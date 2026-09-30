@@ -1,17 +1,16 @@
-# leansphincs-candidate
+# leanSphincs candidate
 
-**leanSPHINCS** is a stateless hash-based signature scheme (NIST category 1, n = 16 bytes). It keeps the
-shape of SLH-DSA-SHA2-128-24: one XMSS tree over one-time keys, with FORS signing the message. It uses
-h = 26, a = 10, k = 24 and WOTS+C (w = 4, 64 chains, digit sum S = 120), and it:
+A SPHINCS+ variant with the shape of SLH-DSA-128-24 (one Merkle tree over WOTS+C keys, FORS signing the
+message), for 2^30 signatures per key at NIST level 1:
 
-- signs 2^30 messages per key at 128-bit security, with 5,684-byte signatures;
-- verifies every signature with the same cost: 366 hash calls (392 SHA-256 compressions);
-- lets weak signers prune the tree: about 1M compressions of keygen for a 2^16-signature key, which then
-  signs in about 200K.
+- public key 32 bytes, signature 5,684 bytes;
+- verification in 391 compressions, the same for every signature;
+- key generation 18.4G compressions, or 1.12M for a pruned key signing 2^16 messages;
+- signing in about 421K compressions with a 1 MiB cache, or about 140K for a pruned key.
+
+Costs count 64-byte compression-function calls, as for BLAKE2s.
 
 - [`leansphincs.tex`](leansphincs.tex): the specification. Build it with
   `mkdir -p .build && pdflatex -output-directory=.build leansphincs.tex`, run twice.
-- [`scripts/scheme.py`](scripts/scheme.py): sizes, costs and lifetime of the scheme (every number in the
-  document), plus `--sweep` to explore other h, a and k.
-- [`scripts/fors_security.py`](scripts/fors_security.py): security level against the number of signatures;
-  `--selftest` checks it against published numbers.
+- [`scripts/scheme.py`](scripts/scheme.py): sizes, costs and lifetime (the numbers in the specification).
+- [`scripts/fors_security.py`](scripts/fors_security.py): security level against the number of signatures.
