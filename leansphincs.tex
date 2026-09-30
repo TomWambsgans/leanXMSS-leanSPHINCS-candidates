@@ -52,8 +52,9 @@
 \begin{abstract}
 This specification defines a SPHINCS$^+$ variant with a lifetime of $2^{30}$ signatures per key pair:
 \begin{itemize}
-  \item \textbf{NIST security level~1}, about 128-bit classical security (generic-attack estimate,
-        Section~\ref{sec:security}).
+  \item \textbf{NIST security level~1}: 127 bits of classical security in the random-oracle model
+        (ROM), Section~\ref{sec:security}.\footnote{The proof is future work, in Lean~4 as for the leanVM
+        SPHINCS$^+$ variant~\cite{LEANVM}.}
   \item \textbf{Public key: 32 bytes.}
   \item \textbf{Signature: 5684 bytes.}
   \item \textbf{Verification: 391 compressions}, the same for every signature.
@@ -251,25 +252,36 @@ key uses its own $S$. After many signatures, an observer can see that all $\idx$
 \section{Security}
 \label{sec:security}
 
-The message digest selects a FORS instance uniformly among $2^h$. After $q$ signatures an instance has
-been used $r$ times with probability about $\mathrm{Pois}(\lambda,r)$, where $\lambda=q/2^h$. A forger wins on a
-digest whose $k$ indices all point to revealed leaves. With the generic-attack estimate of
-SPHINCS$^+$~\cite{SPHINCSPLUS,KN25}, the forgery probability per hash query is
+Model $\hash$ as one random oracle shared by key generation, signing, verification and the adversary.
+The adversary receives $\pk$, may query $\hash$ and request signatures on messages of its choice, at most
+$\qs=2^{30}$ requests, and wins by returning a valid $(m^*,\sigma^*)$ that no signing request returned
+(strong unforgeability). Let $q$ bound the number of hash calls in the whole experiment.
+
+\paragraph{Claim.} Every such adversary wins with probability at most $q/2^{127}$.
+
+This is the statement proved in Lean~4 for the leanVM SPHINCS$^+$ variant~\cite{LEANVM}; the proof for
+this scheme is future work.
+
+The dominant term is FORS reuse. The digest selects a FORS instance uniformly among $2^h$; after $\qs$
+signatures an instance has been used $r$ times with probability about $\mathrm{Pois}(\lambda,r)$, where
+$\lambda=\qs/2^h$. A hash query forges a FORS signature when all $k$ indices of its digest point to revealed
+leaves, which happens with probability~\cite{SPHINCSPLUS,KN25}
 \[
-  \sum_{r\geq1}\mathrm{Pois}(\lambda,r)\,\bigl(1-(1-2^{-a})^{r}\bigr)^{k},
+  \sum_{r\geq1}\mathrm{Pois}(\lambda,r)\,\bigl(1-(1-2^{-a})^{r}\bigr)^{k}.
 \]
-and security is $\min\bigl(128,-\log_2(\cdot)\bigr)$ bits:
 \begin{center}
 \begin{tabular}{@{}lccccc@{}}
 \toprule
-signatures & $2^{28}$ & $2^{29}$ & $2^{30}$ & $2^{31}$ & $2^{32}$\\
-security (bits) & 128 & 128 & 128 & 111.9 & 92.3\\
+$\qs$ & $2^{28}$ & $2^{29}$ & $2^{30}$ & $2^{31}$ & $2^{32}$\\
+$-\log_2$ of this probability & 159.5 & 145.7 & 129.8 & 111.9 & 92.3\\
 \bottomrule
 \end{tabular}
 \end{center}
-The bound holds up to $2^{30.11}$ signatures and falls by about 18 bits per doubling beyond. WOTS keys
-sign fixed values with fixed-sum encodings, so a WOTS forgery needs a second preimage of a 128-bit
-$\Th$ output. No formal proof is given here; about 64-bit quantum security is a target.
+At $\qs=2^{30}$ it is $2^{-129.8}$. Together with $2^{-128}$ for inverting a 128-bit $\Th$ output, a hash
+query succeeds with probability below $2^{-127}$. Beyond $2^{30}$ signatures the FORS term grows by about
+$2^{18}$ per doubling. WOTS keys sign fixed values with fixed-sum encodings, so a WOTS forgery needs a
+second preimage of a 128-bit $\Th$ output. About 64-bit quantum security is a target; no quantum bound is
+claimed.
 
 \paragraph{Completeness.} An encoding attempt succeeds with probability
 $[z^{120}](1+z+z^2+z^3)^{64}/2^{128}\approx2^{-9.70}$. All $\cmax=2^{32}$ counters fail with probability at
@@ -318,6 +330,8 @@ signers.
 \bibitem{KN25} M.~Kudinov, J.~Nick. \emph{Hash-based Signature Schemes for Bitcoin}. Cryptology ePrint
   Archive 2025/2203.
 \bibitem{SPHINCSPLUS} D.~J.~Bernstein et al. \emph{The SPHINCS$^+$ Signature Framework}. ACM CCS, 2019.
+\bibitem{LEANVM} leanEthereum. \emph{leanVM: SPHINCS$^+$ specification and Lean~4 security proof}.
+  \url{https://github.com/leanEthereum/leanVM/tree/main/formal/sphincs}.
 \end{thebibliography}
 
 \end{document}

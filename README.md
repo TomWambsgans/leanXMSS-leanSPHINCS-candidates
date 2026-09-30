@@ -1,7 +1,8 @@
 # leanSphincs candidate
 
 A SPHINCS+ variant with the shape of SLH-DSA-128-24 (one Merkle tree over WOTS+C keys, FORS signing the
-message), for 2^30 signatures per key at NIST level 1:
+message), for 2^30 signatures per key at NIST level 1: 127 bits of classical security in the random-oracle
+model (proof in Lean 4 to come):
 
 - public key 32 bytes, signature 5,684 bytes;
 - verification in 391 compressions, the same for every signature;
