@@ -1,0 +1,326 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\slh}{SLH-DSA}
+\newcommand{\lean}{leanSPHINCS}
+\newcommand{\wc}{WOTS$^+$C}
+\newcommand{\bytes}[1]{#1\,\text{B}}
+\newcommand{\concat}{\,\|\,}
+
+\title{\lean{}: an \slh{} variant for $2^{30}$ signatures\\with a cheap pruned signing mode}
+\author{}
+\date{Draft --- 30 September 2026}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+
+\lean{} is a stateless hash-based signature scheme at NIST security category~1 ($n = 16$ bytes).
+It keeps the shape of \slh{}-SHA2-128-24 from NIST SP~800-230~\cite{sp800-230}: a single XMSS tree
+($d = 1$) whose leaves are one-time keys, each certifying a FORS few-time key that signs the message.
+It changes three things.
+\begin{enumerate}
+  \item \textbf{Parameters.} $h = 26$, $a = 10$, $k = 24$ (instead of $22, 24, 6$). A key can sign
+        $2^{30}$ messages at 128-bit security, instead of $2^{24}$.
+  \item \textbf{\wc{} instead of WOTS$^+$}~\cite{sphincsc}. The one-time keys drop the checksum chains.
+        The signer instead grinds a 32-bit counter until the message digits have a fixed sum. This saves
+        \bytes{60} and makes verification cost constant.
+  \item \textbf{Pruned keys (signer-side only).} A weak signer may generate only a few thousand of the
+        $2^{26}$ leaves, in about $10^6$ compressions, and still sign $2^{16}$ messages. Their signatures are
+        ordinary \lean{} signatures; the verifier cannot tell the difference.
+\end{enumerate}
+Everything else --- FORS, the XMSS tree, the hash functions, addresses and the message hash --- is FIPS~205
+\slh{}~\cite{fips205} unchanged.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{cccccccccccc}
+\toprule
+$n$ & $h$ & $d$ & $a$ & $k$ & $w$ & chains & $S$ & $m$ & pk & sk & signature \\
+\midrule
+16 & 26 & 1 & 10 & 24 & 4 & 64 & 120 & 34 & \bytes{32} & \bytes{64} & \bytes{5\,684} \\
+\bottomrule
+\end{tabular}
+\caption{Parameters. $w$, chains and $S$ describe \wc{}; $m$ is the message-digest length in bytes.}
+\label{tab:params}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lr}
+\toprule
+Lifetime at 128-bit security & $2^{30.11}$ signatures \\
+Verification (every signature) & 366 hash calls, 392 compressions \\
+Full key: key generation / signing & $18.4\cdot10^{9}$ / $4.2\cdot10^{5}$ compressions \\
+Pruned key ($2^{16}$ signatures): key generation / signing & $1.04\cdot10^{6}$ / $2.0\cdot10^{5}$ compressions \\
+Signer cache (built at key generation) & 1~MiB \\
+\bottomrule
+\end{tabular}
+\caption{Headline figures. Costs are SHA-256 compression calls (Section~\ref{sec:costs}).}
+\label{tab:headline}
+\end{table}
+
+\section{Specification}
+
+The scheme uses the FIPS~205 algorithms and the SHA2 security-category-1 instantiation of $\mathbf{F}$,
+$\mathbf{H}$, $\mathbf{T}_\ell$, $\mathbf{PRF}$, $\mathbf{PRF}_{msg}$ and $\mathbf{H}_{msg}$
+(FIPS~205 \S11.2.1). A SHAKE variant is obtained the same way from \S11.1. This section lists only what
+differs.
+
+\paragraph{Keys.} As in FIPS~205:
+$\mathsf{pk} = (\mathsf{PK.seed}, \mathsf{PK.root})$ and
+$\mathsf{sk} = (\mathsf{SK.seed}, \mathsf{SK.prf}, \mathsf{PK.seed}, \mathsf{PK.root})$.
+$\mathsf{PK.root}$ is the root of one XMSS tree of height $h = 26$ whose leaves are \wc{} public keys.
+
+\paragraph{Message digest.} $\mathit{digest} = \mathbf{H}_{msg}(R, \mathsf{PK.seed}, \mathsf{PK.root}, M')$
+has $m = 34$ bytes. The first $\lceil ka/8 \rceil = 30$ bytes give the 24 FORS indices of 10 bits. The next
+4 bytes, reduced mod $2^{26}$, give the leaf index $\mathit{idx}$. There is no tree index, since $d = 1$.
+
+\paragraph{Signature.}
+\[
+  \mathsf{SIG} = R \concat \mathsf{SIG}_{FORS} \concat \mathit{ctr} \concat \mathsf{SIG}_{WOTS} \concat \mathsf{AUTH}
+\]
+with sizes $16 + 24\cdot11\cdot16 + 4 + 64\cdot16 + 26\cdot16 = \bytes{5\,684}$. Here $\mathsf{SIG}_{FORS}$ is
+the FORS signature ($k = 24$ secret values and $a = 10$ authentication nodes each), $\mathit{ctr}$ is the
+32-bit \wc{} counter, $\mathsf{SIG}_{WOTS}$ holds the 64 \wc{} chain values and $\mathsf{AUTH}$ is the XMSS
+authentication path of leaf $\mathit{idx}$.
+
+\subsection{\texorpdfstring{\wc{}}{WOTS+C}}
+
+\wc{} uses $\ell = 64$ hash chains of length $w = 4$ ($\lg w = 2$) and no checksum chains. The message is
+the $n$-byte FORS public key, so it is always the same for a given leaf. The counter search selects a
+digest whose 64 base-4 digits sum to the fixed value $S = 120$:
+\[
+  \mathit{dig}(M, \mathit{ctr}) = \mathit{base\_2b}\bigl(\mathbf{T}_C(\mathsf{PK.seed}, \mathsf{ADRS}_C,
+  M \concat \mathrm{toByte}(\mathit{ctr}, 4)),\, 2,\, 64\bigr),
+\]
+where, for SHA2,
+\[
+  \mathbf{T}_C(\mathsf{PK.seed}, \mathsf{ADRS}, X) = \mathrm{Trunc}_n\bigl(\mathrm{SHA\text{-}256}
+  (\mathsf{PK.seed} \concat \mathrm{toByte}(0, 64 - n) \concat \mathsf{ADRS}^c \concat X)\bigr).
+\]
+$\mathsf{ADRS}_C$ is the leaf's WOTS address with a new type value \textsc{wots\_c} $= 7$.
+
+\begin{algorithm}[ht]
+\caption{\wc{} signing and public-key recovery (chain, PRF and $\mathbf{T}_{64}$ as in FIPS~205)}
+\begin{algorithmic}[1]
+\Function{wotsc\_sign}{$M$, $\mathsf{SK.seed}$, $\mathsf{PK.seed}$, $\mathsf{ADRS}$}
+  \State $\mathit{ctr} \gets 0$
+  \While{$\sum_i \mathit{dig}(M, \mathit{ctr})_i \neq S$} \Comment{about 829 tries for $S = 120$}
+    \State $\mathit{ctr} \gets \mathit{ctr} + 1$
+  \EndWhile
+  \State $d \gets \mathit{dig}(M, \mathit{ctr})$
+  \For{$i = 0, \dots, 63$}
+    \State $\sigma_i \gets \mathrm{chain}(\mathbf{PRF}(\mathsf{PK.seed}, \mathsf{SK.seed}, \mathsf{ADRS}_i), 0, d_i)$
+  \EndFor
+  \State \Return $(\mathit{ctr}, \sigma_0, \dots, \sigma_{63})$
+\EndFunction
+\Statex
+\Function{wotsc\_pkFromSig}{$(\mathit{ctr}, \sigma)$, $M$, $\mathsf{PK.seed}$, $\mathsf{ADRS}$}
+  \State $d \gets \mathit{dig}(M, \mathit{ctr})$
+  \If{$\sum_i d_i \neq S$} \Return $\bot$ \Comment{reject the signature}
+  \EndIf
+  \For{$i = 0, \dots, 63$}
+    \State $p_i \gets \mathrm{chain}(\sigma_i, d_i, 3 - d_i)$
+  \EndFor
+  \State \Return $\mathbf{T}_{64}(\mathsf{PK.seed}, \mathsf{ADRS}_{pk}, p_0 \concat \dots \concat p_{63})$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+The signer walks $\sum_i d_i = S = 120$ chain steps and the verifier walks $\sum_i (3 - d_i) = 192 - S = 72$,
+for every signature. Table~\ref{tab:S} shows the trade-off behind $S = 120$: the counter search is
+negligible, and a larger $S$ would save few verifier hashes for much more search.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrr}
+\toprule
+$S$ & valid digests & expected counter tries & verifier chain steps \\
+\midrule
+96  & $2^{123.5}$ & 22 & 96 \\
+112 & $2^{121.2}$ & 110 & 80 \\
+\textbf{120} & $\mathbf{2^{118.3}}$ & \textbf{829} & \textbf{72} \\
+128 & $2^{114.2}$ & 14\,670 & 64 \\
+132 & $2^{111.6}$ & 86\,554 & 60 \\
+\bottomrule
+\end{tabular}
+\caption{Choice of the \wc{} digit sum $S$ (64 digits in base 4).}
+\label{tab:S}
+\end{table}
+
+\subsection{Verification}
+
+Verification is FIPS~205 \slh{} verification with $d = 1$, except that the one-time signature is checked with
+\textsc{wotsc\_pkFromSig}, which rejects if the digit sum is not $S$. Its cost does not depend on the
+message:
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Step & hash calls & compressions \\
+\midrule
+$\mathbf{H}_{msg}$ & 1 & 5 \\
+FORS: 24 trees $\times$ (1 leaf + 10 nodes) & 264 & 264 \\
+FORS roots, $\mathbf{T}_{24}$ & 1 & 7 \\
+\wc{} digest and chains & $1 + 72$ & $1 + 72$ \\
+\wc{} public key, $\mathbf{T}_{64}$ & 1 & 17 \\
+XMSS path & 26 & 26 \\
+\midrule
+Total & 366 & 392 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Security}
+
+\paragraph{Few-time layer.} The message digest picks a leaf, and so a FORS instance, uniformly among
+$2^{h}$. After $q$ signatures an instance has been used $r$ times with probability close to
+$\mathrm{Pois}(\lambda, r)$, where $\lambda = q/2^h$. A forger wins on a random digest if all $k$ of its FORS indices
+point to leaves already revealed. The generic-attack estimate used for SPHINCS$^+$, \slh{} and
+SP~800-230~\cite{sphincsplus,fenner,kudinov-nick} is
+\[
+  \Pr[\text{forgery per query}] \;=\; \sum_{r \ge 1} \mathrm{Pois}(\lambda, r)\,
+  \bigl(1 - (1 - 2^{-a})^{r}\bigr)^{k},
+\]
+and the security level is $\min(128, -\log_2 \Pr)$. With $h = 26$, $a = 10$ and $k = 24$, the scheme keeps
+128 bits up to $2^{30.11}$ signatures:
+\begin{center}
+\begin{tabular}{lcccccc}
+\toprule
+Signatures & $2^{28}$ & $2^{29}$ & $2^{30}$ & $2^{31}$ & $2^{32}$ & $2^{34}$ \\
+Security (bits) & 128 & 128 & 128 & 111.9 & 92.3 & 51.1 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Security falls quickly past the limit, by about 18 bits per doubling, because each signature reveals
+24 secrets. Signers must stay below $2^{30}$ signatures per key.
+
+\paragraph{One-time layer.} Each \wc{} key only ever signs its own FORS public key, which is deterministic,
+so reusing a leaf never reveals a second message to that key. Because all valid digests have the same digit
+sum, no valid digest dominates another. A forgery therefore needs exactly the same digest, i.e.\ a second
+preimage of the 128-bit value $\mathbf{T}_C$~\cite{sphincsc}.
+
+\section{Signing modes and costs}
+\label{sec:costs}
+
+\paragraph{Cost model.} Costs count SHA-256 compression calls in the FIPS~205 SHA2 layout, with the
+$\mathsf{PK.seed}$ block precomputed:
+\begin{itemize}
+  \item $\mathbf{PRF}$, $\mathbf{F}$, $\mathbf{H}$ and $\mathbf{T}_C$ cost 1;
+        $\mathbf{T}_\ell$ costs $\lceil (22 + 16\ell + 9)/64 \rceil$.
+  \item $\mathbf{H}_{msg}$ costs 5 for a short or pre-hashed message.
+  \item One message attempt ($\mathbf{PRF}_{msg}$ and $\mathbf{H}_{msg}$) costs 7.
+  \item Generating one leaf (64 PRF, 192 chain steps, $\mathbf{T}_{64}$, one tree node) costs 274.
+\end{itemize}
+
+\paragraph{Full keys.} Key generation builds all $2^{26}$ leaves: $18.4\cdot10^9$ compressions.
+The signer keeps a 1~MiB cache ($2^{16}$ nodes) holding level~10 of the tree. Each signature then:
+\begin{itemize}
+  \item rebuilds the $2^{10}$ leaves under its cached node ($2.8\cdot10^5$);
+  \item hashes the cached level up to the root for the upper authentication path ($6.6\cdot10^4$);
+  \item signs with FORS ($7.4\cdot10^4$) and \wc{} ($1.0\cdot10^3$).
+\end{itemize}
+The total is $4.2\cdot10^5$ compressions.
+
+\paragraph{Pruned keys.} Following hypertree pruning~\cite{conduition}, a weak signer computes only $K$
+real leaves. It replaces every other leaf, or whole subtree of pruned leaves, by a pseudorandom surrogate
+node derived from its secret seed. Key generation then costs about $274K$ compressions, and the whole kept
+tree fits in the cache.
+\begin{itemize}
+  \item \textbf{Signing.} To sign, the signer grinds the randomizer $R$ until the leaf index lands on a real
+        leaf. That takes $2^{26}/K$ attempts on average. It then signs with that leaf's FORS and \wc{} keys.
+  \item \textbf{Security.} The analysis above holds with $2^h$ replaced by $K$. A key keeping $K$ leaves
+        therefore signs $2^{30.11}\cdot K/2^{26}$ messages at 128-bit security:
+\end{itemize}
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+Pruned lifetime & real leaves $K$ & key generation & signing & of which grinding \\
+\midrule
+$2^{16}$ & $2^{11.9} \approx 3\,800$ & $1.04\cdot10^6$ & $2.0\cdot10^5$ & $1.2\cdot10^5$ \\
+$2^{18}$ & $2^{13.9}$ & $4.2\cdot10^6$ & $1.1\cdot10^5$ & $3.1\cdot10^4$ \\
+$2^{20}$ & $2^{15.9}$ & $1.7\cdot10^7$ & $8.3\cdot10^4$ & $7.7\cdot10^3$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Pruned signers must follow three rules.
+\begin{itemize}
+  \item \textbf{Separate seeds.} A pruned key must use a secret seed that is domain-separated from full
+        keys, e.g.\ $\mathsf{SK.seed}' = \mathbf{PRF}(\mathsf{SK.seed}, \text{``pruned''})$. Otherwise a pruned and
+        a full signer sharing a seed could make one \wc{} key sign two different FORS keys.
+  \item \textbf{Fixed pattern.} The set of real leaves is chosen pseudorandomly from the seed at key
+        generation and never changes.
+  \item \textbf{Visibility.} Signatures remain valid, but after many signatures an observer can notice
+        that only some leaves are used.
+\end{itemize}
+
+\section{Rationale}
+
+\begin{itemize}
+  \item \textbf{Why $h = 26$.} For a pruned key,
+        (key generation) $\times$ (grinding) $\approx 2^{h} \cdot 274 \cdot 7$, independently of FORS. Targeting
+        about $10^6$ for key generation and about $2^{17}$ for signing gives $h \approx 26$.
+  \item \textbf{Why $a = 10$, $k = 24$.} The pruned signing budget leaves less than $10^5$ compressions
+        for FORS, which forces small trees ($3k\cdot2^{a}$). The smallest $k$ that reaches $2^{30}$ at $h = 26$
+        is then $k = 24$ for $a = 10$. That takes 4\,224 of the 5\,684 signature bytes.
+  \item \textbf{Why a single tree.} It keeps the \slh{}-128-24 structure and the cheapest verification.
+        The cost is heavy key generation for full keys, which pruning avoids for weak signers.
+  \item \textbf{Why \wc{}.} Verification becomes constant: 366 hash calls for every signature, instead of
+        305--494 for WOTS$^+$ with $w = 4$. That matters when verifying inside a proof system.
+        It also saves \bytes{60}.
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & \slh{}-128-24 & \lean{} \\
+\midrule
+Signature & \bytes{3\,856} & \bytes{5\,684} \\
+Lifetime at 128 bits & $2^{24.14}$ & $2^{30.11}$ \\
+Verification (hash calls) & 187--376 & 366 \\
+Full key generation & $1.2\cdot10^9$ & $1.8\cdot10^{10}$ \\
+Pruned key ($2^{16}$ signatures): key generation / signing & $4.3\cdot10^6$ / $3.0\cdot10^8$ & $1.0\cdot10^6$ / $2.0\cdot10^5$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Deviations from FIPS~205 and open points}
+
+\begin{itemize}
+  \item \textbf{Verifier changes.} New parameters (FIPS~205 does not allow them), and \wc{} in place of
+        WOTS$^+$, which needs the counter field, the new address type and the digit-sum check. The
+        verifier is otherwise standard.
+  \item \textbf{Proof.} Security relies on the generic-attack estimate above. There is no tight proof in
+        the quantum random-oracle model; Kudinov and Nick~\cite{kudinov-nick} estimate a loss of about
+        10 bits.
+  \item \textbf{Grinding assumption.} The grinding costs assume short or pre-hashed messages, since
+        $\mathbf{H}_{msg}$ must be recomputed for each attempt.
+  \item \textbf{Counter size.} A 16-bit \wc{} counter would suffice (failure probability about $e^{-79}$)
+        and would save \bytes{2}.
+\end{itemize}
+
+\begin{thebibliography}{9}
+\bibitem{fips205} NIST. \emph{Stateless Hash-Based Digital Signature Standard}. FIPS~205, 2024.
+\bibitem{sp800-230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
+  Cases}. NIST SP~800-230 (initial public draft), 2026.
+\bibitem{sphincsc} M.~Kudinov, A.~H\"ulsing, E.~Ronen, E.~Yogev. \emph{SPHINCS$^+$C: Compressing SPHINCS$^+$
+  With (Almost) No Cost}. IEEE S\&P, 2023.
+\bibitem{sphincsplus} D.~J.~Bernstein et al. \emph{SPHINCS$^+$ submission to the NIST PQC project}, 2020.
+\bibitem{fenner} C.~Fenner. \emph{slh-dsa-rls}: parameter search for SLH-DSA.
+  \url{https://github.com/chrisfenner/slh-dsa-rls}, 2025.
+\bibitem{kudinov-nick} M.~Kudinov, J.~Nick. \emph{Hash-based Signature Schemes for Bitcoin}. Cryptology ePrint
+  Archive 2025/2203.
+\bibitem{conduition} conduition. \emph{Pruning Hypertrees for the Lax and Lazy}.
+  \url{https://conduition.io/cryptography/hypertree-pruning/}, 2026.
+\end{thebibliography}
+
+\end{document}
