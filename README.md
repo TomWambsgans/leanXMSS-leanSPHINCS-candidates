@@ -8,9 +8,9 @@ initial public draft from April 2026, so the parameters may still change.
 
 ## Parameters (SP 800-230, Table 1)
 
-| n | h | d | h′ | a | k | lg_w | m | pk | sk¹ | sig |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 16 | 22 | 1 | 22 | 24 | 6 | 2 | 21 | 32 | 64 | 3,856 |
+| n   | h   | d   | h′  | a   | k   | lg_w | m   | pk  | sk¹ | sig   |
+| --- | --- | --- | --- | --- | --- | ---- | --- | --- | --- | ----- |
+| 16  | 22  | 1   | 22  | 24  | 6   | 2    | 21  | 32  | 64  | 3,856 |
 
 ¹ The secret key size is not in the table; it is 4n, as in FIPS 205.
 
@@ -45,14 +45,15 @@ initial public draft from April 2026, so the parameters may still change.
 
 ## Cost vs SLH-DSA-128s (hash calls, derived)
 
-| | 128-24 | 128s |
-|---|---|---|
-| Signature bytes | 3,856 | 7,856 |
-| Verify (upper bound) | 379 | 3,929 |
-| Key generation | 1.1·10^9 | 2.9·10^5 |
-| Sign | 1.5·10^9, or 3.0·10^8 with the whole tree cached (128 MiB) | 2.2·10^6 |
+|                      | 128-24                                                     | 128s     |
+| -------------------- | ---------------------------------------------------------- | -------- |
+| Signature bytes      | 3,856                                                      | 7,856    |
+| Verify (upper bound) | 379                                                        | 3,929    |
+| Key generation       | 1.1·10^9                                                   | 2.9·10^5 |
+| Sign                 | 1.5·10^9, or 3.0·10^8 with the whole tree cached (128 MiB) | 2.2·10^6 |
 
 [`scripts/`](scripts/) computes security level against the number of signatures.
+[`research/`](research/) compares alternative designs: WOTS+C, PORS+FP, taller trees, grinding and HG-WOTS.
 
 ## References
 
