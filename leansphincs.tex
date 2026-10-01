@@ -145,7 +145,7 @@ the secrets). Every operator grinds $R=\hash(R_0,\mathit{ctr})$ and keeps the fi
 they all get the same $R$. Then:
 \begin{itemize}
   \item vanilla: grind until the leaf index lands in the kept subtree ($2^{14}$ tries), as in a plain
-        pruned key. Compute the selected FORS instance in MPC if it is new, then open the 24 selected
+        pruned key. Compute the selected FORS instance in MPC, then open the 24 selected
         FORS secrets.
   \item with preprocessing: the instance of the next signature is drawn in advance, as
         $\bigoplus_i\hash(k_i,\mathsf{next},R')$ with $R'$ the randomizer of the previous signature, and
