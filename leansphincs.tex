@@ -51,20 +51,15 @@ Properties:
 
 \section{Usage}
 
-\subsection{Full}
+\subsection{Full \texorpdfstring{$2^{30}$}{2\textasciicircum 30} lifetime}
 
 \begin{itemize}
   \item keygen: $19 \cdot 10^9$ compressions
-  \item signing (the FORS instance is always 74K of it):
-  \begin{itemize}
-    \item without cache: same as keygen, the whole tree is rebuilt
-    \item with a 1~MiB cache (level 10 of the tree): $421\cdot10^3$ compressions. Rebuild the $2^{10}$ leaves
-          below the cached node (281K) and hash the cache up for the upper path (66K)
-    \item with a 1~GiB cache (every level above the leaves): $75\cdot10^3$ compressions, only the sibling
-          leaf is rebuilt
+  \item signing 
+    \begin{itemize}
+    \item with a 1~MiB cache: $421\cdot10^3$ compressions
+    \item with a 1~GiB cache: $75\cdot10^3$ compressions
   \end{itemize}
-  \item lifetime: $2^{30}$ signatures. Don't go beyond: security drops by about 18 bits per doubling
-        (112 bits at $2^{31}$)
 \end{itemize}
 
 \subsection{Pruned}
