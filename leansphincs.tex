@@ -199,7 +199,7 @@ With a trusted dealer, signing needs no MPC at all, for any $t$-of-$n$, followin
         (shares for different messages can't be combined, otherwise aborted attempts would leak FORS
         secrets). Anyone combines $t$ shares and checks each secret against its public leaf
 \end{itemize}
-This is secure against $t-1$ malicious signers (e.g.\ 15-of-20 against 14), and $n$, $t$ and the shares
+This is secure against $t-1$ malicious signers, and $n$, $t$ and the shares
 can change without changing the public key. For large $n$ and $t$ (say 30-of-40), $F$ is a lattice (LWE)
 threshold PRF over Shamir shares, used only by the signers; for small $\binom{n}{t}$ it can be hash-based:
 our seeds, plus pairwise masks that cancel only within one signing session. The price is trusting the dealer at keygen: PRAWNS has no efficient DKG.
