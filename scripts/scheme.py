@@ -122,7 +122,9 @@ def main():
     b = x.threshold
     dkg = 2**b * v * (q - 1)  # chain steps of the kept WOTS keys
     fresh = k * 2**a + T  # one instance, preprocessed: FORS leaf hashes and WOTS chain steps
-    online = 2**h * (rnd + msg_block)  # grind until idx is the instance drawn for this signature
+    try_cost = comp(N + 4) + msg_block  # R = H(R_0, ctr), then the first digest call
+    online = 2**h * try_cost  # grind until idx is the instance drawn for this signature
+    trivial = 2 ** (h - b) * try_cost  # grind until idx lands in the kept subtree
 
     def traffic(c):
         def size(nbytes):
@@ -138,12 +140,15 @@ def main():
     # FORS leaves, one opening, then the WOTS chains (the chain ends are public, so at most q - 2 steps)
     print(f"    preprocessing a new FORS instance: {fmt(fresh)} MPC compressions, {traffic(fresh)}, "
           f"{depth[1] + (1 + depth[q - 2] if q > 2 else 0)} rounds")
-    print(f"    online: no MPC, grinding {fmt(online)} compressions in the clear")
-    # Share refresh: each dealer sends one explicit share term to its 3 holders. The term covers the chain
-    # starts of the unused leaves and the FORS secrets of the used instances.
-    fresh_key, all_used = 3 * 2**b * v * N, 3 * 2**b * k * 2**a * N
-    print(f"    share refresh, no MPC: about {fresh_key / 1e6:.3g} MB sent per operator for a fresh key, "
-          f"{all_used / 1e9:.3g} GB once all instances are used")
+    print(f"    online: no MPC, grinding {fmt(online)} compressions in the clear "
+          f"(trivial variant without preprocessing: {fmt(trivial)})")
+    # Share refresh: each operator sends a 16-byte seed to the 3 others. Replacing an operator: the newcomer
+    # receives its 3 share terms, covering the chain starts of the leaves not signed yet and the FORS
+    # secrets of the signed leaves.
+    fresh_key, all_signed = 3 * 2**b * v * N, 3 * 2**b * k * 2**a * N
+    print(f"    share refresh, no MPC: {3 * N} B sent per operator; replacing an operator: the newcomer "
+          f"receives {fresh_key / 1e6:.3g} MB for a fresh key, {all_signed / 1e9:.3g} GB once all leaves "
+          f"are signed")
 
 
 if __name__ == "__main__":

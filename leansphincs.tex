@@ -102,10 +102,10 @@ A concrete example of what's possible:
   \item signing: thanks to caching of the sub-tree in XMSS, only one FORS has to be computed in MPC, $24\,696$ MPC hashes, about 68~MB of
         traffic per operator and 2\,600 rounds. Either:
     \begin{itemize}
-    \item trivially, once the message is known: grind as in a plain pruned key ($66\cdot10^3$
-          compressions), then compute the instance the message selects
+    \item trivially, once the message is known: grind until the leaf index lands in the kept subtree
+          ($49\cdot10^3$ compressions), then compute the instance the message selects
     \item or with preprocessing: compute the instance before the message is known. Online, no MPC: only
-          $2.7\cdot10^8$ compressions of grinding in the clear (about 0.3~s) and 2 rounds of about 1~KB
+          $2.0\cdot10^8$ compressions of grinding in the clear (about 0.2~s) and 2 rounds of about 1~KB
           per operator
     \end{itemize}
 \end{itemize}
@@ -171,27 +171,27 @@ fixed once its WOTS key signs it. So the shares can be refreshed with the same p
   \item each operator turns its seeds into explicit shares of what is fixed and still needed: the chain
         starts of the leaves not signed yet (at most $2^{18}$) and the FORS secrets of the signed leaves
         ($24\,576$ each).
-  \item each operator deals a random sharing of zero, which is added to these shares: same values, fresh
-        shares. Holders compare hashes of what they receive, and a masked random linear combination is
-        opened to check that each dealt sharing is really zero (otherwise a cheater could shift the
-        secrets and break the key).
+  \item each operator sends a random seed to the others. The seeds expand into 4 masks per value that
+        XOR to 0, added to the 4 terms: same values, fresh shares. The operators compare hashes of the
+        seeds. (Each operator holds 3 of the 4 terms, so it could derive the 4th mask anyway: a seed hides
+        nothing more.)
   \item new seeds are sampled as in keygen, for the new instances and randomizers, and the old seeds and
         shares are deleted.
 \end{enumerate}
-To replace an operator, the newcomer first gets the terms it takes over from their other holders. This
-costs no MPC hash, a few rounds, and from 13~MB per operator for a fresh key to 5~GB once all instances
-are used. It
-protects against an attacker who corrupts one operator per period, as long as old shares are really
-deleted.
+This costs no MPC hash, a few rounds and a few hundred bytes. It protects against an attacker who
+corrupts one operator per period, as long as old shares are really deleted. To replace an operator, the
+newcomer first gets the terms it takes over from their other holders: from 13~MB for a fresh key to
+5~GB once all leaves are signed.
 
 \paragraph{MPC cost.} An MPC hash is a BLAKE2s compression on a secret input, about $14.7\cdot10^3$ AND
 gates (XOR is free). What matters is the traffic per AND gate per operator, with malicious security:
 \begin{itemize}
   \item about 1 bit: 3 operators, $f=1$~\cite{BGIN19} (more CPU), e.g.\ when only 3 are online
   \item about 1.5 bits: 4 operators, $f=1$~\cite{FF21} (with the fix of~\cite{BS26}), the numbers above
-  \item about 10 bits: 3 operators with simpler cut-and-choose~\cite{FLNW17}, or bigger clusters (e.g.\
-        10-of-15) with packed Shamir sharing
-  \item tens of bits: bigger clusters with plain Shamir sharing~\cite{ATLAS21}
+  \item about 10 to 16 bits: 3 operators with simpler cut-and-choose~\cite{FLNW17}, for a $2^{-40}$ to
+        $2^{-80}$ chance of undetected cheating
+  \item about 30 bits: bigger clusters (e.g.\ 10-of-15) with Shamir sharing over $\mathrm{GF}(2^8)$ (our
+        estimate, from~\cite{ATLAS21})
 \end{itemize}
 Rounds: each layer of AND gates costs one round, and all the hashes of a layer run together. A BLAKE2s
 compression has AND-depth 884 (with ripple-carry adders, as in the AND count above), so a WOTS chain of 3
