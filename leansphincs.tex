@@ -41,8 +41,7 @@ Same shape as SLH-DSA-128-24 from NIST's recent SP~800-230~\cite{SP800230} (sing
     \item $h = 26$, instead of $22$ (tree height, i.e. height of the only XMSS layer)
     \item $k = 24$, instead of $6$ (number of trees per FORS)
     \item $a = 10$, instead of $24$ (height of each FORS tree)
-    \item WOTS$^+$C~\cite{HK22C}, instead of WOTS: 64 chains of length $w=4$ (as before, i.e.\ 3 hash
-          steps each), with a target sum of 120 for the signed positions
+    \item WOTS$^+$C~\cite{HK22C}, instead of WOTS. 64 chains of length $w=4$, with a target sum of 120
   \end{itemize}
 
 Properties:
@@ -91,7 +90,7 @@ For weaker devices. The trick is to trade smaller lifetime for faster keygen, us
 
 A concrete example of what's possible:
 \begin{itemize}
-  \item 3-of-4: any 3 operators can sign, and the verifier doesn't change
+  \item 3-of-4: any 3 operators can sign
   \item lifetime: $2^{16}$ signatures, using the same hypertree pruning as in \cref{sec:pruned}
   \item malicious security against 1 corrupt operator: alone it can neither sign nor learn anything about
         the key, and if it deviates, signing only aborts (but 2 colluders can rebuild the key, unlike
@@ -103,10 +102,9 @@ A concrete example of what's possible:
   \item signing: thanks to caching of the sub-tree in XMSS, only one FORS has to be computed in MPC, $24\,696$ MPC hashes, about 68~MB of
         traffic per operator and 2\,600 rounds. Either:
     \begin{itemize}
-    \item trivially, once the message is known: grind until the leaf index lands in the kept subtree
-          ($49\cdot10^3$ compressions), then compute the instance the message selects
+    \item trivially, once the message is known (signing takes a few seconds)
     \item or with preprocessing: compute the instance before the message is known. Online, no MPC: only
-          $2.0\cdot10^8$ compressions of grinding in the clear (about 0.2~s) and 2 rounds of about 1~KB
+          $\approx 2.0\cdot10^8$ compressions of grinding in the clear and 2 rounds of about 1~KB
           per operator
     \end{itemize}
 \end{itemize}
@@ -125,10 +123,11 @@ selects the FORS instance and the 24 secrets to open. So they can be computed be
 known, if we fix the instance in advance and grind the randomizer until the message selects it.
 
 \paragraph{Sharing the secrets.} Usually each secret is a hash of the secret key and its address, which
-would already need MPC. Instead there are 4 seeds: $k_i$ is known to every operator except $i$, and each
-secret is $\bigoplus_i\hash(k_i,\mathit{addr})$~\cite{CDI05}. By hashing its 3 seeds, each operator gets a
-share of every secret, without any interaction. One operator misses its own seed, so it learns nothing;
-any 2 hold all seeds.
+would already need MPC. Instead, each secret is the XOR of 4 random terms, term $i$ being known to every
+operator except $i$~\cite{CDI05}. One operator misses its own term, so it learns nothing; any 2 hold all
+terms. There are about $10^8$ secrets (and the randomizer depends on the message), so the terms are not
+stored but derived from 4 seeds: term $i$ is $\hash(k_i,\mathit{addr})$, with $k_i$ known to every
+operator except $i$.
 
 \paragraph{Keygen (DKG).}
 \begin{enumerate}
