@@ -190,9 +190,18 @@ MPC-free.
 
 With a trusted dealer, signing needs no MPC at all, for any $t$-of-$n$, following PRAWNS~\cite{PRAWNS}:
 \begin{itemize}
+  \item lifetime: $2^{16}$ signatures (16 times more lifetime costs 16 times more public data and dealer
+        time)
+  \item keygen, by the dealer in the clear: $3\cdot10^8$ compressions, for all the FORS instances of the
+        $2^{12}$ kept leaves
+  \item public data: 1.6~GB (the FORS leaves, and 4~MB of WOTS signatures)
+  \item signing: no MPC. Each signer sends 24 evaluation shares, and grinding plus the FORS paths take
+        $74\cdot10^3$ compressions
+\end{itemize}
+How it works:
+\begin{itemize}
   \item keygen: the dealer samples the key of a context-aware threshold PRF $F$ and sets every FORS secret of the $2^{12}$
-        kept instances to $F(\mathit{addr})$. It builds the pruned key, publishes all the FORS leaves
-        (1.6~GB) and the WOTS signature of every FORS root, gives each operator its share of $F$, and
+        kept instances to $F(\mathit{addr})$. It builds the pruned key, publishes all the FORS leaves and the WOTS signature of every FORS root, gives each operator its share of $F$, and
         deletes everything else
   \item signing: the $t$ signers pick the randomizer by commit-reveal and grind it into the kept subtree.
         Each sends its evaluation shares of $F$ at the 24 opened FORS secrets, with the message as context

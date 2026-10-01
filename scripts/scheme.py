@@ -150,6 +150,15 @@ def main():
           f"{traffic(dkg_rot)}, {depth[q]} rounds; FORS instance {fmt(fresh_rot)}, {traffic(fresh_rot)}, "
           f"{depth[2] + (1 + depth[q - 1] if q > 2 else 0)} rounds")
 
+    # Trusted dealer (PRAWNS): the dealer computes every FORS instance of the kept leaves and the WOTS
+    # signature of every FORS root in the clear, and publishes the FORS leaves and those WOTS signatures.
+    dealer = derive + 2**b * leaf + (2**b - 1) * node + (h - b) * (derive + node)
+    dealer += 2**b * (fors_sign + wots_sign)
+    public = 2**b * (k * 2**a * N + v * N + 4)
+    rebuild = k * (2**a - 1) * node  # the combiner rebuilds the 24 FORS paths from the public leaves
+    print(f"  trusted dealer, 2^{b} kept leaves: dealer keygen {fmt(dealer)} compressions, public data "
+          f"{public / 1e9:.3g} GB; signing: grinding {fmt(trivial)} + FORS paths {fmt(rebuild)} compressions, no MPC")
+
 
 if __name__ == "__main__":
     main()
