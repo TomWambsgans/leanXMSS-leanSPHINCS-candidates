@@ -10,6 +10,7 @@
 \usepackage{enumitem}
 \usepackage{xcolor}
 \usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage{cleveref}
 
 \newcommand{\Th}{\mathsf{Th}}
 \newcommand{\hash}{\mathsf{H}}
@@ -68,7 +69,7 @@ For powerfull devices.
 \emph{Modern laptop CPUs can compute on the order of a $10^9$ SHA2 or BLAKE2s compressions per second.}
 
 
-\subsection{Pruned: \texorpdfstring{$2^{16}$}{2\textasciicircum 16} lifetime}
+\subsection{Pruned: \texorpdfstring{$2^{16}$}{2\textasciicircum 16} lifetime}\label{sec:pruned}
 
 For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 12, and replace the 14 siblings above it by pseudorandom surrogate nodes.
 
@@ -82,32 +83,40 @@ For weaker devices. The trick is to trade smaller lifetime for faster keygen, us
 
 \subsection{Threshold signing (MPC)}
 
-Example of what's possible, with a pruned key (lifetime of $2^{16}$ signatures):
+What we get, e.g.\ with 4 operators and a pruned key (\cref{sec:pruned}):
 \begin{itemize}
-  \item 3-of-4: 4 operators, any 3 can sign, and the verifier doesn't change
+  \item 3-of-4: any 3 operators can sign, and the verifier doesn't change
+  \item lifetime: $2^{16}$ signatures
   \item malicious security against 1 corrupt operator: alone it can neither sign nor learn anything about
         the key, and if it deviates it is identified and the others sign without it (but 2 colluders can
         rebuild the key, unlike 3-of-4 BLS)
-  \item DKG: no trusted dealer, nobody ever sees the key
-  \item share refresh: the shares can be refreshed, and an operator replaced, without changing the public
-        key (about 13~MB per operator)
-  \item keygen: $786\cdot10^3$ MPC hashes, about 2.2~GB of traffic per operator
-  \item signing, preprocessing (before the messages are known): $24\,696$ MPC hashes, about 68~MB per
-        operator, once every 16 signatures
-  \item signing, online: no MPC, $2.7\cdot10^8$ compressions of grinding in the clear (about 0.3~s) and
-        2 rounds of about 1~KB per operator
+  \item DKG: no trusted dealer
+  \item share refresh: the shares can be refreshed, and an operator replaced, with the same public key
+  \item keygen: $786\cdot10^3$ MPC hashes, about 2.2~GB of traffic per operator (assuming BLAKE2s)
+  \item signing, before the message is known: at most one FORS instance to compute, $24\,696$ MPC hashes,
+        about 68~MB per operator
+  \item signing, online: no MPC, only $2.7\cdot10^8$ compressions of grinding in the clear (about 0.3~s)
+        and 2 rounds of about 1~KB per operator
 \end{itemize}
 
-\paragraph{Idea.} Only hashes with a secret input need MPC: the WOTS chain steps and the FORS leaf hashes.
-Everything else runs in the clear: the XMSS tree, the FORS trees above the leaves, the grinding, the
-WOTS$^+$C counter search. A FORS instance depends only on its leaf, not on the message, so it can be
-computed in MPC in advance; at signing time we grind the randomizer until the message lands on it.
+\paragraph{Where the secrets are used.} A signer only uses its secrets in three places:
+\begin{itemize}
+  \item WOTS: each chain starts at a secret and is hashed forward, to its end at keygen (the ends make the
+        leaf) and to the signed position at signing
+  \item FORS: each leaf is the hash of a secret
+  \item the randomizer: a hash of a secret and the message
+\end{itemize}
+Everything else (the XMSS tree, the FORS trees above the leaves, the WOTS$^+$C counter search) only hashes
+public values. So the operators keep the secrets shared, compute only these hashes jointly, and open only
+what the signature reveals. Moreover, the WOTS and FORS hashes don't depend on the message, which only
+selects the FORS instance and the 24 secrets to open. So they can be computed before the message is
+known, if we fix the instance in advance and grind the randomizer until the message selects it.
 
-\paragraph{Secrets.} Usually each secret is a hash of the secret key and the secret's address, which would
-need MPC on a shared secret key. Instead there is no secret key but 4 seeds: $k_i$ is known to every
-operator except $i$, and each secret is $\bigoplus_i\hash(k_i,\mathit{addr})$~\cite{CDI05}. Each operator
-hashes its 3 seeds, which gives it a share of every secret without any interaction. One operator misses
-its own seed, so it learns nothing; two hold all seeds.
+\paragraph{Sharing the secrets.} Usually each secret is a hash of the secret key and its address, which
+would already need MPC. Instead there are 4 seeds: $k_i$ is known to every operator except $i$, and each
+secret is $\bigoplus_i\hash(k_i,\mathit{addr})$~\cite{CDI05}. By hashing its 3 seeds, each operator gets a
+share of every secret, without any interaction. One operator misses its own seed, so it learns nothing;
+any 2 hold all seeds.
 
 \paragraph{Keygen (DKG).}
 \begin{enumerate}
@@ -115,47 +124,46 @@ its own seed, so it learns nothing; two hold all seeds.
         hash. So the seed a corrupt operator misses comes from an honest one.
   \item the public parameter and the 14 surrogate nodes come from commit-reveal coin tossing, so that no
         operator can pick a surrogate with a subtree it knows below.
-  \item MPC runs the 3 steps of the 64 chains of each of the $2^{12}$ kept leaves ($786\cdot10^3$ hashes),
-        and opens the endpoints. The rest of the tree is built in the clear, and its root is the public
-        key.
+  \item MPC hashes the 64 chains of each of the $2^{12}$ kept leaves to their ends ($786\cdot10^3$ hashes)
+        and opens the ends. The tree is built in the clear, and its root is the public key.
 \end{enumerate}
 
-\paragraph{Signing.} The $2^{12}$ FORS instances are used in a fixed order, each for exactly 16 signatures.
+\paragraph{Signing.} The $j$-th signature uses the FORS instance given by a hash of the public parameter
+and $j$: random as in a plain pruned key (so the security is the same), but known in advance.
 \begin{itemize}
-  \item preprocessing, for the next instance: MPC hashes its $24\,576$ secrets into leaves, which are
-        opened. The FORS trees and the WOTS$^+$C counter search run in the clear, then MPC walks the WOTS
-        chains to the signed positions (120 hashes) and opens them (the WOTS signature is the same for
-        the 16 signatures of the instance).
-  \item online, for a message $m$: open $R_0=\bigoplus_i\hash(k_i,m)$ (local hashes, no MPC), which nobody
-        can predict. Every operator grinds $R=\hash(R_0,\mathit{ctr})$ until the digest's leaf index is
-        the current instance ($2^{26}$ tries), keeping the first counter that works. Then open the 24
-        FORS secrets selected by the digest.
+  \item preprocessing, if the instance is new: MPC hashes its $24\,576$ secrets into leaves and opens
+        them. The FORS trees and the WOTS$^+$C counter search run in the clear, then MPC walks the WOTS
+        chains to the signed positions (120 hashes) and opens them. All of it is cached for later uses
+        of the instance.
+  \item online, for a message $m$: open $R_0=\bigoplus_i\hash(k_i,m)$ (local hashes, no MPC). Every
+        operator grinds $R=\hash(R_0,\mathit{ctr})$ until $m$ selects the instance ($2^{26}$ tries),
+        keeping the first counter that works. Then open the 24 selected FORS secrets.
 \end{itemize}
-Each opened value is checked, against public data (a FORS leaf, a chain endpoint) or by majority (each
-term of $R_0$ is sent by 3 operators), so a bad share is caught and its sender identified. The others
-retry without it, with the same $R$. Using each instance exactly 16 times is safer than the random use of
-a plain pruned key: the FORS reuse term is $2^{-144}$ instead of $2^{-130}$.
 
-\paragraph{Share refresh.} The public key only fixes the WOTS chain starts of the kept leaves, and a FORS
-key is only fixed once its WOTS key signs it. So between two instances, the operators can refresh their
-shares without changing the public key:
+\paragraph{Cheaters.} The MPC protocol is maliciously secure, and every opened value is checked: against
+public data (a FORS leaf, a chain end) or by majority (each term of $R_0$ is sent by 3 operators). So a
+cheater is caught and identified, and the others retry without it, with the same $R$.
+
+\paragraph{Share refresh.} The public key only fixes the WOTS chain starts, and a FORS instance is only
+fixed once its WOTS key signs it. So the shares can be refreshed with the same public key:
 \begin{enumerate}
-  \item each operator turns its seeds into explicit shares of the chain starts of the unused leaves (at
-        most $2^{18}$ values)
+  \item each operator turns its seeds into explicit shares of what is fixed and still needed: the chain
+        starts of the unused leaves (at most $2^{18}$) and the FORS secrets of the used instances
+        ($24\,576$ each).
   \item each operator deals a random sharing of zero, which is added to these shares: same values, fresh
         shares. Holders compare hashes of what they receive, and a masked random linear combination is
         opened to check that each dealt sharing is really zero (otherwise a cheater could shift the
         secrets and break the key).
-  \item new seeds are sampled as in keygen, for the future FORS instances and randomizers, and the old
-        seeds and shares are deleted.
+  \item new seeds are sampled as in keygen, for the new instances and randomizers, and the old seeds and
+        shares are deleted.
 \end{enumerate}
 To replace an operator, the newcomer first gets the terms it takes over from their other holders. This
-costs about 13~MB per operator and no MPC hash. It protects against an attacker who corrupts one operator
-per period, as long as old shares are really deleted.
+costs no MPC hash, and from 13~MB per operator for a fresh key to 5~GB once all instances are used. It
+protects against an attacker who corrupts one operator per period, as long as old shares are really
+deleted.
 
-\paragraph{Cost.} An MPC hash is a BLAKE2s compression on a secret input, about $14.7\cdot10^3$ AND gates
-(XOR is free). What matters is the traffic per AND gate per operator, with malicious security (corrupt
-operators may deviate arbitrarily):
+\paragraph{MPC cost.} An MPC hash is a BLAKE2s compression on a secret input, about $14.7\cdot10^3$ AND
+gates (XOR is free). What matters is the traffic per AND gate per operator, with malicious security:
 \begin{itemize}
   \item about 1 bit: 3 operators, $f=1$~\cite{BGIN19} (more CPU), e.g.\ when only 3 are online
   \item about 1.5 bits: 4 operators, $f=1$~\cite{FF21} (caveat~\cite{BS26}), the numbers above

@@ -50,7 +50,6 @@ def main():
                     help="signer cache sizes for pruned-key signing (KiB)")
     ap.add_argument("--pruned", type=int, nargs="+", default=[12, 14, 16], help="log2 kept leaves")
     ap.add_argument("--threshold", type=int, default=12, help="log2 kept leaves for the threshold estimate")
-    ap.add_argument("--uses", type=int, default=16, help="signatures per FORS instance in threshold mode")
     ap.add_argument("--bits-per-and", type=float, nargs="+", default=[1.0, 1.5],
                     help="MPC traffic per AND gate per operator (estimate)")
     x = ap.parse_args()
@@ -118,8 +117,7 @@ def main():
     b = x.threshold
     dkg = 2**b * v * (q - 1)  # chain steps of the kept WOTS keys
     fresh = k * 2**a + T  # one instance, preprocessed: FORS leaf hashes and WOTS chain steps
-    online = 2**h * (rnd + msg_block)  # grind until idx is the current instance
-    fixed = -math.log2((1 - (1 - 2**-a) ** x.uses) ** k)  # FORS reuse term, each instance used exactly `uses` times
+    online = 2**h * (rnd + msg_block)  # grind until idx is the instance drawn for this signature
 
     def traffic(c):
         def size(nbytes):
@@ -129,15 +127,16 @@ def main():
             return f"{nbytes:.0f} B"
         return " / ".join(size(c * and_gates * bpa / 8) for bpa in x.bits_per_and)
 
-    print(f"  threshold, 2^{b} kept leaves, {x.uses} signatures per FORS instance ({2**b * x.uses} in all), "
-          f"{and_gates} AND gates per compression, traffic per operator at "
+    print(f"  threshold, 2^{b} kept leaves, {and_gates} AND gates per compression, traffic per operator at "
           f"{' / '.join(map(str, x.bits_per_and))} bits per AND:")
     print(f"    DKG: {fmt(dkg)} MPC compressions, {traffic(dkg)}")
-    print(f"    preprocessing one FORS instance: {fmt(fresh)} MPC compressions, {traffic(fresh)}")
+    print(f"    preprocessing a new FORS instance: {fmt(fresh)} MPC compressions, {traffic(fresh)}")
     print(f"    online: no MPC, grinding {fmt(online)} compressions in the clear")
-    print(f"    FORS reuse term with fixed use: 2^-{fixed:.1f}")
-    refresh = 2**b * v * N  # explicit share term of every kept chain start, sent by each dealer to 3 holders
-    print(f"    share refresh: about {3 * refresh / 1e6:.3g} MB sent per operator (4 operators), no MPC")
+    # Share refresh: each dealer sends one explicit share term to its 3 holders. The term covers the chain
+    # starts of the unused leaves and the FORS secrets of the used instances.
+    fresh_key, all_used = 3 * 2**b * v * N, 3 * 2**b * k * 2**a * N
+    print(f"    share refresh, no MPC: about {fresh_key / 1e6:.3g} MB sent per operator for a fresh key, "
+          f"{all_used / 1e9:.3g} GB once all instances are used")
 
 
 if __name__ == "__main__":
