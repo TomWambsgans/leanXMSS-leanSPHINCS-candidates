@@ -97,9 +97,9 @@ A concrete example of what's possible:
   \item malicious security against 1 operator, with abort (but 2 colluders can rebuild the key, unlike
         3-of-4 BLS)
   \item DKG: no trusted dealer
-  \item keygen: $786\cdot10^3$ MPC hashes, about 2.2~GB of traffic per operator and 2\,500 rounds (assuming
+  \item keygen: $786\cdot10^3$ MPC hashes, about 1.45~GB of traffic per operator and 2\,500 rounds (assuming
         BLAKE2s)
-  \item signing: thanks to caching of the sub-tree in XMSS, only one FORS has to be computed in MPC, $24\,696$ MPC hashes, about 68~MB of
+  \item signing: thanks to caching of the sub-tree in XMSS, only one FORS has to be computed in MPC, $24\,696$ MPC hashes, about 45~MB of
         traffic per operator and 2\,600 rounds. Either:
     \begin{itemize}
     \item vanilla, once the message is known (signing takes a few seconds)
@@ -136,7 +136,7 @@ $24\,576$ secrets into leaves, which are opened; the operators build the FORS ro
 counter search, compare hashes of the result, and MPC walks the WOTS chains to the signed positions (120
 hashes).
 
-\paragraph{Cheaters.} The MPC is maliciously secure with abort~\cite{FF21,BS26} and verified before any
+\paragraph{Cheaters.} The MPC is maliciously secure with abort~\cite{BGIN19} and verified before any
 opening; opened values are checked against public data or against the other holders of the same term. A
 cheater can only cause aborts (identifying it would cost more), so the operators retry with each set of 3.
 Once $R_0$ is opened, the signature is always finished: nobody can
@@ -146,8 +146,8 @@ preview FORS indices and pick which get opened.
 gates (XOR is free) and AND-depth 884, i.e.\ 884 rounds (2\,500 rounds is about 2 minutes at 50~ms per
 round). Traffic per AND gate per operator, with malicious security:
 \begin{itemize}
-  \item about 1 bit: 3 operators~\cite{BGIN19}
-  \item about 1.5 bits: 4 operators~\cite{FF21,BS26} (the numbers above)
+  \item about 1 bit: 3 operators~\cite{BGIN19} (the numbers above)
+  \item about 1.5 bits: 4 operators~\cite{FF21,BS26}
   \item about 10 to 16 bits: 3 operators with cut-and-choose~\cite{FLNW17}
   \item about 8 to 16 bits: bigger clusters (e.g.\ 10-of-15), Shamir over $\mathrm{GF}(2^4)$ (our estimate
         from~\cite{ATLAS21})
@@ -182,7 +182,7 @@ holders of each of its 3 terms send it to the newcomer, who checks that the copi
 makes the leaving operator's terms useless. The same idea also changes $n$ and the threshold, with the same public key: each
 old term is split into fresh pieces for the new committee's terms (checked by its other holders), and the
 old terms are deleted. The cost is one more MPC hash per secret: keygen
-$1.05\cdot10^6$ MPC hashes (2.9~GB, 3\,300 rounds), and $49\cdot10^3$ per FORS instance (136~MB, 4\,200
+$1.05\cdot10^6$ MPC hashes (1.9~GB, 3\,300 rounds), and $49\cdot10^3$ per FORS instance (91~MB, 4\,200
 rounds), about $1.3\times$ and $2\times$ today. The randomizer keeps its own seeds, so online signing stays
 MPC-free.
 
