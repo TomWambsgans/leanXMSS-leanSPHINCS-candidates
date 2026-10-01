@@ -51,7 +51,45 @@ Properties:
 
 \section{Usage}
 
-Powerfull laptop CPUs can compute on the order of a $10^9$ SHA2 or BLAKE2s compressions per second.
+\subsection{Practical consideration}
+
+\begin{itemize}
+  \item Powerfull laptop CPUs can compute on the order of a $10^9$ SHA2 or BLAKE2s compressions per second (using SIMD and multi-threading). 
+  \item A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.
+  \item MPC: BLAKE2s is about $14.7\cdot10^3$ AND gates (XOR gates are free), and the main cost is
+        communication per AND gate per operator:
+  \begin{itemize}
+    \item about 1 bit, with an honest majority and few operators, using replicated sharing: each secret bit is
+          split into XOR shares and every operator holds several of them.
+          \begin{itemize}
+            \item 3 operators, 1 corrupt, semi-honest: exactly 1 bit~\cite{AFLNO16}
+            \item 3 operators, 1 corrupt, malicious: about 1 bit plus a small proof, more CPU,
+                  even with guaranteed output~\cite{BGIN19}
+            \item 4 operators, 1 corrupt, malicious: about 1.5 bits~\cite{FF21}. Each message is sent by
+                  one operator and hash-checked by another, so a cheater is caught and named
+                  (caveat~\cite{BS26})
+          \end{itemize}
+    \item about 10 bits: the simpler malicious 3-operator protocols, which check random multiplication
+          triples by cut-and-choose (7--10 bits)~\cite{FLNW17}. Also larger honest-majority clusters with
+          packed Shamir sharing (e.g.\ 10-of-15 with 4 corrupt): about 5--12 bits.
+    \item tens of bits: larger clusters with plain Shamir sharing over $\mathrm{GF}(2^4)$ or
+          $\mathrm{GF}(2^8)$, about 15--40 bits and 2 rounds per AND layer~\cite{ATLAS21}
+    \item hundreds of bits and more: no honest majority (e.g.\ secrecy against 2 of 4), using garbled
+          circuits or oblivious transfer. At least 256 bits per AND gate even
+          semi-honest~\cite{ZRE15}, more when malicious.
+  \end{itemize}
+  \item For us (keygen $1.2\cdot10^{10}$ AND gates, FORS instance $3.6\cdot10^8$): 1 bit gives 1.4 GB and
+        45 MB per operator, 10 bits gives 14 GB and 450 MB.
+  \item Vocabulary:
+  \begin{itemize}
+    \item semi-honest: corrupt operators follow the protocol but pool what they see
+    \item malicious: they may deviate arbitrarily, which is what we need
+    \item honest majority: fewer than half are corrupt, which allows cheap secret-sharing protocols
+    \item abort: cheating is detected and the protocol stops, ideally naming the cheater
+    \item guaranteed output: the honest operators finish anyway
+  \end{itemize}
+\end{itemize}
+
 
 \subsection{Full \texorpdfstring{$2^{30}$}{2\textasciicircum 30} lifetime}
 
@@ -135,6 +173,15 @@ fixed versions may cost more. Bigger clusters (e.g.\ 10-of-15) need Shamir shari
 \bibitem{BS26} A.~Br\"uggemann, T.~Schneider. \emph{When Trying to Catch Cheaters Breaks the MPC: Breaking
   and Fixing Delayed Consistency Checks in Trident, Fantastic Four, SWIFT, and Quad}, 2026.
   \url{https://eprint.iacr.org/2026/234}.
+\bibitem{AFLNO16} T.~Araki, J.~Furukawa, Y.~Lindell, A.~Nof, K.~Ohara. \emph{High-Throughput Semi-Honest
+  Secure Three-Party Computation with an Honest Majority}. ACM CCS, 2016. \url{https://eprint.iacr.org/2016/768}.
+\bibitem{FLNW17} J.~Furukawa, Y.~Lindell, A.~Nof, O.~Weinstein. \emph{High-Throughput Secure Three-Party
+  Computation for Malicious Adversaries and an Honest Majority}. Eurocrypt, 2017.
+  \url{https://eprint.iacr.org/2016/944}.
+\bibitem{ATLAS21} V.~Goyal, H.~Li, R.~Ostrovsky, A.~Polychroniadou, Y.~Song. \emph{ATLAS: Efficient and
+  Scalable MPC in the Honest Majority Setting}. CRYPTO, 2021. \url{https://eprint.iacr.org/2021/833}.
+\bibitem{ZRE15} S.~Zahur, M.~Rosulek, D.~Evans. \emph{Two Halves Make a Whole: Reducing Data Transfer in
+  Garbled Circuits using Half Gates}. Eurocrypt, 2015. \url{https://eprint.iacr.org/2014/756}.
 \end{thebibliography}
 
 \end{document}
