@@ -92,11 +92,10 @@ A concrete example of what's possible:
 \begin{itemize}
   \item 3-of-4: any 3 operators can sign
   \item lifetime: $2^{16}$ signatures, using the same hypertree pruning as in \cref{sec:pruned}
-  \item malicious security against 1 corrupt operator: alone it can neither sign nor learn anything about
-        the key, and if it deviates, signing only aborts (but 2 colluders can rebuild the key, unlike
+  \item malicious security against 1 operator, with abort (but 2 colluders can rebuild the key, unlike
         3-of-4 BLS)
   \item DKG: no trusted dealer
-  \item share refresh: the shares can be refreshed, and an operator replaced, with the same public key
+  \item share refresh and operator replacement, with the same public key
   \item keygen: $786\cdot10^3$ MPC hashes, about 2.2~GB of traffic per operator and 2\,500 rounds (assuming
         BLAKE2s)
   \item signing: thanks to caching of the sub-tree in XMSS, only one FORS has to be computed in MPC, $24\,696$ MPC hashes, about 68~MB of
@@ -109,110 +108,63 @@ A concrete example of what's possible:
     \end{itemize}
 \end{itemize}
 
-\paragraph{Where the secrets are used.} A signer only uses its secrets in three places:
+\paragraph{Idea.} Only hashes on secret inputs need MPC: WOTS chain steps and FORS leaves. The rest (trees,
+grinding, WOTS$^+$C counter) runs in the clear. These hashes don't depend on the message, so a FORS
+instance can be computed in advance, and the randomizer ground until the message selects it.
+
+\paragraph{Secrets.} Each secret is the XOR of 4 terms, term $i$ known to every operator except
+$i$~\cite{CDI05}: 1 operator learns nothing, any 2 know everything. Term $i$ is $\hash(k_i,\mathit{addr})$
+for a seed $k_i$, so nothing is stored.
+
+\paragraph{Keygen (DKG).} Each $k_i$ is sampled by an operator other than $i$ and sent to the two others,
+who compare its hash. The public parameter and the 14 surrogate nodes come from commit-reveal coin tossing
+(a chosen surrogate could hide a known subtree). MPC hashes the 64 chains of the $2^{12}$ kept leaves to
+their ends ($786\cdot10^3$ hashes) and opens the ends; the tree is built in the clear.
+
+\paragraph{Signing.} The operators agree on $m$, open $R_0=\bigoplus_i\hash(k_i,\mathsf{msg},m)$ (local
+hashes) and grind $R=\hash(R_0,\mathit{ctr})$, taking the first counter that works:
 \begin{itemize}
-  \item WOTS: each chain starts at a secret and is hashed forward, to its end at keygen (the ends make the
-        leaf) and to the signed position at signing
-  \item FORS: each leaf is the hash of a secret
-  \item the randomizer: a hash of a secret and the message
+  \item vanilla: until the leaf index lands in the kept subtree, then compute the selected FORS instance
+        in MPC and open the 24 selected secrets
+  \item with preprocessing: until it lands on the next instance, drawn and computed in advance as
+        $\bigoplus_i\hash(k_i,\mathsf{next},R')$ ($R'$ the previous randomizer), then open the 24 selected
+        secrets
 \end{itemize}
-Everything else (the XMSS tree, the FORS trees above the leaves, the WOTS$^+$C counter search) only hashes
-public values. So the operators keep the secrets shared, compute only these hashes jointly, and open only
-what the signature reveals. Moreover, the WOTS and FORS hashes don't depend on the message, which only
-selects the FORS instance and the 24 secrets to open. So they can be computed before the message is
-known, if we fix the instance in advance and grind the randomizer until the message selects it.
+Instances stay random, so security is as for a plain pruned key. Computing an instance: MPC hashes its
+$24\,576$ secrets into leaves, which are opened; the operators build the FORS root, run the WOTS$^+$C
+counter search, compare hashes of the result, and MPC walks the WOTS chains to the signed positions (120
+hashes).
 
-\paragraph{Sharing the secrets.} Usually each secret is a hash of the secret key and its address, which
-would already need MPC. Instead, each secret is the XOR of 4 random terms, term $i$ being known to every
-operator except $i$~\cite{CDI05}. One operator misses its own term, so it learns nothing; any 2 hold all
-terms. There are about $10^8$ secrets (and the randomizer depends on the message), so the terms are not
-stored but derived from 4 seeds: term $i$ is $\hash(k_i,\mathit{addr})$, with $k_i$ known to every
-operator except $i$.
+\paragraph{Cheaters.} The MPC is maliciously secure with abort~\cite{FF21,BS26} and verified before any
+opening; opened values are checked against public data or against the other holders of the same term. A
+cheater can only cause aborts (identifying it would cost more), so the operators retry with each set of 3.
+Once $R_0$ is opened, the signature is always finished, with no share refresh in between: nobody can
+preview FORS indices and pick which get opened.
 
-\paragraph{Keygen (DKG).}
-\begin{enumerate}
-  \item each $k_i$ is sampled by an operator other than $i$ and sent to the two others, who compare its
-        hash. So the seed a corrupt operator misses comes from an honest one.
-  \item the public parameter and the 14 surrogate nodes come from commit-reveal coin tossing, so that no
-        operator can pick a surrogate with a subtree it knows below.
-  \item MPC hashes the 64 chains of each of the $2^{12}$ kept leaves to their ends ($786\cdot10^3$ hashes)
-        and opens the ends. The tree is built in the clear, and its root is the public key.
-\end{enumerate}
+\paragraph{Share refresh.} The public key fixes only the WOTS chain starts, and a FORS instance is fixed
+once its WOTS key signs it. The operators turn their seeds into explicit shares of the chain starts of
+unsigned leaves and of the FORS secrets of signed leaves, add masks that XOR to 0 (expanded from fresh
+seeds they exchange), sample new seeds for the rest, and delete the old ones: no MPC, a few hundred
+bytes. A new operator receives the terms it takes over (13~MB to 5~GB).
 
-\paragraph{Signing.} The operators agree on the message $m$ (by comparing hashes), then open
-$R_0=\bigoplus_i\hash(k_i,\mathsf{msg},m)$ (local hashes, no MPC; the tag $\mathsf{msg}$ keeps it apart from
-the secrets). Every operator grinds $R=\hash(R_0,\mathit{ctr})$ and keeps the first counter that works, so
-they all get the same $R$. Then:
+\paragraph{MPC cost.} An MPC hash is a BLAKE2s compression on a secret input: about $14.7\cdot10^3$ AND
+gates (XOR is free) and AND-depth 884, i.e.\ 884 rounds (2\,500 rounds is about 2 minutes at 50~ms per
+round). Traffic per AND gate per operator, with malicious security:
 \begin{itemize}
-  \item vanilla: grind until the leaf index lands in the kept subtree ($2^{14}$ tries), as in a plain
-        pruned key. Compute the selected FORS instance in MPC, then open the 24 selected
-        FORS secrets.
-  \item with preprocessing: the instance of the next signature is drawn in advance, as
-        $\bigoplus_i\hash(k_i,\mathsf{next},R')$ with $R'$ the randomizer of the previous signature, and
-        computed in MPC. Grind until the leaf index is that instance ($2^{26}$ tries), then open the 24
-        selected FORS secrets. The next signature uses it whatever the message, so nobody can steer
-        signatures onto chosen instances.
+  \item about 1 bit: 3 operators~\cite{BGIN19}
+  \item about 1.5 bits: 4 operators~\cite{FF21,BS26} (the numbers above)
+  \item about 10 to 16 bits: 3 operators with cut-and-choose~\cite{FLNW17}
+  \item about 8 to 16 bits: bigger clusters (e.g.\ 10-of-15), Shamir over $\mathrm{GF}(2^4)$ (our estimate
+        from~\cite{ATLAS21})
 \end{itemize}
-Either way the instances are random, as in a plain pruned key, so the security is the same. Computing a
-FORS instance in MPC: hash its $24\,576$ secrets into leaves and open them, build the FORS trees and run
-the WOTS$^+$C counter search in the clear, compare hashes of the FORS root, counter and positions, then
-walk the WOTS chains to the signed positions (120 hashes) and open them.
+With $n$ operators and $f<n/2$ corrupt (one seed per set of $f$ operators), $2f+1$ must be online; signing
+despite $f$ cheaters needs $n>3f$.
 
-\paragraph{Cheaters.} The MPC is maliciously secure with abort~\cite{FF21,BS26}, and is verified before
-anything is opened. Every opened value is checked: against public data (a FORS leaf, a chain end), or
-against the other holders of the same term (with at most 1 corrupt operator among 3 online, each term has
-an honest holder online). So a cheater can only make signing abort. The operators then retry with each
-set of 3 in turn, one of which excludes it. Identifying the cheater would cost more: FF21 only narrows it
-down to a pair, and robust variants hand all inputs to one honest operator. Once $R_0$ is opened, the
-signature is always finished (retries give the same $R$), with no share refresh in between: otherwise a
-cheater could preview the FORS indices of several messages and choose which get opened.
-
-\paragraph{Share refresh.} The public key only fixes the WOTS chain starts, and a FORS instance is only
-fixed once its WOTS key signs it. So the shares can be refreshed with the same public key:
-\begin{enumerate}
-  \item each operator turns its seeds into explicit shares of what is fixed and still needed: the chain
-        starts of the leaves not signed yet (at most $2^{18}$) and the FORS secrets of the signed leaves
-        ($24\,576$ each).
-  \item each operator sends a random seed to the others. The seeds expand into 4 masks per value that
-        XOR to 0, added to the 4 terms: same values, fresh shares. The operators compare hashes of the
-        seeds. (Each operator holds 3 of the 4 terms, so it could derive the 4th mask anyway: a seed hides
-        nothing more.)
-  \item new seeds are sampled as in keygen, for the new instances and randomizers, and the old seeds and
-        shares are deleted.
-\end{enumerate}
-This costs no MPC hash, a few rounds and a few hundred bytes. It protects against an attacker who
-corrupts one operator per period, as long as old shares are really deleted. To replace an operator, the
-newcomer first gets the terms it takes over from their other holders: from 13~MB for a fresh key to
-5~GB once all leaves are signed.
-
-\paragraph{MPC cost.} An MPC hash is a BLAKE2s compression on a secret input, about $14.7\cdot10^3$ AND
-gates (XOR is free). What matters is the traffic per AND gate per operator, with malicious security:
-\begin{itemize}
-  \item about 1 bit: 3 operators, $f=1$~\cite{BGIN19} (more CPU), e.g.\ when only 3 are online
-  \item about 1.5 bits: 4 operators, $f=1$~\cite{FF21} (with the fix of~\cite{BS26}), the numbers above
-  \item about 10 to 16 bits: 3 operators with simpler cut-and-choose~\cite{FLNW17}, for a $2^{-40}$ to
-        $2^{-80}$ chance of undetected cheating
-  \item about 8 to 16 bits: bigger clusters (e.g.\ 10-of-15) with Shamir sharing over $\mathrm{GF}(2^4)$, 2
-        to 4 field elements per AND gate (our estimate, from~\cite{ATLAS21})
-\end{itemize}
-Rounds: each layer of AND gates costs one round, and all the hashes of a layer run together. A BLAKE2s
-compression has AND-depth 884 (with ripple-carry adders, as in the AND count above), so a WOTS chain of 3
-hashes takes 2\,500 rounds: about 2 minutes at 50~ms per round, 2.5~s at 1~ms. Parallel-prefix adders
-would halve the depth, for 4 times the AND gates. The malicious-security checks add a few rounds, and
-preprocessing can run several instances at once, since they are known in advance.
-
-Everything works for $n$ operators with $f<n/2$ corrupt, with one seed per set of $f$ operators known to
-the others, as long as $2f+1$ of them are online: every opened term then has an honest holder online, so
-any inconsistency aborts. Signing despite $f$ active cheaters needs $n>3f$, so that some $2f+1$ operators
-are all honest.
-
-\paragraph{Against 2 of 4.} For malicious security against 2 in 3-of-4, use one seed per pair of operators
-(6 seeds): 2 colluders miss one, and any 3 hold all. But 3 signers then have no honest majority, and 2
-cheaters can always block signing. Mature protocols for this (authenticated garbling~\cite{YWZ20}) cost
-about 4\,100 bits per AND gate per operator: 5.9~TB at keygen. The 2026 protocol of~\cite{BGHIN26}
-(multiplication triples from a pseudorandom correlation generator, checked via PIR) costs only about 4
-bits: about 6~GB at keygen and 180~MB per FORS instance, but about 15 to 150 core-hours per operator at
-keygen. Its cheapest figures rely on new LPN variants, and it is not implemented yet for 3 parties.
+\paragraph{Against 2 of 4.} One seed per pair (6 seeds) gives secrecy against 2, but 3 signers then have
+no honest majority (and 2 cheaters can block signing). Authenticated garbling~\cite{YWZ20}: about 4\,100
+bits per AND gate (5.9~TB at keygen). The 2026 protocol of~\cite{BGHIN26}: about 4 bits (6~GB at keygen,
+180~MB per FORS instance), but 15 to 150 core-hours per operator at keygen, new LPN variants, and no
+implementation yet for 3 parties.
 
 \begin{thebibliography}{9}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
