@@ -161,9 +161,7 @@ bits per AND gate (5.9~TB at keygen). The 2026 protocol of~\cite{BGHIN26}: about
 180~MB per FORS instance), but 15 to 150 core-hours per operator at keygen, new LPN variants, and no
 implementation yet for 3 parties.
 
-\subsubsection{Key rotation}
-
-The shares above cannot be rotated: new seeds would give new secrets, and
+\paragraph{Key rotation.} The shares above cannot be rotated: new seeds would give new secrets, and
 the public key commits to them. Rotation becomes possible if, as in SLH-DSA, every secret is
 $\hash(S,\mathit{addr})$ for one master secret $S$, computed in MPC, and the operators share only $S$:
 $S=t_1\oplus t_2\oplus t_3\oplus t_4$, with term $t_i$ held by every operator except $i$. A rotation needs
