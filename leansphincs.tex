@@ -308,8 +308,6 @@ first use of a FORS instance & 24.6K & 46--69 MB\\
 \begin{itemize}
 \item All chain steps at key generation, and all leaf hashes of a FORS instance, are independent and run as
       one batch.
-\item The tweak and $P$ are public, so in the first round 6 of the 8 BLAKE2s mixing functions need no
-      AND gates.
 \item Low-depth adders cut a compression from about 2\,500 to about 500 rounds of interaction for about twice
       the AND gates; they matter on wide-area networks.
 \item Operators can prepare FORS instances in the background and grind toward prepared ones. This keeps
