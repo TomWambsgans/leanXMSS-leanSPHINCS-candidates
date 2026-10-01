@@ -39,9 +39,10 @@
 Same shape as SLH-DSA-128-24 from NIST's recent SP~800-230~\cite{SP800230} (single XMSS layer), with the differences:
   \begin{itemize}
     \item $h = 26$, instead of $22$ (tree height, i.e. height of the only XMSS layer)
-    \item $k = 24$, instead of $6$ (number of FORS trees)
+    \item $k = 24$, instead of $6$ (number of trees per FORS)
     \item $a = 10$, instead of $24$ (height of each FORS tree)
-    \item WOTS$^+$C~\cite{HK22C}, instead of WOTS, with a target sum of 120
+    \item WOTS$^+$C~\cite{HK22C}, instead of WOTS: 64 chains of length $w=4$ (as before, i.e.\ 3 hash
+          steps each), with a target sum of 120 for the signed positions
   \end{itemize}
 
 Properties:
