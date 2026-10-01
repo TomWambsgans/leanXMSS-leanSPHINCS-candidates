@@ -50,6 +50,7 @@ def main():
                     help="signer cache sizes for pruned-key signing (KiB)")
     ap.add_argument("--pruned", type=int, nargs="+", default=[12, 14, 16], help="log2 kept leaves")
     ap.add_argument("--threshold", type=int, default=12, help="log2 kept leaves for the threshold estimate")
+    ap.add_argument("--uses", type=int, default=16, help="signatures per FORS instance in threshold mode")
     ap.add_argument("--bits-per-and", type=float, nargs="+", default=[1.0, 1.5],
                     help="MPC traffic per AND gate per operator (estimate)")
     x = ap.parse_args()
@@ -116,9 +117,9 @@ def main():
     and_gates = 80 * 184
     b = x.threshold
     dkg = 2**b * v * (q - 1)  # chain steps of the kept WOTS keys
-    fresh = k * 2**a  # FORS leaf hashes of one instance, on first use
-    total = 2**b * fresh
-    sigs = 2 ** (L - (h - b))
+    fresh = k * 2**a  # FORS leaf hashes of one instance, preprocessed
+    online = 2**h * (rnd + msg_block)  # grind until idx is the current instance
+    fixed = -math.log2((1 - (1 - 2**-a) ** x.uses) ** k)  # FORS reuse term, each instance used exactly `uses` times
 
     def traffic(c):
         def size(nbytes):
@@ -128,13 +129,13 @@ def main():
             return f"{nbytes:.0f} B"
         return " / ".join(size(c * and_gates * bpa / 8) for bpa in x.bits_per_and)
 
-    print(f"  threshold, 2^{b} kept leaves (lifetime 2^{L - (h - b):.2f}), {and_gates} AND gates per compression, "
-          f"traffic per operator at {' / '.join(map(str, x.bits_per_and))} bits per AND:")
+    print(f"  threshold, 2^{b} kept leaves, {x.uses} signatures per FORS instance ({2**b * x.uses} in all), "
+          f"{and_gates} AND gates per compression, traffic per operator at "
+          f"{' / '.join(map(str, x.bits_per_and))} bits per AND:")
     print(f"    DKG: {fmt(dkg)} MPC compressions, {traffic(dkg)}")
-    print(f"    fresh FORS instance: {fmt(fresh)} MPC compressions, {traffic(fresh)}")
-    print(f"    all instances over the key's life: {fmt(total)} MPC compressions, {traffic(total)}; "
-          f"per signature on average {traffic(total / sigs)}")
-    print(f"    public FORS cache: {2**b * k * (2 ** (a + 1) - 1) * N / 2**30:.1f} GiB")
+    print(f"    preprocessing one FORS instance: {fmt(fresh)} MPC compressions, {traffic(fresh)}")
+    print(f"    online: no MPC, grinding {fmt(online)} compressions in the clear")
+    print(f"    FORS reuse term with fixed use: 2^-{fixed:.1f}")
 
 
 if __name__ == "__main__":
