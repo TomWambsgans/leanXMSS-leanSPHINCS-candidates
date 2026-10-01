@@ -56,38 +56,6 @@ Properties:
 \begin{itemize}
   \item Powerfull laptop CPUs can compute on the order of a $10^9$ SHA2 or BLAKE2s compressions per second (using SIMD and multi-threading). 
   \item A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.
-  \item MPC: BLAKE2s is about $14.7\cdot10^3$ AND gates (XOR gates are free), and the main cost is
-        communication per AND gate per operator:
-  \begin{itemize}
-    \item about 1 bit, with an honest majority and few operators, using replicated sharing: each secret bit is
-          split into XOR shares and every operator holds several of them.
-          \begin{itemize}
-            \item 3 operators, 1 corrupt, semi-honest: exactly 1 bit~\cite{AFLNO16}
-            \item 3 operators, 1 corrupt, malicious: about 1 bit plus a small proof, more CPU,
-                  even with guaranteed output~\cite{BGIN19}
-            \item 4 operators, 1 corrupt, malicious: about 1.5 bits~\cite{FF21}. Each message is sent by
-                  one operator and hash-checked by another, so a cheater is caught and named
-                  (caveat~\cite{BS26})
-          \end{itemize}
-    \item about 10 bits: the simpler malicious 3-operator protocols, which check random multiplication
-          triples by cut-and-choose (7--10 bits)~\cite{FLNW17}. Also larger honest-majority clusters with
-          packed Shamir sharing (e.g.\ 10-of-15 with 4 corrupt): about 5--12 bits.
-    \item tens of bits: larger clusters with plain Shamir sharing over $\mathrm{GF}(2^4)$ or
-          $\mathrm{GF}(2^8)$, about 15--40 bits and 2 rounds per AND layer~\cite{ATLAS21}
-    \item hundreds of bits and more: no honest majority (e.g.\ secrecy against 2 of 4), using garbled
-          circuits or oblivious transfer. At least 256 bits per AND gate even
-          semi-honest~\cite{ZRE15}, more when malicious.
-  \end{itemize}
-  \item For us (keygen $1.2\cdot10^{10}$ AND gates, FORS instance $3.6\cdot10^8$): 1 bit gives 1.4 GB and
-        45 MB per operator, 10 bits gives 14 GB and 450 MB.
-  \item Vocabulary:
-  \begin{itemize}
-    \item semi-honest: corrupt operators follow the protocol but pool what they see
-    \item malicious: they may deviate arbitrarily, which is what we need
-    \item honest majority: fewer than half are corrupt, which allows cheap secret-sharing protocols
-    \item abort: cheating is detected and the protocol stops, ideally naming the cheater
-    \item guaranteed output: the honest operators finish anyway
-  \end{itemize}
 \end{itemize}
 
 
@@ -142,16 +110,22 @@ locally.
         randomizer. A signing attempt counts against the lifetime even if it aborts.
 \end{itemize}
 
-\paragraph{Cost.} An MPC hash is a BLAKE2s compression on a secret input, about $14.7\cdot10^3$ AND gates.
-With 3 or 4 operators ($f=1$), malicious honest-majority MPC costs about 1--2 bits per AND gate per
-operator~\cite{BGIN19,FF21}. Per operator:
+\paragraph{Cost.} An MPC hash is a BLAKE2s compression on a secret input, about $14.7\cdot10^3$ AND gates
+(XOR is free). What matters is the traffic per AND gate per operator:
 \begin{itemize}
-  \item keygen: 1.4--2.2 GB
-  \item first use of a FORS instance: 45--68 MB
+  \item about 1 bit: honest majority with 3--4 operators (1 corrupt) and replicated XOR sharing. Exactly 1 bit
+        semi-honest~\cite{AFLNO16}. Malicious: about 1 bit with 3 operators~\cite{BGIN19} (more CPU), about
+        1.5 bits with 4~\cite{FF21} (caveat~\cite{BS26})
+  \item about 10 bits: simpler malicious 3-operator protocols (cut-and-choose on triples)~\cite{FLNW17}, or
+        bigger clusters (e.g.\ 10-of-15) with packed Shamir sharing
+  \item tens of bits: bigger clusters with plain Shamir sharing~\cite{ATLAS21}
+  \item hundreds or more: no honest majority (garbled circuits, OT), at least 256 bits even
+        semi-honest~\cite{ZRE15}
 \end{itemize}
-Caveats: batched consistency checks were recently broken in some of these protocols~\cite{BS26}, and the
-fixed versions may cost more. Bigger clusters (e.g.\ 10-of-15) need Shamir sharing, roughly
-5--20$\times$ more. And secrecy only holds against $f$ colluders, not $2f$ as in BLS threshold signatures.
+For us (keygen $1.2\cdot10^{10}$ AND gates, FORS instance $3.6\cdot10^8$), 1 bit means 1.4 GB and 45 MB per
+operator. Secrecy only holds against $f$ colluders, not $2f$ as in BLS threshold signatures. Vocabulary:
+semi-honest means corrupt operators follow the protocol, malicious means they may deviate (what we
+need), and honest majority means fewer than half are corrupt.
 
 \begin{thebibliography}{9}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
