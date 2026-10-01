@@ -88,6 +88,8 @@ For weaker devices. The trick is to trade smaller lifetime for faster keygen, us
 
 \subsection{Threshold signing}
 
+\subsubsection{3-of-4 with a DKG}
+
 A concrete example of what's possible:
 \begin{itemize}
   \item 3-of-4: any 3 operators can sign
@@ -182,6 +184,24 @@ $1.05\cdot10^6$ MPC hashes (2.9~GB, 3\,300 rounds), and $49\cdot10^3$ per FORS i
 rounds), about $1.3\times$ and $2\times$ today. The randomizer keeps its own seeds, so online signing stays
 MPC-free.
 
+\subsubsection{Any \texorpdfstring{$t$-of-$n$}{t-of-n} with a trusted dealer}
+
+With a trusted dealer, signing needs no MPC at all, for any $t$-of-$n$, following PRAWNS~\cite{PRAWNS}:
+\begin{itemize}
+  \item keygen: the dealer samples the key of a threshold PRF $F$ and sets every FORS secret of the $2^{12}$
+        kept instances to $F(\mathit{addr})$. It builds the pruned key, publishes all the FORS leaves
+        (1.6~GB) and the WOTS signature of every FORS root, gives each operator its share of $F$, and
+        deletes everything else
+  \item signing: the $t$ signers pick the randomizer by commit-reveal and grind it into the kept subtree.
+        Each sends its evaluation shares of $F$ at the 24 opened FORS secrets, with the message as context
+        (shares for different messages can't be combined). Anyone combines $t$ shares and checks each
+        secret against its public leaf
+\end{itemize}
+This is secure against $t-1$ malicious signers (e.g.\ 15-of-20 against 14), and $n$, $t$ and the shares
+can change without changing the public key. For large $n$ and $t$ (say 30-of-40), $F$ is a lattice (LWE)
+threshold PRF over Shamir shares, used only by the signers; for small $\binom{n}{t}$ it can be hash-based,
+like our seeds. The price is trusting the dealer at keygen: PRAWNS has no efficient DKG.
+
 \begin{thebibliography}{9}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
   Cases}. NIST SP~800-230 (draft), 2026. \url{https://csrc.nist.gov/pubs/sp/800/230/ipd}.
@@ -199,6 +219,8 @@ MPC-free.
 \bibitem{FF21} A.~Dalskov, D.~Escudero, M.~Keller. \emph{Fantastic Four: Honest-Majority Four-Party
   Secure Computation With Malicious Security}. USENIX Security, 2021.
   \url{https://eprint.iacr.org/2020/1330}.
+\bibitem{PRAWNS} D.~Boneh, B.~B\"unz, J.~D., Y.~Litchev, K.~Nazirkhanova. \emph{PRAWNS: Threshold Hash-Based
+  Signatures from Threshold PRFs}, 2026. \url{https://eprint.iacr.org/2026/2142}.
 \bibitem{YWZ20} K.~Yang, X.~Wang, J.~Zhang. \emph{More Efficient MPC from Improved Triple Generation and
   Authenticated Garbling}. ACM CCS, 2020. \url{https://eprint.iacr.org/2019/1104}.
 \bibitem{BGHIN26} E.~Boyle, N.~Gilboa, M.~Hamilis, Y.~Ishai, A.~Nof. \emph{Dishonest-Majority Secure
