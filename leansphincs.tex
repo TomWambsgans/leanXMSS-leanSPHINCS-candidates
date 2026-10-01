@@ -156,9 +156,7 @@ they all get the same $R$. Then:
 Either way the instances are random, as in a plain pruned key, so the security is the same. Computing a
 FORS instance in MPC: hash its $24\,576$ secrets into leaves and open them, build the FORS trees and run
 the WOTS$^+$C counter search in the clear, compare hashes of the FORS root, counter and positions, then
-walk the WOTS chains to the signed positions (120 hashes) and open them. All of it is cached (the cache is
-also the list of signed leaves that share refresh needs), and a leaf is never computed again with other
-secrets: two WOTS signatures from one key would allow forgeries.
+walk the WOTS chains to the signed positions (120 hashes) and open them.
 
 \paragraph{Cheaters.} The MPC is maliciously secure with abort~\cite{FF21,BS26}, and is verified before
 anything is opened. Every opened value is checked: against public data (a FORS leaf, a chain end), or
