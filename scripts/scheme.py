@@ -117,7 +117,7 @@ def main():
     and_gates = 80 * 184
     b = x.threshold
     dkg = 2**b * v * (q - 1)  # chain steps of the kept WOTS keys
-    fresh = k * 2**a  # FORS leaf hashes of one instance, preprocessed
+    fresh = k * 2**a + T  # one instance, preprocessed: FORS leaf hashes and WOTS chain steps
     online = 2**h * (rnd + msg_block)  # grind until idx is the current instance
     fixed = -math.log2((1 - (1 - 2**-a) ** x.uses) ** k)  # FORS reuse term, each instance used exactly `uses` times
 
@@ -136,6 +136,8 @@ def main():
     print(f"    preprocessing one FORS instance: {fmt(fresh)} MPC compressions, {traffic(fresh)}")
     print(f"    online: no MPC, grinding {fmt(online)} compressions in the clear")
     print(f"    FORS reuse term with fixed use: 2^-{fixed:.1f}")
+    refresh = 2**b * v * N  # explicit share term of every kept chain start, sent by each dealer to 3 holders
+    print(f"    share refresh: about {3 * refresh / 1e6:.3g} MB sent per operator (4 operators), no MPC")
 
 
 if __name__ == "__main__":

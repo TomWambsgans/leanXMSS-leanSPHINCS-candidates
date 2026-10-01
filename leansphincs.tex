@@ -82,15 +82,17 @@ For weaker devices. The trick is to trade smaller lifetime for faster keygen, us
 
 \subsection{Threshold signing (MPC)}
 
-What we get, with a pruned key ($2^{16}$ signatures):
+Example of what's possible, with a pruned key (lifetime of $2^{16}$ signatures):
 \begin{itemize}
   \item 3-of-4: 4 operators, any 3 can sign, and the verifier doesn't change
   \item malicious security against 1 corrupt operator: alone it can neither sign nor learn anything about
         the key, and if it deviates it is identified and the others sign without it (but 2 colluders can
         rebuild the key, unlike 3-of-4 BLS)
   \item DKG: no trusted dealer, nobody ever sees the key
+  \item share refresh: the shares can be refreshed, and an operator replaced, without changing the public
+        key (about 13~MB per operator)
   \item keygen: $786\cdot10^3$ MPC hashes, about 2.2~GB of traffic per operator
-  \item signing, preprocessing (before the messages are known): $24\,576$ MPC hashes, about 68~MB per
+  \item signing, preprocessing (before the messages are known): $24\,696$ MPC hashes, about 68~MB per
         operator, once every 16 signatures
   \item signing, online: no MPC, $2.7\cdot10^8$ compressions of grinding in the clear (about 0.3~s) and
         2 rounds of about 1~KB per operator
@@ -114,15 +116,16 @@ its own seed, so it learns nothing; two hold all seeds.
   \item the public parameter and the 14 surrogate nodes come from commit-reveal coin tossing, so that no
         operator can pick a surrogate with a subtree it knows below.
   \item MPC runs the 3 steps of the 64 chains of each of the $2^{12}$ kept leaves ($786\cdot10^3$ hashes),
-        opens the endpoints and keeps shares of the intermediate positions. The rest of the tree is
-        built in the clear, and its root is the public key.
+        and opens the endpoints. The rest of the tree is built in the clear, and its root is the public
+        key.
 \end{enumerate}
 
 \paragraph{Signing.} The $2^{12}$ FORS instances are used in a fixed order, each for exactly 16 signatures.
 \begin{itemize}
   \item preprocessing, for the next instance: MPC hashes its $24\,576$ secrets into leaves, which are
-        opened. The FORS trees and the WOTS$^+$C counter search run in the clear, then the WOTS chain
-        values are opened (the WOTS signature is the same for the 16 signatures of the instance).
+        opened. The FORS trees and the WOTS$^+$C counter search run in the clear, then MPC walks the WOTS
+        chains to the signed positions (120 hashes) and opens them (the WOTS signature is the same for
+        the 16 signatures of the instance).
   \item online, for a message $m$: open $R_0=\bigoplus_i\hash(k_i,m)$ (local hashes, no MPC), which nobody
         can predict. Every operator grinds $R=\hash(R_0,\mathit{ctr})$ until the digest's leaf index is
         the current instance ($2^{26}$ tries), keeping the first counter that works. Then open the 24
@@ -132,6 +135,23 @@ Each opened value is checked, against public data (a FORS leaf, a chain endpoint
 term of $R_0$ is sent by 3 operators), so a bad share is caught and its sender identified. The others
 retry without it, with the same $R$. Using each instance exactly 16 times is safer than the random use of
 a plain pruned key: the FORS reuse term is $2^{-144}$ instead of $2^{-130}$.
+
+\paragraph{Share refresh.} The public key only fixes the WOTS chain starts of the kept leaves, and a FORS
+key is only fixed once its WOTS key signs it. So between two instances, the operators can refresh their
+shares without changing the public key:
+\begin{enumerate}
+  \item each operator turns its seeds into explicit shares of the chain starts of the unused leaves (at
+        most $2^{18}$ values)
+  \item each operator deals a random sharing of zero, which is added to these shares: same values, fresh
+        shares. Holders compare hashes of what they receive, and a masked random linear combination is
+        opened to check that each dealt sharing is really zero (otherwise a cheater could shift the
+        secrets and break the key).
+  \item new seeds are sampled as in keygen, for the future FORS instances and randomizers, and the old
+        seeds and shares are deleted.
+\end{enumerate}
+To replace an operator, the newcomer first gets the terms it takes over from their other holders. This
+costs about 13~MB per operator and no MPC hash. It protects against an attacker who corrupts one operator
+per period, as long as old shares are really deleted.
 
 \paragraph{Cost.} An MPC hash is a BLAKE2s compression on a secret input, about $14.7\cdot10^3$ AND gates
 (XOR is free). What matters is the traffic per AND gate per operator, with malicious security (corrupt

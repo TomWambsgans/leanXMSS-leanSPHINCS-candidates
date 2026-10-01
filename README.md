@@ -10,7 +10,8 @@ model (proof in Lean 4 to come):
 - signing in about 421K compressions with a 1 MiB cache, or about 142K for a pruned key with a 16 KiB cache.
 - threshold signing, e.g. 3-of-4 with malicious security against 1 operator and a DKG: MPC for the XMSS
   at key generation and for each FORS instance in advance; online signing needs no MPC, only grinding the
-  randomizer onto a precomputed instance. The verifier is unchanged.
+  randomizer onto a precomputed instance. Shares can be refreshed without changing the public key. The
+  verifier is unchanged.
 
 Costs count 64-byte compression-function calls, as for BLAKE2s.
 
