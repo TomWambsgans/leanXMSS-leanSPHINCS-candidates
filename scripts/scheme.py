@@ -44,13 +44,14 @@ def main():
     ap.add_argument("--k", type=int, default=24)
     ap.add_argument("--w", type=int, default=2, help="bits per WOTS chain position")
     ap.add_argument("--T", type=int, default=120, help="sum of the signed chain positions")
-    ap.add_argument("--cache-level", type=int, default=10, help="tree level held in the signer cache")
+    ap.add_argument("--cache-mib", type=float, nargs="+", default=[0, 1, 1024],
+                    help="signer cache sizes for full-key signing (MiB); pruned keys use 1 MiB")
     ap.add_argument("--pruned", type=int, nargs="+", default=[12, 14, 16], help="log2 kept leaves")
     ap.add_argument("--threshold", type=int, default=12, help="log2 kept leaves for the threshold estimate")
     ap.add_argument("--bits-per-and", type=float, nargs="+", default=[1.0, 1.5],
                     help="MPC traffic per AND gate per operator (estimate)")
     x = ap.parse_args()
-    h, a, k, w, T, c = x.h, x.a, x.k, x.w, x.T, x.cache_level
+    h, a, k, w, T = x.h, x.a, x.k, x.w, x.T
     v, q = 128 // w, 2**w
 
     # per-call costs (input after the 32-byte prefix)
@@ -67,8 +68,23 @@ def main():
     keygen = derive + 2**h * leaf + (2**h - 1) * node
     size = N + k * (1 + a) * N + 4 + v * N + h * N
     L = max_log2_sigs(128, Params("", 16, h, a, k, 30), "exact", "max")
-    tree = 2**c * leaf + (2**c - 1) * node + (2 ** (h - c) - 1) * node  # below and above the cached level
-    sign = rnd + blocks * msg_block + fors_sign + wots_sign + tree
+
+    def tree_cost(height, cache_nodes):
+        """Per-signature tree work: the best of keeping one level c (rebuild the 2^c leaves below the cached
+        node, hash the cached level up) or keeping every level >= c (rebuild the 2^c leaves below)."""
+        if 2 ** (height + 1) - 1 <= cache_nodes:
+            return 0
+        best = 2**height * leaf + (2**height - 1) * node  # no usable cache: rebuild the whole tree
+        for c in range(1, height + 1):
+            below = 2**c * leaf + (2**c - 1) * node
+            if 2 ** (height - c + 1) - 1 <= cache_nodes:
+                best = min(best, below)
+            if 2 ** (height - c) <= cache_nodes:
+                best = min(best, below + (2 ** (height - c) - 1) * node)
+        return best
+
+    def nodes(mib):
+        return int(mib * 2**20) // N
 
     print(f"leanSphincs candidate: h={h} a={a} k={k} WOTS+C w={w} v={v} T={T}; costs in 64-byte compressions")
     print(f"  signature {size} B (rho 16, FORS {k * (1 + a) * N}, counter 4, WOTS {v * N}, path {h * N}); pk 32 B")
@@ -79,12 +95,15 @@ def main():
     print(f"  lifetime at 128 bits: 2^{L:.2f} signatures")
     print(f"  verification: {verify} compressions")
     print(f"  WOTS leaf {leaf}; key generation {keygen:,} ({fmt(keygen)})")
-    print(f"  signing, cache = level {c} ({2 ** (h - c) * N // 2**20} MiB): {fmt(sign)} "
-          f"(tree {fmt(tree)}, FORS {fmt(fors_sign)}, WOTS {fmt(wots_sign)})")
+    for mib in x.cache_mib:
+        tree = tree_cost(h, nodes(mib))
+        sign = rnd + blocks * msg_block + fors_sign + wots_sign + tree
+        print(f"  signing with a {mib:g} MiB cache: {fmt(sign)} "
+              f"(tree {fmt(tree)}, FORS {fmt(fors_sign)}, WOTS {fmt(wots_sign)})")
     for b in x.pruned:
         kg = derive + 2**b * leaf + (2**b - 1) * node + (h - b) * (derive + node)  # subtree + surrogate path
         grind = 2 ** (h - b) * (rnd + msg_block)  # idx is in the first digest block
-        rebuild = 0 if 2 ** (b + 1) <= 2 ** (h - c) else 2 * leaf + node
+        rebuild = tree_cost(b, nodes(1))  # the kept subtree, with a 1 MiB cache
         s = grind + (blocks - 1) * msg_block + fors_sign + wots_sign + rebuild
         print(f"  pruned, 2^{b} leaves: lifetime 2^{L - (h - b):.2f}, key generation {fmt(kg)}, "
               f"signing {fmt(s)} (grinding {fmt(grind)})")

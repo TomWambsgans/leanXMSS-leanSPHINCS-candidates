@@ -45,7 +45,7 @@ Properties:
   \item secret key: 32 bytes
   \item signature size: 5\,684 bytes
   \item verification: 391 compressions (with BLAKE2s)
-  \item security: NIST level 1 \cite{FIPS205}. 127 bits, classical, in the ROM. Applies to both usage cited bellow.
+  \item security: NIST level 1 \cite{FIPS205} (applies to both usage cited bellow) (127 bits SUF in the ROM, and $\approx 64$ bits in the QROM)
   \item lifetime: up to $2^{30}$ signatures.
 \end{itemize}
 
@@ -55,9 +55,14 @@ Properties:
 
 \begin{itemize}
   \item keygen: $19 \cdot 10^9$ compressions
-  \item signing: about 421K compressions with a 1~MiB cache (level 10 of the tree): rebuild the $2^{10}$
-        leaves below the cached node (281K), hash the cache up for the upper path (66K), build the FORS
-        instance (74K)
+  \item signing (the FORS instance is always 74K of it):
+  \begin{itemize}
+    \item without cache: same as keygen, the whole tree is rebuilt
+    \item with a 1~MiB cache (level 10 of the tree): $421\cdot10^3$ compressions. Rebuild the $2^{10}$ leaves
+          below the cached node (281K) and hash the cache up for the upper path (66K)
+    \item with a 1~GiB cache (every level above the leaves): $75\cdot10^3$ compressions, only the sibling
+          leaf is rebuilt
+  \end{itemize}
   \item lifetime: $2^{30}$ signatures. Don't go beyond: security drops by about 18 bits per doubling
         (112 bits at $2^{31}$)
 \end{itemize}
