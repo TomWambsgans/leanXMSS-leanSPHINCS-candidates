@@ -1,4 +1,4 @@
-% Build with: mkdir -p .build && pdflatex -output-directory=.build leansphincs.tex (twice)
+% Build with: latexmk leansphincs.tex (output in .build/)
 \documentclass[11pt]{article}
 
 \usepackage[T1]{fontenc}
@@ -28,6 +28,11 @@
 \begin{document}
 \maketitle
 \vspace{-3em}
+
+\begin{center}
+  \fbox{\parbox{0.9\linewidth}{\centering\textbf{Warning:} this note is only the opinion of a single
+  individual, and may evolve in the future.}}
+\end{center}
 
 \section{The scheme}
 
