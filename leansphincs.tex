@@ -142,11 +142,16 @@ Once $R_0$ is opened, the signature is always finished, with no share rotation i
 preview FORS indices and pick which get opened.
 
 \paragraph{Share rotation.} Goal: new shares for the same secrets (hence the same public key), so that shares
-stolen earlier become useless. Each secret is the XOR of 4 terms, and XORing the terms with 4 random masks
-that XOR to 0 keeps the secret but makes the terms fresh. So each operator expands its seeds into explicit
-terms for all the secrets of the key (about 4.8~GB), the operators exchange fresh seeds that expand into
-the masks and apply them, and the old seeds are deleted; the randomizer seeds are simply replaced. No MPC
-and a few hundred bytes of traffic. This protects against an attacker who corrupts one operator per
+stolen earlier become useless. New seeds alone won't do, since they would give new secrets. Instead:
+\begin{enumerate}
+  \item each operator computes, from its seeds, its 3 terms of every secret of the key, and stores them
+        (about 4.8~GB)
+  \item for every secret, the operators take 4 random masks that XOR to 0 (expanded from fresh seeds they
+        send each other), and XOR term $i$ with mask $i$: the secret is unchanged, but the terms are fresh
+  \item they delete the old seeds and the masks. The randomizer, which depends on the message, just gets
+        new seeds.
+\end{enumerate}
+No MPC, and a few hundred bytes of traffic. This protects against an attacker who corrupts one operator per
 period. To replace an operator, the newcomer first receives the terms it takes over, then a rotation makes
 the old operator's terms useless.
 
