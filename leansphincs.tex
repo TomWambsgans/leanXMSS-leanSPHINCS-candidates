@@ -28,90 +28,48 @@
 \maketitle
 \vspace{-3em}
 
-\begin{itemize}
-  \item Same shape as SLH-DSA-128-24 from NIST's recent SP~800-230~\cite{SP800230}: a single XMSS tree,
-        where each WOTS key signs a FORS instance. Height $h=26$ (instead of 22), and FORS has 24 trees
-        (instead of 6), each of height 10 (instead of 24).
-  \item WOTS is replaced by WOTS$^+$C~\cite{HK22C}: $w=4$, 64 chains, no checksum, digits summing to
-        $T=120$.
-  \item 127 bits of classical security (ROM), up to $2^{30}$ signatures.
-  \item Public key 32 B, signature 5\,684 B.
-  \item Verification: 391 BLAKE2s compressions, the same for every signature.
-  \item Full key: 18.4G compressions to generate, about 421K to sign with a 1~MiB cache.
-  \item Pruned key ($2^{16}$ signatures): 1.12M to generate, about 140K to sign.
-  \item Threshold signing (e.g.\ 3-of-4) works with a small MPC key generation, and the verifier is unchanged.
-\end{itemize}
-
 \section{The scheme}
 
-Everything is hashed with BLAKE2s, truncated to 128 bits, with a 16-byte tweak and a 16-byte public
-parameter $P$ in front: $\Th(P,\tw,M)=\hash(\tw\concat P\concat M)_{[0,128)}$. Costs count BLAKE2s
-compressions (64-byte blocks), so a chain step, a Merkle node or a secret derivation costs~1.
+Same shape as SLH-DSA-128-24 from NIST's recent SP~800-230~\cite{SP800230} (single XMSS layer), with the differences:
+  \begin{itemize}
+    \item $h = 26$, instead of $22$ (tree height, i.e. height of the only XMSS layer)
+    \item $k = 24$, instead of $6$ (number of FORS trees)
+    \item $a = 10$, instead of $24$ (height of each FORS tree)
+    \item WOTS$^+$C~\cite{HK22C}, instead of WOTS, with a target sum of 120
+  \end{itemize}
 
-\begin{center}
-\begin{tabular}{@{}lll@{}}
-\toprule
-Merkle tree & $h=26$, $d=1$ & $2^{26}$ WOTS$^+$C leaves\\
-WOTS$^+$C & $w=4$, 64 chains, $T=120$ & digits must sum to $T$, found with a 32-bit counter\\
-FORS & $a=10$, $k=24$ & plain FORS, 24 trees of 1024 leaves\\
-Digest & 266 bits & 26-bit leaf index, then $24\times10$-bit FORS indices\\
-\bottomrule
-\end{tabular}
-\end{center}
+Properties:
 
-\paragraph{WOTS$^+$C.} No checksum chains: the signer grinds a counter $c$ until the 64 base-4 digits of
-$\Th(P,\tw_{\mathrm{enc}},M\concat c)$ sum to $T=120$. That takes 829 tries on average (9.7 bits). The signer
-walks 120 chain steps, the verifier 72, always. A larger $T$ saves verifier steps but costs grinding
-quickly (14.7K tries for $T=128$). Each WOTS key only ever signs its own FORS public key, a fixed value, so
-reusing a leaf never signs two different messages.
-
-\paragraph{Digest.} $D_b=\hash(\tw_{\mathrm{msg}}(b)\concat P\concat\rho\concat\mathit{root}\concat m)$
-for $b=0,1$ gives 512 bits, of which we use 266. The leaf index $\idx$ is the low 26 bits and comes from
-$D_0$ alone. Then come the 24 FORS indices.
-
-\paragraph{Signature and costs.}
-$\rho\,(16)\concat\text{FORS}\,(24\cdot11\cdot16)\concat c\,(4)\concat\text{WOTS}\,(64\cdot16)\concat
-\text{path}\,(26\cdot16)=5\,684$ bytes. The public key is $(\mathit{root},P)$.
 \begin{itemize}
-  \item \textbf{Verify:} $4+264+7+1+72+17+26=391$ compressions: digest, FORS leaves and paths, FORS roots,
-        WOTS encoding, chains, WOTS leaf, Merkle path.
-  \item \textbf{Keygen:} $2^{26}\times274$ = 18.4G. A WOTS leaf costs 273 and its Merkle node 1.
-  \item \textbf{Sign:} cache tree level 10 ($2^{16}$ nodes, 1~MiB). A signature then rebuilds the $2^{10}$
-        leaves under its node (281K), hashes the cache up for the upper path (66K), and builds the FORS
-        instance (74K). Total about 421K.
+  \item public key: 32 bytes
+  \item secret key: 32 bytes
+  \item signature size: 5\,684 bytes
+  \item verification: 391 compressions (with BLAKE2s, similar with SHA2)
+  \item security: 127 bits, classical, in the ROM. Applies to both usage cited bellow. Quantum security: to be adapted from the NIST standards.
+  \item lifetime: up to $2^{30}$ signatures.
 \end{itemize}
 
-\paragraph{Why these parameters.} Pruned signers (below) pay for one FORS instance per signature. The
-target of about $2^{17}$ for that forces small trees, $a=10$, and then $k=24$ is the smallest $k$ reaching
-$2^{30}$ at $h=26$. $h=26$ balances a pruned key's keygen against its grinding. $d=1$ keeps verification
-cheap and makes pruning and threshold signing simple.
+\section{Usage}
 
-\section{Security}
+\subsection{Full}
 
-We claim strong unforgeability with 127 bits of classical security in the ROM: any adversary making $q$
-hash calls, with at most $2^{30}$ signing queries, wins with probability at most $q/2^{127}$. That is the
-statement proved in Lean for the leanVM variant~\cite{LEANVM}; the proof for this scheme is still to do.
+Standard stateless usage, for a signer that can afford a big keygen.
+\begin{itemize}
+  \item keygen: 18.4G compressions (all $2^{26}$ WOTS$^+$C leaves, 274 each with the Merkle node)
+  \item signing: about 421K compressions with a 1~MiB cache (level 10 of the tree): rebuild the $2^{10}$
+        leaves below the cached node (281K), hash the cache up for the upper path (66K), build the FORS
+        instance (74K)
+  \item lifetime: $2^{30}$ signatures. Don't go beyond: security drops by about 18 bits per doubling
+        (112 bits at $2^{31}$)
+\end{itemize}
 
-The dominant term is FORS reuse. With $\lambda=q_s/2^{26}$ signatures per instance on average, a hash query
-forges with probability $\sum_r \mathrm{Pois}(\lambda,r)(1-(1-2^{-10})^r)^{24}$:
-\begin{center}
-\begin{tabular}{@{}lccccc@{}}
-\toprule
-$q_s$ & $2^{28}$ & $2^{29}$ & $2^{30}$ & $2^{31}$ & $2^{32}$\\
-$-\log_2$ forgery per query & 159.5 & 145.7 & 129.8 & 111.9 & 92.3\\
-\bottomrule
-\end{tabular}
-\end{center}
-At $2^{30}$ this term, plus $2^{-128}$ for inverting $\Th$, stays below $2^{-127}$. Past $2^{30}$ it falls
-by about 18 bits per doubling, so don't overuse a key.
+\subsection{Pruned}
 
-\section{Pruned keys}
-
-A weak signer builds only one subtree of height $b$, chosen pseudorandomly from its secret. It replaces
-the $26-b$ siblings above it with pseudorandom surrogate nodes. Following conduition's hypertree
-pruning~\cite{conduition}, it signs by grinding $\rho$ until $\idx$ lands in its subtree: $2^{26-b}$ tries
-of 4 compressions. Only $2^b$ FORS instances are ever used, so the lifetime is $2^{30.11-(26-b)}$. Nothing
-changes for the verifier.
+For weak signers, using hypertree pruning~\cite{conduition}: only build one subtree of height $b$, chosen
+pseudorandomly from the secret, and replace the $26-b$ siblings above it by pseudorandom surrogate nodes.
+To sign, grind the randomizer until the leaf index falls in the subtree: $2^{26-b}$ tries of 4
+compressions each. The verifier doesn't see any difference. Only $2^b$ FORS instances are used, so the
+lifetime becomes $2^{30.1-(26-b)}$.
 \begin{center}
 \begin{tabular}{@{}ccccc@{}}
 \toprule
@@ -123,78 +81,31 @@ $b$ & lifetime & keygen & signing & of which grinding\\
 \bottomrule
 \end{tabular}
 \end{center}
-With $d=1$, a WOTS key still only signs its own FORS key, so pruning can't make it sign two values.
 
-\section{Threshold signing}
-
-Setting: $n$ operators, at most $f<n/2$ malicious, malicious-secure honest-majority MPC, e.g.\ 3-of-4 with
-$f=1$. Secrecy holds against $f$ colluders (not $2f$). Use a pruned key, here $b=12$.
+\paragraph{Threshold (MPC).} Pruned keys also make threshold signing practical, with an unchanged verifier.
 \begin{itemize}
-  \item \textbf{Shares.} Every secret derivation $\Th(P,\tw,S)$ becomes $\bigoplus_{\mathcal T}\Th(P,\tw,k_{\mathcal T})$
-        over replicated seeds~\cite{CDI05}: one seed per set $\mathcal T$ of $f$ operators, known to everyone
-        outside $\mathcal T$. Shares are computed locally, without MPC.
-  \item \textbf{DKG.} An MPC runs only the WOTS chains of the $2^b$ kept leaves and opens the endpoints.
-        The rest of the tree is built in the clear.
-  \item \textbf{Signing.} Operators open a shared randomizer for $m$ and grind in the clear. On the first
-        use of a FORS instance, an MPC hashes its 24\,576 secrets into leaves, which are opened and cached;
-        later uses are free. Then they open the WOTS chain values and the 24 FORS secrets. Each opened
-        value is checked against public data (endpoint or FORS leaf), so bad shares are caught. Retries
-        after an abort reuse the same $\rho$, and a signing attempt counts against the lifetime even if it
-        aborts.
+  \item setting: $n$ operators, at most $f<n/2$ malicious (e.g.\ 3-of-4, $f=1$), honest-majority MPC with
+        malicious security. Secrecy holds against $f$ colluders (not $2f$)
+  \item shares: each secret derivation $\Th(P,\tw,S)$ becomes $\bigoplus_{\mathcal T}\Th(P,\tw,k_{\mathcal T})$,
+        with one seed per set $\mathcal T$ of $f$ operators, known to everyone outside
+        $\mathcal T$~\cite{CDI05}. Shares are computed locally
+  \item keygen: MPC only on the WOTS chains of the $2^b$ kept leaves; the rest of the tree in the clear
+  \item signing: grind in the clear. On the first use of a FORS instance, MPC hashes its 24\,576 secrets
+        into leaves, which are then public and cached. Then open the WOTS chain values and the 24 FORS
+        secrets, each checked against public data
+  \item cost ($b=12$): a BLAKE2s compression is about 14.7K AND gates, and malicious 3- or 4-party
+        protocols cost about 1--2 bits per AND gate per operator~\cite{BGIN19,FF21}. That gives about
+        1.5--2.2 GB per operator for keygen (786K compressions) and 46--69 MB per FORS instance on first
+        use. Caveat: batched consistency checks were recently shown insecure in some of these
+        protocols~\cite{BS26}, and the fixed versions may cost more
+  \item bigger clusters (e.g.\ 10-of-15) need Shamir sharing: roughly 5--20$\times$ more per operator
 \end{itemize}
-Cost: a BLAKE2s compression is about 14.7K AND gates. Malicious 3- or 4-party protocols cost about 1--2
-bits per AND gate per operator~\cite{BGIN19,FF21}. Per operator:
-\begin{center}
-\begin{tabular}{@{}lll@{}}
-\toprule
- & MPC compressions & traffic per operator\\
-\midrule
-DKG ($2^{16}$ key) & 786K & 1.5--2.2 GB\\
-first use of a FORS instance & 24.6K & 46--69 MB\\
-\bottomrule
-\end{tabular}
-\end{center}
-Larger clusters need Shamir sharing over a small field: roughly 5--20$\times$ more per operator for, say,
-10-of-15, with packing (many BLAKE2s calls per share) at the low end. To go faster without touching the
-verifier, prepare FORS instances in the background, move all FORS work into the DKG, or use a trusted
-dealer.
-
-\section{Open points}
-
-\begin{itemize}
-  \item The Lean proof of the 127-bit claim.
-  \item An MPC implementation, to replace the per-gate estimates above with measurements.
-  \item A 16-bit WOTS counter would suffice and save 2 bytes.
-\end{itemize}
-
-\appendix
-\section{Tweaks}
-
-16 bytes: $\mathsf{enc}(t,\kappa,\tau,p,j)=\texttt{02}\concat t\concat\kappa\concat\texttt{00}\concat
-p_{32}\concat\tau_{32}\concat j_{32}$, with little-endian 32-bit fields.
-
-\begin{center}
-\small
-\begin{tabular}{@{}ll@{\qquad}ll@{}}
-\toprule
-WOTS secret $(e,i)$ & $(0,0,0,i,e)$ & FORS secret $(\idx,\kappa,j)$ & $(8,\kappa,\idx,0,j)$\\
-chain step $(e,i,\mu)$ & $(1,0,0,4i+\mu-1,e)$ & FORS leaf $(\idx,\kappa,j)$ & $(9,\kappa,\idx,0,j)$\\
-WOTS leaf $e$ & $(2,0,0,0,e)$ & FORS node $(\idx,\kappa,\lambda,j)$ & $(10,\kappa,\idx,\lambda,j)$\\
-Merkle node $(\lambda,j)$ & $(3,0,0,\lambda,j)$ & FORS roots $\idx$ & $(11,0,\idx,0,0)$\\
-WOTS encoding $e$ & $(4,0,0,0,e)$ & digest block $b$ & $(12,0,0,b,0)$\\
-parameter $P$ & $(5,0,0,0,0)$ & surrogate $\lambda$ (pruned) & $(13,0,0,\lambda,0)$\\
-randomizer $i$ & $(7,0,0,i,0)$ & & \\
-\bottomrule
-\end{tabular}
-\end{center}
 
 \begin{thebibliography}{9}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
   Cases}. NIST SP~800-230 (draft), 2026. \url{https://csrc.nist.gov/pubs/sp/800/230/ipd}.
 \bibitem{HK22C} M.~Kudinov, A.~H\"ulsing, E.~Ronen, E.~Yogev. \emph{SPHINCS$^+$C: Compressing SPHINCS$^+$
   With (Almost) No Cost}. IEEE S\&P, 2023. \url{https://eprint.iacr.org/2022/778}.
-\bibitem{LEANVM} leanEthereum. \emph{leanVM SPHINCS$^+$ spec and Lean proof}.
-  \url{https://github.com/leanEthereum/leanVM}.
 \bibitem{conduition} conduition. \emph{Pruning Hypertrees for the Lax and Lazy}, 2026.
   \url{https://conduition.io/cryptography/hypertree-pruning/}.
 \bibitem{CDI05} R.~Cramer, I.~Damg{\aa}rd, Y.~Ishai. \emph{Share Conversion, Pseudorandom Secret-Sharing and
@@ -205,6 +116,9 @@ randomizer $i$ & $(7,0,0,i,0)$ & & \\
 \bibitem{FF21} A.~Dalskov, D.~Escudero, M.~Keller. \emph{Fantastic Four: Honest-Majority Four-Party
   Secure Computation With Malicious Security}. USENIX Security, 2021.
   \url{https://eprint.iacr.org/2020/1330}.
+\bibitem{BS26} A.~Br\"uggemann, T.~Schneider. \emph{When Trying to Catch Cheaters Breaks the MPC: Breaking
+  and Fixing Delayed Consistency Checks in Trident, Fantastic Four, SWIFT, and Quad}, 2026.
+  \url{https://eprint.iacr.org/2026/234}.
 \end{thebibliography}
 
 \end{document}
