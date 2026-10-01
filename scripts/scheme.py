@@ -142,13 +142,11 @@ def main():
           f"{depth[1] + (1 + depth[q - 2] if q > 2 else 0)} rounds")
     print(f"    online: no MPC, grinding {fmt(online)} compressions in the clear "
           f"(trivial variant without preprocessing: {fmt(trivial)})")
-    # Share refresh: each operator sends a 16-byte seed to the 3 others. Replacing an operator: the newcomer
-    # receives its 3 share terms, covering the chain starts of the leaves not signed yet and the FORS
-    # secrets of the signed leaves.
-    fresh_key, all_signed = 3 * 2**b * v * N, 3 * 2**b * k * 2**a * N
-    print(f"    share refresh, no MPC: {3 * N} B sent per operator; replacing an operator: the newcomer "
-          f"receives {fresh_key / 1e6:.3g} MB for a fresh key, {all_signed / 1e9:.3g} GB once all leaves "
-          f"are signed")
+    # Share rotation: every secret of the key keeps its value; each operator holds 3 explicit terms of each
+    # (chain starts and FORS secrets of all kept leaves) and sends a 16-byte seed to the 3 others.
+    terms = 3 * 2**b * (v + k * 2**a) * N
+    print(f"    share rotation, no MPC: {3 * N} B sent per operator; explicit terms {terms / 1e9:.3g} GB per "
+          f"operator (also what a new operator receives)")
 
 
 if __name__ == "__main__":

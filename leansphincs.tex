@@ -95,7 +95,7 @@ A concrete example of what's possible:
   \item malicious security against 1 operator, with abort (but 2 colluders can rebuild the key, unlike
         3-of-4 BLS)
   \item DKG: no trusted dealer
-  \item share refresh and operator replacement, with the same public key
+  \item share rotation and operator replacement, with the same public key
   \item keygen: $786\cdot10^3$ MPC hashes, about 2.2~GB of traffic per operator and 2\,500 rounds (assuming
         BLAKE2s)
   \item signing: thanks to caching of the sub-tree in XMSS, only one FORS has to be computed in MPC, $24\,696$ MPC hashes, about 68~MB of
@@ -138,23 +138,17 @@ hashes).
 \paragraph{Cheaters.} The MPC is maliciously secure with abort~\cite{FF21,BS26} and verified before any
 opening; opened values are checked against public data or against the other holders of the same term. A
 cheater can only cause aborts (identifying it would cost more), so the operators retry with each set of 3.
-Once $R_0$ is opened, the signature is always finished, with no share refresh in between: nobody can
+Once $R_0$ is opened, the signature is always finished, with no share rotation in between: nobody can
 preview FORS indices and pick which get opened.
 
-\paragraph{Share refresh.} Goal: give the operators new shares, so that shares stolen earlier become useless,
-with the same public key. Two kinds of secrets:
-\begin{itemize}
-  \item fixed ones must keep their value: the WOTS chain starts of unsigned leaves (the public key depends
-        on them), and the FORS secrets of signed leaves (their WOTS key has signed their FORS root)
-  \item all the others (FORS secrets of unsigned leaves, randomizers) can simply come from new seeds
-\end{itemize}
-A fixed value is the XOR of 4 terms. XORing the terms with 4 random masks that XOR to 0 keeps the value but
-makes the terms fresh. So each operator expands its seeds into explicit terms of the fixed values, the
-operators exchange fresh seeds that expand into the masks and apply them, then sample new seeds for the
-other secrets and delete everything old. No MPC, a few hundred bytes of traffic; the explicit terms take
-13~MB to 5~GB per operator, growing as leaves get signed. This protects against an attacker who corrupts
-one operator per period. To replace an operator, the newcomer first receives the terms it takes over, then
-a refresh makes the old operator's terms useless.
+\paragraph{Share rotation.} Goal: new shares for the same secrets (hence the same public key), so that shares
+stolen earlier become useless. Each secret is the XOR of 4 terms, and XORing the terms with 4 random masks
+that XOR to 0 keeps the secret but makes the terms fresh. So each operator expands its seeds into explicit
+terms for all the secrets of the key (about 4.8~GB), the operators exchange fresh seeds that expand into
+the masks and apply them, and the old seeds are deleted; the randomizer seeds are simply replaced. No MPC
+and a few hundred bytes of traffic. This protects against an attacker who corrupts one operator per
+period. To replace an operator, the newcomer first receives the terms it takes over, then a rotation makes
+the old operator's terms useless.
 
 \paragraph{MPC cost.} An MPC hash is a BLAKE2s compression on a secret input: about $14.7\cdot10^3$ AND
 gates (XOR is free) and AND-depth 884, i.e.\ 884 rounds (2\,500 rounds is about 2 minutes at 50~ms per
