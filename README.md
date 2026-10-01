@@ -19,3 +19,4 @@ Costs count 64-byte compression-function calls, as for BLAKE2s.
   `mkdir -p .build && pdflatex -output-directory=.build leansphincs.tex`, run twice.
 - [`scripts/scheme.py`](scripts/scheme.py): sizes, costs and lifetime (the numbers in the note).
 - [`scripts/fors_security.py`](scripts/fors_security.py): security level against the number of signatures.
+- [`scripts/blake2s_circuit.py`](scripts/blake2s_circuit.py): AND gates and AND-depth (MPC rounds) of BLAKE2s.

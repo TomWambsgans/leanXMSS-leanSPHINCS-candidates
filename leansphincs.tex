@@ -83,18 +83,19 @@ For weaker devices. The trick is to trade smaller lifetime for faster keygen, us
 
 \subsection{Threshold signing (MPC)}
 
-What we get, e.g.\ with 4 operators and a pruned key (\cref{sec:pruned}):
+A concrete example of what's possible:
 \begin{itemize}
   \item 3-of-4: any 3 operators can sign, and the verifier doesn't change
-  \item lifetime: $2^{16}$ signatures
+  \item lifetime: $2^{16}$ signatures, using the same hypertree pruning as in \cref{sec:pruned}
   \item malicious security against 1 corrupt operator: alone it can neither sign nor learn anything about
         the key, and if it deviates it is identified and the others sign without it (but 2 colluders can
         rebuild the key, unlike 3-of-4 BLS)
   \item DKG: no trusted dealer
   \item share refresh: the shares can be refreshed, and an operator replaced, with the same public key
-  \item keygen: $786\cdot10^3$ MPC hashes, about 2.2~GB of traffic per operator (assuming BLAKE2s)
+  \item keygen: $786\cdot10^3$ MPC hashes, about 2.2~GB of traffic per operator and 2\,500 rounds (assuming
+        BLAKE2s)
   \item signing, before the message is known: at most one FORS instance to compute, $24\,696$ MPC hashes,
-        about 68~MB per operator
+        about 68~MB of traffic per operator and 2\,600 rounds
   \item signing, online: no MPC, only $2.7\cdot10^8$ compressions of grinding in the clear (about 0.3~s)
         and 2 rounds of about 1~KB per operator
 \end{itemize}
@@ -158,7 +159,8 @@ fixed once its WOTS key signs it. So the shares can be refreshed with the same p
         shares are deleted.
 \end{enumerate}
 To replace an operator, the newcomer first gets the terms it takes over from their other holders. This
-costs no MPC hash, and from 13~MB per operator for a fresh key to 5~GB once all instances are used. It
+costs no MPC hash, a few rounds, and from 13~MB per operator for a fresh key to 5~GB once all instances
+are used. It
 protects against an attacker who corrupts one operator per period, as long as old shares are really
 deleted.
 
@@ -171,6 +173,12 @@ gates (XOR is free). What matters is the traffic per AND gate per operator, with
         10-of-15) with packed Shamir sharing
   \item tens of bits: bigger clusters with plain Shamir sharing~\cite{ATLAS21}
 \end{itemize}
+Rounds: each layer of AND gates costs one round, and all the hashes of a layer run together. A BLAKE2s
+compression has AND-depth 884 (with ripple-carry adders, as in the AND count above), so a WOTS chain of 3
+hashes takes 2\,500 rounds: about 2 minutes at 50~ms per round, 2.5~s at 1~ms. Parallel-prefix adders
+would halve the depth, for 4 times the AND gates. The malicious-security checks add a few rounds, and
+preprocessing can run several instances at once, since they are known in advance.
+
 Everything works for $n$ operators with $f<n/2$ corrupt, with one seed per set of $f$ operators, known to
 the others. Without an honest majority, MPC costs orders of magnitude more.
 
