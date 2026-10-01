@@ -13,7 +13,7 @@ model (proof in Lean 4 to come):
 
 Costs count 64-byte compression-function calls, as for BLAKE2s.
 
-- [`leansphincs.tex`](leansphincs.tex): the specification. Build it with
+- [`leansphincs.tex`](leansphincs.tex): a short informal note describing the scheme. Build it with
   `mkdir -p .build && pdflatex -output-directory=.build leansphincs.tex`, run twice.
-- [`scripts/scheme.py`](scripts/scheme.py): sizes, costs and lifetime (the numbers in the specification).
+- [`scripts/scheme.py`](scripts/scheme.py): sizes, costs and lifetime (the numbers in the note).
 - [`scripts/fors_security.py`](scripts/fors_security.py): security level against the number of signatures.
