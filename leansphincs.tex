@@ -173,7 +173,9 @@ no dealer:
 $S$ never changes and nobody learns it, but terms stolen before the rotation can't be combined with terms
 stolen after (if at most 1 operator is corrupted in each period). To replace an operator, the 2 other
 holders of each of its 3 terms send it to the newcomer, who checks that the copies match; a rotation then
-makes the leaving operator's terms useless. The cost is one more MPC hash per secret: keygen
+makes the leaving operator's terms useless. The same idea also changes $n$ and the threshold, with the same public key: each
+old term is split into fresh pieces for the new committee's terms (checked by its other holders), and the
+old terms are deleted. The cost is one more MPC hash per secret: keygen
 $1.05\cdot10^6$ MPC hashes (2.9~GB, 3\,300 rounds), and $49\cdot10^3$ per FORS instance (136~MB, 4\,200
 rounds), about $1.3\times$ and $2\times$ today. The randomizer keeps its own seeds, so online signing stays
 MPC-free.
