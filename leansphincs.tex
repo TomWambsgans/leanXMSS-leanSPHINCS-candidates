@@ -156,10 +156,15 @@ With $n$ operators and $f<n/2$ corrupt (one seed per set of $f$ operators), $2f+
 despite $f$ cheaters needs $n>3f$.
 
 \paragraph{Against 2 of 4.} One seed per pair (6 seeds) gives secrecy against 2, but 3 signers then have
-no honest majority (and 2 cheaters can block signing). Authenticated garbling~\cite{YWZ20}: about 4\,100
-bits per AND gate (5.9~TB at keygen). The 2026 protocol of~\cite{BGHIN26}: about 4 bits (6~GB at keygen,
-180~MB per FORS instance), but 15 to 150 core-hours per operator at keygen, new LPN variants, and no
-implementation yet for 3 parties.
+no honest majority (and 2 cheaters can block signing), so the MPC must tolerate a dishonest majority:
+\begin{itemize}
+  \item authenticated garbling~\cite{YWZ20}: about 4\,100 bits per AND gate per operator, so 5.9~TB at
+        keygen
+  \item Beaver triples from a pseudorandom correlation generator, authenticated via PIR~\cite{BGHIN26}:
+        about 4 bits per AND gate per operator (6~GB at keygen, 180~MB per FORS instance), but 15 to 150
+        core-hours of computation per operator at keygen, relies on recent LPN variants, and is not
+        implemented yet for 3 parties
+\end{itemize}
 
 \paragraph{Key rotation.} The shares above cannot be rotated: new seeds would give new secrets, and
 the public key commits to them. Rotation becomes possible if, as in SLH-DSA, every secret is
