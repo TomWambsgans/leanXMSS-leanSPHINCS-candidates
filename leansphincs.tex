@@ -141,11 +141,20 @@ cheater can only cause aborts (identifying it would cost more), so the operators
 Once $R_0$ is opened, the signature is always finished, with no share refresh in between: nobody can
 preview FORS indices and pick which get opened.
 
-\paragraph{Share refresh.} The public key fixes only the WOTS chain starts, and a FORS instance is fixed
-once its WOTS key signs it. The operators turn their seeds into explicit shares of the chain starts of
-unsigned leaves and of the FORS secrets of signed leaves, add masks that XOR to 0 (expanded from fresh
-seeds they exchange), sample new seeds for the rest, and delete the old ones: no MPC, a few hundred
-bytes. A new operator receives the terms it takes over (13~MB to 5~GB).
+\paragraph{Share refresh.} Goal: give the operators new shares, so that shares stolen earlier become useless,
+with the same public key. Two kinds of secrets:
+\begin{itemize}
+  \item fixed ones must keep their value: the WOTS chain starts of unsigned leaves (the public key depends
+        on them), and the FORS secrets of signed leaves (their WOTS key has signed their FORS root)
+  \item all the others (FORS secrets of unsigned leaves, randomizers) can simply come from new seeds
+\end{itemize}
+A fixed value is the XOR of 4 terms. XORing the terms with 4 random masks that XOR to 0 keeps the value but
+makes the terms fresh. So each operator expands its seeds into explicit terms of the fixed values, the
+operators exchange fresh seeds that expand into the masks and apply them, then sample new seeds for the
+other secrets and delete everything old. No MPC, a few hundred bytes of traffic; the explicit terms take
+13~MB to 5~GB per operator, growing as leaves get signed. This protects against an attacker who corrupts
+one operator per period. To replace an operator, the newcomer first receives the terms it takes over, then
+a refresh makes the old operator's terms useless.
 
 \paragraph{MPC cost.} An MPC hash is a BLAKE2s compression on a secret input: about $14.7\cdot10^3$ AND
 gates (XOR is free) and AND-depth 884, i.e.\ 884 rounds (2\,500 rounds is about 2 minutes at 50~ms per
