@@ -1,0 +1,2 @@
+crates/blake2s and parts of crates/sphincs are vendored and adapted from leanVM
+(https://github.com/leanEthereum/leanVM), licensed MIT OR Apache-2.0; see licenses/.

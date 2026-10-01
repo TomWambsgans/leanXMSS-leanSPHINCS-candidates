@@ -1,0 +1,25 @@
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[workspace.lints.clippy]
+needless_range_loop = "allow"
+too_many_arguments = "allow"
+
+[workspace.dependencies]
+blake2s = { path = "crates/blake2s" }
+sphincs = { path = "crates/sphincs" }
+mpc = { path = "crates/mpc" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+debug = 1
+
+[profile.test]
+opt-level = 3

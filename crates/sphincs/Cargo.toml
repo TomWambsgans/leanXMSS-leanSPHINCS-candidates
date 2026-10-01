@@ -1,0 +1,13 @@
+[package]
+name = "sphincs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "The leanSphincs candidate: SLH-DSA-128-24 shape, h=26, a=10, k=24, WOTS+C (w=4, T=120), BLAKE2s"
+
+[lints]
+workspace = true
+
+[dependencies]
+blake2s.workspace = true
