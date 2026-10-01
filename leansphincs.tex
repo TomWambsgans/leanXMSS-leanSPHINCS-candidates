@@ -114,21 +114,18 @@ operators). $f$ colluders miss their own seed, $f+1$ hold them all. The verifier
 \end{itemize}
 
 \paragraph{Cost.} An MPC hash is a BLAKE2s compression on a secret input, about $14.7\cdot10^3$ AND gates
-(XOR is free). What matters is the traffic per AND gate per operator:
+(XOR is free). What matters is the traffic per AND gate per operator, with malicious security (corrupt
+operators may deviate arbitrarily):
 \begin{itemize}
-  \item about 1 bit: honest majority with 3--4 operators (1 corrupt) and replicated XOR sharing. Exactly 1 bit
-        semi-honest~\cite{AFLNO16}. Malicious: about 1 bit with 3 operators~\cite{BGIN19} (more CPU), about
-        1.5 bits with 4~\cite{FF21} (caveat~\cite{BS26})
-  \item about 10 bits: simpler malicious 3-operator protocols (cut-and-choose on triples)~\cite{FLNW17}, or
-        bigger clusters (e.g.\ 10-of-15) with packed Shamir sharing
+  \item about 1 bit: 3 operators, $f=1$~\cite{BGIN19} (more CPU)
+  \item about 1.5 bits: 4 operators, $f=1$~\cite{FF21} (caveat~\cite{BS26})
+  \item about 10 bits: 3 operators with simpler cut-and-choose~\cite{FLNW17}, or bigger clusters (e.g.\
+        10-of-15) with packed Shamir sharing
   \item tens of bits: bigger clusters with plain Shamir sharing~\cite{ATLAS21}
-  \item hundreds or more: no honest majority (garbled circuits, OT), at least 256 bits even
-        semi-honest~\cite{ZRE15}
 \end{itemize}
-For us (keygen $1.2\cdot10^{10}$ AND gates, FORS instance $3.6\cdot10^8$), 1 bit means 1.4 GB and 45 MB per
-operator. Secrecy only holds against $f$ colluders, not $2f$ as in BLS threshold signatures. Vocabulary:
-semi-honest means corrupt operators follow the protocol, malicious means they may deviate (what we
-need), and honest majority means fewer than half are corrupt.
+Without an honest majority it costs orders of magnitude more. For us (keygen $1.2\cdot10^{10}$ AND gates,
+FORS instance $3.6\cdot10^8$), 1 bit means 1.4 GB and 45 MB per operator. Secrecy only holds against $f$
+colluders, not $2f$ as in BLS threshold signatures.
 
 \begin{thebibliography}{9}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
@@ -150,15 +147,11 @@ need), and honest majority means fewer than half are corrupt.
 \bibitem{BS26} A.~Br\"uggemann, T.~Schneider. \emph{When Trying to Catch Cheaters Breaks the MPC: Breaking
   and Fixing Delayed Consistency Checks in Trident, Fantastic Four, SWIFT, and Quad}, 2026.
   \url{https://eprint.iacr.org/2026/234}.
-\bibitem{AFLNO16} T.~Araki, J.~Furukawa, Y.~Lindell, A.~Nof, K.~Ohara. \emph{High-Throughput Semi-Honest
-  Secure Three-Party Computation with an Honest Majority}. ACM CCS, 2016. \url{https://eprint.iacr.org/2016/768}.
 \bibitem{FLNW17} J.~Furukawa, Y.~Lindell, A.~Nof, O.~Weinstein. \emph{High-Throughput Secure Three-Party
   Computation for Malicious Adversaries and an Honest Majority}. Eurocrypt, 2017.
   \url{https://eprint.iacr.org/2016/944}.
 \bibitem{ATLAS21} V.~Goyal, H.~Li, R.~Ostrovsky, A.~Polychroniadou, Y.~Song. \emph{ATLAS: Efficient and
   Scalable MPC in the Honest Majority Setting}. CRYPTO, 2021. \url{https://eprint.iacr.org/2021/833}.
-\bibitem{ZRE15} S.~Zahur, M.~Rosulek, D.~Evans. \emph{Two Halves Make a Whole: Reducing Data Transfer in
-  Garbled Circuits using Half Gates}. Eurocrypt, 2015. \url{https://eprint.iacr.org/2014/756}.
 \end{thebibliography}
 
 \end{document}
