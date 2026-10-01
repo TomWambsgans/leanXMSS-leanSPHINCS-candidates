@@ -51,7 +51,7 @@ Properties:
   \item secret key: 32 bytes
   \item signature size: 5\,684 bytes
   \item verification: 391 compressions (with BLAKE2s)
-  \item security: NIST level 1 \cite{FIPS205} (applies to both usage cited bellow) (127 bits SUF in the ROM, and $\approx 64$ bits in the QROM)
+  \item security: NIST level 1 \cite{FIPS205} (applies to all the usages below) (127 bits SUF in the ROM, and $\approx 64$ bits in the QROM)
   \item lifetime: up to $2^{30}$ signatures.
 \end{itemize}
 
@@ -59,7 +59,7 @@ Properties:
 
 \subsection{Full \texorpdfstring{$2^{30}$}{2\textasciicircum 30} lifetime}
 
-For powerfull devices.
+For powerful devices.
 
 \begin{itemize}
   \item lifetime: $2^{30}$
@@ -71,7 +71,7 @@ For powerfull devices.
   \end{itemize}
 \end{itemize}
 
-\emph{Modern laptop CPUs can compute on the order of a $10^9$ SHA2 or BLAKE2s compressions per second.}
+\emph{Modern laptop CPUs can compute on the order of $10^9$ SHA2 or BLAKE2s compressions per second.}
 
 
 \subsection{Pruned: \texorpdfstring{$2^{16}$}{2\textasciicircum 16} lifetime}\label{sec:pruned}
@@ -93,8 +93,8 @@ A concrete example of what's possible:
   \item 3-of-4: any 3 operators can sign, and the verifier doesn't change
   \item lifetime: $2^{16}$ signatures, using the same hypertree pruning as in \cref{sec:pruned}
   \item malicious security against 1 corrupt operator: alone it can neither sign nor learn anything about
-        the key, and if it deviates it is identified and the others sign without it (but 2 colluders can
-        rebuild the key, unlike 3-of-4 BLS)
+        the key, and if it deviates, signing only aborts (but 2 colluders can rebuild the key, unlike
+        3-of-4 BLS)
   \item DKG: no trusted dealer
   \item share refresh: the shares can be refreshed, and an operator replaced, with the same public key
   \item keygen: $786\cdot10^3$ MPC hashes, about 2.2~GB of traffic per operator and 2\,500 rounds (assuming
@@ -139,27 +139,37 @@ any 2 hold all seeds.
         and opens the ends. The tree is built in the clear, and its root is the public key.
 \end{enumerate}
 
-\paragraph{Signing.} The $j$-th signature uses the FORS instance given by a hash of the public parameter
-and $j$: random as in a plain pruned key (so the security is the same), but known in advance.
+\paragraph{Signing.} The operators keep a signature counter $j$, so this mode is stateful. The $j$-th
+signature uses the FORS instance given by a hash of the public parameter and $j$: random as in a plain
+pruned key (so the security is the same), but known in advance.
 \begin{itemize}
   \item preprocessing, if the instance is new: MPC hashes its $24\,576$ secrets into leaves and opens
-        them. The FORS trees and the WOTS$^+$C counter search run in the clear, then MPC walks the WOTS
-        chains to the signed positions (120 hashes) and opens them. All of it is cached for later uses
-        of the instance.
-  \item online, for a message $m$: open $R_0=\bigoplus_i\hash(k_i,m)$ (local hashes, no MPC). Every
-        operator grinds $R=\hash(R_0,\mathit{ctr})$ until $m$ selects the instance ($2^{26}$ tries),
-        keeping the first counter that works. Then open the 24 selected FORS secrets.
+        them. The FORS trees and the WOTS$^+$C counter search run in the clear. The operators compare
+        hashes of the FORS root, counter and positions, and record that the leaf is signed. Then MPC
+        walks the WOTS chains to the signed positions (120 hashes) and opens them. All of it is cached for
+        later uses, and a signed leaf is never preprocessed again: two WOTS signatures from one key would
+        allow forgeries.
+  \item online, for a message $m$: the operators compare hashes of $(j,m)$, then open
+        $R_0=\bigoplus_i\hash(k_i,\mathsf{msg},j,m)$ (local hashes, no MPC; the tag $\mathsf{msg}$ keeps it
+        apart from the secrets). Every operator grinds $R=\hash(R_0,\mathit{ctr})$ until $m$ selects the
+        instance ($2^{26}$ tries), keeping the first counter that works, and records $(j,m,R)$. Then open
+        the 24 selected FORS secrets.
 \end{itemize}
 
-\paragraph{Cheaters.} The MPC protocol is maliciously secure, and every opened value is checked: against
-public data (a FORS leaf, a chain end) or by majority (each term of $R_0$ is sent by 3 operators). So a
-cheater is caught and identified, and the others retry without it, with the same $R$.
+\paragraph{Cheaters.} The MPC is maliciously secure with abort~\cite{FF21,BS26}, and is verified before
+anything is opened. Every opened value is checked: against public data (a FORS leaf, a chain end), or
+against the other holders of the same term (with at most 1 corrupt operator among 3 online, each term has
+an honest holder online). So a cheater can only make signing abort. The operators then retry with each
+set of 3 in turn, one of which excludes it. Identifying the cheater would cost more: FF21 only narrows it
+down to a pair, and robust variants hand all inputs to one honest operator. Once $R_0$ is opened, slot
+$j$ belongs to $m$ and is always finished with the recorded $R$, even after an abort or a share refresh:
+otherwise a cheater could preview the FORS indices of several messages and choose which get opened.
 
 \paragraph{Share refresh.} The public key only fixes the WOTS chain starts, and a FORS instance is only
 fixed once its WOTS key signs it. So the shares can be refreshed with the same public key:
 \begin{enumerate}
   \item each operator turns its seeds into explicit shares of what is fixed and still needed: the chain
-        starts of the unused leaves (at most $2^{18}$) and the FORS secrets of the used instances
+        starts of the leaves not signed yet (at most $2^{18}$) and the FORS secrets of the signed leaves
         ($24\,576$ each).
   \item each operator deals a random sharing of zero, which is added to these shares: same values, fresh
         shares. Holders compare hashes of what they receive, and a masked random linear combination is
@@ -178,7 +188,7 @@ deleted.
 gates (XOR is free). What matters is the traffic per AND gate per operator, with malicious security:
 \begin{itemize}
   \item about 1 bit: 3 operators, $f=1$~\cite{BGIN19} (more CPU), e.g.\ when only 3 are online
-  \item about 1.5 bits: 4 operators, $f=1$~\cite{FF21} (caveat~\cite{BS26}), the numbers above
+  \item about 1.5 bits: 4 operators, $f=1$~\cite{FF21} (with the fix of~\cite{BS26}), the numbers above
   \item about 10 bits: 3 operators with simpler cut-and-choose~\cite{FLNW17}, or bigger clusters (e.g.\
         10-of-15) with packed Shamir sharing
   \item tens of bits: bigger clusters with plain Shamir sharing~\cite{ATLAS21}
@@ -189,8 +199,10 @@ hashes takes 2\,500 rounds: about 2 minutes at 50~ms per round, 2.5~s at 1~ms. P
 would halve the depth, for 4 times the AND gates. The malicious-security checks add a few rounds, and
 preprocessing can run several instances at once, since they are known in advance.
 
-Everything works for $n$ operators with $f<n/2$ corrupt, with one seed per set of $f$ operators, known to
-the others. Without an honest majority, MPC costs orders of magnitude more.
+Everything works for $n$ operators with $f<n/2$ corrupt, with one seed per set of $f$ operators known to
+the others, as long as $2f+1$ of them are online: every opened term then has an honest holder online, so
+any inconsistency aborts. Signing despite $f$ active cheaters needs $n>3f$, so that some $2f+1$ operators
+are all honest. Without an honest majority, MPC costs orders of magnitude more.
 
 \begin{thebibliography}{9}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use

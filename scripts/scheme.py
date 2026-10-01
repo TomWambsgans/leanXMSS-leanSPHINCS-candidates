@@ -55,7 +55,7 @@ def main():
                     help="MPC traffic per AND gate per operator (estimate)")
     x = ap.parse_args()
     h, a, k, w, T = x.h, x.a, x.k, x.w, x.T
-    v, q = 128 // w, 2**w
+    v, q = -(-128 // w), 2**w  # chains cover the 128-bit message
 
     # per-call costs (input after the 32-byte prefix)
     derive, step, node, enc = comp(32), comp(N), comp(2 * N), comp(N + 4)
@@ -63,7 +63,9 @@ def main():
     rnd, msg_block = comp(32 + 32), comp(N + N + 32)  # S || m ;  rho || root || m
     blocks = math.ceil((h + k * a) / 256)
 
-    alpha = n_sum(v, q, T) / 2**128
+    if not 0 <= T <= v * (q - 1):
+        ap.error(f"--T must be between 0 and {v * (q - 1)}")
+    alpha = n_sum(v, q, T) / q**v  # probability that a counter gives sum T
     leaf = v * derive + v * (q - 1) * step + wots_pk
     fors_sign = k * (2**a * (derive + step) + (2**a - 1) * node) + fors_roots
     wots_sign = enc / alpha + v * derive + T * step
@@ -116,7 +118,7 @@ def main():
     # AND gates each (two three-operand and two two-operand 32-bit additions); blake2s_circuit.py counts them
     # and the AND-depth, i.e. the number of MPC rounds.
     and_gates = chain(1)[0]
-    depth = {s: chain(s)[1] for s in (1, 2, 3)}  # AND-depth (MPC rounds) of s chained hashes
+    depth = {s: chain(s)[1] for s in range(1, q)}  # AND-depth (MPC rounds) of s chained hashes
     b = x.threshold
     dkg = 2**b * v * (q - 1)  # chain steps of the kept WOTS keys
     fresh = k * 2**a + T  # one instance, preprocessed: FORS leaf hashes and WOTS chain steps
@@ -135,7 +137,7 @@ def main():
     print(f"    DKG: {fmt(dkg)} MPC compressions, {traffic(dkg)}, {depth[q - 1]} rounds")
     # FORS leaves, one opening, then the WOTS chains (the chain ends are public, so at most q - 2 steps)
     print(f"    preprocessing a new FORS instance: {fmt(fresh)} MPC compressions, {traffic(fresh)}, "
-          f"{depth[1] + 1 + depth[q - 2]} rounds")
+          f"{depth[1] + (1 + depth[q - 2] if q > 2 else 0)} rounds")
     print(f"    online: no MPC, grinding {fmt(online)} compressions in the clear")
     # Share refresh: each dealer sends one explicit share term to its 3 holders. The term covers the chain
     # starts of the unused leaves and the FORS secrets of the used instances.
