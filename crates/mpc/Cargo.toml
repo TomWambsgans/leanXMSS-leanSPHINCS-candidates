@@ -1,0 +1,13 @@
+[package]
+name = "mpc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "3-party Boolean MPC: replicated sharing, AFLNO16 multiplication, BGIN19 verification"
+
+[lints]
+workspace = true
+
+[dependencies]
+blake2s.workspace = true
