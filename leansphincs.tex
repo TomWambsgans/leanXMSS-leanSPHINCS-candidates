@@ -95,7 +95,6 @@ A concrete example of what's possible:
   \item malicious security against 1 operator, with abort (but 2 colluders can rebuild the key, unlike
         3-of-4 BLS)
   \item DKG: no trusted dealer
-  \item share rotation and operator replacement, with the same public key
   \item keygen: $786\cdot10^3$ MPC hashes, about 2.2~GB of traffic per operator and 2\,500 rounds (assuming
         BLAKE2s)
   \item signing: thanks to caching of the sub-tree in XMSS, only one FORS has to be computed in MPC, $24\,696$ MPC hashes, about 68~MB of
@@ -138,22 +137,8 @@ hashes).
 \paragraph{Cheaters.} The MPC is maliciously secure with abort~\cite{FF21,BS26} and verified before any
 opening; opened values are checked against public data or against the other holders of the same term. A
 cheater can only cause aborts (identifying it would cost more), so the operators retry with each set of 3.
-Once $R_0$ is opened, the signature is always finished, with no share rotation in between: nobody can
+Once $R_0$ is opened, the signature is always finished: nobody can
 preview FORS indices and pick which get opened.
-
-\paragraph{Share rotation.} Goal: new shares for the same secrets (hence the same public key), so that shares
-stolen earlier become useless. New seeds alone won't do, since they would give new secrets. Instead:
-\begin{enumerate}
-  \item each operator computes, from its seeds, its 3 terms of every secret of the key, and stores them
-        (about 4.8~GB)
-  \item for every secret, the operators take 4 random masks that XOR to 0 (expanded from fresh seeds they
-        send each other), and XOR term $i$ with mask $i$: the secret is unchanged, but the terms are fresh
-  \item they delete the old seeds and the masks. The randomizer, which depends on the message, just gets
-        new seeds.
-\end{enumerate}
-No MPC, and a few hundred bytes of traffic. This protects against an attacker who corrupts one operator per
-period. To replace an operator, the newcomer first receives the terms it takes over, then a rotation makes
-the old operator's terms useless.
 
 \paragraph{MPC cost.} An MPC hash is a BLAKE2s compression on a secret input: about $14.7\cdot10^3$ AND
 gates (XOR is free) and AND-depth 884, i.e.\ 884 rounds (2\,500 rounds is about 2 minutes at 50~ms per
@@ -173,6 +158,15 @@ no honest majority (and 2 cheaters can block signing). Authenticated garbling~\c
 bits per AND gate (5.9~TB at keygen). The 2026 protocol of~\cite{BGHIN26}: about 4 bits (6~GB at keygen,
 180~MB per FORS instance), but 15 to 150 core-hours per operator at keygen, new LPN variants, and no
 implementation yet for 3 parties.
+
+\paragraph{Remark: key rotation.} The shares above cannot be rotated: new seeds would give new secrets, and
+the public key commits to them. Rotation becomes possible if, as in SLH-DSA, every secret is
+$\hash(S,\mathit{addr})$ for one master secret $S$, computed in MPC, and the operators share only $S$ (4
+terms). Rotating then means XORing the 4 terms of $S$ with masks that XOR to 0 (a few bytes), and an
+operator can be replaced by giving its terms to a newcomer. The cost is one more MPC hash per secret: keygen
+$1.05\cdot10^6$ MPC hashes (2.9~GB, 3\,300 rounds), and $49\cdot10^3$ per FORS instance (136~MB, 4\,200
+rounds), about $1.3\times$ and $2\times$ today. The randomizer keeps its own seeds, so online signing stays
+MPC-free.
 
 \begin{thebibliography}{9}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use

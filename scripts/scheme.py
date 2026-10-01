@@ -142,11 +142,13 @@ def main():
           f"{depth[1] + (1 + depth[q - 2] if q > 2 else 0)} rounds")
     print(f"    online: no MPC, grinding {fmt(online)} compressions in the clear "
           f"(trivial variant without preprocessing: {fmt(trivial)})")
-    # Share rotation: every secret of the key keeps its value; each operator holds 3 explicit terms of each
-    # (chain starts and FORS secrets of all kept leaves) and sends a 16-byte seed to the 3 others.
-    terms = 3 * 2**b * (v + k * 2**a) * N
-    print(f"    share rotation, no MPC: {3 * N} B sent per operator; explicit terms {terms / 1e9:.3g} GB per "
-          f"operator (also what a new operator receives)")
+    # Key rotation variant: every secret is H(S, addr) for a shared master secret S, derived in MPC (one more
+    # MPC hash per secret); rotating only re-randomizes the shares of S.
+    depth[q] = chain(q)[1]
+    dkg_rot, fresh_rot = 2**b * v * q, fresh + k * 2**a + v
+    print(f"    key rotation variant (secrets derived in MPC from a shared S): DKG {fmt(dkg_rot)} MPC compressions, "
+          f"{traffic(dkg_rot)}, {depth[q]} rounds; FORS instance {fmt(fresh_rot)}, {traffic(fresh_rot)}, "
+          f"{depth[2] + (1 + depth[q - 1] if q > 2 else 0)} rounds")
 
 
 if __name__ == "__main__":
