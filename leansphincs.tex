@@ -90,11 +90,14 @@ anything on their own (e.g.\ 3-of-4 with $f=1$), and the verifier doesn't change
   \item FORS leaf hashes, from the secret to the public leaf
 \end{itemize}
 Everything else only hashes public values and runs in the clear: the Merkle tree, the FORS trees above the
-leaves, the grinding, the WOTS$^+$C counter search (it encodes the public FORS key). Deriving the secrets
-needs no MPC either. Instead of $S$, the operators share seeds, one per set $\mathcal T$ of $f$
-operators, known to everyone outside $\mathcal T$. Each secret is
-$\bigoplus_{\mathcal T}\Th(P,\tw,k_{\mathcal T})$~\cite{CDI05}, and every operator computes its share
-locally.
+leaves, the grinding, the WOTS$^+$C counter search (it encodes the public FORS key).
+
+\paragraph{Secrets.} Usually each secret is a hash of $S$, which would need MPC on a shared $S$. Instead
+there is no $S$: for each set $\mathcal T$ of $f$ operators, a seed $k_{\mathcal T}$ is given to the
+operators outside $\mathcal T$, and each secret is
+$\bigoplus_{\mathcal T}\Th(P,\tw,k_{\mathcal T})$~\cite{CDI05}. Each operator hashes the seeds it holds,
+which gives it a share of every secret without any interaction (e.g.\ 3-of-4: 4 seeds, each held by 3
+operators). $f$ colluders miss their own seed, $f+1$ hold them all. The verifier sees no difference.
 
 \paragraph{Protocol.}
 \begin{itemize}
