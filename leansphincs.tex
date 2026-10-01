@@ -51,17 +51,12 @@ Properties:
 
 \section{Usage}
 
-\subsection{Practical consideration}
-
-\begin{itemize}
-  \item Powerfull laptop CPUs can compute on the order of a $10^9$ SHA2 or BLAKE2s compressions per second (using SIMD and multi-threading). 
-  \item A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.
-\end{itemize}
-
-
 \subsection{Full \texorpdfstring{$2^{30}$}{2\textasciicircum 30} lifetime}
 
+For powerfull devices.
+
 \begin{itemize}
+  \item lifetime: $2^{30}$
   \item keygen: $19 \cdot 10^9$ compressions
   \item signing 
     \begin{itemize}
@@ -70,14 +65,25 @@ Properties:
   \end{itemize}
 \end{itemize}
 
+\emph{Modern laptop CPUs can compute on the order of a $10^9$ SHA2 or BLAKE2s compressions per second.}
+
+
 \subsection{Pruned: \texorpdfstring{$2^{16}$}{2\textasciicircum 16} lifetime}
 
-Using hypertree pruning~\cite{conduition}: only build one subtree of height 12, and replace the 14 siblings above it by pseudorandom surrogate nodes.
+For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 12, and replace the 14 siblings above it by pseudorandom surrogate nodes.
 
 \begin{itemize}
+  \item lifetime: $2^{16}$
   \item keygen: $1.1\cdot10^6$ compressions
-  \item signing: $140\cdot10^3$ compressions, of which $66\cdot10^3$ for grinding
+  \item signing (including $66\cdot10^3$ compressions of grinding)
+    \begin{itemize}
+    \item without cache: $1.3\cdot10^6$ compressions
+    \item with a 1~KiB cache: $158\cdot10^3$ compressions
+    \item with a 16~KiB cache: $142\cdot10^3$ compressions
+    \end{itemize}
 \end{itemize}
+
+\emph{A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.}
 
 \subsection{Threshold signing (MPC)}
 

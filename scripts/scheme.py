@@ -45,7 +45,9 @@ def main():
     ap.add_argument("--w", type=int, default=2, help="bits per WOTS chain position")
     ap.add_argument("--T", type=int, default=120, help="sum of the signed chain positions")
     ap.add_argument("--cache-mib", type=float, nargs="+", default=[0, 1, 1024],
-                    help="signer cache sizes for full-key signing (MiB); pruned keys use 1 MiB")
+                    help="signer cache sizes for full-key signing (MiB)")
+    ap.add_argument("--pruned-cache-kib", type=float, nargs="+", default=[0, 1, 16],
+                    help="signer cache sizes for pruned-key signing (KiB)")
     ap.add_argument("--pruned", type=int, nargs="+", default=[12, 14, 16], help="log2 kept leaves")
     ap.add_argument("--threshold", type=int, default=12, help="log2 kept leaves for the threshold estimate")
     ap.add_argument("--bits-per-and", type=float, nargs="+", default=[1.0, 1.5],
@@ -103,10 +105,11 @@ def main():
     for b in x.pruned:
         kg = derive + 2**b * leaf + (2**b - 1) * node + (h - b) * (derive + node)  # subtree + surrogate path
         grind = 2 ** (h - b) * (rnd + msg_block)  # idx is in the first digest block
-        rebuild = tree_cost(b, nodes(1))  # the kept subtree, with a 1 MiB cache
-        s = grind + (blocks - 1) * msg_block + fors_sign + wots_sign + rebuild
+        base = grind + (blocks - 1) * msg_block + fors_sign + wots_sign
+        signs = ", ".join(f"{fmt(base + tree_cost(b, nodes(kib / 1024)))} with {kib:g} KiB"
+                          for kib in x.pruned_cache_kib)
         print(f"  pruned, 2^{b} leaves: lifetime 2^{L - (h - b):.2f}, key generation {fmt(kg)}, "
-              f"signing {fmt(s)} (grinding {fmt(grind)})")
+              f"signing {signs} (grinding {fmt(grind)})")
 
     # Threshold signing: BLAKE2s runs in MPC only on secret inputs. A compression has 80 G functions of 184
     # AND gates each (two fused three-operand and two two-operand 32-bit additions, as in leanVM's flock).
