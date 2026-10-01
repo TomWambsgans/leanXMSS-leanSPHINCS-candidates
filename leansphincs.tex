@@ -28,10 +28,12 @@
 \maketitle
 \vspace{-3em}
 
-\paragraph{TL;DR.} A SPHINCS$^+$ variant with the shape of SLH-DSA-128-24~\cite{SP800230}: a single Merkle
-tree ($d=1$) of WOTS$^+$C keys~\cite{HK22C}, each signing its own FORS instance, which signs the message.
-Parameters target $2^{30}$ signatures per key and cheap \emph{pruned} keys for weak signers.
 \begin{itemize}
+  \item Same shape as SLH-DSA-128-24 from NIST's recent SP~800-230~\cite{SP800230}: a single XMSS tree,
+        where each WOTS key signs a FORS instance. Height $h=26$ (instead of 22), and FORS has 24 trees
+        (instead of 6), each of height 10 (instead of 24).
+  \item WOTS is replaced by WOTS$^+$C~\cite{HK22C}: $w=4$, 64 chains, no checksum, digits summing to
+        $T=120$.
   \item 127 bits of classical security (ROM), up to $2^{30}$ signatures.
   \item Public key 32 B, signature 5\,684 B.
   \item Verification: 391 BLAKE2s compressions, the same for every signature.
