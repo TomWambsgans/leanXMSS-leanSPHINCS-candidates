@@ -62,24 +62,17 @@ Properties:
   \end{itemize}
 \end{itemize}
 
-\subsection{Pruned}
+\subsection{Pruned: \texorpdfstring{$2^{16}$}{2\textasciicircum 16} lifetime}
 
-For weak signers, using hypertree pruning~\cite{conduition}: only build one subtree of height $b$, chosen
-pseudorandomly from the secret, and replace the $26-b$ siblings above it by pseudorandom surrogate nodes.
-To sign, grind the randomizer until the leaf index falls in the subtree: $2^{26-b}$ tries of 4
-compressions each. The verifier doesn't see any difference. Only $2^b$ FORS instances are used, so the
-lifetime becomes $2^{30.1-(26-b)}$.
-\begin{center}
-\begin{tabular}{@{}ccccc@{}}
-\toprule
-$b$ & lifetime & keygen & signing & of which grinding\\
-\midrule
-12 & $2^{16.1}$ & 1.12M & 140K & 66K\\
-14 & $2^{18.1}$ & 4.49M & 91K & 16K\\
-16 & $2^{20.1}$ & 18.0M & 79K & 4K\\
-\bottomrule
-\end{tabular}
-\end{center}
+For weak signers, using hypertree pruning~\cite{conduition}: only build one subtree of height 12, chosen
+pseudorandomly from the secret, and replace the 14 siblings above it by pseudorandom surrogate nodes. To
+sign, grind the randomizer until the leaf index falls in the subtree ($2^{14}$ tries). The verifier doesn't
+see any difference. Only $2^{12}$ FORS instances are used, hence the $2^{16}$ lifetime.
+
+\begin{itemize}
+  \item keygen: $1.1\cdot10^6$ compressions
+  \item signing: $140\cdot10^3$ compressions, of which $66\cdot10^3$ for grinding
+\end{itemize}
 
 \paragraph{Threshold (MPC).} Pruned keys also make threshold signing practical, with an unchanged verifier.
 \begin{itemize}
