@@ -62,6 +62,8 @@ This specification defines a SPHINCS$^+$ variant with a lifetime of $2^{30}$ sig
         messages.
   \item \textbf{Signing: about 421K compressions} with a 1~MiB cache, or \textbf{about 140K} for a pruned
         key.
+  \item \textbf{Threshold signing} by $n$ operators, at most $f<n/2$ of them malicious, with an unchanged
+        verifier (Section~\ref{sec:threshold}).
 \end{itemize}
 \end{abstract}
 
@@ -249,6 +251,78 @@ $b$ & lifetime & key generation & signing & of which grinding\\
 Because each WOTS key only signs its own FORS key, pruning never makes a WOTS key sign two values. A pruned
 key uses its own $S$. After many signatures, an observer can see that all $\idx$ fall in one subtree.
 
+\section{Threshold signing}
+\label{sec:threshold}
+
+A key can be shared among $n$ operators so that any $f$ of them learn nothing and a quorum can sign, with
+signatures verified exactly as above. Hash evaluations on shared secrets require secure multiparty
+computation (MPC) with malicious security and an honest majority, so $n\geq2f+1$; the usual
+distributed-validator shape $n=3f+1$ with quorum $2f+1$, e.g.\ 3 of 4 with $f=1$, fits. Secrecy holds
+against $f$ colluding operators, not $2f$. The pruned key of Section~\ref{sec:pruned} keeps the MPC
+small; below, $b=12$ gives a lifetime of $2^{16.11}$.
+
+\paragraph{Shares.} For every set $\mathcal T$ of $f$ operators there is a seed $k_{\mathcal T}$ known
+exactly to the $n-f$ operators outside $\mathcal T$~\cite{CDI05}. Every derivation $\Th(P,\tw,S)$ of the
+single-signer scheme becomes $\bigoplus_{\mathcal T}\Th(P,\tw,k_{\mathcal T})$. Each operator computes its
+terms locally; any $f$ operators miss the seed of their own set, while any $f+1$ together know every seed.
+
+\paragraph{Distributed key generation.}
+\begin{enumerate}
+\item For each $\mathcal T$, the operators outside $\mathcal T$ sample $k_{\mathcal T}$ jointly by
+      commit-and-reveal. All operators jointly sample $P$, the subtree index $t$ and the surrogate nodes.
+\item For each of the $2^b$ kept leaves, an MPC evaluates the three chain steps of its 64 chains on the
+      shared starts, keeps the operators' shares of positions 1 and 2, and opens the endpoints.
+\item In the clear, everyone builds the WOTS leaves, the kept subtree and $\rootnode$.
+\end{enumerate}
+
+\paragraph{Signing.}
+\begin{enumerate}
+\item The operators agree on $m$, open $R=\bigoplus_{\mathcal T}\Th(P,\mathsf{tw}_{\mathrm{rnd}}(0),
+      k_{\mathcal T}\concat m)$, and grind $\rho_i=\Th(P,\mathsf{tw}_{\mathrm{rnd}}(i),R\concat m)$,
+      $i\geq1$, in the clear as in Section~\ref{sec:pruned}. With $n\geq3f+1$, each term of $R$ is reported
+      by $n-f$ operators, a majority of them honest.
+\item On the first use of FORS instance $\idx$, an MPC hashes its $k2^a=24\,576$ shared secrets into
+      leaves and opens them. Everyone then builds its trees and $\FtsKey(P,\idx)$ in the clear and caches
+      them.
+\item The WOTS encoding of $\FtsKey(P,\idx)$ is public. The operators open the chain values at the
+      encoded positions and the $k$ FORS secrets. Each opened value is checked against public data, its
+      chain endpoint or FORS leaf, so wrong shares are detected and discarded.
+\end{enumerate}
+
+\paragraph{Cost.} A BLAKE2s compression has 480 32-bit additions, about 14\,880 AND gates. With the
+best malicious honest-majority protocols, which check correctness with distributed zero-knowledge proofs
+at little extra cost, each operator sends about 1~bit per AND gate for $n=3$ and roughly 1.5 for
+$n=4$~\cite{BGIN19,FF21}. For $b=12$:
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Step & MPC compressions & traffic per operator\\
+\midrule
+key generation & 786K & 1.5--2.2 GB\\
+first use of a FORS instance & 24.6K & 46--69 MB\\
+all $2^{12}$ instances over the key's life & 101M & 187--281 GB\\
+average per signature & 1.4K & 2.7--4.0 MB\\
+signature on a used instance & 0 & about 1 KB\\
+\bottomrule
+\end{tabular}
+\end{center}
+Each operator keeps 3~GiB of public FORS trees. Grinding costs $2^{14}$ trials of 4 compressions in the
+clear.
+
+\paragraph{Efficiency.}
+\begin{itemize}
+\item All chain steps at key generation, and all leaf hashes of a FORS instance, are independent and run as
+      one batch.
+\item The tweak and $P$ are public, so in the first round 6 of the 8 BLAKE2s mixing functions need no
+      AND gates.
+\item Low-depth adders cut a compression from about 2\,500 to about 500 rounds of interaction for about twice
+      the AND gates; they matter on wide-area networks.
+\item Operators can prepare FORS instances in the background and grind toward prepared ones. This keeps
+      MPC off the signing path, as long as about one instance is prepared per 17 signatures.
+\item Moving all FORS work into key generation makes signing MPC-free. A trusted dealer, e.g.\ in a
+      secure enclave, removes the MPC entirely. Neither changes the verifier.
+\end{itemize}
+
 \section{Security}
 \label{sec:security}
 
@@ -332,6 +406,12 @@ signers.
 \bibitem{SPHINCSPLUS} D.~J.~Bernstein et al. \emph{The SPHINCS$^+$ Signature Framework}. ACM CCS, 2019.
 \bibitem{LEANVM} leanEthereum. \emph{leanVM: SPHINCS$^+$ specification and Lean~4 security proof}.
   \url{https://github.com/leanEthereum/leanVM/tree/main/formal/sphincs}.
+\bibitem{CDI05} R.~Cramer, I.~Damg{\aa}rd, Y.~Ishai. \emph{Share Conversion, Pseudorandom Secret-Sharing and
+  Applications to Secure Computation}. TCC, 2005.
+\bibitem{BGIN19} E.~Boyle, N.~Gilboa, Y.~Ishai, A.~Nof. \emph{Practical Fully Secure Three-Party
+  Computation via Sublinear Distributed Zero-Knowledge Proofs}. ACM CCS, 2019.
+\bibitem{FF21} A.~Dalskov, D.~Escudero, M.~Keller. \emph{Fantastic Four: Honest-Majority Four-Party
+  Secure Computation With Malicious Security}. USENIX Security, 2021.
 \end{thebibliography}
 
 \end{document}

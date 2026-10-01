@@ -46,6 +46,9 @@ def main():
     ap.add_argument("--T", type=int, default=120, help="sum of the signed chain positions")
     ap.add_argument("--cache-level", type=int, default=10, help="tree level held in the signer cache")
     ap.add_argument("--pruned", type=int, nargs="+", default=[12, 14, 16], help="log2 kept leaves")
+    ap.add_argument("--threshold", type=int, default=12, help="log2 kept leaves for the threshold estimate")
+    ap.add_argument("--bits-per-and", type=float, nargs="+", default=[1.0, 1.5],
+                    help="MPC traffic per AND gate per operator (estimate)")
     x = ap.parse_args()
     h, a, k, w, T, c = x.h, x.a, x.k, x.w, x.T, x.cache_level
     v, q = 128 // w, 2**w
@@ -85,6 +88,31 @@ def main():
         s = grind + (blocks - 1) * msg_block + fors_sign + wots_sign + rebuild
         print(f"  pruned, 2^{b} leaves: lifetime 2^{L - (h - b):.2f}, key generation {fmt(kg)}, "
               f"signing {fmt(s)} (grinding {fmt(grind)})")
+
+    # Threshold signing: BLAKE2s runs in MPC only on secret inputs. A compression has 480 32-bit additions,
+    # about 31 AND gates each with ripple-carry adders.
+    and_gates = 480 * 31
+    b = x.threshold
+    dkg = 2**b * v * (q - 1)  # chain steps of the kept WOTS keys
+    fresh = k * 2**a  # FORS leaf hashes of one instance, on first use
+    total = 2**b * fresh
+    sigs = 2 ** (L - (h - b))
+
+    def traffic(c):
+        def size(nbytes):
+            for dv, u in ((1e9, "GB"), (1e6, "MB"), (1e3, "KB")):
+                if nbytes >= dv:
+                    return f"{nbytes / dv:.3g} {u}"
+            return f"{nbytes:.0f} B"
+        return " / ".join(size(c * and_gates * bpa / 8) for bpa in x.bits_per_and)
+
+    print(f"  threshold, 2^{b} kept leaves (lifetime 2^{L - (h - b):.2f}), {and_gates} AND gates per compression, "
+          f"traffic per operator at {' / '.join(map(str, x.bits_per_and))} bits per AND:")
+    print(f"    DKG: {fmt(dkg)} MPC compressions, {traffic(dkg)}")
+    print(f"    fresh FORS instance: {fmt(fresh)} MPC compressions, {traffic(fresh)}")
+    print(f"    all instances over the key's life: {fmt(total)} MPC compressions, {traffic(total)}; "
+          f"per signature on average {traffic(total / sigs)}")
+    print(f"    public FORS cache: {2**b * k * (2 ** (a + 1) - 1) * N / 2**30:.1f} GiB")
 
 
 if __name__ == "__main__":

@@ -8,6 +8,8 @@ model (proof in Lean 4 to come):
 - verification in 391 compressions, the same for every signature;
 - key generation 18.4G compressions, or 1.12M for a pruned key signing 2^16 messages;
 - signing in about 421K compressions with a 1 MiB cache, or about 140K for a pruned key.
+- threshold signing by n operators with f < n/2 malicious (e.g. 3-of-4), using MPC for the XMSS at key
+  generation and for each FORS instance on its first use; the verifier is unchanged.
 
 Costs count 64-byte compression-function calls, as for BLAKE2s.
 
