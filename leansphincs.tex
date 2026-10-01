@@ -102,7 +102,7 @@ A concrete example of what's possible:
   \item signing: thanks to caching of the sub-tree in XMSS, only one FORS has to be computed in MPC, $24\,696$ MPC hashes, about 68~MB of
         traffic per operator and 2\,600 rounds. Either:
     \begin{itemize}
-    \item trivially, once the message is known (signing takes a few seconds)
+    \item vanilla, once the message is known (signing takes a few seconds)
     \item or with preprocessing: compute the instance before the message is known. Online, no MPC: only
           $\approx 2.0\cdot10^8$ compressions of grinding in the clear and 2 rounds of about 1~KB
           per operator
@@ -139,32 +139,35 @@ operator except $i$.
         and opens the ends. The tree is built in the clear, and its root is the public key.
 \end{enumerate}
 
-\paragraph{Signing.} The $j$-th signature uses the FORS instance given by a hash of the public parameter
-and $j$: random as in a plain pruned key (so the security is the same), but known in advance. The
-operators keep $j$ as a counter: losing it only gives a few instances an extra use (the trivial variant
-needs no counter).
+\paragraph{Signing.} The operators agree on the message $m$ (by comparing hashes), then open
+$R_0=\bigoplus_i\hash(k_i,\mathsf{msg},m)$ (local hashes, no MPC; the tag $\mathsf{msg}$ keeps it apart from
+the secrets). Every operator grinds $R=\hash(R_0,\mathit{ctr})$ and keeps the first counter that works, so
+they all get the same $R$. Then:
 \begin{itemize}
-  \item preprocessing, if the instance is new: MPC hashes its $24\,576$ secrets into leaves and opens
-        them. The FORS trees and the WOTS$^+$C counter search run in the clear. The operators compare
-        hashes of the FORS root, counter and positions, and record that the leaf is signed. Then MPC
-        walks the WOTS chains to the signed positions (120 hashes) and opens them. All of it is cached for
-        later uses, and a signed leaf is never preprocessed again: two WOTS signatures from one key would
-        allow forgeries.
-  \item online, for a message $m$: the operators compare hashes of $(j,m)$, then open
-        $R_0=\bigoplus_i\hash(k_i,\mathsf{msg},j,m)$ (local hashes, no MPC; the tag $\mathsf{msg}$ keeps it
-        apart from the secrets). Every operator grinds $R=\hash(R_0,\mathit{ctr})$ until $m$ selects the
-        instance ($2^{26}$ tries), keeping the first counter that works, and records $(j,m,R)$. Then open
-        the 24 selected FORS secrets.
+  \item vanilla: grind until the leaf index lands in the kept subtree ($2^{14}$ tries), as in a plain
+        pruned key. Compute the selected FORS instance in MPC if it is new, then open the 24 selected
+        FORS secrets.
+  \item with preprocessing: the instance of the next signature is drawn in advance, as
+        $\bigoplus_i\hash(k_i,\mathsf{next},R')$ with $R'$ the randomizer of the previous signature, and
+        computed in MPC. Grind until the leaf index is that instance ($2^{26}$ tries), then open the 24
+        selected FORS secrets. The next signature uses it whatever the message, so nobody can steer
+        signatures onto chosen instances.
 \end{itemize}
+Either way the instances are random, as in a plain pruned key, so the security is the same. Computing a
+FORS instance in MPC: hash its $24\,576$ secrets into leaves and open them, build the FORS trees and run
+the WOTS$^+$C counter search in the clear, compare hashes of the FORS root, counter and positions, then
+walk the WOTS chains to the signed positions (120 hashes) and open them. All of it is cached (the cache is
+also the list of signed leaves that share refresh needs), and a leaf is never computed again with other
+secrets: two WOTS signatures from one key would allow forgeries.
 
 \paragraph{Cheaters.} The MPC is maliciously secure with abort~\cite{FF21,BS26}, and is verified before
 anything is opened. Every opened value is checked: against public data (a FORS leaf, a chain end), or
 against the other holders of the same term (with at most 1 corrupt operator among 3 online, each term has
 an honest holder online). So a cheater can only make signing abort. The operators then retry with each
 set of 3 in turn, one of which excludes it. Identifying the cheater would cost more: FF21 only narrows it
-down to a pair, and robust variants hand all inputs to one honest operator. Once $R_0$ is opened, slot
-$j$ belongs to $m$ and is always finished with the recorded $R$, even after an abort or a share refresh:
-otherwise a cheater could preview the FORS indices of several messages and choose which get opened.
+down to a pair, and robust variants hand all inputs to one honest operator. Once $R_0$ is opened, the
+signature is always finished (retries give the same $R$), with no share refresh in between: otherwise a
+cheater could preview the FORS indices of several messages and choose which get opened.
 
 \paragraph{Share refresh.} The public key only fixes the WOTS chain starts, and a FORS instance is only
 fixed once its WOTS key signs it. So the shares can be refreshed with the same public key:
