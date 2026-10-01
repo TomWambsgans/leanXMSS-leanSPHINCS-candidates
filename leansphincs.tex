@@ -75,12 +75,7 @@ For weaker devices. The trick is to trade smaller lifetime for faster keygen, us
 \begin{itemize}
   \item lifetime: $2^{16}$
   \item keygen: $1.1\cdot10^6$ compressions
-  \item signing (including $66\cdot10^3$ compressions of grinding)
-    \begin{itemize}
-    \item without cache: $1.3\cdot10^6$ compressions
-    \item with a 1~KiB cache: $158\cdot10^3$ compressions
-    \item with a 16~KiB cache: $142\cdot10^3$ compressions
-    \end{itemize}
+  \item signing: $142\cdot10^3$ compressions, with a 16~KiB cache (including $66\cdot10^3$ compressions of grinding)
 \end{itemize}
 
 \emph{A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.}
@@ -92,16 +87,16 @@ anything on their own (e.g.\ 3-of-4 with $f=1$), and the verifier doesn't change
 
 \paragraph{What needs MPC.} Only hashes with a secret input:
 \begin{itemize}
-  \item WOTS chain steps, from the chain start up to the public endpoint
-  \item FORS leaf hashes, from the secret to the public leaf
+  \item WOTS chain steps
+  \item FORS leaf hashes
 \end{itemize}
-Everything else only hashes public values and runs in the clear: the Merkle tree, the FORS trees above the
-leaves, the grinding, the WOTS$^+$C counter search (it encodes the public FORS key).
+Everything else only hashes public values and runs in the clear: the XMSS tree, the FORS trees above the
+leaves, the grinding, the WOTS$^+$C counter search.
 
-\paragraph{Secrets.} Usually each secret is a hash of $S$, which would need MPC on a shared $S$. Instead
-there is no $S$: for each set $\mathcal T$ of $f$ operators, a seed $k_{\mathcal T}$ is given to the
-operators outside $\mathcal T$, and each secret is
-$\bigoplus_{\mathcal T}\Th(P,\tw,k_{\mathcal T})$~\cite{CDI05}. Each operator hashes the seeds it holds,
+\paragraph{Secrets.} Usually each secret is a hash of the secret key and the secret's address, which would
+need MPC on a shared secret key. Instead there is no secret key: for each set $\mathcal T$ of $f$
+operators, a seed $k_{\mathcal T}$ is given to the operators outside $\mathcal T$, and each secret is
+$\bigoplus_{\mathcal T}\hash(k_{\mathcal T},\mathit{addr})$~\cite{CDI05}. Each operator hashes the seeds it holds,
 which gives it a share of every secret without any interaction (e.g.\ 3-of-4: 4 seeds, each held by 3
 operators). $f$ colluders miss their own seed, $f+1$ hold them all. The verifier sees no difference.
 
