@@ -51,6 +51,8 @@ Properties:
 
 \section{Usage}
 
+Powerfull laptop CPUs can compute on the order of a $10^9$ SHA2 or BLAKE2s compressions per second.
+
 \subsection{Full \texorpdfstring{$2^{30}$}{2\textasciicircum 30} lifetime}
 
 \begin{itemize}
@@ -64,34 +66,54 @@ Properties:
 
 \subsection{Pruned: \texorpdfstring{$2^{16}$}{2\textasciicircum 16} lifetime}
 
-For weak signers, using hypertree pruning~\cite{conduition}: only build one subtree of height 12, chosen
-pseudorandomly from the secret, and replace the 14 siblings above it by pseudorandom surrogate nodes. To
-sign, grind the randomizer until the leaf index falls in the subtree ($2^{14}$ tries). The verifier doesn't
-see any difference. Only $2^{12}$ FORS instances are used, hence the $2^{16}$ lifetime.
+Using hypertree pruning~\cite{conduition}: only build one subtree of height 12, and replace the 14 siblings above it by pseudorandom surrogate nodes.
 
 \begin{itemize}
   \item keygen: $1.1\cdot10^6$ compressions
   \item signing: $140\cdot10^3$ compressions, of which $66\cdot10^3$ for grinding
 \end{itemize}
 
-\paragraph{Threshold (MPC).} Pruned keys also make threshold signing practical, with an unchanged verifier.
+\subsection{Threshold signing (MPC)}
+
+Goal: $n$ operators share a pruned key so that no $f<n/2$ of them, even malicious, can sign or learn
+anything on their own (e.g.\ 3-of-4 with $f=1$), and the verifier doesn't change.
+
+\paragraph{What needs MPC.} Only hashes with a secret input:
 \begin{itemize}
-  \item setting: $n$ operators, at most $f<n/2$ malicious (e.g.\ 3-of-4, $f=1$), honest-majority MPC with
-        malicious security. Secrecy holds against $f$ colluders (not $2f$)
-  \item shares: each secret derivation $\Th(P,\tw,S)$ becomes $\bigoplus_{\mathcal T}\Th(P,\tw,k_{\mathcal T})$,
-        with one seed per set $\mathcal T$ of $f$ operators, known to everyone outside
-        $\mathcal T$~\cite{CDI05}. Shares are computed locally
-  \item keygen: MPC only on the WOTS chains of the $2^b$ kept leaves; the rest of the tree in the clear
-  \item signing: grind in the clear. On the first use of a FORS instance, MPC hashes its 24\,576 secrets
-        into leaves, which are then public and cached. Then open the WOTS chain values and the 24 FORS
-        secrets, each checked against public data
-  \item cost ($b=12$): a BLAKE2s compression is about 14.7K AND gates, and malicious 3- or 4-party
-        protocols cost about 1--2 bits per AND gate per operator~\cite{BGIN19,FF21}. That gives about
-        1.5--2.2 GB per operator for keygen (786K compressions) and 46--69 MB per FORS instance on first
-        use. Caveat: batched consistency checks were recently shown insecure in some of these
-        protocols~\cite{BS26}, and the fixed versions may cost more
-  \item bigger clusters (e.g.\ 10-of-15) need Shamir sharing: roughly 5--20$\times$ more per operator
+  \item WOTS chain steps, from the chain start up to the public endpoint
+  \item FORS leaf hashes, from the secret to the public leaf
 \end{itemize}
+Everything else only hashes public values and runs in the clear: the Merkle tree, the FORS trees above the
+leaves, the grinding, the WOTS$^+$C counter search (it encodes the public FORS key). Deriving the secrets
+needs no MPC either. Instead of $S$, the operators share seeds, one per set $\mathcal T$ of $f$
+operators, known to everyone outside $\mathcal T$. Each secret is
+$\bigoplus_{\mathcal T}\Th(P,\tw,k_{\mathcal T})$~\cite{CDI05}, and every operator computes its share
+locally.
+
+\paragraph{Protocol.}
+\begin{itemize}
+  \item keygen: MPC on the 3 steps of the 64 chains of each of the $2^{12}$ kept leaves
+        ($786\cdot10^3$ hashes). It opens the endpoints and keeps shares of the intermediate positions.
+        The rest of the tree is built in the clear.
+  \item signing: derive the randomizer from the seeds and $m$, so it is unpredictable and the same for
+        everyone, then grind in the clear. On the first use of a FORS instance, MPC hashes its 24\,576
+        secrets into leaves, which are opened and cached; later uses are free. Then open the WOTS chain
+        values at the signed positions and the 24 FORS secrets. Each opened value is hashed forward to
+        public data, so a bad share is caught.
+  \item a cheater is caught and identified, and the operators retry without it. Retries reuse the same
+        randomizer. A signing attempt counts against the lifetime even if it aborts.
+\end{itemize}
+
+\paragraph{Cost.} An MPC hash is a BLAKE2s compression on a secret input, about $14.7\cdot10^3$ AND gates.
+With 3 or 4 operators ($f=1$), malicious honest-majority MPC costs about 1--2 bits per AND gate per
+operator~\cite{BGIN19,FF21}. Per operator:
+\begin{itemize}
+  \item keygen: 1.4--2.2 GB
+  \item first use of a FORS instance: 45--68 MB
+\end{itemize}
+Caveats: batched consistency checks were recently broken in some of these protocols~\cite{BS26}, and the
+fixed versions may cost more. Bigger clusters (e.g.\ 10-of-15) need Shamir sharing, roughly
+5--20$\times$ more. And secrecy only holds against $f$ colluders, not $2f$ as in BLS threshold signatures.
 
 \begin{thebibliography}{9}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use

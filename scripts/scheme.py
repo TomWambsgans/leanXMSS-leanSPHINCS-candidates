@@ -108,9 +108,9 @@ def main():
         print(f"  pruned, 2^{b} leaves: lifetime 2^{L - (h - b):.2f}, key generation {fmt(kg)}, "
               f"signing {fmt(s)} (grinding {fmt(grind)})")
 
-    # Threshold signing: BLAKE2s runs in MPC only on secret inputs. A compression has 480 32-bit additions,
-    # about 31 AND gates each with ripple-carry adders.
-    and_gates = 480 * 31
+    # Threshold signing: BLAKE2s runs in MPC only on secret inputs. A compression has 80 G functions of 184
+    # AND gates each (two fused three-operand and two two-operand 32-bit additions, as in leanVM's flock).
+    and_gates = 80 * 184
     b = x.threshold
     dkg = 2**b * v * (q - 1)  # chain steps of the kept WOTS keys
     fresh = k * 2**a  # FORS leaf hashes of one instance, on first use
