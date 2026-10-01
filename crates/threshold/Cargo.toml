@@ -1,0 +1,15 @@
+[package]
+name = "threshold"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "3-of-4 threshold signing of the leanSphincs candidate: DKG, MPC-computed FORS instances, MPC-free online signing"
+
+[lints]
+workspace = true
+
+[dependencies]
+blake2s.workspace = true
+sphincs.workspace = true
+mpc.workspace = true

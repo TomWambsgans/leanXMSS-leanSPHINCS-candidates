@@ -89,6 +89,14 @@ impl Party {
         }
     }
 
+    /// Switches to batches of `n` instances; the ANDs so far must be verified.
+    pub fn set_n(&mut self, n: usize) {
+        assert!(n > 0 && self.transcript.n_and == 0, "verify before changing the batch size");
+        self.n = n;
+        self.words = n.div_ceil(64);
+        self.tail = if n.is_multiple_of(64) { u64::MAX } else { (1u64 << (n % 64)) - 1 };
+    }
+
     fn mask(&self, v: &mut [u64]) {
         if let Some(last) = v.last_mut() {
             *last &= self.tail;
@@ -261,7 +269,11 @@ impl Party {
         if self.transcript.n_and != 0 {
             return abort("opening before the ANDs are verified");
         }
-        let mut to_prev = Vec::with_capacity(xs.len() * self.words * 8);
+        // Wires of the whole batch, or all of the same leading words (e.g. a range of whole words).
+        let words = xs.first().map_or(0, |x| x.own.len());
+        assert!(words <= self.words && xs.iter().all(|x| x.own.len() == words && x.prev.len() == words));
+        let tail = if words == self.words { self.tail } else { u64::MAX };
+        let mut to_prev = Vec::with_capacity(xs.len() * words * 8);
         let mut hasher = blake2s::Hasher::new();
         for x in xs {
             for &v in &x.own {
@@ -272,19 +284,19 @@ impl Party {
             }
         }
         let (from_prev, from_next) = self.link.exchange(to_prev, hasher.finalize().to_vec())?;
-        if from_next.len() != xs.len() * self.words * 8 || blake2s::hash(&from_next).as_slice() != from_prev.as_slice() {
+        if from_next.len() != xs.len() * words * 8 || blake2s::hash(&from_next).as_slice() != from_prev.as_slice() {
             return abort("inconsistent opening");
         }
         Ok(xs
             .iter()
             .enumerate()
             .map(|(i, x)| {
-                (0..self.words)
+                (0..words)
                     .map(|k| {
-                        let at = (i * self.words + k) * 8;
+                        let at = (i * words + k) * 8;
                         let mut v = x.own[k] ^ x.prev[k] ^ u64::from_le_bytes(from_next[at..at + 8].try_into().unwrap());
-                        if k + 1 == self.words {
-                            v &= self.tail;
+                        if k + 1 == words {
+                            v &= tail;
                         }
                         v
                     })
