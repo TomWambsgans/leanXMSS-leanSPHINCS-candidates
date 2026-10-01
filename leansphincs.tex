@@ -190,8 +190,8 @@ gates (XOR is free). What matters is the traffic per AND gate per operator, with
   \item about 1.5 bits: 4 operators, $f=1$~\cite{FF21} (with the fix of~\cite{BS26}), the numbers above
   \item about 10 to 16 bits: 3 operators with simpler cut-and-choose~\cite{FLNW17}, for a $2^{-40}$ to
         $2^{-80}$ chance of undetected cheating
-  \item about 30 bits: bigger clusters (e.g.\ 10-of-15) with Shamir sharing over $\mathrm{GF}(2^8)$ (our
-        estimate, from~\cite{ATLAS21})
+  \item about 8 to 16 bits: bigger clusters (e.g.\ 10-of-15) with Shamir sharing over $\mathrm{GF}(2^4)$, 2
+        to 4 field elements per AND gate (our estimate, from~\cite{ATLAS21})
 \end{itemize}
 Rounds: each layer of AND gates costs one round, and all the hashes of a layer run together. A BLAKE2s
 compression has AND-depth 884 (with ripple-carry adders, as in the AND count above), so a WOTS chain of 3
