@@ -202,7 +202,15 @@ preprocessing can run several instances at once, since they are known in advance
 Everything works for $n$ operators with $f<n/2$ corrupt, with one seed per set of $f$ operators known to
 the others, as long as $2f+1$ of them are online: every opened term then has an honest holder online, so
 any inconsistency aborts. Signing despite $f$ active cheaters needs $n>3f$, so that some $2f+1$ operators
-are all honest. Without an honest majority, MPC costs orders of magnitude more.
+are all honest.
+
+\paragraph{Against 2 of 4.} For malicious security against 2 in 3-of-4, use one seed per pair of operators
+(6 seeds): 2 colluders miss one, and any 3 hold all. But 3 signers then have no honest majority, and 2
+cheaters can always block signing. Mature protocols for this (authenticated garbling~\cite{YWZ20}) cost
+about 4\,100 bits per AND gate per operator: 5.9~TB at keygen. The 2026 protocol of~\cite{BGHIN26}
+(multiplication triples from a pseudorandom correlation generator, checked via PIR) costs only about 4
+bits: about 6~GB at keygen and 180~MB per FORS instance, but about 15 to 150 core-hours per operator at
+keygen. Its cheapest figures rely on new LPN variants, and it is not implemented yet for 3 parties.
 
 \begin{thebibliography}{9}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
@@ -221,6 +229,10 @@ are all honest. Without an honest majority, MPC costs orders of magnitude more.
 \bibitem{FF21} A.~Dalskov, D.~Escudero, M.~Keller. \emph{Fantastic Four: Honest-Majority Four-Party
   Secure Computation With Malicious Security}. USENIX Security, 2021.
   \url{https://eprint.iacr.org/2020/1330}.
+\bibitem{YWZ20} K.~Yang, X.~Wang, J.~Zhang. \emph{More Efficient MPC from Improved Triple Generation and
+  Authenticated Garbling}. ACM CCS, 2020. \url{https://eprint.iacr.org/2019/1104}.
+\bibitem{BGHIN26} E.~Boyle, N.~Gilboa, M.~Hamilis, Y.~Ishai, A.~Nof. \emph{Dishonest-Majority Secure
+  Computation via PIR-Authenticated Multiplication Triples}, 2026. \url{https://eprint.iacr.org/2026/257}.
 \bibitem{BS26} A.~Br\"uggemann, T.~Schneider. \emph{When Trying to Catch Cheaters Breaks the MPC: Breaking
   and Fixing Delayed Consistency Checks in Trident, Fantastic Four, SWIFT, and Quad}, 2026.
   \url{https://eprint.iacr.org/2026/234}.
