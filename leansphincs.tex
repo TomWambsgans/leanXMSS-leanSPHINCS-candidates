@@ -139,9 +139,10 @@ operator except $i$.
         and opens the ends. The tree is built in the clear, and its root is the public key.
 \end{enumerate}
 
-\paragraph{Signing.} The operators keep a signature counter $j$, so this mode is stateful. The $j$-th
-signature uses the FORS instance given by a hash of the public parameter and $j$: random as in a plain
-pruned key (so the security is the same), but known in advance.
+\paragraph{Signing.} The $j$-th signature uses the FORS instance given by a hash of the public parameter
+and $j$: random as in a plain pruned key (so the security is the same), but known in advance. The
+operators keep $j$ as a counter: losing it only gives a few instances an extra use (the trivial variant
+needs no counter).
 \begin{itemize}
   \item preprocessing, if the instance is new: MPC hashes its $24\,576$ secrets into leaves and opens
         them. The FORS trees and the WOTS$^+$C counter search run in the clear. The operators compare
