@@ -94,10 +94,15 @@ A concrete example of what's possible:
   \item share refresh: the shares can be refreshed, and an operator replaced, with the same public key
   \item keygen: $786\cdot10^3$ MPC hashes, about 2.2~GB of traffic per operator and 2\,500 rounds (assuming
         BLAKE2s)
-  \item signing, before the message is known: at most one FORS instance to compute, $24\,696$ MPC hashes,
-        about 68~MB of traffic per operator and 2\,600 rounds
-  \item signing, online: no MPC, only $2.7\cdot10^8$ compressions of grinding in the clear (about 0.3~s)
-        and 2 rounds of about 1~KB per operator
+  \item signing: at most one new FORS instance to compute in MPC, $24\,696$ MPC hashes, about 68~MB of
+        traffic per operator and 2\,600 rounds. Either:
+    \begin{itemize}
+    \item trivially, once the message is known: grind as in a plain pruned key ($66\cdot10^3$
+          compressions), then compute the instance the message selects, if it is new
+    \item or with preprocessing: compute the instance before the message is known. Online, no MPC: only
+          $2.7\cdot10^8$ compressions of grinding in the clear (about 0.3~s) and 2 rounds of about 1~KB
+          per operator
+    \end{itemize}
 \end{itemize}
 
 \paragraph{Where the secrets are used.} A signer only uses its secrets in three places:
