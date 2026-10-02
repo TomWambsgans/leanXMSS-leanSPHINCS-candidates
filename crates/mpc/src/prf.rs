@@ -57,8 +57,31 @@ pub fn prf_challenge(key: &Key, tag: &Tag, index: u64) -> Gf128 {
         .unwrap()
 }
 
+#[cfg(any(test, feature = "testing"))]
+thread_local! {
+    static TEST_SEED: std::cell::Cell<Option<([u8; 32], u64)>> = const { std::cell::Cell::new(None) };
+}
+
+/// Test hook: this thread's randomness comes from `seed` (a BLAKE2s counter stream) instead of the
+/// operating system, so that a test run can be replayed; `None` restores the operating system's.
+#[cfg(any(test, feature = "testing"))]
+pub fn seed_thread(seed: Option<[u8; 32]>) {
+    TEST_SEED.with(|c| c.set(seed.map(|s| (s, 0))));
+}
+
 /// Fills `out` from the operating system's generator, in one read.
 pub fn os_random_fill(out: &mut [u8]) {
+    #[cfg(any(test, feature = "testing"))]
+    if let Some((seed, mut ctr)) = TEST_SEED.with(|c| c.get()) {
+        for chunk in out.chunks_mut(32) {
+            let mut h = blake2s::Hasher::new();
+            h.update(&seed).update(&ctr.to_le_bytes());
+            chunk.copy_from_slice(&h.finalize()[..chunk.len()]);
+            ctr += 1;
+        }
+        TEST_SEED.with(|c| c.set(Some((seed, ctr))));
+        return;
+    }
     std::fs::File::open("/dev/urandom").and_then(|mut f| f.read_exact(out)).expect("no /dev/urandom");
 }
 
