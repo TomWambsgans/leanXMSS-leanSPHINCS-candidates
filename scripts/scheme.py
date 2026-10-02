@@ -43,7 +43,7 @@ def main():
     ap.add_argument("--h", type=int, default=26)
     ap.add_argument("--a", type=int, default=10)
     ap.add_argument("--k", type=int, default=24)
-    ap.add_argument("--w", type=int, default=2, help="bits per WOTS chain position")
+    ap.add_argument("--lg-w", type=int, default=2, help="bits per WOTS chain; chains have length 2^lg_w")
     ap.add_argument("--T", type=int, default=120, help="sum of the signed chain positions")
     ap.add_argument("--cache-mib", type=float, nargs="+", default=[0, 1, 1024],
                     help="signer cache sizes for full-key signing (MiB)")
@@ -54,8 +54,8 @@ def main():
     ap.add_argument("--bits-per-and", type=float, nargs="+", default=[1.0, 1.5],
                     help="MPC traffic per AND gate per operator (estimate)")
     x = ap.parse_args()
-    h, a, k, w, T = x.h, x.a, x.k, x.w, x.T
-    v, q = -(-128 // w), 2**w  # chains cover the 128-bit message
+    h, a, k, lg_w, T = x.h, x.a, x.k, x.lg_w, x.T
+    v, q = -(-128 // lg_w), 2**lg_w  # v chains of length q cover the 128-bit message
 
     # per-call costs (input after the 32-byte prefix)
     derive, step, node, enc = comp(32), comp(N), comp(2 * N), comp(N + 4)
@@ -91,7 +91,8 @@ def main():
     def nodes(mib):
         return int(mib * 2**20) // N
 
-    print(f"leanSphincs candidate: h={h} a={a} k={k} WOTS+C w={w} v={v} T={T}; costs in 64-byte compressions")
+    print(f"leanSphincs candidate: h={h} a={a} k={k}, WOTS+C with {v} chains of length {q} and T={T}; "
+          f"costs in 64-byte compressions")
     print(f"  signature {size} B (rho 16, FORS {k * (1 + a) * N}, counter 4, WOTS {v * N}, path {h * N}); pk 32 B")
     print(f"  per call: derive {derive}, chain {step}, node {node}, encode {enc}, WOTS leaf {wots_pk}, "
           f"FORS roots {fors_roots}, randomizer {rnd}, digest {blocks} x {msg_block}")
