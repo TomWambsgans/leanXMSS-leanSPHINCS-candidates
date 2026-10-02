@@ -4,152 +4,217 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>leanSphincs</title>
-<meta name="description" content="leanSphincs: a hash-based signature with the shape of SLH-DSA, retuned for small signatures, cheap verification, and four ways to hold a key.">
+<meta name="description" content="leanSphincs: a hash-based signature with the shape of SLH-DSA, retuned for small signatures and cheap verification, in four modes from hardware wallets to threshold signing.">
 <link rel="stylesheet" href="style.css">
+<script>document.documentElement.classList.add("js")</script>
 </head>
 <body>
-<main>
 
-<header>
-  <h1>leanSphincs</h1>
-  <p>A hash-based signature with the shape of SLH-DSA, retuned for small signatures and cheap verification.</p>
-  <nav>
-    <a href="https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf">Note (PDF)</a>
-    <a href="https://github.com/TomWambsgans/leansphincs-candidate">Code</a>
-  </nav>
+<header class="hero">
+  <div class="wrap">
+    <h1>leanSphincs</h1>
+    <p class="tagline">A post-quantum, hash-based signature with the shape of SLH-DSA, retuned for small signatures and cheap verification.</p>
+    <dl class="stats">
+      <div><dt>Public key</dt><dd>32&nbsp;B</dd></div>
+      <div><dt>Signature</dt><dd>5,684&nbsp;B</dd></div>
+      <div><dt>Verification</dt><dd>391 <small>compressions</small></dd></div>
+      <div><dt>Security</dt><dd>NIST level 1</dd></div>
+    </dl>
+    <nav class="links">
+      <a href="https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf">Note (PDF)</a>
+      <a href="https://github.com/TomWambsgans/leansphincs-candidate">Code</a>
+      <a href="#how">How it works</a>
+    </nav>
+  </div>
 </header>
 
-<section>
-  <h2>The scheme</h2>
+<main class="wrap">
+
+<section class="choose" aria-labelledby="choose-title">
+  <h2 id="choose-title">Pick your setting</h2>
+  <p class="lead">Same public key, same signature, same verifier. Only the signer changes.</p>
+
+  <div class="cards" role="tablist">
+    <a class="card" href="#wallet" role="tab" aria-controls="wallet">
+      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/></svg>
+      <span class="name">Hardware wallet</span>
+      <span class="life">2<sup>16</sup> signatures</span>
+      <span class="hint">Ledger Nano S+: keygen 34&nbsp;s, signing 4&nbsp;s</span>
+    </a>
+    <a class="card" href="#laptop" role="tab" aria-controls="laptop">
+      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="30,30 14,58 46,58"/></svg>
+      <span class="name">Laptop &amp; phone</span>
+      <span class="life">2<sup>24</sup> signatures</span>
+      <span class="hint">keygen 0.3&nbsp;s on a laptop</span>
+    </a>
+    <a class="card" href="#industry" role="tab" aria-controls="industry">
+      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="k" points="48,6 6,58 90,58"/></svg>
+      <span class="name">Industry</span>
+      <span class="life">2<sup>30</sup> signatures</span>
+      <span class="hint">the full tree, keygen 20&nbsp;s on a laptop</span>
+    </a>
+    <a class="card" href="#threshold" role="tab" aria-controls="threshold">
+      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/><circle class="op" cx="62" cy="38" r="5"/><circle class="op" cx="76" cy="38" r="5"/><circle class="op" cx="62" cy="52" r="5"/><circle class="op off" cx="76" cy="52" r="5"/></svg>
+      <span class="name">Threshold (MPC)</span>
+      <span class="life">3-of-4, 2<sup>16</sup> signatures</span>
+      <span class="hint">no trusted dealer, no MPC when signing</span>
+    </a>
+  </div>
+
+  <section class="panel" id="wallet" role="tabpanel">
+    <h3>Hardware wallet</h3>
+    <table>
+      <tr><th>Lifetime</th><td>2<sup>16</sup> signatures</td></tr>
+      <tr><th>Key generation</th><td>1.1M compressions, about 34&nbsp;s on a Ledger Nano S+</td></tr>
+      <tr><th>Signing</th><td>142K compressions, about 4&nbsp;s, with a 16&nbsp;KiB cache</td></tr>
+    </table>
+    <p>The key only builds one subtree of 2<sup>12</sup> leaves, and replaces the 14 siblings above it with pseudorandom nodes. The signer grinds the randomizer (2<sup>14</sup> tries on average) until the message lands in its subtree.</p>
+  </section>
+
+  <section class="panel" id="laptop" role="tabpanel">
+    <h3>Laptop &amp; phone</h3>
+    <table>
+      <tr><th>Lifetime</th><td>2<sup>24</sup> signatures</td></tr>
+      <tr><th>Key generation</th><td>287M compressions, about 0.3&nbsp;s on a laptop</td></tr>
+      <tr><th>Signing</th><td>84K compressions with a 1&nbsp;MiB cache</td></tr>
+    </table>
+    <p>The same pruning with a subtree of 2<sup>20</sup> leaves, so grinding drops to 2<sup>6</sup> tries. Also fits powerful hardware wallets.</p>
+  </section>
+
+  <section class="panel" id="industry" role="tabpanel">
+    <h3>Industry</h3>
+    <table>
+      <tr><th>Lifetime</th><td>2<sup>30</sup> signatures</td></tr>
+      <tr><th>Key generation</th><td>18.4B compressions, about 20&nbsp;s on a laptop</td></tr>
+      <tr><th>Signing</th><td>421K compressions with a 1&nbsp;MiB cache, 75K with 1&nbsp;GiB</td></tr>
+    </table>
+    <p>The full tree of 2<sup>26</sup> leaves. Each few-time key is used about 16 times over the lifetime, which the security bound accounts for.</p>
+  </section>
+
+  <section class="panel" id="threshold" role="tabpanel">
+    <h3>Threshold (MPC)</h3>
+    <table>
+      <tr><th>Signers</th><td>any 3 of 4 operators</td></tr>
+      <tr><th>Security</th><td>against 1 malicious operator, key generated without a trusted dealer</td></tr>
+      <tr><th>Lifetime</th><td>2<sup>16</sup> signatures</td></tr>
+      <tr><th>Key generation</th><td>1.3&nbsp;GB of traffic per operator</td></tr>
+      <tr><th>Signing</th><td>no MPC once the message is known: about 10 rounds of a few KB</td></tr>
+    </table>
+    <p>Only hashes of secrets run in MPC, and none of them depends on the message. The next few-time key is computed in advance (42&nbsp;MB of traffic per operator), and the randomizer is ground until the message lands on it. <a href="https://github.com/TomWambsgans/leansphincs-candidate/tree/main/crates/threshold">Prototype in Rust</a>.</p>
+  </section>
+</section>
+
+<section class="how" id="how" aria-labelledby="how-title">
+  <h2 id="how-title">How it works</h2>
   <p>
-    One Merkle tree of one-time keys. The message picks a leaf; that leaf's one-time key signs a
-    few-time key, which signs the message. This is the shape of SLH-DSA-128-24 (NIST SP&nbsp;800-230),
-    with three changes:
+    One Merkle tree of one-time keys. The message, hashed with a randomizer, picks a leaf: that leaf's
+    one-time key signs a few-time key, which signs the message. This is the shape of SLH-DSA-128-24
+    (NIST SP&nbsp;800-230), with three changes:
   </p>
   <ul>
-    <li>a tree of height 26, instead of 22;</li>
-    <li>few-time keys (FORS) of 24 trees of height 10, instead of 6 of height 24;</li>
-    <li>WOTS+C instead of WOTS: 64 chains of length 4 whose positions sum to 120, so no checksum.</li>
+    <li>a tree of height <strong>26</strong>, instead of 22;</li>
+    <li>few-time keys (FORS) of <strong>24 trees of height 10</strong>, instead of 6 of height 24;</li>
+    <li><strong>WOTS+C</strong> instead of WOTS: 64 chains of length 4 whose positions sum to 120, so no checksum.</li>
   </ul>
 
-  <figure>
-    <svg viewBox="0 0 560 370" role="img" aria-labelledby="fig-title">
-      <title id="fig-title">The structure of a leanSphincs key and signature</title>
+  <figure class="diagram">
+    <svg viewBox="0 0 720 470" role="img" aria-labelledby="dia-title">
+      <title id="dia-title">A leanSphincs signature: a Merkle path, a WOTS+C signature and a FORS signature</title>
       <defs>
-        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
-        </marker>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker>
       </defs>
 
-      <!-- the tree of one-time keys -->
-      <polygon points="300,28 100,196 500,196" class="tree"/>
-      <text x="314" y="24" class="label">public key (the root)</text>
-      <text x="350" y="176" class="label">tree of height 26</text>
-
-      <!-- the subtree a pruned key builds -->
-      <polygon points="180,150 152,196 208,196" class="kept"/>
-      <text x="18" y="112" class="note">a pruned key builds</text>
-      <text x="18" y="127" class="note">only this subtree</text>
-      <line x1="112" y1="132" x2="170" y2="168" class="lead"/>
-
-      <!-- the selected leaf and its path to the root -->
-      <polyline points="280,196 286,140 294,80 300,28" class="path"/>
-      <circle cx="300" cy="28" r="5" class="dot"/>
-      <circle cx="280" cy="196" r="5" class="dot accent"/>
-
-      <!-- its one-time key -->
-      <line x1="280" y1="202" x2="280" y2="224" class="edge" marker-end="url(#arrow)"/>
-      <rect x="200" y="228" width="160" height="34" rx="4" class="box"/>
-      <text x="280" y="250" class="label" text-anchor="middle">WOTS+C one-time key</text>
-
-      <!-- signs a few-time key -->
-      <line x1="280" y1="262" x2="280" y2="288" class="edge" marker-end="url(#arrow)"/>
-      <text x="290" y="280" class="note">signs</text>
-      <g class="fors">
-        <polygon points="150,294 132,332 168,332"/>
-        <polygon points="190,294 172,332 208,332"/>
-        <polygon points="230,294 212,332 248,332"/>
-        <polygon points="270,294 252,332 288,332"/>
-        <polygon points="310,294 292,332 328,332"/>
-        <polygon points="350,294 332,332 368,332"/>
+      <!-- Merkle tree: 4 drawn levels stand for 26 -->
+      <g class="edges">
+        <line x1="360" y1="40" x2="240" y2="100"/><line x1="360" y1="40" x2="480" y2="100"/>
+        <line x1="240" y1="100" x2="180" y2="160"/><line x1="240" y1="100" x2="300" y2="160"/>
+        <line x1="480" y1="100" x2="420" y2="160"/><line x1="480" y1="100" x2="540" y2="160"/>
+        <line x1="180" y1="160" x2="150" y2="220"/><line x1="180" y1="160" x2="210" y2="220"/>
+        <line x1="300" y1="160" x2="270" y2="220"/><line x1="300" y1="160" x2="330" y2="220"/>
+        <line x1="420" y1="160" x2="390" y2="220"/><line x1="420" y1="160" x2="450" y2="220"/>
+        <line x1="540" y1="160" x2="510" y2="220"/><line x1="540" y1="160" x2="570" y2="220"/>
       </g>
-      <g class="dot accent">
-        <circle cx="140" cy="332" r="3"/>
-        <circle cx="198" cy="332" r="3"/>
-        <circle cx="222" cy="332" r="3"/>
-        <circle cx="281" cy="332" r="3"/>
-        <circle cx="300" cy="332" r="3"/>
-        <circle cx="359" cy="332" r="3"/>
+      <g class="path">
+        <line x1="330" y1="220" x2="300" y2="160"/><line x1="300" y1="160" x2="240" y2="100"/><line x1="240" y1="100" x2="360" y2="40"/>
       </g>
-      <text x="382" y="320" class="label">… 24 trees of height 10</text>
-      <text x="250" y="358" class="label" text-anchor="middle">FORS few-time key</text>
+      <g class="nodes">
+        <circle cx="240" cy="100" r="9" class="on"/><circle cx="480" cy="100" r="9" class="sib"/>
+        <circle cx="180" cy="160" r="9" class="sib"/><circle cx="300" cy="160" r="9" class="on"/>
+        <circle cx="420" cy="160" r="9"/><circle cx="540" cy="160" r="9"/>
+        <rect x="142" y="212" width="16" height="16" rx="3"/><rect x="202" y="212" width="16" height="16" rx="3"/>
+        <rect x="262" y="212" width="16" height="16" rx="3" class="sib"/><rect x="322" y="212" width="16" height="16" rx="3" class="on"/>
+        <rect x="382" y="212" width="16" height="16" rx="3"/><rect x="442" y="212" width="16" height="16" rx="3"/>
+        <rect x="502" y="212" width="16" height="16" rx="3"/><rect x="562" y="212" width="16" height="16" rx="3"/>
+        <circle cx="360" cy="40" r="11" class="root"/>
+      </g>
+      <text x="380" y="34" class="t">public key: the root</text>
+      <text x="596" y="164" class="m">height 26</text>
+      <text x="596" y="224" class="t">2<tspan baseline-shift="super" class="sm">26</tspan> one-time keys</text>
+
+      <!-- WOTS+C -->
+      <line x1="330" y1="232" x2="330" y2="262" class="flow" marker-end="url(#arr)"/>
+      <g transform="translate(250,268)">
+        <rect x="0" y="0" width="160" height="78" rx="8" class="box"/>
+        <g class="chain" transform="translate(16,10)">
+          <rect x="0" y="0" width="22" height="10" rx="2"/><rect x="26" y="0" width="22" height="10" rx="2" class="rev"/><rect x="52" y="0" width="22" height="10" rx="2"/><rect x="78" y="0" width="22" height="10" rx="2"/>
+          <rect x="0" y="16" width="22" height="10" rx="2"/><rect x="26" y="16" width="22" height="10" rx="2"/><rect x="52" y="16" width="22" height="10" rx="2"/><rect x="78" y="16" width="22" height="10" rx="2" class="rev"/>
+          <rect x="0" y="32" width="22" height="10" rx="2" class="rev"/><rect x="26" y="32" width="22" height="10" rx="2"/><rect x="52" y="32" width="22" height="10" rx="2"/><rect x="78" y="32" width="22" height="10" rx="2"/>
+          <rect x="0" y="48" width="22" height="10" rx="2"/><rect x="26" y="48" width="22" height="10" rx="2"/><rect x="52" y="48" width="22" height="10" rx="2" class="rev"/><rect x="78" y="48" width="22" height="10" rx="2"/>
+        </g>
+        <text x="138" y="44" class="m" text-anchor="middle">⋯</text>
+      </g>
+      <text x="426" y="300" class="t">WOTS+C one-time key</text>
+      <text x="426" y="318" class="m">64 chains of length 4</text>
+
+      <!-- FORS -->
+      <line x1="330" y1="346" x2="330" y2="372" class="flow" marker-end="url(#arr)"/>
+      <text x="340" y="364" class="m">signs</text>
+      <g class="fors" transform="translate(170,378)">
+        <polygon points="20,0 2,40 38,40"/><circle cx="12" cy="40" r="3.2" class="rev"/>
+        <polygon points="66,0 48,40 84,40"/><circle cx="76" cy="40" r="3.2" class="rev"/>
+        <polygon points="112,0 94,40 130,40"/><circle cx="104" cy="40" r="3.2" class="rev"/>
+        <polygon points="158,0 140,40 176,40"/><circle cx="166" cy="40" r="3.2" class="rev"/>
+        <polygon points="204,0 186,40 222,40"/><circle cx="196" cy="40" r="3.2" class="rev"/>
+        <polygon points="250,0 232,40 268,40"/><circle cx="262" cy="40" r="3.2" class="rev"/>
+        <polygon points="296,0 278,40 314,40"/><circle cx="290" cy="40" r="3.2" class="rev"/>
+        <text x="330" y="26" class="m">⋯</text>
+      </g>
+      <text x="530" y="396" class="t">FORS few-time key</text>
+      <text x="530" y="414" class="m">24 trees of height 10</text>
+
+      <!-- legend -->
+      <g transform="translate(200,454)" class="legend">
+        <rect x="0" y="-10" width="12" height="12" rx="3" class="on"/><text x="18" y="0" class="m">recomputed by the verifier</text>
+        <rect x="190" y="-10" width="12" height="12" rx="3" class="sib"/><text x="208" y="0" class="m">sent in the signature</text>
+      </g>
     </svg>
-    <figcaption>The message, hashed with a randomizer, picks a leaf of the tree and one leaf in each FORS tree. The signature reveals them, with their paths to the roots.</figcaption>
+    <figcaption>The message picks one leaf of the tree and one leaf in each FORS tree. The signature reveals them, with the sibling nodes needed to recompute every root: 5,684 bytes, verified in 391 compressions.</figcaption>
   </figure>
-
-  <table>
-    <tr><td>Public key</td><td>32 bytes</td></tr>
-    <tr><td>Signature</td><td>5,684 bytes</td></tr>
-    <tr><td>Verification</td><td>391 BLAKE2s compressions, the same for every signature</td></tr>
-    <tr><td>Security</td><td>NIST level 1 (128 bits), with BLAKE2s truncated to 16 bytes</td></tr>
-  </table>
 </section>
-
-<section>
-  <h2>Four modes</h2>
-  <p>Same public key, same signature, same verifier. Only the signer changes.</p>
-
-  <article>
-    <h3>1. Hardware wallets (Ledger Nano S+)</h3>
-    <table>
-      <tr><td>Lifetime</td><td>2<sup>16</sup> signatures</td></tr>
-      <tr><td>Key generation</td><td>1.1M compressions, about 34&nbsp;s</td></tr>
-      <tr><td>Signing</td><td>142K compressions, about 4&nbsp;s, with a 16&nbsp;KiB cache</td></tr>
-    </table>
-    <p>The key only builds a subtree of 2<sup>12</sup> leaves; the signer grinds the randomizer until the message lands in it.</p>
-  </article>
-
-  <article>
-    <h3>2. Laptops, phones, powerful hardware wallets</h3>
-    <table>
-      <tr><td>Lifetime</td><td>2<sup>24</sup> signatures</td></tr>
-      <tr><td>Key generation</td><td>287M compressions, about 0.3&nbsp;s on a laptop</td></tr>
-      <tr><td>Signing</td><td>84K compressions with a 1&nbsp;MiB cache</td></tr>
-    </table>
-    <p>The same trick with a subtree of 2<sup>20</sup> leaves.</p>
-  </article>
-
-  <article>
-    <h3>3. Industry</h3>
-    <table>
-      <tr><td>Lifetime</td><td>2<sup>30</sup> signatures</td></tr>
-      <tr><td>Key generation</td><td>18.4B compressions, about 20&nbsp;s on a laptop</td></tr>
-      <tr><td>Signing</td><td>421K compressions with a 1&nbsp;MiB cache, 75K with 1&nbsp;GiB</td></tr>
-    </table>
-    <p>The full tree.</p>
-  </article>
-
-  <article>
-    <h3>4. Threshold (MPC)</h3>
-    <table>
-      <tr><td>Signers</td><td>3-of-4, key generated without a trusted dealer</td></tr>
-      <tr><td>Security</td><td>against 1 malicious operator</td></tr>
-      <tr><td>Lifetime</td><td>2<sup>16</sup> signatures</td></tr>
-      <tr><td>Key generation</td><td>1.3&nbsp;GB of traffic per operator</td></tr>
-      <tr><td>Signing</td><td>no MPC once the message is known: about 10 rounds of a few KB</td></tr>
-    </table>
-    <p>
-      Only hashes of secrets run in MPC, and none depends on the message: the next few-time key is
-      computed in advance (42&nbsp;MB per operator), and the randomizer is ground until the message lands
-      on it. <a href="https://github.com/TomWambsgans/leansphincs-candidate/tree/main/crates/threshold">Prototype in Rust</a>.
-    </p>
-  </article>
-</section>
-
-<footer>
-  <p>Times assume 33K BLAKE2s per second on a Nano S+ and 10<sup>9</sup> on a laptop. Personal opinion of the author, Tom Wambsgans; subject to change.</p>
-</footer>
 
 </main>
+
+<footer class="wrap">
+  <p>Costs are BLAKE2s compressions; times assume 33K per second on a Ledger Nano S+ and 10<sup>9</sup> on a laptop. Personal opinion of the author, Tom Wambsgans; subject to change.</p>
+</footer>
+
+<script>
+  // The cards act as tabs; the hash keeps the selected mode linkable.
+  const ids = ["wallet", "laptop", "industry", "threshold"];
+  function show(id) {
+    if (!ids.includes(id)) id = ids[0];
+    for (const x of ids) {
+      document.getElementById(x).hidden = x !== id;
+      document.querySelector(`.card[href="#${x}"]`).setAttribute("aria-selected", x === id);
+    }
+  }
+  document.querySelectorAll(".card").forEach(c => c.addEventListener("click", e => {
+    e.preventDefault();
+    const id = c.getAttribute("href").slice(1);
+    history.replaceState(null, "", "#" + id);
+    show(id);
+  }));
+  show(location.hash.slice(1));
+</script>
 </body>
 </html>

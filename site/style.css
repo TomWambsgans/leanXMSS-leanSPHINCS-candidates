@@ -1,68 +1,182 @@
 :root {
-  --fg: #1d1d1f;
-  --muted: #6e6e73;
-  --bg: #ffffff;
-  --line: #d2d2d7;
-  --accent: #0b6bcb;
-  --fill: #f2f2f5;
+  --bg: #fbfbfd;
+  --surface: #ffffff;
+  --fg: #16181d;
+  --muted: #6b7280;
+  --line: #e4e6ec;
+  --soft: #f1f3f8;
+  --accent: #3b5bdb;
+  --accent-soft: rgba(59, 91, 219, 0.12);
+  --sent: #e8890c;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --fg: #ececf0;
-    --muted: #9a9aa2;
-    --bg: #151517;
-    --line: #3a3a3e;
-    --accent: #5aa9ff;
-    --fill: #222226;
+    --bg: #111215;
+    --surface: #18191d;
+    --fg: #eceef3;
+    --muted: #9aa0ac;
+    --line: #2b2e35;
+    --soft: #22242a;
+    --accent: #7b96ff;
+    --accent-soft: rgba(123, 150, 255, 0.16);
+    --sent: #f5a524;
+    --shadow: none;
   }
 }
 
 * { box-sizing: border-box; }
 
+html { scroll-behavior: smooth; }
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font: 16.5px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-main {
-  max-width: 44rem;
-  margin: 0 auto;
-  padding: 3rem 1rem 4rem;
-}
-
-h1 { font-size: 2rem; margin: 0 0 0.25rem; }
-h2 { font-size: 1.3rem; margin: 2.5rem 0 0.75rem; }
-h3 { font-size: 1.05rem; margin: 0 0 0.25rem; }
+.wrap { max-width: 62rem; margin: 0 auto; padding: 0 1.25rem; }
 
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-nav { display: flex; gap: 1.25rem; }
+h1, h2, h3 { letter-spacing: -0.015em; line-height: 1.2; }
+h2 { font-size: 1.55rem; margin: 0 0 0.4rem; }
+h3 { font-size: 1.15rem; margin: 0 0 0.75rem; }
+sup { font-size: 0.7em; }
 
-ul { padding-left: 1.2rem; }
+/* Hero */
 
-table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; }
-td { padding: 0.35rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-td:first-child { color: var(--muted); width: 9rem; padding-right: 1rem; }
+.hero {
+  padding: 4.5rem 0 3rem;
+  background: radial-gradient(60rem 22rem at 20% 0%, var(--accent-soft), transparent 70%);
+  border-bottom: 1px solid var(--line);
+}
+.hero h1 { font-size: 3rem; margin: 0; letter-spacing: -0.03em; }
+.tagline { font-size: 1.2rem; color: var(--muted); max-width: 40rem; margin: 0.6rem 0 2rem; }
 
-article { margin: 1.75rem 0; }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1.75rem;
+}
+.stats div {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  box-shadow: var(--shadow);
+}
+.stats dt { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.stats dd { margin: 0.15rem 0 0; font-size: 1.35rem; font-weight: 650; }
+.stats small { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
 
-figure { margin: 1.5rem 0; }
-svg { width: 100%; height: auto; color: var(--fg); }
-svg .tree { fill: var(--fill); stroke: currentColor; stroke-width: 1.5; }
-svg .kept { fill: color-mix(in srgb, var(--accent) 25%, transparent); stroke: var(--accent); stroke-width: 1.5; }
-svg .fors polygon { fill: var(--fill); stroke: currentColor; stroke-width: 1.2; }
-svg .box { fill: var(--bg); stroke: currentColor; stroke-width: 1.5; }
-svg .path { fill: none; stroke: var(--accent); stroke-width: 2.5; }
-svg .edge { stroke: currentColor; stroke-width: 1.5; }
-svg .lead { stroke: var(--muted); stroke-width: 1; }
-svg .dot { fill: currentColor; }
-svg .dot.accent { fill: var(--accent); }
-svg text { font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: currentColor; }
-svg .note { fill: var(--muted); font-size: 12px; }
+.links { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.links a {
+  padding: 0.45rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 550;
+  font-size: 0.95rem;
+}
+.links a:first-child { background: var(--accent); border-color: var(--accent); color: #fff; }
+.links a:hover { text-decoration: none; border-color: var(--accent); }
 
-footer { margin-top: 3rem; color: var(--muted); font-size: 0.9rem; }
-figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; }
+/* Modes */
+
+main section { padding-top: 3rem; }
+.lead { color: var(--muted); margin: 0 0 1.5rem; }
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 1.1rem 1.1rem 1.2rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--fg);
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s, transform 0.15s, background 0.15s;
+}
+.card:hover { text-decoration: none; border-color: var(--accent); transform: translateY(-2px); }
+.card[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); }
+.card svg { width: 72px; height: 48px; margin-bottom: 0.6rem; }
+.card .t { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linejoin: round; }
+.card .k { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.card .op { fill: var(--accent); }
+.card .op.off { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.card .name { font-weight: 650; font-size: 1.05rem; }
+.card .life { color: var(--accent); font-weight: 600; }
+.card .hint { color: var(--muted); font-size: 0.88rem; line-height: 1.4; margin-top: 0.3rem; }
+
+.panel {
+  margin-top: 1rem;
+  padding: 1.5rem 1.6rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.panel p { max-width: 44rem; }
+
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 0.55rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; width: 10rem; padding-right: 1rem; }
+
+/* How it works */
+
+.how > p, .how > ul { max-width: 44rem; }
+.how li { margin: 0.2rem 0; }
+
+.diagram {
+  margin: 2rem 0 0;
+  padding: 1.5rem 1rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.diagram svg { display: block; width: 100%; height: auto; max-width: 720px; margin: 0 auto; }
+.diagram figcaption { color: var(--muted); font-size: 0.92rem; max-width: 44rem; margin: 0.75rem auto 0; text-align: center; }
+
+.diagram text { font-family: inherit; fill: var(--fg); }
+.diagram .t { font-size: 14px; font-weight: 600; }
+.diagram .m { font-size: 13px; fill: var(--muted); }
+.diagram .sm { font-size: 10px; }
+.diagram .edges line { stroke: var(--line); stroke-width: 2; }
+.diagram .path line { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
+.diagram .nodes circle, .diagram .nodes rect { fill: var(--surface); stroke: var(--muted); stroke-width: 1.5; }
+.diagram .root { fill: var(--fg) !important; stroke: var(--fg) !important; }
+.diagram .on { fill: var(--accent) !important; stroke: var(--accent) !important; }
+.diagram .sib, .diagram .rev { fill: var(--sent) !important; stroke: var(--sent) !important; }
+.diagram .flow { stroke: var(--muted); stroke-width: 1.5; }
+.diagram .arrowhead { fill: var(--muted); }
+.diagram .box { fill: var(--soft); stroke: var(--line); stroke-width: 1.5; }
+.diagram .chain rect { fill: var(--surface); stroke: var(--muted); stroke-width: 1; }
+.diagram .fors polygon { fill: var(--soft); stroke: var(--muted); stroke-width: 1.5; stroke-linejoin: round; }
+
+footer { margin-top: 4rem; padding-bottom: 3rem; color: var(--muted); font-size: 0.88rem; }
+
+/* Without JavaScript, every panel shows; with it, the cards switch between them. */
+.js .panel[hidden] { display: none; }
+
+@media (max-width: 860px) {
+  .cards, .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .hero h1 { font-size: 2.3rem; }
+  .cards, .stats { grid-template-columns: 1fr; }
+  th { width: 7.5rem; }
+}
