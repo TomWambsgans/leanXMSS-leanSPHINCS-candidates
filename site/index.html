@@ -10,11 +10,10 @@
 :root {
   color-scheme: light;
   --ink: #111111;
-  --muted: #7a7a7a;
+  --muted: #5e5e5e;
   --rule: #e8e8e8;
   --tree: #cfcfcf;
   --sans: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
 }
 
 * { box-sizing: border-box; }
@@ -27,46 +26,47 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-main { max-width: 60rem; margin: 0 auto; padding: 5rem 1.5rem 3rem; }
+main { max-width: 72rem; margin: 0 auto; padding: 4.5rem 2rem 3rem; }
 
 a { color: inherit; text-decoration: underline; text-decoration-color: var(--tree); text-underline-offset: 3px; }
 a:hover { text-decoration-color: var(--ink); }
 
 sup { font-size: 0.7em; line-height: 0; }
 .nowrap { white-space: nowrap; }
-i { font-family: var(--serif); font-size: 1.08em; }
 
 /* Title */
 
-h1 { font-size: 2.25rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; margin: 0; }
-.by { color: var(--muted); margin: 0.4rem 0 0; }
+h1 { font-size: 2.25rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; margin: 0; white-space: nowrap; }
+.by { margin: 0.4rem 0 0; }
 
 /* The scheme */
 
 .scheme {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 3.5rem;
-  align-items: center;
-  margin: 4.5rem 0;
+  align-items: stretch;
+  margin: 0 0 5rem;
 }
+.params { margin-top: 3.5rem; }
 
-.params p { margin: 0 0 1.75rem; color: var(--muted); white-space: nowrap; }
+.params p { margin: 0 0 1.75rem; white-space: nowrap; }
 .params table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.params th, .params td { text-align: left; padding: 0.45rem 2.25rem 0.45rem 0; font-weight: 400; }
-.params thead th { color: var(--muted); font-size: 0.85rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.6rem; }
-.params tbody tr:first-child > * { padding-top: 0.8rem; }
-.params tbody th { width: 3.5rem; }
+.params th, .params td { text-align: left; padding: 0.65rem 2.25rem 0.65rem 0; font-weight: 400; }
 .params td + td { color: var(--muted); }
+.params thead th { border-bottom: 1px solid var(--rule); padding-bottom: 0.6rem; }
+.params tbody tr:first-child > * { padding-top: 0.8rem; }
+.params tbody th { padding-right: 2.25rem; }
+.params tbody.out tr:first-child > * { border-top: 1px solid var(--rule); padding-top: 0.8rem; }
 
-figure { margin: 0; }
-figure svg { display: block; width: 100%; height: auto; }
+figure { margin: 0; position: relative; }
+figure svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 svg text { font-family: var(--sans); }
-svg .lb { font-size: 13px; fill: var(--muted); }
-svg .nm { font-size: 14px; font-weight: 600; fill: var(--ink); }
-svg .pv { font-size: 14px; fill: var(--ink); }
-svg .it { font-family: var(--serif); font-style: italic; font-size: 15.5px; }
+svg .lb { font-size: 15px; fill: var(--muted); }
+svg .nm { font-size: 15px; font-weight: 600; fill: var(--ink); }
+svg .pv { font-size: 15px; fill: var(--ink); }
+svg .it { font-style: italic; }
 svg .tree line { stroke: var(--tree); stroke-width: 1; }
 svg .stub line { stroke: url(#fade); stroke-width: 1; }
 svg .f0 { stop-color: var(--tree); stop-opacity: 1; }
@@ -82,22 +82,10 @@ svg .ell circle { fill: var(--ink); }
 svg .brace { fill: none; stroke: #8a8a8a; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
 svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-linejoin: round; }
 
-/* Numbers */
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 0;
-  padding: 1.5rem 0;
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
-}
-.stats dt { color: var(--muted); font-size: 0.85rem; }
-.stats dd { margin: 0.15rem 0 0; font-size: 1.15rem; font-weight: 500; }
 
 /* Modes */
 
-.modes { margin-top: 4.5rem; }
+.modes { margin-top: 0; }
 
 .tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--rule); }
 .tabs a {
@@ -110,23 +98,26 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
   border-bottom: 1.5px solid transparent;
   margin-bottom: -1px;
 }
-.tabs a span { font-size: 0.85rem; font-weight: 400; }
+.tabs a span { font-weight: 400; }
 .tabs a:hover { color: var(--ink); }
 .tabs a[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 
 .panel { display: grid; grid-template-columns: 9rem 1fr; gap: 0.8rem 1.5rem; margin: 1.75rem 0 0; }
-.panel dt { color: var(--muted); }
+.panel dt { font-weight: 500; }
 .panel dd { margin: 0; }
 .js .panel[hidden] { display: none; }
 
-footer { margin-top: 6rem; color: var(--muted); font-size: 0.85rem; }
+footer { margin-top: 6rem; color: var(--muted); }
 footer p { margin: 0.3rem 0; }
 footer a + a { margin-left: 1.25rem; }
 
 @media (max-width: 820px) {
+  h1 { white-space: normal; }
   main { padding-top: 3rem; }
-  .scheme { grid-template-columns: 1fr; gap: 2.5rem; margin: 3rem 0; }
-  .stats, .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 1rem; }
+  .scheme { grid-template-columns: 1fr; gap: 2.5rem; margin: 0 0 3rem; }
+  figure svg { position: static; height: auto; }
+  .params { margin-top: 2.5rem; }
+  .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 1rem; }
   .panel { grid-template-columns: 1fr; gap: 0.15rem; }
   .panel dd { margin-bottom: 0.8rem; }
 }
@@ -136,26 +127,32 @@ footer a + a { margin-left: 1.25rem; }
 <body>
 <main>
 
-<header>
-  <h1>A proposal for leanSphincs</h1>
-  <p class="by">by Tom Wambsgans</p>
-</header>
-
 <section class="scheme">
-  <div class="params">
-    <p>Same as SLH-DSA-128-24 (<a href="https://csrc.nist.gov/pubs/sp/800/230/ipd">NIST SP 800-230</a>), except:</p>
-    <table>
-      <thead><tr><th></th><th>leanSphincs</th><th>SLH-DSA-128-24</th></tr></thead>
-      <tbody>
-        <tr><th><i>h</i></th><td>26</td><td>22</td></tr>
-        <tr><th><i>k</i></th><td>24</td><td>6</td></tr>
-        <tr><th><i>a</i></th><td>10</td><td>24</td></tr>
-        <tr><th>OTS</th><td>WOTS+C</td><td>WOTS</td></tr>
-      </tbody>
-    </table>
+  <div class="text">
+    <header>
+      <h1>A proposal for leanSphincs</h1>
+      <p class="by">by Tom Wambsgans</p>
+    </header>
+    <div class="params">
+      <p>Same as SLH-DSA-128-24 (<a href="https://csrc.nist.gov/pubs/sp/800/230/ipd">NIST SP 800-230</a>), except:</p>
+      <table>
+        <thead><tr><th></th><th>leanSphincs</th><th>SLH-DSA-128-24</th></tr></thead>
+        <tbody>
+          <tr><th><i>h</i></th><td>26</td><td>22</td></tr>
+          <tr><th><i>k</i></th><td>24</td><td>6</td></tr>
+          <tr><th><i>a</i></th><td>10</td><td>24</td></tr>
+          <tr><th>OTS</th><td>WOTS+C</td><td>WOTS</td></tr>
+        </tbody>
+        <tbody class="out">
+          <tr><th>Lifetime</th><td>2<sup>30</sup></td><td>2<sup>24</sup></td></tr>
+          <tr><th>Signature</th><td>5,684 B</td><td>3,856 B</td></tr>
+          <tr><th>Verification<br><span class="unit">(compressions)</span></th><td>391</td><td>≈ 296</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
   <figure>
-      <svg viewBox="0 0 600 474" role="img" aria-labelledby="dia-title">
+      <svg viewBox="10 15 580 456" preserveAspectRatio="xMinYMid meet" role="img" aria-labelledby="dia-title">
         <title id="dia-title">A leanSphincs signature: a path in a tree of height 26 to a leaf, the hash of a WOTS+C key of 64 chains of length 4, which signs the root of a FORS key of 24 trees of height 10</title>
         <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient></defs>
         <g class="tree">
@@ -450,12 +447,6 @@ footer a + a { margin-left: 1.25rem; }
   </figure>
 </section>
 
-<dl class="stats">
-  <div><dt>Public key</dt><dd>32 B</dd></div>
-  <div><dt>Signature</dt><dd>5,684 B</dd></div>
-  <div><dt>Verification</dt><dd>391 compressions</dd></div>
-  <div><dt>Security</dt><dd>NIST level 1</dd></div>
-</dl>
 
 <section class="modes">
   <div class="tabs" role="tablist">
@@ -493,7 +484,7 @@ footer a + a { margin-left: 1.25rem; }
 
 <footer>
   <p><a href="https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf">Note</a><a href="https://github.com/TomWambsgans/leansphincs-candidate">Code</a></p>
-  <p>Costs in BLAKE2s compressions; times assume 10<sup>9</sup> per second on a laptop and 33K on a Ledger Nano S+.</p>
+  <p>Costs in BLAKE2s compressions, for both schemes (SLH-DSA verification varies with the message, ≈&nbsp;is its average); times assume 10<sup>9</sup> per second on a laptop and 33K on a Ledger Nano S+.</p>
 </footer>
 
 </main>
