@@ -1,194 +1,176 @@
 :root {
-  --bg: #fbfbfd;
+  --bg: #fafaf9;
   --surface: #ffffff;
-  --fg: #16181d;
-  --muted: #6b7280;
-  --line: #e4e6ec;
-  --soft: #f1f3f8;
-  --accent: #3b5bdb;
-  --accent-soft: rgba(59, 91, 219, 0.12);
-  --sent: #e8890c;
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.06);
+  --fg: #141416;
+  --muted: #6b6b72;
+  --faint: #a3a3aa;
+  --line: #e6e6e3;
+  --accent: #3d5afe;
+  --accent-soft: rgba(61, 90, 254, 0.09);
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111215;
-    --surface: #18191d;
-    --fg: #eceef3;
-    --muted: #9aa0ac;
-    --line: #2b2e35;
-    --soft: #22242a;
-    --accent: #7b96ff;
-    --accent-soft: rgba(123, 150, 255, 0.16);
-    --sent: #f5a524;
-    --shadow: none;
+    --bg: #0d0d0f;
+    --surface: #141417;
+    --fg: #ececee;
+    --muted: #9b9ba3;
+    --faint: #5b5b63;
+    --line: #26262b;
+    --accent: #8197ff;
+    --accent-soft: rgba(129, 151, 255, 0.12);
   }
 }
 
 * { box-sizing: border-box; }
-
 html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font: 16.5px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  font: 16px/1.6 var(--sans);
   -webkit-font-smoothing: antialiased;
 }
 
-.wrap { max-width: 62rem; margin: 0 auto; padding: 0 1.25rem; }
+.wrap { max-width: 64rem; margin: 0 auto; padding: 0 1.5rem; }
 
 a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
 
-h1, h2, h3 { letter-spacing: -0.015em; line-height: 1.2; }
-h2 { font-size: 1.55rem; margin: 0 0 0.4rem; }
-h3 { font-size: 1.15rem; margin: 0 0 0.75rem; }
+h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.15; font-weight: 600; }
+h2 { font-size: 1.5rem; margin: 0 0 0.35rem; }
+h3 { font-size: 1.1rem; margin: 0 0 0.9rem; }
 sup { font-size: 0.7em; }
 
 /* Hero */
 
-.hero {
-  padding: 4.5rem 0 3rem;
-  background: radial-gradient(60rem 22rem at 20% 0%, var(--accent-soft), transparent 70%);
-  border-bottom: 1px solid var(--line);
-}
-.hero h1 { font-size: 3rem; margin: 0 0 1.5rem; letter-spacing: -0.03em; }
+.hero { padding: 4.5rem 0 3.5rem; border-bottom: 1px solid var(--line); }
+.hero h1 { font-size: 2.75rem; margin: 0 0 2.5rem; letter-spacing: -0.035em; }
 
 .how {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
-  gap: 1.5rem;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.3fr);
+  gap: 3rem;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2.5rem;
 }
-.steps { list-style: none; margin: 0; padding: 0; }
-.steps li { display: flex; gap: 0.8rem; align-items: flex-start; margin: 0 0 1.1rem; }
-.steps p { margin: 0; font-size: 1.05rem; }
-.steps .n {
-  flex: none;
-  width: 1.7rem; height: 1.7rem;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  font-weight: 650;
-  font-size: 0.9rem;
-  display: grid; place-items: center;
-  margin-top: 0.1rem;
+
+.params p { margin: 0 0 1.25rem; color: var(--muted); }
+.params dl { margin: 0; }
+.params dl div {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line);
 }
-.steps .verify { padding-left: 2.5rem; color: var(--muted); }
-.aside { color: var(--muted); font-size: 0.92rem; margin: 0.25rem 0 0; }
+.params dl div:last-child { border-bottom: 1px solid var(--line); }
+.params dt { font: 600 0.95rem/1.5 var(--mono); color: var(--accent); }
+.params dd { margin: 0; color: var(--fg); }
 
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin: 0 0 0.75rem;
-}
-.stats div {
-  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 0.8rem 1rem;
-  box-shadow: var(--shadow);
+  background: var(--surface);
+  margin: 0;
 }
-.stats dt { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; }
-.stats dd { margin: 0.15rem 0 0; font-size: 1.35rem; font-weight: 650; }
-.stats small { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
-
+.stats div { padding: 1rem 1.25rem; }
+.stats div + div { border-left: 1px solid var(--line); }
+.stats dt { font: 500 0.72rem/1.4 var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.stats dd { margin: 0.3rem 0 0; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.02em; }
+.stats small { font-size: 0.8rem; font-weight: 400; color: var(--muted); letter-spacing: 0; }
 
 /* Modes */
 
-main section { padding-top: 3rem; }
+main section { padding-top: 3.5rem; }
 .lead { color: var(--muted); margin: 0 0 1.5rem; }
 
-.cards {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.9rem;
-}
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.85rem; }
 .card {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  padding: 1.1rem 1.1rem 1.2rem;
+  gap: 0.1rem;
+  padding: 1.2rem 1.2rem 1.25rem;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   color: var(--fg);
-  box-shadow: var(--shadow);
-  transition: border-color 0.15s, transform 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s;
 }
-.card:hover { text-decoration: none; border-color: var(--accent); transform: translateY(-2px); }
-.card[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); }
-.card svg { width: 72px; height: 48px; margin-bottom: 0.6rem; }
-.card .t { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linejoin: round; }
-.card .k { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.card:hover { text-decoration: none; border-color: var(--faint); }
+.card[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.card svg { width: 64px; height: 43px; margin-bottom: 0.9rem; }
+.card .t { fill: none; stroke: var(--faint); stroke-width: 1.25; stroke-linejoin: round; }
+.card .k { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.25; stroke-linejoin: round; }
 .card .op { fill: var(--accent); }
-.card .op.off { fill: none; stroke: var(--muted); stroke-width: 1.5; }
-.card .name { font-weight: 650; font-size: 1.05rem; }
-.card .life { color: var(--accent); font-weight: 600; }
-.card .hint { color: var(--muted); font-size: 0.88rem; line-height: 1.4; margin-top: 0.3rem; }
+.card .op.off { fill: none; stroke: var(--faint); stroke-width: 1.25; }
+.card .name { font-weight: 600; }
+.card .life { font: 500 0.9rem/1.5 var(--mono); color: var(--accent); }
+.card .hint { color: var(--muted); font-size: 0.86rem; margin-top: 0.25rem; }
 
 .panel {
-  margin-top: 1rem;
-  padding: 1.5rem 1.6rem 0.6rem;
+  margin-top: 0.85rem;
+  padding: 1.5rem 1.6rem 0.75rem;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
+  border-radius: 12px;
 }
-.panel p { max-width: 44rem; }
+.panel p { max-width: 44rem; color: var(--muted); }
 
 table { border-collapse: collapse; width: 100%; }
-th, td { text-align: left; padding: 0.55rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { color: var(--muted); font-weight: 500; width: 10rem; padding-right: 1rem; }
+th, td { text-align: left; padding: 0.6rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 400; width: 10rem; padding-right: 1rem; }
 
 /* Diagram */
 
-.diagram {
-  margin: 0;
-  padding: 1rem 0.75rem 0.5rem;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
-}
-.diagram svg { display: block; width: 100%; height: auto; max-width: 720px; margin: 0 auto; }
-.diagram figcaption { color: var(--muted); font-size: 0.92rem; max-width: 44rem; margin: 0.75rem auto 0; text-align: center; }
+.diagram { margin: 0; }
+.diagram svg { display: block; width: 100%; height: auto; }
+.diagram text { font-family: var(--mono); }
+.diagram .lb { font-size: 11px; fill: var(--muted); }
+.diagram .pv { font-size: 12px; font-weight: 600; fill: var(--accent); }
+.diagram .tt { font: 600 13px var(--sans); fill: var(--fg); }
+.diagram .sup { font-size: 8px; }
+.diagram .ln line, .diagram .br line { stroke: var(--faint); stroke-width: 1.2; }
+.diagram .dash line { stroke: var(--faint); stroke-width: 1.2; stroke-dasharray: 2 4; }
+.diagram .leaf circle { fill: var(--faint); }
+.diagram .path { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linejoin: round; }
+.diagram .dashp { stroke-dasharray: 3 4; }
+.diagram .node circle { fill: var(--bg); stroke: var(--faint); stroke-width: 1.2; }
+.diagram .on circle, .diagram circle.on { fill: var(--accent); }
+.diagram .sib circle, .diagram circle.sib { fill: var(--bg); stroke: var(--accent); stroke-width: 1.6; }
+.diagram .root { fill: var(--fg); }
+.diagram .flow { stroke: var(--faint); stroke-width: 1.2; }
+.diagram .ah { fill: none; stroke: var(--faint); stroke-width: 1.2; }
+.diagram .chain line { stroke: var(--faint); stroke-width: 1.2; }
+.diagram .chain circle { fill: var(--bg); stroke: var(--faint); stroke-width: 1.2; }
+.diagram .sibm circle, .diagram circle.sibm { fill: var(--bg); stroke: var(--accent); stroke-width: 1.6; }
+.diagram .fors polygon { fill: none; stroke: var(--faint); stroke-width: 1.2; stroke-linejoin: round; }
+.diagram .msg { fill: none; stroke: var(--faint); stroke-width: 1.2; }
+.diagram figcaption { font: 11px/1.4 var(--mono); color: var(--muted); text-align: center; margin-top: 0.4rem; }
+.diagram .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin: 0 0.4rem 0 1rem; vertical-align: 0; }
+.diagram .dot.on { background: var(--accent); }
+.diagram .dot.sib { border: 1.6px solid var(--accent); }
 
-.diagram text { font-family: inherit; fill: var(--fg); }
-.diagram .t { font-size: 14px; font-weight: 600; }
-.diagram .m { font-size: 13px; fill: var(--muted); }
-.diagram .sm { font-size: 10px; }
-.diagram .edges line { stroke: var(--line); stroke-width: 2; }
-.diagram .path line { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
-.diagram .nodes circle, .diagram .nodes rect { fill: var(--surface); stroke: var(--muted); stroke-width: 1.5; }
-.diagram .root { fill: var(--fg) !important; stroke: var(--fg) !important; }
-.diagram .on { fill: var(--accent) !important; stroke: var(--accent) !important; }
-.diagram .sib, .diagram .rev { fill: var(--sent) !important; stroke: var(--sent) !important; }
-.diagram .flow { stroke: var(--muted); stroke-width: 1.5; }
-.diagram .arrowhead { fill: var(--muted); }
-.diagram .box { fill: var(--soft); stroke: var(--line); stroke-width: 1.5; }
-.diagram .chain rect { fill: var(--surface); stroke: var(--muted); stroke-width: 1; }
-.diagram .msg { fill: var(--surface); stroke: var(--fg); stroke-width: 1.5; }
-.diagram .badge circle { fill: var(--accent); }
-.diagram .badge text { fill: #fff; font-size: 12px; font-weight: 700; }
-.diagram .fors polygon { fill: var(--soft); stroke: var(--muted); stroke-width: 1.5; stroke-linejoin: round; }
+footer { margin-top: 4.5rem; padding-bottom: 3rem; color: var(--muted); font-size: 0.85rem; }
+footer p { margin: 0.25rem 0; }
 
-footer { margin-top: 4rem; padding-bottom: 3rem; color: var(--muted); font-size: 0.88rem; }
-
-/* Without JavaScript, every panel shows; with it, the cards switch between them. */
+/* Without JavaScript every panel shows; with it, the cards switch between them. */
 .js .panel[hidden] { display: none; }
 
 @media (max-width: 860px) {
-  .how { grid-template-columns: 1fr; }
-  .cards, .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .how { grid-template-columns: 1fr; gap: 2rem; }
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats div:nth-child(3) { border-left: 0; }
+  .stats div:nth-child(n+3) { border-top: 1px solid var(--line); }
 }
 @media (max-width: 480px) {
-  .hero h1 { font-size: 2.3rem; }
-  .cards, .stats { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 2.2rem; }
+  .cards { grid-template-columns: 1fr; }
   th { width: 7.5rem; }
 }

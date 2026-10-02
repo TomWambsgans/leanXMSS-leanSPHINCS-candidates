@@ -14,94 +14,158 @@
   <div class="wrap">
     <h1>leanSphincs</h1>
     <div class="how">
-      <ol class="steps">
-        <li><span class="n">1</span><p>The message picks a leaf of a tree of 2<sup>26</sup> one-time keys. The root is the <strong>public key</strong>.</p></li>
-        <li><span class="n">2</span><p>Its <strong>WOTS+C</strong> one-time key signs a few-time key.</p></li>
-        <li><span class="n">3</span><p>The <strong>FORS</strong> few-time key signs the message.</p></li>
-        <li class="verify"><p>Verify: recompute the root, in <strong>391 compressions</strong>.</p></li>
-      </ol>
+      <div class="params">
+        <p>Same as SLH-DSA-128-24 (NIST SP&nbsp;800-230), but with:</p>
+        <dl>
+          <div><dt>h = 26</dt><dd>tree height, instead of 22</dd></div>
+          <div><dt>k = 24</dt><dd>FORS trees, instead of 6</dd></div>
+          <div><dt>a = 10</dt><dd>FORS tree height, instead of 24</dd></div>
+          <div><dt>WOTS+C</dt><dd>instead of WOTS: 64 chains of length 4, positions summing to 120</dd></div>
+        </dl>
+      </div>
       <figure class="diagram">
-    <svg viewBox="120 12 610 528" role="img" aria-labelledby="dia-title">
-      <title id="dia-title">A leanSphincs signature: a Merkle path, a WOTS+C signature and a FORS signature</title>
-      <defs>
-        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker>
-      </defs>
-
-      <!-- Merkle tree: 4 drawn levels stand for 26 -->
-      <g class="edges">
-        <line x1="360" y1="40" x2="240" y2="100"/><line x1="360" y1="40" x2="480" y2="100"/>
-        <line x1="240" y1="100" x2="180" y2="160"/><line x1="240" y1="100" x2="300" y2="160"/>
-        <line x1="480" y1="100" x2="420" y2="160"/><line x1="480" y1="100" x2="540" y2="160"/>
-        <line x1="180" y1="160" x2="150" y2="220"/><line x1="180" y1="160" x2="210" y2="220"/>
-        <line x1="300" y1="160" x2="270" y2="220"/><line x1="300" y1="160" x2="330" y2="220"/>
-        <line x1="420" y1="160" x2="390" y2="220"/><line x1="420" y1="160" x2="450" y2="220"/>
-        <line x1="540" y1="160" x2="510" y2="220"/><line x1="540" y1="160" x2="570" y2="220"/>
-      </g>
-      <g class="path">
-        <line x1="330" y1="220" x2="300" y2="160"/><line x1="300" y1="160" x2="240" y2="100"/><line x1="240" y1="100" x2="360" y2="40"/>
-      </g>
-      <g class="nodes">
-        <circle cx="240" cy="100" r="9" class="on"/><circle cx="480" cy="100" r="9" class="sib"/>
-        <circle cx="180" cy="160" r="9" class="sib"/><circle cx="300" cy="160" r="9" class="on"/>
-        <circle cx="420" cy="160" r="9"/><circle cx="540" cy="160" r="9"/>
-        <rect x="142" y="212" width="16" height="16" rx="3"/><rect x="202" y="212" width="16" height="16" rx="3"/>
-        <rect x="262" y="212" width="16" height="16" rx="3" class="sib"/><rect x="322" y="212" width="16" height="16" rx="3" class="on"/>
-        <rect x="382" y="212" width="16" height="16" rx="3"/><rect x="442" y="212" width="16" height="16" rx="3"/>
-        <rect x="502" y="212" width="16" height="16" rx="3"/><rect x="562" y="212" width="16" height="16" rx="3"/>
-        <circle cx="360" cy="40" r="11" class="root"/>
-      </g>
-      <text x="380" y="34" class="t">public key: the root</text>
-      <text x="596" y="164" class="m">height 26</text>
-      <text x="596" y="224" class="t">2<tspan baseline-shift="super" class="sm">26</tspan> one-time keys</text>
-
-      <!-- WOTS+C -->
-      <line x1="330" y1="232" x2="330" y2="262" class="flow" marker-end="url(#arr)"/>
-      <g transform="translate(250,268)">
-        <rect x="0" y="0" width="160" height="78" rx="8" class="box"/>
-        <g class="chain" transform="translate(16,10)">
-          <rect x="0" y="0" width="22" height="10" rx="2"/><rect x="26" y="0" width="22" height="10" rx="2" class="rev"/><rect x="52" y="0" width="22" height="10" rx="2"/><rect x="78" y="0" width="22" height="10" rx="2"/>
-          <rect x="0" y="16" width="22" height="10" rx="2"/><rect x="26" y="16" width="22" height="10" rx="2"/><rect x="52" y="16" width="22" height="10" rx="2"/><rect x="78" y="16" width="22" height="10" rx="2" class="rev"/>
-          <rect x="0" y="32" width="22" height="10" rx="2" class="rev"/><rect x="26" y="32" width="22" height="10" rx="2"/><rect x="52" y="32" width="22" height="10" rx="2"/><rect x="78" y="32" width="22" height="10" rx="2"/>
-          <rect x="0" y="48" width="22" height="10" rx="2"/><rect x="26" y="48" width="22" height="10" rx="2"/><rect x="52" y="48" width="22" height="10" rx="2" class="rev"/><rect x="78" y="48" width="22" height="10" rx="2"/>
-        </g>
-        <text x="138" y="44" class="m" text-anchor="middle">⋯</text>
-      </g>
-      <text x="426" y="300" class="t">WOTS+C one-time key</text>
-      <text x="426" y="318" class="m">64 chains of length 4</text>
-
-      <!-- FORS -->
-      <line x1="330" y1="346" x2="330" y2="372" class="flow" marker-end="url(#arr)"/>
-      <text x="340" y="364" class="m">signs</text>
-      <g class="fors" transform="translate(170,378)">
-        <polygon points="20,0 2,40 38,40"/><circle cx="12" cy="40" r="3.2" class="rev"/>
-        <polygon points="66,0 48,40 84,40"/><circle cx="76" cy="40" r="3.2" class="rev"/>
-        <polygon points="112,0 94,40 130,40"/><circle cx="104" cy="40" r="3.2" class="rev"/>
-        <polygon points="158,0 140,40 176,40"/><circle cx="166" cy="40" r="3.2" class="rev"/>
-        <polygon points="204,0 186,40 222,40"/><circle cx="196" cy="40" r="3.2" class="rev"/>
-        <polygon points="250,0 232,40 268,40"/><circle cx="262" cy="40" r="3.2" class="rev"/>
-        <polygon points="296,0 278,40 314,40"/><circle cx="290" cy="40" r="3.2" class="rev"/>
-        <text x="330" y="26" class="m">⋯</text>
-      </g>
-      <text x="530" y="396" class="t">FORS few-time key</text>
-      <text x="530" y="414" class="m">24 trees of height 10</text>
-
-      <!-- the message -->
-      <line x1="330" y1="424" x2="330" y2="450" class="flow" marker-end="url(#arr)"/>
-      <text x="340" y="442" class="m">signs</text>
-      <rect x="276" y="454" width="108" height="34" rx="8" class="msg"/>
-      <text x="330" y="476" class="t" text-anchor="middle">message</text>
-
-      <!-- steps -->
-      <g class="badge"><circle cx="306" cy="248" r="11"/><text x="306" y="252.5" text-anchor="middle">1</text></g>
-      <g class="badge"><circle cx="232" cy="307" r="11"/><text x="232" y="311.5" text-anchor="middle">2</text></g>
-      <g class="badge"><circle cx="150" cy="398" r="11"/><text x="150" y="402.5" text-anchor="middle">3</text></g>
-
-      <!-- legend -->
-      <g transform="translate(200,524)" class="legend">
-        <rect x="0" y="-10" width="12" height="12" rx="3" class="on"/><text x="18" y="0" class="m">recomputed by the verifier</text>
-        <rect x="190" y="-10" width="12" height="12" rx="3" class="sib"/><text x="208" y="0" class="m">sent in the signature</text>
-      </g>
-    </svg>
+        <svg viewBox="70 14 590 500" role="img" aria-labelledby="dia-title">
+          <title id="dia-title">A leanSphincs signature: a Merkle path, a WOTS+C signature and a FORS signature</title>
+          <defs><marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0.5 L7,4 L0,7.5" class="ah"/></marker></defs>
+          <g class="ln">
+            <line x1="320" y1="40" x2="200" y2="94"/>
+            <line x1="320" y1="40" x2="440" y2="94"/>
+            <line x1="200" y1="94" x2="140" y2="150"/>
+            <line x1="200" y1="94" x2="260" y2="150"/>
+            <line x1="440" y1="94" x2="380" y2="150"/>
+            <line x1="440" y1="94" x2="500" y2="150"/>
+          </g>
+          <g class="dash">
+            <line x1="140" y1="150" x2="100" y2="258"/><line x1="140" y1="150" x2="180" y2="258"/>
+            <line x1="260" y1="150" x2="220" y2="258"/>
+            <line x1="380" y1="150" x2="340" y2="258"/><line x1="380" y1="150" x2="420" y2="258"/>
+            <line x1="500" y1="150" x2="460" y2="258"/><line x1="500" y1="150" x2="540" y2="258"/>
+          </g>
+          <g class="leaf">
+            <circle cx="100" cy="276" r="1.6"/>
+            <circle cx="108" cy="276" r="1.6"/>
+            <circle cx="116" cy="276" r="1.6"/>
+            <circle cx="124" cy="276" r="1.6"/>
+            <circle cx="132" cy="276" r="1.6"/>
+            <circle cx="140" cy="276" r="1.6"/>
+            <circle cx="148" cy="276" r="1.6"/>
+            <circle cx="156" cy="276" r="1.6"/>
+            <circle cx="164" cy="276" r="1.6"/>
+            <circle cx="172" cy="276" r="1.6"/>
+            <circle cx="180" cy="276" r="1.6"/>
+            <circle cx="188" cy="276" r="1.6"/>
+            <circle cx="196" cy="276" r="1.6"/>
+            <circle cx="204" cy="276" r="1.6"/>
+            <circle cx="212" cy="276" r="1.6"/>
+            <circle cx="220" cy="276" r="1.6"/>
+            <circle cx="228" cy="276" r="1.6"/>
+            <circle cx="236" cy="276" r="1.6"/>
+            <circle cx="244" cy="276" r="1.6"/>
+            <circle cx="252" cy="276" r="1.6"/>
+            <circle cx="260" cy="276" r="1.6"/>
+            <circle cx="268" cy="276" r="1.6"/>
+            <circle cx="276" cy="276" r="1.6"/>
+            <circle cx="284" cy="276" r="1.6"/>
+            <circle cx="308" cy="276" r="1.6"/>
+            <circle cx="316" cy="276" r="1.6"/>
+            <circle cx="324" cy="276" r="1.6"/>
+            <circle cx="332" cy="276" r="1.6"/>
+            <circle cx="340" cy="276" r="1.6"/>
+            <circle cx="348" cy="276" r="1.6"/>
+            <circle cx="356" cy="276" r="1.6"/>
+            <circle cx="364" cy="276" r="1.6"/>
+            <circle cx="372" cy="276" r="1.6"/>
+            <circle cx="380" cy="276" r="1.6"/>
+            <circle cx="388" cy="276" r="1.6"/>
+            <circle cx="396" cy="276" r="1.6"/>
+            <circle cx="404" cy="276" r="1.6"/>
+            <circle cx="412" cy="276" r="1.6"/>
+            <circle cx="420" cy="276" r="1.6"/>
+            <circle cx="428" cy="276" r="1.6"/>
+            <circle cx="436" cy="276" r="1.6"/>
+            <circle cx="444" cy="276" r="1.6"/>
+            <circle cx="452" cy="276" r="1.6"/>
+            <circle cx="460" cy="276" r="1.6"/>
+            <circle cx="468" cy="276" r="1.6"/>
+            <circle cx="476" cy="276" r="1.6"/>
+            <circle cx="484" cy="276" r="1.6"/>
+            <circle cx="492" cy="276" r="1.6"/>
+            <circle cx="500" cy="276" r="1.6"/>
+            <circle cx="508" cy="276" r="1.6"/>
+            <circle cx="516" cy="276" r="1.6"/>
+            <circle cx="524" cy="276" r="1.6"/>
+            <circle cx="532" cy="276" r="1.6"/>
+            <circle cx="540" cy="276" r="1.6"/>
+          </g>
+          <polyline points="320,40 200,94 260,150" class="path"/>
+          <line x1="260" y1="150" x2="300" y2="272" class="path dashp"/>
+          <g class="node"><circle cx="380" cy="150" r="3.5"/><circle cx="500" cy="150" r="3.5"/></g>
+          <g class="sib"><circle cx="440" cy="94" r="4.5"/><circle cx="140" cy="150" r="4.5"/><circle cx="292" cy="276" r="3.2"/></g>
+          <g class="on"><circle cx="200" cy="94" r="4.5"/><circle cx="260" cy="150" r="4.5"/><circle cx="300" cy="276" r="4"/></g>
+          <circle cx="320" cy="40" r="6" class="root"/>
+          <text x="334" y="36" class="lb">public key</text>
+          <g class="br"><line x1="572" y1="40" x2="572" y2="276"/><line x1="567" y1="40" x2="577" y2="40"/><line x1="567" y1="276" x2="577" y2="276"/></g>
+          <text x="584" y="162" class="pv">h = 26</text>
+          <line x1="300" y1="284" x2="300" y2="308" class="flow" marker-end="url(#arr)"/>
+          <g class="chain">
+            <line x1="258" y1="322" x2="342" y2="322"/>
+            <circle cx="258" cy="322" r="2"/>
+            <circle cx="286" cy="322" r="3" class="sibm"/>
+            <circle cx="314" cy="322" r="2"/>
+            <circle cx="342" cy="322" r="2"/>
+            <line x1="258" y1="334" x2="342" y2="334"/>
+            <circle cx="258" cy="334" r="2"/>
+            <circle cx="286" cy="334" r="2"/>
+            <circle cx="314" cy="334" r="2"/>
+            <circle cx="342" cy="334" r="3" class="sibm"/>
+            <line x1="258" y1="346" x2="342" y2="346"/>
+            <circle cx="258" cy="346" r="3" class="sibm"/>
+            <circle cx="286" cy="346" r="2"/>
+            <circle cx="314" cy="346" r="2"/>
+            <circle cx="342" cy="346" r="2"/>
+            <line x1="258" y1="358" x2="342" y2="358"/>
+            <circle cx="258" cy="358" r="2"/>
+            <circle cx="286" cy="358" r="2"/>
+            <circle cx="314" cy="358" r="3" class="sibm"/>
+            <circle cx="342" cy="358" r="2"/>
+            <line x1="258" y1="370" x2="342" y2="370"/>
+            <circle cx="258" cy="370" r="2"/>
+            <circle cx="286" cy="370" r="3" class="sibm"/>
+            <circle cx="314" cy="370" r="2"/>
+            <circle cx="342" cy="370" r="2"/>
+          </g>
+          <text x="300" y="389" class="lb" text-anchor="middle">⋯</text>
+          <text x="362" y="340" class="tt">WOTS+C</text><text x="362" y="356" class="pv">64 chains, length 4</text>
+          <line x1="300" y1="394" x2="300" y2="402" class="flow"/>
+          <g class="fors">
+            <polygon points="196,406 186,430 206,430"/>
+            <polygon points="222,406 212,430 232,430"/>
+            <polygon points="248,406 238,430 258,430"/>
+            <polygon points="274,406 264,430 284,430"/>
+            <polygon points="300,406 290,430 310,430"/>
+            <polygon points="326,406 316,430 336,430"/>
+            <polygon points="352,406 342,430 362,430"/>
+            <polygon points="378,406 368,430 388,430"/>
+            <polygon points="404,406 394,430 414,430"/>
+          </g>
+          <g class="sibm">
+            <circle cx="191" cy="430" r="2.4"/>
+            <circle cx="226" cy="430" r="2.4"/>
+            <circle cx="246" cy="430" r="2.4"/>
+            <circle cx="280" cy="430" r="2.4"/>
+            <circle cx="294" cy="430" r="2.4"/>
+            <circle cx="328" cy="430" r="2.4"/>
+            <circle cx="357" cy="430" r="2.4"/>
+            <circle cx="375" cy="430" r="2.4"/>
+            <circle cx="404" cy="430" r="2.4"/>
+          </g>
+          <text x="420" y="424" class="lb">⋯</text>
+          <text x="446" y="414" class="tt">FORS</text><text x="446" y="430" class="pv">k = 24, a = 10</text>
+          <line x1="300" y1="436" x2="300" y2="458" class="flow" marker-end="url(#arr)"/>
+          <rect x="258" y="462" width="84" height="24" rx="12" class="msg"/>
+          <text x="300" y="478" class="lb" text-anchor="middle">message</text>
+        </svg>
+        <figcaption><span class="dot on"></span>recomputed by the verifier <span class="dot sib"></span>sent in the signature</figcaption>
       </figure>
     </div>
 
@@ -111,7 +175,6 @@
       <div><dt>Verification</dt><dd>391 <small>compressions</small></dd></div>
       <div><dt>Security</dt><dd>NIST level 1</dd></div>
     </dl>
-    <p class="aside">SLH-DSA-128-24 shape (NIST SP&nbsp;800-230), with height 26, FORS 24&nbsp;×&nbsp;height&nbsp;10, and WOTS+C.</p>
   </div>
 </header>
 
