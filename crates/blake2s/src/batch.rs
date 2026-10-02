@@ -11,7 +11,6 @@
 //!     set      the groups one compression call advances together
 //! ```
 
-use std::mem::MaybeUninit;
 
 use super::{BLOCK_LEN, IV, OUT_LEN, hash_from_state_final};
 
@@ -130,6 +129,7 @@ pub(super) trait Lanes32: Copy {
 /// Dispatch is compile time, so only tests use it where a SIMD backend exists.
 #[allow(dead_code)]
 #[derive(Clone, Copy)]
+#[repr(transparent)]
 pub(super) struct Scalar8([u32; 8]);
 
 impl Lanes32 for Scalar8 {
@@ -329,17 +329,17 @@ unsafe fn hash_sets<S: Lanes32, const G: usize>(
     //
     //     set s, group g, lane l    input (s * G + g) * WIDTH + l
     let set_bytes = G * S::WIDTH * len;
-    let transpose = |step: usize, buf: &mut [MaybeUninit<[S; 16]>; G]| {
+    let transpose = |step: usize, buf: &mut [[S; 16]; G]| {
         let (set, b) = (step / n_blocks, step % n_blocks);
         for (g, block) in buf.iter_mut().enumerate() {
             let first = set * set_bytes + g * S::WIDTH * len + b * BLOCK_LEN;
             // SAFETY: `step < steps`, so block `b` of every input in the group is in bounds.
-            unsafe { S::transpose(src.add(first), len, block.as_mut_ptr().as_mut_unchecked()) };
+            unsafe { S::transpose(src.add(first), len, block) };
         }
     };
 
-    // Double buffer, never cleared: a block is transposed before it is read.
-    let mut blocks = [[const { MaybeUninit::uninit() }; G]; 2];
+    // Double buffer, zeroed once: a block is transposed before it is read.
+    let mut blocks = [[[S::splat(0); 16]; G]; 2];
     let [even, odd] = &mut blocks;
     // Every input starts from the same chaining value.
     let fresh = || [std::array::from_fn::<S, 8, _>(|i| S::splat(state[i])); G];
@@ -365,8 +365,8 @@ unsafe fn hash_sets<S: Lanes32, const G: usize>(
         // Block `b` ends at byte `(b + 1) * 64`, after the shared prefix.
         let (set, b) = (step / n_blocks, step % n_blocks);
         let t = t_offset + if b + 1 == n_blocks { final_len } else { (b + 1) * BLOCK_LEN } as u64;
-        // SAFETY: this step's transpose initialized every block of `cur`.
-        let m = std::array::from_fn(|g| unsafe { cur[g].assume_init_ref() });
+        // This step's transpose filled every block of `cur`.
+        let m = std::array::from_fn(|g| &cur[g]);
         // SAFETY: the blocks are initialized, and `h` is this set's chaining value.
         unsafe { S::compress_groups::<G>(&mut h, m, t, b + 1 == n_blocks) };
 

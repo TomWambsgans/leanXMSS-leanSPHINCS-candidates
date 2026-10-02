@@ -22,6 +22,7 @@ use core::arch::x86_64::*;
 #[cfg(target_feature = "avx2")]
 #[cfg_attr(target_feature = "avx512f", allow(dead_code))]
 #[derive(Clone, Copy)]
+#[repr(transparent)]
 pub(super) struct Avx2(__m256i);
 
 #[cfg(target_feature = "avx2")]
@@ -111,6 +112,7 @@ impl Lanes32 for Avx2 {
 /// Two groups run together, so neither waits on its own dependency chain.
 #[cfg(target_feature = "avx512f")]
 #[derive(Clone, Copy)]
+#[repr(transparent)]
 pub(super) struct Avx512(__m512i);
 
 #[cfg(target_feature = "avx512f")]

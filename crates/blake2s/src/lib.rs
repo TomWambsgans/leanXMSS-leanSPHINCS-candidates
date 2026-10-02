@@ -33,6 +33,17 @@ type Backend = arm::Neon;
 #[cfg(not(any(all(target_arch = "x86_64", target_feature = "avx2"), target_arch = "aarch64")))]
 type Backend = batch::Scalar8;
 
+/// The batched backend this build dispatches to, by name.
+pub const BACKEND: &str = if cfg!(all(target_arch = "x86_64", target_feature = "avx512f")) {
+    "AVX-512"
+} else if cfg!(all(target_arch = "x86_64", target_feature = "avx2")) {
+    "AVX2"
+} else if cfg!(target_arch = "aarch64") {
+    "NEON"
+} else {
+    "scalar"
+};
+
 /// BLAKE2s initial values: the SHA-256 IV.
 pub const IV: [u32; 8] = [
     0x6A09_E667,

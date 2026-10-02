@@ -1,0 +1,4 @@
+# The carry-less multiply of GF(2^128) (PMULL, PCLMULQDQ) and the SIMD BLAKE2s backends (NEON,
+# AVX2, AVX-512) are selected at compile time: build for this CPU, or they fall back to slow code.
+[build]
+rustflags = ["-C", "target-cpu=native"]

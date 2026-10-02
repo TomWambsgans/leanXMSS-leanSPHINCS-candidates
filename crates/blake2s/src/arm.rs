@@ -5,12 +5,17 @@ use super::OUT_LEN;
 use super::batch::Lanes32;
 use core::arch::aarch64::*;
 
+// The transposes and digest stores read and write bytes in little-endian lane order.
+#[cfg(not(target_endian = "little"))]
+compile_error!("the NEON backend assumes a little-endian target");
+
 /// NEON: four lanes.
 ///
 /// At this width the G dependency chain, not the four SIMD pipes, bounds the backend.
 ///
 /// So it interleaves groups, and picks each rotation for latency.
 #[derive(Clone, Copy)]
+#[repr(transparent)]
 pub(super) struct Neon(uint32x4_t);
 
 impl Lanes32 for Neon {
