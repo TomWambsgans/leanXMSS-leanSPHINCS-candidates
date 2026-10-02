@@ -5,7 +5,9 @@ use std::time::Instant;
 
 use mpc::blake2s_circuit::{split_prefixes, th_circuit};
 use mpc::engine::Shares;
-use mpc::session::{parties, random_keys, run, share};
+use mpc::engine::Party;
+use mpc::net::ring;
+use mpc::session::{establish, random_keys, share};
 
 fn main() {
     let args: Vec<usize> = std::env::args().skip(1).map(|a| a.parse().unwrap()).collect();
@@ -26,17 +28,30 @@ fn main() {
     let words = n.div_ceil(64);
     let secrets: Vec<[Shares; 3]> = (0..128).map(|_| share(&vec![0x0123_4567_89ab_cdefu64; words])).collect();
     let t = Instant::now();
-    let out = run(parties(&random_keys(), [1; 16], n), |mut p| {
-        let mut x: Vec<Shares> = secrets.iter().map(|s| s[p.id].clone()).collect();
-        let t0 = Instant::now();
-        for _ in 0..steps {
-            x = p.eval(&prog, &pub_in, &x)?;
-        }
-        let t1 = Instant::now();
-        p.verify()?;
-        let t2 = Instant::now();
-        p.open(&x)?;
-        Ok((t1 - t0, t2 - t1, p.link.stats))
+    let keys = random_keys();
+    let out: Vec<_> = std::thread::scope(|scope| {
+        let handles: Vec<_> = ring()
+            .into_iter()
+            .map(|mut link| {
+                let (secrets, prog, pub_in) = (&secrets, &prog, &pub_in);
+                scope.spawn(move || -> Result<_, mpc::net::Abort> {
+                    let i = link.id;
+                    let session = establish(&mut link)?;
+                    let mut p = Party::new(link, keys[i], keys[(i + 2) % 3], session, n);
+                    let mut x: Vec<Shares> = secrets.iter().map(|s| s[i].clone()).collect();
+                    let t0 = Instant::now();
+                    for _ in 0..steps {
+                        x = p.eval(prog, pub_in, &x)?;
+                    }
+                    let t1 = Instant::now();
+                    p.verify()?;
+                    let t2 = Instant::now();
+                    p.open(&x)?;
+                    Ok((t1 - t0, t2 - t1, p.link.stats))
+                })
+            })
+            .collect();
+        handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
     let (e, v, s) = out[0].as_ref().unwrap();
     println!("eval {e:.2?}, verify {v:.2?}, total {:.2?}; party 0 sent {:.1} MB in {} rounds", t.elapsed(), s.bytes_sent as f64 / 1e6, s.rounds);

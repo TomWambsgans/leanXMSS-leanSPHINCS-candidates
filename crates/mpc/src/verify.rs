@@ -21,6 +21,11 @@
 //!
 //! Coins come from the key `k_{i+1}` that only the two verifiers share, so the prover cannot predict
 //! them; the challenges reach the prover from `V-` only after `V-` has received the round's message.
+//! The prover uses a coin only if both verifiers vouch for it: one sends it in full (`V+` the batching
+//! coins, `V-` the challenges), the other a hash of it in the same exchange, and the prover aborts on
+//! a mismatch. So one malicious verifier cannot make the prover use coins of its choice (which would
+//! let it read the other verifier's shares off the honest final message), and the hash, which can
+//! arrive early, reveals nothing about the coin.
 //!
 //! Soundness: at most `(5 R + 3 + R) / (2^128 - 2)` for `R` rounds (Section 7's bound, the tensor
 //! `beta` adding `R / 2^128`), below `2^-120` for any batch here.
@@ -32,10 +37,25 @@
 use crate::engine::*;
 use crate::gf128::Gf128;
 use crate::net::{Abort, abort};
-use crate::prf::{Key, os_random_fields, prf_challenge, prf_field, prf_fields};
+use crate::prf::{Key, Tag, os_random_fields, prf_challenge, prf_field, prf_fields, prf_words, tag};
 
-/// Memory for the materialized folded statement, per proof.
-const MATERIALIZE_BYTES: usize = 2 << 30;
+/// The default memory for the prover's materialized statement: the transcript's own size, within
+/// these bounds (the streamed rounds before it each read the whole transcript).
+const MATERIALIZE_MIN: usize = 64 << 20;
+const MATERIALIZE_MAX: usize = 2 << 30;
+
+/// The hash of verification coins that the second verifier sends: `j` is the round of a challenge,
+/// or [`BETA`] for the batching coins.
+fn coin_hash(tag: &Tag, prover: usize, j: u64, coins: &[Gf128]) -> Vec<u8> {
+    let mut h = blake2s::Hasher::new();
+    h.update(b"vrfy-coin").update(tag).update(&(prover as u64).to_le_bytes()).update(&j.to_le_bytes());
+    for c in coins {
+        h.update(&c.to_bytes());
+    }
+    h.finalize().to_vec()
+}
+
+const BETA: u64 = u64::MAX;
 
 /// One gate's six relation inputs.
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
@@ -179,18 +199,40 @@ pub(crate) fn verify(party: &mut Party) -> Result<(), Abort> {
     let minus = coins(party, &k_prev, next, d);
     let share_tag = party.tag(b"vrfy-share");
 
-    // The beta coins to the prover, only now that its AND messages have all arrived.
-    let mut beta = plus.tau.clone();
-    beta.extend_from_slice(&plus.sigma);
-    let (_, from_next) = party.link.exchange(to_bytes(&beta), vec![])?;
+    let coin_tag = party.tag(b"vrfy-coin");
+    // The beta coins to the prover, only now that its AND messages have all arrived: as V+ of
+    // `prev` in full, as V- of `next` hashed. As the prover, I compare the two.
+    #[cfg_attr(not(any(test, feature = "testing")), allow(unused_mut))]
+    let mut beta = [plus.tau.clone(), plus.sigma.clone()].concat();
+    #[cfg(any(test, feature = "testing"))]
+    if party.cheat == Cheat::BadBeta {
+        beta = os_random_fields(d.a + d.c);
+    }
+    let beta_hash = coin_hash(&coin_tag, next, BETA, &[minus.tau.clone(), minus.sigma.clone()].concat());
+    let (from_prev, from_next) = party.link.exchange(to_bytes(&beta), beta_hash)?;
     let my_beta = from_bytes(&from_next, d.a + d.c)?;
-    let mut prover = Prover::new(&party.transcript, d, my_beta[..d.a].to_vec(), my_beta[d.a..].to_vec(), party.threads);
+    if coin_hash(&coin_tag, party.id, BETA, &my_beta) != from_prev {
+        return abort("my verifiers sent different batching coins");
+    }
+    let limit = party.materialize_limit.unwrap_or_else(|| (party.transcript.data.len() * FIELDS * 8).clamp(MATERIALIZE_MIN, MATERIALIZE_MAX));
+    let mut prover = Prover::new(&party.transcript, d, my_beta[..d.a].to_vec(), my_beta[d.a..].to_vec(), party.threads, limit);
 
     // Verifier state per role: the claim's share and the batched round checks.
     let (mut claim_p, mut claim_m) = (Gf128::ZERO, Gf128::ZERO);
     let (mut batch_p, mut batch_m) = (Gf128::ZERO, Gf128::ZERO);
     for j in 0..rounds {
-        let p = prover.round();
+        #[cfg_attr(not(any(test, feature = "testing")), allow(unused_mut))]
+        let mut p = prover.round();
+        #[cfg(any(test, feature = "testing"))]
+        if let (0, Cheat::Forge { and, bit, r0 }) = (j, party.cheat) {
+            // The cheated statement's true polynomial sums to e = beta(and, bit), not 0: shift it by
+            // e (X + r0), which is right only if the first challenge is r0.
+            let e = prover.beta_low(1, and) * prover.beta_inst[bit];
+            let t = values_from(p[0], e, prover.last_lead);
+            let r0 = Gf128(r0);
+            p = [t[0] + e * r0, t[1] + e * (Gf128::ONE + r0), t[2] + e * (Gf128::X + r0)];
+            prover.last_p = p;
+        }
         let v_plus = prf_fields(&k_own, &share_tag, j as u64, 3);
         let mine: Vec<Gf128> = p.iter().zip(&v_plus).map(|(&x, &y)| x + y).collect();
         let (_, from_next) = party.link.exchange(to_bytes(&mine), vec![])?;
@@ -201,9 +243,24 @@ pub(crate) fn verify(party: &mut Party) -> Result<(), Abort> {
         batch_m += minus.delta[j] * (p_m[0] + p_m[1] + claim_m);
         claim_p = eval_at(&p_p, plus.r[j]);
         claim_m = eval_at(&p_m, minus.r[j]);
-        // The challenge goes to `next`, whose V- I am, now that I hold its message.
-        let (from_prev, _) = party.link.exchange(vec![], minus.r[j].to_bytes().to_vec())?;
+        // The challenge goes to `next`, whose V- I am, now that I hold its message; as V+ of `prev`,
+        // its hash. As the prover, I compare the two.
+        #[cfg_attr(not(any(test, feature = "testing")), allow(unused_mut))]
+        let mut r_next = minus.r[j];
+        #[cfg(any(test, feature = "testing"))]
+        if party.cheat == Cheat::BadChallenge {
+            r_next = os_random_fields(1)[0];
+        }
+        let r_hash = coin_hash(&coin_tag, prev, j as u64, &[plus.r[j]]);
+        let (from_prev, from_next) = party.link.exchange(r_hash, r_next.to_bytes().to_vec())?;
         let r = from_bytes(&from_prev, 1)?[0];
+        if coin_hash(&coin_tag, party.id, j as u64, &[r]) != from_next {
+            return abort("my verifiers sent different challenges");
+        }
+        #[cfg(any(test, feature = "testing"))]
+        if j == 0 {
+            party.seen_r0 = Some(r.0);
+        }
         prover.fold(r);
     }
 
@@ -259,13 +316,17 @@ pub(crate) fn verify(party: &mut Party) -> Result<(), Abort> {
 /// quadratic part on unscaled sums and apply the factor once per instance. Each round needs only
 /// `p(0)` and the leading coefficient: `p(1) = p(0) + C` for the claim `C` the prover itself made.
 struct Prover<'a> {
-    tr: &'a [[u64; 8]],
+    tr: &'a [[u64; FIELDS]],
+    #[cfg(any(test, feature = "testing"))]
+    zfix: &'a [u64],
     d: Dims,
     tau: Vec<Gf128>,
     beta_inst: Vec<Gf128>,
     rs: Vec<Gf128>,
     claim: Gf128,
     last_p: [Gf128; 3],
+    /// The leading coefficient of the last round's polynomial.
+    last_lead: Gf128,
     /// Rounds computed from the bit transcript before materializing.
     streamed: usize,
     mat: Option<Vec<Y>>,
@@ -274,8 +335,8 @@ struct Prover<'a> {
 
 /// The prover's six transcript inputs of word `w` of a gate record.
 #[inline(always)]
-fn prover_words(rec: &[u64; 8]) -> [u64; 6] {
-    [rec[U_OWN], rec[U_PREV], rec[V_OWN], rec[V_PREV], rec[RHO_OWN] ^ rec[RHO_PREV], rec[Z_OWN]]
+fn prover_words(rec: &[u64; FIELDS]) -> [u64; 6] {
+    [rec[U_OWN], rec[U_PREV], rec[V_OWN], rec[V_PREV], rec[S], z_own(rec)]
 }
 
 /// Fields scaled by beta: a1, a2, s, z (indices into the six inputs).
@@ -306,21 +367,36 @@ fn values_from(p0: Gf128, claim: Gf128, lead: Gf128) -> [Gf128; 3] {
 }
 
 impl<'a> Prover<'a> {
-    fn new(transcript: &'a Transcript, d: Dims, tau: Vec<Gf128>, sigma: Vec<Gf128>, threads: usize) -> Self {
+    fn new(transcript: &'a Transcript, d: Dims, tau: Vec<Gf128>, sigma: Vec<Gf128>, threads: usize, limit: usize) -> Self {
         let n_pad = 1usize << d.c;
-        let streamed = (0..=d.a).find(|&j| (1usize << (d.a - j)) * n_pad * std::mem::size_of::<Y>() <= MATERIALIZE_BYTES).unwrap_or(d.a);
+        let streamed = (0..=d.a).find(|&j| (1usize << (d.a - j)) * n_pad * std::mem::size_of::<Y>() <= limit).unwrap_or(d.a);
         Self {
             tr: &transcript.data,
+            #[cfg(any(test, feature = "testing"))]
+            zfix: &transcript.zfix,
             d,
             beta_inst: tensor(d.c, |t| (Gf128::ONE, sigma[t])),
             tau,
             rs: vec![],
             claim: Gf128::ZERO,
             last_p: [Gf128::ZERO; 3],
+            last_lead: Gf128::ZERO,
             streamed,
             mat: None,
             threads,
         }
+    }
+
+    /// The six prover inputs of transcript record `i`.
+    #[inline(always)]
+    fn words_at(&self, i: usize) -> [u64; 6] {
+        #[cfg_attr(not(any(test, feature = "testing")), allow(unused_mut))]
+        let mut x = prover_words(&self.tr[i]);
+        #[cfg(any(test, feature = "testing"))]
+        if let Some(f) = self.zfix.get(i) {
+            x[5] ^= f;
+        }
+        x
     }
 
     /// Weights of the `2^(j-1)` copies folded before round `j` (1-based): `(scaled, plain)`.
@@ -354,7 +430,7 @@ impl<'a> Prover<'a> {
             if and >= d.n_and {
                 continue;
             }
-            let x = prover_words(&self.tr[and * d.words + w]);
+            let x = self.words_at(and * d.words + w);
             for f in 0..6 {
                 let weight = if SCALED[f] { tables.0[s] } else { tables.1[s] };
                 let mut bits = x[f];
@@ -391,6 +467,7 @@ impl<'a> Prover<'a> {
             });
             (p[0], p[1])
         };
+        self.last_lead = lead;
         self.last_p = values_from(p0, self.claim, lead);
         self.last_p
     }
@@ -422,7 +499,7 @@ impl<'a> Prover<'a> {
                     for s in 0..c {
                         let load = |l: usize| {
                             let and = (s << shift) | l;
-                            if and < d.n_and { prover_words(&self.tr[and * d.words + w]) } else { [0; 6] }
+                            if and < d.n_and { self.words_at(and * d.words + w) } else { [0; 6] }
                         };
                         lo[s] = load(low);
                         hi[s] = load(low + half);
@@ -583,6 +660,7 @@ fn parallel_sum(threads: usize, len: usize, f: impl Fn(std::ops::Range<usize>) -
 
 /// Both verifier roles' shares of the last gate: as `V+` of `prev` (inputs a1, b1, s, z from its
 /// messages and my `prev` components) and as `V-` of `next` (a2, b2, s from my `own` components).
+/// The masks are regenerated from the PRF, as in the evaluation.
 fn verifier_pass(party: &Party, d: Dims, plus: &Coins, minus: &Coins) -> (Y, Y) {
     let n_pad = 1usize << d.c;
     // Weight of AND bit t: round a - t; of instance bit t: round a + c - t.
@@ -597,30 +675,34 @@ fn verifier_pass(party: &Party, d: Dims, plus: &Coins, minus: &Coins) -> (Y, Y) 
     let (pa, pa_w, pi, pi_w) = (and_w(plus, true), and_w(plus, false), inst_w(plus, true), inst_w(plus, false));
     let (ma, ma_w, mi, mi_w) = (and_w(minus, true), and_w(minus, false), inst_w(minus, true), inst_w(minus, false));
     let tr = &party.transcript.data;
-    // (field, AND weights, instance weights) for the seven inputs: four as V+, three as V-.
-    let inputs: [(usize, &[Gf128], &[Gf128]); 7] = [
-        (U_PREV, &pa, &pi),
-        (V_PREV, &pa_w, &pi_w),
-        (RHO_PREV, &pa, &pi),
-        (Z_PREV, &pa, &pi),
-        (U_OWN, &ma, &mi),
-        (V_OWN, &ma_w, &mi_w),
-        (RHO_OWN, &ma, &mi),
-    ];
+    // (AND weights, instance weights) of the seven inputs: four as V+ (u_prev, v_prev, rho_prev,
+    // z_prev), three as V- (u_own, v_own, rho_own).
+    let weights: [(&[Gf128], &[Gf128]); 7] = [(&pa, &pi), (&pa_w, &pi_w), (&pa, &pi), (&pa, &pi), (&ma, &mi), (&ma_w, &mi_w), (&ma, &mi)];
+    let rho_tag = tag(party.session(), b"rho");
+    let (k_own, k_prev, first, tail) = (party.k_own, party.k_prev, party.transcript.first_index, party.tail());
     let chunk = d.n_and.div_ceil(party.threads).max(1);
     let sums = std::thread::scope(|scope| {
         let handles: Vec<_> = (0..d.n_and)
             .step_by(chunk)
             .map(|start| {
-                let inputs = &inputs;
+                let weights = &weights;
+                let rho_tag = &rho_tag;
                 scope.spawn(move || {
                     let mut total = [Gf128::ZERO; 7];
+                    let (mut rho_own, mut rho_prev) = (vec![0u64; d.words], vec![0u64; d.words]);
                     for and in start..(start + chunk).min(d.n_and) {
+                        prf_words(&k_own, rho_tag, first + and as u64, &mut rho_own);
+                        prf_words(&k_prev, rho_tag, first + and as u64, &mut rho_prev);
+                        if let (Some(o), Some(p)) = (rho_own.last_mut(), rho_prev.last_mut()) {
+                            (*o, *p) = (*o & tail, *p & tail);
+                        }
                         let mut inner = [Gf128::ZERO; 7];
                         for w in 0..d.words {
                             let rec = &tr[and * d.words + w];
-                            for (i, &(field, _, inst)) in inputs.iter().enumerate() {
-                                let mut bits = rec[field];
+                            let fields = [rec[U_PREV], rec[V_PREV], rho_prev[w], rec[Z_PREV], rec[U_OWN], rec[V_OWN], rho_own[w]];
+                            for (i, &bits0) in fields.iter().enumerate() {
+                                let mut bits = bits0;
+                                let inst = weights[i].1;
                                 while bits != 0 {
                                     let t = bits.trailing_zeros() as usize;
                                     if 64 * w + t < n_pad {
@@ -630,7 +712,7 @@ fn verifier_pass(party: &Party, d: Dims, plus: &Coins, minus: &Coins) -> (Y, Y) 
                                 }
                             }
                         }
-                        for (i, &(_, aw, _)) in inputs.iter().enumerate() {
+                        for (i, &(aw, _)) in weights.iter().enumerate() {
                             total[i] += aw[and] * inner[i];
                         }
                     }

@@ -1,5 +1,9 @@
 //! GF(2^128) = GF(2)[x] / (x^128 + x^7 + x^2 + x + 1), the field of the BGIN19 checks.
 
+/// Whether this build multiplies with the hardware carry-less multiply (PMULL or PCLMULQDQ); the
+/// portable fallback is much slower.
+pub const CLMUL: bool = cfg!(any(all(target_arch = "aarch64", target_feature = "aes"), all(target_arch = "x86_64", target_feature = "pclmulqdq")));
+
 /// A field element, bit `i` being the coefficient of `x^i`.
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 #[repr(transparent)]

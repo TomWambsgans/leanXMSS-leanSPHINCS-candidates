@@ -57,14 +57,26 @@ pub fn prf_challenge(key: &Key, tag: &Tag, index: u64) -> Gf128 {
         .unwrap()
 }
 
+/// Fills `out` from the operating system's generator, in one read.
+pub fn os_random_fill(out: &mut [u8]) {
+    std::fs::File::open("/dev/urandom").and_then(|mut f| f.read_exact(out)).expect("no /dev/urandom");
+}
+
 /// Bytes from the operating system's generator.
 pub fn os_random<const L: usize>() -> [u8; L] {
     let mut out = [0u8; L];
-    std::fs::File::open("/dev/urandom").and_then(|mut f| f.read_exact(&mut out)).expect("no /dev/urandom");
+    os_random_fill(&mut out);
     out
+}
+
+/// Words from the operating system's generator, in one read.
+pub fn os_random_words(count: usize) -> Vec<u64> {
+    let mut bytes = vec![0u8; 8 * count];
+    os_random_fill(&mut bytes);
+    bytes.as_chunks::<8>().0.iter().map(|b| u64::from_le_bytes(*b)).collect()
 }
 
 /// Field elements from the operating system's generator.
 pub fn os_random_fields(count: usize) -> Vec<Gf128> {
-    (0..count).map(|_| Gf128(u128::from_le_bytes(os_random()))).collect()
+    os_random_words(2 * count).as_chunks::<2>().0.iter().map(|w| Gf128(u128::from(w[0]) | u128::from(w[1]) << 64)).collect()
 }

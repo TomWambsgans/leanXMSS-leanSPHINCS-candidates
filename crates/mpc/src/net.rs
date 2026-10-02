@@ -56,6 +56,7 @@ impl NetModel {
 }
 
 /// A single bit flip injected into one outgoing message, for the cheating tests.
+#[cfg(any(test, feature = "testing"))]
 #[derive(Clone, Copy, Debug)]
 pub struct Fault {
     pub round: u64,
@@ -71,14 +72,18 @@ pub struct Link {
     from_prev: Receiver<Vec<u8>>,
     from_next: Receiver<Vec<u8>>,
     pub stats: Stats,
+    #[cfg(any(test, feature = "testing"))]
     pub fault: Option<Fault>,
     /// Whether the fault hit a nonempty message.
+    #[cfg(any(test, feature = "testing"))]
     pub fault_applied: bool,
 }
 
 impl Link {
     /// One round: send to both neighbors (possibly empty messages), then receive from both.
+    #[cfg_attr(not(any(test, feature = "testing")), allow(unused_mut))]
     pub fn exchange(&mut self, mut to_prev: Vec<u8>, mut to_next: Vec<u8>) -> Result<(Vec<u8>, Vec<u8>), Abort> {
+        #[cfg(any(test, feature = "testing"))]
         if let Some(f) = self.fault.filter(|f| f.round == self.stats.rounds) {
             let msg = if f.to_next { &mut to_next } else { &mut to_prev };
             if !msg.is_empty() {
@@ -116,7 +121,9 @@ pub fn ring() -> [Link; 3] {
             to_prev: b_tx[prev].take().unwrap(),
             from_next: b_rx[i].take().unwrap(),
             stats: Stats::default(),
+            #[cfg(any(test, feature = "testing"))]
             fault: None,
+            #[cfg(any(test, feature = "testing"))]
             fault_applied: false,
         }
     })

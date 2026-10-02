@@ -6,11 +6,14 @@
 //! `rho_j = F(k_j, gate)`, and the output share is `(z_i, z_{i-1})`.
 //!
 //! Every AND is recorded until [`Party::verify`] (BGIN19) has checked all of them; [`Party::open`]
-//! refuses to run before that.
+//! refuses to run before that. After any abort (a failed check, a malformed message, a neighbor
+//! that left) the party is poisoned: every later call fails, so nothing is ever opened after a
+//! rejected verification.
 
 use crate::circuit::{Op, Program};
 use crate::net::{Abort, Link, abort};
 use crate::prf::{Key, Tag, prf_words, tag};
+use crate::session::SessionId;
 
 /// A party's share of one secret bit-vector.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -19,24 +22,37 @@ pub struct Shares {
     pub prev: Vec<u64>,
 }
 
-/// Transcript fields of one AND gate, per 64 instances.
+/// Transcript fields of one AND gate, per 64 instances: the input shares, the AND message received,
+/// and `S = rho_i ^ rho_{i-1}`. The own message `Z_OWN` is recomputed from them (see [`z_own`]),
+/// and the two masks are regenerated from the PRF by the verifier roles.
 pub(crate) const U_OWN: usize = 0;
 pub(crate) const U_PREV: usize = 1;
 pub(crate) const V_OWN: usize = 2;
 pub(crate) const V_PREV: usize = 3;
-pub(crate) const Z_OWN: usize = 4;
-pub(crate) const Z_PREV: usize = 5;
-pub(crate) const RHO_OWN: usize = 6;
-pub(crate) const RHO_PREV: usize = 7;
+pub(crate) const Z_PREV: usize = 4;
+pub(crate) const S: usize = 5;
+pub(crate) const FIELDS: usize = 6;
 
-/// The ANDs not yet verified: `data[and * words + w]` holds the eight fields of word `w`.
+/// The AND message a party sent, from its transcript record.
+#[inline(always)]
+pub(crate) fn z_own(rec: &[u64; FIELDS]) -> u64 {
+    (rec[U_OWN] & rec[V_OWN]) ^ (rec[U_OWN] & rec[V_PREV]) ^ (rec[U_PREV] & rec[V_OWN]) ^ rec[S]
+}
+
+/// The ANDs not yet verified: `data[and * words + w]` holds the fields of word `w`; the PRF index
+/// of the `j`-th recorded AND is `first_index + j`.
 #[derive(Default)]
 pub(crate) struct Transcript {
-    pub data: Vec<[u64; 8]>,
+    pub data: Vec<[u64; FIELDS]>,
     pub n_and: usize,
+    pub first_index: u64,
+    /// Test hook: flips of the recorded own message (a cheater covering its tracks), per record.
+    #[cfg(any(test, feature = "testing"))]
+    pub zfix: Vec<u64>,
 }
 
 /// Test hooks for a cheating party.
+#[cfg(any(test, feature = "testing"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Cheat {
     #[default]
@@ -44,6 +60,13 @@ pub enum Cheat {
     /// Flip bit `bit` of the `and`-th AND message sent; if `consistent`, also use the flipped value
     /// everywhere else (own output share, own transcript), as a prover covering its tracks would.
     FlipAnd { and: usize, bit: usize, consistent: bool },
+    /// As the `V+` of its predecessor: send it verification coins of its choice (random).
+    BadBeta,
+    /// As the `V-` of its successor: send it a random challenge instead of the right one.
+    BadChallenge,
+    /// A consistent flip of AND `and` at instance `bit`, then a round-0 polynomial forged with a
+    /// guess `r0` of the first challenge (e.g. one seen in an earlier session).
+    Forge { and: usize, bit: usize, r0: u128 },
 }
 
 pub struct Party {
@@ -62,39 +85,72 @@ pub struct Party {
     pub(crate) verifications: u64,
     /// Worker threads for the heavy verification passes.
     pub threads: usize,
+    /// Memory for the prover's materialized statement; `None` picks it from the transcript size.
+    pub materialize_limit: Option<usize>,
+    poisoned: bool,
+    #[cfg(any(test, feature = "testing"))]
     pub cheat: Cheat,
+    /// The first challenge this party received as a prover (for the session-reuse test).
+    #[cfg(any(test, feature = "testing"))]
+    pub seen_r0: Option<u128>,
 }
 
 impl Party {
-    /// `k_own` is shared with the next party, `k_prev` with the previous one; `session` must be
-    /// fresh for every session (it separates all PRF streams).
-    pub fn new(link: Link, k_own: Key, k_prev: Key, session: [u8; 16], n: usize) -> Self {
+    /// `k_own` is shared with the next party, `k_prev` with the previous one; `session` comes from
+    /// [`crate::session::establish`] (it separates all PRF streams, and must never repeat).
+    pub fn new(link: Link, k_own: Key, k_prev: Key, session: SessionId, n: usize) -> Self {
         assert!(n > 0);
-        let tail = if n.is_multiple_of(64) { u64::MAX } else { (1u64 << (n % 64)) - 1 };
         let threads = std::thread::available_parallelism().map_or(1, |p| p.get()).div_ceil(3).max(1);
         Self {
             id: link.id,
             link,
             k_own,
             k_prev,
-            session,
+            session: *session.bytes(),
             n,
             words: n.div_ceil(64),
-            tail,
+            tail: tail_mask(n),
             transcript: Transcript::default(),
             ands_done: 0,
             verifications: 0,
             threads,
+            materialize_limit: None,
+            poisoned: false,
+            #[cfg(any(test, feature = "testing"))]
             cheat: Cheat::Honest,
+            #[cfg(any(test, feature = "testing"))]
+            seen_r0: None,
         }
     }
 
+    /// Runs `f` unless the party is poisoned, and poisons it if `f` fails.
+    fn guarded<T>(&mut self, f: impl FnOnce(&mut Self) -> Result<T, Abort>) -> Result<T, Abort> {
+        if self.poisoned {
+            return abort("this party already aborted");
+        }
+        let out = f(self);
+        if out.is_err() {
+            self.poisoned = true;
+        }
+        out
+    }
+
+    pub fn session(&self) -> &[u8; 16] {
+        &self.session
+    }
+
     /// Switches to batches of `n` instances; the ANDs so far must be verified.
-    pub fn set_n(&mut self, n: usize) {
-        assert!(n > 0 && self.transcript.n_and == 0, "verify before changing the batch size");
-        self.n = n;
-        self.words = n.div_ceil(64);
-        self.tail = if n.is_multiple_of(64) { u64::MAX } else { (1u64 << (n % 64)) - 1 };
+    pub fn set_n(&mut self, n: usize) -> Result<(), Abort> {
+        self.guarded(|p| {
+            assert!(n > 0);
+            if p.transcript.n_and != 0 {
+                return abort("verify before changing the batch size");
+            }
+            p.n = n;
+            p.words = n.div_ceil(64);
+            p.tail = tail_mask(n);
+            Ok(())
+        })
     }
 
     fn mask(&self, v: &mut [u64]) {
@@ -115,6 +171,10 @@ impl Party {
 
     /// Evaluates `prog` on public inputs (bit-vectors) and secret inputs (shares).
     pub fn eval(&mut self, prog: &Program, pub_in: &[Vec<u64>], sec_in: &[Shares]) -> Result<Vec<Shares>, Abort> {
+        self.guarded(|p| p.eval_inner(prog, pub_in, sec_in))
+    }
+
+    fn eval_inner(&mut self, prog: &Program, pub_in: &[Vec<u64>], sec_in: &[Shares]) -> Result<Vec<Shares>, Abort> {
         assert_eq!(pub_in.len(), prog.n_pub_inputs);
         assert_eq!(sec_in.len(), prog.n_sec_inputs);
         let w = self.words;
@@ -127,6 +187,10 @@ impl Party {
             v
         };
         let rho_tag = tag(&self.session, b"rho");
+        if self.transcript.n_and == 0 {
+            self.transcript.first_index = self.ands_done;
+        }
+        self.transcript.data.reserve(prog.n_and * w);
         for step in &prog.steps {
             for op in &step.local {
                 let r = |slot: u32| slot as usize * w..(slot as usize + 1) * w;
@@ -202,6 +266,7 @@ impl Party {
             // All products first (outputs may reuse input slots), then one round.
             let first_record = self.transcript.data.len();
             let mut msg = Vec::with_capacity(step.ands.len() * w * 8);
+            let mut z_out = Vec::with_capacity(step.ands.len() * w);
             let (mut rho_own, mut rho_prev) = (vec![0u64; w], vec![0u64; w]);
             for (j, g) in step.ands.iter().enumerate() {
                 let index = self.ands_done + j as u64;
@@ -209,25 +274,36 @@ impl Party {
                 prf_words(&self.k_prev, &rho_tag, index, &mut rho_prev);
                 self.mask(&mut rho_own);
                 self.mask(&mut rho_prev);
+                #[cfg(any(test, feature = "testing"))]
                 let flip = match self.cheat {
                     Cheat::FlipAnd { and, bit, consistent } if and == self.transcript.n_and + j => Some((bit % self.n, consistent)),
+                    Cheat::Forge { and, bit, .. } if and == self.transcript.n_and + j => Some((bit % self.n, true)),
                     _ => None,
                 };
                 for k in 0..w {
                     let (ao, ap) = (own[g.a as usize * w + k], prev[g.a as usize * w + k]);
                     let (bo, bp) = (own[g.b as usize * w + k], prev[g.b as usize * w + k]);
-                    let mut z = (ao & bo) ^ (ao & bp) ^ (ap & bo) ^ rho_own[k] ^ rho_prev[k];
-                    let mut recorded = z;
+                    let s = rho_own[k] ^ rho_prev[k];
+                    #[cfg_attr(not(any(test, feature = "testing")), allow(unused_mut))]
+                    let (mut sent, mut kept) = {
+                        let z = (ao & bo) ^ (ao & bp) ^ (ap & bo) ^ s;
+                        (z, z)
+                    };
+                    #[cfg(any(test, feature = "testing"))]
                     if let Some((bit, consistent)) = flip
                         && bit / 64 == k
                     {
-                        z ^= 1 << (bit % 64);
+                        sent ^= 1 << (bit % 64);
                         if consistent {
-                            recorded = z;
+                            kept = sent;
+                            let at = self.transcript.data.len();
+                            self.transcript.zfix.resize(at + 1, 0);
+                            self.transcript.zfix[at] = 1 << (bit % 64);
                         }
                     }
-                    msg.extend_from_slice(&z.to_le_bytes());
-                    self.transcript.data.push([ao, ap, bo, bp, recorded, 0, rho_own[k], rho_prev[k]]);
+                    msg.extend_from_slice(&sent.to_le_bytes());
+                    z_out.push(kept);
+                    self.transcript.data.push([ao, ap, bo, bp, 0, s]);
                 }
             }
             let (from_prev, _) = self.link.exchange(vec![], msg)?;
@@ -241,9 +317,8 @@ impl Party {
                     if k + 1 == w {
                         z_prev &= self.tail;
                     }
-                    let rec = &mut self.transcript.data[first_record + j * w + k];
-                    rec[Z_PREV] = z_prev;
-                    own[g.dst as usize * w + k] = rec[Z_OWN];
+                    self.transcript.data[first_record + j * w + k][Z_PREV] = z_prev;
+                    own[g.dst as usize * w + k] = z_out[j * w + k];
                     prev[g.dst as usize * w + k] = z_prev;
                 }
             }
@@ -260,12 +335,16 @@ impl Party {
     /// Verifies every AND since the last verification (BGIN19); aborts unless all three parties' messages
     /// were correct.
     pub fn verify(&mut self) -> Result<(), Abort> {
-        crate::verify::verify(self)
+        self.guarded(crate::verify::verify)
     }
 
     /// Opens secrets to all three parties, which must have been verified. Each missing component is
     /// received from the two parties holding it (once in full, once as a hash) and compared.
     pub fn open(&mut self, xs: &[Shares]) -> Result<Vec<Vec<u64>>, Abort> {
+        self.guarded(|p| p.open_inner(xs))
+    }
+
+    fn open_inner(&mut self, xs: &[Shares]) -> Result<Vec<Vec<u64>>, Abort> {
         if self.transcript.n_and != 0 {
             return abort("opening before the ANDs are verified");
         }
@@ -310,6 +389,14 @@ impl Party {
         p.extend_from_slice(&self.verifications.to_le_bytes());
         tag(&self.session, &p)
     }
+
+    pub(crate) fn tail(&self) -> u64 {
+        self.tail
+    }
+}
+
+fn tail_mask(n: usize) -> u64 {
+    if n.is_multiple_of(64) { u64::MAX } else { (1u64 << (n % 64)) - 1 }
 }
 
 fn binop(arena: &mut [u64], w: usize, dst: u32, a: u32, b: u32, f: impl Fn(u64, u64) -> u64) {

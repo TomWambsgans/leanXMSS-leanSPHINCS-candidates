@@ -9,5 +9,9 @@ description = "3-party Boolean MPC: replicated sharing, AFLNO16 multiplication, 
 [lints]
 workspace = true
 
+[features]
+# Test hooks (cheating parties, injected faults), for this crate's and dependents' tests only.
+testing = []
+
 [dependencies]
 blake2s.workspace = true
