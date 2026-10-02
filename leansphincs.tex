@@ -86,6 +86,17 @@ For weaker devices. The trick is to trade smaller lifetime for faster keygen, us
 
 \emph{A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.}
 
+\subsection{Pruned: \texorpdfstring{$2^{24}$}{2\textasciicircum 24} lifetime}
+
+For laptops, phones and powerful hardware wallets. The same pruning, with a subtree of height 20 (and 6
+surrogate siblings).
+
+\begin{itemize}
+  \item lifetime: $2^{24}$
+  \item keygen: $287\cdot10^6$ compressions
+  \item signing: $84\cdot10^3$ compressions, with a 1~MiB cache (including 256 compressions of grinding)
+\end{itemize}
+
 \subsection{Threshold signing}
 
 \subsubsection{3-of-4 with a DKG}
