@@ -92,7 +92,7 @@ impl Cluster {
                 Some(link) => protocol::sign(op, net, link, roles, m, mode, &hooks).map(Some),
                 // The offline operator only learns the signature; its failure fails nothing.
                 None => {
-                    let _ = protocol::observe_signature(op, net, roles);
+                    let _ = protocol::observe_signature(op, net, roles, &hooks);
                     Ok(None)
                 }
             });

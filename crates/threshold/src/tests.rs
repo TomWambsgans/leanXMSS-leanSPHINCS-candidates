@@ -60,6 +60,7 @@ fn a_cheater_in_any_step_is_routed_around_and_learns_only_the_signature() {
         (Cheat::BadBeta, Lie::None),
         (Cheat::BadChallenge, Lie::None),
         (Cheat::Honest, Lie::AgreeHash),
+        (Cheat::Honest, Lie::AgreeSplit),
         (Cheat::Honest, Lie::FlipR0),
         (Cheat::Honest, Lie::FlipFors),
         (Cheat::Honest, Lie::FlipWots),
@@ -67,7 +68,7 @@ fn a_cheater_in_any_step_is_routed_around_and_learns_only_the_signature() {
     ];
     for (i, (c, lie)) in scenarios.into_iter().enumerate() {
         // Preprocessed signing has no AND gates and no WOTS opening.
-        let modes = if matches!(lie, Lie::AgreeHash | Lie::FlipR0 | Lie::FlipFors | Lie::FakePending) { &[Mode::Vanilla, Mode::Preprocessed][..] } else { &[Mode::Vanilla] };
+        let modes = if matches!(lie, Lie::AgreeHash | Lie::AgreeSplit | Lie::FlipR0 | Lie::FlipFors | Lie::FakePending) { &[Mode::Vanilla, Mode::Preprocessed][..] } else { &[Mode::Vanilla] };
         for &mode in modes {
             if mode == Mode::Preprocessed {
                 cluster.set_cheats(vec![]);
@@ -78,7 +79,10 @@ fn a_cheater_in_any_step_is_routed_around_and_learns_only_the_signature() {
             let m = message(40 + i as u8);
             let (sig, online, _) = cluster.sign(&m, mode).unwrap_or_else(|e| panic!("{c:?} {lie:?} {mode:?}: {e}"));
             assert_eq!(verify(&pk, &m, &sig), Ok(()));
-            assert!(!online.contains(&bad), "{c:?} {lie:?} {mode:?}: the cheater's sets abort");
+            // A fake pending claim no holder backs only picks s for a request never opened.
+            if lie != Lie::FakePending {
+                assert!(!online.contains(&bad), "{c:?} {lie:?} {mode:?}: the cheater's sets abort");
+            }
             // Every attempt (aborted or not) computed the final signature's randomizer: whatever
             // the cheater saw opened belongs to this signature.
             for o in honest(&cluster, bad) {
@@ -148,7 +152,7 @@ fn a_split_message_aborts_before_any_opening() {
         let m = if op.id == 2 { m2 } else { m1 };
         match link {
             Some(link) => protocol::sign(op, net, link, roles, &m, Mode::Vanilla, &hooks).map(|_| ()),
-            None => protocol::observe_signature(op, net, roles),
+            None => protocol::observe_signature(op, net, roles, &hooks),
         }
     });
     for o in 0..3 {

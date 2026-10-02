@@ -1,13 +1,13 @@
 //! The per-operator steps of the protocols (each operator runs them on its own thread).
 //!
-//! The online operators agree on what they are about to do (a hash round and an "ok" round) before
-//! every opening. Among three operators with one cheater no agreement protocol can make the two
-//! honest ones always decide alike (that needs n > 3f), so a split remains possible; it only makes
-//! the attempt abort, and never opens more than the final signature reveals: every opening needs all
-//! three operators, and what each opening reveals is fixed by the agreement before it (the pending
-//! request's `s` fixes `R0`, hence `R` and the FORS positions; the FORS key fixes the WOTS
-//! positions). The four-operator decision of the DKG is a Byzantine agreement (n = 4 > 3f), so it
-//! is unanimous.
+//! The online operators agree on what they are about to do before every opening, and what an
+//! opening reveals is fixed by the agreement before it (the pending request's `s` fixes `R0`, hence
+//! `R` and the FORS positions; the FORS key fixes the WOTS positions), so an aborted attempt never
+//! opens more than the final signature reveals. The agreement that makes a request pending, and the
+//! one on the public key, are Byzantine agreements of the four operators (n = 4 > 3f: unanimous; the
+//! offline operator relays). The others are among the three online operators (a hash round and an
+//! "ok" round): with one cheater among three, the two honest ones can be split (that needs n > 3f),
+//! which only aborts the attempt.
 //!
 //! The operators' links must be private (encrypted) and direct: the offline operator knows all
 //! three MPC keys of a session, so a relay through it would see every share.
@@ -66,6 +66,9 @@ pub(crate) enum Lie {
     None,
     /// Sends another hash to one member in the online agreements.
     AgreeHash,
+    /// Says "ok" to one member and "not ok" to the other in the online agreements: one honest
+    /// member goes on, the other aborts.
+    AgreeSplit,
     /// Reveals to one other holder a seed contribution that does not match its commitment.
     InconsistentReveal,
     /// Rushes the seed reveals (sees the others' first), then reveals so as to copy another seed.
@@ -177,8 +180,10 @@ fn open_values(party: &mut Party, own: &[Digest], prev: &[Digest], flip: bool) -
     Ok(unpack(&opened[0], count))
 }
 
-/// The online operators agree on `value`: every member sends its hash to the others, then whether
-/// all matched; each member continues only if every member said so.
+/// The online operators agree on `value` before an opening: every member sends its hash to the
+/// others, then whether all matched; each member continues only if every member said so. With three
+/// members a traitor can still split the verdict, which only aborts the run: this agreement guards
+/// an opening, while the one that makes a request pending is [`om1`].
 fn agree(net: &mut Net4, members: &[usize], value: &[u8], hooks: &Hooks) -> Result<(), Abort> {
     let h = blake2s::hash(value);
     let me = net.id;
@@ -186,40 +191,53 @@ fn agree(net: &mut Net4, members: &[usize], value: &[u8], hooks: &Hooks) -> Resu
     let victim = hooks.lies(me, Lie::AgreeHash).then(|| members[(members.iter().position(|&o| o == me).unwrap() + 1) % members.len()]);
     let got = net.round(members, |to| if Some(to) == victim { blake2s::hash(b"other").to_vec() } else { h.to_vec() })?;
     let ok = members.iter().all(|&o| o == me || got[o] == h);
-    let oks = net.broadcast(members, &[ok as u8])?;
+    let split = hooks.lies(me, Lie::AgreeSplit).then(|| members[(members.iter().position(|&o| o == me).unwrap() + 1) % members.len()]);
+    let oks = net.round(members, |to| vec![(ok && Some(to) != split) as u8])?;
     if !ok || members.iter().any(|&o| o != me && oks[o] != [1]) {
         return abort("operators disagree");
     }
     Ok(())
 }
 
-/// Byzantine agreement of the four operators on whether they all hold `value` (Lamport, Shostak and
-/// Pease's OM(1): n = 4 tolerates one traitor): every operator broadcasts the hash of its value,
-/// then relays what it received; each value is the majority of its three reports. The honest
-/// operators reach the same verdict.
-fn agree4(net: &mut Net4, value: &[u8]) -> Result<bool, Abort> {
+/// Byzantine agreement of the four operators (Lamport, Shostak and Pease's OM(1): n = 4 tolerates
+/// one traitor) on whether the `members` hold the same value: each member sends the hash of its
+/// value to the three others, then every operator relays what it received; a member's hash is the
+/// majority of its three reports. The honest operators reach the same verdict, and a missing message
+/// counts as empty, so an operator that leaves can't split them either. Operators outside `members`
+/// (no value) only relay.
+fn om1(net: &mut Net4, members: &[usize], value: Option<&[u8]>, hooks: &Hooks) -> bool {
     let all = [0, 1, 2, 3];
     let me = net.id;
-    let h = blake2s::hash(value);
-    let direct = net.broadcast(&all, &h)?;
-    let mut mine: [Vec<u8>; 4] = direct.clone();
-    mine[me] = h.to_vec();
-    let relay: Vec<u8> = (0..4).flat_map(|o| { let mut v = mine[o].clone(); v.resize(32, 0); v }).collect();
-    let relays = net.broadcast(&all, &relay)?;
-    // Operator o's hash: as received from o, and as relayed by the two others (my own is known).
-    let agreed: Vec<Vec<u8>> = (0..4)
-        .map(|o| {
+    let h = value.map(blake2s::hash);
+    let next_member = members.iter().position(|&o| o == me).map(|i| members[(i + 1) % members.len()]);
+    let victim = hooks.lies(me, Lie::AgreeHash).then_some(next_member).flatten();
+    let mut got = net.round_lenient(&all, |to| match h {
+        Some(_) if Some(to) == victim => blake2s::hash(b"other").to_vec(),
+        Some(h) => h.to_vec(),
+        None => vec![],
+    });
+    if let Some(h) = h {
+        got[me] = h.to_vec();
+    }
+    let report = |v: &[u8]| -> Vec<u8> { if v.len() == 32 { v.to_vec() } else { vec![0; 32] } };
+    let relay: Vec<u8> = members.iter().flat_map(|&o| report(&got[o])).collect();
+    let split = hooks.lies(me, Lie::AgreeSplit).then_some((me + 1) % 4);
+    let relays = net.round_lenient(&all, |to| if Some(to) == split { vec![0xff; relay.len()] } else { relay.clone() });
+    let agreed: Vec<Vec<u8>> = members
+        .iter()
+        .enumerate()
+        .map(|(k, &o)| {
             if o == me {
-                return h.to_vec();
+                return got[me].clone();
             }
-            let mut reports = vec![mine[o].clone()];
-            for r in (0..4).filter(|&r| r != me && r != o) {
-                reports.push(relays[r].get(32 * o..32 * o + 32).map_or(vec![], |s| s.to_vec()));
+            let mut reports = vec![report(&got[o])];
+            for r in all.into_iter().filter(|&r| r != me && r != o) {
+                reports.push(report(relays[r].get(32 * k..32 * k + 32).unwrap_or(&[])));
             }
             reports.iter().find(|x| reports.iter().filter(|y| y == x).count() >= 2).cloned().unwrap_or_default()
         })
         .collect();
-    Ok(agreed.iter().all(|x| x == &agreed[me]))
+    agreed.iter().all(|x| x.len() == 32 && x == &agreed[0])
 }
 
 /// The four-operator part of the DKG: the seeds, each generated jointly by its three holders, and
@@ -375,7 +393,7 @@ pub(crate) fn dkg_mpc(op: &mut Operator, net: &mut Net4, link: Option<Link>, rol
     let leaf_hashes = (0..leaves).map(|l| wots_leaf_hash(&pp, ((s << b) + l as u64) as u32, &ends[l])).collect();
     let tree = XmssTree::from_leaves(&pp, b, s, leaf_hashes, surrogates);
     let pk = PublicKey { root: tree.root, public_param: pp };
-    if !agree4(net, &pk.to_bytes())? {
+    if !om1(net, &[0, 1, 2, 3], Some(&pk.to_bytes()), hooks) {
         return abort("the operators hold different public keys");
     }
     meter.mark("ends to the 4th operator, tree, agree on pk", party.as_ref(), net);
@@ -487,8 +505,8 @@ pub fn grind(pp: &PublicParam, root: &Digest, r0: &Digest, m: &Message, target: 
     (ctr, rho)
 }
 
-/// The request's `s`: the pending one if this operator holds it, or if two other members vouch for
-/// the same one; otherwise fresh, by commit-reveal among the members. Two rounds either way.
+/// The request's `s`: the pending one if this operator holds it or another member claims it (all
+/// claims must match); otherwise fresh, by commit-reveal among the members. Two rounds either way.
 fn request_seed(op: &Operator, net: &mut Net4, members: &[usize], m: &Message, mode: Mode, hooks: &Hooks) -> Result<[u8; 32], Abort> {
     let me = op.id;
     let mut pending = op.pending.filter(|p| (p.m, p.mode) == (*m, mode)).map(|p| p.s);
@@ -520,11 +538,14 @@ fn request_seed(op: &Operator, net: &mut Net4, members: &[usize], m: &Message, m
         return Ok(s);
     }
     if !claims.is_empty() {
-        // Only a pending request held by two others is adopted (a lone claim could be a cheater's).
-        if claims.len() >= 2 && claims.iter().all(|c| c == &claims[0]) {
+        // A request whose R0 may be open is held by both honest online operators of that run (the
+        // agreement is unanimous), so every set of three has a holder, who refuses any other s. A
+        // claim no holder backs (a cheater's) only picks s for a request never opened: R0 stays
+        // unpredictable, and it fixes s for good.
+        if claims.iter().all(|c| c == &claims[0]) {
             return Ok(claims[0]);
         }
-        return abort("an unconfirmed pending request");
+        return abort("members claim different pending requests");
     }
     let mut h = blake2s::Hasher::new();
     h.update(b"request-s");
@@ -540,8 +561,8 @@ fn request_seed(op: &Operator, net: &mut Net4, members: &[usize], m: &Message, m
 
 /// Signs `m`, for one online operator.
 ///
-/// 1. The members fix the request's `s` (the pending one, or a fresh one) and agree on
-///    `(m, mode, s, session, target)`; the request is then pending until finished.
+/// 1. The members fix the request's `s` (the pending one, or a fresh one) and the four operators
+///    agree on `(m, mode, s, session, target)`; the request is then pending until finished.
 /// 2. They open `R0 = XOR_t H(k_t, msg, H(m | s))` and grind `R`; they agree on `(R, idx, u)`.
 /// 3. Vanilla: the instance is computed in MPC; preprocessed: it is the checked `next`.
 /// 4. They open the 24 FORS secrets; the signature is assembled and verified, and sent to the
@@ -578,7 +599,10 @@ pub(crate) fn sign(op: &mut Operator, net: &mut Net4, link: Link, roles: &Roles,
         what.extend_from_slice(&idx.to_le_bytes());
         what.extend_from_slice(&inst.forest.key);
     }
-    agree(net, &members, &what, hooks)?;
+    // Unanimous: the honest online operators either all hold the request pending or none does.
+    if !om1(net, &members, Some(&what), hooks) {
+        return abort("operators disagree on the request");
+    }
     op.pending = Some(Pending { m: *m, mode, s, done: false });
     let (own, prev) = op.shares(roles, |seed| tagged_term(&pp, seed, TAG_MSG, &msg_data(m, &s)));
     let r0 = open_values(&mut party, &[own], &[prev], hooks.lies(op.id, Lie::FlipR0))?[0];
@@ -646,9 +670,11 @@ fn finished(op: &mut Operator, m: &Message, sig: &Signature, mode: Mode) {
     }
 }
 
-/// The offline operator's side of a signing attempt: it keeps a signature that two online
-/// operators sent and that verifies.
-pub(crate) fn observe_signature(op: &mut Operator, net: &mut Net4, roles: &Roles) -> Result<(), Abort> {
+/// The offline operator's side of a signing attempt: it relays in the agreement on the request, then
+/// keeps a signature that two online operators sent and that verifies. Every online operator
+/// finished it before sending, so its own record of the request is no longer needed.
+pub(crate) fn observe_signature(op: &mut Operator, net: &mut Net4, roles: &Roles, hooks: &Hooks) -> Result<(), Abort> {
+    om1(net, &roles.online, None, hooks);
     let got = net.round(&[0, 1, 2, 3], |_| vec![])?;
     let [a, b, c] = roles.online.map(|o| got[o].clone());
     let agreed = if a == b || a == c { a } else if b == c { b } else { return abort("no two online operators sent the same signature") };
@@ -664,6 +690,9 @@ pub(crate) fn observe_signature(op: &mut Operator, net: &mut Net4, roles: &Roles
     let idx = digest_index(&pp, &op.key().pk.root, &sig.randomizer, &m);
     let mode = if op.next.as_ref().is_some_and(|n| n.idx == idx) { Mode::Preprocessed } else { Mode::Vanilla };
     finished(op, &m, &sig, mode);
+    if op.pending.is_some_and(|p| (p.m, p.mode) == (m, mode)) {
+        op.pending = None;
+    }
     Ok(())
 }
 

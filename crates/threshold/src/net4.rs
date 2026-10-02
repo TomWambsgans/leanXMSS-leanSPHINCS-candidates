@@ -29,6 +29,22 @@ impl Net4 {
         Ok(out)
     }
 
+    /// [`Self::round`] for a Byzantine agreement: a message missing because its sender left counts as
+    /// empty, and a member that left is not waited for.
+    pub fn round_lenient(&mut self, members: &[usize], msg: impl Fn(usize) -> Vec<u8>) -> [Vec<u8>; 4] {
+        self.stats.rounds += 1;
+        for &o in members.iter().filter(|&&o| o != self.id) {
+            let m = msg(o);
+            self.stats.bytes_sent += m.len() as u64;
+            let _ = self.to[o].as_ref().unwrap().send(m);
+        }
+        let mut out: [Vec<u8>; 4] = Default::default();
+        for &o in members.iter().filter(|&&o| o != self.id) {
+            out[o] = self.from[o].as_ref().unwrap().recv().unwrap_or_default();
+        }
+        out
+    }
+
     /// Test hook: a rushing member, which receives every other member's message before choosing its own.
     #[cfg(test)]
     pub fn round_rushing(&mut self, members: &[usize], msg: impl Fn(usize, &[Vec<u8>; 4]) -> Vec<u8>) -> Result<[Vec<u8>; 4], Abort> {
