@@ -107,6 +107,10 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
 .panel dt { font-weight: 500; }
 .panel dd { margin: 0; }
 .js .panel[hidden] { display: none; }
+.cost { border-collapse: collapse; margin-top: 0.6rem; font-variant-numeric: tabular-nums; }
+.cost th, .cost td { text-align: right; padding: 0.3rem 0 0.3rem 2rem; font-weight: 400; }
+.cost th:first-child { text-align: left; padding-left: 0; }
+.cost thead th { border-bottom: 1px solid var(--rule); }
 
 footer { margin-top: 6rem; color: var(--muted); }
 footer p { margin: 0.3rem 0; }
@@ -455,7 +459,7 @@ footer a + a { margin-left: 1.25rem; }
     <a href="#wallet" role="tab" aria-controls="wallet">Hardware wallets<span>2<sup>17</sup> signatures</span></a>
     <a href="#laptop" role="tab" aria-controls="laptop">Laptops &amp; phones<span>2<sup>24</sup> signatures</span></a>
     <a href="#industry" role="tab" aria-controls="industry">Industry<span>2<sup>30</sup> signatures</span></a>
-    <a href="#threshold" role="tab" aria-controls="threshold">Threshold<span>3-of-4, 2<sup>16</sup> signatures</span></a>
+    <a href="#threshold" role="tab" aria-controls="threshold">Threshold<span><i>t</i>-of-<i>n</i>, 2<sup>12</sup> to 2<sup>16</sup> signatures</span></a>
   </div>
 
   <dl class="panel" id="wallet" role="tabpanel" aria-label="Hardware wallets">
@@ -477,10 +481,19 @@ footer a + a { margin-left: 1.25rem; }
   </dl>
 
   <dl class="panel" id="threshold" role="tabpanel" aria-label="Threshold">
-    <dt>Key generation</dt><dd>1.33&nbsp;GB per operator, no trusted dealer</dd>
-    <dt>Signing</dt><dd>7&nbsp;KB per operator in 10 rounds, no MPC</dd>
-    <dt>Security</dt><dd>against 1 malicious operator</dd>
-    <dt>How</dt><dd>only hashes of secrets run in MPC, all before the message is known (<a href="https://github.com/TomWambsgans/leansphincs-candidate/tree/main/crates/threshold">prototype</a>)</dd>
+    <dt>Security</dt><dd>against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers</dd>
+    <dt>Signing</dt><dd>no MPC: 400 bytes per signer, 2 rounds</dd>
+    <dt>Key generation</dt><dd>no trusted dealer: a one-time MPC among the <i>n</i> operators (fewer than <i>n</i>/2 corrupt), per operator:
+      <table class="cost">
+        <thead><tr><th></th><th>2<sup>12</sup></th><th>2<sup>14</sup></th><th>2<sup>16</sup></th></tr></thead>
+        <tbody>
+          <tr><th>2-of-3</th><td>11 GB</td><td>43 GB</td><td>172 GB</td></tr>
+          <tr><th>3-of-5</th><td>13 GB</td><td>52 GB</td><td>207 GB</td></tr>
+          <tr><th>4-of-7</th><td>14 GB</td><td>55 GB</td><td>222 GB</td></tr>
+        </tbody>
+      </table>
+    </dd>
+    <dt>How</dt><dd>adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>: FORS secrets are outputs of a threshold PRF; keygen publishes all FORS leaves and WOTS signatures, and signing reveals 24 secrets</dd>
   </dl>
 </section>
 
