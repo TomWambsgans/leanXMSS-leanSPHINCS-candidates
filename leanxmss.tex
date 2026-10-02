@@ -1,0 +1,86 @@
+% Build with: latexmk leanxmss.tex (output in .build/)
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\newcommand{\hash}{\mathsf{H}}
+
+\setlist{itemsep=2pt}
+\setlength{\parskip}{4pt}
+
+\title{leanXMSS candidate}
+\author{Tom Wambsgans}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-3em}
+
+\begin{center}
+  \fbox{\parbox{0.9\linewidth}{\centering\textbf{Warning:} personal opinion of the author only, subject
+  to change.}}
+\end{center}
+
+A stateful hash-based signature for Ethereum attestations: $2^{32}$ signatures, small and fast to verify,
+and thresholdizable with a DKG. Same hash as leanSphincs: $\hash(P,\mathit{tw},M)$ is BLAKE2s truncated to
+16 bytes, costs are in compressions, and security is NIST level 1.
+
+\section{The scheme}
+
+\begin{itemize}
+  \item synchronized: the leaf is the slot, so the only state is the slashing protection validators
+        already keep (never sign two messages in one slot)
+  \item two layers of XMSS of height 16: each leaf of the top tree signs the root of one bottom tree of
+        $2^{16}$ slots
+  \item one-time signature: WOTS$^+$C~\cite{HK22C}, chains of length 4, and a 128-bit digest read as 64
+        base-4 digits. Grinding forces the last 8 digits to 0, so those chains are dropped (56 chains
+        left), and the others to sum to a target $T$. A forger pays the same grinding, so nothing is lost
+  \item bottom layer (attestations): the digest is $\hash(P,\mathit{tw}_{\text{slot}},R,m)$ and the signer
+        grinds the 16-byte randomizer $R$ itself ($2^{22}$ tries, $T=96$). Top layer (once per bottom
+        tree): a 4-byte counter, $2^{24}$ tries, $T=102$
+\end{itemize}
+
+\begin{itemize}
+  \item signature: 1\,168 bytes for the bottom half, which fits one IPv6 minimum-MTU UDP packet with 50
+        bytes of attestation metadata, and 1\,156 bytes for the top half (the same for $2^{16}$ slots, so
+        it can be sent once and cached)
+  \item verification: $105+98=203$ compressions
+  \item keygen: $16\cdot10^6$ compressions for the top tree, and the same for each bottom tree
+\end{itemize}
+
+\section{Threshold signing}
+
+3-of-4 with a DKG, no trusted dealer, malicious security against 1 operator (with abort), using the same
+machinery as leanSphincs: secrets shared from 4 seeds, and 3-party MPC~\cite{BGIN19} on BLAKE2s. Only the
+WOTS chains are hashed in MPC, and every chain value is independent of the message, so all the MPC
+happens in advance:
+\begin{itemize}
+  \item keygen: MPC computes every chain value of the $2^{16}$ top keys ($56\times3=168$ MPC hashes per
+        key), keeps them shared among the 4 operators, and opens the chain ends. The top tree is built in
+        the clear, and its root is the public key
+  \item before each bottom tree: the same MPC for its $2^{16}$ keys, then the next top key signs its root
+        by opening precomputed values
+  \item signing: the operators agree on (slot, $m$), derive $R$ jointly and grind it in the clear, then
+        open the 56 precomputed values at the selected positions, each checked against its public chain
+        end. No MPC: one round of a few KB
+\end{itemize}
+An MPC hash costs about $13.5\cdot10^3$ AND gates at 1 bit each (measured in the leanSphincs prototype),
+so a key costs 2.3~Mbit of traffic per operator. Per bottom tree, and once for keygen: 18.6~GB per operator,
+i.e.\ 71~KB/s on average with 4-second slots, plus 350~MB of stored shares.
+
+\begin{thebibliography}{9}
+\bibitem{HK22C} M.~Kudinov, A.~H\"ulsing, E.~Ronen, E.~Yogev. \emph{SPHINCS$^+$C: Compressing SPHINCS$^+$
+  With (Almost) No Cost}. IEEE S\&P, 2023. \url{https://eprint.iacr.org/2022/778}.
+\bibitem{BGIN19} E.~Boyle, N.~Gilboa, Y.~Ishai, A.~Nof. \emph{Practical Fully Secure Three-Party
+  Computation via Sublinear Distributed Zero-Knowledge Proofs}. ACM CCS, 2019.
+  \url{https://eprint.iacr.org/2019/1390}.
+\end{thebibliography}
+
+\end{document}
