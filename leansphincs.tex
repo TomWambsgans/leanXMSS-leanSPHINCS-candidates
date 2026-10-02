@@ -74,14 +74,14 @@ For powerful devices.
 \emph{Modern laptop CPUs can compute on the order of $10^9$ SHA2 or BLAKE2s compressions per second.}
 
 
-\subsection{Pruned: \texorpdfstring{$2^{16}$}{2\textasciicircum 16} lifetime}\label{sec:pruned}
+\subsection{Pruned: \texorpdfstring{$2^{17}$}{2\textasciicircum 17} lifetime}\label{sec:pruned}
 
-For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 12, and replace the 14 siblings above it by pseudorandom surrogate nodes.
+For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 13, and replace the 13 siblings above it by pseudorandom surrogate nodes.
 
 \begin{itemize}
-  \item lifetime: $2^{16}$
-  \item keygen: $1.1\cdot10^6$ compressions
-  \item signing: $142\cdot10^3$ compressions, with a 16~KiB cache (including $66\cdot10^3$ compressions of grinding)
+  \item lifetime: $2^{17}$
+  \item keygen: $2.2\cdot10^6$ compressions
+  \item signing: $111\cdot10^3$ compressions, with a 16~KiB cache (including $33\cdot10^3$ compressions of grinding)
 \end{itemize}
 
 \emph{A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.}
@@ -104,7 +104,8 @@ surrogate siblings).
 A concrete example of what's possible:
 \begin{itemize}
   \item 3-of-4: any 3 operators can sign
-  \item lifetime: $2^{16}$ signatures, using the same hypertree pruning as in \cref{sec:pruned}
+  \item lifetime: $2^{16}$ signatures, with the hypertree pruning of \cref{sec:pruned} and a subtree of
+        height 12
   \item malicious security against 1 operator, with abort (but 2 colluders can rebuild the key, unlike
         3-of-4 BLS)
   \item DKG: no trusted dealer

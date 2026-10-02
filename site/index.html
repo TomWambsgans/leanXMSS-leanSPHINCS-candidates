@@ -304,7 +304,7 @@
     <a class="card" href="#wallet" role="tab" aria-controls="wallet">
       <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/></svg>
       <span class="name">Hardware wallets</span>
-      <span class="life">2<sup>16</sup> signatures</span>
+      <span class="life">2<sup>17</sup> signatures</span>
     </a>
     <a class="card" href="#laptop" role="tab" aria-controls="laptop">
       <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="30,30 14,58 46,58"/></svg>
@@ -325,9 +325,9 @@
 
   <section class="panel" id="wallet" role="tabpanel" aria-label="Hardware wallets">
     <table>
-      <tr><th>Key generation</th><td>1.1M compressions, e.g.&nbsp;34&nbsp;s on a Ledger Nano S+</td></tr>
-      <tr><th>Signing</th><td>142K compressions (4&nbsp;s), with a 16&nbsp;KiB cache</td></tr>
-      <tr><th>How</th><td>only a subtree of 2<sup>12</sup> leaves exists; the signer grinds the randomizer into it</td></tr>
+      <tr><th>Key generation</th><td>2.2M compressions, e.g.&nbsp;68&nbsp;s on a Ledger Nano S+</td></tr>
+      <tr><th>Signing</th><td>111K compressions (3.4&nbsp;s), with a 16&nbsp;KiB cache</td></tr>
+      <tr><th>How</th><td>only a subtree of 2<sup>13</sup> leaves exists; the signer grinds the randomizer into it</td></tr>
     </table>
   </section>
 
