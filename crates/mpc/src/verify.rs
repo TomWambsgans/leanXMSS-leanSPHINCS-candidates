@@ -329,6 +329,8 @@ struct Prover<'a> {
     last_lead: Gf128,
     /// Rounds computed from the bit transcript before materializing.
     streamed: usize,
+    /// Byte tables of `beta_inst`, for the bit-level rounds.
+    beta_lut: std::sync::OnceLock<Vec<[Gf128; 256]>>,
     mat: Option<Vec<Y>>,
     threads: usize,
 }
@@ -347,8 +349,8 @@ const SCALED: [bool; 6] = [true, true, false, false, true, true];
 /// `sum (constant product) * (sum of beta_inst over the instances whose bits are set)`.
 const BIT_ROUNDS: usize = 3;
 
-/// `sum of beta[64 w + t]` over the set bits `t` of `bits`.
-#[inline(always)]
+/// `sum of beta[64 w + t]` over the set bits `t` of `bits` (the reference of [`select_lut`]).
+#[cfg(test)]
 fn select_sum(beta: &[Gf128], w: usize, mut bits: u64) -> Gf128 {
     let mut acc = Gf128::ZERO;
     while bits != 0 {
@@ -356,6 +358,51 @@ fn select_sum(beta: &[Gf128], w: usize, mut bits: u64) -> Gf128 {
         bits &= bits - 1;
     }
     acc
+}
+
+/// Subset sums of 8 weights: `table[v] = sum of weights[i]` over the set bits `i` of `v` (weights
+/// past the end count as zero).
+fn subset_sums(weights: &[Gf128]) -> [Gf128; 256] {
+    let mut table = [Gf128::ZERO; 256];
+    for v in 1..256usize {
+        let i = v.trailing_zeros() as usize;
+        table[v] = table[v & (v - 1)] + weights.get(i).copied().unwrap_or(Gf128::ZERO);
+    }
+    table
+}
+
+/// Byte tables of `beta`: entry `8 w + b` holds the subset sums of `beta[64 w + 8 b ..][..8]`.
+fn byte_tables(beta: &[Gf128], words: usize) -> Vec<[Gf128; 256]> {
+    (0..8 * words).map(|k| subset_sums(&beta[(8 * k).min(beta.len())..(8 * k + 8).min(beta.len())])).collect()
+}
+
+/// `sum of beta[64 w + t]` over the set bits `t` of `bits`, by byte tables.
+#[inline(always)]
+fn select_lut(lut: &[[Gf128; 256]], w: usize, bits: u64) -> Gf128 {
+    let mut acc = Gf128::ZERO;
+    for b in 0..8 {
+        let v = ((bits >> (8 * b)) & 0xff) as usize;
+        if v != 0 {
+            acc += lut[8 * w + b][v];
+        }
+    }
+    acc
+}
+
+/// Transposes an 8x8 bit matrix: bit `j` of byte `i` becomes bit `i` of byte `j`.
+#[inline(always)]
+fn transpose8(mut x: u64) -> u64 {
+    let t = (x ^ (x >> 7)) & 0x00AA_00AA_00AA_00AA;
+    x ^= t ^ (t << 7);
+    let t = (x ^ (x >> 14)) & 0x0000_CCCC_0000_CCCC;
+    x ^= t ^ (t << 14);
+    let t = (x ^ (x >> 28)) & 0x0000_0000_F0F0_F0F0;
+    x ^ t ^ (t << 28)
+}
+
+/// The subset-sum tables of copy weights, 8 copies per group.
+fn group_tables(weights: &[Gf128]) -> Vec<[Gf128; 256]> {
+    weights.chunks(8).map(subset_sums).collect()
 }
 
 /// `p(0), p(1), p(x)` from `p(0)`, the claim `p(0) + p(1)`, and the leading coefficient.
@@ -382,6 +429,7 @@ impl<'a> Prover<'a> {
             last_p: [Gf128::ZERO; 3],
             last_lead: Gf128::ZERO,
             streamed,
+            beta_lut: std::sync::OnceLock::new(),
             mat: None,
             threads,
         }
@@ -419,25 +467,37 @@ impl<'a> Prover<'a> {
     }
 
     /// Unscaled sums at level `j` of the low AND index `low`, for the 64 instances of word `w`:
-    /// `sum_s table(s) x_f[s : low][inst]`.
+    /// `sum_s table(s) x_f[s : low][inst]`. The copies go 8 at a time: their 8 words of a field are
+    /// transposed into one byte per instance, which indexes the group's subset sums (`tables`, from
+    /// [`group_tables`] of the scaled and plain weights).
     #[inline(always)]
-    fn gather(&self, j: usize, tables: (&[Gf128], &[Gf128]), low: usize, w: usize, acc: &mut [[Gf128; 64]; 6]) {
+    fn gather(&self, j: usize, tables: (&[[Gf128; 256]], &[[Gf128; 256]]), low: usize, w: usize, acc: &mut [[Gf128; 64]; 6]) {
         let d = self.d;
         let shift = d.a + 1 - j;
+        let copies = 1usize << (j - 1);
         *acc = [[Gf128::ZERO; 64]; 6];
-        for s in 0..1usize << (j - 1) {
-            let and = (s << shift) | low;
-            if and >= d.n_and {
-                continue;
+        for g in 0..copies.div_ceil(8) {
+            let mut xs = [[0u64; 6]; 8];
+            for (i, x) in xs.iter_mut().enumerate().take(copies - 8 * g) {
+                let and = ((8 * g + i) << shift) | low;
+                if and < d.n_and {
+                    *x = self.words_at(and * d.words + w);
+                }
             }
-            let x = self.words_at(and * d.words + w);
             for f in 0..6 {
-                let weight = if SCALED[f] { tables.0[s] } else { tables.1[s] };
-                let mut bits = x[f];
-                while bits != 0 {
-                    let t = bits.trailing_zeros() as usize;
-                    acc[f][t] += weight;
-                    bits &= bits - 1;
+                let table = if SCALED[f] { &tables.0[g] } else { &tables.1[g] };
+                for b in 0..8 {
+                    let rows = (0..8).fold(0u64, |m, i| m | (((xs[i][f] >> (8 * b)) & 0xff) << (8 * i)));
+                    if rows == 0 {
+                        continue;
+                    }
+                    let cols = transpose8(rows);
+                    for k in 0..8 {
+                        let v = ((cols >> (8 * k)) & 0xff) as usize;
+                        if v != 0 {
+                            acc[f][8 * b + k] += table[v];
+                        }
+                    }
                 }
             }
         }
@@ -483,7 +543,7 @@ impl<'a> Prover<'a> {
         let half = 1usize << (d.a - j);
         let shift = d.a + 1 - j;
         let n_pad = 1usize << d.c;
-        let beta = &self.beta_inst[..];
+        let beta = self.beta_lut.get_or_init(|| byte_tables(&self.beta_inst, d.words.min(n_pad.div_ceil(64))));
         let p = parallel_sum(self.threads, half, |range| {
             let mut p = [Gf128::ZERO; 3];
             let mut tc = vec![Gf128::ZERO; c * c];
@@ -507,10 +567,10 @@ impl<'a> Prover<'a> {
                     // c(lo): A1 (B1 + B2) + A2 B1 + S + Z.
                     for s in 0..c {
                         let x = &lo[s];
-                        tl[s] += select_sum(beta, w, x[4] ^ x[5]);
+                        tl[s] += select_lut(beta, w, x[4] ^ x[5]);
                         for t in 0..c {
                             let y = &lo[t];
-                            tc[s * c + t] += select_sum(beta, w, (x[0] & (y[2] ^ y[3])) ^ (x[1] & y[2]));
+                            tc[s * c + t] += select_lut(beta, w, (x[0] & (y[2] ^ y[3])) ^ (x[1] & y[2]));
                         }
                     }
                     // quad(lo + hi): B sums combine bitwise, A sums keep 2c copies.
@@ -519,7 +579,7 @@ impl<'a> Prover<'a> {
                         let db12 = db1 ^ lo[t][3] ^ hi[t][3];
                         for s2 in 0..2 * c {
                             let x = if s2 < c { &lo[s2] } else { &hi[s2 - c] };
-                            tq[s2 * c + t] += select_sum(beta, w, (x[0] & db12) ^ (x[1] & db1));
+                            tq[s2 * c + t] += select_lut(beta, w, (x[0] & db12) ^ (x[1] & db1));
                         }
                     }
                 }
@@ -552,6 +612,7 @@ impl<'a> Prover<'a> {
         // The upper half's low index carries one more tau factor (bit a - j), folded into its table.
         let t_up = self.tau[d.a - j];
         let up_scaled: Vec<Gf128> = tables.0.iter().map(|&v| v * t_up).collect();
+        let (lo_t, up_t, plain_t) = (group_tables(&tables.0), group_tables(&up_scaled), group_tables(&tables.1));
         let half = 1usize << (d.a - j);
         let n_pad = 1usize << d.c;
         let p = parallel_sum(self.threads, half, |range| {
@@ -560,8 +621,8 @@ impl<'a> Prover<'a> {
             for low in range {
                 let (mut s0, mut s2) = (Gf128::ZERO, Gf128::ZERO);
                 for w in 0..d.words {
-                    self.gather(j, (&tables.0, &tables.1), low, w, &mut lo);
-                    self.gather(j, (&up_scaled, &tables.1), low + half, w, &mut hi);
+                    self.gather(j, (&lo_t, &plain_t), low, w, &mut lo);
+                    self.gather(j, (&up_t, &plain_t), low + half, w, &mut hi);
                     for t in 0..64.min(n_pad - 64 * w) {
                         let l = Y { a1: lo[0][t], a2: lo[1][t], b1: lo[2][t], b2: lo[3][t], s: lo[4][t], z: lo[5][t] };
                         let h = Y { a1: hi[0][t], a2: hi[1][t], b1: hi[2][t], b2: hi[3][t], s: hi[4][t], z: hi[5][t] };
@@ -585,6 +646,7 @@ impl<'a> Prover<'a> {
         let n_pad = 1usize << d.c;
         let lows = 1usize << (d.a + 1 - j);
         let tables = self.copy_tables(j);
+        let tables = (group_tables(&tables.0), group_tables(&tables.1));
         let mut mat = vec![Y::default(); lows * n_pad];
         let this = &*self;
         let chunk = lows.div_ceil(this.threads).max(1);
@@ -732,4 +794,39 @@ fn verifier_pass(party: &Party, d: Dims, plus: &Coins, minus: &Coins) -> (Y, Y) 
         Y { a1: sums[0], a2: z, b1: sums[1], b2: z, s: sums[2], z: sums[3] },
         Y { a1: z, a2: sums[4], b1: z, b2: sums[5], s: sums[6], z },
     )
+}
+
+#[cfg(test)]
+mod lut_tests {
+    use super::*;
+
+    fn weights(n: usize, seed: u128) -> Vec<Gf128> {
+        (0..n as u128).map(|i| Gf128((i + 1).wrapping_mul(0x9e37_79b9_7f4a_7c15_f39c_c060_5ced_c835) ^ seed)).collect()
+    }
+
+    #[test]
+    fn byte_tables_match_the_bitwise_sums() {
+        // 100 weights: the last word is partial.
+        let beta = weights(100, 7);
+        let lut = byte_tables(&beta, 2);
+        let mut x = 0x0123_4567_89ab_cdefu64;
+        for _ in 0..1000 {
+            x = x.rotate_left(13).wrapping_mul(0x2545_f491_4f6c_dd1d);
+            assert_eq!(select_lut(&lut, 0, x), select_sum(&beta, 0, x));
+            let partial = x & ((1 << 36) - 1);
+            assert_eq!(select_lut(&lut, 1, partial), select_sum(&beta, 1, partial));
+        }
+    }
+
+    #[test]
+    fn transpose8_moves_bit_j_of_byte_i_to_bit_i_of_byte_j() {
+        let x = 0x8040_2010_0804_02ffu64 ^ 0x1234_5678_9abc_def0;
+        let t = transpose8(x);
+        for i in 0..8 {
+            for j in 0..8 {
+                assert_eq!((x >> (8 * i + j)) & 1, (t >> (8 * j + i)) & 1);
+            }
+        }
+        assert_eq!(transpose8(t), x);
+    }
 }
