@@ -86,6 +86,7 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
 /* Modes */
 
 .modes { margin-top: 0; }
+.idea { margin: 0 0 2rem; }
 
 .tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--rule); }
 .tabs a {
@@ -449,6 +450,7 @@ footer a + a { margin-left: 1.25rem; }
 
 
 <section class="modes">
+  <p class="idea"><strong>Key idea:</strong> <a href="https://conduition.io/cryptography/hypertree-pruning/">pruning the tree</a>. Lifetime scales with keygen time.</p>
   <div class="tabs" role="tablist">
     <a href="#wallet" role="tab" aria-controls="wallet">Hardware wallets<span>2<sup>17</sup> signatures</span></a>
     <a href="#laptop" role="tab" aria-controls="laptop">Laptops &amp; phones<span>2<sup>24</sup> signatures</span></a>
