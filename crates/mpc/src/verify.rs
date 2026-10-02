@@ -329,8 +329,8 @@ struct Prover<'a> {
     last_lead: Gf128,
     /// Rounds computed from the bit transcript before materializing.
     streamed: usize,
-    /// Byte tables of `beta_inst`, for the bit-level rounds.
-    beta_lut: std::sync::OnceLock<Vec<[Gf128; 256]>>,
+    /// Nibble tables of `beta_inst`, for the bit-level rounds.
+    beta_lut: std::sync::OnceLock<Vec<[Gf128; 16]>>,
     mat: Option<Vec<Y>>,
     threads: usize,
 }
@@ -360,31 +360,29 @@ fn select_sum(beta: &[Gf128], w: usize, mut bits: u64) -> Gf128 {
     acc
 }
 
-/// Subset sums of 8 weights: `table[v] = sum of weights[i]` over the set bits `i` of `v` (weights
-/// past the end count as zero).
-fn subset_sums(weights: &[Gf128]) -> [Gf128; 256] {
-    let mut table = [Gf128::ZERO; 256];
-    for v in 1..256usize {
+/// Subset sums of `log2(T)` weights: `table[v] = sum of weights[i]` over the set bits `i` of `v`
+/// (weights past the end count as zero).
+fn subset_sums<const T: usize>(weights: &[Gf128]) -> [Gf128; T] {
+    let mut table = [Gf128::ZERO; T];
+    for v in 1..T {
         let i = v.trailing_zeros() as usize;
         table[v] = table[v & (v - 1)] + weights.get(i).copied().unwrap_or(Gf128::ZERO);
     }
     table
 }
 
-/// Byte tables of `beta`: entry `8 w + b` holds the subset sums of `beta[64 w + 8 b ..][..8]`.
-fn byte_tables(beta: &[Gf128], words: usize) -> Vec<[Gf128; 256]> {
-    (0..8 * words).map(|k| subset_sums(&beta[(8 * k).min(beta.len())..(8 * k + 8).min(beta.len())])).collect()
+/// Nibble tables of `beta`: entry `16 w + q` holds the subset sums of `beta[64 w + 4 q ..][..4]`
+/// (4 KiB per word: small enough to stay in cache).
+fn nibble_tables(beta: &[Gf128], words: usize) -> Vec<[Gf128; 16]> {
+    (0..16 * words).map(|k| subset_sums(&beta[(4 * k).min(beta.len())..(4 * k + 4).min(beta.len())])).collect()
 }
 
-/// `sum of beta[64 w + t]` over the set bits `t` of `bits`, by byte tables.
+/// `sum of beta[64 w + t]` over the set bits `t` of `bits`, by nibble tables.
 #[inline(always)]
-fn select_lut(lut: &[[Gf128; 256]], w: usize, bits: u64) -> Gf128 {
+fn select_lut(lut: &[[Gf128; 16]], w: usize, bits: u64) -> Gf128 {
     let mut acc = Gf128::ZERO;
-    for b in 0..8 {
-        let v = ((bits >> (8 * b)) & 0xff) as usize;
-        if v != 0 {
-            acc += lut[8 * w + b][v];
-        }
+    for q in 0..16 {
+        acc += lut[16 * w + q][((bits >> (4 * q)) & 0xf) as usize];
     }
     acc
 }
@@ -402,7 +400,7 @@ fn transpose8(mut x: u64) -> u64 {
 
 /// The subset-sum tables of copy weights, 8 copies per group.
 fn group_tables(weights: &[Gf128]) -> Vec<[Gf128; 256]> {
-    weights.chunks(8).map(subset_sums).collect()
+    weights.chunks(8).map(subset_sums::<256>).collect()
 }
 
 /// `p(0), p(1), p(x)` from `p(0)`, the claim `p(0) + p(1)`, and the leading coefficient.
@@ -543,7 +541,7 @@ impl<'a> Prover<'a> {
         let half = 1usize << (d.a - j);
         let shift = d.a + 1 - j;
         let n_pad = 1usize << d.c;
-        let beta = self.beta_lut.get_or_init(|| byte_tables(&self.beta_inst, d.words.min(n_pad.div_ceil(64))));
+        let beta = self.beta_lut.get_or_init(|| nibble_tables(&self.beta_inst, d.words.min(n_pad.div_ceil(64))));
         let p = parallel_sum(self.threads, half, |range| {
             let mut p = [Gf128::ZERO; 3];
             let mut tc = vec![Gf128::ZERO; c * c];
@@ -805,10 +803,10 @@ mod lut_tests {
     }
 
     #[test]
-    fn byte_tables_match_the_bitwise_sums() {
+    fn nibble_tables_match_the_bitwise_sums() {
         // 100 weights: the last word is partial.
         let beta = weights(100, 7);
-        let lut = byte_tables(&beta, 2);
+        let lut = nibble_tables(&beta, 2);
         let mut x = 0x0123_4567_89ab_cdefu64;
         for _ in 0..1000 {
             x = x.rotate_left(13).wrapping_mul(0x2545_f491_4f6c_dd1d);
