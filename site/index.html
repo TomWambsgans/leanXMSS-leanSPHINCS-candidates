@@ -303,70 +303,57 @@
   <div class="cards" role="tablist">
     <a class="card" href="#wallet" role="tab" aria-controls="wallet">
       <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/></svg>
-      <span class="name">Hardware wallet</span>
+      <span class="name">Hardware wallets</span>
       <span class="life">2<sup>16</sup> signatures</span>
-      <span class="hint">Ledger Nano S+</span>
     </a>
     <a class="card" href="#laptop" role="tab" aria-controls="laptop">
       <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="30,30 14,58 46,58"/></svg>
-      <span class="name">Laptop &amp; phone</span>
+      <span class="name">Laptops &amp; phones</span>
       <span class="life">2<sup>24</sup> signatures</span>
-      <span class="hint">also powerful hardware wallets</span>
     </a>
     <a class="card" href="#industry" role="tab" aria-controls="industry">
       <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="k" points="48,6 6,58 90,58"/></svg>
       <span class="name">Industry</span>
       <span class="life">2<sup>30</sup> signatures</span>
-      <span class="hint">the full tree</span>
     </a>
     <a class="card" href="#threshold" role="tab" aria-controls="threshold">
-      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/><circle class="op" cx="62" cy="38" r="5"/><circle class="op" cx="76" cy="38" r="5"/><circle class="op" cx="62" cy="52" r="5"/><circle class="op off" cx="76" cy="52" r="5"/></svg>
-      <span class="name">Threshold (MPC)</span>
+      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/><circle class="op" cx="62" cy="38" r="4.5"/><circle class="op" cx="76" cy="38" r="4.5"/><circle class="op" cx="62" cy="52" r="4.5"/><circle class="op off" cx="76" cy="52" r="4.5"/></svg>
+      <span class="name">Threshold</span>
       <span class="life">3-of-4, 2<sup>16</sup> signatures</span>
-      <span class="hint">no trusted dealer</span>
     </a>
   </div>
 
-  <section class="panel" id="wallet" role="tabpanel">
-    <h3>Hardware wallet</h3>
+  <section class="panel" id="wallet" role="tabpanel" aria-label="Hardware wallets">
     <table>
-      <tr><th>Lifetime</th><td>2<sup>16</sup> signatures</td></tr>
-      <tr><th>Key generation</th><td>1.1M compressions, about 34&nbsp;s on a Ledger Nano S+</td></tr>
-      <tr><th>Signing</th><td>142K compressions, about 4&nbsp;s, with a 16&nbsp;KiB cache</td></tr>
+      <tr><th>Key generation</th><td>1.1M compressions, e.g.&nbsp;34&nbsp;s on a Ledger Nano S+</td></tr>
+      <tr><th>Signing</th><td>142K compressions (4&nbsp;s), with a 16&nbsp;KiB cache</td></tr>
+      <tr><th>How</th><td>only a subtree of 2<sup>12</sup> leaves exists; the signer grinds the randomizer into it</td></tr>
     </table>
-    <p>The key only builds a subtree of 2<sup>12</sup> leaves; the signer grinds the randomizer until the message lands in it.</p>
   </section>
 
-  <section class="panel" id="laptop" role="tabpanel">
-    <h3>Laptop &amp; phone</h3>
+  <section class="panel" id="laptop" role="tabpanel" aria-label="Laptops and phones">
     <table>
-      <tr><th>Lifetime</th><td>2<sup>24</sup> signatures</td></tr>
       <tr><th>Key generation</th><td>287M compressions, about 0.3&nbsp;s on a laptop</td></tr>
-      <tr><th>Signing</th><td>84K compressions with a 1&nbsp;MiB cache</td></tr>
+      <tr><th>Signing</th><td>84K compressions, with a 1&nbsp;MiB cache</td></tr>
+      <tr><th>How</th><td>only a subtree of 2<sup>20</sup> leaves exists</td></tr>
     </table>
-    <p>The same, with a subtree of 2<sup>20</sup> leaves.</p>
   </section>
 
-  <section class="panel" id="industry" role="tabpanel">
-    <h3>Industry</h3>
+  <section class="panel" id="industry" role="tabpanel" aria-label="Industry">
     <table>
-      <tr><th>Lifetime</th><td>2<sup>30</sup> signatures</td></tr>
       <tr><th>Key generation</th><td>18.4B compressions, about 20&nbsp;s on a laptop</td></tr>
       <tr><th>Signing</th><td>421K compressions with a 1&nbsp;MiB cache, 75K with 1&nbsp;GiB</td></tr>
+      <tr><th>How</th><td>the full tree</td></tr>
     </table>
-    <p>The full tree.</p>
   </section>
 
-  <section class="panel" id="threshold" role="tabpanel">
-    <h3>Threshold (MPC)</h3>
+  <section class="panel" id="threshold" role="tabpanel" aria-label="Threshold">
     <table>
-      <tr><th>Signers</th><td>any 3 of 4 operators</td></tr>
-      <tr><th>Security</th><td>against 1 malicious operator, key generated without a trusted dealer</td></tr>
-      <tr><th>Lifetime</th><td>2<sup>16</sup> signatures</td></tr>
-      <tr><th>Key generation</th><td>1.3&nbsp;GB of traffic per operator</td></tr>
-      <tr><th>Signing</th><td>no MPC once the message is known: about 10 rounds of a few KB</td></tr>
+      <tr><th>Key generation</th><td>1.33&nbsp;GB per operator, no trusted dealer</td></tr>
+      <tr><th>Signing</th><td>7&nbsp;KB per operator in 10 rounds, no MPC</td></tr>
+      <tr><th>Security</th><td>against 1 malicious operator</td></tr>
+      <tr><th>How</th><td>only hashes of secrets run in MPC, all before the message is known (42&nbsp;MB per few-time key) &middot; <a href="https://github.com/TomWambsgans/leansphincs-candidate/tree/main/crates/threshold">prototype</a></td></tr>
     </table>
-    <p>The next few-time key is computed in MPC in advance; signing only grinds and opens. <a href="https://github.com/TomWambsgans/leansphincs-candidate/tree/main/crates/threshold">Prototype</a>.</p>
   </section>
 </section>
 
@@ -374,7 +361,7 @@
 
 <footer class="wrap">
   <p><a href="https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf">Note (PDF)</a> · <a href="https://github.com/TomWambsgans/leansphincs-candidate">Code</a></p>
-  <p>Costs in BLAKE2s compressions (Nano S+: 33K/s, laptop: 10<sup>9</sup>/s). Tom Wambsgans, personal opinion, subject to change.</p>
+  <p>Costs in BLAKE2s compressions; times assume 10<sup>9</sup> per second on a laptop and 33K on a Ledger Nano S+. Tom Wambsgans, personal opinion, subject to change.</p>
 </footer>
 
 <script>
