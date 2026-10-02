@@ -41,16 +41,15 @@ and thresholdizable with a DKG. Same hash as leanSphincs: $\hash(P,\mathit{tw},M
         $2^{16}$ slots
   \item one-time signature: WOTS$^+$C~\cite{HK22C}, chains of length 4, and a 128-bit digest read as 64
         base-4 digits. Grinding forces the last 6 digits to 0, so those chains are dropped (58 chains
-        left), and the others to sum to a target $T$. A forger pays the same grinding, so nothing is lost
+        left), and the others to sum to $T=106$: $2^{20}$ tries. A forger pays the same grinding, so nothing is lost
   \item bottom layer (attestations): the digest is $\hash(P,\mathit{tw}_{\text{slot}},R,m)$ and the signer
-        grinds the 16-byte randomizer $R$ itself ($2^{22}$ tries, $T=110$). Top layer (once per bottom
-        tree): a 4-byte counter, $2^{24}$ tries, $T=114$
+        grinds the 16-byte randomizer $R$ itself. Top layer (once per bottom tree): a 4-byte counter
 \end{itemize}
 
 \begin{itemize}
   \item signature: 1\,200 bytes for the bottom half, and 1\,188 bytes for the top half (the same for
         $2^{16}$ slots, so it can be sent once and cached)
-  \item verification: $97+92=189$ compressions
+  \item verification: $101+100=201$ compressions
   \item keygen: $16\cdot10^6$ compressions for the top tree, and the same for each bottom tree
 \end{itemize}
 
