@@ -108,14 +108,14 @@ A concrete example of what's possible:
   \item malicious security against 1 operator, with abort (but 2 colluders can rebuild the key, unlike
         3-of-4 BLS)
   \item DKG: no trusted dealer
-  \item keygen: $786\cdot10^3$ MPC hashes, about 1.45~GB of traffic per operator and 2\,500 rounds (assuming
-        BLAKE2s)
-  \item signing: thanks to caching of the sub-tree in XMSS, only one FORS has to be computed in MPC, $24\,696$ MPC hashes, about 45~MB of
-        traffic per operator and 2\,600 rounds. Either:
+  \item keygen: $786\cdot10^3$ MPC hashes, 1.33~GB of traffic per operator and 2\,734 rounds (measured
+        with the prototype, BLAKE2s)
+  \item signing: thanks to caching of the sub-tree in XMSS, only one FORS has to be computed in MPC, $24\,696$ MPC hashes, 42~MB of
+        traffic per operator and 1\,800 rounds. Either:
     \begin{itemize}
     \item vanilla, once the message is known (signing takes a few seconds)
     \item or with preprocessing: compute the instance before the message is known. Online, no MPC: only
-          $\approx 2.0\cdot10^8$ compressions of grinding in the clear and 2 rounds of about 1~KB
+          $\approx 2.0\cdot10^8$ compressions of grinding in the clear and 10 rounds of 7~KB in total
           per operator
     \end{itemize}
 \end{itemize}
@@ -128,19 +128,20 @@ instance can be computed in advance, and the randomizer ground until the message
 $i$~\cite{CDI05}: 1 operator learns nothing, any 2 know everything. Term $i$ is $\hash(k_i,\mathit{addr})$
 for a seed $k_i$, so nothing is stored.
 
-\paragraph{Keygen (DKG).} Each $k_i$ is sampled by an operator other than $i$ and sent to the two others,
-who compare its hash. The public parameter and the 14 surrogate nodes come from commit-reveal coin tossing
+\paragraph{Keygen (DKG).} Each $k_i$ is generated jointly by its 3 holders (commit-reveal), so no holder can
+relate it to another seed. The public parameter and the 14 surrogate nodes come from commit-reveal coin tossing
 (a chosen surrogate could hide a known subtree). MPC hashes the 64 chains of the $2^{12}$ kept leaves to
 their ends ($786\cdot10^3$ hashes) and opens the ends; the tree is built in the clear.
 
-\paragraph{Signing.} The operators agree on $m$, open $R_0=\bigoplus_i\hash(k_i,\mathsf{msg},m)$ (local
-hashes) and grind $R=\hash(R_0,\mathit{ctr})$, taking the first counter that works:
+\paragraph{Signing.} The operators agree on $m$ and on a fresh joint nonce $s$ (commit-reveal), kept until the
+signature is finished. They open $R_0=\bigoplus_i\hash(k_i,\mathsf{msg},m,s)$ (local hashes) and grind
+$R=\hash(R_0,\mathit{ctr})$, taking the first counter that works:
 \begin{itemize}
   \item vanilla: until the leaf index lands in the kept subtree, then compute the selected FORS instance
         in MPC and open the 24 selected secrets
   \item with preprocessing: until it lands on the next instance, drawn and computed in advance as
-        $\bigoplus_i\hash(k_i,\mathsf{next},R')$ ($R'$ the previous randomizer), then open the 24 selected
-        secrets
+        $\bigoplus_i\hash(k_i,\mathsf{next},D)$, where $D\leftarrow\hash(D,R)$ after each finished signature (so
+        $D$ never repeats), then open the 24 selected secrets
 \end{itemize}
 Instances stay random, so security is as for a plain pruned key. Computing an instance: MPC hashes its
 $24\,576$ secrets into leaves, which are opened; the operators build the FORS root, run the WOTS$^+$C
