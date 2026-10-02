@@ -15,6 +15,13 @@ pub const TAG_MSG: u32 = 0;
 pub const TAG_NEXT: u32 = 1;
 pub const TAG_RAND: u32 = 2;
 
+/// The data of the randomizer seed's terms: `H(m | s)`, binding the message and the request's `s`.
+pub fn msg_data(m: &Message, s: &[u8; 32]) -> [u8; 32] {
+    let mut h = blake2s::Hasher::new();
+    h.update(b"r0-data").update(m).update(s);
+    h.finalize()
+}
+
 /// What a key's operators all know, after the DKG.
 #[derive(Clone)]
 pub struct KeyState {
@@ -32,17 +39,76 @@ pub struct Instance {
     pub wots: [Digest; V],
 }
 
+/// How the signature's instance is chosen.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Mode {
+    /// Grind into the kept subtree, then compute the selected instance in MPC.
+    Vanilla,
+    /// Grind until the message lands on the instance computed in advance.
+    Preprocessed,
+}
+
+/// The current signature request, from the moment its randomizer seed `s` is agreed: its `R0` may
+/// be open, so it is finished, with this `s`, before any other request. Once `done`, it is kept so
+/// that this operator still vouches for `s` if the request is run again (some other operator may
+/// have aborted before finishing): a rerun gives the same signature.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Pending {
+    pub m: Message,
+    pub mode: Mode,
+    pub s: [u8; 32],
+    pub done: bool,
+}
+
+impl Pending {
+    pub fn blocks(&self, m: &Message, mode: Mode) -> bool {
+        !self.done && (self.m, self.mode) != (*m, mode)
+    }
+}
+
+/// A preprocessed instance: its leaf, the instance, and the randomizer it was drawn from.
+#[derive(Clone)]
+pub struct Next {
+    pub idx: u64,
+    pub inst: Instance,
+    pub from: Randomizer,
+}
+
+/// An operator's secrets and state, kept across protocol runs (in memory only: a deployment must
+/// persist `pending`, `last` and `next` before acting on them).
 pub struct Operator {
     pub id: usize,
     pub(crate) seeds: [Option<Seed>; 4],
     pub key: Option<KeyState>,
-    /// The preprocessed next instance (leaf index and instance), consumed by the next signature.
-    pub next: Option<(u64, Instance)>,
+    /// The randomizer of the last finished signature (the root before the first): it draws the
+    /// next preprocessed instance.
+    pub last: Option<Randomizer>,
+    /// The preprocessed next instance, checked by this operator, and consumed by the next
+    /// preprocessed signature.
+    pub next: Option<Next>,
+    /// The current request (see [`Pending`]).
+    pub pending: Option<Pending>,
+    /// The randomizers that drew a preprocessed instance already used by a signature (they never
+    /// repeat, so a stale instance can't be used twice).
+    pub consumed: Vec<Randomizer>,
+    /// Test record: the randomizer each signing attempt computed.
+    #[cfg(test)]
+    pub seen_r: Vec<Randomizer>,
 }
 
 impl Operator {
     pub fn new(id: usize) -> Self {
-        Self { id, seeds: [None; 4], key: None, next: None }
+        Self {
+            id,
+            seeds: [None; 4],
+            key: None,
+            last: None,
+            next: None,
+            pending: None,
+            consumed: vec![],
+            #[cfg(test)]
+            seen_r: vec![],
+        }
     }
 
     pub(crate) fn seed(&self, t: usize) -> &Seed {

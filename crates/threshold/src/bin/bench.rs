@@ -3,7 +3,7 @@
 //! rounds + traffic / bandwidth, computation excluded).
 //!
 //! `cargo run --release -p threshold --bin bench -- [b]`: kept subtree of 2^b leaves (default 12, as in
-//! the note: about 16 GB of memory and a minute; keygen traffic scales with 2^b, rounds don't).
+//! the note). Keygen traffic scales with 2^b; its rounds grow slowly (by about 6 per unit of b).
 
 use std::time::Instant;
 
@@ -35,10 +35,14 @@ fn print(title: &str, secs: f64, report: &Report) -> Stats {
 
 fn main() {
     let b: usize = std::env::args().nth(1).map_or(12, |a| a.parse().unwrap());
-    println!("leanSphincs 3-of-4 threshold prototype, kept subtree of 2^{b} leaves; per operator (the busiest)\n");
+    println!("leanSphincs 3-of-4 threshold prototype, kept subtree of 2^{b} leaves; per operator (the busiest)");
+    println!("fast paths: carry-less multiply {}, BLAKE2s batches {}\n", mpc::gf128::CLMUL, blake2s::BACKEND);
+    if !mpc::gf128::CLMUL {
+        println!("WARNING: no hardware carry-less multiply in this build (see .cargo/config.toml): verification is slow\n");
+    }
 
     let t = Instant::now();
-    let (mut cluster, _, report) = Cluster::dkg(b, vec![]).unwrap();
+    let (mut cluster, _, report) = Cluster::dkg(b).unwrap();
     let dkg = print("DKG", t.elapsed().as_secs_f64(), &report);
     let pk = cluster.ops[0].key().pk;
 

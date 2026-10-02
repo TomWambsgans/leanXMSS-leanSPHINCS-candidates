@@ -1,16 +1,30 @@
 //! The per-operator steps of the protocols (each operator runs them on its own thread).
+//!
+//! The online operators agree on what they are about to do (a hash round and an "ok" round) before
+//! every opening. Among three operators with one cheater no agreement protocol can make the two
+//! honest ones always decide alike (that needs n > 3f), so a split remains possible; it only makes
+//! the attempt abort, and never opens more than the final signature reveals: every opening needs all
+//! three operators, and what each opening reveals is fixed by the agreement before it (the pending
+//! request's `s` fixes `R0`, hence `R` and the FORS positions; the FORS key fixes the WOTS
+//! positions). The four-operator decision of the DKG is a Byzantine agreement (n = 4 > 3f), so it
+//! is unanimous.
+//!
+//! The operators' links must be private (encrypted) and direct: the offline operator knows all
+//! three MPC keys of a session, so a relay through it would see every share.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use mpc::blake2s_circuit::{split_prefixes, th_circuit};
-use mpc::engine::{Cheat, Party, Shares};
-use mpc::net::{Abort, Fault, Link, Stats, abort};
+use mpc::engine::{Party, Shares};
+use mpc::net::{Abort, Link, Stats, abort};
 use mpc::prf::os_random;
+use mpc::session::establish;
 use sphincs::*;
 
 use crate::net4::Net4;
+pub use crate::operator::Mode;
 use crate::operator::*;
 
 /// Traffic, rounds and time of one phase, for one operator.
@@ -30,8 +44,8 @@ pub(crate) struct Meter {
 }
 
 impl Meter {
-    pub fn new() -> Self {
-        Self { link: Stats::default(), net: Stats::default(), at: Instant::now(), phases: vec![] }
+    pub fn new(net: &Net4) -> Self {
+        Self { link: Stats::default(), net: net.stats, at: Instant::now(), phases: vec![] }
     }
 
     pub fn mark(&mut self, name: &'static str, party: Option<&Party>, net: &Net4) {
@@ -45,28 +59,86 @@ impl Meter {
     }
 }
 
-/// A cheating operator, for the tests: its MPC link flips a bit, or its AND messages are wrong.
-#[derive(Clone, Copy, Debug)]
-pub struct CheatSpec {
-    pub op: usize,
-    pub fault: Option<Fault>,
-    pub cheat: Cheat,
+/// How an operator deviates, for the tests, in the steps outside the MPC.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) enum Lie {
+    #[default]
+    None,
+    /// Sends another hash to one member in the online agreements.
+    AgreeHash,
+    /// Reveals to one other holder a seed contribution that does not match its commitment.
+    InconsistentReveal,
+    /// Rushes the seed reveals (sees the others' first), then reveals so as to copy another seed.
+    SeedCopy,
+    /// As an online operator, sends the offline one a corrupted full copy (chain ends, instance).
+    BadCopy,
+    /// As the offline operator, rejects every instance it is sent.
+    RefuseInstance,
+    /// Claims a pending request with an `s` of its choice.
+    FakePending,
+    /// Flips a bit of its component in the opening of `R0`, of the FORS secrets, or of the WOTS values.
+    FlipR0,
+    FlipFors,
+    FlipWots,
 }
 
-/// An online operator's MPC party for a session.
-pub(crate) fn party(op: &Operator, roles: &Roles, link: Link, session: [u8; 16], cheats: &[CheatSpec]) -> Party {
-    let (k_own, k_prev) = op.mpc_keys(roles, &session);
+/// A cheating operator, for the tests: a fault on its MPC link, a cheat in its MPC steps, a lie in
+/// the other steps.
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct CheatSpec {
+    pub op: usize,
+    pub fault: Option<mpc::net::Fault>,
+    pub cheat: mpc::engine::Cheat,
+    pub lie: Lie,
+}
+
+/// The test hooks of a protocol run (none outside the tests).
+#[derive(Clone, Default)]
+pub(crate) struct Hooks {
+    #[cfg(test)]
+    pub cheats: Vec<CheatSpec>,
+}
+
+impl Hooks {
+    #[inline(always)]
+    pub(crate) fn lies(&self, op: usize, lie: Lie) -> bool {
+        #[cfg(test)]
+        {
+            self.cheats.iter().any(|c| c.op == op && c.lie == lie)
+        }
+        #[cfg(not(test))]
+        {
+            let _ = (op, lie);
+            false
+        }
+    }
+}
+
+/// An online operator's MPC party for a fresh session (established over the link).
+#[cfg_attr(not(test), allow(unused_mut))]
+pub(crate) fn party(op: &Operator, roles: &Roles, mut link: Link, hooks: &Hooks) -> Result<Party, Abort> {
+    #[cfg(test)]
+    let mine = hooks.cheats.iter().find(|c| c.op == op.id).copied();
+    #[cfg(test)]
+    if let Some(c) = mine {
+        link.fault = c.fault;
+    }
+    #[cfg(not(test))]
+    let _ = hooks;
+    let session = establish(&mut link)?;
+    let (k_own, k_prev) = op.mpc_keys(roles, session.bytes());
     let mut party = Party::new(link, k_own, k_prev, session, 1);
-    for c in cheats.iter().filter(|c| c.op == op.id) {
-        party.link.fault = c.fault;
+    #[cfg(test)]
+    if let Some(c) = mine {
         party.cheat = c.cheat;
     }
-    party
+    Ok(party)
 }
 
 /// `Th` on a batch of secret values, each under its own tweak (all ANDs left unverified).
 fn mpc_th(party: &mut Party, pp: &PublicParam, tweaks: &[Tweak], x: &[Shares]) -> Result<Vec<Shares>, Abort> {
-    party.set_n(tweaks.len());
+    party.set_n(tweaks.len())?;
     let prefixes: Vec<[u8; 32]> = tweaks
         .iter()
         .map(|t| {
@@ -92,42 +164,143 @@ fn open_sliced(party: &mut Party, shares: &[Shares]) -> Result<Vec<Digest>, Abor
     Ok(unslice(&party.open(shares)?, n))
 }
 
-/// Opens values given as replicated components, packed into one wire.
-fn open_values(party: &mut Party, own: &[Digest], prev: &[Digest]) -> Result<Vec<Digest>, Abort> {
-    party.set_n(128 * own.len());
-    let opened = party.open(&[Shares { own: pack(own), prev: pack(prev) }])?;
-    Ok(unpack(&opened[0], own.len()))
+/// Opens values given as replicated components, packed into one wire; `flip` corrupts my own
+/// component (a test cheater).
+fn open_values(party: &mut Party, own: &[Digest], prev: &[Digest], flip: bool) -> Result<Vec<Digest>, Abort> {
+    let count = own.len();
+    party.set_n(128 * count)?;
+    let mut own = pack(own);
+    if flip {
+        own[0] ^= 1;
+    }
+    let opened = party.open(&[Shares { own, prev: pack(prev) }])?;
+    Ok(unpack(&opened[0], count))
 }
 
-/// Every member sends the hash of `value` to the others; all must agree.
-fn agree(net: &mut Net4, members: &[usize], value: &[u8]) -> Result<(), Abort> {
+/// The online operators agree on `value`: every member sends its hash to the others, then whether
+/// all matched; each member continues only if every member said so.
+fn agree(net: &mut Net4, members: &[usize], value: &[u8], hooks: &Hooks) -> Result<(), Abort> {
     let h = blake2s::hash(value);
-    let got = net.broadcast(members, &h)?;
-    if members.iter().any(|&o| o != net.id && got[o] != h) {
+    let me = net.id;
+    // A lying member sends another hash to the member after it.
+    let victim = hooks.lies(me, Lie::AgreeHash).then(|| members[(members.iter().position(|&o| o == me).unwrap() + 1) % members.len()]);
+    let got = net.round(members, |to| if Some(to) == victim { blake2s::hash(b"other").to_vec() } else { h.to_vec() })?;
+    let ok = members.iter().all(|&o| o == me || got[o] == h);
+    let oks = net.broadcast(members, &[ok as u8])?;
+    if !ok || members.iter().any(|&o| o != me && oks[o] != [1]) {
         return abort("operators disagree");
     }
     Ok(())
 }
 
-/// The DKG, for one operator; `link` is its MPC link if it is one of the three online operators.
-pub(crate) fn dkg(op: &mut Operator, net: &mut Net4, link: Option<Link>, roles: &Roles, b: usize, cheats: &[CheatSpec]) -> Result<Vec<Phase>, Abort> {
+/// Byzantine agreement of the four operators on whether they all hold `value` (Lamport, Shostak and
+/// Pease's OM(1): n = 4 tolerates one traitor): every operator broadcasts the hash of its value,
+/// then relays what it received; each value is the majority of its three reports. The honest
+/// operators reach the same verdict.
+fn agree4(net: &mut Net4, value: &[u8]) -> Result<bool, Abort> {
+    let all = [0, 1, 2, 3];
+    let me = net.id;
+    let h = blake2s::hash(value);
+    let direct = net.broadcast(&all, &h)?;
+    let mut mine: [Vec<u8>; 4] = direct.clone();
+    mine[me] = h.to_vec();
+    let relay: Vec<u8> = (0..4).flat_map(|o| { let mut v = mine[o].clone(); v.resize(32, 0); v }).collect();
+    let relays = net.broadcast(&all, &relay)?;
+    // Operator o's hash: as received from o, and as relayed by the two others (my own is known).
+    let agreed: Vec<Vec<u8>> = (0..4)
+        .map(|o| {
+            if o == me {
+                return h.to_vec();
+            }
+            let mut reports = vec![mine[o].clone()];
+            for r in (0..4).filter(|&r| r != me && r != o) {
+                reports.push(relays[r].get(32 * o..32 * o + 32).map_or(vec![], |s| s.to_vec()));
+            }
+            reports.iter().find(|x| reports.iter().filter(|y| y == x).count() >= 2).cloned().unwrap_or_default()
+        })
+        .collect();
+    Ok(agreed.iter().all(|x| x == &agreed[me]))
+}
+
+/// The four-operator part of the DKG: the seeds, each generated jointly by its three holders, and
+/// the coins for the public parameter and the surrogates. Returns `(P, s, surrogates)`.
+pub(crate) fn dkg_seeds_and_coins(op: &mut Operator, net: &mut Net4, b: usize, hooks: &Hooks) -> Result<(PublicParam, u64, Vec<Digest>), Abort> {
     let all = [0, 1, 2, 3];
     let me = op.id;
-    let mut meter = Meter::new();
-    // 1. Seed k_t is sampled by operator t + 1 and sent to the two other holders; every pair compares
-    // the hashes of the seeds both hold.
-    let dealt: Seed = os_random();
-    let got = net.round(&all, |to| if to != (me + 3) % 4 { dealt.to_vec() } else { vec![] })?;
+    // 1. Seed k_t is H(t | r_a | r_b | r_c) for contributions of its three holders (every operator
+    // but t), committed before they are revealed: no holder can relate it to another seed. Each
+    // pair of operators exchanges its contributions to the two seeds both hold.
+    let mine: [[u8; 32]; 4] = std::array::from_fn(|_| os_random());
+    let commit = |t: usize, from: usize, r: &[u8]| -> Vec<u8> {
+        let mut h = blake2s::Hasher::new();
+        h.update(b"seed-commit").update(&[t as u8, from as u8]).update(r);
+        h.finalize().to_vec()
+    };
+    let shared = |o: usize| (0..4).filter(move |&t| t != me && t != o);
+    let commitments = net.round(&all, |o| shared(o).flat_map(|t| commit(t, me, &mine[t])).collect())?;
+    let reveal = |o: usize| -> Vec<u8> {
+        let mut out: Vec<u8> = shared(o).flat_map(|t| mine[t]).collect();
+        if hooks.lies(me, Lie::InconsistentReveal) && o == (me + 1) % 4 {
+            out[0] ^= 1;
+        }
+        out
+    };
+    let reveals = if hooks.lies(me, Lie::SeedCopy) {
+        // Rushing: the others' contributions first; the best the cheater can do is reveal what it
+        // committed (anything else is caught below), so it tries to copy k_{me+1} into k_{me-1}.
+        #[cfg(test)]
+        {
+            net.round_rushing(&all, |o, got| {
+                let mut out = reveal(o);
+                if o != (me + 1) % 4 && o != (me + 3) % 4 {
+                    // Its contribution to k_{me-1}, as seen by `o`: a value that makes it k_{me+1}'s.
+                    if let Some(pos) = shared(o).position(|t| t == (me + 3) % 4) {
+                        let copy = got[o].get(..32).map_or([0; 32], |s| s.try_into().unwrap());
+                        out[32 * pos..32 * pos + 32].copy_from_slice(&copy);
+                    }
+                }
+                out
+            })?
+        }
+        #[cfg(not(test))]
+        unreachable!()
+    } else {
+        net.round(&all, reveal)?
+    };
+    let mut contributions: [[Option<[u8; 32]>; 4]; 4] = [[None; 4]; 4];
     for t in (0..4).filter(|&t| t != me) {
-        let dealer = (t + 1) % 4;
-        op.seeds[t] = Some(if dealer == me { dealt } else { got[dealer].as_slice().try_into().map_err(|_| Abort("malformed seed".into()))? });
+        contributions[t][me] = Some(mine[t]);
     }
+    for o in (0..4).filter(|&o| o != me) {
+        let ts: Vec<usize> = shared(o).collect();
+        if reveals[o].len() != 32 * ts.len() || commitments[o].len() != 32 * ts.len() {
+            return abort("malformed seed contribution");
+        }
+        for (k, &t) in ts.iter().enumerate() {
+            let r: [u8; 32] = reveals[o][32 * k..32 * k + 32].try_into().unwrap();
+            if commit(t, o, &r) != commitments[o][32 * k..32 * k + 32] {
+                return abort("a seed contribution does not match its commitment");
+            }
+            contributions[t][o] = Some(r);
+        }
+    }
+    for t in (0..4).filter(|&t| t != me) {
+        let mut h = blake2s::Hasher::new();
+        h.update(b"seed").update(&[t as u8]);
+        for o in (0..4).filter(|&o| o != t) {
+            h.update(&contributions[t][o].unwrap());
+        }
+        op.seeds[t] = Some(h.finalize());
+    }
+    // Every pair compares the hashes of the seeds both hold (a contributor that revealed different
+    // values to different holders is caught here).
     let hashes = |to: usize| (0..4).filter(|&t| t != me && t != to).flat_map(|t| blake2s::hash(op.seed(t))).collect::<Vec<u8>>();
     let got = net.round(&all, hashes)?;
     if (0..4).any(|o| o != me && got[o] != hashes(o)) {
-        return abort("inconsistent seed dealing");
+        return abort("inconsistent seeds");
     }
-    // 2. Commit-reveal coins for P (whose low bits place the kept subtree, as in `key_gen`) and the surrogates.
+    // 2. Commit-reveal coins for P (whose low bits place the kept subtree, as in `key_gen`) and the
+    // surrogates; every reveal is exactly 32 bytes.
     let r: [u8; 32] = os_random();
     let commitments = net.broadcast(&all, &blake2s::hash(&r))?;
     let reveals = net.broadcast(&all, &r)?;
@@ -135,7 +308,7 @@ pub(crate) fn dkg(op: &mut Operator, net: &mut Net4, link: Option<Link>, roles: 
     coins.update(b"dkg-coins");
     for o in 0..4 {
         let ro: &[u8] = if o == me { &r } else { &reveals[o] };
-        if o != me && blake2s::hash(ro).as_slice() != commitments[o].as_slice() {
+        if ro.len() != 32 || (o != me && blake2s::hash(ro).as_slice() != commitments[o].as_slice()) {
             return abort("a reveal does not match its commitment");
         }
         coins.update(ro);
@@ -149,14 +322,23 @@ pub(crate) fn dkg(op: &mut Operator, net: &mut Net4, link: Option<Link>, roles: 
     let pp: PublicParam = derive(b"P", 0);
     let s = if b == H { 0 } else { u64::from_le_bytes(pp[..8].try_into().unwrap()) & ((1 << (H - b)) - 1) };
     let surrogates: Vec<Digest> = (b..H).map(|level| derive(b"surrogate", level as u32)).collect();
-    meter.mark("seed dealing and coin tossing", None, net);
-    // 3. The three online operators hash the chains to their ends in MPC, verify, and open the ends.
+    Ok((pp, s, surrogates))
+}
+
+/// The DKG's MPC part, for one set of three online operators (retried with another set on an
+/// abort, with the same seeds and coins): the chains in MPC, their ends to the fourth operator,
+/// the tree, and a unanimous agreement on the public key.
+pub(crate) fn dkg_mpc(op: &mut Operator, net: &mut Net4, link: Option<Link>, roles: &Roles, b: usize, coins: &(PublicParam, u64, Vec<Digest>), hooks: &Hooks) -> Result<Vec<Phase>, Abort> {
+    let all = [0, 1, 2, 3];
+    let me = op.id;
+    let (pp, s, surrogates) = (coins.0, coins.1, coins.2.clone());
+    let mut meter = Meter::new(net);
     let leaves = 1usize << b;
     let leaf_of = |k: usize| ((s << b) + (k / V) as u64) as u32;
     let mut party = None;
     let mut ends: Vec<Digest> = vec![];
     if let Some(link) = link {
-        let mut p = self::party(op, roles, link, derive(b"session", 0), cheats);
+        let mut p = self::party(op, roles, link, hooks)?;
         let n = leaves * V;
         let (own, prev): (Vec<Digest>, Vec<Digest>) = (0..n).map(|k| op.shares(roles, |seed| term(&pp, seed, &wots_secret_tweak(leaf_of(k), k % V)))).unzip();
         let mut x = sliced_shares(&own, &prev);
@@ -170,23 +352,34 @@ pub(crate) fn dkg(op: &mut Operator, net: &mut Net4, link: Option<Link>, roles: 
         meter.mark("MPC: 3 chain steps, verify, open the ends", Some(&p), net);
         party = Some(p);
     }
-    // 4. The fourth operator gets the ends from all three and compares.
-    let bytes: Vec<u8> = ends.concat();
-    let got = net.round(&all, |to| if to == roles.offline { bytes.clone() } else { vec![] })?;
-    if me == roles.offline {
-        let first = &got[roles.online[0]];
-        if roles.online.iter().any(|&o| &got[o] != first) || first.len() != leaves * V * N {
-            return abort("the online operators sent different chain ends");
-        }
-        ends = first.as_chunks::<N>().0.to_vec();
+    // The fourth operator gets the ends in full from two online operators and hashed from the third,
+    // and keeps the copy that a second source confirms (one cheater cannot stop it).
+    let mut bytes: Vec<u8> = ends.concat();
+    if hooks.lies(me, Lie::BadCopy) && !bytes.is_empty() {
+        bytes[0] ^= 1;
     }
-    // 5. Everyone builds the tree and compares the public key.
+    let full = |o: usize| roles.online[..2].contains(&o);
+    let got = net.round(&all, |to| match to == roles.offline {
+        true if full(me) => bytes.clone(),
+        true => blake2s::hash(&bytes).to_vec(),
+        false => vec![],
+    })?;
+    if me == roles.offline {
+        let [a, b2, c] = roles.online;
+        let confirmed = |x: &[u8], other_full: &[u8]| x.len() == leaves * V * N && (blake2s::hash(x).as_slice() == got[c].as_slice() || x == other_full);
+        let pick = if confirmed(&got[a], &got[b2]) { &got[a] } else if confirmed(&got[b2], &got[a]) { &got[b2] } else { return abort("no two online operators sent the same chain ends") };
+        ends = pick.as_chunks::<N>().0.to_vec();
+    }
+    // Everyone builds the tree; the four agree (unanimously) on the public key.
     let ends: Vec<[Digest; V]> = ends.as_chunks::<V>().0.to_vec();
     let leaf_hashes = (0..leaves).map(|l| wots_leaf_hash(&pp, ((s << b) + l as u64) as u32, &ends[l])).collect();
     let tree = XmssTree::from_leaves(&pp, b, s, leaf_hashes, surrogates);
     let pk = PublicKey { root: tree.root, public_param: pp };
-    agree(net, &all, &pk.to_bytes())?;
-    meter.mark("ends to the 4th operator, tree, compare pk", party.as_ref(), net);
+    if !agree4(net, &pk.to_bytes())? {
+        return abort("the operators hold different public keys");
+    }
+    meter.mark("ends to the 4th operator, tree, agree on pk", party.as_ref(), net);
+    op.last = Some(pk.root);
     op.key = Some(KeyState { pk, tree, ends });
     Ok(meter.phases)
 }
@@ -197,7 +390,7 @@ pub(crate) fn dkg(op: &mut Operator, net: &mut Net4, link: Option<Link>, roles: 
 /// after it (the chain steps don't depend on the FORS key, so 2 hash depths instead of 3). Only the
 /// FORS leaves and each chain's signed position are opened, after the root, counter and positions
 /// are agreed.
-fn compute_instance(op: &Operator, net: &mut Net4, party: &mut Party, roles: &Roles, idx: u64) -> Result<Instance, Abort> {
+fn compute_instance(op: &Operator, net: &mut Net4, party: &mut Party, roles: &Roles, idx: u64, hooks: &Hooks) -> Result<Instance, Abort> {
     let key = op.key();
     let pp = key.pk.public_param;
     let e = idx as u32;
@@ -213,19 +406,24 @@ fn compute_instance(op: &Operator, net: &mut Net4, party: &mut Party, roles: &Ro
     let step1 = columns(&step1, n_fors, 1);
     let step2 = mpc_th(party, &pp, &(0..V).map(|i| chain_tweak(e, i, 2)).collect::<Vec<_>>(), &step1)?;
     party.verify()?;
-    // In the clear: the FORS key, the WOTS+C counter; the three compare.
+    // In the clear: the FORS key, the WOTS+C counter; the three agree before any WOTS value opens.
     let forest = ForsForest::from_leaves(&pp, idx, &leaves);
     let (counter, x) = wots_encode(&pp, e, &forest.key).ok_or(Abort("no admissible encoding".into()))?;
-    let mut agreed = forest.key.to_vec();
+    let mut agreed = idx.to_le_bytes().to_vec();
+    agreed.extend_from_slice(&forest.key);
     agreed.extend_from_slice(&counter.to_le_bytes());
     agreed.extend_from_slice(&x);
-    agree(net, &roles.online, &agreed)?;
+    agree(net, &roles.online, &agreed, hooks)?;
     // Open each chain at its signed position (position 3 is the public end).
     let masked = |values: &[Shares], pos: u8| -> Vec<Shares> {
         let m = (0..V).fold(0u64, |acc, i| acc | (u64::from(x[i] == pos) << i));
         values.iter().map(|s| Shares { own: vec![s.own[0] & m], prev: vec![s.prev[0] & m] }).collect()
     };
-    let opened = party.open(&[masked(&starts, 0), masked(&step1, 1), masked(&step2, 2)].concat())?;
+    let mut to_open = [masked(&starts, 0), masked(&step1, 1), masked(&step2, 2)].concat();
+    if hooks.lies(op.id, Lie::FlipWots) {
+        to_open[0].own[0] ^= 1;
+    }
+    let opened = party.open(&to_open)?;
     let by_pos: Vec<Vec<Digest>> = opened.chunks(8 * N).map(|bits| unslice(bits, V)).collect();
     let local = (idx - (key.tree.s << key.tree.b)) as usize;
     let wots: [Digest; V] = std::array::from_fn(|i| if x[i] == 3 { key.ends[local][i] } else { by_pos[x[i] as usize][i] });
@@ -289,43 +487,124 @@ pub fn grind(pp: &PublicParam, root: &Digest, r0: &Digest, m: &Message, target: 
     (ctr, rho)
 }
 
-/// How the signature's instance is chosen.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Mode {
-    /// Grind into the kept subtree, then compute the selected instance in MPC.
-    Vanilla,
-    /// Grind until the message lands on the instance computed in advance.
-    Preprocessed,
+/// The request's `s`: the pending one if this operator holds it, or if two other members vouch for
+/// the same one; otherwise fresh, by commit-reveal among the members. Two rounds either way.
+fn request_seed(op: &Operator, net: &mut Net4, members: &[usize], m: &Message, mode: Mode, hooks: &Hooks) -> Result<[u8; 32], Abort> {
+    let me = op.id;
+    let mut pending = op.pending.filter(|p| (p.m, p.mode) == (*m, mode)).map(|p| p.s);
+    if hooks.lies(me, Lie::FakePending) {
+        pending = Some([0x5a; 32]);
+    }
+    let r: [u8; 32] = os_random();
+    let commitment = |r: &[u8]| {
+        let mut h = blake2s::Hasher::new();
+        h.update(b"request-seed").update(m).update(&[mode as u8]).update(r);
+        h.finalize()
+    };
+    let first = match pending {
+        Some(s) => [b"P".as_slice(), &s].concat(),
+        None => [b"C".as_slice(), &commitment(&r)].concat(),
+    };
+    let got = net.broadcast(members, &first)?;
+    let others: Vec<usize> = members.iter().copied().filter(|&o| o != me).collect();
+    if others.iter().any(|&o| got[o].len() != 33) {
+        return abort("malformed request seed message");
+    }
+    let claims: Vec<[u8; 32]> = others.iter().filter(|&&o| got[o][0] == b'P').map(|&o| got[o][1..].try_into().unwrap()).collect();
+    let fresh = pending.is_none() && claims.is_empty();
+    let reveals = net.broadcast(members, if fresh { &r } else { &[] })?;
+    if let Some(s) = pending {
+        if claims.iter().any(|c| c != &s) {
+            return abort("another member claims another pending request");
+        }
+        return Ok(s);
+    }
+    if !claims.is_empty() {
+        // Only a pending request held by two others is adopted (a lone claim could be a cheater's).
+        if claims.len() >= 2 && claims.iter().all(|c| c == &claims[0]) {
+            return Ok(claims[0]);
+        }
+        return abort("an unconfirmed pending request");
+    }
+    let mut h = blake2s::Hasher::new();
+    h.update(b"request-s");
+    for &o in members {
+        let ro: &[u8] = if o == me { &r } else { &reveals[o] };
+        if ro.len() != 32 || (o != me && commitment(ro).as_slice() != &got[o][1..]) {
+            return abort("a request seed reveal does not match its commitment");
+        }
+        h.update(ro);
+    }
+    Ok(h.finalize())
 }
 
-/// Signs `m`, for one online operator. A retry (any three operators) reproduces the same `R0`,
-/// hence the same signature: once `R0` is opened, the signature is always finished.
-pub(crate) fn sign(op: &mut Operator, net: &mut Net4, party: &mut Party, roles: &Roles, m: &Message, mode: Mode) -> Result<(Signature, Vec<Phase>), Abort> {
+/// Signs `m`, for one online operator.
+///
+/// 1. The members fix the request's `s` (the pending one, or a fresh one) and agree on
+///    `(m, mode, s, session, target)`; the request is then pending until finished.
+/// 2. They open `R0 = XOR_t H(k_t, msg, H(m | s))` and grind `R`; they agree on `(R, idx, u)`.
+/// 3. Vanilla: the instance is computed in MPC; preprocessed: it is the checked `next`.
+/// 4. They open the 24 FORS secrets; the signature is assembled and verified, and sent to the
+///    offline operator (which keeps the copy two online operators agree on).
+///
+/// Any retry of the request (any three operators) uses the same `s`, hence the same `R0` and the
+/// same signature: once `R0` is opened, the signature is always finished.
+pub(crate) fn sign(op: &mut Operator, net: &mut Net4, link: Link, roles: &Roles, m: &Message, mode: Mode, hooks: &Hooks) -> Result<(Signature, Vec<Phase>), Abort> {
     let key = op.key().clone();
     let (pp, root) = (key.pk.public_param, key.pk.root);
-    let mut meter = Meter::new();
-    // Opening R0 also checks that the three agree on m: each term's two holders must send the same value.
-    let (own, prev) = op.shares(roles, |seed| tagged_term(&pp, seed, TAG_MSG, m));
-    let r0 = open_values(party, &[own], &[prev])?[0];
+    let members = roles.online;
+    let mut meter = Meter::new(net);
+    // Local checks first: nothing is sent unless this request may run.
+    if op.pending.is_some_and(|p| p.blocks(m, mode)) {
+        return abort("another request is pending");
+    }
+    let next = match mode {
+        Mode::Vanilla => None,
+        Mode::Preprocessed => match &op.next {
+            Some(n) if !op.consumed.contains(&n.from) => Some((n.idx, n.inst.clone())),
+            _ => return abort("no preprocessed instance"),
+        },
+    };
+    let mut party = party(op, roles, link, hooks)?;
+    let s = request_seed(op, net, &members, m, mode, hooks)?;
+    let mut what = m.to_vec();
+    what.push(mode as u8);
+    what.extend_from_slice(&s);
+    what.extend_from_slice(party.session());
+    if let Some((idx, inst)) = &next {
+        what.extend_from_slice(&idx.to_le_bytes());
+        what.extend_from_slice(&inst.forest.key);
+    }
+    agree(net, &members, &what, hooks)?;
+    op.pending = Some(Pending { m: *m, mode, s, done: false });
+    let (own, prev) = op.shares(roles, |seed| tagged_term(&pp, seed, TAG_MSG, &msg_data(m, &s)));
+    let r0 = open_values(&mut party, &[own], &[prev], hooks.lies(op.id, Lie::FlipR0))?[0];
     let tree = &key.tree;
-    let (rho, inst) = match mode {
-        Mode::Vanilla => {
-            let (_, rho) = grind(&pp, &root, &r0, m, &|idx| tree.contains(idx));
-            meter.mark("open R0, grind into the kept subtree", Some(party), net);
-            let inst = compute_instance(op, net, party, roles, digest_index(&pp, &root, &rho, m))?;
-            meter.mark("MPC: FORS instance and WOTS signature", Some(party), net);
-            (rho, inst)
+    let (_, rho) = match &next {
+        None => grind(&pp, &root, &r0, m, &|idx| tree.contains(idx)),
+        Some((target, _)) => grind(&pp, &root, &r0, m, &|idx| idx == *target),
+    };
+    #[cfg(test)]
+    op.seen_r.push(rho);
+    let (idx, u) = message_digest(&pp, &root, &rho, m);
+    let mut what = rho.to_vec();
+    what.extend_from_slice(&idx.to_le_bytes());
+    what.extend(u.iter().flat_map(|x| x.to_le_bytes()));
+    agree(net, &members, &what, hooks)?;
+    let inst = match next {
+        None => {
+            meter.mark("agree, open R0, grind into the kept subtree", Some(&party), net);
+            let inst = compute_instance(op, net, &mut party, roles, idx, hooks)?;
+            meter.mark("MPC: FORS instance and WOTS signature", Some(&party), net);
+            inst
         }
-        Mode::Preprocessed => {
-            let (target, inst) = op.next.clone().ok_or(Abort("no preprocessed instance".into()))?;
-            let (_, rho) = grind(&pp, &root, &r0, m, &|idx| idx == target);
-            meter.mark("open R0, grind onto the next instance", Some(party), net);
-            (rho, inst)
+        Some((_, inst)) => {
+            meter.mark("agree, open R0, grind onto the next instance", Some(&party), net);
+            inst
         }
     };
-    let (idx, u) = message_digest(&pp, &root, &rho, m);
     let (own, prev): (Vec<Digest>, Vec<Digest>) = (0..K).map(|kappa| op.shares(roles, |seed| term(&pp, seed, &fors_secret_tweak(idx, kappa, u[kappa] as usize)))).unzip();
-    let secrets = open_values(party, &own, &prev)?;
+    let secrets = open_values(&mut party, &own, &prev, hooks.lies(op.id, Lie::FlipFors))?;
     if (0..K).any(|kappa| fors_leaf(&pp, idx, kappa, u[kappa] as usize, &secrets[kappa]) != inst.forest.leaf(kappa, u[kappa] as usize)) {
         return abort("an opened FORS secret does not match its leaf");
     }
@@ -339,57 +618,124 @@ pub(crate) fn sign(op: &mut Operator, net: &mut Net4, party: &mut Party, roles: 
     if verify(&key.pk, m, &sig).is_err() {
         return abort("the assembled signature does not verify");
     }
-    meter.mark("open the 24 FORS secrets", Some(party), net);
+    finished(op, m, &sig, mode);
+    // The offline operator learns the signature (and with it the new `last`).
+    let bytes = [m.as_slice(), &sig.to_bytes()].concat();
+    net.round(&[0, 1, 2, 3], |to| if to == roles.offline { bytes.clone() } else { vec![] })?;
+    meter.mark("open the 24 FORS secrets", Some(&party), net);
     Ok((sig, meter.phases))
 }
 
-/// Draws the next instance as the XOR of the terms of `last` (the previous randomizer) and
-/// computes it; the three online operators then send its public data to the fourth, who checks it.
-pub(crate) fn preprocess(op: &mut Operator, net: &mut Net4, party: Option<&mut Party>, roles: &Roles, last: &Randomizer) -> Result<Vec<Phase>, Abort> {
+/// A signature of this request is finished: the request is no longer pending, its randomizer draws
+/// the next instance, and a preprocessed instance is consumed.
+fn finished(op: &mut Operator, m: &Message, sig: &Signature, mode: Mode) {
+    if let Some(p) = op.pending.as_mut()
+        && (p.m, p.mode) == (*m, mode)
+    {
+        p.done = true;
+    }
+    op.last = Some(sig.randomizer);
+    if mode == Mode::Preprocessed
+        && let Some(n) = op.next.take()
+    {
+        op.consumed.push(n.from);
+    }
+}
+
+/// The offline operator's side of a signing attempt: it keeps a signature that two online
+/// operators sent and that verifies.
+pub(crate) fn observe_signature(op: &mut Operator, net: &mut Net4, roles: &Roles) -> Result<(), Abort> {
+    let got = net.round(&[0, 1, 2, 3], |_| vec![])?;
+    let [a, b, c] = roles.online.map(|o| got[o].clone());
+    let agreed = if a == b || a == c { a } else if b == c { b } else { return abort("no two online operators sent the same signature") };
+    if agreed.len() != 32 + SIG_SIZE {
+        return abort("malformed signature");
+    }
+    let m: Message = agreed[..32].try_into().unwrap();
+    let sig = Signature::from_bytes(agreed[32..].try_into().unwrap()).ok_or(Abort("malformed signature".into()))?;
+    if verify(&op.key().pk, &m, &sig).is_err() {
+        return abort("the signature does not verify");
+    }
+    let pp = op.key().pk.public_param;
+    let idx = digest_index(&pp, &op.key().pk.root, &sig.randomizer, &m);
+    let mode = if op.next.as_ref().is_some_and(|n| n.idx == idx) { Mode::Preprocessed } else { Mode::Vanilla };
+    finished(op, &m, &sig, mode);
+    Ok(())
+}
+
+/// Draws the next instance as the XOR of the terms of `last` (the randomizer of the last finished
+/// signature, which never repeats) and computes it; the online operators then send its public data
+/// to the fourth, which checks it and keeps it only if it checks (its verdict is its own: it never
+/// blocks the others).
+pub(crate) fn preprocess(op: &mut Operator, net: &mut Net4, link: Option<Link>, roles: &Roles, hooks: &Hooks) -> Result<Vec<Phase>, Abort> {
     let key = op.key().clone();
     let pp = key.pk.public_param;
-    let mut meter = Meter::new();
+    let me = op.id;
+    let mut meter = Meter::new(net);
+    op.next = None;
     let mut next = None;
-    if let Some(party) = party {
+    if let Some(link) = link {
+        if op.pending.is_some_and(|p| !p.done) {
+            return abort("a request is pending");
+        }
+        let last = op.last.expect("no last randomizer");
+        let mut party = party(op, roles, link, hooks)?;
+        let mut what = last.to_vec();
+        what.extend_from_slice(party.session());
+        agree(net, &roles.online, &what, hooks)?;
         let mut data = [0u8; 32];
-        data[..16].copy_from_slice(last);
+        data[..16].copy_from_slice(&last);
         let (own, prev) = op.shares(roles, |seed| tagged_term(&pp, seed, TAG_NEXT, &data));
-        let drawn = open_values(party, &[own], &[prev])?[0];
+        let drawn = open_values(&mut party, &[own], &[prev], false)?[0];
         let idx = (key.tree.s << key.tree.b) + (u64::from_le_bytes(drawn[..8].try_into().unwrap()) & ((1 << key.tree.b) - 1));
-        next = Some((idx, compute_instance(op, net, party, roles, idx)?));
-        meter.mark("MPC: draw, FORS instance and WOTS signature", Some(party), net);
+        next = Some(Next { idx, inst: compute_instance(op, net, &mut party, roles, idx, hooks)?, from: last });
+        meter.mark("MPC: draw, FORS instance and WOTS signature", Some(&party), net);
     }
-    // The public data: index, WOTS+C counter and signature, FORS leaves.
+    // The public data, in full from the first online operator and hashed from the two others.
     let mut data = vec![];
-    if let Some((idx, inst)) = &next {
+    if let Some(Next { idx, inst, .. }) = &next {
         data.extend(idx.to_le_bytes());
         data.extend(inst.counter.to_le_bytes());
         data.extend(inst.wots.concat());
         data.extend((0..K * FORS_LEAVES).flat_map(|t| inst.forest.leaf(t / FORS_LEAVES, t % FORS_LEAVES)));
+        if hooks.lies(me, Lie::BadCopy) {
+            data[20] ^= 1;
+        }
     }
-    let got = net.round(&[0, 1, 2, 3], |to| if to == roles.offline { data.clone() } else { vec![] })?;
-    if op.id == roles.offline {
-        let d = &got[roles.online[0]];
-        if roles.online.iter().any(|&o| &got[o] != d) || d.len() != 12 + (V + K * FORS_LEAVES) * N {
-            return abort("the online operators sent different instances");
-        }
-        let idx = u64::from_le_bytes(d[..8].try_into().unwrap());
-        let counter = u32::from_le_bytes(d[8..12].try_into().unwrap());
-        let wots: [Digest; V] = d[12..12 + V * N].as_chunks::<N>().0.try_into().unwrap();
-        let forest = ForsForest::from_leaves(&pp, idx, d[12 + V * N..].as_chunks::<N>().0);
-        // The WOTS signature must sign this FORS key and reach the public leaf.
-        if !key.tree.contains(idx) {
-            return abort("the received instance is outside the kept subtree");
-        }
-        let local = (idx - (key.tree.s << key.tree.b)) as usize;
-        if wots_recover(&pp, idx as u32, &forest.key, counter, &wots) != Some(wots_leaf_hash(&pp, idx as u32, &key.ends[local])) {
-            return abort("the received instance does not check");
-        }
-        next = Some((idx, Instance { forest: Arc::new(forest), counter, wots }));
+    let got = net.round(&[0, 1, 2, 3], |to| match to == roles.offline {
+        true if me == roles.online[0] => data.clone(),
+        true => blake2s::hash(&data).to_vec(),
+        false => vec![],
+    })?;
+    if me == roles.offline {
+        next = check_instance(op, &got, roles).filter(|_| !hooks.lies(me, Lie::RefuseInstance));
         meter.mark("receive and check the instance", None, net);
     } else {
         meter.mark("send the instance to the 4th operator", None, net);
     }
     op.next = next;
     Ok(meter.phases)
+}
+
+/// The offline operator's check of a preprocessed instance: a copy confirmed by a second online
+/// operator, inside the kept subtree, whose WOTS signature signs its FORS key and reaches the leaf.
+fn check_instance(op: &Operator, got: &[Vec<u8>; 4], roles: &Roles) -> Option<Next> {
+    let key = op.key();
+    let pp = key.pk.public_param;
+    let d = &got[roles.online[0]];
+    let h = blake2s::hash(d);
+    if d.len() != 12 + (V + K * FORS_LEAVES) * N || !roles.online[1..].iter().any(|&o| got[o].as_slice() == h.as_slice()) {
+        return None;
+    }
+    let idx = u64::from_le_bytes(d[..8].try_into().unwrap());
+    let counter = u32::from_le_bytes(d[8..12].try_into().unwrap());
+    let wots: [Digest; V] = d[12..12 + V * N].as_chunks::<N>().0.try_into().unwrap();
+    if !key.tree.contains(idx) {
+        return None;
+    }
+    let forest = ForsForest::from_leaves(&pp, idx, d[12 + V * N..].as_chunks::<N>().0);
+    let local = (idx - (key.tree.s << key.tree.b)) as usize;
+    let ok = wots_recover(&pp, idx as u32, &forest.key, counter, &wots) == Some(wots_leaf_hash(&pp, idx as u32, &key.ends[local]));
+    let from = op.last?;
+    ok.then(|| Next { idx, inst: Instance { forest: Arc::new(forest), counter, wots }, from })
 }

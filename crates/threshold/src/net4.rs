@@ -29,6 +29,22 @@ impl Net4 {
         Ok(out)
     }
 
+    /// Test hook: a rushing member, which receives every other member's message before choosing its own.
+    #[cfg(test)]
+    pub fn round_rushing(&mut self, members: &[usize], msg: impl Fn(usize, &[Vec<u8>; 4]) -> Vec<u8>) -> Result<[Vec<u8>; 4], Abort> {
+        self.stats.rounds += 1;
+        let mut out: [Vec<u8>; 4] = Default::default();
+        for &o in members.iter().filter(|&&o| o != self.id) {
+            out[o] = self.from[o].as_ref().unwrap().recv().map_err(|_| Abort("an operator left".into()))?;
+        }
+        for &o in members.iter().filter(|&&o| o != self.id) {
+            let m = msg(o, &out);
+            self.stats.bytes_sent += m.len() as u64;
+            self.to[o].as_ref().unwrap().send(m).map_err(|_| Abort("an operator left".into()))?;
+        }
+        Ok(out)
+    }
+
     /// Same message to every other member.
     pub fn broadcast(&mut self, members: &[usize], msg: &[u8]) -> Result<[Vec<u8>; 4], Abort> {
         self.round(members, |_| msg.to_vec())

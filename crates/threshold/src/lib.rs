@@ -5,11 +5,12 @@
 //! in the clear ([`protocol`]); a failed attempt is retried with the next set of three ([`cluster`]).
 //!
 //! Simplifications of this research prototype:
-//! - the operators are threads of one process, over simulated networks;
-//! - nothing is persisted (a deployment must persist the preprocessed instance before using it);
-//! - session ids come from a counter of the orchestrator, not from an agreement among the operators;
-//! - a cheater is not identified, so one that aborts the four-operator steps of the DKG (seed dealing,
-//!   coin tossing) blocks it.
+//! - the operators are threads of one process, over simulated networks (a deployment needs private,
+//!   direct links between operators);
+//! - the operators' state (pending request, last randomizer, preprocessed instance) is kept in
+//!   memory, not persisted;
+//! - a cheater is not identified, so one that aborts the four-operator steps of the DKG (seed
+//!   generation, coin tossing, the agreement on the public key) blocks it.
 //!
 //! One scheduling change from the note: the FORS leaves and the first WOTS chain step of an instance
 //! run in one batch (the chains don't depend on the FORS key), so an instance takes 2 hash depths of
