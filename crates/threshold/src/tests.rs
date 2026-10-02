@@ -40,7 +40,9 @@ fn dkg_then_vanilla_and_preprocessed_signing() {
         let (sig, _, _) = cluster.sign(&m, Mode::Preprocessed).unwrap();
         assert_eq!(verify(&pk, &m, &sig), Ok(()));
         assert_eq!(digest_index(&pk.public_param, &pk.root, &sig.randomizer, &m), next, "landed on the preprocessed instance");
-        assert!(cluster.ops.iter().all(|o| o.next.is_none() && o.consumed.len() == (i - 1) as usize));
+        assert!(cluster.ops.iter().all(|o| o.next.as_ref().is_some_and(|n| o.consumed.contains(&n.from)) && o.consumed.len() == (i - 1) as usize));
+        // Asking again gives the same signature (the same instance).
+        assert_eq!(cluster.sign(&m, Mode::Preprocessed).unwrap().0, sig);
         let err = cluster.sign(&message(9), Mode::Preprocessed).unwrap_err();
         assert!(err.0.contains("no preprocessed instance"), "{err}");
         assert!(cluster.ops.iter().all(|o| o.pending.is_none_or(|p| p.m == m && p.done)), "refused before anything was agreed");
@@ -64,18 +66,27 @@ fn a_cheater_in_any_step_is_routed_around_and_learns_only_the_signature() {
         (Cheat::Honest, Lie::FakePending),
     ];
     for (i, (c, lie)) in scenarios.into_iter().enumerate() {
-        cluster.set_cheats(vec![cheat(bad, c, lie)]);
-        cluster.ops.iter_mut().for_each(|o| o.seen_r.clear());
-        let m = message(40 + i as u8);
-        let (sig, online, _) = cluster.sign(&m, Mode::Vanilla).unwrap_or_else(|e| panic!("{c:?} {lie:?}: {e}"));
-        assert_eq!(verify(&pk, &m, &sig), Ok(()));
-        assert!(!online.contains(&bad), "{c:?} {lie:?}: the cheater's sets abort");
-        // Every attempt (aborted or not) computed the final signature's randomizer: whatever the
-        // cheater saw opened belongs to this signature.
-        for o in honest(&cluster, bad) {
-            assert!(o.seen_r.iter().all(|r| *r == sig.randomizer), "{c:?} {lie:?}: operator {} saw another R", o.id);
+        // Preprocessed signing has no AND gates and no WOTS opening.
+        let modes = if matches!(lie, Lie::AgreeHash | Lie::FlipR0 | Lie::FlipFors | Lie::FakePending) { &[Mode::Vanilla, Mode::Preprocessed][..] } else { &[Mode::Vanilla] };
+        for &mode in modes {
+            if mode == Mode::Preprocessed {
+                cluster.set_cheats(vec![]);
+                cluster.preprocess().unwrap();
+            }
+            cluster.set_cheats(vec![cheat(bad, c, lie)]);
+            cluster.ops.iter_mut().for_each(|o| o.seen_r.clear());
+            let m = message(40 + i as u8);
+            let (sig, online, _) = cluster.sign(&m, mode).unwrap_or_else(|e| panic!("{c:?} {lie:?} {mode:?}: {e}"));
+            assert_eq!(verify(&pk, &m, &sig), Ok(()));
+            assert!(!online.contains(&bad), "{c:?} {lie:?} {mode:?}: the cheater's sets abort");
+            // Every attempt (aborted or not) computed the final signature's randomizer: whatever
+            // the cheater saw opened belongs to this signature.
+            for o in honest(&cluster, bad) {
+                assert!(o.seen_r.iter().all(|r| *r == sig.randomizer), "{c:?} {lie:?} {mode:?}: operator {} saw another R", o.id);
+                assert_eq!(o.last, Some(sig.randomizer), "{c:?} {lie:?} {mode:?}: operator {} missed the signature", o.id);
+            }
+            assert!(honest(&cluster, bad).any(|o| !o.seen_r.is_empty()));
         }
-        assert!(honest(&cluster, bad).any(|o| !o.seen_r.is_empty()));
     }
     // ... and in preprocessing.
     for (c, lie) in [(Cheat::FlipAnd { and: 7, bit: 1, consistent: false }, Lie::None), (Cheat::Honest, Lie::FlipWots), (Cheat::Honest, Lie::AgreeHash)] {

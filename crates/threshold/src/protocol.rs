@@ -558,10 +558,13 @@ pub(crate) fn sign(op: &mut Operator, net: &mut Net4, link: Link, roles: &Roles,
     if op.pending.is_some_and(|p| p.blocks(m, mode)) {
         return abort("another request is pending");
     }
+    // A rerun of the request this operator finished (another one may not have) gives the same
+    // signature, with the same instance.
+    let rerun = op.pending.is_some_and(|p| p.done && (p.m, p.mode) == (*m, mode));
     let next = match mode {
         Mode::Vanilla => None,
         Mode::Preprocessed => match &op.next {
-            Some(n) if !op.consumed.contains(&n.from) => Some((n.idx, n.inst.clone())),
+            Some(n) if rerun || !op.consumed.contains(&n.from) => Some((n.idx, n.inst.clone())),
             _ => return abort("no preprocessed instance"),
         },
     };
@@ -626,8 +629,8 @@ pub(crate) fn sign(op: &mut Operator, net: &mut Net4, link: Link, roles: &Roles,
     Ok((sig, meter.phases))
 }
 
-/// A signature of this request is finished: the request is no longer pending, its randomizer draws
-/// the next instance, and a preprocessed instance is consumed.
+/// A signature of this request is finished: the request is done, its randomizer draws the next
+/// instance, and a preprocessed instance is consumed (kept only for reruns of this request).
 fn finished(op: &mut Operator, m: &Message, sig: &Signature, mode: Mode) {
     if let Some(p) = op.pending.as_mut()
         && (p.m, p.mode) == (*m, mode)
@@ -636,7 +639,8 @@ fn finished(op: &mut Operator, m: &Message, sig: &Signature, mode: Mode) {
     }
     op.last = Some(sig.randomizer);
     if mode == Mode::Preprocessed
-        && let Some(n) = op.next.take()
+        && let Some(n) = &op.next
+        && !op.consumed.contains(&n.from)
     {
         op.consumed.push(n.from);
     }

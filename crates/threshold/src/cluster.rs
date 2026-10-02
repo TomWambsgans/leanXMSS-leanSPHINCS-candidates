@@ -109,8 +109,12 @@ impl Cluster {
         unreachable!()
     }
 
-    /// Draws and computes the next instance, retried with each set of three operators.
+    /// Draws and computes the next instance, retried with each set of three operators. A pending
+    /// request is finished first.
     pub fn preprocess(&mut self) -> Result<([usize; 3], Report), Abort> {
+        if let Some(p) = self.ops.iter().filter_map(|o| o.pending).find(|p| !p.done) {
+            self.sign(&p.m, p.mode)?;
+        }
         let hooks = self.hooks.clone();
         for online in SETS {
             let results = run(&mut self.ops, online, |op, net, link, roles| protocol::preprocess(op, net, link, roles, &hooks));
