@@ -66,6 +66,7 @@ fn a_cheater_in_any_step_is_routed_around_and_learns_only_the_signature() {
         (Cheat::Honest, Lie::FlipWots),
         (Cheat::Honest, Lie::FakePending),
     ];
+    let mut issued = vec![];
     for (i, (c, lie)) in scenarios.into_iter().enumerate() {
         // Preprocessed signing has no AND gates and no WOTS opening.
         let modes = if matches!(lie, Lie::AgreeHash | Lie::AgreeSplit | Lie::FlipR0 | Lie::FlipFors | Lie::FakePending) { &[Mode::Vanilla, Mode::Preprocessed][..] } else { &[Mode::Vanilla] };
@@ -79,14 +80,17 @@ fn a_cheater_in_any_step_is_routed_around_and_learns_only_the_signature() {
             let m = message(40 + i as u8);
             let (sig, online, _) = cluster.sign(&m, mode).unwrap_or_else(|e| panic!("{c:?} {lie:?} {mode:?}: {e}"));
             assert_eq!(verify(&pk, &m, &sig), Ok(()));
+            issued.push(sig.randomizer);
             // A fake pending claim no holder backs only picks s for a request never opened.
             if lie != Lie::FakePending {
                 assert!(!online.contains(&bad), "{c:?} {lie:?} {mode:?}: the cheater's sets abort");
             }
-            // Every attempt (aborted or not) computed the final signature's randomizer: whatever
-            // the cheater saw opened belongs to this signature.
+            // Every attempt (aborted or not) computed the randomizer of an issued signature: whatever
+            // the cheater saw opened belongs to one (the cluster may first rerun an earlier request
+            // the cheater still claims, which gives the same signature again).
             for o in honest(&cluster, bad) {
-                assert!(o.seen_r.iter().all(|r| *r == sig.randomizer), "{c:?} {lie:?} {mode:?}: operator {} saw another R", o.id);
+                assert!(o.seen_r.iter().all(|r| issued.contains(r)), "{c:?} {lie:?} {mode:?}: operator {} saw another R", o.id);
+                assert!(!online.contains(&o.id) || o.seen_r.contains(&sig.randomizer));
                 assert_eq!(o.last, Some(sig.randomizer), "{c:?} {lie:?} {mode:?}: operator {} missed the signature", o.id);
             }
             assert!(honest(&cluster, bad).any(|o| !o.seen_r.is_empty()));
