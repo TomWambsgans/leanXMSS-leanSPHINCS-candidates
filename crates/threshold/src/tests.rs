@@ -7,6 +7,14 @@ use crate::net4::Net4;
 use crate::operator::*;
 use crate::protocol::{self, CheatSpec, Hooks, Lie};
 
+/// Seeded test randomness, from `THRESHOLD_SEED` or a fresh seed; the seed is printed, so a failing
+/// run can be replayed with `THRESHOLD_SEED=<seed>`.
+fn seeded() -> Hooks {
+    let seed = std::env::var("THRESHOLD_SEED").ok().map_or_else(|| u64::from_le_bytes(mpc::prf::os_random()), |s| s.parse().expect("THRESHOLD_SEED: a u64"));
+    eprintln!("THRESHOLD_SEED={seed}");
+    Hooks::seeded(seed)
+}
+
 fn message(i: u8) -> Message {
     std::array::from_fn(|k| i.wrapping_mul(17) ^ k as u8)
 }
@@ -21,7 +29,7 @@ fn honest(c: &Cluster, bad: usize) -> impl Iterator<Item = &Operator> {
 
 #[test]
 fn dkg_then_vanilla_and_preprocessed_signing() {
-    let (mut cluster, online, _) = Cluster::dkg(4).unwrap();
+    let (mut cluster, online, _) = Cluster::dkg_with(4, seeded()).unwrap();
     assert_eq!(online, [0, 1, 2]);
     let pk = cluster.ops[0].key().pk;
     assert!(cluster.ops.iter().all(|o| o.key().pk == pk), "every operator has the key");
@@ -40,7 +48,7 @@ fn dkg_then_vanilla_and_preprocessed_signing() {
         let (sig, _, _) = cluster.sign(&m, Mode::Preprocessed).unwrap();
         assert_eq!(verify(&pk, &m, &sig), Ok(()));
         assert_eq!(digest_index(&pk.public_param, &pk.root, &sig.randomizer, &m), next, "landed on the preprocessed instance");
-        assert!(cluster.ops.iter().all(|o| o.next.as_ref().is_some_and(|n| o.consumed.contains(&n.from)) && o.consumed.len() == (i - 1) as usize));
+        assert!(cluster.ops.iter().all(|o| o.next.is_none() && o.used.as_ref().is_some_and(|u| u.idx == next) && o.consumed.len() == (i - 1) as usize));
         // Asking again gives the same signature (the same instance).
         assert_eq!(cluster.sign(&m, Mode::Preprocessed).unwrap().0, sig);
         let err = cluster.sign(&message(9), Mode::Preprocessed).unwrap_err();
@@ -51,7 +59,7 @@ fn dkg_then_vanilla_and_preprocessed_signing() {
 
 #[test]
 fn a_cheater_in_any_step_is_routed_around_and_learns_only_the_signature() {
-    let (mut cluster, _, _) = Cluster::dkg(3).unwrap();
+    let (mut cluster, _, _) = Cluster::dkg_with(3, seeded()).unwrap();
     let pk = cluster.ops[0].key().pk;
     let bad = 1;
     let scenarios = [
@@ -97,27 +105,97 @@ fn a_cheater_in_any_step_is_routed_around_and_learns_only_the_signature() {
         }
     }
     // ... and in preprocessing.
-    for (c, lie) in [(Cheat::FlipAnd { and: 7, bit: 1, consistent: false }, Lie::None), (Cheat::Honest, Lie::FlipWots), (Cheat::Honest, Lie::AgreeHash)] {
+    for (k, (c, lie)) in PREPROCESSING_CHEATS.into_iter().enumerate() {
         cluster.set_cheats(vec![cheat(bad, c, lie)]);
-        let (online, _) = cluster.preprocess().unwrap();
-        assert!(!online.contains(&bad));
-        cluster.set_cheats(vec![]);
-        let m = message(77);
-        let (sig, _, _) = cluster.sign(&m, Mode::Preprocessed).unwrap();
+        preprocess_then_sign(&mut cluster, bad, &message(77 + k as u8));
+    }
+}
+
+/// The cheats a preprocessing can meet.
+const PREPROCESSING_CHEATS: [(Cheat, Lie); 3] = [(Cheat::FlipAnd { and: 7, bit: 1, consistent: false }, Lie::None), (Cheat::Honest, Lie::FlipWots), (Cheat::Honest, Lie::AgreeHash)];
+
+/// Preprocesses (with the cluster's cheats), then signs `m` on the new instance with no cheats: the
+/// honest online operators hold the same instance, and the signature lands on it.
+fn preprocess_then_sign(cluster: &mut Cluster, bad: usize, m: &Message) {
+    let fail = |c: &Cluster, e: &dyn std::fmt::Display| -> ! { panic!("{e}\n{}", c.log.join("\n")) };
+    let (online, _) = cluster.preprocess().unwrap_or_else(|e| fail(cluster, &e));
+    assert!(!online.contains(&bad), "the cheater's sets abort");
+    let target = cluster.ops[online[0]].next.as_ref().unwrap().idx;
+    assert!(online.iter().all(|&o| cluster.ops[o].next.as_ref().is_some_and(|n| n.idx == target)), "the online operators hold the instance");
+    cluster.set_cheats(vec![]);
+    let pk = cluster.ops[0].key().pk;
+    let (sig, _, _) = cluster.sign(m, Mode::Preprocessed).unwrap_or_else(|e| fail(cluster, &e));
+    assert_eq!(verify(&pk, m, &sig), Ok(()));
+    assert_eq!(digest_index(&pk.public_param, &pk.root, &sig.randomizer, m), target, "landed on the preprocessed instance");
+}
+
+/// The preprocessing cheats over many seeds, each from the same state (after the DKG and a signature
+/// on a preprocessed instance): the cheater may first hold a record of its own (none, a stale
+/// unfinished copy of the last request, or a made-up request), then cheats in the preprocessing,
+/// and the next signature must land on the new instance. `THRESHOLD_SEEDS` sets how many seeds
+/// (default 50); a failure prints its seed, replayed alone with `THRESHOLD_SEED=<seed>`.
+#[test]
+fn preprocessing_cheats_over_many_seeds() {
+    let mut base = Cluster::dkg_with(3, Hooks::seeded(0)).unwrap().0;
+    base.preprocess().unwrap();
+    base.sign(&message(1), Mode::Preprocessed).unwrap();
+    let last = base.ops[0].pending.unwrap();
+    let seeds: Vec<u64> = match std::env::var("THRESHOLD_SEED") {
+        Ok(s) => vec![s.parse().unwrap()],
+        Err(_) => (1..=std::env::var("THRESHOLD_SEEDS").map_or(50, |n| n.parse().unwrap())).collect(),
+    };
+    for seed in seeds {
+        let mut cluster = base.clone();
+        cluster.hooks = Hooks::seeded(seed);
+        let bad = (seed % 4) as usize;
+        let record = [None, Some(Pending { done: false, ..last }), Some(Pending { m: message(3), mode: Mode::Preprocessed, s: [seed as u8; 32], done: false })][(seed / 4) as usize % 3];
+        let (c, lie) = PREPROCESSING_CHEATS[(seed / 12) as usize % 3];
+        let run = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            cluster.ops[bad].pending = record;
+            cluster.set_cheats(vec![cheat(bad, c, lie)]);
+            preprocess_then_sign(&mut cluster, bad, &message(2));
+        }));
+        if run.is_err() {
+            panic!("THRESHOLD_SEED={seed} (cheater {bad} with record {record:?}, {c:?} {lie:?}) failed");
+        }
+        if std::env::var("THRESHOLD_SEED").is_ok() {
+            eprintln!("{}", cluster.log.join("\n"));
+        }
+    }
+}
+
+#[test]
+fn a_lone_unfinished_claim_does_not_redirect_the_cluster() {
+    let (mut cluster, _, _) = Cluster::dkg_with(3, seeded()).unwrap();
+    let pk = cluster.ops[0].key().pk;
+    let bad = 1;
+    cluster.preprocess().unwrap();
+    let old = message(60);
+    cluster.sign(&old, Mode::Preprocessed).unwrap();
+    let stale = cluster.ops[0].pending.unwrap();
+    let fake = Pending { m: message(61), mode: Mode::Preprocessed, s: [7; 32], done: false };
+    for claim in [Pending { done: false, ..stale }, fake] {
+        cluster.preprocess().unwrap();
+        let target = cluster.ops[0].next.as_ref().unwrap().idx;
+        cluster.ops[bad].pending = Some(claim);
+        let m = message(62 + claim.m[0]);
+        let (sig, _, _) = cluster.sign(&m, Mode::Preprocessed).unwrap_or_else(|e| panic!("{e}\n{}", cluster.log.join("\n")));
         assert_eq!(verify(&pk, &m, &sig), Ok(()));
+        assert_eq!(digest_index(&pk.public_param, &pk.root, &sig.randomizer, &m), target, "the instance went to the request");
+        assert!(honest(&cluster, bad).all(|o| o.pending.is_none_or(|p| p.m != fake.m)), "nobody signed the fake request");
     }
 }
 
 #[test]
 fn a_cheater_in_the_dkg_mpc_is_routed_around_with_the_same_seeds() {
-    let hooks = Hooks { cheats: vec![cheat(0, Cheat::FlipAnd { and: 5000, bit: 3, consistent: true }, Lie::None)] };
+    let hooks = Hooks { cheats: vec![cheat(0, Cheat::FlipAnd { and: 5000, bit: 3, consistent: true }, Lie::None)], ..seeded() };
     let (cluster, online, _) = Cluster::dkg_with(3, hooks).unwrap();
     assert_eq!(online, [1, 2, 3]);
     let pk = cluster.ops[1].key().pk;
     assert!(cluster.ops.iter().all(|o| o.key().pk == pk));
     // An online cheater sending the offline operator a corrupted copy of the chain ends: the offline
     // operator keeps the copy a second online operator confirms.
-    let hooks = Hooks { cheats: vec![cheat(0, Cheat::Honest, Lie::BadCopy)] };
+    let hooks = Hooks { cheats: vec![cheat(0, Cheat::Honest, Lie::BadCopy)], ..seeded() };
     let (cluster, online, _) = Cluster::dkg_with(3, hooks).unwrap();
     assert_eq!(online, [0, 1, 2]);
     let pk = cluster.ops[1].key().pk;
@@ -128,13 +206,13 @@ fn a_cheater_in_the_dkg_mpc_is_routed_around_with_the_same_seeds() {
 fn seeds_are_independent_and_no_contributor_can_copy_one() {
     // A rushing contributor that tries to make k_{c-1} a copy of k_{c+1} must reveal what it did not
     // commit to: the honest holders abort.
-    let err = Cluster::dkg_with(3, Hooks { cheats: vec![cheat(0, Cheat::Honest, Lie::SeedCopy)] }).err().unwrap();
+    let err = Cluster::dkg_with(3, Hooks { cheats: vec![cheat(0, Cheat::Honest, Lie::SeedCopy)], ..seeded() }).err().unwrap();
     assert!(err.0.contains("commitment"), "{err}");
     // A contributor revealing different values to different holders is caught too.
-    let err = Cluster::dkg_with(3, Hooks { cheats: vec![cheat(2, Cheat::Honest, Lie::InconsistentReveal)] }).err().unwrap();
+    let err = Cluster::dkg_with(3, Hooks { cheats: vec![cheat(2, Cheat::Honest, Lie::InconsistentReveal)], ..seeded() }).err().unwrap();
     assert!(err.0.contains("commitment") || err.0.contains("inconsistent"), "{err}");
     // Honest seeds: four distinct values, each operator missing exactly its own.
-    let (cluster, _, _) = Cluster::dkg(3).unwrap();
+    let (cluster, _, _) = Cluster::dkg_with(3, seeded()).unwrap();
     let seeds: Vec<Seed> = (0..4).map(|t| *cluster.ops[(t + 1) % 4].seed(t)).collect();
     for t in 0..4 {
         for u in 0..t {
@@ -149,10 +227,10 @@ fn seeds_are_independent_and_no_contributor_can_copy_one() {
 /// `m2` to the other): they disagree before anything is opened.
 #[test]
 fn a_split_message_aborts_before_any_opening() {
-    let (mut cluster, _, _) = Cluster::dkg(3).unwrap();
-    let hooks = Hooks::default();
+    let (mut cluster, _, _) = Cluster::dkg_with(3, seeded()).unwrap();
+    let hooks = cluster.hooks.clone();
     let (m1, m2) = ([0xA1u8; 32], [0xB2u8; 32]);
-    let results = run(&mut cluster.ops, [0, 1, 2], |op: &mut Operator, net: &mut Net4, link: Option<Link>, roles: &Roles| -> Result<(), Abort> {
+    let results = run(&mut cluster.ops, [0, 1, 2], &hooks, |op: &mut Operator, net: &mut Net4, link: Option<Link>, roles: &Roles| -> Result<(), Abort> {
         let m = if op.id == 2 { m2 } else { m1 };
         match link {
             Some(link) => protocol::sign(op, net, link, roles, &m, Mode::Vanilla, &hooks).map(|_| ()),
@@ -181,7 +259,7 @@ fn a_split_message_aborts_before_any_opening() {
 /// instance: every signature has a fresh `s`, hence a fresh randomizer.
 #[test]
 fn re_signing_does_not_pin_the_next_instance() {
-    let (mut cluster, _, _) = Cluster::dkg(5).unwrap();
+    let (mut cluster, _, _) = Cluster::dkg_with(5, seeded()).unwrap();
     let pk = cluster.ops[0].key().pk;
     let m0 = [0x77; 32];
     let (mut idxs, mut rs) = (vec![], vec![]);
@@ -201,7 +279,7 @@ fn re_signing_does_not_pin_the_next_instance() {
 /// the MPC (online), or sending a bad copy, cannot block preprocessing.
 #[test]
 fn one_cheater_cannot_block_preprocessing() {
-    let (mut cluster, _, _) = Cluster::dkg(3).unwrap();
+    let (mut cluster, _, _) = Cluster::dkg_with(3, seeded()).unwrap();
     let pk = cluster.ops[0].key().pk;
     for (bad, spec) in [
         (3, vec![cheat(3, Cheat::FlipAnd { and: 100, bit: 0, consistent: true }, Lie::RefuseInstance)]),
@@ -219,7 +297,7 @@ fn one_cheater_cannot_block_preprocessing() {
 /// A request whose `R0` was opened is finished, with the same randomizer, before any other.
 #[test]
 fn a_pending_request_is_finished_first_with_the_same_randomizer() {
-    let (mut cluster, _, _) = Cluster::dkg(3).unwrap();
+    let (mut cluster, _, _) = Cluster::dkg_with(3, seeded()).unwrap();
     let pk = cluster.ops[0].key().pk;
     // Two cheaters (beyond the threat model) make every set abort after R0 is opened.
     cluster.set_cheats(vec![cheat(0, Cheat::Honest, Lie::FlipFors), cheat(3, Cheat::Honest, Lie::FlipFors)]);

@@ -51,7 +51,8 @@ pub enum Mode {
 /// The current signature request, from the moment its randomizer seed `s` is agreed: its `R0` may
 /// be open, so it is finished, with this `s`, before any other request. Once `done`, it is kept so
 /// that this operator still vouches for `s` if the request is run again (some other operator may
-/// have aborted before finishing): a rerun gives the same signature.
+/// have aborted before finishing): a rerun gives the same signature (with the same instance) and
+/// changes nothing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Pending {
     pub m: Message,
@@ -75,7 +76,8 @@ pub struct Next {
 }
 
 /// An operator's secrets and state, kept across protocol runs (in memory only: a deployment must
-/// persist `pending`, `last` and `next` before acting on them).
+/// persist `pending`, `last`, `next` and `used` before acting on them).
+#[derive(Clone)]
 pub struct Operator {
     pub id: usize,
     pub(crate) seeds: [Option<Seed>; 4],
@@ -86,6 +88,8 @@ pub struct Operator {
     /// The preprocessed next instance, checked by this operator, and consumed by the next
     /// preprocessed signature.
     pub next: Option<Next>,
+    /// The instance of this operator's last finished preprocessed signature, for reruns of it.
+    pub used: Option<Next>,
     /// The current request (see [`Pending`]).
     pub pending: Option<Pending>,
     /// The randomizers that drew a preprocessed instance already used by a signature (they never
@@ -104,6 +108,7 @@ impl Operator {
             key: None,
             last: None,
             next: None,
+            used: None,
             pending: None,
             consumed: vec![],
             #[cfg(test)]

@@ -101,9 +101,30 @@ pub(crate) struct CheatSpec {
 pub(crate) struct Hooks {
     #[cfg(test)]
     pub cheats: Vec<CheatSpec>,
+    /// The tests' randomness: operator `o`'s thread in the `k`-th run draws from `H(seed, k, o)`.
+    #[cfg(test)]
+    pub seed: Option<u64>,
+    #[cfg(test)]
+    pub runs: Arc<AtomicU64>,
 }
 
 impl Hooks {
+    #[cfg(test)]
+    pub(crate) fn seeded(seed: u64) -> Self {
+        Self { seed: Some(seed), ..Self::default() }
+    }
+
+    /// The seeds of the operator threads of the next run (tests only).
+    pub(crate) fn next_run(&self) -> Option<[[u8; 32]; 4]> {
+        #[cfg(test)]
+        {
+            let k = self.runs.fetch_add(1, Ordering::Relaxed);
+            self.seed.map(|seed| std::array::from_fn(|o| blake2s::hash(&[seed.to_le_bytes(), k.to_le_bytes(), (o as u64).to_le_bytes()].concat())))
+        }
+        #[cfg(not(test))]
+        None
+    }
+
     #[inline(always)]
     pub(crate) fn lies(&self, op: usize, lie: Lie) -> bool {
         #[cfg(test)]
@@ -456,6 +477,27 @@ fn compute_instance(op: &Operator, net: &mut Net4, party: &mut Party, roles: &Ro
 
 /// The least counter whose randomizer `R = Th(P, tw(ctr), R0)` gives a leaf index accepted by
 /// `target`, searched on all cores in batches (every operator finds the same one).
+/// [`grind`]. In the tests, the simulated operators share one machine, so the online ones share one
+/// grind (a pure function of public data, keyed by all of it) instead of competing for the cores;
+/// deployed operators grind on their own machines at the same time.
+fn shared_grind(pp: &PublicParam, root: &Digest, r0: &Digest, m: &Message, target: Option<u64>, f: &(dyn Fn(u64) -> bool + Sync)) -> (u32, Randomizer) {
+    #[cfg(test)]
+    {
+        use std::collections::HashMap;
+        use std::sync::{Mutex, OnceLock};
+        type Memo = Mutex<HashMap<Vec<u8>, Arc<OnceLock<(u32, Randomizer)>>>>;
+        static MEMO: OnceLock<Memo> = OnceLock::new();
+        let key = [pp.as_slice(), root, r0, m, &target.map_or([0xff; 9], |t| { let mut k = [0; 9]; k[1..].copy_from_slice(&t.to_le_bytes()); k })].concat();
+        let cell = MEMO.get_or_init(Memo::default).lock().unwrap().entry(key).or_default().clone();
+        *cell.get_or_init(|| grind(pp, root, r0, m, f))
+    }
+    #[cfg(not(test))]
+    {
+        let _ = target;
+        grind(pp, root, r0, m, f)
+    }
+}
+
 pub fn grind(pp: &PublicParam, root: &Digest, r0: &Digest, m: &Message, target: &(dyn Fn(u64) -> bool + Sync)) -> (u32, Randomizer) {
     const BATCH: usize = 4096;
     let randomizer_tweak = |ctr: u32| tweak(TWEAK_THRESHOLD, 0, 0, TAG_RAND, ctr);
@@ -566,7 +608,7 @@ fn request_seed(op: &Operator, net: &mut Net4, members: &[usize], m: &Message, m
 /// 2. They open `R0 = XOR_t H(k_t, msg, H(m | s))` and grind `R`; they agree on `(R, idx, u)`.
 /// 3. Vanilla: the instance is computed in MPC; preprocessed: it is the checked `next`.
 /// 4. They open the 24 FORS secrets; the signature is assembled and verified, and sent to the
-///    offline operator (which keeps the copy two online operators agree on).
+///    offline operator with its mode and `s` (it keeps the copy two online operators agree on).
 ///
 /// Any retry of the request (any three operators) uses the same `s`, hence the same `R0` and the
 /// same signature: once `R0` is opened, the signature is always finished.
@@ -580,13 +622,13 @@ pub(crate) fn sign(op: &mut Operator, net: &mut Net4, link: Link, roles: &Roles,
         return abort("another request is pending");
     }
     // A rerun of the request this operator finished (another one may not have) gives the same
-    // signature, with the same instance.
+    // signature, with the instance it used.
     let rerun = op.pending.is_some_and(|p| p.done && (p.m, p.mode) == (*m, mode));
     let next = match mode {
         Mode::Vanilla => None,
-        Mode::Preprocessed => match &op.next {
-            Some(n) if rerun || !op.consumed.contains(&n.from) => Some((n.idx, n.inst.clone())),
-            _ => return abort("no preprocessed instance"),
+        Mode::Preprocessed => match if rerun { op.used.as_ref() } else { op.next.as_ref().filter(|n| !op.consumed.contains(&n.from)) } {
+            Some(n) => Some((n.idx, n.inst.clone())),
+            None => return abort("no preprocessed instance"),
         },
     };
     let mut party = party(op, roles, link, hooks)?;
@@ -608,8 +650,8 @@ pub(crate) fn sign(op: &mut Operator, net: &mut Net4, link: Link, roles: &Roles,
     let r0 = open_values(&mut party, &[own], &[prev], hooks.lies(op.id, Lie::FlipR0))?[0];
     let tree = &key.tree;
     let (_, rho) = match &next {
-        None => grind(&pp, &root, &r0, m, &|idx| tree.contains(idx)),
-        Some((target, _)) => grind(&pp, &root, &r0, m, &|idx| idx == *target),
+        None => shared_grind(&pp, &root, &r0, m, None, &|idx| tree.contains(idx)),
+        Some((target, _)) => shared_grind(&pp, &root, &r0, m, Some(*target), &|idx| idx == *target),
     };
     #[cfg(test)]
     op.seen_r.push(rho);
@@ -647,51 +689,62 @@ pub(crate) fn sign(op: &mut Operator, net: &mut Net4, link: Link, roles: &Roles,
     }
     finished(op, m, &sig, mode);
     // The offline operator learns the signature (and with it the new `last`).
-    let bytes = [m.as_slice(), &sig.to_bytes()].concat();
+    let bytes = [m.as_slice(), &[mode as u8], &s, &sig.to_bytes()].concat();
     net.round(&[0, 1, 2, 3], |to| if to == roles.offline { bytes.clone() } else { vec![] })?;
     meter.mark("open the 24 FORS secrets", Some(&party), net);
     Ok((sig, meter.phases))
 }
 
 /// A signature of this request is finished: the request is done, its randomizer draws the next
-/// instance, and a preprocessed instance is consumed (kept only for reruns of this request).
+/// instance, and a preprocessed instance it landed on is used up (kept for reruns of the request).
+/// A rerun of a request this operator already finished gave the same signature: nothing changes.
 fn finished(op: &mut Operator, m: &Message, sig: &Signature, mode: Mode) {
     if let Some(p) = op.pending.as_mut()
         && (p.m, p.mode) == (*m, mode)
     {
+        if p.done {
+            return;
+        }
         p.done = true;
     }
     op.last = Some(sig.randomizer);
+    let key = op.key();
+    let idx = digest_index(&key.pk.public_param, &key.pk.root, &sig.randomizer, m);
     if mode == Mode::Preprocessed
-        && let Some(n) = &op.next
-        && !op.consumed.contains(&n.from)
+        && op.next.as_ref().is_some_and(|n| n.idx == idx)
+        && let Some(n) = op.next.take()
     {
         op.consumed.push(n.from);
+        op.used = Some(n);
     }
 }
 
 /// The offline operator's side of a signing attempt: it relays in the agreement on the request, then
-/// keeps a signature that two online operators sent and that verifies. Every online operator
-/// finished it before sending, so its own record of the request is no longer needed.
+/// keeps a signature (with its mode and `s`) that two online operators sent and that verifies, and
+/// records the request as done, like the online operators (it vouches for `s` in a rerun).
 pub(crate) fn observe_signature(op: &mut Operator, net: &mut Net4, roles: &Roles, hooks: &Hooks) -> Result<(), Abort> {
     om1(net, &roles.online, None, hooks);
     let got = net.round(&[0, 1, 2, 3], |_| vec![])?;
     let [a, b, c] = roles.online.map(|o| got[o].clone());
     let agreed = if a == b || a == c { a } else if b == c { b } else { return abort("no two online operators sent the same signature") };
-    if agreed.len() != 32 + SIG_SIZE {
+    if agreed.len() != 65 + SIG_SIZE {
         return abort("malformed signature");
     }
     let m: Message = agreed[..32].try_into().unwrap();
-    let sig = Signature::from_bytes(agreed[32..].try_into().unwrap()).ok_or(Abort("malformed signature".into()))?;
+    let mode = match agreed[32] {
+        0 => Mode::Vanilla,
+        1 => Mode::Preprocessed,
+        _ => return abort("malformed signature"),
+    };
+    let s: [u8; 32] = agreed[33..65].try_into().unwrap();
+    let sig = Signature::from_bytes(agreed[65..].try_into().unwrap()).ok_or(Abort("malformed signature".into()))?;
     if verify(&op.key().pk, &m, &sig).is_err() {
         return abort("the signature does not verify");
     }
-    let pp = op.key().pk.public_param;
-    let idx = digest_index(&pp, &op.key().pk.root, &sig.randomizer, &m);
-    let mode = if op.next.as_ref().is_some_and(|n| n.idx == idx) { Mode::Preprocessed } else { Mode::Vanilla };
     finished(op, &m, &sig, mode);
-    if op.pending.is_some_and(|p| (p.m, p.mode) == (m, mode)) {
-        op.pending = None;
+    // An unfinished record of another request stays: it still has to be finished.
+    if !op.pending.is_some_and(|p| p.blocks(&m, mode)) {
+        op.pending = Some(Pending { m, mode, s, done: true });
     }
     Ok(())
 }
