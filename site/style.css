@@ -137,7 +137,7 @@ th { color: var(--muted); font-weight: 400; width: 10rem; padding-right: 1rem; }
 .diagram .sup { font-size: 8px; }
 .diagram .ln line, .diagram .br line { stroke: var(--faint); stroke-width: 1.2; }
 .diagram .dash line { stroke: var(--faint); stroke-width: 1.2; stroke-dasharray: 2 4; }
-.diagram .leaf circle { fill: var(--faint); }
+.diagram .leaves { stroke: var(--faint); stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 0 4.4; }
 .diagram .path { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linejoin: round; }
 .diagram .dashp { stroke-dasharray: 3 4; }
 .diagram .node circle { fill: var(--bg); stroke: var(--faint); stroke-width: 1.2; }
