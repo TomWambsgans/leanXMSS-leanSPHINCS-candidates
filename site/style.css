@@ -1,0 +1,68 @@
+:root {
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --bg: #ffffff;
+  --line: #d2d2d7;
+  --accent: #0b6bcb;
+  --fill: #f2f2f5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #ececf0;
+    --muted: #9a9aa2;
+    --bg: #151517;
+    --line: #3a3a3e;
+    --accent: #5aa9ff;
+    --fill: #222226;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+main {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 3rem 1rem 4rem;
+}
+
+h1 { font-size: 2rem; margin: 0 0 0.25rem; }
+h2 { font-size: 1.3rem; margin: 2.5rem 0 0.75rem; }
+h3 { font-size: 1.05rem; margin: 0 0 0.25rem; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+nav { display: flex; gap: 1.25rem; }
+
+ul { padding-left: 1.2rem; }
+
+table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; }
+td { padding: 0.35rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+td:first-child { color: var(--muted); width: 9rem; padding-right: 1rem; }
+
+article { margin: 1.75rem 0; }
+
+figure { margin: 1.5rem 0; }
+svg { width: 100%; height: auto; color: var(--fg); }
+svg .tree { fill: var(--fill); stroke: currentColor; stroke-width: 1.5; }
+svg .kept { fill: color-mix(in srgb, var(--accent) 25%, transparent); stroke: var(--accent); stroke-width: 1.5; }
+svg .fors polygon { fill: var(--fill); stroke: currentColor; stroke-width: 1.2; }
+svg .box { fill: var(--bg); stroke: currentColor; stroke-width: 1.5; }
+svg .path { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+svg .edge { stroke: currentColor; stroke-width: 1.5; }
+svg .lead { stroke: var(--muted); stroke-width: 1; }
+svg .dot { fill: currentColor; }
+svg .dot.accent { fill: var(--accent); }
+svg text { font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: currentColor; }
+svg .note { fill: var(--muted); font-size: 12px; }
+
+footer { margin-top: 3rem; color: var(--muted); font-size: 0.9rem; }
+figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; }

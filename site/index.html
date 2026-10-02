@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>leanSphincs</title>
+<meta name="description" content="leanSphincs: a hash-based signature with the shape of SLH-DSA, retuned for small signatures, cheap verification, and four ways to hold a key.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<header>
+  <h1>leanSphincs</h1>
+  <p>A hash-based signature with the shape of SLH-DSA, retuned for small signatures and cheap verification.</p>
+  <nav>
+    <a href="https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf">Note (PDF)</a>
+    <a href="https://github.com/TomWambsgans/leansphincs-candidate">Code</a>
+  </nav>
+</header>
+
+<section>
+  <h2>The scheme</h2>
+  <p>
+    One Merkle tree of one-time keys. The message picks a leaf; that leaf's one-time key signs a
+    few-time key, which signs the message. This is the shape of SLH-DSA-128-24 (NIST SP&nbsp;800-230),
+    with three changes:
+  </p>
+  <ul>
+    <li>a tree of height 26, instead of 22;</li>
+    <li>few-time keys (FORS) of 24 trees of height 10, instead of 6 of height 24;</li>
+    <li>WOTS+C instead of WOTS: 64 chains of length 4 whose positions sum to 120, so no checksum.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 560 370" role="img" aria-labelledby="fig-title">
+      <title id="fig-title">The structure of a leanSphincs key and signature</title>
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+
+      <!-- the tree of one-time keys -->
+      <polygon points="300,28 100,196 500,196" class="tree"/>
+      <text x="314" y="24" class="label">public key (the root)</text>
+      <text x="350" y="176" class="label">tree of height 26</text>
+
+      <!-- the subtree a pruned key builds -->
+      <polygon points="180,150 152,196 208,196" class="kept"/>
+      <text x="18" y="112" class="note">a pruned key builds</text>
+      <text x="18" y="127" class="note">only this subtree</text>
+      <line x1="112" y1="132" x2="170" y2="168" class="lead"/>
+
+      <!-- the selected leaf and its path to the root -->
+      <polyline points="280,196 286,140 294,80 300,28" class="path"/>
+      <circle cx="300" cy="28" r="5" class="dot"/>
+      <circle cx="280" cy="196" r="5" class="dot accent"/>
+
+      <!-- its one-time key -->
+      <line x1="280" y1="202" x2="280" y2="224" class="edge" marker-end="url(#arrow)"/>
+      <rect x="200" y="228" width="160" height="34" rx="4" class="box"/>
+      <text x="280" y="250" class="label" text-anchor="middle">WOTS+C one-time key</text>
+
+      <!-- signs a few-time key -->
+      <line x1="280" y1="262" x2="280" y2="288" class="edge" marker-end="url(#arrow)"/>
+      <text x="290" y="280" class="note">signs</text>
+      <g class="fors">
+        <polygon points="150,294 132,332 168,332"/>
+        <polygon points="190,294 172,332 208,332"/>
+        <polygon points="230,294 212,332 248,332"/>
+        <polygon points="270,294 252,332 288,332"/>
+        <polygon points="310,294 292,332 328,332"/>
+        <polygon points="350,294 332,332 368,332"/>
+      </g>
+      <g class="dot accent">
+        <circle cx="140" cy="332" r="3"/>
+        <circle cx="198" cy="332" r="3"/>
+        <circle cx="222" cy="332" r="3"/>
+        <circle cx="281" cy="332" r="3"/>
+        <circle cx="300" cy="332" r="3"/>
+        <circle cx="359" cy="332" r="3"/>
+      </g>
+      <text x="382" y="320" class="label">… 24 trees of height 10</text>
+      <text x="250" y="358" class="label" text-anchor="middle">FORS few-time key</text>
+    </svg>
+    <figcaption>The message, hashed with a randomizer, picks a leaf of the tree and one leaf in each FORS tree. The signature reveals them, with their paths to the roots.</figcaption>
+  </figure>
+
+  <table>
+    <tr><td>Public key</td><td>32 bytes</td></tr>
+    <tr><td>Signature</td><td>5,684 bytes</td></tr>
+    <tr><td>Verification</td><td>391 BLAKE2s compressions, the same for every signature</td></tr>
+    <tr><td>Security</td><td>NIST level 1 (128 bits), with BLAKE2s truncated to 16 bytes</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Four modes</h2>
+  <p>Same public key, same signature, same verifier. Only the signer changes.</p>
+
+  <article>
+    <h3>1. Hardware wallets (Ledger Nano S+)</h3>
+    <table>
+      <tr><td>Lifetime</td><td>2<sup>16</sup> signatures</td></tr>
+      <tr><td>Key generation</td><td>1.1M compressions, about 34&nbsp;s</td></tr>
+      <tr><td>Signing</td><td>142K compressions, about 4&nbsp;s, with a 16&nbsp;KiB cache</td></tr>
+    </table>
+    <p>The key only builds a subtree of 2<sup>12</sup> leaves; the signer grinds the randomizer until the message lands in it.</p>
+  </article>
+
+  <article>
+    <h3>2. Laptops, phones, powerful hardware wallets</h3>
+    <table>
+      <tr><td>Lifetime</td><td>2<sup>24</sup> signatures</td></tr>
+      <tr><td>Key generation</td><td>287M compressions, about 0.3&nbsp;s on a laptop</td></tr>
+      <tr><td>Signing</td><td>84K compressions with a 1&nbsp;MiB cache</td></tr>
+    </table>
+    <p>The same trick with a subtree of 2<sup>20</sup> leaves.</p>
+  </article>
+
+  <article>
+    <h3>3. Industry</h3>
+    <table>
+      <tr><td>Lifetime</td><td>2<sup>30</sup> signatures</td></tr>
+      <tr><td>Key generation</td><td>18.4B compressions, about 20&nbsp;s on a laptop</td></tr>
+      <tr><td>Signing</td><td>421K compressions with a 1&nbsp;MiB cache, 75K with 1&nbsp;GiB</td></tr>
+    </table>
+    <p>The full tree.</p>
+  </article>
+
+  <article>
+    <h3>4. Threshold (MPC)</h3>
+    <table>
+      <tr><td>Signers</td><td>3-of-4, key generated without a trusted dealer</td></tr>
+      <tr><td>Security</td><td>against 1 malicious operator</td></tr>
+      <tr><td>Lifetime</td><td>2<sup>16</sup> signatures</td></tr>
+      <tr><td>Key generation</td><td>1.3&nbsp;GB of traffic per operator</td></tr>
+      <tr><td>Signing</td><td>no MPC once the message is known: about 10 rounds of a few KB</td></tr>
+    </table>
+    <p>
+      Only hashes of secrets run in MPC, and none depends on the message: the next few-time key is
+      computed in advance (42&nbsp;MB per operator), and the randomizer is ground until the message lands
+      on it. <a href="https://github.com/TomWambsgans/leansphincs-candidate/tree/main/crates/threshold">Prototype in Rust</a>.
+    </p>
+  </article>
+</section>
+
+<footer>
+  <p>Times assume 33K BLAKE2s per second on a Nano S+ and 10<sup>9</sup> on a laptop. Personal opinion of the author, Tom Wambsgans; subject to change.</p>
+</footer>
+
+</main>
+</body>
+</html>
