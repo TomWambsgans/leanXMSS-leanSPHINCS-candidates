@@ -1,0 +1,18 @@
+[package]
+name = "rss"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "n-party Boolean MPC (n = 2f + 1): replicated sharing, collector resharing, sublinear malicious checks"
+
+[lints]
+workspace = true
+
+[features]
+# Test hooks (cheating parties, injected faults), for this crate's and dependents' tests only.
+testing = []
+
+[dependencies]
+blake2s.workspace = true
+mpc.workspace = true
