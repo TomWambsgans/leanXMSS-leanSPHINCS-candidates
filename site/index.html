@@ -3,380 +3,512 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>leanSphincs</title>
-<meta name="description" content="leanSphincs: a hash-based signature with the shape of SLH-DSA, retuned for small signatures and cheap verification, in four modes from hardware wallets to threshold signing.">
-<link rel="stylesheet" href="style.css">
+<meta name="color-scheme" content="light">
+<title>A proposal for leanSphincs</title>
+<meta name="description" content="A proposal for leanSphincs: a hash-based signature with the shape of SLH-DSA, retuned for small signatures and cheap verification.">
+<style>
+:root {
+  color-scheme: light;
+  --ink: #111111;
+  --muted: #7a7a7a;
+  --rule: #e8e8e8;
+  --tree: #cfcfcf;
+  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: var(--ink);
+  font: 16px/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+main { max-width: 60rem; margin: 0 auto; padding: 5rem 1.5rem 3rem; }
+
+a { color: inherit; text-decoration: underline; text-decoration-color: var(--tree); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--ink); }
+
+sup { font-size: 0.7em; line-height: 0; }
+.nowrap { white-space: nowrap; }
+i { font-family: var(--serif); font-size: 1.08em; }
+
+/* Title */
+
+h1 { font-size: 2.25rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; margin: 0; }
+.by { color: var(--muted); margin: 0.4rem 0 0; }
+
+/* The scheme */
+
+.scheme {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 3.5rem;
+  align-items: center;
+  margin: 4.5rem 0;
+}
+
+.params p { margin: 0 0 1.75rem; color: var(--muted); white-space: nowrap; }
+.params table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.params th, .params td { text-align: left; padding: 0.45rem 2.25rem 0.45rem 0; font-weight: 400; }
+.params thead th { color: var(--muted); font-size: 0.85rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.6rem; }
+.params tbody tr:first-child > * { padding-top: 0.8rem; }
+.params tbody th { width: 3.5rem; }
+.params td + td { color: var(--muted); }
+
+figure { margin: 0; }
+figure svg { display: block; width: 100%; height: auto; }
+
+svg text { font-family: var(--sans); }
+svg .lb { font-size: 13px; fill: var(--muted); }
+svg .nm { font-size: 14px; font-weight: 600; fill: var(--ink); }
+svg .pv { font-size: 14px; fill: var(--ink); }
+svg .it { font-family: var(--serif); font-style: italic; font-size: 15.5px; }
+svg .tree line { stroke: var(--tree); stroke-width: 1; }
+svg .stub line { stroke: url(#fade); stroke-width: 1; }
+svg .f0 { stop-color: var(--tree); stop-opacity: 1; }
+svg .f1 { stop-color: var(--tree); stop-opacity: 0; }
+svg .base { stroke: var(--tree); stroke-width: 1; }
+svg .path { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
+svg .dash { stroke-dasharray: 2 3; }
+svg .on circle { fill: var(--ink); }
+svg .conn { stroke: var(--tree); stroke-width: 1; }
+svg .chain line { stroke: var(--tree); stroke-width: 1; }
+svg .dot circle { fill: var(--tree); }
+svg .ell circle { fill: var(--ink); }
+svg .brace { fill: none; stroke: #8a8a8a; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
+svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-linejoin: round; }
+
+/* Numbers */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 1.5rem 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+.stats dt { color: var(--muted); font-size: 0.85rem; }
+.stats dd { margin: 0.15rem 0 0; font-size: 1.15rem; font-weight: 500; }
+
+/* Modes */
+
+.modes { margin-top: 4.5rem; }
+
+.tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--rule); }
+.tabs a {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 1rem;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1.5px solid transparent;
+  margin-bottom: -1px;
+}
+.tabs a span { font-size: 0.85rem; font-weight: 400; }
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+
+.panel { display: grid; grid-template-columns: 9rem 1fr; gap: 0.8rem 1.5rem; margin: 1.75rem 0 0; }
+.panel dt { color: var(--muted); }
+.panel dd { margin: 0; }
+.js .panel[hidden] { display: none; }
+
+footer { margin-top: 6rem; color: var(--muted); font-size: 0.85rem; }
+footer p { margin: 0.3rem 0; }
+footer a + a { margin-left: 1.25rem; }
+
+@media (max-width: 820px) {
+  main { padding-top: 3rem; }
+  .scheme { grid-template-columns: 1fr; gap: 2.5rem; margin: 3rem 0; }
+  .stats, .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 1rem; }
+  .panel { grid-template-columns: 1fr; gap: 0.15rem; }
+  .panel dd { margin-bottom: 0.8rem; }
+}
+</style>
 <script>document.documentElement.classList.add("js")</script>
 </head>
 <body>
+<main>
 
-<header class="hero">
-  <div class="wrap">
-    <h1>leanSphincs</h1>
-    <div class="how">
-      <div class="params">
-        <p>Same as SLH-DSA-128-24 (<a href="https://csrc.nist.gov/pubs/sp/800/230/ipd">NIST SP&nbsp;800-230</a>), but with:</p>
-        <dl>
-          <div><dt>h = 26</dt><dd>tree height, instead of 22</dd></div>
-          <div><dt>k = 24</dt><dd>FORS trees, instead of 6</dd></div>
-          <div><dt>a = 10</dt><dd>FORS tree height, instead of 24</dd></div>
-          <div><dt>WOTS+C</dt><dd>instead of WOTS: 64 chains of length 4, positions summing to 120</dd></div>
-        </dl>
-      </div>
-      <figure class="diagram">
-        <svg viewBox="70 14 590 520" role="img" aria-labelledby="dia-title">
-          <title id="dia-title">A leanSphincs signature: a Merkle path, a WOTS+C signature and a FORS signature</title>
-          <defs><marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0.5 L7,4 L0,7.5" class="ah"/></marker></defs>
-          <g class="ln">
-            <line x1="320.0" y1="40" x2="210.0" y2="76"/>
-            <line x1="320.0" y1="40" x2="430.0" y2="76"/>
-            <line x1="210.0" y1="76" x2="155.0" y2="112"/>
-            <line x1="210.0" y1="76" x2="265.0" y2="112"/>
-            <line x1="430.0" y1="76" x2="375.0" y2="112"/>
-            <line x1="430.0" y1="76" x2="485.0" y2="112"/>
-            <line x1="155.0" y1="112" x2="127.5" y2="148"/>
-            <line x1="155.0" y1="112" x2="182.5" y2="148"/>
-            <line x1="265.0" y1="112" x2="237.5" y2="148"/>
-            <line x1="265.0" y1="112" x2="292.5" y2="148"/>
-            <line x1="375.0" y1="112" x2="347.5" y2="148"/>
-            <line x1="375.0" y1="112" x2="402.5" y2="148"/>
-            <line x1="485.0" y1="112" x2="457.5" y2="148"/>
-            <line x1="485.0" y1="112" x2="512.5" y2="148"/>
-            <line x1="127.5" y1="148" x2="113.8" y2="184"/>
-            <line x1="127.5" y1="148" x2="141.2" y2="184"/>
-            <line x1="182.5" y1="148" x2="168.8" y2="184"/>
-            <line x1="182.5" y1="148" x2="196.2" y2="184"/>
-            <line x1="237.5" y1="148" x2="223.8" y2="184"/>
-            <line x1="237.5" y1="148" x2="251.2" y2="184"/>
-            <line x1="292.5" y1="148" x2="278.8" y2="184"/>
-            <line x1="292.5" y1="148" x2="306.2" y2="184"/>
-            <line x1="347.5" y1="148" x2="333.8" y2="184"/>
-            <line x1="347.5" y1="148" x2="361.2" y2="184"/>
-            <line x1="402.5" y1="148" x2="388.8" y2="184"/>
-            <line x1="402.5" y1="148" x2="416.2" y2="184"/>
-            <line x1="457.5" y1="148" x2="443.8" y2="184"/>
-            <line x1="457.5" y1="148" x2="471.2" y2="184"/>
-            <line x1="512.5" y1="148" x2="498.8" y2="184"/>
-            <line x1="512.5" y1="148" x2="526.2" y2="184"/>
-            <line x1="113.8" y1="184" x2="106.9" y2="220"/>
-            <line x1="113.8" y1="184" x2="120.6" y2="220"/>
-            <line x1="141.2" y1="184" x2="134.4" y2="220"/>
-            <line x1="141.2" y1="184" x2="148.1" y2="220"/>
-            <line x1="168.8" y1="184" x2="161.9" y2="220"/>
-            <line x1="168.8" y1="184" x2="175.6" y2="220"/>
-            <line x1="196.2" y1="184" x2="189.4" y2="220"/>
-            <line x1="196.2" y1="184" x2="203.1" y2="220"/>
-            <line x1="223.8" y1="184" x2="216.9" y2="220"/>
-            <line x1="223.8" y1="184" x2="230.6" y2="220"/>
-            <line x1="251.2" y1="184" x2="244.4" y2="220"/>
-            <line x1="251.2" y1="184" x2="258.1" y2="220"/>
-            <line x1="278.8" y1="184" x2="271.9" y2="220"/>
-            <line x1="278.8" y1="184" x2="285.6" y2="220"/>
-            <line x1="306.2" y1="184" x2="299.4" y2="220"/>
-            <line x1="306.2" y1="184" x2="313.1" y2="220"/>
-            <line x1="333.8" y1="184" x2="326.9" y2="220"/>
-            <line x1="333.8" y1="184" x2="340.6" y2="220"/>
-            <line x1="361.2" y1="184" x2="354.4" y2="220"/>
-            <line x1="361.2" y1="184" x2="368.1" y2="220"/>
-            <line x1="388.8" y1="184" x2="381.9" y2="220"/>
-            <line x1="388.8" y1="184" x2="395.6" y2="220"/>
-            <line x1="416.2" y1="184" x2="409.4" y2="220"/>
-            <line x1="416.2" y1="184" x2="423.1" y2="220"/>
-            <line x1="443.8" y1="184" x2="436.9" y2="220"/>
-            <line x1="443.8" y1="184" x2="450.6" y2="220"/>
-            <line x1="471.2" y1="184" x2="464.4" y2="220"/>
-            <line x1="471.2" y1="184" x2="478.1" y2="220"/>
-            <line x1="498.8" y1="184" x2="491.9" y2="220"/>
-            <line x1="498.8" y1="184" x2="505.6" y2="220"/>
-            <line x1="526.2" y1="184" x2="519.4" y2="220"/>
-            <line x1="526.2" y1="184" x2="533.1" y2="220"/>
-          </g>
-          <g class="dash">
-            <line x1="106.9" y1="224" x2="106.9" y2="278"/>
-            <line x1="120.6" y1="224" x2="120.6" y2="278"/>
-            <line x1="134.4" y1="224" x2="134.4" y2="278"/>
-            <line x1="148.1" y1="224" x2="148.1" y2="278"/>
-            <line x1="161.9" y1="224" x2="161.9" y2="278"/>
-            <line x1="175.6" y1="224" x2="175.6" y2="278"/>
-            <line x1="189.4" y1="224" x2="189.4" y2="278"/>
-            <line x1="203.1" y1="224" x2="203.1" y2="278"/>
-            <line x1="216.9" y1="224" x2="216.9" y2="278"/>
-            <line x1="230.6" y1="224" x2="230.6" y2="278"/>
-            <line x1="244.4" y1="224" x2="244.4" y2="278"/>
-            <line x1="258.1" y1="224" x2="258.1" y2="278"/>
-            <line x1="271.9" y1="224" x2="271.9" y2="278"/>
-            <line x1="285.6" y1="224" x2="285.6" y2="278"/>
-            <line x1="299.4" y1="224" x2="299.4" y2="278"/>
-            <line x1="313.1" y1="224" x2="313.1" y2="278"/>
-            <line x1="326.9" y1="224" x2="326.9" y2="278"/>
-            <line x1="340.6" y1="224" x2="340.6" y2="278"/>
-            <line x1="354.4" y1="224" x2="354.4" y2="278"/>
-            <line x1="368.1" y1="224" x2="368.1" y2="278"/>
-            <line x1="381.9" y1="224" x2="381.9" y2="278"/>
-            <line x1="395.6" y1="224" x2="395.6" y2="278"/>
-            <line x1="409.4" y1="224" x2="409.4" y2="278"/>
-            <line x1="423.1" y1="224" x2="423.1" y2="278"/>
-            <line x1="436.9" y1="224" x2="436.9" y2="278"/>
-            <line x1="450.6" y1="224" x2="450.6" y2="278"/>
-            <line x1="464.4" y1="224" x2="464.4" y2="278"/>
-            <line x1="478.1" y1="224" x2="478.1" y2="278"/>
-            <line x1="491.9" y1="224" x2="491.9" y2="278"/>
-            <line x1="505.6" y1="224" x2="505.6" y2="278"/>
-            <line x1="519.4" y1="224" x2="519.4" y2="278"/>
-            <line x1="533.1" y1="224" x2="533.1" y2="278"/>
-          </g>
-          <line x1="100" y1="286" x2="540" y2="286" class="leaves"/>
-          <g class="node">
-            <circle cx="375.0" cy="112" r="3.2"/>
-            <circle cx="485.0" cy="112" r="3.2"/>
-            <circle cx="127.5" cy="148" r="2.8"/>
-            <circle cx="182.5" cy="148" r="2.8"/>
-            <circle cx="347.5" cy="148" r="2.8"/>
-            <circle cx="402.5" cy="148" r="2.8"/>
-            <circle cx="457.5" cy="148" r="2.8"/>
-            <circle cx="512.5" cy="148" r="2.8"/>
-            <circle cx="113.8" cy="184" r="2.3"/>
-            <circle cx="141.2" cy="184" r="2.3"/>
-            <circle cx="168.8" cy="184" r="2.3"/>
-            <circle cx="196.2" cy="184" r="2.3"/>
-            <circle cx="223.8" cy="184" r="2.3"/>
-            <circle cx="251.2" cy="184" r="2.3"/>
-            <circle cx="333.8" cy="184" r="2.3"/>
-            <circle cx="361.2" cy="184" r="2.3"/>
-            <circle cx="388.8" cy="184" r="2.3"/>
-            <circle cx="416.2" cy="184" r="2.3"/>
-            <circle cx="443.8" cy="184" r="2.3"/>
-            <circle cx="471.2" cy="184" r="2.3"/>
-            <circle cx="498.8" cy="184" r="2.3"/>
-            <circle cx="526.2" cy="184" r="2.3"/>
-            <circle cx="106.9" cy="220" r="1.8"/>
-            <circle cx="120.6" cy="220" r="1.8"/>
-            <circle cx="134.4" cy="220" r="1.8"/>
-            <circle cx="148.1" cy="220" r="1.8"/>
-            <circle cx="161.9" cy="220" r="1.8"/>
-            <circle cx="175.6" cy="220" r="1.8"/>
-            <circle cx="189.4" cy="220" r="1.8"/>
-            <circle cx="203.1" cy="220" r="1.8"/>
-            <circle cx="216.9" cy="220" r="1.8"/>
-            <circle cx="230.6" cy="220" r="1.8"/>
-            <circle cx="244.4" cy="220" r="1.8"/>
-            <circle cx="258.1" cy="220" r="1.8"/>
-            <circle cx="271.9" cy="220" r="1.8"/>
-            <circle cx="285.6" cy="220" r="1.8"/>
-            <circle cx="326.9" cy="220" r="1.8"/>
-            <circle cx="340.6" cy="220" r="1.8"/>
-            <circle cx="354.4" cy="220" r="1.8"/>
-            <circle cx="368.1" cy="220" r="1.8"/>
-            <circle cx="381.9" cy="220" r="1.8"/>
-            <circle cx="395.6" cy="220" r="1.8"/>
-            <circle cx="409.4" cy="220" r="1.8"/>
-            <circle cx="423.1" cy="220" r="1.8"/>
-            <circle cx="436.9" cy="220" r="1.8"/>
-            <circle cx="450.6" cy="220" r="1.8"/>
-            <circle cx="464.4" cy="220" r="1.8"/>
-            <circle cx="478.1" cy="220" r="1.8"/>
-            <circle cx="491.9" cy="220" r="1.8"/>
-            <circle cx="505.6" cy="220" r="1.8"/>
-            <circle cx="519.4" cy="220" r="1.8"/>
-            <circle cx="533.1" cy="220" r="1.8"/>
-          </g>
-          <polyline points="320.0,40 210.0,76 265.0,112 292.5,148 306.2,184 299.4,220" class="path"/>
-          <line x1="299.4" y1="220" x2="300" y2="282" class="path dashp"/>
-          <g class="sib">
-            <circle cx="430.0" cy="76" r="4.5"/>
-            <circle cx="155.0" cy="112" r="4"/>
-            <circle cx="237.5" cy="148" r="3.6"/>
-            <circle cx="278.8" cy="184" r="3.2"/>
-            <circle cx="313.1" cy="220" r="2.8"/>
-            <circle cx="291" cy="286" r="3"/>
-          </g>
-          <g class="on">
-            <circle cx="210.0" cy="76" r="4.5"/>
-            <circle cx="265.0" cy="112" r="4"/>
-            <circle cx="292.5" cy="148" r="3.6"/>
-            <circle cx="306.2" cy="184" r="3.2"/>
-            <circle cx="299.4" cy="220" r="2.8"/>
-            <circle cx="300" cy="286" r="3.8"/>
-          </g>
-          <circle cx="320" cy="40" r="6" class="root"/>
-          <text x="334" y="36" class="lb">public key</text>
-          <g class="br"><line x1="572" y1="40" x2="572" y2="286"/><line x1="567" y1="40" x2="577" y2="40"/><line x1="567" y1="286" x2="577" y2="286"/></g>
-          <text x="584" y="167" class="pv">h = 26</text>
-          <line x1="300" y1="294" x2="300" y2="310" class="flow" marker-end="url(#arr)"/>
-          <g class="chain">
-            <line x1="244" y1="316" x2="244" y2="382"/>
-            <circle cx="244" cy="382" r="2"/>
-            <circle cx="244" cy="360" r="2"/>
-            <circle cx="244" cy="338" r="3" class="sibm"/>
-            <circle cx="244" cy="316" r="2"/>
-            <line x1="258" y1="316" x2="258" y2="382"/>
-            <circle cx="258" cy="382" r="3" class="sibm"/>
-            <circle cx="258" cy="360" r="2"/>
-            <circle cx="258" cy="338" r="2"/>
-            <circle cx="258" cy="316" r="2"/>
-            <line x1="272" y1="316" x2="272" y2="382"/>
-            <circle cx="272" cy="382" r="2"/>
-            <circle cx="272" cy="360" r="2"/>
-            <circle cx="272" cy="338" r="2"/>
-            <circle cx="272" cy="316" r="3" class="sibm"/>
-            <line x1="286" y1="316" x2="286" y2="382"/>
-            <circle cx="286" cy="382" r="2"/>
-            <circle cx="286" cy="360" r="3" class="sibm"/>
-            <circle cx="286" cy="338" r="2"/>
-            <circle cx="286" cy="316" r="2"/>
-            <line x1="300" y1="316" x2="300" y2="382"/>
-            <circle cx="300" cy="382" r="2"/>
-            <circle cx="300" cy="360" r="2"/>
-            <circle cx="300" cy="338" r="3" class="sibm"/>
-            <circle cx="300" cy="316" r="2"/>
-            <line x1="314" y1="316" x2="314" y2="382"/>
-            <circle cx="314" cy="382" r="2"/>
-            <circle cx="314" cy="360" r="3" class="sibm"/>
-            <circle cx="314" cy="338" r="2"/>
-            <circle cx="314" cy="316" r="2"/>
-            <line x1="328" y1="316" x2="328" y2="382"/>
-            <circle cx="328" cy="382" r="3" class="sibm"/>
-            <circle cx="328" cy="360" r="2"/>
-            <circle cx="328" cy="338" r="2"/>
-            <circle cx="328" cy="316" r="2"/>
-            <line x1="342" y1="316" x2="342" y2="382"/>
-            <circle cx="342" cy="382" r="2"/>
-            <circle cx="342" cy="360" r="2"/>
-            <circle cx="342" cy="338" r="2"/>
-            <circle cx="342" cy="316" r="3" class="sibm"/>
-            <line x1="356" y1="316" x2="356" y2="382"/>
-            <circle cx="356" cy="382" r="2"/>
-            <circle cx="356" cy="360" r="2"/>
-            <circle cx="356" cy="338" r="3" class="sibm"/>
-            <circle cx="356" cy="316" r="2"/>
-          </g>
-          <text x="364" y="353" class="lb">⋯</text>
-          <text x="384" y="344" class="tt">WOTS+C</text><text x="384" y="360" class="pv">64 chains, length 4</text>
-          <line x1="300" y1="388" x2="300" y2="410" class="flow" marker-end="url(#arr)"/>
-          <g class="fors">
-            <polygon points="196,416 186,440 206,440"/>
-            <polygon points="222,416 212,440 232,440"/>
-            <polygon points="248,416 238,440 258,440"/>
-            <polygon points="274,416 264,440 284,440"/>
-            <polygon points="300,416 290,440 310,440"/>
-            <polygon points="326,416 316,440 336,440"/>
-            <polygon points="352,416 342,440 362,440"/>
-            <polygon points="378,416 368,440 388,440"/>
-            <polygon points="404,416 394,440 414,440"/>
-          </g>
-          <g class="sibm">
-            <circle cx="191" cy="440" r="2.4"/>
-            <circle cx="226" cy="440" r="2.4"/>
-            <circle cx="246" cy="440" r="2.4"/>
-            <circle cx="280" cy="440" r="2.4"/>
-            <circle cx="294" cy="440" r="2.4"/>
-            <circle cx="328" cy="440" r="2.4"/>
-            <circle cx="357" cy="440" r="2.4"/>
-            <circle cx="375" cy="440" r="2.4"/>
-            <circle cx="404" cy="440" r="2.4"/>
-          </g>
-          <text x="420" y="434" class="lb">⋯</text>
-          <text x="446" y="424" class="tt">FORS</text><text x="446" y="440" class="pv">k = 24, a = 10</text>
-          <line x1="300" y1="446" x2="300" y2="468" class="flow" marker-end="url(#arr)"/>
-          <rect x="258" y="472" width="84" height="24" rx="12" class="msg"/>
-          <text x="300" y="488" class="lb" text-anchor="middle">message</text>
-        </svg>
-        <figcaption><span class="dot on"></span>recomputed by the verifier <span class="dot sib"></span>sent in the signature</figcaption>
-      </figure>
-    </div>
-
-    <dl class="stats">
-      <div><dt>Public key</dt><dd>32&nbsp;B</dd></div>
-      <div><dt>Signature</dt><dd>5,684&nbsp;B</dd></div>
-      <div><dt>Verification</dt><dd>391 <small>compressions</small></dd></div>
-      <div><dt>Security</dt><dd>NIST level 1</dd></div>
-    </dl>
-  </div>
+<header>
+  <h1>A proposal for leanSphincs</h1>
+  <p class="by">by Tom Wambsgans</p>
 </header>
 
-<main class="wrap">
-
-<section class="choose" aria-labelledby="choose-title">
-  <h2 id="choose-title">Pick your setting</h2>
-  <p class="lead">Same signature and verifier; only the signer changes.</p>
-
-  <div class="cards" role="tablist">
-    <a class="card" href="#wallet" role="tab" aria-controls="wallet">
-      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/></svg>
-      <span class="name">Hardware wallets</span>
-      <span class="life">2<sup>17</sup> signatures</span>
-    </a>
-    <a class="card" href="#laptop" role="tab" aria-controls="laptop">
-      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="30,30 14,58 46,58"/></svg>
-      <span class="name">Laptops &amp; phones</span>
-      <span class="life">2<sup>24</sup> signatures</span>
-    </a>
-    <a class="card" href="#industry" role="tab" aria-controls="industry">
-      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="k" points="48,6 6,58 90,58"/></svg>
-      <span class="name">Industry</span>
-      <span class="life">2<sup>30</sup> signatures</span>
-    </a>
-    <a class="card" href="#threshold" role="tab" aria-controls="threshold">
-      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/><circle class="op" cx="62" cy="38" r="4.5"/><circle class="op" cx="76" cy="38" r="4.5"/><circle class="op" cx="62" cy="52" r="4.5"/><circle class="op off" cx="76" cy="52" r="4.5"/></svg>
-      <span class="name">Threshold</span>
-      <span class="life">3-of-4, 2<sup>16</sup> signatures</span>
-    </a>
+<section class="scheme">
+  <div class="params">
+    <p>Same as SLH-DSA-128-24 (<a href="https://csrc.nist.gov/pubs/sp/800/230/ipd">NIST SP 800-230</a>), except:</p>
+    <table>
+      <thead><tr><th></th><th>leanSphincs</th><th>SLH-DSA-128-24</th></tr></thead>
+      <tbody>
+        <tr><th><i>h</i></th><td>26</td><td>22</td></tr>
+        <tr><th><i>k</i></th><td>24</td><td>6</td></tr>
+        <tr><th><i>a</i></th><td>10</td><td>24</td></tr>
+        <tr><th>OTS</th><td>WOTS+C</td><td>WOTS</td></tr>
+      </tbody>
+    </table>
   </div>
-
-  <section class="panel" id="wallet" role="tabpanel" aria-label="Hardware wallets">
-    <table>
-      <tr><th>Key generation</th><td>2.2M compressions, e.g.&nbsp;68&nbsp;s on a Ledger Nano S+</td></tr>
-      <tr><th>Signing</th><td>111K compressions (3.4&nbsp;s), with a 16&nbsp;KiB cache</td></tr>
-      <tr><th>How</th><td>only a subtree of 2<sup>13</sup> leaves exists; the signer grinds the randomizer into it</td></tr>
-    </table>
-  </section>
-
-  <section class="panel" id="laptop" role="tabpanel" aria-label="Laptops and phones">
-    <table>
-      <tr><th>Key generation</th><td>287M compressions, about 0.3&nbsp;s on a laptop</td></tr>
-      <tr><th>Signing</th><td>84K compressions, with a 1&nbsp;MiB cache</td></tr>
-      <tr><th>How</th><td>only a subtree of 2<sup>20</sup> leaves exists</td></tr>
-    </table>
-  </section>
-
-  <section class="panel" id="industry" role="tabpanel" aria-label="Industry">
-    <table>
-      <tr><th>Key generation</th><td>18.4B compressions, about 20&nbsp;s on a laptop</td></tr>
-      <tr><th>Signing</th><td>421K compressions with a 1&nbsp;MiB cache, 75K with 1&nbsp;GiB</td></tr>
-      <tr><th>How</th><td>the full tree</td></tr>
-    </table>
-  </section>
-
-  <section class="panel" id="threshold" role="tabpanel" aria-label="Threshold">
-    <table>
-      <tr><th>Key generation</th><td>1.33&nbsp;GB per operator, no trusted dealer</td></tr>
-      <tr><th>Signing</th><td>7&nbsp;KB per operator in 10 rounds, no MPC</td></tr>
-      <tr><th>Security</th><td>against 1 malicious operator</td></tr>
-      <tr><th>How</th><td>only hashes of secrets run in MPC, all before the message is known (42&nbsp;MB per few-time key) &middot; <a href="https://github.com/TomWambsgans/leansphincs-candidate/tree/main/crates/threshold">prototype</a></td></tr>
-    </table>
-  </section>
+  <figure>
+      <svg viewBox="0 0 600 474" role="img" aria-labelledby="dia-title">
+        <title id="dia-title">A leanSphincs signature: a path in a tree of height 26 to a leaf, the hash of a WOTS+C key of 64 chains of length 4, which signs the root of a FORS key of 24 trees of height 10</title>
+        <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient></defs>
+        <g class="tree">
+          <line x1="256.0" y1="22" x2="136.0" y2="48"/>
+          <line x1="256.0" y1="22" x2="376.0" y2="48"/>
+          <line x1="136.0" y1="48" x2="76.0" y2="74"/>
+          <line x1="136.0" y1="48" x2="196.0" y2="74"/>
+          <line x1="376.0" y1="48" x2="316.0" y2="74"/>
+          <line x1="376.0" y1="48" x2="436.0" y2="74"/>
+          <line x1="76.0" y1="74" x2="46.0" y2="100"/>
+          <line x1="76.0" y1="74" x2="106.0" y2="100"/>
+          <line x1="196.0" y1="74" x2="166.0" y2="100"/>
+          <line x1="196.0" y1="74" x2="226.0" y2="100"/>
+          <line x1="316.0" y1="74" x2="286.0" y2="100"/>
+          <line x1="316.0" y1="74" x2="346.0" y2="100"/>
+          <line x1="436.0" y1="74" x2="406.0" y2="100"/>
+          <line x1="436.0" y1="74" x2="466.0" y2="100"/>
+          <line x1="46.0" y1="100" x2="31.0" y2="126"/>
+          <line x1="46.0" y1="100" x2="61.0" y2="126"/>
+          <line x1="106.0" y1="100" x2="91.0" y2="126"/>
+          <line x1="106.0" y1="100" x2="121.0" y2="126"/>
+          <line x1="166.0" y1="100" x2="151.0" y2="126"/>
+          <line x1="166.0" y1="100" x2="181.0" y2="126"/>
+          <line x1="226.0" y1="100" x2="211.0" y2="126"/>
+          <line x1="226.0" y1="100" x2="241.0" y2="126"/>
+          <line x1="286.0" y1="100" x2="271.0" y2="126"/>
+          <line x1="286.0" y1="100" x2="301.0" y2="126"/>
+          <line x1="346.0" y1="100" x2="331.0" y2="126"/>
+          <line x1="346.0" y1="100" x2="361.0" y2="126"/>
+          <line x1="406.0" y1="100" x2="391.0" y2="126"/>
+          <line x1="406.0" y1="100" x2="421.0" y2="126"/>
+          <line x1="466.0" y1="100" x2="451.0" y2="126"/>
+          <line x1="466.0" y1="100" x2="481.0" y2="126"/>
+          <line x1="31.0" y1="126" x2="23.5" y2="152"/>
+          <line x1="31.0" y1="126" x2="38.5" y2="152"/>
+          <line x1="61.0" y1="126" x2="53.5" y2="152"/>
+          <line x1="61.0" y1="126" x2="68.5" y2="152"/>
+          <line x1="91.0" y1="126" x2="83.5" y2="152"/>
+          <line x1="91.0" y1="126" x2="98.5" y2="152"/>
+          <line x1="121.0" y1="126" x2="113.5" y2="152"/>
+          <line x1="121.0" y1="126" x2="128.5" y2="152"/>
+          <line x1="151.0" y1="126" x2="143.5" y2="152"/>
+          <line x1="151.0" y1="126" x2="158.5" y2="152"/>
+          <line x1="181.0" y1="126" x2="173.5" y2="152"/>
+          <line x1="181.0" y1="126" x2="188.5" y2="152"/>
+          <line x1="211.0" y1="126" x2="203.5" y2="152"/>
+          <line x1="211.0" y1="126" x2="218.5" y2="152"/>
+          <line x1="241.0" y1="126" x2="233.5" y2="152"/>
+          <line x1="241.0" y1="126" x2="248.5" y2="152"/>
+          <line x1="271.0" y1="126" x2="263.5" y2="152"/>
+          <line x1="271.0" y1="126" x2="278.5" y2="152"/>
+          <line x1="301.0" y1="126" x2="293.5" y2="152"/>
+          <line x1="301.0" y1="126" x2="308.5" y2="152"/>
+          <line x1="331.0" y1="126" x2="323.5" y2="152"/>
+          <line x1="331.0" y1="126" x2="338.5" y2="152"/>
+          <line x1="361.0" y1="126" x2="353.5" y2="152"/>
+          <line x1="361.0" y1="126" x2="368.5" y2="152"/>
+          <line x1="391.0" y1="126" x2="383.5" y2="152"/>
+          <line x1="391.0" y1="126" x2="398.5" y2="152"/>
+          <line x1="421.0" y1="126" x2="413.5" y2="152"/>
+          <line x1="421.0" y1="126" x2="428.5" y2="152"/>
+          <line x1="451.0" y1="126" x2="443.5" y2="152"/>
+          <line x1="451.0" y1="126" x2="458.5" y2="152"/>
+          <line x1="481.0" y1="126" x2="473.5" y2="152"/>
+          <line x1="481.0" y1="126" x2="488.5" y2="152"/>
+          <line x1="23.5" y1="152" x2="19.8" y2="178"/>
+          <line x1="23.5" y1="152" x2="27.2" y2="178"/>
+          <line x1="38.5" y1="152" x2="34.8" y2="178"/>
+          <line x1="38.5" y1="152" x2="42.2" y2="178"/>
+          <line x1="53.5" y1="152" x2="49.8" y2="178"/>
+          <line x1="53.5" y1="152" x2="57.2" y2="178"/>
+          <line x1="68.5" y1="152" x2="64.8" y2="178"/>
+          <line x1="68.5" y1="152" x2="72.2" y2="178"/>
+          <line x1="83.5" y1="152" x2="79.8" y2="178"/>
+          <line x1="83.5" y1="152" x2="87.2" y2="178"/>
+          <line x1="98.5" y1="152" x2="94.8" y2="178"/>
+          <line x1="98.5" y1="152" x2="102.2" y2="178"/>
+          <line x1="113.5" y1="152" x2="109.8" y2="178"/>
+          <line x1="113.5" y1="152" x2="117.2" y2="178"/>
+          <line x1="128.5" y1="152" x2="124.8" y2="178"/>
+          <line x1="128.5" y1="152" x2="132.2" y2="178"/>
+          <line x1="143.5" y1="152" x2="139.8" y2="178"/>
+          <line x1="143.5" y1="152" x2="147.2" y2="178"/>
+          <line x1="158.5" y1="152" x2="154.8" y2="178"/>
+          <line x1="158.5" y1="152" x2="162.2" y2="178"/>
+          <line x1="173.5" y1="152" x2="169.8" y2="178"/>
+          <line x1="173.5" y1="152" x2="177.2" y2="178"/>
+          <line x1="188.5" y1="152" x2="184.8" y2="178"/>
+          <line x1="188.5" y1="152" x2="192.2" y2="178"/>
+          <line x1="203.5" y1="152" x2="199.8" y2="178"/>
+          <line x1="203.5" y1="152" x2="207.2" y2="178"/>
+          <line x1="218.5" y1="152" x2="214.8" y2="178"/>
+          <line x1="218.5" y1="152" x2="222.2" y2="178"/>
+          <line x1="233.5" y1="152" x2="229.8" y2="178"/>
+          <line x1="233.5" y1="152" x2="237.2" y2="178"/>
+          <line x1="248.5" y1="152" x2="244.8" y2="178"/>
+          <line x1="248.5" y1="152" x2="252.2" y2="178"/>
+          <line x1="263.5" y1="152" x2="259.8" y2="178"/>
+          <line x1="263.5" y1="152" x2="267.2" y2="178"/>
+          <line x1="278.5" y1="152" x2="274.8" y2="178"/>
+          <line x1="278.5" y1="152" x2="282.2" y2="178"/>
+          <line x1="293.5" y1="152" x2="289.8" y2="178"/>
+          <line x1="293.5" y1="152" x2="297.2" y2="178"/>
+          <line x1="308.5" y1="152" x2="304.8" y2="178"/>
+          <line x1="308.5" y1="152" x2="312.2" y2="178"/>
+          <line x1="323.5" y1="152" x2="319.8" y2="178"/>
+          <line x1="323.5" y1="152" x2="327.2" y2="178"/>
+          <line x1="338.5" y1="152" x2="334.8" y2="178"/>
+          <line x1="338.5" y1="152" x2="342.2" y2="178"/>
+          <line x1="353.5" y1="152" x2="349.8" y2="178"/>
+          <line x1="353.5" y1="152" x2="357.2" y2="178"/>
+          <line x1="368.5" y1="152" x2="364.8" y2="178"/>
+          <line x1="368.5" y1="152" x2="372.2" y2="178"/>
+          <line x1="383.5" y1="152" x2="379.8" y2="178"/>
+          <line x1="383.5" y1="152" x2="387.2" y2="178"/>
+          <line x1="398.5" y1="152" x2="394.8" y2="178"/>
+          <line x1="398.5" y1="152" x2="402.2" y2="178"/>
+          <line x1="413.5" y1="152" x2="409.8" y2="178"/>
+          <line x1="413.5" y1="152" x2="417.2" y2="178"/>
+          <line x1="428.5" y1="152" x2="424.8" y2="178"/>
+          <line x1="428.5" y1="152" x2="432.2" y2="178"/>
+          <line x1="443.5" y1="152" x2="439.8" y2="178"/>
+          <line x1="443.5" y1="152" x2="447.2" y2="178"/>
+          <line x1="458.5" y1="152" x2="454.8" y2="178"/>
+          <line x1="458.5" y1="152" x2="462.2" y2="178"/>
+          <line x1="473.5" y1="152" x2="469.8" y2="178"/>
+          <line x1="473.5" y1="152" x2="477.2" y2="178"/>
+          <line x1="488.5" y1="152" x2="484.8" y2="178"/>
+          <line x1="488.5" y1="152" x2="492.2" y2="178"/>
+        </g>
+        <g class="stub">
+          <line x1="19.8" y1="178" x2="19.8" y2="204"/>
+          <line x1="27.2" y1="178" x2="27.2" y2="204"/>
+          <line x1="34.8" y1="178" x2="34.8" y2="204"/>
+          <line x1="42.2" y1="178" x2="42.2" y2="204"/>
+          <line x1="49.8" y1="178" x2="49.8" y2="204"/>
+          <line x1="57.2" y1="178" x2="57.2" y2="204"/>
+          <line x1="64.8" y1="178" x2="64.8" y2="204"/>
+          <line x1="72.2" y1="178" x2="72.2" y2="204"/>
+          <line x1="79.8" y1="178" x2="79.8" y2="204"/>
+          <line x1="87.2" y1="178" x2="87.2" y2="204"/>
+          <line x1="94.8" y1="178" x2="94.8" y2="204"/>
+          <line x1="102.2" y1="178" x2="102.2" y2="204"/>
+          <line x1="109.8" y1="178" x2="109.8" y2="204"/>
+          <line x1="117.2" y1="178" x2="117.2" y2="204"/>
+          <line x1="124.8" y1="178" x2="124.8" y2="204"/>
+          <line x1="132.2" y1="178" x2="132.2" y2="204"/>
+          <line x1="139.8" y1="178" x2="139.8" y2="204"/>
+          <line x1="147.2" y1="178" x2="147.2" y2="204"/>
+          <line x1="154.8" y1="178" x2="154.8" y2="204"/>
+          <line x1="162.2" y1="178" x2="162.2" y2="204"/>
+          <line x1="169.8" y1="178" x2="169.8" y2="204"/>
+          <line x1="177.2" y1="178" x2="177.2" y2="204"/>
+          <line x1="184.8" y1="178" x2="184.8" y2="204"/>
+          <line x1="192.2" y1="178" x2="192.2" y2="204"/>
+          <line x1="199.8" y1="178" x2="199.8" y2="204"/>
+          <line x1="207.2" y1="178" x2="207.2" y2="204"/>
+          <line x1="214.8" y1="178" x2="214.8" y2="204"/>
+          <line x1="222.2" y1="178" x2="222.2" y2="204"/>
+          <line x1="229.8" y1="178" x2="229.8" y2="204"/>
+          <line x1="237.2" y1="178" x2="237.2" y2="204"/>
+          <line x1="244.8" y1="178" x2="244.8" y2="204"/>
+          <line x1="252.2" y1="178" x2="252.2" y2="204"/>
+          <line x1="259.8" y1="178" x2="259.8" y2="204"/>
+          <line x1="267.2" y1="178" x2="267.2" y2="204"/>
+          <line x1="274.8" y1="178" x2="274.8" y2="204"/>
+          <line x1="282.2" y1="178" x2="282.2" y2="204"/>
+          <line x1="289.8" y1="178" x2="289.8" y2="204"/>
+          <line x1="297.2" y1="178" x2="297.2" y2="204"/>
+          <line x1="304.8" y1="178" x2="304.8" y2="204"/>
+          <line x1="312.2" y1="178" x2="312.2" y2="204"/>
+          <line x1="319.8" y1="178" x2="319.8" y2="204"/>
+          <line x1="327.2" y1="178" x2="327.2" y2="204"/>
+          <line x1="334.8" y1="178" x2="334.8" y2="204"/>
+          <line x1="342.2" y1="178" x2="342.2" y2="204"/>
+          <line x1="349.8" y1="178" x2="349.8" y2="204"/>
+          <line x1="357.2" y1="178" x2="357.2" y2="204"/>
+          <line x1="364.8" y1="178" x2="364.8" y2="204"/>
+          <line x1="372.2" y1="178" x2="372.2" y2="204"/>
+          <line x1="379.8" y1="178" x2="379.8" y2="204"/>
+          <line x1="387.2" y1="178" x2="387.2" y2="204"/>
+          <line x1="394.8" y1="178" x2="394.8" y2="204"/>
+          <line x1="402.2" y1="178" x2="402.2" y2="204"/>
+          <line x1="409.8" y1="178" x2="409.8" y2="204"/>
+          <line x1="417.2" y1="178" x2="417.2" y2="204"/>
+          <line x1="424.8" y1="178" x2="424.8" y2="204"/>
+          <line x1="432.2" y1="178" x2="432.2" y2="204"/>
+          <line x1="439.8" y1="178" x2="439.8" y2="204"/>
+          <line x1="447.2" y1="178" x2="447.2" y2="204"/>
+          <line x1="454.8" y1="178" x2="454.8" y2="204"/>
+          <line x1="462.2" y1="178" x2="462.2" y2="204"/>
+          <line x1="469.8" y1="178" x2="469.8" y2="204"/>
+          <line x1="477.2" y1="178" x2="477.2" y2="204"/>
+          <line x1="484.8" y1="178" x2="484.8" y2="204"/>
+          <line x1="492.2" y1="178" x2="492.2" y2="204"/>
+        </g>
+        <polyline points="256.0,22 136.0,48 196.0,74 226.0,100 241.0,126 233.5,152 237.2,178" class="path"/>
+        <line x1="237.2" y1="178" x2="237.2" y2="228" class="path dash"/>
+        <g class="on">
+          <circle cx="136.0" cy="48" r="2.6"/>
+          <circle cx="196.0" cy="74" r="2.6"/>
+          <circle cx="226.0" cy="100" r="2.6"/>
+          <circle cx="241.0" cy="126" r="2.6"/>
+          <circle cx="233.5" cy="152" r="2.6"/>
+          <circle cx="237.2" cy="178" r="2.2"/>
+          <circle cx="256.0" cy="22" r="4.2"/>
+        </g>
+        <g class="tree"><line x1="522.0" y1="22" x2="522.0" y2="228"/><line x1="518.0" y1="22" x2="526.0" y2="22"/><line x1="518.0" y1="228" x2="526.0" y2="228"/></g>
+        <text x="536.0" y="130" class="pv"><tspan class="it">h</tspan> = 26</text>
+        <path class="brace" d="M165.8,242 Q165.8,235.0 172.8,235.0 L230.2,235.0 Q237.2,235.0 237.2,228 Q237.2,235.0 244.2,235.0 L301.8,235.0 Q308.8,235.0 308.8,242"/>
+        <g class="chain">
+          <line x1="169.8" y1="252" x2="169.8" y2="306"/>
+          <line x1="184.8" y1="252" x2="184.8" y2="306"/>
+          <line x1="199.8" y1="252" x2="199.8" y2="306"/>
+          <line x1="214.8" y1="252" x2="214.8" y2="306"/>
+          <line x1="259.8" y1="252" x2="259.8" y2="306"/>
+          <line x1="274.8" y1="252" x2="274.8" y2="306"/>
+          <line x1="289.8" y1="252" x2="289.8" y2="306"/>
+          <line x1="304.8" y1="252" x2="304.8" y2="306"/>
+        </g>
+        <g class="dot">
+          <circle cx="169.8" cy="306" r="1.6"/>
+          <circle cx="169.8" cy="288" r="1.6"/>
+          <circle cx="169.8" cy="252" r="1.6"/>
+          <circle cx="184.8" cy="288" r="1.6"/>
+          <circle cx="184.8" cy="270" r="1.6"/>
+          <circle cx="184.8" cy="252" r="1.6"/>
+          <circle cx="199.8" cy="306" r="1.6"/>
+          <circle cx="199.8" cy="288" r="1.6"/>
+          <circle cx="199.8" cy="270" r="1.6"/>
+          <circle cx="214.8" cy="306" r="1.6"/>
+          <circle cx="214.8" cy="270" r="1.6"/>
+          <circle cx="214.8" cy="252" r="1.6"/>
+          <circle cx="259.8" cy="306" r="1.6"/>
+          <circle cx="259.8" cy="270" r="1.6"/>
+          <circle cx="259.8" cy="252" r="1.6"/>
+          <circle cx="274.8" cy="288" r="1.6"/>
+          <circle cx="274.8" cy="270" r="1.6"/>
+          <circle cx="274.8" cy="252" r="1.6"/>
+          <circle cx="289.8" cy="306" r="1.6"/>
+          <circle cx="289.8" cy="288" r="1.6"/>
+          <circle cx="289.8" cy="270" r="1.6"/>
+          <circle cx="304.8" cy="306" r="1.6"/>
+          <circle cx="304.8" cy="288" r="1.6"/>
+          <circle cx="304.8" cy="252" r="1.6"/>
+        </g>
+        <g class="on">
+          <circle cx="169.8" cy="270" r="2.9"/>
+          <circle cx="184.8" cy="306" r="2.9"/>
+          <circle cx="199.8" cy="252" r="2.9"/>
+          <circle cx="214.8" cy="288" r="2.9"/>
+          <circle cx="259.8" cy="288" r="2.9"/>
+          <circle cx="274.8" cy="306" r="2.9"/>
+          <circle cx="289.8" cy="252" r="2.9"/>
+          <circle cx="304.8" cy="270" r="2.9"/>
+        </g>
+        <g class="ell"><circle cx="232.2" cy="279.0" r="1.3"/><circle cx="237.2" cy="279.0" r="1.3"/><circle cx="242.2" cy="279.0" r="1.3"/></g>
+        <text x="328.8" y="284.0" class="nm">WOTS+C</text>
+        <g class="tree"><line x1="155.8" y1="252" x2="155.8" y2="306"/><line x1="151.8" y1="252" x2="159.8" y2="252"/><line x1="151.8" y1="306" x2="159.8" y2="306"/></g>
+        <text x="145.8" y="284" class="pv" text-anchor="end"><tspan class="it">w</tspan> = 4</text>
+        <g class="tree"><line x1="165.8" y1="320" x2="308.8" y2="320"/><line x1="165.8" y1="316" x2="165.8" y2="324"/><line x1="308.8" y1="316" x2="308.8" y2="324"/></g>
+        <text x="237.2" y="342" class="pv" text-anchor="middle"><tspan class="it">ℓ</tspan> = 64</text>
+        <line x1="237.2" y1="352" x2="237.2" y2="378" class="brace"/>
+        <path class="brace" d="M106.2,392 Q106.2,385.0 113.2,385.0 L230.2,385.0 Q237.2,385.0 237.2,378 Q237.2,385.0 244.2,385.0 L361.2,385.0 Q368.2,385.0 368.2,392"/>
+        <g class="fors">
+          <polygon points="117.2,402 106.2,430 128.2,430"/>
+          <polygon points="147.2,402 136.2,430 158.2,430"/>
+          <polygon points="177.2,402 166.2,430 188.2,430"/>
+          <polygon points="207.2,402 196.2,430 218.2,430"/>
+          <polygon points="267.2,402 256.2,430 278.2,430"/>
+          <polygon points="297.2,402 286.2,430 308.2,430"/>
+          <polygon points="327.2,402 316.2,430 338.2,430"/>
+          <polygon points="357.2,402 346.2,430 368.2,430"/>
+        </g>
+        <g class="on">
+          <circle cx="112.2" cy="430" r="2.6"/>
+          <circle cx="151.2" cy="430" r="2.6"/>
+          <circle cx="175.2" cy="430" r="2.6"/>
+          <circle cx="213.2" cy="430" r="2.6"/>
+          <circle cx="261.2" cy="430" r="2.6"/>
+          <circle cx="298.2" cy="430" r="2.6"/>
+          <circle cx="332.2" cy="430" r="2.6"/>
+          <circle cx="354.2" cy="430" r="2.6"/>
+        </g>
+        <g class="ell"><circle cx="232.2" cy="420.0" r="1.3"/><circle cx="237.2" cy="420.0" r="1.3"/><circle cx="242.2" cy="420.0" r="1.3"/></g>
+        <text x="388.2" y="421.0" class="nm">FORS</text>
+        <g class="tree"><line x1="94.2" y1="402" x2="94.2" y2="430"/><line x1="90.2" y1="402" x2="98.2" y2="402"/><line x1="90.2" y1="430" x2="98.2" y2="430"/></g>
+        <text x="84.2" y="421" class="pv" text-anchor="end"><tspan class="it">a</tspan> = 10</text>
+        <g class="tree"><line x1="106.2" y1="444" x2="368.2" y2="444"/><line x1="106.2" y1="440" x2="106.2" y2="448"/><line x1="368.2" y1="440" x2="368.2" y2="448"/></g>
+        <text x="237.2" y="466" class="pv" text-anchor="middle"><tspan class="it">k</tspan> = 24</text>
+      </svg>
+  </figure>
 </section>
 
-</main>
+<dl class="stats">
+  <div><dt>Public key</dt><dd>32 B</dd></div>
+  <div><dt>Signature</dt><dd>5,684 B</dd></div>
+  <div><dt>Verification</dt><dd>391 compressions</dd></div>
+  <div><dt>Security</dt><dd>NIST level 1</dd></div>
+</dl>
 
-<footer class="wrap">
-  <p><a href="https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf">Note (PDF)</a> · <a href="https://github.com/TomWambsgans/leansphincs-candidate">Code</a></p>
-  <p>Costs in BLAKE2s compressions; times assume 10<sup>9</sup> per second on a laptop and 33K on a Ledger Nano S+. Tom Wambsgans, personal opinion, subject to change.</p>
+<section class="modes">
+  <div class="tabs" role="tablist">
+    <a href="#wallet" role="tab" aria-controls="wallet">Hardware wallets<span>2<sup>17</sup> signatures</span></a>
+    <a href="#laptop" role="tab" aria-controls="laptop">Laptops &amp; phones<span>2<sup>24</sup> signatures</span></a>
+    <a href="#industry" role="tab" aria-controls="industry">Industry<span>2<sup>30</sup> signatures</span></a>
+    <a href="#threshold" role="tab" aria-controls="threshold">Threshold<span>3-of-4, 2<sup>16</sup> signatures</span></a>
+  </div>
+
+  <dl class="panel" id="wallet" role="tabpanel" aria-label="Hardware wallets">
+    <dt>Key generation</dt><dd>2.2M compressions, e.g. 68&nbsp;s on a Ledger Nano S+</dd>
+    <dt>Signing</dt><dd>111K compressions (3.4&nbsp;s), with a 16&nbsp;KiB cache</dd>
+    <dt>How</dt><dd>only a subtree of 2<sup>13</sup> leaves exists; the signer grinds the randomizer into it</dd>
+  </dl>
+
+  <dl class="panel" id="laptop" role="tabpanel" aria-label="Laptops and phones">
+    <dt>Key generation</dt><dd>287M compressions, about 0.3&nbsp;s on a laptop</dd>
+    <dt>Signing</dt><dd>84K compressions, with a 1&nbsp;MiB cache</dd>
+    <dt>How</dt><dd>only a subtree of 2<sup>20</sup> leaves exists</dd>
+  </dl>
+
+  <dl class="panel" id="industry" role="tabpanel" aria-label="Industry">
+    <dt>Key generation</dt><dd>18.4B compressions, about 20&nbsp;s on a laptop</dd>
+    <dt>Signing</dt><dd>421K compressions with a 1&nbsp;MiB cache, 75K with 1&nbsp;GiB</dd>
+    <dt>How</dt><dd>the full tree</dd>
+  </dl>
+
+  <dl class="panel" id="threshold" role="tabpanel" aria-label="Threshold">
+    <dt>Key generation</dt><dd>1.33&nbsp;GB per operator, no trusted dealer</dd>
+    <dt>Signing</dt><dd>7&nbsp;KB per operator in 10 rounds, no MPC</dd>
+    <dt>Security</dt><dd>against 1 malicious operator</dd>
+    <dt>How</dt><dd>only hashes of secrets run in MPC, all before the message is known (<a href="https://github.com/TomWambsgans/leansphincs-candidate/tree/main/crates/threshold">prototype</a>)</dd>
+  </dl>
+</section>
+
+<footer>
+  <p><a href="https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf">Note</a><a href="https://github.com/TomWambsgans/leansphincs-candidate">Code</a></p>
+  <p>Costs in BLAKE2s compressions; times assume 10<sup>9</sup> per second on a laptop and 33K on a Ledger Nano S+.</p>
 </footer>
 
+</main>
 <script>
-  // The cards act as tabs; the hash keeps the selected mode linkable.
   const ids = ["wallet", "laptop", "industry", "threshold"];
   function show(id) {
     if (!ids.includes(id)) id = ids[0];
     for (const x of ids) {
       document.getElementById(x).hidden = x !== id;
-      document.querySelector(`.card[href="#${x}"]`).setAttribute("aria-selected", x === id);
+      document.querySelector(`.tabs a[href="#${x}"]`).setAttribute("aria-selected", x === id);
     }
   }
-  document.querySelectorAll(".card").forEach(c => c.addEventListener("click", e => {
+  document.querySelectorAll(".tabs a").forEach(t => t.addEventListener("click", e => {
     e.preventDefault();
-    const id = c.getAttribute("href").slice(1);
+    const id = t.getAttribute("href").slice(1);
     history.replaceState(null, "", "#" + id);
     show(id);
   }));
