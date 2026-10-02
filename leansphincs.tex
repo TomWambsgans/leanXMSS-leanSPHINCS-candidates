@@ -99,132 +99,104 @@ surrogate siblings).
 
 \subsection{Threshold signing}
 
-\subsubsection{3-of-4 with a DKG}
-
-A concrete example of what's possible:
 \begin{itemize}
-  \item 3-of-4: any 3 operators can sign
-  \item lifetime: $2^{16}$ signatures, with the hypertree pruning of \cref{sec:pruned} and a subtree of
-        height 12
-  \item malicious security against 1 operator, with abort (but 2 colluders can rebuild the key, unlike
-        3-of-4 BLS)
-  \item DKG: no trusted dealer
-  \item keygen: $786\cdot10^3$ MPC hashes, 1.33~GB of traffic per operator and 2\,734 rounds (measured
-        with the prototype, BLAKE2s)
-  \item signing: thanks to caching of the sub-tree in XMSS, only one FORS has to be computed in MPC, $24\,696$ MPC hashes, 42~MB of
-        traffic per operator and 1\,800 rounds. Either:
-    \begin{itemize}
-    \item vanilla, once the message is known (signing takes a few seconds)
-    \item or with preprocessing: compute the instance before the message is known. Online, no MPC: only
-          $\approx 2.0\cdot10^8$ compressions of grinding in the clear and 10 rounds of 7~KB in total
-          per operator
-    \end{itemize}
+  \item $t$-of-$n$
+  \item signing: malicious security against $t-1$ operators (with abort); 400 bytes per signer, 2 rounds
+  \item keygen: no trusted dealer, a one-time MPC among the $n$ operators, fewer than $n/2$ corrupt
+  \item lifetime: $2^L$, e.g.\ $L=12$, 14 or 16 (pruned, subtree of height $L-4$)
 \end{itemize}
 
-\paragraph{Idea.} Only hashes on secret inputs need MPC: WOTS chain steps and FORS leaves. The rest (trees,
-grinding, WOTS$^+$C counter) runs in the clear. These hashes don't depend on the message, so a FORS
-instance can be computed in advance, and the randomizer ground until the message selects it.
-
-\paragraph{Secrets.} Each secret is the XOR of 4 terms, term $i$ known to every operator except
-$i$~\cite{CDI05}: 1 operator learns nothing, any 2 know everything. Term $i$ is $\hash(k_i,\mathit{addr})$
-for a seed $k_i$, so nothing is stored.
-
-\paragraph{Keygen (DKG).} Each $k_i$ is generated jointly by its 3 holders (commit-reveal), so no holder can
-relate it to another seed. The public parameter and the 14 surrogate nodes come from commit-reveal coin tossing
-(a chosen surrogate could hide a known subtree). MPC hashes the 64 chains of the $2^{12}$ kept leaves to
-their ends ($786\cdot10^3$ hashes) and opens the ends; the tree is built in the clear.
-
-\paragraph{Signing.} The operators agree on $m$ and on a fresh joint nonce $s$ (commit-reveal), kept until the
-signature is finished. They open $R_0=\bigoplus_i\hash(k_i,\mathsf{msg},m,s)$ (local hashes) and grind
-$R=\hash(R_0,\mathit{ctr})$, taking the first counter that works:
+\paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS}).} Each FORS secret is $F(\mathit{addr})$, for a
+threshold PRF $F$: $t$ operators evaluate it together, $t-1$ learn nothing (context-aware, see below).
 \begin{itemize}
-  \item vanilla: until the leaf index lands in the kept subtree, then compute the selected FORS instance
-        in MPC and open the 24 selected secrets
-  \item with preprocessing: until it lands on the next instance, drawn and computed in advance as
-        $\bigoplus_i\hash(k_i,\mathsf{next},D)$, where $D\leftarrow\hash(D,R)$ after each finished signature (so
-        $D$ never repeats), then open the 24 selected secrets
-\end{itemize}
-Instances stay random, so security is as for a plain pruned key. Computing an instance: MPC hashes its
-$24\,576$ secrets into leaves, which are opened; the operators build the FORS root, run the WOTS$^+$C
-counter search, compare hashes of the result, and MPC walks the WOTS chains to the signed positions (120
-hashes).
-
-\paragraph{Cheaters.} The MPC is maliciously secure with abort~\cite{BGIN19} and verified before any
-opening; opened values are checked against public data or against the other holders of the same term. A
-cheater can only cause aborts (identifying it would cost more), so the operators retry with each set of 3.
-Once $R_0$ is opened, the signature is always finished: nobody can
-preview FORS indices and pick which get opened.
-
-\paragraph{MPC cost.} An MPC hash is a BLAKE2s compression on a secret input: about $14.7\cdot10^3$ AND
-gates (XOR is free) and AND-depth 884, i.e.\ 884 rounds (2\,500 rounds is about 2 minutes at 50~ms per
-round). Traffic per AND gate per operator, with malicious security:
-\begin{itemize}
-  \item about 1 bit: 3 operators~\cite{BGIN19} (the numbers above)
-  \item about 1.5 bits: 4 operators~\cite{FF21,BS26}
-  \item about 10 to 16 bits: 3 operators with cut-and-choose~\cite{FLNW17}
-  \item about 8 to 16 bits: bigger clusters (e.g.\ 10-of-15), Shamir over $\mathrm{GF}(2^4)$ (our estimate
-        from~\cite{ATLAS21})
-\end{itemize}
-With $n$ operators and $f<n/2$ corrupt (one seed per set of $f$ operators), $2f+1$ must be online; signing
-despite $f$ cheaters needs $n>3f$.
-
-\paragraph{Against 2 of 4.} One seed per pair (6 seeds) gives secrecy against 2, but 3 signers then have
-no honest majority (and 2 cheaters can block signing), so the MPC must tolerate a dishonest majority:
-\begin{itemize}
-  \item authenticated garbling~\cite{YWZ20}: about 4\,100 bits per AND gate per operator, so 5.9~TB at
-        keygen
-  \item Beaver triples from a pseudorandom correlation generator, authenticated via PIR~\cite{BGHIN26}:
-        about 4 bits per AND gate per operator (6~GB at keygen, 180~MB per FORS instance), but 15 to 150
-        core-hours of computation per operator at keygen, and relies on recent LPN variants
+  \item keygen (MPC): computes and publishes all FORS leaves $\hash(F(\mathit{addr}))$, and the signature of
+        each FORS root by its WOTS key
+  \item signing: the $t$ signers evaluate $F$ at the 24 FORS addresses selected by the message; everything
+        else (FORS paths, WOTS signature, authentication path) is read from the public data
 \end{itemize}
 
-\paragraph{Key rotation.} The shares above cannot be rotated: new seeds would give new secrets, and
-the public key commits to them. Rotation becomes possible if, as in SLH-DSA, every secret is
-$\hash(S,\mathit{addr})$ for one master secret $S$, computed in MPC, and the operators share only $S$:
-$S=t_1\oplus t_2\oplus t_3\oplus t_4$, with term $t_i$ held by every operator except $i$. A rotation needs
-no dealer:
+\paragraph{Choice of $F$.}
+\begin{itemize}
+  \item hash-based, for small $\binom{n}{t-1}$: replicated seeds~\cite{CDI05}, one seed $k_T$ per set $T$ of $t-1$
+        operators, held by the others; $F(x)=\bigoplus_T\hash(k_T,x)$. Hash only
+  \item lattice-based, for large $\binom{n}{t-1}$: threshold PRF~\cite{PRAWNS},
+        $F(x)=\lfloor\langle\hash(x),\mathit{msk}\rangle\rceil_p$, $\mathit{msk}$ Shamir-shared. LWE
+\end{itemize}
+\paragraph{Context-awareness~\cite{PRAWNS}.} To reveal $F(x)$, each of the $t$ signers sends a part $p_i$,
+and the parts combine into $F(x)$:
+\begin{itemize}
+  \item hash-based: within the quorum, each term $\hash(k_T,x)$ is assigned to one signer holding $k_T$; $p_i$ is
+        the XOR of its terms, and $F(x)=\bigoplus_i p_i$
+  \item lattice-based: $p_i=\lambda_i\langle\hash(x),\mathit{sk}_i\rangle$ (Lagrange coefficient $\lambda_i$), and
+        $F(x)$ is $\sum_i p_i \bmod q$, rounded
+\end{itemize}
+A signing can abort. Sent as is, parts of $F(x)$ gathered from aborted signings of different messages
+could be combined into $F(x)$, revealing a FORS secret no signature revealed. So each part is bound to its
+message $m$: signer $i$ adds a mask $\hash(k_{ij},x,m)$ for each co-signer $j$, with $k_{ij}$ a key shared by
+$i$ and $j$. Within one signing, each mask is added twice (by $i$ and by $j$) and cancels; parts from
+signings of different messages carry different masks and don't combine.
+
+\paragraph{Keygen.} Honest-majority MPC, malicious with abort:
 \begin{enumerate}
-  \item every operator sends a random seed to the others
-  \item from all the seeds, everyone expands the same 4 masks $z_1,\dots,z_4$ with $z_1\oplus z_2\oplus
-        z_3\oplus z_4=0$, and every holder of $t_i$ replaces it by $t_i\oplus z_i$
-  \item the holders of each term compare hashes of the new term, then delete the seeds and the old terms
-\end{enumerate}
-$S$ never changes and nobody learns it, but terms stolen before the rotation can't be combined with terms
-stolen after (if at most 1 operator is corrupted in each period). To replace an operator, the 2 other
-holders of each of its 3 terms send it to the newcomer, who checks that the copies match; a rotation then
-makes the leaving operator's terms useless. The same idea also changes $n$ and the threshold, with the same public key: each
-old term is split into fresh pieces for the new committee's terms (checked by its other holders), and the
-old terms are deleted. The cost is one more MPC hash per secret: keygen
-$1.05\cdot10^6$ MPC hashes (1.9~GB, 3\,300 rounds), and $49\cdot10^3$ per FORS instance (91~MB, 4\,200
-rounds), about $1.3\times$ and $2\times$ today. The randomizer keeps its own seeds, so online signing stays
-MPC-free.
-
-\subsubsection{Any \texorpdfstring{$t$-of-$n$}{t-of-n} with a trusted dealer}
-
-With a trusted dealer, signing needs no MPC at all, for any $t$-of-$n$, following PRAWNS~\cite{PRAWNS}:
-\begin{itemize}
-  \item lifetime: $2^{16}$ signatures (16 times more lifetime costs 16 times more public data and dealer
-        time)
-  \item keygen, by the dealer in the clear: $3\cdot10^8$ compressions, for all the FORS instances of the
-        $2^{12}$ kept leaves
-  \item public data: 1.6~GB (the FORS leaves, and 4~MB of WOTS signatures)
-  \item signing: no MPC. Each signer sends 24 evaluation shares, and grinding plus the FORS paths take
-        $74\cdot10^3$ compressions
-\end{itemize}
-How it works:
-\begin{itemize}
-  \item keygen: the dealer samples the key of a context-aware threshold PRF $F$ and sets every FORS secret of the $2^{12}$
-        kept instances to $F(\mathit{addr})$. It builds the pruned key, publishes all the FORS leaves and the WOTS signature of every FORS root, gives each operator its share of $F$, and
+  \item coin tossing: $P$, the kept subtree, its $30-L$ surrogates
+  \item the key of $F$: hash-based, each seed by commit-reveal among its holders; lattice-based, a
+        verifiable Shamir sharing of $\mathit{msk}$
+  \item MPC: $F$ at the $2^{L-4}\cdot24\cdot2^{10}$ FORS addresses, hashed into leaves; $F$ at the
+        $2^{L-4}\cdot64$ WOTS chain starts, hashed 3 times. Open the leaves and chain ends
+  \item in the clear: FORS roots, WOTS$^+$C counters; open the WOTS signatures; build the tree
+  \item the operators check they all got the same public data (public key, FORS leaves, WOTS signatures;
+        1.6~GB for $L=16$) by comparing its hash. Each keeps the public data and its key share of $F$, and
         deletes everything else
-  \item signing: the $t$ signers pick the randomizer by commit-reveal and grind it into the kept subtree.
-        Each sends its evaluation shares of $F$ at the 24 opened FORS secrets, with the message as context
-        (shares for different messages can't be combined, otherwise aborted attempts would leak FORS
-        secrets). Anyone combines $t$ shares and checks each secret against its public leaf
+\end{enumerate}
+
+\paragraph{Signing (any $t$).}
+\begin{enumerate}
+  \item agree on $m$
+  \item $R_0=F(\mathsf{msg},m)$; grind $R=\hash(R_0,\mathit{ctr})$ into the kept subtree. Deterministic: all
+        quorums give the same signature
+  \item open $F$ at the 24 FORS addresses; check each against its leaf
+  \item output $R$, the 24 secrets and paths, the WOTS signature, the authentication path
+\end{enumerate}
+
+\paragraph{Keygen cost (measured).} $\approx1.5\cdot10^3\cdot2^L$ MPC hashes (mostly FORS leaves) of
+$\approx13.5\cdot10^3$ AND gates. The MPC uses replicated sharing over $\mathrm{GF}(2)$ as
+in~\cite{BGIN19}, generalized to $n=2f+1$: each AND gate is computed locally and reshared through one
+collector, $(n-1)+f$ bits in total, i.e.\ 1, 1.2 and 1.29 bits per operator for $n=3$, 5, 7, plus a
+check~\cite{GS20} of negligible cost. Traffic per operator:
+
+\begin{center}
+\begin{tabular}{lrrr}
+  \toprule
+  & $2^{12}$ & $2^{14}$ & $2^{16}$ \\
+  \midrule
+  2-of-3 & 11~GB & 43~GB & 172~GB \\
+  3-of-5 & 13~GB & 52~GB & 207~GB \\
+  4-of-7 & 14~GB & 55~GB & 222~GB \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Remarks.}
+\begin{itemize}
+  \item With a trusted dealer instead, keygen needs no MPC: the dealer computes everything in the clear
+        ($3\cdot10^8$ compressions for $L=16$) and gives each operator its key share of $F$.
+  \item The key shares can be refreshed, and the committee changed (including $n$ and $t$), with the same
+        public key:
+  \begin{itemize}
+    \item hash-based:
+    \begin{enumerate}
+      \item the new committee generates fresh seeds for its own $n'$, $t'$ (as at keygen): they define a
+            new PRF $F'$
+      \item for each FORS address $x$, $t$ old operators send their parts of $F(x)$ and the new operators
+            their parts of $F'(x)$, masked so that only $c(x)=F(x)\oplus F'(x)$ is revealed; $c(x)$ is
+            published (it reveals nothing: $F'(x)$ masks $F(x)$)
+      \item from then on, the secret at $x$ is $F'(x)\oplus c(x)$, which equals $F(x)$: signing uses $F'$
+            and the public $c$
+      \item the old seeds are deleted
+    \end{enumerate}
+    \item lattice-based: $t$ old operators reshare $\mathit{msk}$ to the new committee, with threshold $t'$
+  \end{itemize}
 \end{itemize}
-This is secure against $t-1$ malicious signers, and $n$, $t$ and the shares
-can change without changing the public key. For large $n$ and $t$ (say 30-of-40), $F$ is a lattice (LWE)
-threshold PRF over Shamir shares, used only by the signers; for small $\binom{n}{t}$ it can be hash-based:
-our seeds, plus pairwise masks that cancel only within one signing session. The price is trusting the dealer at keygen: PRAWNS has no efficient DKG.
 
 \begin{thebibliography}{9}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
@@ -237,26 +209,13 @@ our seeds, plus pairwise masks that cancel only within one signing session. The 
   \url{https://conduition.io/cryptography/hypertree-pruning/}.
 \bibitem{CDI05} R.~Cramer, I.~Damg{\aa}rd, Y.~Ishai. \emph{Share Conversion, Pseudorandom Secret-Sharing and
   Applications to Secure Computation}. TCC, 2005. \url{https://doi.org/10.1007/978-3-540-30576-7_19}.
+\bibitem{GS20} V.~Goyal, Y.~Song. \emph{Malicious Security Comes Free in Honest-Majority MPC}. CRYPTO, 2020.
+  \url{https://eprint.iacr.org/2020/134}.
 \bibitem{BGIN19} E.~Boyle, N.~Gilboa, Y.~Ishai, A.~Nof. \emph{Practical Fully Secure Three-Party
   Computation via Sublinear Distributed Zero-Knowledge Proofs}. ACM CCS, 2019.
   \url{https://eprint.iacr.org/2019/1390}.
-\bibitem{FF21} A.~Dalskov, D.~Escudero, M.~Keller. \emph{Fantastic Four: Honest-Majority Four-Party
-  Secure Computation With Malicious Security}. USENIX Security, 2021.
-  \url{https://eprint.iacr.org/2020/1330}.
 \bibitem{PRAWNS} D.~Boneh, B.~B\"unz, J.~D., Y.~Litchev, K.~Nazirkhanova. \emph{PRAWNS: Threshold Hash-Based
   Signatures from Threshold PRFs}, 2026. \url{https://eprint.iacr.org/2026/2142}.
-\bibitem{YWZ20} K.~Yang, X.~Wang, J.~Zhang. \emph{More Efficient MPC from Improved Triple Generation and
-  Authenticated Garbling}. ACM CCS, 2020. \url{https://eprint.iacr.org/2019/1104}.
-\bibitem{BGHIN26} E.~Boyle, N.~Gilboa, M.~Hamilis, Y.~Ishai, A.~Nof. \emph{Dishonest-Majority Secure
-  Computation via PIR-Authenticated Multiplication Triples}, 2026. \url{https://eprint.iacr.org/2026/257}.
-\bibitem{BS26} A.~Br\"uggemann, T.~Schneider. \emph{When Trying to Catch Cheaters Breaks the MPC: Breaking
-  and Fixing Delayed Consistency Checks in Trident, Fantastic Four, SWIFT, and Quad}, 2026.
-  \url{https://eprint.iacr.org/2026/234}.
-\bibitem{FLNW17} J.~Furukawa, Y.~Lindell, A.~Nof, O.~Weinstein. \emph{High-Throughput Secure Three-Party
-  Computation for Malicious Adversaries and an Honest Majority}. Eurocrypt, 2017.
-  \url{https://eprint.iacr.org/2016/944}.
-\bibitem{ATLAS21} V.~Goyal, H.~Li, R.~Ostrovsky, A.~Polychroniadou, Y.~Song. \emph{ATLAS: Efficient and
-  Scalable MPC in the Honest Majority Setting}. CRYPTO, 2021. \url{https://eprint.iacr.org/2021/833}.
 \end{thebibliography}
 
 \end{document}
