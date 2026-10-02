@@ -33,12 +33,14 @@ fn dkg_then_vanilla_and_preprocessed_signing() {
     assert_eq!(online, [0, 1, 2]);
     let pk = cluster.ops[0].key().pk;
     assert!(cluster.ops.iter().all(|o| o.key().pk == pk), "every operator has the key");
+    let mut prev = cluster.ops[0].last;
     for i in 0..2 {
         let m = message(i);
         let (sig, _, _) = cluster.sign(&m, Mode::Vanilla).unwrap();
         assert_eq!(verify(&pk, &m, &sig), Ok(()));
         assert_eq!(sig.to_bytes().len(), SIG_SIZE);
-        assert!(cluster.ops.iter().all(|o| o.last == Some(sig.randomizer) && o.pending.is_none_or(|p| p.done)), "every operator, the offline one too, moves on");
+        assert!(cluster.ops.iter().all(|o| o.last == Some(advance(prev, &sig.randomizer)) && o.pending.is_none_or(|p| p.done)), "every operator, the offline one too, moves on");
+        prev = cluster.ops[0].last;
     }
     for i in 2..4 {
         cluster.preprocess().unwrap();
@@ -99,7 +101,7 @@ fn a_cheater_in_any_step_is_routed_around_and_learns_only_the_signature() {
             for o in honest(&cluster, bad) {
                 assert!(o.seen_r.iter().all(|r| issued.contains(r)), "{c:?} {lie:?} {mode:?}: operator {} saw another R", o.id);
                 assert!(!online.contains(&o.id) || o.seen_r.contains(&sig.randomizer));
-                assert_eq!(o.last, Some(sig.randomizer), "{c:?} {lie:?} {mode:?}: operator {} missed the signature", o.id);
+                assert_eq!(o.last, cluster.ops[online[0]].last, "{c:?} {lie:?} {mode:?}: operator {} missed the signature\n{}", o.id, cluster.log.join("\n"));
             }
             assert!(honest(&cluster, bad).any(|o| !o.seen_r.is_empty()));
         }
@@ -114,12 +116,13 @@ fn a_cheater_in_any_step_is_routed_around_and_learns_only_the_signature() {
 /// The cheats a preprocessing can meet.
 const PREPROCESSING_CHEATS: [(Cheat, Lie); 3] = [(Cheat::FlipAnd { and: 7, bit: 1, consistent: false }, Lie::None), (Cheat::Honest, Lie::FlipWots), (Cheat::Honest, Lie::AgreeHash)];
 
-/// Preprocesses (with the cluster's cheats), then signs `m` on the new instance with no cheats: the
-/// honest online operators hold the same instance, and the signature lands on it.
+/// Preprocesses (with the cluster's cheats, which make the cheater's sets abort), then signs `m` on
+/// the new instance with no cheats: the online operators hold the same instance, the signature lands
+/// on it, and the honest operators end with the same draw state.
 fn preprocess_then_sign(cluster: &mut Cluster, bad: usize, m: &Message) {
     let fail = |c: &Cluster, e: &dyn std::fmt::Display| -> ! { panic!("{e}\n{}", c.log.join("\n")) };
     let (online, _) = cluster.preprocess().unwrap_or_else(|e| fail(cluster, &e));
-    assert!(!online.contains(&bad), "the cheater's sets abort");
+    assert!(cluster.hooks.cheats.is_empty() || !online.contains(&bad), "the cheater's sets abort");
     let target = cluster.ops[online[0]].next.as_ref().unwrap().idx;
     assert!(online.iter().all(|&o| cluster.ops[o].next.as_ref().is_some_and(|n| n.idx == target)), "the online operators hold the instance");
     cluster.set_cheats(vec![]);
@@ -127,6 +130,8 @@ fn preprocess_then_sign(cluster: &mut Cluster, bad: usize, m: &Message) {
     let (sig, _, _) = cluster.sign(m, Mode::Preprocessed).unwrap_or_else(|e| fail(cluster, &e));
     assert_eq!(verify(&pk, m, &sig), Ok(()));
     assert_eq!(digest_index(&pk.public_param, &pk.root, &sig.randomizer, m), target, "landed on the preprocessed instance");
+    let last = cluster.ops[(bad + 1) % 4].last;
+    assert!(honest(cluster, bad).all(|o| o.last == last), "the honest operators have the same draw state\n{}", cluster.log.join("\n"));
 }
 
 /// The preprocessing cheats over many seeds, each from the same state (after the DKG and a signature
@@ -184,6 +189,23 @@ fn a_lone_unfinished_claim_does_not_redirect_the_cluster() {
         assert_eq!(digest_index(&pk.public_param, &pk.root, &sig.randomizer, &m), target, "the instance went to the request");
         assert!(honest(&cluster, bad).all(|o| o.pending.is_none_or(|p| p.m != fake.m)), "nobody signed the fake request");
     }
+}
+
+/// A cheater picking `s` (a lone claim, adopted when no honest operator holds the request) can make
+/// the operators sign an earlier request again as a new one, which repeats its randomizer: the next
+/// instance is still a fresh one.
+#[test]
+fn a_repeated_randomizer_does_not_redraw_a_used_instance() {
+    let (mut cluster, _, _) = Cluster::dkg_with(3, seeded()).unwrap();
+    let bad = 1;
+    let old = message(70);
+    let (first, _, _) = cluster.sign(&old, Mode::Vanilla).unwrap();
+    let record = cluster.ops[0].pending.unwrap();
+    preprocess_then_sign(&mut cluster, bad, &message(71));
+    cluster.ops[bad].pending = Some(Pending { done: false, ..record });
+    let (again, online, _) = cluster.sign(&old, Mode::Vanilla).unwrap();
+    assert!(online.contains(&bad) && again == first, "the cheater's s gave the same signature again");
+    preprocess_then_sign(&mut cluster, bad, &message(72));
 }
 
 #[test]

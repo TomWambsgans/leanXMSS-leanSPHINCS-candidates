@@ -7,7 +7,7 @@
 //! Simplifications of this research prototype:
 //! - the operators are threads of one process, over simulated networks (a deployment needs private,
 //!   direct links between operators);
-//! - the operators' state (pending request, last randomizer, preprocessed instance) is kept in
+//! - the operators' state (pending request, draw state, preprocessed instance) is kept in
 //!   memory, not persisted;
 //! - a cheater is not identified, so one that aborts the four-operator steps of the DKG (seed
 //!   generation, coin tossing, the agreement on the public key) blocks it.

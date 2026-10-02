@@ -645,7 +645,9 @@ pub(crate) fn sign(op: &mut Operator, net: &mut Net4, link: Link, roles: &Roles,
     if !om1(net, &members, Some(&what), hooks) {
         return abort("operators disagree on the request");
     }
-    op.pending = Some(Pending { m: *m, mode, s, done: false });
+    if !rerun {
+        op.pending = Some(Pending { m: *m, mode, s, done: false });
+    }
     let (own, prev) = op.shares(roles, |seed| tagged_term(&pp, seed, TAG_MSG, &msg_data(m, &s)));
     let r0 = open_values(&mut party, &[own], &[prev], hooks.lies(op.id, Lie::FlipR0))?[0];
     let tree = &key.tree;
@@ -695,8 +697,8 @@ pub(crate) fn sign(op: &mut Operator, net: &mut Net4, link: Link, roles: &Roles,
     Ok((sig, meter.phases))
 }
 
-/// A signature of this request is finished: the request is done, its randomizer draws the next
-/// instance, and a preprocessed instance it landed on is used up (kept for reruns of the request).
+/// A signature of this request is finished: the request is done, its randomizer advances the draw
+/// state, and a preprocessed instance it landed on is used up (kept for reruns of the request).
 /// A rerun of a request this operator already finished gave the same signature: nothing changes.
 fn finished(op: &mut Operator, m: &Message, sig: &Signature, mode: Mode) {
     if let Some(p) = op.pending.as_mut()
@@ -707,7 +709,7 @@ fn finished(op: &mut Operator, m: &Message, sig: &Signature, mode: Mode) {
         }
         p.done = true;
     }
-    op.last = Some(sig.randomizer);
+    op.last = Some(advance(op.last, &sig.randomizer));
     let key = op.key();
     let idx = digest_index(&key.pk.public_param, &key.pk.root, &sig.randomizer, m);
     if mode == Mode::Preprocessed
@@ -749,8 +751,8 @@ pub(crate) fn observe_signature(op: &mut Operator, net: &mut Net4, roles: &Roles
     Ok(())
 }
 
-/// Draws the next instance as the XOR of the terms of `last` (the randomizer of the last finished
-/// signature, which never repeats) and computes it; the online operators then send its public data
+/// Draws the next instance as the XOR of the terms of `last` (the draw state, which never repeats)
+/// and computes it; the online operators then send its public data
 /// to the fourth, which checks it and keeps it only if it checks (its verdict is its own: it never
 /// blocks the others).
 pub(crate) fn preprocess(op: &mut Operator, net: &mut Net4, link: Option<Link>, roles: &Roles, hooks: &Hooks) -> Result<Vec<Phase>, Abort> {
@@ -764,7 +766,7 @@ pub(crate) fn preprocess(op: &mut Operator, net: &mut Net4, link: Option<Link>, 
         if op.pending.is_some_and(|p| !p.done) {
             return abort("a request is pending");
         }
-        let last = op.last.expect("no last randomizer");
+        let last = op.last.expect("no draw state");
         let mut party = party(op, roles, link, hooks)?;
         let mut what = last.to_vec();
         what.extend_from_slice(party.session());

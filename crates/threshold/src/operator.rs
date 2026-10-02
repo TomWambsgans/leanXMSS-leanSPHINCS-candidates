@@ -82,8 +82,9 @@ pub struct Operator {
     pub id: usize,
     pub(crate) seeds: [Option<Seed>; 4],
     pub key: Option<KeyState>,
-    /// The randomizer of the last finished signature (the root before the first): it draws the
-    /// next preprocessed instance.
+    /// The draw state: a running hash of the randomizers of the finished signatures (the root
+    /// before the first). It draws the next preprocessed instance, and never repeats, even if a
+    /// randomizer does (an earlier request signed again as a new one, with an `s` a cheater picked).
     pub last: Option<Randomizer>,
     /// The preprocessed next instance, checked by this operator, and consumed by the next
     /// preprocessed signature.
@@ -123,6 +124,13 @@ impl Operator {
     pub fn key(&self) -> &KeyState {
         self.key.as_ref().expect("no key yet")
     }
+}
+
+/// The draw state after a signature with randomizer `r` is finished.
+pub fn advance(last: Option<Randomizer>, r: &Randomizer) -> Randomizer {
+    let mut h = blake2s::Hasher::new();
+    h.update(b"draw").update(&last.unwrap_or_default()).update(r);
+    h.finalize()[..RANDOMIZER_LEN].try_into().unwrap()
 }
 
 /// `Th(P, tw, k_t)`: seed `t`'s term of the secret named by `tw`.
