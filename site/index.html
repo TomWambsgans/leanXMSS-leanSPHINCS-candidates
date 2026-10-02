@@ -13,112 +13,15 @@
 <header class="hero">
   <div class="wrap">
     <h1>leanSphincs</h1>
-    <p class="tagline">A post-quantum, hash-based signature with the shape of SLH-DSA, retuned for small signatures and cheap verification.</p>
-    <dl class="stats">
-      <div><dt>Public key</dt><dd>32&nbsp;B</dd></div>
-      <div><dt>Signature</dt><dd>5,684&nbsp;B</dd></div>
-      <div><dt>Verification</dt><dd>391 <small>compressions</small></dd></div>
-      <div><dt>Security</dt><dd>NIST level 1</dd></div>
-    </dl>
-    <nav class="links">
-      <a href="https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf">Note (PDF)</a>
-      <a href="https://github.com/TomWambsgans/leansphincs-candidate">Code</a>
-      <a href="#how">How it works</a>
-    </nav>
-  </div>
-</header>
-
-<main class="wrap">
-
-<section class="choose" aria-labelledby="choose-title">
-  <h2 id="choose-title">Pick your setting</h2>
-  <p class="lead">Same public key, same signature, same verifier. Only the signer changes.</p>
-
-  <div class="cards" role="tablist">
-    <a class="card" href="#wallet" role="tab" aria-controls="wallet">
-      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/></svg>
-      <span class="name">Hardware wallet</span>
-      <span class="life">2<sup>16</sup> signatures</span>
-      <span class="hint">Ledger Nano S+: keygen 34&nbsp;s, signing 4&nbsp;s</span>
-    </a>
-    <a class="card" href="#laptop" role="tab" aria-controls="laptop">
-      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="30,30 14,58 46,58"/></svg>
-      <span class="name">Laptop &amp; phone</span>
-      <span class="life">2<sup>24</sup> signatures</span>
-      <span class="hint">keygen 0.3&nbsp;s on a laptop</span>
-    </a>
-    <a class="card" href="#industry" role="tab" aria-controls="industry">
-      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="k" points="48,6 6,58 90,58"/></svg>
-      <span class="name">Industry</span>
-      <span class="life">2<sup>30</sup> signatures</span>
-      <span class="hint">the full tree, keygen 20&nbsp;s on a laptop</span>
-    </a>
-    <a class="card" href="#threshold" role="tab" aria-controls="threshold">
-      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/><circle class="op" cx="62" cy="38" r="5"/><circle class="op" cx="76" cy="38" r="5"/><circle class="op" cx="62" cy="52" r="5"/><circle class="op off" cx="76" cy="52" r="5"/></svg>
-      <span class="name">Threshold (MPC)</span>
-      <span class="life">3-of-4, 2<sup>16</sup> signatures</span>
-      <span class="hint">no trusted dealer, no MPC when signing</span>
-    </a>
-  </div>
-
-  <section class="panel" id="wallet" role="tabpanel">
-    <h3>Hardware wallet</h3>
-    <table>
-      <tr><th>Lifetime</th><td>2<sup>16</sup> signatures</td></tr>
-      <tr><th>Key generation</th><td>1.1M compressions, about 34&nbsp;s on a Ledger Nano S+</td></tr>
-      <tr><th>Signing</th><td>142K compressions, about 4&nbsp;s, with a 16&nbsp;KiB cache</td></tr>
-    </table>
-    <p>The key only builds one subtree of 2<sup>12</sup> leaves, and replaces the 14 siblings above it with pseudorandom nodes. The signer grinds the randomizer (2<sup>14</sup> tries on average) until the message lands in its subtree.</p>
-  </section>
-
-  <section class="panel" id="laptop" role="tabpanel">
-    <h3>Laptop &amp; phone</h3>
-    <table>
-      <tr><th>Lifetime</th><td>2<sup>24</sup> signatures</td></tr>
-      <tr><th>Key generation</th><td>287M compressions, about 0.3&nbsp;s on a laptop</td></tr>
-      <tr><th>Signing</th><td>84K compressions with a 1&nbsp;MiB cache</td></tr>
-    </table>
-    <p>The same pruning with a subtree of 2<sup>20</sup> leaves, so grinding drops to 2<sup>6</sup> tries. Also fits powerful hardware wallets.</p>
-  </section>
-
-  <section class="panel" id="industry" role="tabpanel">
-    <h3>Industry</h3>
-    <table>
-      <tr><th>Lifetime</th><td>2<sup>30</sup> signatures</td></tr>
-      <tr><th>Key generation</th><td>18.4B compressions, about 20&nbsp;s on a laptop</td></tr>
-      <tr><th>Signing</th><td>421K compressions with a 1&nbsp;MiB cache, 75K with 1&nbsp;GiB</td></tr>
-    </table>
-    <p>The full tree of 2<sup>26</sup> leaves. Each few-time key is used about 16 times over the lifetime, which the security bound accounts for.</p>
-  </section>
-
-  <section class="panel" id="threshold" role="tabpanel">
-    <h3>Threshold (MPC)</h3>
-    <table>
-      <tr><th>Signers</th><td>any 3 of 4 operators</td></tr>
-      <tr><th>Security</th><td>against 1 malicious operator, key generated without a trusted dealer</td></tr>
-      <tr><th>Lifetime</th><td>2<sup>16</sup> signatures</td></tr>
-      <tr><th>Key generation</th><td>1.3&nbsp;GB of traffic per operator</td></tr>
-      <tr><th>Signing</th><td>no MPC once the message is known: about 10 rounds of a few KB</td></tr>
-    </table>
-    <p>Only hashes of secrets run in MPC, and none of them depends on the message. The next few-time key is computed in advance (42&nbsp;MB of traffic per operator), and the randomizer is ground until the message lands on it. <a href="https://github.com/TomWambsgans/leansphincs-candidate/tree/main/crates/threshold">Prototype in Rust</a>.</p>
-  </section>
-</section>
-
-<section class="how" id="how" aria-labelledby="how-title">
-  <h2 id="how-title">How it works</h2>
-  <p>
-    One Merkle tree of one-time keys. The message, hashed with a randomizer, picks a leaf: that leaf's
-    one-time key signs a few-time key, which signs the message. This is the shape of SLH-DSA-128-24
-    (NIST SP&nbsp;800-230), with three changes:
-  </p>
-  <ul>
-    <li>a tree of height <strong>26</strong>, instead of 22;</li>
-    <li>few-time keys (FORS) of <strong>24 trees of height 10</strong>, instead of 6 of height 24;</li>
-    <li><strong>WOTS+C</strong> instead of WOTS: 64 chains of length 4 whose positions sum to 120, so no checksum.</li>
-  </ul>
-
-  <figure class="diagram">
-    <svg viewBox="0 0 720 470" role="img" aria-labelledby="dia-title">
+    <div class="how">
+      <ol class="steps">
+        <li><span class="n">1</span><p>The message picks a leaf of a tree of 2<sup>26</sup> one-time keys. The root is the <strong>public key</strong>.</p></li>
+        <li><span class="n">2</span><p>Its <strong>WOTS+C</strong> one-time key signs a few-time key.</p></li>
+        <li><span class="n">3</span><p>The <strong>FORS</strong> few-time key signs the message.</p></li>
+        <li class="verify"><p>Verify: recompute the root, in <strong>391 compressions</strong>.</p></li>
+      </ol>
+      <figure class="diagram">
+    <svg viewBox="120 12 610 528" role="img" aria-labelledby="dia-title">
       <title id="dia-title">A leanSphincs signature: a Merkle path, a WOTS+C signature and a FORS signature</title>
       <defs>
         <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker>
@@ -182,20 +85,117 @@
       <text x="530" y="396" class="t">FORS few-time key</text>
       <text x="530" y="414" class="m">24 trees of height 10</text>
 
+      <!-- the message -->
+      <line x1="330" y1="424" x2="330" y2="450" class="flow" marker-end="url(#arr)"/>
+      <text x="340" y="442" class="m">signs</text>
+      <rect x="276" y="454" width="108" height="34" rx="8" class="msg"/>
+      <text x="330" y="476" class="t" text-anchor="middle">message</text>
+
+      <!-- steps -->
+      <g class="badge"><circle cx="306" cy="248" r="11"/><text x="306" y="252.5" text-anchor="middle">1</text></g>
+      <g class="badge"><circle cx="232" cy="307" r="11"/><text x="232" y="311.5" text-anchor="middle">2</text></g>
+      <g class="badge"><circle cx="150" cy="398" r="11"/><text x="150" y="402.5" text-anchor="middle">3</text></g>
+
       <!-- legend -->
-      <g transform="translate(200,454)" class="legend">
+      <g transform="translate(200,524)" class="legend">
         <rect x="0" y="-10" width="12" height="12" rx="3" class="on"/><text x="18" y="0" class="m">recomputed by the verifier</text>
         <rect x="190" y="-10" width="12" height="12" rx="3" class="sib"/><text x="208" y="0" class="m">sent in the signature</text>
       </g>
     </svg>
-    <figcaption>The message picks one leaf of the tree and one leaf in each FORS tree. The signature reveals them, with the sibling nodes needed to recompute every root: 5,684 bytes, verified in 391 compressions.</figcaption>
-  </figure>
+      </figure>
+    </div>
+
+    <dl class="stats">
+      <div><dt>Public key</dt><dd>32&nbsp;B</dd></div>
+      <div><dt>Signature</dt><dd>5,684&nbsp;B</dd></div>
+      <div><dt>Verification</dt><dd>391 <small>compressions</small></dd></div>
+      <div><dt>Security</dt><dd>NIST level 1</dd></div>
+    </dl>
+    <p class="aside">SLH-DSA-128-24 shape (NIST SP&nbsp;800-230), with height 26, FORS 24&nbsp;×&nbsp;height&nbsp;10, and WOTS+C.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section class="choose" aria-labelledby="choose-title">
+  <h2 id="choose-title">Pick your setting</h2>
+  <p class="lead">Same signature and verifier; only the signer changes.</p>
+
+  <div class="cards" role="tablist">
+    <a class="card" href="#wallet" role="tab" aria-controls="wallet">
+      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/></svg>
+      <span class="name">Hardware wallet</span>
+      <span class="life">2<sup>16</sup> signatures</span>
+      <span class="hint">Ledger Nano S+</span>
+    </a>
+    <a class="card" href="#laptop" role="tab" aria-controls="laptop">
+      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="30,30 14,58 46,58"/></svg>
+      <span class="name">Laptop &amp; phone</span>
+      <span class="life">2<sup>24</sup> signatures</span>
+      <span class="hint">also powerful hardware wallets</span>
+    </a>
+    <a class="card" href="#industry" role="tab" aria-controls="industry">
+      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="k" points="48,6 6,58 90,58"/></svg>
+      <span class="name">Industry</span>
+      <span class="life">2<sup>30</sup> signatures</span>
+      <span class="hint">the full tree</span>
+    </a>
+    <a class="card" href="#threshold" role="tab" aria-controls="threshold">
+      <svg viewBox="0 0 96 64" aria-hidden="true"><polygon class="t" points="48,6 6,58 90,58"/><polygon class="k" points="24,44 16,58 32,58"/><circle class="op" cx="62" cy="38" r="5"/><circle class="op" cx="76" cy="38" r="5"/><circle class="op" cx="62" cy="52" r="5"/><circle class="op off" cx="76" cy="52" r="5"/></svg>
+      <span class="name">Threshold (MPC)</span>
+      <span class="life">3-of-4, 2<sup>16</sup> signatures</span>
+      <span class="hint">no trusted dealer</span>
+    </a>
+  </div>
+
+  <section class="panel" id="wallet" role="tabpanel">
+    <h3>Hardware wallet</h3>
+    <table>
+      <tr><th>Lifetime</th><td>2<sup>16</sup> signatures</td></tr>
+      <tr><th>Key generation</th><td>1.1M compressions, about 34&nbsp;s on a Ledger Nano S+</td></tr>
+      <tr><th>Signing</th><td>142K compressions, about 4&nbsp;s, with a 16&nbsp;KiB cache</td></tr>
+    </table>
+    <p>The key only builds a subtree of 2<sup>12</sup> leaves; the signer grinds the randomizer until the message lands in it.</p>
+  </section>
+
+  <section class="panel" id="laptop" role="tabpanel">
+    <h3>Laptop &amp; phone</h3>
+    <table>
+      <tr><th>Lifetime</th><td>2<sup>24</sup> signatures</td></tr>
+      <tr><th>Key generation</th><td>287M compressions, about 0.3&nbsp;s on a laptop</td></tr>
+      <tr><th>Signing</th><td>84K compressions with a 1&nbsp;MiB cache</td></tr>
+    </table>
+    <p>The same, with a subtree of 2<sup>20</sup> leaves.</p>
+  </section>
+
+  <section class="panel" id="industry" role="tabpanel">
+    <h3>Industry</h3>
+    <table>
+      <tr><th>Lifetime</th><td>2<sup>30</sup> signatures</td></tr>
+      <tr><th>Key generation</th><td>18.4B compressions, about 20&nbsp;s on a laptop</td></tr>
+      <tr><th>Signing</th><td>421K compressions with a 1&nbsp;MiB cache, 75K with 1&nbsp;GiB</td></tr>
+    </table>
+    <p>The full tree.</p>
+  </section>
+
+  <section class="panel" id="threshold" role="tabpanel">
+    <h3>Threshold (MPC)</h3>
+    <table>
+      <tr><th>Signers</th><td>any 3 of 4 operators</td></tr>
+      <tr><th>Security</th><td>against 1 malicious operator, key generated without a trusted dealer</td></tr>
+      <tr><th>Lifetime</th><td>2<sup>16</sup> signatures</td></tr>
+      <tr><th>Key generation</th><td>1.3&nbsp;GB of traffic per operator</td></tr>
+      <tr><th>Signing</th><td>no MPC once the message is known: about 10 rounds of a few KB</td></tr>
+    </table>
+    <p>The next few-time key is computed in MPC in advance; signing only grinds and opens. <a href="https://github.com/TomWambsgans/leansphincs-candidate/tree/main/crates/threshold">Prototype</a>.</p>
+  </section>
 </section>
 
 </main>
 
 <footer class="wrap">
-  <p>Costs are BLAKE2s compressions; times assume 33K per second on a Ledger Nano S+ and 10<sup>9</sup> on a laptop. Personal opinion of the author, Tom Wambsgans; subject to change.</p>
+  <p><a href="https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf">Note (PDF)</a> · <a href="https://github.com/TomWambsgans/leansphincs-candidate">Code</a></p>
+  <p>Costs in BLAKE2s compressions (Nano S+: 33K/s, laptop: 10<sup>9</sup>/s). Tom Wambsgans, personal opinion, subject to change.</p>
 </footer>
 
 <script>
