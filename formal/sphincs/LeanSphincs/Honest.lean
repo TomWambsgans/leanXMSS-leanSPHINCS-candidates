@@ -59,6 +59,25 @@ theorem honest_completeness_negligible (hb : 10 ≤ subtreeHeight) (message : Me
   exact (add_le_add (inv_two_pow_anti he) (inv_two_pow_anti (by decide))).trans_eq
     (inv_two_pow_succ_add 32767)
 
+/-- The sum of honest failure probabilities over the entire 256-bit message space is ≤2^-256.
+This is the same all-message union-bound form used by the leanVM completeness theorem. -/
+theorem honest_completeness_all_messages (hb : 10 ≤ subtreeHeight) :
+    (∑' message : Message,
+      Pr[fun r => r.1 = false | (simulateQ romImpl (honestExperiment message)).run ∅])
+      ≤ (2⁻¹ : ℝ≥0∞) ^ 256 := by
+  rw [tsum_fintype]
+  calc
+    _ ≤ ∑ _message : Message, (2⁻¹ : ℝ≥0∞) ^ 512 := by
+      apply Finset.sum_le_sum
+      intro message _
+      exact (honest_completeness_negligible hb message).trans (inv_two_pow_anti (by decide))
+    _ = (2 : ℝ≥0∞) ^ 256 * (2⁻¹ : ℝ≥0∞) ^ 512 := by
+      rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul,
+        show Fintype.card Message = 2 ^ 256 by simp [messageBits], Nat.cast_pow, Nat.cast_ofNat]
+    _ = (2⁻¹ : ℝ≥0∞) ^ 256 := by
+      rw [← ENNReal.inv_pow, ← div_eq_mul_inv]
+      exact two_pow_div_two_pow 256 256
+
 end LeanSphincs.Completeness
 
 namespace LeanSphincs.Lifetimes

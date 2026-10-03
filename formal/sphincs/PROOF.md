@@ -44,6 +44,8 @@ correctness. `Honest.honest_completeness` therefore proves a failure bound of
 fixed message. `Lifetimes.requested_completeness` specializes this to ≤2^-32767 for all six
 instances. This is a single honest experiment, not a theorem about arbitrary adversarially
 populated initial caches or simultaneous success of unlimited signing calls.
+`honest_completeness_all_messages` also bounds the sum over all 2^256 messages by 2^-256,
+matching the original leanVM completeness formulation.
 
 `ForsCoverage.lean` proves the 266-bit digest's index/leaf decomposition is bijective. For
 fixed sets R[i,t] of distinct disclosed leaves, a fresh uniform digest is covered with probability
@@ -67,6 +69,31 @@ requested N values, with no floating point or native proof evaluation. `Lifetime
 expresses these bounds as probabilities and covers every smaller N. They prove the scripts'
 binomial occupancy expression is ≤2^-127; connecting that expression to the adaptive signing
 transcript remains necessary.
+
+`LifetimeSampling.lean` and `LifetimeIndependent.lean` connect the arithmetic to an explicit
+independent uniform FORS experiment. `LifetimeLanding.lean` factors the landed digest law into
+a uniform local index and all 24 uniform selectors. `LifetimeGrinding.lean` proves this exact
+conditional law for the actual randomized loop and its subsequent two-block digest, handling
+repeated randomizers and discharging freshness from key generation.
+`LifetimeReuse.lean` permits cached accepted digests already represented in a proof-side prior
+set. Every increasing event after one disclosure update is bounded by inserting one uniform
+view; repeats and exhaustion leave the set unchanged. Preservation through full signing,
+iteration over the lifetime, and adversary-prequeried accepted inputs remain separate obligations.
+
+`SecurityTreeWitness.lean` extracts canonical paths, same-address node matches, and surrogate
+preimages. `SecurityChainWitness.lean` and `SecurityWotsWitness.lean` classify chain divergence,
+two linked prefix edges, two chain contacts, and a unit-neighbor encoding plus a contact.
+`SecurityEncoding.lean` supplies the candidate's injective decoder and 4032-neighbor bound.
+`SecurityForsWitness.lean` extracts exact FORS secrets/paths or queried leaf/node/root-list
+matches. `SecurityVerifier.lean` connects these to the actual accepted verifier execution;
+`SecuritySignatureWitness.lean` composes the classification and derives reference certificates
+from successful signing. Canonical signatures with the same message and randomizer are identical,
+so the strong-forgery case is preserved. No global hash-injectivity hypothesis is used.
+
+`SecurityDomains.lean` proves exact derivation-input injection and separation from verifier
+domains. `SecurityPrimitive.lean` bounds an explicit monitor of adaptive fresh queries against
+targets chosen before their answers. Connecting hidden-input guesses, cached matches, and the
+structural/chain witnesses to this probability accounting is still open.
 
 ## Differences and obligations
 
