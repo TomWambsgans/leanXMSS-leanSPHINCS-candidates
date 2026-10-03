@@ -95,9 +95,20 @@ import LeanSphincs.SecurityPrefixCostTransfer
 import LeanSphincs.SecurityPrefixPrepared
 import LeanSphincs.SecurityPrefixMaterialSampling
 import LeanSphincs.SecuritySeedLoss
+import LeanSphincs.LifetimeMarginal
+import LeanSphincs.LifetimeSecondBank
+import LeanSphincs.LifetimeJointBank
+import LeanSphincs.LifetimeVarianceBudget
+import LeanSphincs.LifetimeTransition
+import LeanSphincs.LifetimePoolConcentration
+import LeanSphincs.LifetimePoolRatio
+import LeanSphincs.LifetimePoolGrinding
+import LeanSphincs.SecurityGraphCorrectness
+import LeanSphincs.SecurityPrefixMaterialView
+import LeanSphincs.SecurityPrefixMaterialCost
+import LeanSphincs.SecurityPrefixErasedKeygen
 
-/-! Kernel-checked axiom dependencies for every public candidate theorem.
-Only propext, Classical.choice, and Quot.sound are permitted. -/
+/-! Public candidate theorem axiom footprints, checked by the Lean kernel. -/
 
 /-- info: 'LeanSphincs.bytesLE_injective' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -4070,3 +4081,563 @@ Only propext, Classical.choice, and Quot.sound are permitted. -/
 /-- info: 'LeanSphincs.Security.SeedLoss.forgeAdvantage_le_of_material_charge' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.SeedLoss.forgeAdvantage_le_of_material_charge
+
+/-- info: 'LeanSphincs.Lifetime.pivotalPositions_card_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.pivotalPositions_card_le
+
+/-- info: 'LeanSphincs.Lifetime.pivotalPositions_card_eq_zero_of_not_covered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.pivotalPositions_card_eq_zero_of_not_covered
+
+/-- info: 'LeanSphincs.Lifetime.functionCovered_reindex_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.functionCovered_reindex_iff
+
+/-- info: 'LeanSphincs.Lifetime.pivotalPosition_reindex_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.pivotalPosition_reindex_iff
+
+/-- info: 'LeanSphincs.Lifetime.probEvent_pivotal_position_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.probEvent_pivotal_position_eq
+
+/-- info: 'LeanSphincs.Lifetime.probEvent_pivotal_mul_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.probEvent_pivotal_mul_le
+
+/-- info: 'LeanSphincs.Lifetime.pivotalPosition_zero_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.pivotalPosition_zero_iff
+
+/-- info: 'LeanSphincs.Lifetime.probEvent_independent_marginal_mul_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.probEvent_independent_marginal_mul_le
+
+/-- info: 'LeanSphincs.Lifetime.initial_independentMarginalWeight_mul_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.initial_independentMarginalWeight_mul_le
+
+/-- info: 'LeanSphincs.Lifetime.pairForecast_product' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.pairForecast_product
+
+/-- info: 'LeanSphincs.Lifetime.targetSecondForecast_comm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.targetSecondForecast_comm
+
+/-- info: 'LeanSphincs.Lifetime.expected_targetSecondForecast_query' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.expected_targetSecondForecast_query
+
+/-- info: 'LeanSphincs.Lifetime.expected_secondBankValue_query' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.expected_secondBankValue_query
+
+/-- info: 'LeanSphincs.Lifetime.secondBankValue_insert' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.secondBankValue_insert
+
+/-- info: 'LeanSphincs.Lifetime.expected_secondBankStep' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.expected_secondBankStep
+
+/-- info: 'LeanSphincs.Lifetime.uniformDigestForecast_square_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.uniformDigestForecast_square_le
+
+/-- info: 'LeanSphincs.Lifetime.expected_secondBankStep_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.expected_secondBankStep_le
+
+/-- info: 'LeanSphincs.Lifetime.expected_secondBankEnvelope_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.expected_secondBankEnvelope_step
+
+/-- info: 'LeanSphincs.Lifetime.expected_adaptiveSecondBank_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.expected_adaptiveSecondBank_le
+
+/-- info: 'LeanSphincs.Lifetime.expected_adaptiveSecondBank_empty_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.expected_adaptiveSecondBank_empty_le
+
+/-- info: 'LeanSphincs.Lifetime.digestForecast_cachedSource' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.digestForecast_cachedSource
+
+/-- info: 'LeanSphincs.Lifetime.secondBankValue_resolved' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.secondBankValue_resolved
+
+/-- info: 'LeanSphincs.Lifetime.secondBankValue_congr_cache' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.secondBankValue_congr_cache
+
+/-- info: 'LeanSphincs.Lifetime.expected_jointSecondBankValue_query' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.expected_jointSecondBankValue_query
+
+/-- info: 'LeanSphincs.Lifetime.expected_jointSecondBankStep' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.expected_jointSecondBankStep
+
+/-- info: 'LeanSphincs.Lifetime.requested_scaled_lifetime' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.requested_scaled_lifetime
+
+/-- info: 'LeanSphincs.Lifetime.requested_pair_fors_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.requested_pair_fors_bound
+
+/-- info: 'LeanSphincs.Lifetime.requested_localizedVarianceRate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.requested_localizedVarianceRate
+
+/-- info: 'LeanSphincs.Lifetime.localized_variance_exception_budget' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.localized_variance_exception_budget
+
+/-- info: 'LeanSphincs.Lifetime.uniformDisclosureSet_insert' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.uniformDisclosureSet_insert
+
+/-- info: 'LeanSphincs.Lifetime.probEvent_coverage_insert' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.probEvent_coverage_insert
+
+/-- info: 'LeanSphincs.Lifetime.futureCoverWeight_insert' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.futureCoverWeight_insert
+
+/-- info: 'LeanSphincs.Lifetime.futureCoverWeight_succ_gain' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.futureCoverWeight_succ_gain
+
+/-- info: 'LeanSphincs.Lifetime.signWithSources_mass' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.signWithSources_mass
+
+/-- info: 'LeanSphincs.Lifetime.signWithSources_future_gain' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.signWithSources_future_gain
+
+/-- info: 'LeanSphincs.Lifetime.expected_signWithSources_centered_gain' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.expected_signWithSources_centered_gain
+
+/-- info: 'LeanSphincs.Lifetime.poolCount_eq_sum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolCount_eq_sum
+
+/-- info: 'LeanSphincs.Lifetime.poolHit_independent' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolHit_independent
+
+/-- info: 'LeanSphincs.Lifetime.poolHit_mean' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolHit_mean
+
+/-- info: 'LeanSphincs.Lifetime.poolHit_subGaussian' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolHit_subGaussian
+
+/-- info: 'LeanSphincs.Lifetime.indexPool_upper_tail' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.indexPool_upper_tail
+
+/-- info: 'LeanSphincs.Lifetime.indexPool_lower_tail' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.indexPool_lower_tail
+
+/-- info: 'LeanSphincs.Lifetime.indexPool_bad_index' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.indexPool_bad_index
+
+/-- info: 'LeanSphincs.Lifetime.indexPool_unbalanced' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.indexPool_unbalanced
+
+/-- info: 'LeanSphincs.Lifetime.indexPoolMeasure_eq_uniform' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.indexPoolMeasure_eq_uniform
+
+/-- info: 'LeanSphincs.Lifetime.poolFamily_unbalanced_key' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolFamily_unbalanced_key
+
+/-- info: 'LeanSphincs.Lifetime.poolFamily_unbalanced' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolFamily_unbalanced
+
+/-- info: 'LeanSphincs.Lifetime.pool_concentration_exp_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.pool_concentration_exp_bound
+
+/-- info: 'LeanSphincs.Lifetime.poolFamily_unbalanced_negligible' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolFamily_unbalanced_negligible
+
+/-- info: 'LeanSphincs.Lifetime.indexPoolFamilyMeasure_eq_uniform' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.indexPoolFamilyMeasure_eq_uniform
+
+/-- info: 'LeanSphincs.Lifetime.PoolBalanced.count_lower' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.PoolBalanced.count_lower
+
+/-- info: 'LeanSphincs.Lifetime.PoolBalanced.count_upper' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.PoolBalanced.count_upper
+
+/-- info: 'LeanSphincs.Lifetime.PoolBalanced.accepted_lower' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.PoolBalanced.accepted_lower
+
+/-- info: 'LeanSphincs.Lifetime.PoolBalanced.accepted_positive' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.PoolBalanced.accepted_positive
+
+/-- info: 'LeanSphincs.Lifetime.PoolBalanced.accepted_index_ratio' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.PoolBalanced.accepted_index_ratio
+
+/-- info: 'LeanSphincs.Lifetime.poolAcceptedCount_eq_card' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolAcceptedCount_eq_card
+
+/-- info: 'LeanSphincs.Lifetime.pool_uniform_index' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.pool_uniform_index
+
+/-- info: 'LeanSphincs.Lifetime.pool_uniform_landing' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.pool_uniform_landing
+
+/-- info: 'LeanSphincs.Lifetime.poolGrind_index_factor' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolGrind_index_factor
+
+/-- info: 'LeanSphincs.Lifetime.poolGrind_index_le_ratio' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolGrind_index_le_ratio
+
+/-- info: 'LeanSphincs.Lifetime.balanced_poolGrind_index_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.balanced_poolGrind_index_bound
+
+/-- info: 'LeanSphincs.Lifetime.poolGrindRandomness_factor' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolGrindRandomness_factor
+
+/-- info: 'LeanSphincs.Lifetime.poolGrindRandomness_weighted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetime.poolGrindRandomness_weighted
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.one_lt_leaf_capacity' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.one_lt_leaf_capacity
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.chain_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.chain_value
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.leaf_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.leaf_input
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.leaf_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.leaf_value
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.tree_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.tree_input
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.fors_input
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.child_index_bound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.child_index_bound
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.fors_value
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_roots_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.fors_roots_input
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_key_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.fors_key_value
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.double_div_pow' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.double_div_pow
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.treePosition_active_below' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.treePosition_active_below
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.tree_value_below' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.tree_value_below
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.spineIndex_range' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.spineIndex_range
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.spineIndex_step' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.spineIndex_step
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.spinePosition_active' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.spinePosition_active
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.boundary_tree_value' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.boundary_tree_value
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.tree_input_ordered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.tree_input_ordered
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.spine_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.spine_value
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.chain_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.chain_input
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.quotient_range' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.quotient_range
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.pathNode_kept' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.pathNode_kept
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.pathSibling_kept' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.pathSibling_kept
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.canonicalPath_below' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.canonicalPath_below
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.tree_path_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.tree_path_value
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.tree_path_sibling' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.tree_path_sibling
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.tree_path_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.tree_path_input
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.tree_path_active' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.tree_path_active
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.tree_root_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.tree_root_value
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_leaf_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.fors_leaf_input
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_input_ordered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.fors_input_ordered
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_path_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.fors_path_value
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_path_sibling' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.fors_path_sibling
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_path_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.fors_path_input
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.materialOts_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.materialOts_eq
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.materialFts_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.materialFts_eq
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.materialSurrogates_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.materialSurrogates_eq
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.prepared_consistent' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.prepared_consistent
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.prepared_boundary' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.prepared_boundary
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.prepared_root_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.prepared_root_value
+
+/-- info: 'LeanSphincs.Security.GraphCorrectness.prepared_fors_key_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphCorrectness.prepared_fors_key_value
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.tweakable' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.tweakable
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.chain' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.chain
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.encoding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.encoding
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.firstEncoding_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.firstEncoding_eq
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.forsNode' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.forsNode
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.forsKey' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.forsKey
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.forsOpen' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.forsOpen
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.digestCall' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.digestCall
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.digest' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.digest
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.endpoints' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.endpoints
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.node' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.node
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.values' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.values
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.spine' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.spine
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.path' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.path
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.layer' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.layer
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.finishSign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.finishSign
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.cutoff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.cutoff
+
+/-- info: 'LeanSphincs.Security.Prefix.prepared_replaceMaterial_agreement' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.prepared_replaceMaterial_agreement
+
+/-- info: 'LeanSphincs.Security.Prefix.publicFinishSign_replaceMaterial' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.publicFinishSign_replaceMaterial
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.otsCost' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.otsCost
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.layerCost' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.layerCost
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.finishCost' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.finishCost
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.signAttempt' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.signAttempt
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.countedDigest' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.countedDigest
+
+/-- info: 'LeanSphincs.Security.Prefix.PublicAgreement.signWithCost' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.PublicAgreement.signWithCost
+
+/-- info: 'LeanSphincs.Security.Prefix.publicSignWithCost_replaceMaterial' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.publicSignWithCost_replaceMaterial
+
+/-- info: 'LeanSphincs.Security.Prefix.surrogate_replaceMaterial' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.surrogate_replaceMaterial
+
+/-- info: 'LeanSphincs.Security.Prefix.erasedMaterialSign_replaceMaterial' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.erasedMaterialSign_replaceMaterial
+
+/-- info: 'LeanSphincs.Security.Prefix.counted_prepared_sign_erased' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.counted_prepared_sign_erased
+
+/-- info: 'LeanSphincs.Security.Prefix.eval_compiledHash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.eval_compiledHash
+
+/-- info: 'LeanSphincs.Security.Prefix.hashCalls_spineNode' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.hashCalls_spineNode
+
+/-- info: 'LeanSphincs.Security.Prefix.hashCalls_keygenFromSeed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.hashCalls_keygenFromSeed
+
+/-- info: 'LeanSphincs.Security.Prefix.publicSpine_replaceMaterial' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.publicSpine_replaceMaterial
+
+/-- info: 'LeanSphincs.Security.Prefix.erasedMaterialRoot_replaceMaterial' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.erasedMaterialRoot_replaceMaterial
+
+/-- info: 'LeanSphincs.Security.Prefix.prepared_root_erased' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.prepared_root_erased
+
+/-- info: 'LeanSphincs.Security.Prefix.prepared_keygen_erased' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Prefix.prepared_keygen_erased

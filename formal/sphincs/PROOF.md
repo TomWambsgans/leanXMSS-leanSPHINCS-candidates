@@ -139,6 +139,12 @@ ideal experiments cannot be summed merely by invoking trace disjointness.
 `SecurityPrefixPrepared.lean` composes the material compiler with the counted signer, while
 `SecurityPrefixMaterialSampling.lean` splits one uniform secret coordinate from all remaining
 full-output material. The common game/transcript law still needs to be assembled.
+`SecurityPrefixMaterialView.lean`, `SecurityPrefixMaterialCost.lean`, and
+`SecurityPrefixErasedKeygen.lean` remove the selected secret from the outside programmed
+oracle as well as the explicit secret table. Actual counted signing and public-key generation
+equal views built from erased material and the supplied chain frontier. This is a deterministic
+factoring result; the stopped adaptive-query coupling is still needed. The current two-edge
+coefficient and its cost-transfer factor do not close the bound for every large query budget.
 
 `SecurityDomains.lean` proves exact derivation-input injection and separation from verifier
 domains. `SecurityPrimitive.lean` bounds an explicit monitor of adaptive fresh queries against
@@ -182,8 +188,21 @@ labels satisfy the canonical query equations; inactive labels stay fixed.
 `SecuritySurrogateAddress.lean` preserves the exact sibling address in first-divergence
 extraction. `SecurityPrunedGraph.lean` instantiates retained and boundary positions, proves
 boundary positions are inactive, and turns the addressed cached surrogate witness into the
-single appropriate structural target. Matching every prepared active node to the actual
-seeded computation is the remaining graph correctness bridge.
+single appropriate structural target. `SecurityGraphCorrectness.lean` now derives that bridge:
+supported preparation and agreement with the final cache imply equality with actual seeded
+chain, FORS, retained-tree and surrogate-spine computations, including their canonical inputs.
+
+`LifetimeTransition.lean` gives an exact future-coverage identity for an actual signing call,
+with its selected-source gain and the independent-source mean gain kept separate. It permits
+arbitrary adversarial caches, repeated sources, grinding exhaustion and later WOTS failure.
+`LifetimeMarginal.lean` bounds the independent marginal; the SecondBank and JointBank modules
+control fixed-kernel moments and conditional forecasts. `LifetimeVarianceBudget.lean` checks
+the proposed variance coefficient for all six limits, but does not establish its composition
+through changing signing histories. The PoolConcentration/PoolRatio/PoolGrinding modules prove
+that independent complete randomizer tables are simultaneously balanced except with probability
+at most 2^-400, and give exact accepted-randomizer and weighted-source laws. Their connection to
+the actual lazy random oracle, adaptive occupancy, and the final changing-kernel bound remains
+to be proved.
 
 ## Differences and obligations
 
