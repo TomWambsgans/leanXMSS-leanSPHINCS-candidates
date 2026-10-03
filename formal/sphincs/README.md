@@ -89,6 +89,7 @@ all dependencies are drawn from `propext`, `Classical.choice`, and `Quot.sound`.
 | Prepared graph values and inputs equal actual seeded computations | [SecurityGraphCorrectness](LeanSphincs/SecurityGraphCorrectness.lean) | WOTS chains, FORS roots and paths, retained Merkle nodes, surrogate spine and public root |
 | Independent graph-label programming preserves the actual random-oracle continuation | `Security.Graph.evalDist_graph_continuation`, [SecurityGraphSampling](LeanSphincs/SecurityGraphSampling.lean) | All original output/count information retained; inactive surrogate labels preserved |
 | An outside-subtree surrogate witness has one off-spine target address | `Security.PrunedGraph.cached_surrogate_bad`, [SecurityPrunedGraph](LeanSphincs/SecurityPrunedGraph.lean) | Precise retained/boundary separation, including the actual cached query |
+| The actual advantage is at most a seed-free capped graph-view win plus q/2^256 | `Security.Reduce.forgeAdvantage_le_seedFree`, [BridgeReduce](LeanSphincs/BridgeReduce.lean) | Every adversary; long inputs internalized, lazy oracle replaced by independent material, labels and a uniform short-input table |
 | Serialized signature length = 5684 | `signature_size`, [Layout](LeanSphincs/Layout.lean) | Every signature, including malformed ones |
 | Accepted verification uses exactly 391 compressions | `Cost.verification_compressions`, [VerificationCost](LeanSphincs/VerificationCost.lean) | Actual logged hash inputs; every execution costs at most 391 |
 

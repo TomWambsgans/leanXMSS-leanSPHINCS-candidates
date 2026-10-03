@@ -278,6 +278,22 @@ same fresh digest. A single-leaf rectangle class cannot justify a simultaneous b
 full changing signing history: that kernel depends on sets at every retained leaf. A valid
 concentration and leaf-aggregation argument is still missing.
 
+BridgeShort, BridgeInternalize, BridgeEager, BridgeAssembly, BridgeStop and BridgeReduce close
+the probability-level bridge from the actual experiment to the graph-view game. Honest key
+generation, both signers and the verifier query only inputs of at most 1056 bytes. An adversary
+whose longer inputs are answered by its own private lazy table has exactly the same forgery
+probability and, on every execution, no more counted calls
+(`Internalize.forgeAdvantage_internalize`, `Internalize.hashQueryBound_internalize`). For a
+short-only game the lazy oracle equals a uniform table on the finite short inputs
+(`Eager.evalDist_romImpl_eq_table`). Composing the existing seed-material and graph-label
+preparation laws with this table, every sample is a consistent fixed answer function, so
+`costGame_correct` applies sample by sample (`Assembly.sample_costGame`). A cost-trace semantics,
+a marked-input stop lemma and the original-budget cap then give
+`Reduce.forgeAdvantage_le_seedFree`: the actual advantage is at most the win probability of a
+seed-free, budget-capped graph-view game over independent material, labels and remaining answers,
+plus q/2^256. The hidden-coordinate stop on that game, the structural/encoding/FORS monitors and
+the final composition remain open.
+
 ## Differences and obligations
 
 - The old proof's thirteenth/fourteenth moments, pinned FORS group, three-layer witnesses,
