@@ -1,7 +1,8 @@
 # leanSPHINCS proofs in Lean 4
 
-**Status: candidate correctness, end-to-end honest completeness, and all six exact FORS
-lifetime arithmetic bounds are checked. The adaptive SUF-CMA security reduction is unfinished.**
+**Status: candidate correctness, honest completeness, and all six exact FORS lifetime bounds
+after actual signing calls are checked for a fresh independent target. The adaptive SUF-CMA
+security reduction is unfinished.**
 A successful build must not be read as completion of the six security claims.
 
 `LeanSphincs/` models the candidate: one height-26 tree, 24 height-10 FORS trees, 64 WOTS+C
@@ -44,16 +45,20 @@ all dependencies are drawn from `propext`, `Classical.choice`, and `Quot.sound`.
 | Independent FORS experiments satisfy those six bounds | `Lifetime.independent_forgery_lifetime_*`, [LifetimeIndependent](LeanSphincs/LifetimeIndependent.lean) | Explicit uniform index and disclosure sampling, including pruning |
 | Successful grinding gives a uniform kept index and 24 uniform FORS selectors | `Lifetime.conditional_grindDigest_after_keygen`, [LifetimeGrinding](LeanSphincs/LifetimeGrinding.lean) | Actual keygen and randomized grinding; positive finite attempt budget; repeated randomizers included |
 | One disclosure update is bounded by inserting an independent uniform view | `Lifetime.grindDigest_disclosure_step_le_uniform`, [LifetimeReuse](LeanSphincs/LifetimeReuse.lean) | Every increasing set event; cached accepted views must already be in the prior set |
+| N complete signing calls are dominated by N independent disclosure samples | `Lifetime.signing_disclosures_after_keygen_le_uniform`, [LifetimeSigningDisclosure](LeanSphincs/LifetimeSigningDisclosure.lean) | Adaptive/repeated messages, actual keygen/cache and WOTS exhaustion; no adversarial hash interleaving |
+| All six exact lifetime bounds hold after those signing calls | `Lifetimes.requested_signing_lifetime_bounds`, [LifetimeSigningBound](LeanSphincs/LifetimeSigningBound.lean) | Fresh independent FORS target; every n≤N; the target search reduction remains open |
 | Accepted signatures yield canonical components or concrete exceptional queries | `Security.SignatureWitness.accepted_classification`, [SecuritySignatureWitness](LeanSphincs/SecuritySignatureWitness.lean) | Explicit WOTS reference certificate; includes surrogate, chain, encoding and FORS cases |
 | A distinct accepted signature with an honest message/randomizer has an exceptional witness | `Security.SignatureWitness.strong_forgery_same_randomness`, [SecuritySignatureWitness](LeanSphincs/SecuritySignatureWitness.lean) | Reference certificate derived from actual successful honest assembly |
+| Actual successful games yield cached forgery witnesses and supported honest signing runs | `Security.SuccessWitness.same_randomness_exception`, [SecurityGameWitness](LeanSphincs/SecurityGameWitness.lean) | Private sampling and actual counted cost retained; exceptional-event probability still unbounded |
+| Adaptive hidden-seed guesses have probability ≤ q/2^256 | `Security.SeedGuess.adaptive_seed_guess_bound`, [SecuritySeedGuess](LeanSphincs/SecuritySeedGuess.lean) | Explicit seed-independent initial state and private selection strategy |
 | Adaptive fresh hash queries hit at most two prior targets with probability ≤ q/2^127 | `Security.Primitive.two_target_monitor_bound`, [SecurityPrimitive](LeanSphincs/SecurityPrimitive.lean) | Explicit generic monitor; cached queries and hidden-input guesses still require game-level accounting |
 | Serialized signature length = 5684 | `signature_size`, [Layout](LeanSphincs/Layout.lean) | Every signature, including malformed ones |
 | Accepted verification uses exactly 391 compressions | `Cost.verification_compressions`, [VerificationCost](LeanSphincs/VerificationCost.lean) | Actual logged hash inputs; every execution costs at most 391 |
 
 ## Lifetime targets still open
 
-`Lifetimes.RequestedSecurity` states all six targets in the candidate game. The numerical
-FORS expression is now proved for every requested N, but none of the six game-level security
+`Lifetimes.RequestedSecurity` states all six targets in the candidate game. The FORS expression
+is connected to actual complete signing calls and a fresh target, but none of the six SUF-CMA
 claims is yet proved. Each counts every hash call in the modeled experiment, including honest-party calls,
 repeated inputs, and final verification; private sampling is free.
 

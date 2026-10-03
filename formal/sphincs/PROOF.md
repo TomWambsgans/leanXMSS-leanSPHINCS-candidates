@@ -67,8 +67,8 @@ inequalities. `LifetimeMoments.lean` expands its binomial moments into Stirling 
 descending factorials. `LifetimeBounds.lean` checks six integer certificates for exactly the
 requested N values, with no floating point or native proof evaluation. `LifetimeProbability.lean`
 expresses these bounds as probabilities and covers every smaller N. They prove the scripts'
-binomial occupancy expression is ≤2^-127; connecting that expression to the adaptive signing
-transcript remains necessary.
+binomial occupancy expression is ≤2^-127. The signing-only connection is now checked below;
+adversarial hash interleaving and target search remain necessary.
 
 `LifetimeSampling.lean` and `LifetimeIndependent.lean` connect the arithmetic to an explicit
 independent uniform FORS experiment. `LifetimeLanding.lean` factors the landed digest law into
@@ -77,8 +77,17 @@ conditional law for the actual randomized loop and its subsequent two-block dige
 repeated randomizers and discharging freshness from key generation.
 `LifetimeReuse.lean` permits cached accepted digests already represented in a proof-side prior
 set. Every increasing event after one disclosure update is bounded by inserting one uniform
-view; repeats and exhaustion leave the set unchanged. Preservation through full signing,
-iteration over the lifetime, and adversary-prequeried accepted inputs remain separate obligations.
+view; repeats and exhaustion leave the set unchanged. `LifetimeDisclosure.lean` iterates this
+bound for arbitrary invariant-preserving adaptive transitions. `LifetimeDisclosureCache.lean`
+preserves the invariant across actual grinding, for all messages simultaneously.
+`FinishFresh.lean` proves that the entire post-digest signing suffix leaves message-domain
+cache entries unchanged. `LifetimeSigningDisclosure.lean` therefore covers N complete signing
+calls, including repeated/adaptive messages and exhausted WOTS searches. Its proof-side set
+records every accepted digest before assembly; erasing that record gives exactly the actual
+signer and cache. `LifetimeTerminal.lean` proves the independent-history coverage formula by
+projecting uniform coordinate tables to the positions with the target index.
+`LifetimeSigningBound.lean` closes all six exact lifetime bounds for these actual signing calls
+followed by a fresh independent target. Adversary-prequeried inputs and target search remain open.
 
 `SecurityTreeWitness.lean` extracts canonical paths, same-address node matches, and surrogate
 preimages. `SecurityChainWitness.lean` and `SecurityWotsWitness.lean` classify chain divergence,
@@ -94,6 +103,15 @@ so the strong-forgery case is preserved. No global hash-injectivity hypothesis i
 domains. `SecurityPrimitive.lean` bounds an explicit monitor of adaptive fresh queries against
 targets chosen before their answers. Connecting hidden-input guesses, cached matches, and the
 structural/chain witnesses to this probability accounting is still open.
+`SecurityGameSupport.lean` preserves actual cost while extracting supported keygen, adversary,
+and verifier runs. `SecurityGameWitness.lean` extracts each logged signing subrun and replays
+it against the same final-cache-consistent function, retaining actual private randomization.
+This discharges the reference certificate for same-message, same-randomizer strong forgeries.
+Tree exceptions retain the actual recovered leaf and a concrete cached matching/preimage query.
+`SecuritySeedGuess.lean` proves an adaptive q/2^256 hidden-seed guessing bound with explicit
+seed-independent initialization. `SecuritySeedModel.lean` defines full-output independent key
+material and exact derivation-cache programming, including all surrogate addresses. Actual
+game coupling must establish the independence needed to apply the guessing bound.
 
 ## Differences and obligations
 

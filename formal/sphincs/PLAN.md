@@ -14,11 +14,15 @@ six-lifetime FORS arithmetic with monotonicity; actual fresh/cached-first digest
 an adaptive fresh-query coverage union bound; the actual verifier's 391-compression count;
 independent FORS experiment bounds; exact conditional uniformity of actual grinding after
 keygen; structural, WOTS and FORS query-witness extraction and composition, with reference
-certificates obtained from honest signing; all-message completeness sum ≤2^-256.
+certificates obtained from honest signing; all-message completeness sum ≤2^-256; N complete
+signing-call disclosure domination after actual keygen, including adaptive/repeated messages
+and WOTS exhaustion; exact terminal coverage formula and all six signing/fresh-target lifetime
+bounds; actual-game cached witness and signing-subrun extraction; independent prepared secret
+model and adaptive hidden-seed guessing bound with explicit independence assumptions.
 
 Next necessary work:
-1. Dominate repeated honest disclosures by independent draws, treating cached views as repeats.
-2. Bound the actual adversarial 24-tree disclosure process and its cached-query exceptions.
+1. Bound the actual adversarial 24-tree disclosure process and its cached-query exceptions.
+2. Couple the actual seeded game to the prepared-secret model with cost preserved.
 3. Connect the checked WOTS/structural/FORS witnesses to primitive probability bounds and
    the seeded-to-independent-secret coupling, with reference-free leaves handled explicitly.
 4. Combine the terms with the shared query budget and prove every exact N in
