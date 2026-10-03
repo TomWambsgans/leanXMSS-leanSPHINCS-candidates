@@ -201,6 +201,12 @@ reveal/guess bound with an expected charge from a common forced-failure comparis
 Failed guesses do not justify assuming conditional uniformity in the stopped real run. The
 candidate byte interpreter, success-event covering, and shared comparison budget remain to
 be composed; costs from different experiments must not be added as if they shared a trace.
+`SecurityHiddenRows.lean` now compiles a generic programmed-row interpreter to the reveal/guess
+monitor. `SecurityHiddenGraph.lean` instantiates its exact candidate bytes and active pruned
+addresses, preserving the ordinary-query cap. The full graph sampling and game-view bridge is
+still needed. `SecurityReferenceChoice.lean` selects the actual first accepted encoding, or a
+fixed valid dummy word if all counters reject. It proves an unconditional WOTS classification;
+on exhaustion all canonical encoding trials are clean for the dummy target.
 
 `LifetimeTransition.lean` gives an exact future-coverage identity for an actual signing call,
 with its selected-source gain and the independent-source mean gain kept separate. It permits
@@ -222,6 +228,17 @@ order, preserving the actual program distribution. PairedMonitor tracks fresh pa
 proves their event probabilities. `SecurityExponentialCharge.lean` supplies a generic
 exponential monitor tied to the original source query count. The changing-history variance
 bound and its final shared-budget composition remain open.
+`SecurityExponentialTrace.lean` and the PairedCharge/Trace/Rectangles/Bank modules now place all
+rectangle monitors on one actual adaptive trace. For q≤2^127, simultaneously every rectangle
+has at most 2^56 first-touch candidates except with probability 2^-400. BankInclusion extends
+this to arbitrary transcript-selected subsets. PairedReification gives an exact local-cache
+interpreter for that trace, needed to couple it jointly with complete randomizer pools.
+`LifetimePriorMarginal.lean` proves the pivotal-disclosure bound after arbitrary actual prior
+histories. GainBudget telescopes actual gains and gives the harmonic occupation bound, without
+assuming an independent law for the actual history. ReserveBudget checks an explicit 1/64
+reserve for all six exact lifetime formulas and closes the proposed normalized square-root
+inequality. The actual changing-history variance estimate supplying that inequality is still
+unproved; these arithmetic results do not establish any of the six SUF-CMA claims.
 
 ## Differences and obligations
 
