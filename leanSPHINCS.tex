@@ -70,25 +70,25 @@ For powerful devices.
 \emph{A modern laptop CPU computes about $2^{29}$ SHA2 or BLAKE2s compressions per second.}
 
 
-\subsection{Pruned: \texorpdfstring{$2^{17}$}{2\textasciicircum 17} lifetime}\label{sec:pruned}
+\subsection{Pruned: \texorpdfstring{$2.3\cdot10^5$}{230K} lifetime}
 
-For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 13, and replace the 13 siblings above it by pseudorandom surrogate nodes.
+For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 13, and replace the 13 siblings above it by pseudorandom surrogate nodes. A forgery must land in the subtree (probability $2^{-13}$), which the lifetime accounts for.
 
 \begin{itemize}
-  \item lifetime: $2^{17}$
+  \item lifetime: $2.3\cdot10^5$ signatures ($2^{17.8}$)
   \item keygen: $2.2\cdot10^6$ compressions
   \item signing: $111\cdot10^3$ compressions, with a 16~KiB cache (including $33\cdot10^3$ compressions of grinding)
 \end{itemize}
 
 \emph{A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.}
 
-\subsection{Pruned: \texorpdfstring{$2^{24}$}{2\textasciicircum 24} lifetime}
+\subsection{Pruned: \texorpdfstring{$2.3\cdot10^7$}{23M} lifetime}
 
 For laptops, phones and powerful hardware wallets. The same pruning, with a subtree of height 20 (and 6
 surrogate siblings).
 
 \begin{itemize}
-  \item lifetime: $2^{24}$
+  \item lifetime: $2.3\cdot10^7$ signatures ($2^{24.4}$)
   \item keygen: $287\cdot10^6$ compressions
   \item signing: $84\cdot10^3$ compressions, with a 1~MiB cache (including 256 compressions of grinding)
 \end{itemize}
@@ -99,7 +99,8 @@ surrogate siblings).
   \item $t$-of-$n$
   \item signing: malicious security against $t-1$ operators (with abort); 432 bytes per signer, 3 rounds
   \item keygen: no trusted dealer, a one-time MPC among the $n$ operators, fewer than $n/2$ corrupt
-  \item lifetime: $2^L$, e.g.\ $L=12$, 14 or 16 (pruned, subtree of height $L-4$)
+  \item lifetime: $9\cdot10^3$, $3.3\cdot10^4$ or $1.2\cdot10^5$ signatures, with a pruned subtree of $2^b$ leaves, $b=8$,
+        10 or 12
 \end{itemize}
 
 \paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS}).} Each FORS secret is $F(\mathit{addr})$, for a
@@ -132,14 +133,14 @@ Parts from signings of different $(m,J)$ don't combine, so aborted signings reve
 
 \paragraph{Keygen.} Honest-majority MPC, malicious with abort:
 \begin{enumerate}
-  \item coin tossing: $P$, the kept subtree, its $30-L$ surrogates
+  \item coin tossing: $P$, the kept subtree, its $26-b$ surrogates
   \item the key of $F$ (hash-based: each seed by commit-reveal among its holders; lattice-based: a
         verifiable Shamir sharing of $\mathit{msk}$), and the pairwise keys $k_{ij}$
-  \item MPC: $F$ at the $2^{L-4}\cdot24\cdot2^{10}$ FORS addresses, hashed into leaves; $F$ at the
-        $2^{L-4}\cdot64$ WOTS chain starts, hashed 3 times. Open the leaves and chain ends
+  \item MPC: $F$ at the $2^b\cdot24\cdot2^{10}$ FORS addresses, hashed into leaves; $F$ at the
+        $2^b\cdot64$ WOTS chain starts, hashed 3 times. Open the leaves and chain ends
   \item in the clear: FORS roots, WOTS$^+$C counters; open the WOTS signatures; build the tree
   \item the operators check they all got the same public data (public key, FORS leaves, WOTS signatures;
-        1.6~GB for $L=16$) by comparing its hash. Each keeps the public data and its key share of $F$, and
+        1.6~GB for $b=12$) by comparing its hash. Each keeps the public data and its key share of $F$, and
         deletes everything else
 \end{enumerate}
 
@@ -153,7 +154,7 @@ Parts from signings of different $(m,J)$ don't combine, so aborted signings reve
   \item output $R$, the 24 secrets and paths, the WOTS signature, the authentication path
 \end{enumerate}
 
-\paragraph{Keygen cost (measured, hash-based $F$, $t=(n+1)/2$).} $\approx1.5\cdot10^3\cdot2^L$ MPC hashes (mostly FORS leaves) of
+\paragraph{Keygen cost (measured, hash-based $F$, $t=(n+1)/2$).} $\approx2.5\cdot10^4\cdot2^b$ MPC hashes (mostly FORS leaves) of
 $\approx13.5\cdot10^3$ AND gates. The MPC uses replicated sharing over $\mathrm{GF}(2)$ as
 in~\cite{BGIN19}, generalized to $n=2f+1$: each AND gate is computed locally and reshared through one
 collector, $(n-1)+f$ bits in total, i.e.\ 1, 1.2 and 1.29 bits per operator for $n=3$, 5, 7, plus a
@@ -162,7 +163,8 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
 \begin{center}
 \begin{tabular}{lrrr}
   \toprule
-  & $2^{12}$ & $2^{14}$ & $2^{16}$ \\
+  subtree & $2^8$ & $2^{10}$ & $2^{12}$ \\
+  lifetime & $9\cdot10^3$ & $3.3\cdot10^4$ & $1.2\cdot10^5$ \\
   \midrule
   2-of-3 & 11~GB & 43~GB & 172~GB \\
   3-of-5 & 13~GB & 52~GB & 207~GB \\
@@ -174,7 +176,7 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
 \paragraph{Remarks.}
 \begin{itemize}
   \item With a trusted dealer instead, keygen needs no MPC: the dealer computes everything in the clear
-        ($5\cdot10^8$ to $4\cdot10^9$ compressions for $L=16$, from 2-of-3 to 4-of-7 with the hash-based
+        ($5\cdot10^8$ to $4\cdot10^9$ compressions for $b=12$, from 2-of-3 to 4-of-7 with the hash-based
         $F$) and gives each operator its key share of $F$.
   \item The key shares can be refreshed, and the committee changed (including $n$ and $t$), with the same
         public key:
