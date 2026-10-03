@@ -138,12 +138,14 @@ slice costs to real slice costs with an explicit factor 1−q/2^128; expectation
 ideal experiments cannot be summed merely by invoking trace disjointness.
 `SecurityPrefixPrepared.lean` composes the material compiler with the counted signer, while
 `SecurityPrefixMaterialSampling.lean` splits one uniform secret coordinate from all remaining
-full-output material. The common game/transcript law still needs to be assembled.
+full-output material.
 `SecurityPrefixMaterialView.lean`, `SecurityPrefixMaterialCost.lean`, and
 `SecurityPrefixErasedKeygen.lean` remove the selected secret from the outside programmed
 oracle as well as the explicit secret table. Actual counted signing and public-key generation
-equal views built from erased material and the supplied chain frontier. This is a deterministic
-factoring result; the stopped adaptive-query coupling is still needed. The current two-edge
+equal views built from erased material and the supplied chain frontier.
+`SecurityPrefixErasedGame.lean` composes these identities through the entire adaptive material
+game, retaining its joint success/cost law and literal selected-coordinate erasure. This is a
+fixed-function factoring result; the stopped adaptive-query coupling is still needed. The current two-edge
 coefficient and its cost-transfer factor do not close the bound for every large query budget.
 
 `SecurityDomains.lean` proves exact derivation-input injection and separation from verifier
@@ -191,6 +193,14 @@ boundary positions are inactive, and turns the addressed cached surrogate witnes
 single appropriate structural target. `SecurityGraphCorrectness.lean` now derives that bridge:
 supported preparation and agreement with the final cache imply equality with actual seeded
 chain, FORS, retained-tree and surrogate-spine computations, including their canonical inputs.
+`SecurityGraphSampling.lean` proves the actual lazy-oracle preparation law equals independent
+uniform full-output labels and canonical cache programming. Its continuation theorem retains
+any instrumented original costs while leaving pruned boundary labels untouched.
+`SecurityHiddenReveal.lean` and `SecurityHiddenCharge.lean` give an adaptive coordinate
+reveal/guess bound with an expected charge from a common forced-failure comparison run.
+Failed guesses do not justify assuming conditional uniformity in the stopped real run. The
+candidate byte interpreter, success-event covering, and shared comparison budget remain to
+be composed; costs from different experiments must not be added as if they shared a trace.
 
 `LifetimeTransition.lean` gives an exact future-coverage identity for an actual signing call,
 with its selected-source gain and the independent-source mean gain kept separate. It permits
@@ -200,9 +210,18 @@ control fixed-kernel moments and conditional forecasts. `LifetimeVarianceBudget.
 the proposed variance coefficient for all six limits, but does not establish its composition
 through changing signing histories. The PoolConcentration/PoolRatio/PoolGrinding modules prove
 that independent complete randomizer tables are simultaneously balanced except with probability
-at most 2^-400, and give exact accepted-randomizer and weighted-source laws. Their connection to
-the actual lazy random oracle, adaptive occupancy, and the final changing-kernel bound remains
-to be proved.
+at most 2^-400, and give exact accepted-randomizer and weighted-source laws.
+`LifetimePoolPreparation.lean` now connects these complete first-block tables to the actual
+lazy oracle; PoolSigning gives the actual fixed-function grinding law. AdaptiveOccupancy and
+PoolOccupancy prove the all-six tail from an explicit conditional index bound.
+`LifetimeLocalizedGain.lean` splits an actual insertion into localized gain and an overflow
+remainder without replacing the signer or displacing future samples. The localized gain has
+uniform target measure at most 2^-74; that is not a pointwise bound for a cached target.
+`LifetimePairedOracle.lean` samples both latent digest blocks at their first touch, in either
+order, preserving the actual program distribution. PairedMonitor tracks fresh pairs and
+proves their event probabilities. `SecurityExponentialCharge.lean` supplies a generic
+exponential monitor tied to the original source query count. The changing-history variance
+bound and its final shared-budget composition remain open.
 
 ## Differences and obligations
 
