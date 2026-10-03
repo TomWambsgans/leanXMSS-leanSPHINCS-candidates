@@ -22,12 +22,16 @@ model and adaptive hidden-seed guessing bound with explicit independence assumpt
 Also checked: actual-game eager-preparation equivalence preserving cost; exact stopped
 ordinary-oracle coupling before seed hits; all four cached candidate laws and mixed-prefix
 invariant auditing; reference-free two-edge witnesses; exact hidden-prefix table splits;
-local cache-potential accounting against the actual shared query budget.
+local cache-potential accounting against the actual shared query budget; ideal interleaved
+digest-query/disclosure bounds for all six lifetimes; labelled actual source provenance and
+weighted source-selection charging to actual grinding cost; full material-game equivalence
+with virtual costs for privileged derivations; full randomized signing through a selected
+chain cutoff; exact finite structural-address injection and canonical graph preparation.
 
 Next necessary work:
 1. Bound the actual adversarial 24-tree disclosure process and its cached-query exceptions.
-2. Substitute privileged honest derivations by prepared-material reads with virtual cost,
-   then prove seed independence of the ordinary adversarial view before a seed hit.
+2. Complete the stopped whole-game seed-cache change and apply the seed-guess bound;
+   privileged derivation substitution and full material-game cost equivalence are checked.
 3. Connect the checked WOTS/structural/FORS witnesses to primitive probability bounds and
    the seeded-to-independent-secret coupling, with reference-free leaves handled explicitly.
 4. Combine the terms with the shared query budget and prove every exact N in

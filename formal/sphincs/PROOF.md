@@ -93,6 +93,18 @@ disclosure invariant; it does not treat these bookkeeping defects as negligible 
 `LifetimeCandidate.lean` gives the exact conditional price in all four digest cache states,
 including a cached second block queried before the first.
 
+`LifetimeForecast.lean`, `LifetimeBank.lean`, and `LifetimeFutureBank.lean` assign each queried
+message/randomizer pair its conditional coverage probability, including either block queried
+first and subsequent cached completions. `LifetimeIdealInterleaving.lean` closes all six bounds
+for adaptive digest queries interleaved with independent disclosure samples. The actual signer
+needs a further coupling: an adversarially prequeried accepted pair can be a new, biased signing
+source. `LifetimeSources.lean` records source identities and proves exact cache/response
+provenance; excluding a target's own source does not alone remove this cross-source bias.
+`LifetimeSourceSelection.lean` and `LifetimeGrindingCost.lean` bound weighted actual source
+selection by its uniform 128-bit randomizer average times the actual expected grinding hash
+calls, with pruning, repeats, and arbitrary caches retained. The required weighted coverage
+charge and its composition with the disclosure bound remain open.
+
 `SecurityTreeWitness.lean` extracts canonical paths, same-address node matches, and surrogate
 preimages. `SecurityChainWitness.lean` and `SecurityWotsWitness.lean` classify chain divergence,
 two linked prefix edges, two chain contacts, and a unit-neighbor encoding plus a contact.
@@ -106,8 +118,13 @@ so the strong-forgery case is preserved. No global hash-injectivity hypothesis i
 sum 120 across 64 digits forces a digit at most one, so that chain performs two linked edges.
 This also happens in honest signatures and must be charged only with an appropriate hidden-prefix
 invariant. `SecurityPrefixOracle.lean` and `SecurityPrefixSampling.lean` give exact serialized
-prefix parsing and independent secret/low-output/high-output table splits. They do not assume
-that an actual signing transcript already exposes only the selected prefix's endpoint.
+prefix parsing and independent secret/low-output/high-output table splits. `SecurityPrefixExecution.lean` and `SecurityPrefixTrace.lean` connect the byte transcript to a
+selected prefix experiment. The Frontier/Separation/Public/Signing/SignLayer/FullSign modules
+factor the actual public-key computations and full randomized signer through one selected
+leaf's cutoff. The cutoff depends only on the least successful encoding of that leaf's fixed
+FORS key; it covers all signing indices and preserves exhaustion and private samples.
+Combining these prefix experiments without multiplying by the number of chains, and retaining
+the costs of honest internal work without exposing it, still needs the aggregate reduction.
 
 `SecurityDomains.lean` proves exact derivation-input injection and separation from verifier
 domains. `SecurityPrimitive.lean` bounds an explicit monitor of adaptive fresh queries against
@@ -124,11 +141,22 @@ material and exact derivation-cache programming, including all surrogate address
 game coupling must establish the independence needed to apply the guessing bound.
 `SecuritySeedCoupling.lean` proves parameter-first eager preparation and equality with the
 actual experiment's joint success/cost distribution. It also proves equality up to a seed-hit
-for ordinary computations. The prepared cache still contains seed-addressed entries; honest
-privileged derivations must be substituted by material reads before the seed-hiding argument
-applies to the entire game. `SecurityQueryCharge.lean` connects local expected potential
+for ordinary computations. `SecurityPreparedScheme.lean` substitutes honest derivations by material reads with explicit
+virtual query charges, while adversarial raw hashes bypass this privileged compiler.
+`SecurityMaterialGameCoupling.evalDist_experiment_material` now proves equality of the entire
+actual game's success/cost distribution with this material game on the programmed cache.
+The game program is seed-independent; changing the seed-addressed initial cache still requires
+a stopped-game coupling and the seed-guess probability bound. `SecurityQueryCharge.lean` connects local expected potential
 increases to the actual shared hash budget. The required forgery-covering potential and its
 concrete local bound are still to be constructed.
+
+`SecurityCacheMatch.lean` bounds actual cached target hits from an initially clean cache.
+`SecurityTargetAssignment.lean` gives one target per exact tweak: canonical inputs are exempt,
+and surrogate positions have no canonical input. `SecurityPosition.lean` proves the finite
+candidate structural addresses inject into the exact serialized fields. `SecurityGraph.lean`
+prepares any selected subset in dependency order and proves that every preparation query is its
+final canonical input; omitted positions retain their initial labels. The retained subtree,
+surrogate boundary, and candidate witness events still need the complete graph instantiation.
 
 ## Differences and obligations
 
