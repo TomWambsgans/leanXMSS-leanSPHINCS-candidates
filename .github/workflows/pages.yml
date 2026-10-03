@@ -25,8 +25,11 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Keep only the page
-        run: mkdir _site && cp site/index.html _site/
+      - name: Serve the page at /sphincs/, and redirect the root to it
+        run: |
+          mkdir -p _site/sphincs
+          cp site/index.html _site/sphincs/index.html
+          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=sphincs/"><link rel="canonical" href="sphincs/"><title>leanSPHINCS</title><a href="sphincs/">leanSPHINCS</a>\n' > _site/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
