@@ -56,14 +56,17 @@ theorem evalDist_uniform_congr {α : Type} [Fintype α] [Nonempty α] (left righ
     𝒟[(@uniformSample α left : ProbComp α)] = 𝒟[(@uniformSample α right : ProbComp α)] := by
   rw [@evalDist_uniformSample α left, @evalDist_uniformSample α right]
 
-noncomputable local instance : Fintype SampleCell := sampleCellFintype
-noncomputable local instance : DecidableEq SampleCell := Classical.decEq _
-noncomputable local instance : SampleableType SecretOutputs := secretOutputsSampleableType
-noncomputable local instance : SampleableType CanonicalGraphLabels := graphLabelsSampleable
+noncomputable local instance sampleCellFintypeInst : Fintype SampleCell := sampleCellFintype
+noncomputable local instance sampleCellDecEq : DecidableEq SampleCell := Classical.decEq _
+noncomputable local instance secretOutputsSampleableInst : SampleableType SecretOutputs :=
+  secretOutputsSampleableType
+noncomputable local instance labelsSampleableInst : SampleableType CanonicalGraphLabels :=
+  graphLabelsSampleable
 noncomputable local instance hiddenTableSampleable : SampleableType HiddenGraph.Table :=
   SampleableType.ofFintype _
-noncomputable local instance : SampleableType CoordinateHighs := SampleableType.ofFintype _
-noncomputable local instance : SampleableType RemainingOutputs := SampleableType.ofFintype _
+noncomputable local instance highsSampleable : SampleableType CoordinateHighs := SampleableType.ofFintype _
+noncomputable local instance remainingSampleable : SampleableType RemainingOutputs :=
+  SampleableType.ofFintype _
 
 omit [Params] in
 private theorem lift_pmf_bind {α β : Type} (distribution : PMF α) (next : α → PMF β) :
