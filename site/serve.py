@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Serve the site at http://localhost:8000 with caching disabled: python3 site/serve.py"""
+"""Serve the site with caching disabled: python3 site/serve.py [port]  (default 8000)
+
+leanSPHINCS at http://localhost:8000/, leanXMSS at http://localhost:8000/xmss/
+"""
 
 import functools
 import http.server
 import os
+import sys
 
 
 class NoCache(http.server.SimpleHTTPRequestHandler):
@@ -13,4 +17,5 @@ class NoCache(http.server.SimpleHTTPRequestHandler):
 
 
 handler = functools.partial(NoCache, directory=os.path.dirname(os.path.abspath(__file__)))
-http.server.ThreadingHTTPServer(("", 8000), handler).serve_forever()
+port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+http.server.ThreadingHTTPServer(("", port), handler).serve_forever()
