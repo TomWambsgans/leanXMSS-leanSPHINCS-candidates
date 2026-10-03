@@ -176,6 +176,7 @@ import LeanSphincs.SecurityHiddenOutsideProgram
 import LeanSphincs.SecurityHiddenStopping
 import LeanSphincs.SecurityHiddenOutput
 import LeanSphincs.BridgeReduce
+import LeanSphincs.BridgeHiddenSample
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -7462,3 +7463,175 @@ import LeanSphincs.BridgeReduce
 /-- info: 'LeanSphincs.Security.Reduce.forgeAdvantage_le_seedFree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Reduce.forgeAdvantage_le_seedFree
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.stopped_map' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.stopped_map
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.probEvent_stopOr_map' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.probEvent_stopOr_map
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.erase_trace_query_bind' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.erase_trace_query_bind
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.costRun_le_stopped' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.costRun_le_stopped
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.address_isRow' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.address_isRow
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.programGraphCache_empty_some' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.programGraphCache_empty_some
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.programGraphCache_empty_none' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.programGraphCache_empty_none
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.graphFn_eq_answer' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.graphFn_eq_answer
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.coordinateAtCell_of_cell' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.coordinateAtCell_of_cell
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.cellKnown_of_none' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.cellKnown_of_none
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.cellKnown_struct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.cellKnown_struct
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.cellKnown_last' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.cellKnown_last
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.cellKnown_ftsLeaf' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.cellKnown_ftsLeaf
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.cellKnown_surrogate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.cellKnown_surrogate
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.cellKnown_children' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.cellKnown_children
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.assemble_agree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.assemble_agree
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.splitMaterial_parameter' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.splitMaterial_parameter
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.labelsOf_agree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.labelsOf_agree
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.cellKnown_nonchain' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.cellKnown_nonchain
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.programGraphCache_congr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.programGraphCache_congr
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.canonicalGraphInput_struct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.canonicalGraphInput_struct
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.structCache_agree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.structCache_agree
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.publicData_congr' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.publicData_congr
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.publicData_agree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.publicData_agree
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.highHalves_split' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.highHalves_split
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.answer_congr_high' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.answer_congr_high
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.known_of_masked' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.known_of_masked
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.mix_known' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.mix_known
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.masked_mix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.masked_mix
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.graphCoordinates_split' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.graphCoordinates_split
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.mix_agree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.mix_agree
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.seedFreeRun_mix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.seedFreeRun_mix
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.swapKnown_involutive' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.swapKnown_involutive
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.uniform_map_fst' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.uniform_map_fst
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.uniform_mix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.uniform_mix
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.evalDist_uniform_congr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.evalDist_uniform_congr
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.evalDist_mix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.evalDist_mix
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.evalDist_mix_bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.evalDist_mix_bind
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.evalDist_completion_bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.evalDist_completion_bind
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.evalDist_seedFree_completion' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.evalDist_seedFree_completion
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.probEvent_bind_mono_support' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.probEvent_bind_mono_support
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.hiddenRun_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.hiddenRun_eq
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.seedFree_le_stopped' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.seedFree_le_stopped
