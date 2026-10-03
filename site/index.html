@@ -143,6 +143,12 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
 .tables { display: grid; gap: 0.4rem; }
 .tables h2 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; margin: 0.9rem 0 0.2rem; }
 .tables h2:first-child { margin-top: 0; }
+.tables .lead { margin: 0 0 0.3rem; color: var(--muted); }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; margin-top: 0.5rem; }
+.split h3 { font-size: 1.1rem; font-weight: 600; margin: 0; }
+.split .bn { margin: 0.1rem 0 0.3rem; }
+.split .cmp col.label { width: 8.5rem; }
+.split .cmp tbody th { white-space: nowrap; }
 
 footer { display: flex; justify-content: space-between; gap: 2rem; margin-top: 1.5rem; color: var(--muted); }
 footer p { margin: 0; }
@@ -150,6 +156,7 @@ footer a + a { margin-left: 1.25rem; }
 
 @media (max-width: 900px) {
   .tables { overflow-x: auto; }
+  .split { grid-template-columns: 1fr; gap: 1.5rem; }
   .cmp { min-width: 36rem; }
   main { min-height: 0; }
   h1 { white-space: normal; }
@@ -501,18 +508,33 @@ footer a + a { margin-left: 1.25rem; }
         </tbody>
       </table>
       <h2>Threshold, <i>t</i>-of-<i>n</i></h2>
-      <table class="cmp">
-        <colgroup><col class="label"><col><col></colgroup>
-        <thead>
-          <tr><th></th><th>with DKG</th><th>with a trusted dealer</th></tr>
-        </thead>
-        <tbody>
-          <tr><th>Lifetime</th><td colspan="2">2<sup>12</sup> to 2<sup>16</sup> signatures (subtree of 2<sup>8</sup> to 2<sup>12</sup> leaves)</td></tr>
-          <tr><th>Key generation</th><td>one-time MPC among the <i>n</i> operators, 11 to 222&nbsp;GB each</td><td>by the dealer: 3&middot;10<sup>8</sup> compressions</td></tr>
-          <tr><th>Signing</th><td colspan="2">no MPC: 400 bytes per signer, 2 rounds (adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>)</td></tr>
-          <tr><th>Security</th><td><i>t</i>&nbsp;&minus;&nbsp;1 malicious signers; honest majority at keygen</td><td><i>t</i>&nbsp;&minus;&nbsp;1 malicious signers; honest dealer</td></tr>
-        </tbody>
-      </table>
+      <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>: a one-time ceremony at keygen precomputes every hash of a secret, run either as an MPC among the operators (DKG) or by a trusted dealer; signing then needs no MPC (400 bytes per signer, 2 rounds), and is secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers, assuming an honest majority at keygen (DKG) or an honest dealer.</p>
+      <div class="split">
+        <div>
+          <h3>With DKG</h3>
+          <p class="bn">Bottleneck: keygen traffic per operator</p>
+          <table class="cmp">
+            <colgroup><col class="label"><col><col><col></colgroup>
+            <thead><tr><th>Lifetime</th><th>2<sup>12</sup> signatures</th><th>2<sup>14</sup> signatures</th><th>2<sup>16</sup> signatures</th></tr></thead>
+            <tbody>
+              <tr><th>2-of-3</th><td>11&nbsp;GB</td><td>43&nbsp;GB</td><td>172&nbsp;GB</td></tr>
+              <tr><th>3-of-5</th><td>13&nbsp;GB</td><td>52&nbsp;GB</td><td>207&nbsp;GB</td></tr>
+              <tr><th>4-of-7</th><td>14&nbsp;GB</td><td>55&nbsp;GB</td><td>222&nbsp;GB</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>With a trusted dealer</h3>
+          <p class="bn">Bottleneck: public data to store</p>
+          <table class="cmp">
+            <colgroup><col class="label"><col><col><col></colgroup>
+            <thead><tr><th>Lifetime</th><th>2<sup>14</sup> signatures</th><th>2<sup>16</sup> signatures</th><th>2<sup>18</sup> signatures</th></tr></thead>
+            <tbody>
+              <tr><th>Public data</th><td>404&nbsp;MB</td><td>1.6&nbsp;GB</td><td>6.5&nbsp;GB</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </section>
 </div>
