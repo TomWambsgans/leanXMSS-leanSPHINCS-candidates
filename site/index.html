@@ -150,6 +150,7 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
 .split .bn { margin: 0.1rem 0 0.3rem; }
 .split .cmp col.label { width: 8.5rem; }
 .split .cmp tbody th { white-space: nowrap; }
+.cmp thead .sub { font-weight: 400; color: var(--muted); }
 
 footer { display: flex; justify-content: space-between; gap: 2rem; margin-top: 1.5rem; color: var(--muted); }
 footer p { margin: 0; }
@@ -522,7 +523,7 @@ footer a + a { margin-left: 1.25rem; }
           <p class="bn">Bottleneck: keygen traffic per operator</p>
           <table class="cmp">
             <colgroup><col class="label"><col><col><col></colgroup>
-            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security">i</span></th><th>9K signatures<span class="info" tabindex="0" data-tip="15K signatures: 113 bits of security">i</span></th><th>33K signatures<span class="info" tabindex="0" data-tip="55K signatures: 113 bits of security">i</span></th><th>120K signatures<span class="info r" tabindex="0" data-tip="200K signatures: 114 bits of security">i</span></th></tr></thead>
+            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security">i</span></th><th>9K signatures<span class="info" tabindex="0" data-tip="15K signatures: 113 bits of security">i</span><br><span class="sub">(subtree of 2<sup>8</sup> leaves)</span></th><th>33K signatures<span class="info" tabindex="0" data-tip="55K signatures: 113 bits of security">i</span><br><span class="sub">(subtree of 2<sup>10</sup> leaves)</span></th><th>120K signatures<span class="info r" tabindex="0" data-tip="200K signatures: 114 bits of security">i</span><br><span class="sub">(subtree of 2<sup>12</sup> leaves)</span></th></tr></thead>
             <tbody>
               <tr><th>2-of-3</th><td>11&nbsp;GB</td><td>43&nbsp;GB</td><td>172&nbsp;GB</td></tr>
               <tr><th>3-of-5</th><td>13&nbsp;GB</td><td>52&nbsp;GB</td><td>207&nbsp;GB</td></tr>
@@ -535,7 +536,7 @@ footer a + a { margin-left: 1.25rem; }
           <p class="bn">Bottleneck: public data to store (the same for the DKG version)</p>
           <table class="cmp">
             <colgroup><col class="label"><col><col><col></colgroup>
-            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security">i</span></th><th>33K signatures<span class="info" tabindex="0" data-tip="55K signatures: 113 bits of security">i</span></th><th>120K signatures<span class="info" tabindex="0" data-tip="200K signatures: 114 bits of security">i</span></th><th>450K signatures<span class="info r" tabindex="0" data-tip="750K signatures: 114 bits of security">i</span></th></tr></thead>
+            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security">i</span></th><th>33K signatures<span class="info" tabindex="0" data-tip="55K signatures: 113 bits of security">i</span><br><span class="sub">(subtree of 2<sup>10</sup> leaves)</span></th><th>120K signatures<span class="info" tabindex="0" data-tip="200K signatures: 114 bits of security">i</span><br><span class="sub">(subtree of 2<sup>12</sup> leaves)</span></th><th>450K signatures<span class="info r" tabindex="0" data-tip="750K signatures: 114 bits of security">i</span><br><span class="sub">(subtree of 2<sup>14</sup> leaves)</span></th></tr></thead>
             <tbody>
               <tr><th>Public data</th><td>404&nbsp;MB</td><td>1.6&nbsp;GB</td><td>6.5&nbsp;GB</td></tr>
             </tbody>
