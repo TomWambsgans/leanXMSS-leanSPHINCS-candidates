@@ -19,10 +19,15 @@ signing-call disclosure domination after actual keygen, including adaptive/repea
 and WOTS exhaustion; exact terminal coverage formula and all six signing/fresh-target lifetime
 bounds; actual-game cached witness and signing-subrun extraction; independent prepared secret
 model and adaptive hidden-seed guessing bound with explicit independence assumptions.
+Also checked: actual-game eager-preparation equivalence preserving cost; exact stopped
+ordinary-oracle coupling before seed hits; all four cached candidate laws and mixed-prefix
+invariant auditing; reference-free two-edge witnesses; exact hidden-prefix table splits;
+local cache-potential accounting against the actual shared query budget.
 
 Next necessary work:
 1. Bound the actual adversarial 24-tree disclosure process and its cached-query exceptions.
-2. Couple the actual seeded game to the prepared-secret model with cost preserved.
+2. Substitute privileged honest derivations by prepared-material reads with virtual cost,
+   then prove seed independence of the ordinary adversarial view before a seed hit.
 3. Connect the checked WOTS/structural/FORS witnesses to primitive probability bounds and
    the seeded-to-independent-secret coupling, with reference-free leaves handled explicitly.
 4. Combine the terms with the shared query budget and prove every exact N in

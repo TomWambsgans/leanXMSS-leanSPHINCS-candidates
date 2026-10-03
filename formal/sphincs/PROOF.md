@@ -88,6 +88,10 @@ signer and cache. `LifetimeTerminal.lean` proves the independent-history coverag
 projecting uniform coordinate tables to the positions with the target index.
 `LifetimeSigningBound.lean` closes all six exact lifetime bounds for these actual signing calls
 followed by a fresh independent target. Adversary-prequeried inputs and target search remain open.
+`LifetimeInterleaving.lean` characterizes exactly when raw adversarial queries break the
+disclosure invariant; it does not treat these bookkeeping defects as negligible failures.
+`LifetimeCandidate.lean` gives the exact conditional price in all four digest cache states,
+including a cached second block queried before the first.
 
 `SecurityTreeWitness.lean` extracts canonical paths, same-address node matches, and surrogate
 preimages. `SecurityChainWitness.lean` and `SecurityWotsWitness.lean` classify chain divergence,
@@ -98,6 +102,12 @@ matches. `SecurityVerifier.lean` connects these to the actual accepted verifier 
 `SecuritySignatureWitness.lean` composes the classification and derives reference certificates
 from successful signing. Canonical signatures with the same message and randomizer are identical,
 so the strong-forgery case is preserved. No global hash-injectivity hypothesis is used.
+`SecurityUnsignedWitness.lean` removes the reference requirement for a coarser witness:
+sum 120 across 64 digits forces a digit at most one, so that chain performs two linked edges.
+This also happens in honest signatures and must be charged only with an appropriate hidden-prefix
+invariant. `SecurityPrefixOracle.lean` and `SecurityPrefixSampling.lean` give exact serialized
+prefix parsing and independent secret/low-output/high-output table splits. They do not assume
+that an actual signing transcript already exposes only the selected prefix's endpoint.
 
 `SecurityDomains.lean` proves exact derivation-input injection and separation from verifier
 domains. `SecurityPrimitive.lean` bounds an explicit monitor of adaptive fresh queries against
@@ -112,6 +122,13 @@ Tree exceptions retain the actual recovered leaf and a concrete cached matching/
 seed-independent initialization. `SecuritySeedModel.lean` defines full-output independent key
 material and exact derivation-cache programming, including all surrogate addresses. Actual
 game coupling must establish the independence needed to apply the guessing bound.
+`SecuritySeedCoupling.lean` proves parameter-first eager preparation and equality with the
+actual experiment's joint success/cost distribution. It also proves equality up to a seed-hit
+for ordinary computations. The prepared cache still contains seed-addressed entries; honest
+privileged derivations must be substituted by material reads before the seed-hiding argument
+applies to the entire game. `SecurityQueryCharge.lean` connects local expected potential
+increases to the actual shared hash budget. The required forgery-covering potential and its
+concrete local bound are still to be constructed.
 
 ## Differences and obligations
 
