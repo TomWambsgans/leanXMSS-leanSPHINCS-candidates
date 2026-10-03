@@ -60,7 +60,7 @@ h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height:
 .params table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .params th, .params td { text-align: left; padding: 0.22rem 1.5rem 0.22rem 0; font-weight: 400; line-height: 1.35; }
 .params td + td { color: var(--muted); }
-.params thead th { border-bottom: 1px solid var(--rule); padding-bottom: 0.45rem; }
+.params thead th { border-bottom: 1px solid var(--rule); padding-bottom: 0.45rem; white-space: nowrap; }
 .params tbody tr:first-child > * { padding-top: 0.5rem; }
 .params tbody.out tr:first-child > * { border-top: 1px solid var(--rule); padding-top: 0.5rem; }
 
@@ -157,21 +157,26 @@ footer p { margin: 0; }
 footer a + a { margin-left: 1.25rem; }
 
 @media (max-width: 1150px) {
-  .tables { overflow-x: auto; }
-  .split { grid-template-columns: 1fr; gap: 1.5rem; }
-  .cmp { min-width: 36rem; }
   main { min-height: 0; }
   h1 { white-space: normal; }
-  .page { grid-template-columns: 1fr; }
+  .page { grid-template-columns: minmax(0, 1fr); }
+  .page > * { min-width: 0; }
   .params p { white-space: normal; }
   figure { min-height: 0; }
   figure svg { position: static; height: auto; }
+  .split { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+  .scroll { overflow-x: auto; }
+  .cmp { table-layout: auto; width: auto; }
+  .cmp col.label, .split .cmp col.label { width: auto; }
+  .cmp th, .cmp td { white-space: nowrap; }
   footer { flex-direction: column; gap: 0.5rem; }
 }
 @media (max-width: 600px) {
   main { padding: 1.25rem 1rem; }
   h1 { font-size: 2.2rem; }
-  .split .cmp { min-width: 22rem; }
+  .params p, .idea { font-size: 1.1rem; }
+  .params th, .params td { padding-right: 0.9rem; }
+  .info::after { white-space: pre-wrap; width: max-content; max-width: 70vw; }
 }
 </style>
 </head>
@@ -185,7 +190,8 @@ footer a + a { margin-left: 1.25rem; }
       <p class="by">by Tom Wambsgans</p>
     </header>
     <div class="params">
-      <p>Same as SLH-DSA-128-24 (<a href="https://csrc.nist.gov/pubs/sp/800/230/ipd">NIST SP 800-230</a>), except:</p>
+      <p>Same as SLH-DSA-128-24 (<a href="https://csrc.nist.gov/pubs/sp/800/230/ipd" style="white-space: nowrap">NIST SP 800-230</a>), except:</p>
+      <div class="scroll">
       <table>
         <thead><tr><th></th><th>leanSphincs</th><th>SLH-DSA-128-24</th></tr></thead>
         <tbody>
@@ -201,6 +207,7 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th>Verification<br><span class="unit">(compressions)</span></th><td>391</td><td>≈ 296</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
   <figure>
@@ -504,6 +511,7 @@ footer a + a { margin-left: 1.25rem; }
     <p class="idea"><strong>Key idea:</strong> the signer builds only part of the XMSS tree (<a href="https://conduition.io/cryptography/hypertree-pruning/">pruning</a>), so lifetime scales with keygen time.</p>
     <div class="tables">
       <h2>One signer</h2>
+      <div class="scroll">
       <table class="cmp">
         <colgroup><col class="label"><col><col><col></colgroup>
         <thead>
@@ -515,12 +523,14 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th>Signing</th><td><div class="hd"><span>111K compressions, 16&nbsp;KiB cache</span><span class="ex">3.4&nbsp;s</span></div></td><td><div class="hd"><span>84K compressions, 1&nbsp;MiB cache</span><span class="ex">0.7&nbsp;ms</span></div></td><td><div class="hd"><span>110K compressions, 16&nbsp;MiB cache</span><span class="ex">0.1&nbsp;ms</span></div></td></tr>
         </tbody>
       </table>
+      </div>
       <h2>Threshold, <i>t</i>-of-<i>n</i></h2>
       <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>: a one-time ceremony at keygen precomputes every hash of a secret, run either as an MPC among the operators (DKG) or by a trusted dealer; signing then needs no MPC (432 bytes per signer, 3 rounds), and is secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers (with abort), assuming an honest majority at keygen (DKG) or a trusted dealer.</p>
       <div class="split">
         <div>
           <h3>With DKG</h3>
           <p class="bn">Bottleneck: keygen traffic per operator</p>
+          <div class="scroll">
           <table class="cmp">
             <colgroup><col class="label"><col><col><col></colgroup>
             <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security">i</span></th><th>9K signatures<span class="info" tabindex="0" data-tip="15K signatures: 113 bits of security">i</span><br><span class="sub">(subtree of 2<sup>8</sup>)</span></th><th>33K signatures<span class="info" tabindex="0" data-tip="55K signatures: 113 bits of security">i</span><br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th>120K signatures<span class="info r" tabindex="0" data-tip="200K signatures: 114 bits of security">i</span><br><span class="sub">(subtree of 2<sup>12</sup>)</span></th></tr></thead>
@@ -530,10 +540,12 @@ footer a + a { margin-left: 1.25rem; }
               <tr><th>4-of-7</th><td>14&nbsp;GB</td><td>55&nbsp;GB</td><td>222&nbsp;GB</td></tr>
             </tbody>
           </table>
+          </div>
         </div>
         <div>
           <h3>With a trusted dealer</h3>
           <p class="bn">Bottleneck: public data to store (the same for the DKG version)</p>
+          <div class="scroll">
           <table class="cmp">
             <colgroup><col class="label"><col><col><col></colgroup>
             <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security">i</span></th><th>33K signatures<span class="info" tabindex="0" data-tip="55K signatures: 113 bits of security">i</span><br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th>120K signatures<span class="info" tabindex="0" data-tip="200K signatures: 114 bits of security">i</span><br><span class="sub">(subtree of 2<sup>12</sup>)</span></th><th>450K signatures<span class="info r" tabindex="0" data-tip="750K signatures: 114 bits of security">i</span><br><span class="sub">(subtree of 2<sup>14</sup>)</span></th></tr></thead>
@@ -541,6 +553,7 @@ footer a + a { margin-left: 1.25rem; }
               <tr><th>Public data</th><td>404&nbsp;MB</td><td>1.6&nbsp;GB</td><td>6.5&nbsp;GB</td></tr>
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>
