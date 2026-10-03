@@ -57,39 +57,75 @@ slots), small and fast to verify, and thresholdizable, with a DKG or a trusted d
 \section{Threshold signing}
 
 \begin{itemize}
-  \item $t$-of-$n$, set up either by DKG ceremonies among the operators, with $n=2f+1$ and $t=f+1$ (e.g.\
-        2-of-3, 3-of-5, 4-of-7), or by a trusted dealer, with $n=3f+1$ and $t=2f+1$ as in DVT (e.g.\ 3-of-4,
+  \item $t$-of-$n$, with two setups: DKG ceremonies among the operators, with $n=2f+1$ and $t=f+1$ (e.g.\
+        2-of-3, 3-of-5, 4-of-7), or a trusted dealer, with $n=3f+1$ and $t=2f+1$ as in DVT (e.g.\ 3-of-4,
         5-of-7)
   \item malicious security against $t-1$ operators (with abort), at signing and at the ceremonies, assuming
         the operators first agree, by consensus, on the message to sign
-  \item signing: no MPC, 944 bytes per signer, 2 rounds
+  \item signing: the same for both setups, no MPC, 944 bytes per signer, 2 rounds
 \end{itemize}
 
 \paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS}).} Let $F$ be a threshold PRF: any $t$ operators evaluate
 it together, $t-1$ learn nothing. A chain of a bottom key starts at $y_0=F(x_0)$, with $y_{j+1}=\hash(y_j)$.
-The ceremony computes the chains in MPC and publishes $y_1\oplus F(x_1)$, $y_2\oplus F(x_2)$ and $y_3$, for
-distinct addresses $x_j$. To sign position $p$, the signers reveal $F(x_p)$, which is $y_0$ or unmasks $y_1$
-or $y_2$ (nothing for $p=3$).
+The setup computes the chains (in MPC, or the dealer in the clear) and publishes $y_1\oplus F(x_1)$,
+$y_2\oplus F(x_2)$ and $y_3$, for distinct addresses $x_j$. To sign position $p$, the signers reveal
+$F(x_p)$, which is $y_0$ or unmasks $y_1$ or $y_2$ (nothing for $p=3$).
 
 \paragraph{$F$.} As in leanSPHINCS: one seed $k_T$ per set $T$ of $t-1$ operators, held by the others, and
 $F(x)=\bigoplus_T\hash(k_T,x)$. When a quorum $J$ signs $m$, each signer's part of $F(x)$ carries masks
 $\hash(k_{ij},x,m,J)$, one per co-signer $j$, which cancel within the signing: parts from different
 signings don't combine.
 
-\paragraph{DKG ceremonies.} At keygen, then for each bottom tree (every $2^{16}$ slots): they recur, so their
-honest majority must hold against the same $t-1$ operators as signing, hence $n=2f+1$ and $t=f+1$.
+\subsection{\texorpdfstring{Setup by DKG, $n=2f+1$, $t=f+1$}{Setup by DKG, n = 2f+1, t = f+1}}
+
+Ceremonies at keygen, then for each bottom tree (every $2^{16}$ slots): they recur, so their honest
+majority must hold against the same $t-1$ operators as signing, hence $n=2f+1$ and $t=f+1$.
 Honest-majority MPC with replicated sharing~\cite{CDI05} and a malicious-security check~\cite{GS20}, with
 abort:
 \begin{itemize}
-  \item at keygen: generate $P$, the seeds and the pairwise keys $k_{ij}$ (commit-reveal); MPC hashes the
+  \item keygen: generate $P$, the seeds and the pairwise keys $k_{ij}$ (commit-reveal); MPC hashes the
         chains of the $2^{16}$ top keys and opens their ends; the top root is the public key. Top keys
         only sign bottom roots, known at the ceremonies, so they need no masks
-  \item for each bottom tree: MPC hashes the chains of its $2^{16}$ keys ($58\times3$ hashes per key) and
+  \item each bottom tree: MPC hashes the chains of its $2^{16}$ keys ($58\times3$ hashes per key) and
         opens their ends and masked values; the tree is built in the clear; MPC recomputes the next top
         key and opens its signature of the bottom root
+  \item public data: 182~MB per bottom tree (masked values and chain ends), kept while the tree is in
+        use. Operators keep only their seeds and pairwise keys
 \end{itemize}
 
-\paragraph{Signing (any $t$, no MPC).}
+\paragraph{Cost (measured with the leanSPHINCS prototype).} $2^{16}\cdot58\cdot3=11.4\cdot10^6$ MPC hashes
+per bottom tree, and once at keygen. Traffic sent by the busiest operator (about as much is received):
+
+\begin{center}
+\begin{tabular}{lrr}
+  & traffic & average rate (10-second slots) \\
+  2-of-3 & 19.2~GB & 29~KB/s \\
+  3-of-5 & 23.1~GB & 35~KB/s \\
+  4-of-7 & 24.8~GB & 38~KB/s \\
+\end{tabular}
+\end{center}
+
+\subsection{\texorpdfstring{Setup by a trusted dealer, $n=3f+1$, $t=2f+1$}{Setup by a trusted dealer, n = 3f+1, t = 2f+1}}
+
+The usual DVT setting. For a lifetime of $L$ bottom trees, the dealer, in the clear:
+\begin{itemize}
+  \item generates $P$, one seed $k_T$ per set $T$ of $2f$ operators, and the pairwise keys $k_{ij}$
+  \item computes the $2^{16}$ top keys and the top tree, whose root is the public key
+  \item for each of the $L$ bottom trees: computes the chains of its $2^{16}$ keys from $F$, publishes
+        their ends and masked values, builds the tree, and signs its root with the next top key
+  \item gives each operator its seeds (those of the sets it is not in) and its pairwise keys, then
+        erases everything
+\end{itemize}
+Top keys only sign at setup, so they are never thresholdized. No MPC, so the key is secure against $2f$
+operators; consensus on the message tolerates $f$, as in BLS-based DVT. After $L$ bottom trees, a new
+setup gives a new public key.
+
+\paragraph{Cost.} The dealer hashes the chains and their $F$ values (3 per chain, one hash per seed): about
+40~s of CPU per year of lifetime for 5-of-7. The bottleneck is the public data, 182~MB per bottom tree,
+i.e.\ 8.8~GB per year of lifetime with 10-second slots (44~GB for 5 years, 88~GB for 10).
+
+\subsection{\texorpdfstring{Signing (both setups, any $t$, no MPC)}{Signing (both setups, any t, no MPC)}}
+
 \begin{enumerate}
   \item agree, by consensus, on (slot, $m$)
   \item each signer sends its part of $F(x_s)$, at an address $x_s$ of the slot: $R_0=\hash(F(x_s),m)$; grind
@@ -101,29 +137,6 @@ $F(x_s)$ is unpredictable until the slot is signed, and the same for every quoru
 the same signature, so a slot never opens two encodings. A secret known to every operator would not do:
 $t-1$ of them could predict $R$ and search for two attestations with the same encoding (about $2^{64}$
 hashes).
-
-\paragraph{DKG ceremony cost (measured with the leanSPHINCS prototype).} $2^{16}\cdot58\cdot3=11.4\cdot10^6$
-MPC hashes per bottom tree, and once at keygen. Traffic sent by the busiest operator (about as much is
-received):
-
-\begin{center}
-\begin{tabular}{lrr}
-  & traffic & average rate (10-second slots) \\
-  2-of-3 & 19.2~GB & 29~KB/s \\
-  3-of-5 & 23.1~GB & 35~KB/s \\
-  4-of-7 & 24.8~GB & 38~KB/s \\
-\end{tabular}
-\end{center}
-
-\noindent Public data: 182~MB per bottom tree (masked values and chain ends). Operators keep only their
-seeds and pairwise keys.
-
-\paragraph{Trusted dealer, $n=3f+1$, $t=2f+1$.} The dealer computes everything in the clear, with one seed
-$k_T$ per set of $2f$ operators: every bottom tree of the key's lifetime at once, and the top-tree
-signatures of their roots. It publishes the data, then erases its secrets. No MPC, so the key is secure
-against $2f$ operators; consensus on the message tolerates $f$, as in BLS-based DVT. Bottleneck: the
-public data, 182~MB per bottom tree, i.e.\ 8.8~GB per year of lifetime with 10-second slots (44~GB for 5
-years, 88~GB for 10).
 
 \begin{thebibliography}{9}
 \bibitem{HK22C} M.~Kudinov, A.~H\"ulsing, E.~Ronen, E.~Yogev. \emph{SPHINCS$^+$C: Compressing SPHINCS$^+$
