@@ -159,6 +159,19 @@ footer { display: flex; justify-content: space-between; gap: 2rem; margin-top: 1
 footer p { margin: 0; }
 footer a + a { margin-left: 1.25rem; }
 
+@media (hover: none) {
+  .info::after, .cmp .dev .info::after, .info.r::after {
+    position: fixed;
+    left: 1rem;
+    right: 1rem;
+    top: auto;
+    bottom: 1.25rem;
+    width: auto;
+    max-width: none;
+    white-space: pre-wrap;
+    text-align: center;
+  }
+}
 @media (max-width: 1150px) {
   main { min-height: 0; }
   h1 { white-space: normal; }
