@@ -541,7 +541,7 @@ footer a + a { margin-left: 1.25rem; }
       </table>
       </div>
       <h2>Threshold, <i>t</i>-of-<i>n</i></h2>
-      <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>: a one-time ceremony at keygen precomputes every hash of a secret, run either as an MPC among the operators (DKG) or by a trusted dealer; signing then needs no MPC (432 bytes per signer, 3 rounds), and is secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers (with abort), assuming an honest majority at keygen (DKG) or a trusted dealer.</p>
+      <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>: a one-time ceremony at keygen precomputes every hash of a secret, run either as an honest-majority MPC among the operators (DKG) or by a trusted dealer; signing then needs no MPC (432 bytes per signer, 3 rounds), and is secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers (with abort).</p>
       <div class="split">
         <div>
           <h3>With DKG</h3>
