@@ -84,7 +84,7 @@ fn share_det(s: &Structure, value: &[u64], seed: u64) -> Vec<Vec<u64>> {
 }
 
 fn party_shares(s: &Structure, terms: &[Vec<u64>], i: usize) -> Shares {
-    Shares(s.held[i].iter().map(|&t| terms[t].clone()).collect())
+    Shares::input(s.held[i].iter().map(|&t| terms[t].clone()).collect())
 }
 
 /// A corrupt party: network faults (and rushing), a protocol cheat, and whether it ignores checks.
@@ -1086,7 +1086,7 @@ fn coalition_views_two_worlds_messages() {
                 .map(|k| {
                     let mut terms: Vec<u64> = (0..s.terms.len()).map(|t| fixed[k * s.terms.len() + t]).collect();
                     terms[tc] = (0..s.terms.len()).filter(|&t| t != tc).fold(sec[k], |a, t| a ^ terms[t]);
-                    (0..parties).map(|i| Shares(s.held[i].iter().map(|&t| vec![terms[t]]).collect())).collect()
+                    (0..parties).map(|i| Shares::input(s.held[i].iter().map(|&t| vec![terms[t]]).collect())).collect()
                 })
                 .collect()
         };
@@ -1167,5 +1167,110 @@ fn coalition_views_two_worlds_messages() {
             }
         }
         assert!(constant > 0 && masked > 0);
+    }
+}
+
+/// Session 1 evaluates `z = x & y` (x = y = all ones), with party 0 flipping instance 5 of the AND
+/// as the reviewer's reproduction did; `verify_first` says whether session 1 verifies its ANDs. Then
+/// session 2, fresh and honest, verifies (nothing) and opens session 1's outputs, or uses them as the
+/// input of another evaluation.
+fn cross_session(parties: usize, cheat: Cheat, verify_first: bool, reuse: bool) -> Vec<Result<Vec<Vec<u64>>, Abort>> {
+    let s = Arc::new(Structure::new(parties));
+    let keys = deal(&s);
+    let n = 64;
+    let mut b = Builder::new();
+    let (x, y) = (b.sec_input(), b.sec_input());
+    let z = b.and(x, y);
+    b.output(z);
+    let prog = b.compile();
+    let mut b = Builder::new();
+    let x = b.sec_input();
+    let y = b.not(x);
+    b.output(y);
+    let negate = b.compile();
+    let ones = vec![u64::MAX];
+    let (sx, sy) = (crate::setup::share(&s, &ones), crate::setup::share(&s, &ones));
+    let bad = [Bad { party: 0, cheat, ..Default::default() }];
+    let first = session(&s, &keys, None, n, &bad, |p| {
+        let i = p.id;
+        let out = p.eval(&prog, &[], &[sx[i].clone(), sy[i].clone()])?;
+        if verify_first {
+            p.verify()?;
+        }
+        Ok(out)
+    });
+    let outs: Vec<Vec<Shares>> = first.into_iter().map(|o| o.result.unwrap_or_default()).collect();
+    if outs.iter().any(Vec::is_empty) {
+        return vec![Err(Abort("session 1 aborted".into())); parties];
+    }
+    session(&s, &keys, None, n, &[], |p| {
+        let mine = outs[p.id].clone();
+        let mine = if reuse {
+            let negated = p.eval(&negate, &[], &mine)?;
+            p.verify()?;
+            negated
+        } else {
+            p.verify()?;
+            mine
+        };
+        p.open(&mine)
+    })
+    .into_iter()
+    .map(|o| o.result)
+    .collect()
+}
+
+#[test]
+fn unverified_shares_cannot_cross_sessions() {
+    let flip = Cheat::FlipAnd { and: 0, bit: 5, split: false };
+    for parties in [3, 5, 7] {
+        // Session 1 never verifies its (corrupted) AND: session 2 refuses to open the outputs, or to
+        // use them as inputs.
+        for reuse in [false, true] {
+            for (i, r) in cross_session(parties, flip, false, reuse).iter().enumerate() {
+                assert!(r.is_err(), "n = {parties}, reuse {reuse}: party {i} accepted {r:?}");
+            }
+        }
+        // Verified in session 1, they open (or are used) in session 2; a corrupted AND makes
+        // session 1's verification abort instead.
+        for reuse in [false, true] {
+            let want = if reuse { 0 } else { u64::MAX };
+            for r in cross_session(parties, Cheat::Honest, true, reuse) {
+                assert_eq!(r.unwrap(), vec![vec![want]], "n = {parties}, reuse {reuse}");
+            }
+            assert!(cross_session(parties, flip, true, reuse).iter().all(|r| r.is_err()), "n = {parties}");
+        }
+    }
+}
+
+#[test]
+fn trailing_bytes_are_rejected_in_every_round() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    for parties in [3, 5] {
+        let case = Case::new(parties, toy(), 100, 31);
+        let rounds = round_count(&case);
+        let mut tested = 0;
+        for round in 0..rounds {
+            let appended = Arc::new(AtomicBool::new(false));
+            let flag = appended.clone();
+            let adapt: crate::net::Adapt = Arc::new(move |r, _got, out| {
+                if r == round {
+                    for m in out.iter_mut().filter(|m| !m.is_empty()) {
+                        m.push(0);
+                        flag.store(true, Ordering::Relaxed);
+                    }
+                }
+            });
+            let tamper = Tamper { rush: true, corrupt: 1, adapt: Some(adapt), ..Default::default() };
+            let b = [Bad { party: 0, tamper, ..Default::default() }];
+            let run = case.run(None, &b, None);
+            if appended.load(Ordering::Relaxed) {
+                tested += 1;
+                for i in case.honest(&b) {
+                    assert!(run[i].result.is_err(), "n = {parties}: a trailing byte in round {round} was accepted by party {i}");
+                }
+            }
+        }
+        assert!(tested as u64 > rounds / 2, "n = {parties}: only {tested} of {rounds} rounds carried a message");
     }
 }

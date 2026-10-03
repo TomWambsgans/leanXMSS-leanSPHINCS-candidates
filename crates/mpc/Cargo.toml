@@ -4,14 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
-description = "3-party Boolean MPC: replicated sharing, AFLNO16 multiplication, BGIN19 verification"
+description = "Boolean circuits (BLAKE2s), GF(2^128), PRFs and network accounting for the MPC in crates/rss"
 
 [lints]
 workspace = true
-
-[features]
-# Test hooks (cheating parties, injected faults), for this crate's and dependents' tests only.
-testing = []
 
 [dependencies]
 blake2s.workspace = true

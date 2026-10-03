@@ -13,10 +13,13 @@
 //! - the output terms are `z_T = r_T` for `T != T*`, and `z_T*`: they add up to `x y`.
 //!
 //! Every AND is recorded until [`Party::verify`] has checked all of them; [`Party::open`] refuses
-//! to run before that. After any abort (a failed check, a malformed message, a party that left) the
-//! party is poisoned: every later call fails, so nothing is ever opened after a rejection.
+//! to run before that. The outputs of [`Party::eval`] carry their provenance: they can be opened, or
+//! used as inputs in another session, only once the session that computed them has verified their
+//! ANDs. After any abort (a failed check, a malformed message, a party that left) the party is
+//! poisoned: every later call fails, so nothing is ever opened after a rejection.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use mpc::circuit::{AndOp, Op, Program};
 use mpc::gf128::Gf128;
@@ -27,9 +30,35 @@ use crate::setup::{Keys, SessionId};
 use crate::structure::{Structure, convert};
 use crate::verify::{ceil_log2, tensor};
 
-/// A party's shares of one secret bit-vector: its terms, by local index.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Shares(pub Vec<Vec<u64>>);
+/// A party's shares of one secret bit-vector: its terms, by local index, and their provenance.
+#[derive(Clone, Debug)]
+pub struct Shares(pub Vec<Vec<u64>>, pub(crate) Origin);
+
+impl Shares {
+    /// Fresh input shares (dealt, or PRF terms of the setup's seeds). Never wrap values computed by
+    /// [`Party::eval`] this way: that would skip the check that their ANDs were verified.
+    pub fn input(terms: Vec<Vec<u64>>) -> Self {
+        Self(terms, Origin::Input)
+    }
+}
+
+impl PartialEq for Shares {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Eq for Shares {}
+
+/// Where shares come from.
+#[derive(Clone, Debug)]
+pub(crate) enum Origin {
+    /// Inputs: their terms are hash-compared among their holders when used.
+    Input,
+    /// The output of an evaluation: correct once the evaluating party has verified its first `ands`
+    /// ANDs (`verified` is that party's count of verified ANDs).
+    Eval { ands: u64, verified: Arc<AtomicU64> },
+}
 
 /// Transcript fields: the party's terms of an AND's inputs and output.
 pub(crate) const X: usize = 0;
@@ -86,6 +115,8 @@ pub struct Party {
     pub(crate) transcript: Transcript,
     /// ANDs evaluated in this session so far: the index of the next one.
     ands_done: u64,
+    /// ANDs of this session verified so far, shared with the outputs of [`Party::eval`].
+    verified: Arc<AtomicU64>,
     /// Calls to [`Party::verify`] and [`Party::open`] so far: every coin and PRSS tag of a call
     /// carries it, so no tag repeats within a session.
     pub(crate) epoch: u64,
@@ -143,6 +174,7 @@ impl Party {
             tail: tail_mask(n),
             transcript: Transcript::default(),
             ands_done: 0,
+            verified: Arc::new(AtomicU64::new(0)),
             epoch: 0,
             hashes: (0..m).map(|_| blake2s::Hasher::new()).collect(),
             pending: false,
@@ -203,7 +235,24 @@ impl Party {
     /// Shares of a public bit-vector: the term `T_0` is the value, the others are zero.
     pub fn share_public(&self, value: &[u64]) -> Shares {
         let l0 = self.s.local(self.id, 0);
-        Shares((0..self.s.m()).map(|l| if Some(l) == l0 { value.to_vec() } else { vec![0; self.words] }).collect())
+        Shares::input((0..self.s.m()).map(|l| if Some(l) == l0 { value.to_vec() } else { vec![0; self.words] }).collect())
+    }
+
+    /// Whether `x` may be used here: inputs always; outputs of this party's own evaluation (verified
+    /// or not, as later verifications cover them); and outputs of another session once verified there.
+    fn usable(&self, x: &Shares) -> bool {
+        match &x.1 {
+            Origin::Input => true,
+            Origin::Eval { ands, verified } => Arc::ptr_eq(verified, &self.verified) || verified.load(Ordering::Acquire) >= *ands,
+        }
+    }
+
+    /// Whether `x` may be opened: inputs, and outputs whose ANDs have all been verified.
+    fn openable(&self, x: &Shares) -> bool {
+        match &x.1 {
+            Origin::Input => true,
+            Origin::Eval { ands, verified } => verified.load(Ordering::Acquire) >= *ands,
+        }
     }
 
     /// Evaluates `prog` on public inputs (bit-vectors) and secret inputs (shares).
@@ -214,6 +263,9 @@ impl Party {
     fn eval_inner(&mut self, prog: &Program, pub_in: &[Vec<u64>], sec_in: &[Shares]) -> Result<Vec<Shares>, Abort> {
         assert_eq!(pub_in.len(), prog.n_pub_inputs);
         assert_eq!(sec_in.len(), prog.n_sec_inputs);
+        if !sec_in.iter().all(|x| self.usable(x)) {
+            return abort("shares from another session whose ANDs were never verified");
+        }
         let (w, m, tail) = (self.words, self.s.m(), self.tail);
         let mw = m * w;
         let mut pubs = vec![0u64; prog.n_pub_slots * w];
@@ -279,7 +331,12 @@ impl Party {
                 self.and_level(&step.ands, &mut sec)?;
             }
         }
-        Ok(prog.outputs.iter().map(|&o| Shares((0..m).map(|l| sec[o as usize * mw + l * w..o as usize * mw + (l + 1) * w].to_vec()).collect())).collect())
+        let origin = Origin::Eval { ands: self.ands_done, verified: self.verified.clone() };
+        Ok(prog
+            .outputs
+            .iter()
+            .map(|&o| Shares((0..m).map(|l| sec[o as usize * mw + l * w..o as usize * mw + (l + 1) * w].to_vec()).collect(), origin.clone()))
+            .collect())
     }
 
     /// One level of AND gates: products, two rounds, output terms (all inputs read before any
@@ -465,7 +522,9 @@ impl Party {
     /// Verifies every AND since the last verification ([`crate::verify`]); aborts unless all of them
     /// are correct.
     pub fn verify(&mut self) -> Result<(), Abort> {
-        self.guarded(crate::verify::verify)
+        self.guarded(crate::verify::verify)?;
+        self.verified.store(self.ands_done, Ordering::Release);
+        Ok(())
     }
 
     /// Opens secrets to all parties; every AND and input since the last [`Party::verify`] must have
@@ -488,6 +547,9 @@ impl Party {
     fn open_inner(&mut self, xs: &[Shares]) -> Result<Vec<Vec<u64>>, Abort> {
         if self.transcript.n_and != 0 || self.pending {
             return abort("opening before the ANDs and inputs are verified");
+        }
+        if !xs.iter().all(|x| self.openable(x)) {
+            return abort("opening shares whose ANDs were never verified");
         }
         self.epoch += 1;
         let s = self.s.clone();
@@ -643,7 +705,8 @@ impl Party {
         let out: Vec<Vec<u8>> = (0..n).map(|p| [&mine[..], &extra[p][..]].concat()).collect();
         let got = self.net.exchange(out)?;
         let len = 16 * vals.len();
-        if (0..n).any(|p| p != i && got[p].len() < len) {
+        let exact = extra.iter().all(Vec::is_empty);
+        if (0..n).any(|p| p != i && (got[p].len() < len || (exact && got[p].len() != len))) {
             return abort("malformed opening of a check value");
         }
         let mut opened = Vec::with_capacity(vals.len());

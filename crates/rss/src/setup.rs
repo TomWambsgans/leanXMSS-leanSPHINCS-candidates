@@ -154,7 +154,7 @@ pub fn prf_term(key: &Key, addr: &[u8; 32]) -> [u8; 16] {
 /// again by the next [`crate::engine::Party::verify`]).
 pub fn prf_inputs(s: &Structure, keys: &Keys, addrs: &[[u8; 32]]) -> Vec<Shares> {
     let words = addrs.len().div_ceil(64);
-    let mut out: Vec<Shares> = (0..128).map(|_| Shares(vec![vec![0u64; words]; s.m()])).collect();
+    let mut out: Vec<Shares> = (0..128).map(|_| Shares::input(vec![vec![0u64; words]; s.m()])).collect();
     for (l, key) in keys.prf.iter().enumerate() {
         for (k, addr) in addrs.iter().enumerate() {
             let h = prf_term(key, addr);
@@ -171,5 +171,5 @@ pub fn share(s: &Structure, value: &[u64]) -> Vec<Shares> {
     let mut terms: Vec<Vec<u64>> = (1..s.terms.len()).map(|_| os_random_words(value.len())).collect();
     let last: Vec<u64> = (0..value.len()).map(|w| terms.iter().fold(value[w], |acc, t| acc ^ t[w])).collect();
     terms.push(last);
-    (0..s.n).map(|i| Shares(s.held[i].iter().map(|&t| terms[t].clone()).collect())).collect()
+    (0..s.n).map(|i| Shares::input(s.held[i].iter().map(|&t| terms[t].clone()).collect())).collect()
 }

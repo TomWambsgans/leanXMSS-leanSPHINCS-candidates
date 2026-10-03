@@ -252,12 +252,6 @@ mod tests {
     }
 
     #[test]
-    fn sizes() {
-        assert_eq!(SIG_SIZE, 5684);
-        assert_eq!(PUB_KEY_SIZE, 32);
-    }
-
-    #[test]
     fn pruned_sign_verify_and_costs() {
         for b in [3usize, 12] {
             let before = compressions();
@@ -282,6 +276,74 @@ mod tests {
                 assert!(verify(&pk, &m, &bad).is_err());
             }
         }
+    }
+
+    fn hex(bytes: &[u8]) -> String {
+        bytes.iter().map(|b| format!("{b:02x}")).collect()
+    }
+
+    #[test]
+    fn tampered_signatures_are_rejected() {
+        let (sk, pk) = key_gen(&seed(9), 10);
+        let m: Message = std::array::from_fn(|i| i as u8);
+        let sig = sign(&sk, &m);
+        assert_eq!(verify(&pk, &m, &sig), Ok(()));
+        let bytes = sig.to_bytes();
+        for len in [0, SIG_SIZE - 1, SIG_SIZE + 1] {
+            let mut b = bytes.clone();
+            b.resize(len, 0);
+            assert!(Signature::from_bytes(&b).is_none(), "length {len}");
+        }
+        // Other counters: never accepted, and some encode no codeword at all.
+        let mut inadmissible = 0;
+        for delta in 1..=40u32 {
+            let mut bad = sig.clone();
+            bad.counter = sig.counter.wrapping_add(delta);
+            match verify(&pk, &m, &bad) {
+                Err(VerifyError::InadmissibleEncoding) => inadmissible += 1,
+                r => assert_eq!(r, Err(VerifyError::RootMismatch), "counter + {delta}"),
+            }
+        }
+        assert!(inadmissible > 30, "{inadmissible} of 40 altered counters were inadmissible");
+        let mut cases: Vec<(&str, Signature)> = Vec::new();
+        let mut bad = sig.clone();
+        bad.path[7][3] ^= 1;
+        cases.push(("auth path", bad));
+        let mut bad = sig.clone();
+        bad.path[H - 1][0] ^= 0x80;
+        cases.push(("top of the auth path", bad));
+        let mut bad = sig.clone();
+        bad.wots[11][5] ^= 4;
+        cases.push(("WOTS value", bad));
+        let mut bad = sig.clone();
+        bad.fors.paths[2][A - 1][0] ^= 1;
+        cases.push(("FORS path", bad));
+        let mut bad = sig.clone();
+        bad.fors.secrets[K - 1][N - 1] ^= 1;
+        cases.push(("FORS secret", bad));
+        let mut bad = sig.clone();
+        bad.randomizer[0] ^= 1;
+        cases.push(("randomizer", bad));
+        for (what, bad) in cases {
+            assert!(verify(&pk, &m, &bad).is_err(), "tampered {what} accepted");
+            assert_eq!(Signature::from_bytes(&bad.to_bytes()).unwrap(), bad);
+        }
+        let mut other = pk;
+        other.public_param[0] ^= 1;
+        assert!(verify(&other, &m, &sig).is_err(), "another public parameter");
+    }
+
+    /// Pins the key and the signature bytes of one small pruned key, so that a change to
+    /// the tweaks, the hash inputs or the serialization cannot pass unnoticed.
+    #[test]
+    fn known_answer() {
+        let (sk, pk) = key_gen(&seed(1), 11);
+        let m: Message = std::array::from_fn(|i| (7 * i) as u8);
+        let sig = sign(&sk, &m);
+        let digest = blake2s::hash(&sig.to_bytes());
+        assert_eq!(hex(&pk.to_bytes()), "7c7a4258fe736164a91b0f3e7cfcbbcd7029a8f51ef0f8fcdddcaa01af51abb8");
+        assert_eq!(hex(&digest), "c130139ab6945ba7bf59aadac936f8cf4cb7145f6588a6f93d05584c28363927");
+        assert_eq!(sig.counter, 194);
     }
 
     #[test]

@@ -1,5 +1,5 @@
 //! Boolean MPC among `n = 2f + 1` parties with an honest majority (at most `f` corrupt), malicious
-//! security with abort: the generalization of [`mpc`] (three parties) to 3-of-5, 4-of-7, ...
+//! security with abort, for 2-of-3, 3-of-5, 4-of-7, ...
 //!
 //! - Sharing: replicated (Cramer, Damgard, Ishai, TCC 2005): `x = XOR_T x_T` over the `f`-subsets
 //!   `T` of parties, `x_T` held by the `f + 1` parties outside `T`. Any `f` parties miss the term of
@@ -16,6 +16,8 @@
 //!   robust (error-detecting) opening.
 //! - Openings ([`engine::Party::open`]): through a rotating king, then a batched check against a
 //!   robustly opened random linear combination.
+//! - Shares carry their provenance: outputs of an evaluation are opened, or used in another
+//!   session, only once their ANDs are verified.
 //!
 //! Circuits, the PRF and GF(2^128) come from [`mpc`]; the network is [`net`].
 

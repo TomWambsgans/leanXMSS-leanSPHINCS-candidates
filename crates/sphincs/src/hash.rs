@@ -22,11 +22,8 @@ pub const TWEAK_FTS_LEAF: u8 = 9;
 pub const TWEAK_FTS_NODE: u8 = 10;
 pub const TWEAK_FTS_ROOTS: u8 = 11;
 pub const TWEAK_MSG: u8 = 12;
-/// A pruned key's surrogate siblings, and where its kept subtree sits.
+/// A pruned key's surrogate siblings (the kept subtree's position comes from the low bits of `P`).
 pub const TWEAK_SURROGATE: u8 = 13;
-pub const TWEAK_SUBTREE: u8 = 14;
-/// Reserved for the threshold signer's own derivations (shares, randomness); never a verifier's.
-pub const TWEAK_THRESHOLD: u8 = 15;
 
 /// `[protocol_domain_sep:1 | type:1 | layer:1 | zero:1 | p:4 | tree:4 | index:4]`, little endian.
 pub fn tweak(t: u8, lay: usize, tau: u32, p: u32, j: u32) -> Tweak {

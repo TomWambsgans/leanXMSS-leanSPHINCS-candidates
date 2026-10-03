@@ -1,6 +1,6 @@
 // CREDIT: adapted from leanVM's SPHINCS crate (https://github.com/leanEthereum/leanVM, crates/sphincs),
 // MIT OR Apache-2.0, see licenses/leanVM-LICENSE-MIT and licenses/leanVM-LICENSE-APACHE.
-// Re-parameterized to the leanSphincs candidate (leansphincs.tex): one XMSS layer (d = 1) of height
+// Re-parameterized to the leanSphincs candidate (leanSPHINCS.tex): one XMSS layer (d = 1) of height
 // h = 26, plain FORS with k = 24 trees of height a = 10, WOTS+C with w = 4, 64 chains and target sum
 // 120, and pruned keys (a kept subtree plus pseudorandom surrogate siblings).
 
@@ -64,4 +64,5 @@ pub const VERIFY_COMPRESSIONS: u64 = 391;
 const _: () = assert!(W * V == 8 * N);
 const _: () = assert!(TARGET_SUM < V * (CHAIN_LEN - 1));
 const _: () = assert!(SIG_SIZE == 5684);
+const _: () = assert!(PUB_KEY_SIZE == 32);
 const _: () = assert!(DIGEST_BITS <= 512);
