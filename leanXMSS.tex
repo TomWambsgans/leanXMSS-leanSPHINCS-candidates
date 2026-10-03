@@ -28,40 +28,41 @@
   to change.}}
 \end{center}
 
-A stateful hash-based signature for Ethereum attestations: $2^{32}$ signatures, small and fast to verify,
-and thresholdizable with a DKG. Same hash as leanSPHINCS: $\hash(P,\mathit{tw},M)$ is BLAKE2s truncated to
+A stateful hash-based signature for Ethereum attestations: $2^{32}$ signatures (1\,361 years of 10-second
+slots), small and fast to verify, and thresholdizable, with a DKG or a trusted dealer. Same hash as leanSPHINCS: $\hash(P,\mathit{tw},M)$ is BLAKE2s truncated to
 16 bytes, costs are in compressions, and security is NIST level 1.
 
 \section{The scheme}
 
 \begin{itemize}
-  \item synchronized: the leaf is the slot, so the only state is the slashing protection validators
-        already keep (never sign two messages in one slot)
+  \item synchronized: each Ethereum slot has its own leaf, so no extra state is needed: double-signing is
+        already a slashable offense
   \item two layers of XMSS of height 16: each leaf of the top tree signs the root of one bottom tree of
-        $2^{16}$ slots
+        $2^{16}$ slots (7.6 days)
   \item one-time signature: WOTS$^+$C~\cite{HK22C}, chains of length 4, and a 128-bit digest read as 64
         base-4 digits. Grinding forces the last 6 digits to 0, so those chains are dropped (58 chains
         left), and the others to sum to $T=106$: $2^{20}$ tries. A forger pays the same grinding, so nothing is lost
-  \item every digest is $\hash(P,\mathit{tw},R,M)$, where the signer grinds the 16-byte randomizer $R$
-        itself, and $M$ is the attestation (bottom layer) or the bottom root (top layer)
+  \item every digest is $\hash(P,\mathit{tw},R,M)$, where $M$ is the attestation (bottom layer) or the bottom
+        root (top layer), and the signer grinds the 16-byte randomizer $R=\hash(R_0,\mathit{ctr})$ from
+        $R_0=\hash(S,\mathit{slot},M)$, for a secret seed $S$: signing $M$ again gives the same signature
 \end{itemize}
 
 \begin{itemize}
   \item signature: 2 halves of 1\,200 bytes each. The top half is the same for $2^{16}$ slots, so it can
         be sent once and cached
-  \item verification: $101+100=201$ compressions
+  \item verification: 201 compressions, 100 per layer, plus 1 as the attestation's digest spans two blocks
   \item keygen: $16\cdot10^6$ compressions for the top tree, and the same for each bottom tree
 \end{itemize}
 
 \section{Threshold signing}
 
 \begin{itemize}
-  \item $t$-of-$n$ with $n=2f+1$ and $t=f+1$ (e.g.\ 2-of-3, 3-of-5, 4-of-7)
-  \item malicious security against $t-1$ operators (with abort), at signing and at the ceremonies
-  \item no trusted dealer: a DKG ceremony among the $n$ operators at keygen, then one per bottom tree
-        (every $2^{16}$ slots, about 3 days with 4-second slots). A dealer would have to come back every 3
-        days, so only the DKG is considered
-  \item signing: no MPC, 976 bytes per signer, 3 rounds
+  \item $t$-of-$n$, set up either by DKG ceremonies among the operators, with $n=2f+1$ and $t=f+1$ (e.g.\
+        2-of-3, 3-of-5, 4-of-7), or by a trusted dealer, with $n=3f+1$ and $t=2f+1$ as in DVT (e.g.\ 3-of-4,
+        5-of-7)
+  \item malicious security against $t-1$ operators (with abort), at signing and at the ceremonies, assuming
+        the operators first agree, by consensus, on the message to sign
+  \item signing: no MPC, 944 bytes per signer, 2 rounds
 \end{itemize}
 
 \paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS}).} Let $F$ be a threshold PRF: any $t$ operators evaluate
@@ -75,8 +76,10 @@ $F(x)=\bigoplus_T\hash(k_T,x)$. When a quorum $J$ signs $m$, each signer's part 
 $\hash(k_{ij},x,m,J)$, one per co-signer $j$, which cancel within the signing: parts from different
 signings don't combine.
 
-\paragraph{Ceremony.} Honest-majority MPC with replicated sharing~\cite{CDI05} and a malicious-security
-check~\cite{GS20}, with abort:
+\paragraph{DKG ceremonies.} At keygen, then for each bottom tree (every $2^{16}$ slots): they recur, so their
+honest majority must hold against the same $t-1$ operators as signing, hence $n=2f+1$ and $t=f+1$.
+Honest-majority MPC with replicated sharing~\cite{CDI05} and a malicious-security check~\cite{GS20}, with
+abort:
 \begin{itemize}
   \item at keygen: generate $P$, the seeds and the pairwise keys $k_{ij}$ (commit-reveal); MPC hashes the
         chains of the $2^{16}$ top keys and opens their ends; the top root is the public key. Top keys
@@ -88,28 +91,39 @@ check~\cite{GS20}, with abort:
 
 \paragraph{Signing (any $t$, no MPC).}
 \begin{enumerate}
-  \item agree on (slot, $m$)
-  \item each signer commits to a random $r_i$, then reveals it: $R_0=\hash(r_1,\dots,r_t,m)$; grind
+  \item agree, by consensus, on (slot, $m$)
+  \item each signer sends its part of $F(x_s)$, at an address $x_s$ of the slot: $R_0=\hash(F(x_s),m)$; grind
         $R=\hash(R_0,\mathit{ctr})$ for the WOTS$^+$C encoding ($2^{20}$ tries, in the clear)
   \item each signer sends its parts of $F$ at the selected positions; combine, unmask, and check each value
         against its chain end
 \end{enumerate}
-The slashing-protection state records the $R$ of each slot, so a slot never opens two encodings.
+$F(x_s)$ is unpredictable until the slot is signed, and the same for every quorum: signing $m$ again gives
+the same signature, so a slot never opens two encodings. A secret known to every operator would not do:
+$t-1$ of them could predict $R$ and search for two attestations with the same encoding (about $2^{64}$
+hashes).
 
-\paragraph{Ceremony cost (measured with the leanSPHINCS prototype).} $2^{16}\cdot58\cdot3=11.4\cdot10^6$ MPC
-hashes per bottom tree, and once at keygen. Per operator:
+\paragraph{DKG ceremony cost (measured with the leanSPHINCS prototype).} $2^{16}\cdot58\cdot3=11.4\cdot10^6$
+MPC hashes per bottom tree, and once at keygen. Traffic sent by the busiest operator (about as much is
+received):
 
 \begin{center}
 \begin{tabular}{lrr}
-  & traffic & average rate (4-second slots) \\
-  2-of-3 & 19.2~GB & 73~KB/s \\
-  3-of-5 & 23.1~GB & 88~KB/s \\
-  4-of-7 & 24.8~GB & 94~KB/s \\
+  & traffic & average rate (10-second slots) \\
+  2-of-3 & 19.2~GB & 29~KB/s \\
+  3-of-5 & 23.1~GB & 35~KB/s \\
+  4-of-7 & 24.8~GB & 38~KB/s \\
 \end{tabular}
 \end{center}
 
 \noindent Public data: 182~MB per bottom tree (masked values and chain ends). Operators keep only their
 seeds and pairwise keys.
+
+\paragraph{Trusted dealer, $n=3f+1$, $t=2f+1$.} The dealer computes everything in the clear, with one seed
+$k_T$ per set of $2f$ operators: every bottom tree of the key's lifetime at once, and the top-tree
+signatures of their roots. It publishes the data, then erases its secrets. No MPC, so the key is secure
+against $2f$ operators; consensus on the message tolerates $f$, as in BLS-based DVT. Bottleneck: the
+public data, 182~MB per bottom tree, i.e.\ 8.8~GB per year of lifetime with 10-second slots (44~GB for 5
+years, 88~GB for 10).
 
 \begin{thebibliography}{9}
 \bibitem{HK22C} M.~Kudinov, A.~H\"ulsing, E.~Ronen, E.~Yogev. \emph{SPHINCS$^+$C: Compressing SPHINCS$^+$
