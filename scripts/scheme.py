@@ -69,9 +69,9 @@ def main():
     verify = blocks * msg_block + k * (step + a * node) + fors_roots + enc + ((q - 1) * v - T) * step + wots_pk + h * node
     keygen = derive + 2**h * leaf + (2**h - 1) * node
     size = N + k * (1 + a) * N + 4 + v * N + h * N
-    L = max_log2_sigs(128, Params("", 16, h, a, k, 30), "exact", "max")
+    L = max_log2_sigs(127, Params("", 16, h, a, k, 30), "exact", "max")  # the FORS term at 2^-127 per query
 
-    def pruned_log2_sigs(b, level=128):
+    def pruned_log2_sigs(b, level=127):
         """Lifetime of a key that keeps a subtree of 2^b leaves: the signatures spread over its 2^b FORS
         instances, and a forger's digest must also land in the subtree (probability 2^(b - h))."""
         def bits(log2_q):
@@ -106,7 +106,7 @@ def main():
           f"FORS roots {fors_roots}, randomizer {rnd}, digest {blocks} x {msg_block}")
     print(f"  WOTS encoding: {math.log2(n_sum(v, q, T)):.2f} bits of valid encodings, "
           f"expected {1 / alpha:.0f} counters")
-    print(f"  lifetime at 128 bits: 2^{L:.2f} signatures")
+    print(f"  lifetime at 127 bits: 2^{L:.2f} signatures")
     print(f"  verification: {verify} compressions")
     print(f"  WOTS leaf {leaf}; key generation {keygen:,} ({fmt(keygen)})")
     for mib in x.cache_mib:

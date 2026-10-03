@@ -70,25 +70,26 @@ For powerful devices.
 \emph{A modern laptop CPU computes about $2^{29}$ SHA2 or BLAKE2s compressions per second.}
 
 
-\subsection{Pruned: \texorpdfstring{$2.3\cdot10^5$}{230K} lifetime}
+\subsection{Pruned: \texorpdfstring{$2.4\cdot10^5$}{240K} lifetime}
 
-For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 13, and replace the 13 siblings above it by pseudorandom surrogate nodes. A forgery must land in the subtree (probability $2^{-13}$), which the lifetime accounts for.
+For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 13, and replace the 13 siblings above it by pseudorandom surrogate nodes. A forgery must land in the subtree (probability $2^{-13}$), which the lifetime accounts for. Lifetimes keep the
+FORS forgery probability below $2^{-127}$ per hash query.
 
 \begin{itemize}
-  \item lifetime: $2.3\cdot10^5$ signatures ($2^{17.8}$)
+  \item lifetime: $2.4\cdot10^5$ signatures ($2^{17.9}$)
   \item keygen: $2.2\cdot10^6$ compressions
   \item signing: $111\cdot10^3$ compressions, with a 16~KiB cache (including $33\cdot10^3$ compressions of grinding)
 \end{itemize}
 
 \emph{A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.}
 
-\subsection{Pruned: \texorpdfstring{$2.3\cdot10^7$}{23M} lifetime}
+\subsection{Pruned: \texorpdfstring{$2.37\cdot10^7$}{23.7M} lifetime}
 
 For laptops, phones and powerful hardware wallets. The same pruning, with a subtree of height 20 (and 6
 surrogate siblings).
 
 \begin{itemize}
-  \item lifetime: $2.3\cdot10^7$ signatures ($2^{24.4}$)
+  \item lifetime: $2.37\cdot10^7$ signatures ($2^{24.5}$)
   \item keygen: $287\cdot10^6$ compressions
   \item signing: $84\cdot10^3$ compressions, with a 1~MiB cache (including 256 compressions of grinding)
 \end{itemize}
@@ -99,7 +100,7 @@ surrogate siblings).
   \item $t$-of-$n$
   \item signing: malicious security against $t-1$ operators (with abort); 432 bytes per signer, 3 rounds
   \item keygen: no trusted dealer, a one-time MPC among the $n$ operators, fewer than $n/2$ corrupt
-  \item lifetime: $9\cdot10^3$, $3.3\cdot10^4$ or $1.2\cdot10^5$ signatures, with a pruned subtree of $2^b$ leaves, $b=8$,
+  \item lifetime: $9\cdot10^3$, $3.3\cdot10^4$ or $1.25\cdot10^5$ signatures, with a pruned subtree of $2^b$ leaves, $b=8$,
         10 or 12
 \end{itemize}
 
@@ -164,7 +165,7 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
 \begin{tabular}{lrrr}
   \toprule
   subtree & $2^8$ & $2^{10}$ & $2^{12}$ \\
-  lifetime & $9\cdot10^3$ & $3.3\cdot10^4$ & $1.2\cdot10^5$ \\
+  lifetime & $9\cdot10^3$ & $3.3\cdot10^4$ & $1.25\cdot10^5$ \\
   \midrule
   2-of-3 & 11~GB & 43~GB & 172~GB \\
   3-of-5 & 13~GB & 52~GB & 207~GB \\
