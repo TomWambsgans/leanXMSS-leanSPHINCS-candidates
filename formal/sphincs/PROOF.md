@@ -240,6 +240,29 @@ reserve for all six exact lifetime formulas and closes the proposed normalized s
 inequality. The actual changing-history variance estimate supplying that inequality is still
 unproved; these arithmetic results do not establish any of the six SUF-CMA claims.
 
+PairedPoolCoupling now preserves the joint observed trace and complete first-block table;
+PairedAgreement proves the observed answers equal those table entries. PreparedSigning and
+PreparedOccupancy connect balanced pools to complete actual signing. ActualOccupancy removes
+that balance assumption through the empty-ROM preparation law, giving overflow at most
+2^-400 + 2^-294 for every requested limit, with arbitrary OracleWorld interludes. HybridOccupancy
+allows real signing prefixes followed by independent kept-view samples, and HybridUnion checks
+the all-split reserve. ComparisonTransition, ExcludedGain and GainCoordinates retain exact
+actual-history source transitions and finite coordinate-feature identities. The centered
+adaptive fluctuation still needs its probabilistic bound; a later chosen kernel cannot simply
+be treated as if it were fixed at an earlier oracle query.
+
+HiddenGraphRows and HiddenGraphSampling now connect programmed rows to actual graph cache
+lookups and split the real material/graph sampling law into independent low coordinates,
+high halves and remaining outputs. EncodingPreparation proves the actual canonical encoding
+search leaves the selected target cache clean, even on exhaustion. ReferenceSignature removes
+the honest certificate premise from complete accepted-signature extraction. ReferenceFailure
+shows failed honest WOTS assembly makes every accepted signature at that index exceptional;
+this resolves the failed-own-source case without an extra completeness loss. GraphView and
+GraphSigner give the actual randomized signer's exact output law as public structural data,
+ordinary digest/encoding queries, and explicit frontier/FORS-secret disclosures. Preserving
+the original internal hash costs and composing this view with the capped whole-game monitors
+remain obligations.
+
 ## Differences and obligations
 
 - The old proof's thirteenth/fourteenth moments, pinned FORS group, three-layer witnesses,
