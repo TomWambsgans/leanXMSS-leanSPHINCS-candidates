@@ -26,40 +26,45 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-main { max-width: 72rem; margin: 0 auto; padding: 4.5rem 2rem 3rem; }
+main {
+  max-width: 88rem;
+  margin: 0 auto;
+  padding: 1.5rem 2.5rem 1rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 
 a { color: inherit; text-decoration: underline; text-decoration-color: var(--tree); text-underline-offset: 3px; }
 a:hover { text-decoration-color: var(--ink); }
 
 sup { font-size: 0.7em; line-height: 0; }
-.nowrap { white-space: nowrap; }
 
 /* Title */
 
-h1 { font-size: 2.25rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; margin: 0; white-space: nowrap; }
+h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; margin: 0; white-space: nowrap; }
 .by { margin: 0.4rem 0 0; }
 
-/* The scheme */
+/* Layout: top, parameters and diagram; bottom, the settings */
 
-.scheme {
+.page {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 3.5rem;
-  align-items: stretch;
-  margin: 0 0 5rem;
+  gap: 1.1rem 3.5rem;
 }
-.params { margin-top: 3.5rem; }
+.sep { grid-column: 1 / -1; width: 100%; margin: 0; border: 0; border-top: 1px solid var(--rule); }
 
-.params p { margin: 0 0 1.75rem; white-space: nowrap; }
+.params { margin-top: 1.75rem; }
+.params p { margin: 0 0 0.9rem; white-space: nowrap; font-size: 1.25rem; }
 .params table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.params th, .params td { text-align: left; padding: 0.65rem 2.25rem 0.65rem 0; font-weight: 400; }
+.params th, .params td { text-align: left; padding: 0.22rem 1.5rem 0.22rem 0; font-weight: 400; line-height: 1.35; }
 .params td + td { color: var(--muted); }
-.params thead th { border-bottom: 1px solid var(--rule); padding-bottom: 0.6rem; }
-.params tbody tr:first-child > * { padding-top: 0.8rem; }
-.params tbody th { padding-right: 2.25rem; }
-.params tbody.out tr:first-child > * { border-top: 1px solid var(--rule); padding-top: 0.8rem; }
+.params thead th { border-bottom: 1px solid var(--rule); padding-bottom: 0.45rem; }
+.params tbody tr:first-child > * { padding-top: 0.5rem; }
+.params tbody.out tr:first-child > * { border-top: 1px solid var(--rule); padding-top: 0.5rem; }
 
-figure { margin: 0; position: relative; }
+figure { margin: 0; position: relative; min-height: 18rem; }
 figure svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 svg text { font-family: var(--sans); }
@@ -85,54 +90,81 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
 
 /* Modes */
 
-.modes { margin-top: 0; }
-.idea { margin: 0 0 2rem; }
-
-.tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--rule); }
-.tabs a {
-  display: flex;
-  flex-direction: column;
-  padding: 0 0 1rem;
-  color: var(--muted);
-  text-decoration: none;
-  font-weight: 500;
-  border-bottom: 1.5px solid transparent;
-  margin-bottom: -1px;
+.modes { grid-column: 1 / -1; }
+.idea { margin: 0.6rem 0 1.4rem; text-align: center; font-size: 1.25rem; }
+.cmp { width: 100%; border-collapse: collapse; table-layout: fixed; line-height: 1.45; }
+.cmp th, .cmp td { text-align: left; vertical-align: top; padding: 0.22rem 1.5rem 0.22rem 0; font-weight: 400; }
+.cmp thead th { font-weight: 600; white-space: nowrap; padding-bottom: 0.1rem; }
+.cmp thead tr:last-child th { border-bottom: 1px solid var(--rule); padding-bottom: 0.4rem; }
+.cmp .hd { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; }
+.cmp .dev { font-weight: 400; color: var(--muted); }
+.cmp .dev .info::after { left: auto; right: 0; }
+.cmp th + th, .cmp th + td, .cmp td + td { border-left: 1px solid var(--rule); padding-left: 1rem; padding-right: 1rem; }
+.info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 0.4em;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.75em;
+  font-weight: 600;
+  font-style: normal;
+  line-height: 1;
+  cursor: help;
+  vertical-align: 0.15em;
 }
-.tabs a span { font-weight: 400; }
-.tabs a:hover { color: var(--ink); }
-.tabs a[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.info::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0.5rem);
+  white-space: pre;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.5;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 10;
+}
+.info:hover::after, .info:focus::after { opacity: 1; }
+.cmp tbody th { font-weight: 500; }
+.cmp tbody tr:first-child > * { padding-top: 0.45rem; }
+.cmp col.label { width: 10rem; }
+.ex { color: var(--muted); font-style: italic; }
+.tables { display: grid; gap: 0.4rem; }
+.tables h2 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; margin: 0.9rem 0 0.2rem; }
+.tables h2:first-child { margin-top: 0; }
 
-.panel { display: grid; grid-template-columns: 9rem 1fr; gap: 0.8rem 1.5rem; margin: 1.75rem 0 0; }
-.panel dt { font-weight: 500; }
-.panel dd { margin: 0; }
-.js .panel[hidden] { display: none; }
-.cost { border-collapse: collapse; margin-top: 0.6rem; font-variant-numeric: tabular-nums; }
-.cost th, .cost td { text-align: right; padding: 0.3rem 0 0.3rem 2rem; font-weight: 400; }
-.cost th:first-child { text-align: left; padding-left: 0; }
-.cost thead th { border-bottom: 1px solid var(--rule); }
-
-footer { margin-top: 6rem; color: var(--muted); }
-footer p { margin: 0.3rem 0; }
+footer { display: flex; justify-content: space-between; gap: 2rem; margin-top: 1.5rem; color: var(--muted); }
+footer p { margin: 0; }
 footer a + a { margin-left: 1.25rem; }
 
-@media (max-width: 820px) {
+@media (max-width: 900px) {
+  .tables { overflow-x: auto; }
+  .cmp { min-width: 36rem; }
+  main { min-height: 0; }
   h1 { white-space: normal; }
-  main { padding-top: 3rem; }
-  .scheme { grid-template-columns: 1fr; gap: 2.5rem; margin: 0 0 3rem; }
+  .page { grid-template-columns: 1fr; }
+  .params p { white-space: normal; }
+  figure { min-height: 0; }
   figure svg { position: static; height: auto; }
-  .params { margin-top: 2.5rem; }
-  .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 1rem; }
-  .panel { grid-template-columns: 1fr; gap: 0.15rem; }
-  .panel dd { margin-bottom: 0.8rem; }
+  footer { flex-direction: column; gap: 0.5rem; }
 }
 </style>
-<script>document.documentElement.classList.add("js")</script>
 </head>
 <body>
 <main>
 
-<section class="scheme">
+<div class="page">
   <div class="text">
     <header>
       <h1>A proposal for leanSphincs</h1>
@@ -157,7 +189,7 @@ footer a + a { margin-left: 1.25rem; }
     </div>
   </div>
   <figure>
-      <svg viewBox="10 15 580 456" preserveAspectRatio="xMinYMid meet" role="img" aria-labelledby="dia-title">
+      <svg viewBox="10 15 580 456" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="dia-title">
         <title id="dia-title">A leanSphincs signature: a path in a tree of height 26 to a leaf, the hash of a WOTS+C key of 64 chains of length 4, which signs the root of a FORS key of 24 trees of height 10</title>
         <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient></defs>
         <g class="tree">
@@ -450,75 +482,46 @@ footer a + a { margin-left: 1.25rem; }
         <text x="237.2" y="466" class="pv" text-anchor="middle"><tspan class="it">k</tspan> = 24</text>
       </svg>
   </figure>
-</section>
 
+  <hr class="sep">
 
-<section class="modes">
-  <p class="idea"><strong>Key idea:</strong> <a href="https://conduition.io/cryptography/hypertree-pruning/">pruning the tree</a>. Lifetime scales with keygen time.</p>
-  <div class="tabs" role="tablist">
-    <a href="#wallet" role="tab" aria-controls="wallet">Hardware wallets<span>2<sup>17</sup> signatures</span></a>
-    <a href="#laptop" role="tab" aria-controls="laptop">Laptops &amp; phones<span>2<sup>24</sup> signatures</span></a>
-    <a href="#industry" role="tab" aria-controls="industry">Industry<span>2<sup>30</sup> signatures</span></a>
-    <a href="#threshold" role="tab" aria-controls="threshold">Threshold<span><i>t</i>-of-<i>n</i>, 2<sup>12</sup> to 2<sup>16</sup> signatures</span></a>
-  </div>
-
-  <dl class="panel" id="wallet" role="tabpanel" aria-label="Hardware wallets">
-    <dt>Key generation</dt><dd>2.2M compressions, e.g. 68&nbsp;s on a Ledger Nano S+</dd>
-    <dt>Signing</dt><dd>111K compressions (3.4&nbsp;s), with a 16&nbsp;KiB cache</dd>
-    <dt>How</dt><dd>only a subtree of 2<sup>13</sup> leaves exists; the signer grinds the randomizer into it</dd>
-  </dl>
-
-  <dl class="panel" id="laptop" role="tabpanel" aria-label="Laptops and phones">
-    <dt>Key generation</dt><dd>287M compressions, about 0.3&nbsp;s on a laptop</dd>
-    <dt>Signing</dt><dd>84K compressions, with a 1&nbsp;MiB cache</dd>
-    <dt>How</dt><dd>only a subtree of 2<sup>20</sup> leaves exists</dd>
-  </dl>
-
-  <dl class="panel" id="industry" role="tabpanel" aria-label="Industry">
-    <dt>Key generation</dt><dd>18.4B compressions, about 20&nbsp;s on a laptop</dd>
-    <dt>Signing</dt><dd>421K compressions with a 1&nbsp;MiB cache, 75K with 1&nbsp;GiB</dd>
-    <dt>How</dt><dd>the full tree</dd>
-  </dl>
-
-  <dl class="panel" id="threshold" role="tabpanel" aria-label="Threshold">
-    <dt>Security</dt><dd>against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers</dd>
-    <dt>Signing</dt><dd>no MPC: 400 bytes per signer, 2 rounds</dd>
-    <dt>Key generation</dt><dd>no trusted dealer: a one-time MPC among the <i>n</i> operators (fewer than <i>n</i>/2 corrupt), per operator:
-      <table class="cost">
-        <thead><tr><th></th><th>2<sup>12</sup></th><th>2<sup>14</sup></th><th>2<sup>16</sup></th></tr></thead>
+  <section class="modes">
+    <p class="idea"><strong>Key idea:</strong> the signer builds only part of the XMSS tree (<a href="https://conduition.io/cryptography/hypertree-pruning/">pruning</a>), so lifetime scales with keygen time.</p>
+    <div class="tables">
+      <h2>One signer</h2>
+      <table class="cmp">
+        <colgroup><col class="label"><col><col><col></colgroup>
+        <thead>
+          <tr><th></th><th><div class="hd">Light<span class="dev"><span class="info" tabindex="0" data-tip="33K compressions per second">i</span>Ledger Nano S+</span></div></th><th><div class="hd">Standard<span class="dev"><span class="info" tabindex="0" data-tip="128M compressions per second">i</span>weak CPU</span></div></th><th><div class="hd">Full<span class="dev"><span class="info" tabindex="0" data-tip="1B compressions per second">i</span>powerful CPU</span></div></th></tr>
+        </thead>
         <tbody>
-          <tr><th>2-of-3</th><td>11 GB</td><td>43 GB</td><td>172 GB</td></tr>
-          <tr><th>3-of-5</th><td>13 GB</td><td>52 GB</td><td>207 GB</td></tr>
-          <tr><th>4-of-7</th><td>14 GB</td><td>55 GB</td><td>222 GB</td></tr>
+          <tr><th>Lifetime</th><td>2<sup>17</sup> signatures (subtree of 2<sup>13</sup> leaves)</td><td>2<sup>24</sup> signatures (subtree of 2<sup>20</sup> leaves)</td><td>2<sup>30</sup> signatures (full tree of 2<sup>26</sup> leaves)</td></tr>
+          <tr><th>Key generation</th><td><div class="hd"><span>2.2M compressions</span><span class="ex">68&nbsp;s</span></div></td><td><div class="hd"><span>287M compressions</span><span class="ex">2.2&nbsp;s</span></div></td><td><div class="hd"><span>18.4B compressions</span><span class="ex">18&nbsp;s</span></div></td></tr>
+          <tr><th>Signing</th><td><div class="hd"><span>111K compressions, 16&nbsp;KiB cache</span><span class="ex">3.4&nbsp;s</span></div></td><td><div class="hd"><span>84K compressions, 1&nbsp;MiB cache</span><span class="ex">0.7&nbsp;ms</span></div></td><td><div class="hd"><span>110K compressions, 16&nbsp;MiB cache</span><span class="ex">0.1&nbsp;ms</span></div></td></tr>
         </tbody>
       </table>
-    </dd>
-    <dt>How</dt><dd>adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>: FORS secrets are outputs of a threshold PRF; keygen publishes all FORS leaves and WOTS signatures, and signing reveals 24 secrets</dd>
-  </dl>
-</section>
+      <h2>Threshold, <i>t</i>-of-<i>n</i></h2>
+      <table class="cmp">
+        <colgroup><col class="label"><col><col></colgroup>
+        <thead>
+          <tr><th></th><th>with DKG</th><th>with a trusted dealer</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>Lifetime</th><td colspan="2">2<sup>12</sup> to 2<sup>16</sup> signatures (subtree of 2<sup>8</sup> to 2<sup>12</sup> leaves)</td></tr>
+          <tr><th>Key generation</th><td>one-time MPC among the <i>n</i> operators, 11 to 222&nbsp;GB each</td><td>by the dealer: 3&middot;10<sup>8</sup> compressions</td></tr>
+          <tr><th>Signing</th><td colspan="2">no MPC: 400 bytes per signer, 2 rounds (adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>)</td></tr>
+          <tr><th>Security</th><td><i>t</i>&nbsp;&minus;&nbsp;1 malicious signers; honest majority at keygen</td><td><i>t</i>&nbsp;&minus;&nbsp;1 malicious signers; honest dealer</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
 
 <footer>
   <p><a href="https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf">Note</a><a href="https://github.com/TomWambsgans/leansphincs-candidate">Code</a></p>
-  <p>Costs in BLAKE2s compressions, for both schemes (SLH-DSA verification varies with the message, ≈&nbsp;is its average); times assume 10<sup>9</sup> per second on a laptop and 33K on a Ledger Nano S+.</p>
+  <p>Costs in BLAKE2s compressions.</p>
 </footer>
 
 </main>
-<script>
-  const ids = ["wallet", "laptop", "industry", "threshold"];
-  function show(id) {
-    if (!ids.includes(id)) id = ids[0];
-    for (const x of ids) {
-      document.getElementById(x).hidden = x !== id;
-      document.querySelector(`.tabs a[href="#${x}"]`).setAttribute("aria-selected", x === id);
-    }
-  }
-  document.querySelectorAll(".tabs a").forEach(t => t.addEventListener("click", e => {
-    e.preventDefault();
-    const id = t.getAttribute("href").slice(1);
-    history.replaceState(null, "", "#" + id);
-    show(id);
-  }));
-  show(location.hash.slice(1));
-</script>
 </body>
 </html>
