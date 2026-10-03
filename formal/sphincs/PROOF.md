@@ -259,9 +259,24 @@ the honest certificate premise from complete accepted-signature extraction. Refe
 shows failed honest WOTS assembly makes every accepted signature at that index exceptional;
 this resolves the failed-own-source case without an extra completeness loss. GraphView and
 GraphSigner give the actual randomized signer's exact output law as public structural data,
-ordinary digest/encoding queries, and explicit frontier/FORS-secret disclosures. Preserving
-the original internal hash costs and composing this view with the capped whole-game monitors
-remain obligations.
+ordinary digest/encoding queries, and explicit frontier/FORS-secret disclosures. GraphCost,
+GraphCountedSigner and GraphCountedGame now preserve the joint output/original-cost law through
+the complete fixed-oracle game, including adaptive signing, exhaustion and final verification.
+HiddenCost and HiddenOutsideAccounting give seed/hidden-input monitors on one weighted capped
+trace. HiddenDeferred and HiddenOutsideProgram move only a finite hidden table before the
+comparison and keep outside hashes as explicit lazy-ROM calls. Connecting this prepared view
+and all terminal exceptional events to the actual game's probability remains an obligation.
+
+FullViewTrace, FutureOverflow and SourceProjection establish the sum of expected future
+occupancy-overflow terms over every actual signing prefix, at most 2^-263. ActiveBank tracks
+source removal and the excluded own-pair gain. PairedWord, PairedWordSupport and PairedSlots
+embed the actual bank into a jointly retained independent digest word, including adaptive
+stopping. SmallQueryBudget checks the auxiliary N+16 arithmetic for a proposed marked-source
+expansion through q=2^88; the expansion itself remains unproved. CenteredPairs, PairEnergy and
+PairProcess establish a fixed-kernel adaptive second-moment bound with both roles using the
+same fresh digest. A single-leaf rectangle class cannot justify a simultaneous bound for the
+full changing signing history: that kernel depends on sets at every retained leaf. A valid
+concentration and leaf-aggregation argument is still missing.
 
 ## Differences and obligations
 
