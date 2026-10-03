@@ -29,7 +29,7 @@
 \end{center}
 
 A stateful hash-based signature for Ethereum attestations: $2^{32}$ signatures, small and fast to verify,
-and thresholdizable with a DKG. Same hash as leanSphincs: $\hash(P,\mathit{tw},M)$ is BLAKE2s truncated to
+and thresholdizable with a DKG. Same hash as leanSPHINCS: $\hash(P,\mathit{tw},M)$ is BLAKE2s truncated to
 16 bytes, costs are in compressions, and security is NIST level 1.
 
 \section{The scheme}
@@ -55,32 +55,71 @@ and thresholdizable with a DKG. Same hash as leanSphincs: $\hash(P,\mathit{tw},M
 
 \section{Threshold signing}
 
-$t$-of-$n$ with $n=2f+1$ and $t=f+1$ (e.g.\ 2-of-3), a DKG, no trusted dealer, malicious security against
-$t-1$ operators (with abort), using the same machinery as leanSphincs: secrets shared from replicated
-seeds, and the $n$-party MPC on BLAKE2s. Only the WOTS chains are hashed in MPC, and every chain value is
-independent of the message, so all the MPC happens in advance:
 \begin{itemize}
-  \item keygen: MPC computes every chain value of the $2^{16}$ top keys ($58\times3=174$ MPC hashes per
-        key), keeps them shared among the operators, and opens the chain ends. The top tree is built in
-        the clear, and its root is the public key
-  \item before each bottom tree: the same MPC for its $2^{16}$ keys, then the next top key signs its root
-        by opening precomputed values
-  \item signing: the operators agree on (slot, $m$), derive $R$ by commit-reveal and grind it in the clear,
-        then open the 58 precomputed values at the selected positions, each checked against its public
-        chain end. No MPC: a few KB. The slashing-protection state records the $R$ of each slot, so a slot
-        never opens two encodings
+  \item $t$-of-$n$ with $n=2f+1$ and $t=f+1$ (e.g.\ 2-of-3, 3-of-5, 4-of-7)
+  \item malicious security against $t-1$ operators (with abort), at signing and at the ceremonies
+  \item no trusted dealer: a DKG ceremony among the $n$ operators at keygen, then one per bottom tree
+        (every $2^{16}$ slots, about 3 days with 4-second slots). A dealer would have to come back every 3
+        days, so only the DKG is considered
+  \item signing: no MPC, 976 bytes per signer, 3 rounds
 \end{itemize}
-An MPC hash costs about $13.5\cdot10^3$ AND gates at 1 bit each for 2-of-3 (measured in the leanSphincs
-prototype; 1.2 and 1.29 bits for 3-of-5 and 4-of-7), so a key costs 2.4~Mbit of traffic per operator. Per
-bottom tree, and once for keygen: 19.3~GB per operator, i.e.\ 74~KB/s on average with 4-second slots, plus
-365~MB of stored shares.
+
+\paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS}).} Let $F$ be a threshold PRF: any $t$ operators evaluate
+it together, $t-1$ learn nothing. A chain of a bottom key starts at $y_0=F(x_0)$, with $y_{j+1}=\hash(y_j)$.
+The ceremony computes the chains in MPC and publishes $y_1\oplus F(x_1)$, $y_2\oplus F(x_2)$ and $y_3$, for
+distinct addresses $x_j$. To sign position $p$, the signers reveal $F(x_p)$, which is $y_0$ or unmasks $y_1$
+or $y_2$ (nothing for $p=3$).
+
+\paragraph{$F$.} As in leanSPHINCS: one seed $k_T$ per set $T$ of $t-1$ operators, held by the others, and
+$F(x)=\bigoplus_T\hash(k_T,x)$. When a quorum $J$ signs $m$, each signer's part of $F(x)$ carries masks
+$\hash(k_{ij},x,m,J)$, one per co-signer $j$, which cancel within the signing: parts from different
+signings don't combine.
+
+\paragraph{Ceremony.} Honest-majority MPC with replicated sharing~\cite{CDI05} and a malicious-security
+check~\cite{GS20}, with abort:
+\begin{itemize}
+  \item at keygen: generate $P$, the seeds and the pairwise keys $k_{ij}$ (commit-reveal); MPC hashes the
+        chains of the $2^{16}$ top keys and opens their ends; the top root is the public key. Top keys
+        only sign bottom roots, known at the ceremonies, so they need no masks
+  \item for each bottom tree: MPC hashes the chains of its $2^{16}$ keys ($58\times3$ hashes per key) and
+        opens their ends and masked values; the tree is built in the clear; MPC recomputes the next top
+        key and opens its signature of the bottom root
+\end{itemize}
+
+\paragraph{Signing (any $t$, no MPC).}
+\begin{enumerate}
+  \item agree on (slot, $m$)
+  \item each signer commits to a random $r_i$, then reveals it: $R_0=\hash(r_1,\dots,r_t,m)$; grind
+        $R=\hash(R_0,\mathit{ctr})$ for the WOTS$^+$C encoding ($2^{20}$ tries, in the clear)
+  \item each signer sends its parts of $F$ at the selected positions; combine, unmask, and check each value
+        against its chain end
+\end{enumerate}
+The slashing-protection state records the $R$ of each slot, so a slot never opens two encodings.
+
+\paragraph{Ceremony cost (measured with the leanSPHINCS prototype).} $2^{16}\cdot58\cdot3=11.4\cdot10^6$ MPC
+hashes per bottom tree, and once at keygen. Per operator:
+
+\begin{center}
+\begin{tabular}{lrr}
+  & traffic & average rate (4-second slots) \\
+  2-of-3 & 19.2~GB & 73~KB/s \\
+  3-of-5 & 23.1~GB & 88~KB/s \\
+  4-of-7 & 24.8~GB & 94~KB/s \\
+\end{tabular}
+\end{center}
+
+\noindent Public data: 182~MB per bottom tree (masked values and chain ends). Operators keep only their
+seeds and pairwise keys.
 
 \begin{thebibliography}{9}
 \bibitem{HK22C} M.~Kudinov, A.~H\"ulsing, E.~Ronen, E.~Yogev. \emph{SPHINCS$^+$C: Compressing SPHINCS$^+$
   With (Almost) No Cost}. IEEE S\&P, 2023. \url{https://eprint.iacr.org/2022/778}.
-\bibitem{BGIN19} E.~Boyle, N.~Gilboa, Y.~Ishai, A.~Nof. \emph{Practical Fully Secure Three-Party
-  Computation via Sublinear Distributed Zero-Knowledge Proofs}. ACM CCS, 2019.
-  \url{https://eprint.iacr.org/2019/1390}.
+\bibitem{PRAWNS} D.~Boneh, B.~B\"unz, J.~D., Y.~Litchev, K.~Nazirkhanova. \emph{PRAWNS: Threshold Hash-Based
+  Signatures from Threshold PRFs}, 2026. \url{https://eprint.iacr.org/2026/2142}.
+\bibitem{CDI05} R.~Cramer, I.~Damg{\aa}rd, Y.~Ishai. \emph{Share Conversion, Pseudorandom Secret-Sharing and
+  Applications to Secure Computation}. TCC, 2005.
+\bibitem{GS20} V.~Goyal, Y.~Song. \emph{Malicious Security Comes Free in Honest-Majority MPC}. CRYPTO, 2020.
+  \url{https://eprint.iacr.org/2020/134}.
 \end{thebibliography}
 
 \end{document}
