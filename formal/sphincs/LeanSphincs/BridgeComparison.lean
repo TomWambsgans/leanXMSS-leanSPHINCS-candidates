@@ -14,7 +14,7 @@ set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
 variable {ι : Type} [Fintype ι]
-noncomputable local instance : DecidableEq ι := Classical.decEq ι
+noncomputable local instance bridgeComparisonDecEqIndex : DecidableEq ι := Classical.decEq ι
 
 /-- For a fixed table, a stopped run either stops or behaves as the comparison. -/
 theorem run_stopOr_le {α : Type} (table : ι → Digest) (computation : OracleComp (ViewSpec ι) α)
@@ -52,8 +52,8 @@ set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
 variable {D R A ι : Type} [Fintype ι] [SampleableType R]
-noncomputable local instance : DecidableEq D := Classical.decEq _
-noncomputable local instance : DecidableEq ι := Classical.decEq _
+noncomputable local instance bridgeComparisonDecEqInput : DecidableEq D := Classical.decEq _
+noncomputable local instance bridgeComparisonDecEqCoordinate : DecidableEq ι := Classical.decEq _
 
 /-- **Table-dependent common bound.** Stopping and a terminal event that may read the whole
 hidden table are charged to the forced-failure comparison run against that same table. -/

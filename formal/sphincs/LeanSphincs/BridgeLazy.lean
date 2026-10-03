@@ -13,8 +13,9 @@ open Eager Short
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
-noncomputable local instance : DecidableEq HiddenGraph.Coordinate := Classical.decEq _
-noncomputable local instance : DecidableEq HashInput := Classical.decEq _
+noncomputable local instance lazyCoordinateDecEq : DecidableEq HiddenGraph.Coordinate :=
+  Classical.decEq _
+noncomputable local instance lazyInputDecEq : DecidableEq HashInput := Classical.decEq _
 
 /-- Ordinary source queries are all short. -/
 def LongSource {ι : Type} : (HiddenRows.SourceSpec HashInput HashOutput ι).Domain → Prop

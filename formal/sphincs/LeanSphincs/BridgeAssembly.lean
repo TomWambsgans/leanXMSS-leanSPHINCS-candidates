@@ -58,7 +58,8 @@ theorem evalDist_fixedRom_eq_fixedHashWorld (f : HashInput → HashOutput) {α :
       rw [evalDist_query]
   | inr bytes => simp [fixedRom, Prefix.fixedHashWorld]
 
-noncomputable local instance : SampleableType CanonicalGraphLabels := graphLabelsSampleable
+noncomputable local instance assemblyLabelsSampleable : SampleableType CanonicalGraphLabels :=
+  graphLabelsSampleable
 
 variable [Params]
 

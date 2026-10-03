@@ -133,8 +133,8 @@ def KnownCoordinate (parameter : PublicParameter) : Coordinate → Prop
   | .ftsSecret .. => False
   | .ftsValue .. => True
 
-noncomputable local instance : Fintype SampleCell := sampleCellFintype
-noncomputable local instance : DecidableEq SampleCell := Classical.decEq _
+noncomputable local instance hiddenSampleCellFintype : Fintype SampleCell := sampleCellFintype
+noncomputable local instance hiddenSampleCellDecEq : DecidableEq SampleCell := Classical.decEq _
 
 omit [Params] in
 theorem coordinateAtCell_of_cell {coordinate : Coordinate} {cell : SampleCell}
