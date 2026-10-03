@@ -56,6 +56,13 @@ jobs:
           ! grep -qE 'Reference .* undefined|Citation .* undefined|multiply defined' .build/leanSPHINCS.log .build/leanXMSS.log
       - name: Name the artifacts
         run: cp .build/leanSPHINCS.pdf .build/leanXMSS.pdf .
+      - name: Drop the assets of the old lowercase names (asset names clash case-insensitively)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for a in leansphincs.pdf leanxmss.pdf; do
+            gh release delete-asset doc-latest "$a" --yes --repo "$GITHUB_REPOSITORY" || true
+          done
       - name: Publish the PDFs as release assets
         uses: softprops/action-gh-release@v2
         with:
