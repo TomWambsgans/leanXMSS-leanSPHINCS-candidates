@@ -181,6 +181,7 @@ import LeanSphincs.BridgeLazyGame
 import LeanSphincs.BridgeSupport
 import LeanSphincs.BridgeEncodingPrep
 import LeanSphincs.BridgeFixedRun
+import LeanSphincs.BridgeClassify
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -7939,3 +7940,59 @@ import LeanSphincs.BridgeFixedRun
 /-- info: 'LeanSphincs.Security.HiddenBridge.rich_support' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.rich_support
+
+/-- info: 'LeanSphincs.Security.SignatureWitness.accepted_landed_classification' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.SignatureWitness.accepted_landed_classification
+
+/-- info: 'LeanSphincs.Security.SignatureWitness.crossing_boundary' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.SignatureWitness.crossing_boundary
+
+/-- info: 'LeanSphincs.Security.SignatureWitness.outside_witness_address' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.SignatureWitness.outside_witness_address
+
+/-- info: 'LeanSphincs.Security.SignatureWitness.accepted_full_classification' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.SignatureWitness.accepted_full_classification
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.active_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.active_hit
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.leafOutput_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.leafOutput_hit
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.chainOutput_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.chainOutput_hit
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.forsException_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.forsException_hit
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.treeHit_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.treeHit_hit
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.encoding_fields_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.encoding_fields_injective
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.encodingAt_encoding' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.encodingAt_encoding
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.graph_targets_subset' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.graph_targets_subset
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.encoding_positionAt' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.encoding_positionAt
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.encodingMatch_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.encodingMatch_hit
