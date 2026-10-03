@@ -1,5 +1,5 @@
 VERY WIP
 
-[leansphincs.pdf](https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf)
+[leanSPHINCS.pdf](https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/releases/download/doc-latest/leanSPHINCS.pdf)
 
-[leanxmss.pdf](https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leanxmss.pdf)
+[leanXMSS.pdf](https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/releases/download/doc-latest/leanXMSS.pdf)

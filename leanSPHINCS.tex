@@ -1,4 +1,4 @@
-% Build with: latexmk leansphincs.tex (output in .build/)
+% Build with: latexmk leanSPHINCS.tex (output in .build/)
 \documentclass[11pt]{article}
 
 \usepackage[T1]{fontenc}
@@ -41,7 +41,7 @@ Same shape as SLH-DSA-128-24 from NIST's recent SP~800-230~\cite{SP800230} (sing
     \item $h = 26$, instead of $22$ (tree height, i.e. height of the only XMSS layer)
     \item $k = 24$, instead of $6$ (number of trees per FORS)
     \item $a = 10$, instead of $24$ (height of each FORS tree)
-    \item WOTS$^+$C~\cite{HK22C}, instead of WOTS. 64 chains of length $w=4$, with a target sum of 120
+    \item WOTS$^+$C~\cite{HK22C}, instead of WOTS$^+$. 64 chains of length $w=4$, with a target sum of 120
   \end{itemize}
 
 Properties:
@@ -64,11 +64,7 @@ For powerful devices.
 \begin{itemize}
   \item lifetime: $2^{30}$
   \item keygen: $19 \cdot 10^9$ compressions
-  \item signing 
-    \begin{itemize}
-    \item with a 1~MiB cache: $421\cdot10^3$ compressions
-    \item with a 1~GiB cache: $75\cdot10^3$ compressions
-  \end{itemize}
+  \item signing: $110\cdot10^3$ compressions, with a 16~MiB cache
 \end{itemize}
 
 \emph{A modern laptop CPU computes about $2^{29}$ SHA2 or BLAKE2s compressions per second.}
@@ -101,7 +97,7 @@ surrogate siblings).
 
 \begin{itemize}
   \item $t$-of-$n$
-  \item signing: malicious security against $t-1$ operators (with abort); 400 bytes per signer, 2 rounds
+  \item signing: malicious security against $t-1$ operators (with abort); 432 bytes per signer, 3 rounds
   \item keygen: no trusted dealer, a one-time MPC among the $n$ operators, fewer than $n/2$ corrupt
   \item lifetime: $2^L$, e.g.\ $L=12$, 14 or 16 (pruned, subtree of height $L-4$)
 \end{itemize}
@@ -119,28 +115,26 @@ threshold PRF $F$: $t$ operators evaluate it together, $t-1$ learn nothing (cont
 \begin{itemize}
   \item hash-based, for small $\binom{n}{t-1}$: replicated seeds~\cite{CDI05}, one seed $k_T$ per set $T$ of $t-1$
         operators, held by the others; $F(x)=\bigoplus_T\hash(k_T,x)$. Hash only
-  \item lattice-based, for large $\binom{n}{t-1}$: threshold PRF~\cite{PRAWNS},
+  \item lattice-based, for large $\binom{n}{t-1}$: the threshold PRF of PRAWNS~\cite{PRAWNS},
         $F(x)=\lfloor\langle\hash(x),\mathit{msk}\rangle\rceil_p$, $\mathit{msk}$ Shamir-shared. LWE
 \end{itemize}
-\paragraph{Context-awareness~\cite{PRAWNS}.} To reveal $F(x)$, each of the $t$ signers sends a part $p_i$,
-and the parts combine into $F(x)$:
+\paragraph{Context-awareness~\cite{PRAWNS}.} To reveal $F(x)$ when a quorum $J$ signs $m$, each signer
+$i\in J$ sends a part, and the parts combine into $F(x)$:
 \begin{itemize}
-  \item hash-based: within the quorum, each term $\hash(k_T,x)$ is assigned to one signer holding $k_T$; $p_i$ is
-        the XOR of its terms, and $F(x)=\bigoplus_i p_i$
-  \item lattice-based: $p_i=\lambda_i\langle\hash(x),\mathit{sk}_i\rangle$ (Lagrange coefficient $\lambda_i$), and
-        $F(x)$ is $\sum_i p_i \bmod q$, rounded
+  \item hash-based: each term $\hash(k_T,x)$ is assigned to one signer of $J$ holding $k_T$. Signer $i$ sends
+        the XOR of its terms and of $\hash(k_{ij},x,m,J)$ for each co-signer $j$, with $k_{ij}$ a key shared by
+        $i$ and $j$: each mask is sent twice and cancels, so the parts XOR to $F(x)$
+  \item lattice-based: as in PRAWNS, a rounded share $\lfloor\lambda_i\langle\hash(x),\mathit{sk}_i\rangle\rceil_p$
+        plus a rounded share of zero evaluated at $(x,m,J)$; the sum is $F(x)$ up to $\pm t$, and the
+        candidates are checked against the public leaf
 \end{itemize}
-A signing can abort. Sent as is, parts of $F(x)$ gathered from aborted signings of different messages
-could be combined into $F(x)$, revealing a FORS secret no signature revealed. So each part is bound to its
-message $m$: signer $i$ adds a mask $\hash(k_{ij},x,m)$ for each co-signer $j$, with $k_{ij}$ a key shared by
-$i$ and $j$. Within one signing, each mask is added twice (by $i$ and by $j$) and cancels; parts from
-signings of different messages carry different masks and don't combine.
+Parts from signings of different $(m,J)$ don't combine, so aborted signings reveal no FORS secret.
 
 \paragraph{Keygen.} Honest-majority MPC, malicious with abort:
 \begin{enumerate}
   \item coin tossing: $P$, the kept subtree, its $30-L$ surrogates
-  \item the key of $F$: hash-based, each seed by commit-reveal among its holders; lattice-based, a
-        verifiable Shamir sharing of $\mathit{msk}$
+  \item the key of $F$ (hash-based: each seed by commit-reveal among its holders; lattice-based: a
+        verifiable Shamir sharing of $\mathit{msk}$), and the pairwise keys $k_{ij}$
   \item MPC: $F$ at the $2^{L-4}\cdot24\cdot2^{10}$ FORS addresses, hashed into leaves; $F$ at the
         $2^{L-4}\cdot64$ WOTS chain starts, hashed 3 times. Open the leaves and chain ends
   \item in the clear: FORS roots, WOTS$^+$C counters; open the WOTS signatures; build the tree
@@ -152,17 +146,18 @@ signings of different messages carry different masks and don't combine.
 \paragraph{Signing (any $t$).}
 \begin{enumerate}
   \item agree on $m$
-  \item $R_0=F(\mathsf{msg},m)$; grind $R=\hash(R_0,\mathit{ctr})$ into the kept subtree. Deterministic: all
-        quorums give the same signature
+  \item each signer commits to a random $r_i$, then reveals it; $R_0=\hash(r_1,\dots,r_t,m)$, and the signers
+        grind $R=\hash(R_0,\mathit{ctr})$ into the kept subtree. No signer may choose $R$: it could steer
+        signatures to the FORS instances of its choice~\cite{PRAWNS}
   \item open $F$ at the 24 FORS addresses; check each against its leaf
   \item output $R$, the 24 secrets and paths, the WOTS signature, the authentication path
 \end{enumerate}
 
-\paragraph{Keygen cost (measured).} $\approx1.5\cdot10^3\cdot2^L$ MPC hashes (mostly FORS leaves) of
+\paragraph{Keygen cost (measured, hash-based $F$, $t=(n+1)/2$).} $\approx1.5\cdot10^3\cdot2^L$ MPC hashes (mostly FORS leaves) of
 $\approx13.5\cdot10^3$ AND gates. The MPC uses replicated sharing over $\mathrm{GF}(2)$ as
 in~\cite{BGIN19}, generalized to $n=2f+1$: each AND gate is computed locally and reshared through one
 collector, $(n-1)+f$ bits in total, i.e.\ 1, 1.2 and 1.29 bits per operator for $n=3$, 5, 7, plus a
-check~\cite{GS20} of negligible cost. Traffic per operator:
+check~\cite{GS20} of negligible traffic. Traffic per operator:
 
 \begin{center}
 \begin{tabular}{lrrr}
@@ -179,7 +174,8 @@ check~\cite{GS20} of negligible cost. Traffic per operator:
 \paragraph{Remarks.}
 \begin{itemize}
   \item With a trusted dealer instead, keygen needs no MPC: the dealer computes everything in the clear
-        ($3\cdot10^8$ compressions for $L=16$) and gives each operator its key share of $F$.
+        ($5\cdot10^8$ to $4\cdot10^9$ compressions for $L=16$, from 2-of-3 to 4-of-7 with the hash-based
+        $F$) and gives each operator its key share of $F$.
   \item The key shares can be refreshed, and the committee changed (including $n$ and $t$), with the same
         public key:
   \begin{itemize}
@@ -187,12 +183,12 @@ check~\cite{GS20} of negligible cost. Traffic per operator:
     \begin{enumerate}
       \item the new committee generates fresh seeds for its own $n'$, $t'$ (as at keygen): they define a
             new PRF $F'$
-      \item for each FORS address $x$, $t$ old operators send their parts of $F(x)$ and the new operators
-            their parts of $F'(x)$, masked so that only $c(x)=F(x)\oplus F'(x)$ is revealed; $c(x)$ is
-            published (it reveals nothing: $F'(x)$ masks $F(x)$)
+      \item an MPC among $t$ old and the new operators computes, for each FORS address $x$, $F(x)$ (checked
+            against its leaf) and $F'(x)$, and opens $c(x)=F(x)\oplus F'(x)$, which is published (it reveals
+            nothing: $F'(x)$ masks $F(x)$). About one MPC hash per address, as at keygen
       \item from then on, the secret at $x$ is $F'(x)\oplus c(x)$, which equals $F(x)$: signing uses $F'$
             and the public $c$
-      \item the old seeds are deleted
+      \item new pairwise keys are generated, and the old seeds are deleted
     \end{enumerate}
     \item lattice-based: $t$ old operators reshare $\mathit{msk}$ to the new committee, with threshold $t'$
   \end{itemize}

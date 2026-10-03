@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sizes, compression counts and lifetime of the leanSphincs candidate (the numbers in leansphincs.tex).
+"""Sizes, compression counts and lifetime of the leanSphincs candidate (the numbers in leanSPHINCS.tex).
 
 Costs count compression-function calls of a hash with 64-byte blocks and no padding overhead, such as
 BLAKE2s: hashing l bytes costs max(1, ceil(l / 64)). Every call hashes tw (16 B) || P (16 B) || input.
@@ -8,8 +8,7 @@ BLAKE2s: hashing l bytes costs max(1, ceil(l / 64)). Every call hashes tw (16 B)
 import argparse
 import math
 
-from blake2s_circuit import chain
-from fors_security import Params, max_log2_sigs
+from fors_security import Params, forgery_bits_exact, max_log2_sigs
 
 N = 16  # bytes per hash value
 PREFIX = 32  # tweak and public parameter
@@ -45,14 +44,12 @@ def main():
     ap.add_argument("--k", type=int, default=24)
     ap.add_argument("--lg-w", type=int, default=2, help="bits per WOTS chain; chains have length 2^lg_w")
     ap.add_argument("--T", type=int, default=120, help="sum of the signed chain positions")
-    ap.add_argument("--cache-mib", type=float, nargs="+", default=[0, 1, 1024],
+    ap.add_argument("--cache-mib", type=float, nargs="+", default=[1, 16, 1024],
                     help="signer cache sizes for full-key signing (MiB)")
-    ap.add_argument("--pruned-cache-kib", type=float, nargs="+", default=[0, 1, 16],
+    ap.add_argument("--pruned-cache-kib", type=float, nargs="+", default=[16, 1024],
                     help="signer cache sizes for pruned-key signing (KiB)")
-    ap.add_argument("--pruned", type=int, nargs="+", default=[12, 14, 16], help="log2 kept leaves")
+    ap.add_argument("--pruned", type=int, nargs="+", default=[13, 20], help="log2 kept leaves")
     ap.add_argument("--threshold", type=int, default=12, help="log2 kept leaves for the threshold estimate")
-    ap.add_argument("--bits-per-and", type=float, nargs="+", default=[1.0, 1.5],
-                    help="MPC traffic per AND gate per operator (estimate)")
     x = ap.parse_args()
     h, a, k, lg_w, T = x.h, x.a, x.k, x.lg_w, x.T
     v, q = -(-128 // lg_w), 2**lg_w  # v chains of length q cover the 128-bit message
@@ -73,6 +70,17 @@ def main():
     keygen = derive + 2**h * leaf + (2**h - 1) * node
     size = N + k * (1 + a) * N + 4 + v * N + h * N
     L = max_log2_sigs(128, Params("", 16, h, a, k, 30), "exact", "max")
+
+    def pruned_log2_sigs(b, level=128):
+        """Lifetime of a key that keeps a subtree of 2^b leaves: the signatures spread over its 2^b FORS
+        instances, and a forger's digest must also land in the subtree (probability 2^(b - h))."""
+        def bits(log2_q):
+            return min(8 * N, (h - b) + forgery_bits_exact(log2_q, b, a, k))
+        lo, hi = 0.0, b + 12.0
+        for _ in range(50):
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if bits(mid) >= level else (lo, mid)
+        return lo
 
     def tree_cost(height, cache_nodes):
         """Per-signature tree work: the best of keeping one level c (rebuild the 2^c leaves below the cached
@@ -112,54 +120,32 @@ def main():
         base = grind + (blocks - 1) * msg_block + fors_sign + wots_sign
         signs = ", ".join(f"{fmt(base + tree_cost(b, nodes(kib / 1024)))} with {kib:g} KiB"
                           for kib in x.pruned_cache_kib)
-        print(f"  pruned, 2^{b} leaves: lifetime 2^{L - (h - b):.2f}, key generation {fmt(kg)}, "
+        print(f"  pruned, 2^{b} leaves: lifetime 2^{pruned_log2_sigs(b):.2f}, key generation {fmt(kg)}, "
               f"signing {signs} (grinding {fmt(grind)})")
 
-    # Threshold signing: BLAKE2s runs in MPC only on secret inputs. A compression has 80 G functions of 184
-    # AND gates each (two three-operand and two two-operand 32-bit additions); blake2s_circuit.py counts them
-    # and the AND-depth, i.e. the number of MPC rounds.
-    and_gates = chain(1)[0]
-    depth = {s: chain(s)[1] for s in range(1, q)}  # AND-depth (MPC rounds) of s chained hashes
+    # Threshold signing (adapted from PRAWNS): every FORS secret is F(addr) for a threshold PRF F. A one-time
+    # ceremony hashes the secrets of the 2^b kept instances (FORS leaves and WOTS chains) and publishes the
+    # FORS leaves and the WOTS signature of every FORS root; signing reveals 24 values of F, with no MPC.
     b = x.threshold
-    dkg = 2**b * v * (q - 1)  # chain steps of the kept WOTS keys
-    fresh = k * 2**a + T  # one instance, preprocessed: FORS leaf hashes and WOTS chain steps
+    mpc_hashes = 2**b * (k * 2**a + v * (q - 1))
+    public = 2**b * (k * 2**a * N + v * N + 4)
     try_cost = comp(N + 4) + msg_block  # R = H(R_0, ctr), then the first digest call
-    online = 2**h * try_cost  # grind until idx is the instance drawn for this signature
-    trivial = 2 ** (h - b) * try_cost  # grind until idx lands in the kept subtree
-
-    def traffic(c):
-        def size(nbytes):
-            for dv, u in ((1e9, "GB"), (1e6, "MB"), (1e3, "KB")):
-                if nbytes >= dv:
-                    return f"{nbytes / dv:.3g} {u}"
-            return f"{nbytes:.0f} B"
-        return " / ".join(size(c * and_gates * bpa / 8) for bpa in x.bits_per_and)
-
-    print(f"  threshold, 2^{b} kept leaves, {and_gates} AND gates per compression, traffic per operator at "
-          f"{' / '.join(map(str, x.bits_per_and))} bits per AND:")
-    print(f"    DKG: {fmt(dkg)} MPC compressions, {traffic(dkg)}, {depth[q - 1]} rounds")
-    # FORS leaves, one opening, then the WOTS chains (the chain ends are public, so at most q - 2 steps)
-    print(f"    preprocessing a new FORS instance: {fmt(fresh)} MPC compressions, {traffic(fresh)}, "
-          f"{depth[1] + (1 + depth[q - 2] if q > 2 else 0)} rounds")
-    print(f"    online: no MPC, grinding {fmt(online)} compressions in the clear "
-          f"(trivial variant without preprocessing: {fmt(trivial)})")
-    # Key rotation variant: every secret is H(S, addr) for a shared master secret S, derived in MPC (one more
-    # MPC hash per secret); rotating only re-randomizes the shares of S.
-    depth[q] = chain(q)[1]
-    dkg_rot, fresh_rot = 2**b * v * q, fresh + k * 2**a + v
-    print(f"    key rotation variant (secrets derived in MPC from a shared S): DKG {fmt(dkg_rot)} MPC compressions, "
-          f"{traffic(dkg_rot)}, {depth[q]} rounds; FORS instance {fmt(fresh_rot)}, {traffic(fresh_rot)}, "
-          f"{depth[2] + (1 + depth[q - 1] if q > 2 else 0)} rounds")
-
-    # Trusted dealer (PRAWNS): the dealer computes every FORS instance of the kept leaves and the WOTS
-    # signature of every FORS root in the clear, and publishes the FORS leaves and those WOTS signatures.
+    grind = 2 ** (h - b) * try_cost
+    rebuild = k * (2**a - 1) * node  # the combiner rebuilds the 24 FORS paths from the public leaves
+    print(f"  threshold, 2^{b} kept leaves (lifetime 2^{pruned_log2_sigs(b):.2f}): {fmt(mpc_hashes)} MPC hashes at keygen, public data "
+          f"{public / 1e9:.3g} GB; signing: grinding {fmt(grind)} + FORS paths {fmt(rebuild)} compressions, no MPC")
+    # Keygen with a DKG: n-party replicated-sharing MPC, t = (n + 1) / 2, hash-based F. Bytes per operator for
+    # one FORS leaf and one 3-step WOTS chain, measured by `cargo run --release -p rss --bin bench`.
+    measured = {3: (1699, 5064), 5: (2039, 6078), 7: (2186, 6514)}
+    # Trusted dealer: F costs comb(n, t - 1) hashes per secret with the hash-based F.
     dealer = derive + 2**b * leaf + (2**b - 1) * node + (h - b) * (derive + node)
     dealer += 2**b * (fors_sign + wots_sign)
-    public = 2**b * (k * 2**a * N + v * N + 4)
-    rebuild = k * (2**a - 1) * node  # the combiner rebuilds the 24 FORS paths from the public leaves
-    print(f"  trusted dealer, 2^{b} kept leaves: dealer keygen {fmt(dealer)} compressions, public data "
-          f"{public / 1e9:.3g} GB; signing: grinding {fmt(trivial)} + FORS paths {fmt(rebuild)} compressions, no MPC")
-
+    for n, (per_leaf, per_chain) in measured.items():
+        f = n // 2
+        traffic = 2**b * (k * 2**a * per_leaf + v * per_chain)
+        dealer_n = dealer + 2**b * (k * 2**a + v) * (math.comb(n, f) - 1)
+        print(f"    {f + 1}-of-{n}: DKG traffic {traffic / 1e9:.3g} GB per operator; "
+              f"trusted dealer {fmt(dealer_n)} compressions")
 
 if __name__ == "__main__":
     main()

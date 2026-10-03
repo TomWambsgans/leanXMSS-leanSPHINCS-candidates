@@ -4,14 +4,14 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'leansphincs.tex'
-      - 'leanxmss.tex'
+      - 'leanSPHINCS.tex'
+      - 'leanXMSS.tex'
       - 'latexmkrc'
       - '.github/workflows/doc.yml'
   pull_request:
     paths:
-      - 'leansphincs.tex'
-      - 'leanxmss.tex'
+      - 'leanSPHINCS.tex'
+      - 'leanXMSS.tex'
       - 'latexmkrc'
       - '.github/workflows/doc.yml'
   workflow_dispatch:
@@ -32,11 +32,11 @@ jobs:
         uses: xu-cheng/latex-action@v3
         with:
           root_file: |
-            leansphincs.tex
-            leanxmss.tex
+            leanSPHINCS.tex
+            leanXMSS.tex
       - name: Fail on an undefined reference or citation
         run: |
-          ! grep -qE 'Reference .* undefined|Citation .* undefined|multiply defined' .build/leansphincs.log .build/leanxmss.log
+          ! grep -qE 'Reference .* undefined|Citation .* undefined|multiply defined' .build/leanSPHINCS.log .build/leanXMSS.log
 
   build-pdf:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -49,13 +49,13 @@ jobs:
         uses: xu-cheng/latex-action@v3
         with:
           root_file: |
-            leansphincs.tex
-            leanxmss.tex
+            leanSPHINCS.tex
+            leanXMSS.tex
       - name: Fail on an undefined reference or citation
         run: |
-          ! grep -qE 'Reference .* undefined|Citation .* undefined|multiply defined' .build/leansphincs.log .build/leanxmss.log
+          ! grep -qE 'Reference .* undefined|Citation .* undefined|multiply defined' .build/leanSPHINCS.log .build/leanXMSS.log
       - name: Name the artifacts
-        run: cp .build/leansphincs.pdf .build/leanxmss.pdf .
+        run: cp .build/leanSPHINCS.pdf .build/leanXMSS.pdf .
       - name: Publish the PDFs as release assets
         uses: softprops/action-gh-release@v2
         with:
@@ -64,8 +64,8 @@ jobs:
           body: |
             Auto-built on every push to `main`.
 
-            `leansphincs.pdf` and `leanxmss.pdf` are the notes describing the leanSphincs and leanXMSS candidates.
+            `leanSPHINCS.pdf` and `leanXMSS.pdf` are the notes describing the leanSphincs and leanXMSS candidates.
           make_latest: false
           files: |
-            leansphincs.pdf
-            leanxmss.pdf
+            leanSPHINCS.pdf
+            leanXMSS.pdf

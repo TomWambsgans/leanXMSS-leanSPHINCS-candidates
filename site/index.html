@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <title>A proposal for leanSphincs</title>
-<meta name="description" content="A proposal for leanSphincs: a hash-based signature with the shape of SLH-DSA, retuned for small signatures and cheap verification.">
+<meta name="description" content="A proposal for leanSphincs: a hash-based signature with the shape of SLH-DSA-128-24, retuned for a 2^30 lifetime, fast signing, and pruned or threshold keys.">
 <style>
 :root {
   color-scheme: light;
@@ -99,6 +99,7 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
 .cmp .hd { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; }
 .cmp .dev { font-weight: 400; color: var(--muted); }
 .cmp .dev .info::after { left: auto; right: 0; }
+.info.r::after { left: auto; right: 0; }
 .cmp th + th, .cmp th + td, .cmp td + td { border-left: 1px solid var(--rule); padding-left: 1rem; padding-right: 1rem; }
 .info {
   position: relative;
@@ -107,7 +108,7 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
   justify-content: center;
   width: 1.1em;
   height: 1.1em;
-  margin-right: 0.4em;
+  margin-left: 0.4em;
   border: 1px solid currentColor;
   border-radius: 50%;
   font-size: 0.75em;
@@ -154,7 +155,7 @@ footer { display: flex; justify-content: space-between; gap: 2rem; margin-top: 1
 footer p { margin: 0; }
 footer a + a { margin-left: 1.25rem; }
 
-@media (max-width: 900px) {
+@media (max-width: 1150px) {
   .tables { overflow-x: auto; }
   .split { grid-template-columns: 1fr; gap: 1.5rem; }
   .cmp { min-width: 36rem; }
@@ -165,6 +166,11 @@ footer a + a { margin-left: 1.25rem; }
   figure { min-height: 0; }
   figure svg { position: static; height: auto; }
   footer { flex-direction: column; gap: 0.5rem; }
+}
+@media (max-width: 600px) {
+  main { padding: 1.25rem 1rem; }
+  h1 { font-size: 2.2rem; }
+  .split .cmp { min-width: 22rem; }
 }
 </style>
 </head>
@@ -185,10 +191,11 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th><i>h</i></th><td>26</td><td>22</td></tr>
           <tr><th><i>k</i></th><td>24</td><td>6</td></tr>
           <tr><th><i>a</i></th><td>10</td><td>24</td></tr>
-          <tr><th>OTS</th><td>WOTS+C</td><td>WOTS</td></tr>
+          <tr><th>OTS</th><td>WOTS+C</td><td>WOTS+</td></tr>
+          <tr><th>Hash</th><td>BLAKE2s</td><td>SHA-2 or SHAKE</td></tr>
         </tbody>
         <tbody class="out">
-          <tr><th>Lifetime</th><td>2<sup>30</sup></td><td>2<sup>24</sup></td></tr>
+          <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security">i</span></th><td>2<sup>30</sup></td><td>2<sup>24</sup></td></tr>
           <tr><th>Signature</th><td>5,684 B</td><td>3,856 B</td></tr>
           <tr><th>Verification<br><span class="unit">(compressions)</span></th><td>391</td><td>≈ 296</td></tr>
         </tbody>
@@ -499,23 +506,23 @@ footer a + a { margin-left: 1.25rem; }
       <table class="cmp">
         <colgroup><col class="label"><col><col><col></colgroup>
         <thead>
-          <tr><th></th><th><div class="hd">Light<span class="dev"><span class="info" tabindex="0" data-tip="33K compressions per second">i</span>Ledger Nano S+</span></div></th><th><div class="hd">Standard<span class="dev"><span class="info" tabindex="0" data-tip="128M compressions per second">i</span>weak CPU</span></div></th><th><div class="hd">Full<span class="dev"><span class="info" tabindex="0" data-tip="1B compressions per second">i</span>powerful CPU</span></div></th></tr>
+          <tr><th></th><th><div class="hd">Light<span class="dev">Ledger Nano S+<span class="info" tabindex="0" data-tip="33K compressions per second">i</span></span></div></th><th><div class="hd">Standard<span class="dev">weak CPU<span class="info" tabindex="0" data-tip="128M compressions per second">i</span></span></div></th><th><div class="hd">Full<span class="dev">powerful CPU<span class="info" tabindex="0" data-tip="1B compressions per second">i</span></span></div></th></tr>
         </thead>
         <tbody>
-          <tr><th>Lifetime</th><td>2<sup>17</sup> signatures (subtree of 2<sup>13</sup> leaves)</td><td>2<sup>24</sup> signatures (subtree of 2<sup>20</sup> leaves)</td><td>2<sup>30</sup> signatures (full tree of 2<sup>26</sup> leaves)</td></tr>
-          <tr><th>Key generation</th><td><div class="hd"><span>2.2M compressions</span><span class="ex">68&nbsp;s</span></div></td><td><div class="hd"><span>287M compressions</span><span class="ex">2.2&nbsp;s</span></div></td><td><div class="hd"><span>18.4B compressions</span><span class="ex">18&nbsp;s</span></div></td></tr>
+          <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security">i</span></th><td>2<sup>17</sup> signatures (subtree of 2<sup>13</sup> leaves) <span class="info" tabindex="0" data-tip="2^18 signatures: 125 bits of security">i</span></td><td>2<sup>24</sup> signatures (subtree of 2<sup>20</sup> leaves) <span class="info" tabindex="0" data-tip="2^25 signatures: 118 bits of security">i</span></td><td>2<sup>30</sup> signatures (full tree of 2<sup>26</sup> leaves) <span class="info r" tabindex="0" data-tip="2^31 signatures: 112 bits of security">i</span></td></tr>
+          <tr><th>Key generation</th><td><div class="hd"><span>2.24M compressions</span><span class="ex">68&nbsp;s</span></div></td><td><div class="hd"><span>287M compressions</span><span class="ex">2.2&nbsp;s</span></div></td><td><div class="hd"><span>18.4B compressions</span><span class="ex">18&nbsp;s</span></div></td></tr>
           <tr><th>Signing</th><td><div class="hd"><span>111K compressions, 16&nbsp;KiB cache</span><span class="ex">3.4&nbsp;s</span></div></td><td><div class="hd"><span>84K compressions, 1&nbsp;MiB cache</span><span class="ex">0.7&nbsp;ms</span></div></td><td><div class="hd"><span>110K compressions, 16&nbsp;MiB cache</span><span class="ex">0.1&nbsp;ms</span></div></td></tr>
         </tbody>
       </table>
       <h2>Threshold, <i>t</i>-of-<i>n</i></h2>
-      <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>: a one-time ceremony at keygen precomputes every hash of a secret, run either as an MPC among the operators (DKG) or by a trusted dealer; signing then needs no MPC (400 bytes per signer, 2 rounds), and is secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers, assuming an honest majority at keygen (DKG) or an honest dealer.</p>
+      <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>: a one-time ceremony at keygen precomputes every hash of a secret, run either as an MPC among the operators (DKG) or by a trusted dealer; signing then needs no MPC (432 bytes per signer, 3 rounds), and is secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers (with abort), assuming an honest majority at keygen (DKG) or an honest dealer.</p>
       <div class="split">
         <div>
           <h3>With DKG</h3>
           <p class="bn">Bottleneck: keygen traffic per operator</p>
           <table class="cmp">
             <colgroup><col class="label"><col><col><col></colgroup>
-            <thead><tr><th>Lifetime</th><th>2<sup>12</sup> signatures</th><th>2<sup>14</sup> signatures</th><th>2<sup>16</sup> signatures</th></tr></thead>
+            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security">i</span></th><th>2<sup>12</sup> signatures</th><th>2<sup>14</sup> signatures</th><th>2<sup>16</sup> signatures</th></tr></thead>
             <tbody>
               <tr><th>2-of-3</th><td>11&nbsp;GB</td><td>43&nbsp;GB</td><td>172&nbsp;GB</td></tr>
               <tr><th>3-of-5</th><td>13&nbsp;GB</td><td>52&nbsp;GB</td><td>207&nbsp;GB</td></tr>
@@ -525,10 +532,10 @@ footer a + a { margin-left: 1.25rem; }
         </div>
         <div>
           <h3>With a trusted dealer</h3>
-          <p class="bn">Bottleneck: public data to store</p>
+          <p class="bn">Bottleneck: public data to store (the same for the DKG version)</p>
           <table class="cmp">
             <colgroup><col class="label"><col><col><col></colgroup>
-            <thead><tr><th>Lifetime</th><th>2<sup>14</sup> signatures</th><th>2<sup>16</sup> signatures</th><th>2<sup>18</sup> signatures</th></tr></thead>
+            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security">i</span></th><th>2<sup>14</sup> signatures</th><th>2<sup>16</sup> signatures</th><th>2<sup>18</sup> signatures</th></tr></thead>
             <tbody>
               <tr><th>Public data</th><td>404&nbsp;MB</td><td>1.6&nbsp;GB</td><td>6.5&nbsp;GB</td></tr>
             </tbody>
@@ -540,7 +547,7 @@ footer a + a { margin-left: 1.25rem; }
 </div>
 
 <footer>
-  <p><a href="https://github.com/TomWambsgans/leansphincs-candidate/releases/download/doc-latest/leansphincs.pdf">Note</a><a href="https://github.com/TomWambsgans/leansphincs-candidate">Code</a></p>
+  <p><a href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/releases/download/doc-latest/leanSPHINCS.pdf">Note</a><a href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/main">Code</a></p>
   <p>Costs in BLAKE2s compressions.</p>
 </footer>
 

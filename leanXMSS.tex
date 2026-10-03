@@ -1,4 +1,4 @@
-% Build with: latexmk leanxmss.tex (output in .build/)
+% Build with: latexmk leanXMSS.tex (output in .build/)
 \documentclass[11pt]{article}
 
 \usepackage[T1]{fontenc}
@@ -55,23 +55,25 @@ and thresholdizable with a DKG. Same hash as leanSphincs: $\hash(P,\mathit{tw},M
 
 \section{Threshold signing}
 
-3-of-4 with a DKG, no trusted dealer, malicious security against 1 operator (with abort), using the same
-machinery as leanSphincs: secrets shared from 4 seeds, and 3-party MPC~\cite{BGIN19} on BLAKE2s. Only the
-WOTS chains are hashed in MPC, and every chain value is independent of the message, so all the MPC
-happens in advance:
+$t$-of-$n$ with $n=2f+1$ and $t=f+1$ (e.g.\ 2-of-3), a DKG, no trusted dealer, malicious security against
+$t-1$ operators (with abort), using the same machinery as leanSphincs: secrets shared from replicated
+seeds, and the $n$-party MPC on BLAKE2s. Only the WOTS chains are hashed in MPC, and every chain value is
+independent of the message, so all the MPC happens in advance:
 \begin{itemize}
   \item keygen: MPC computes every chain value of the $2^{16}$ top keys ($58\times3=174$ MPC hashes per
-        key), keeps them shared among the 4 operators, and opens the chain ends. The top tree is built in
+        key), keeps them shared among the operators, and opens the chain ends. The top tree is built in
         the clear, and its root is the public key
   \item before each bottom tree: the same MPC for its $2^{16}$ keys, then the next top key signs its root
         by opening precomputed values
-  \item signing: the operators agree on (slot, $m$), derive $R$ jointly and grind it in the clear, then
-        open the 58 precomputed values at the selected positions, each checked against its public chain
-        end. No MPC: one round of a few KB
+  \item signing: the operators agree on (slot, $m$), derive $R$ by commit-reveal and grind it in the clear,
+        then open the 58 precomputed values at the selected positions, each checked against its public
+        chain end. No MPC: a few KB. The slashing-protection state records the $R$ of each slot, so a slot
+        never opens two encodings
 \end{itemize}
-An MPC hash costs about $13.5\cdot10^3$ AND gates at 1 bit each (measured in the leanSphincs prototype),
-so a key costs 2.4~Mbit of traffic per operator. Per bottom tree, and once for keygen: 19.3~GB per operator,
-i.e.\ 74~KB/s on average with 4-second slots, plus 365~MB of stored shares.
+An MPC hash costs about $13.5\cdot10^3$ AND gates at 1 bit each for 2-of-3 (measured in the leanSphincs
+prototype; 1.2 and 1.29 bits for 3-of-5 and 4-of-7), so a key costs 2.4~Mbit of traffic per operator. Per
+bottom tree, and once for keygen: 19.3~GB per operator, i.e.\ 74~KB/s on average with 4-second slots, plus
+365~MB of stored shares.
 
 \begin{thebibliography}{9}
 \bibitem{HK22C} M.~Kudinov, A.~H\"ulsing, E.~Ronen, E.~Yogev. \emph{SPHINCS$^+$C: Compressing SPHINCS$^+$
