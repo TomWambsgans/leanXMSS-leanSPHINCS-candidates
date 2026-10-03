@@ -179,6 +179,7 @@ import LeanSphincs.BridgeReduce
 import LeanSphincs.BridgeHiddenSample
 import LeanSphincs.BridgeLazyGame
 import LeanSphincs.BridgeSupport
+import LeanSphincs.BridgeEncodingPrep
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -7841,3 +7842,19 @@ import LeanSphincs.BridgeSupport
 /-- info: 'LeanSphincs.Security.HiddenBridge.lazy_support' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.lazy_support
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.Only.searchAll' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.Only.searchAll
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.evalDist_eager_prefix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.evalDist_eager_prefix
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.evalDist_stoppedExperiment_prep' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.evalDist_stoppedExperiment_prep
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.forgeAdvantage_le_prep' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.forgeAdvantage_le_prep
