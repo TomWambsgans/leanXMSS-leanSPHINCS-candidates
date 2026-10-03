@@ -26,12 +26,16 @@ local cache-potential accounting against the actual shared query budget; ideal i
 digest-query/disclosure bounds for all six lifetimes; labelled actual source provenance and
 weighted source-selection charging to actual grinding cost; full material-game equivalence
 with virtual costs for privileged derivations; full randomized signing through a selected
-chain cutoff; exact finite structural-address injection and canonical graph preparation.
+chain cutoff with original costs; exact finite structural-address injection and canonical graph
+preparation; supported preparation-cache cleanliness and exact surrogate-target addresses;
+full seeded-game cache-change reduction with derivation-only loss and a shared-budget partition;
+actual conditional prequeried-source selection, joint-pair forecasts, and exact pool mass balance.
 
 Next necessary work:
 1. Bound the actual adversarial 24-tree disclosure process and its cached-query exceptions.
-2. Complete the stopped whole-game seed-cache change and apply the seed-guess bound;
-   privileged derivation substitution and full material-game cost equivalence are checked.
+2. Close centered cached-source fluctuations and the joint-target bank; the coarse positive
+   cross-source bound does not fit the full-key constant. The complete seed-cache reduction
+   and its shared-budget partition are now checked.
 3. Connect the checked WOTS/structural/FORS witnesses to primitive probability bounds and
    the seeded-to-independent-secret coupling, with reference-free leaves handled explicitly.
 4. Combine the terms with the shared query budget and prove every exact N in

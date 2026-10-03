@@ -104,6 +104,12 @@ provenance; excluding a target's own source does not alone remove this cross-sou
 selection by its uniform 128-bit randomizer average times the actual expected grinding hash
 calls, with pruning, repeats, and arbitrary caches retained. The required weighted coverage
 charge and its composition with the disclosure bound remain open.
+`LifetimeCachedSources.lean` and `LifetimeConditionalSources.lean` retain each prequeried
+source's initial conditional forecast, including either partial-cache order, and charge its
+actual selection to grinding work. `LifetimePairForecast.lean` supplies joint two-pair
+conditional laws; `LifetimePoolBalance.lean` keeps the exact fresh-versus-cached pool mass.
+Discarding the negative fresh-mass correction produces a bound too large for the requested
+full-key constant. Centered fluctuation and joint-target accounting remain necessary.
 
 `SecurityTreeWitness.lean` extracts canonical paths, same-address node matches, and surrogate
 preimages. `SecurityChainWitness.lean` and `SecurityWotsWitness.lean` classify chain divergence,
@@ -125,6 +131,14 @@ leaf's cutoff. The cutoff depends only on the least successful encoding of that 
 FORS key; it covers all signing indices and preserves exhaustion and private samples.
 Combining these prefix experiments without multiplying by the number of chains, and retaining
 the costs of honest internal work without exposing it, still needs the aggregate reduction.
+`SecurityPrefixCost.lean` and `SecurityPrefixCountedSign.lean` preserve original total signing
+costs, including erased internal work. `SecurityPrefixAllocation.lean` partitions one recorded
+query trace among disjoint chain addresses. `SecurityPrefixCostTransfer.lean` connects ideal
+slice costs to real slice costs with an explicit factor 1−q/2^128; expectations from distinct
+ideal experiments cannot be summed merely by invoking trace disjointness.
+`SecurityPrefixPrepared.lean` composes the material compiler with the counted signer, while
+`SecurityPrefixMaterialSampling.lean` splits one uniform secret coordinate from all remaining
+full-output material. The common game/transcript law still needs to be assembled.
 
 `SecurityDomains.lean` proves exact derivation-input injection and separation from verifier
 domains. `SecurityPrimitive.lean` bounds an explicit monitor of adaptive fresh queries against
@@ -145,8 +159,13 @@ for ordinary computations. `SecurityPreparedScheme.lean` substitutes honest deri
 virtual query charges, while adversarial raw hashes bypass this privileged compiler.
 `SecurityMaterialGameCoupling.evalDist_experiment_material` now proves equality of the entire
 actual game's success/cost distribution with this material game on the programmed cache.
-The game program is seed-independent; changing the seed-addressed initial cache still requires
-a stopped-game coupling and the seed-guess probability bound. `SecurityQueryCharge.lean` connects local expected potential
+`SecuritySeedLoss.lean` now caps the seed-independent frontend, proves the cap preserves the
+actual experiment under its original query bound, and changes the initial cache through a
+stopped seed-guess coupling. The loss is the expected number of ordinary derivation-shaped
+queries divided by 2^256. Virtual derivation charges and verification-domain hashes have zero
+seed-guess charge. Its derivation and complementary expected query charges sum to at most q;
+therefore proving the remaining material game at the complementary 127-bit rate suffices
+without adding an unnecessary full-budget seed term. `SecurityQueryCharge.lean` connects local expected potential
 increases to the actual shared hash budget. The required forgery-covering potential and its
 concrete local bound are still to be constructed.
 
@@ -157,6 +176,14 @@ candidate structural addresses inject into the exact serialized fields. `Securit
 prepares any selected subset in dependency order and proves that every preparation query is its
 final canonical input; omitted positions retain their initial labels. The retained subtree,
 surrogate boundary, and candidate witness events still need the complete graph instantiation.
+`SecurityGraphCache.lean` proves that supported graph preparation starts the structural
+monitor clean, including when it follows the actual seed-material preparation. Its active
+labels satisfy the canonical query equations; inactive labels stay fixed.
+`SecuritySurrogateAddress.lean` preserves the exact sibling address in first-divergence
+extraction. `SecurityPrunedGraph.lean` instantiates retained and boundary positions, proves
+boundary positions are inactive, and turns the addressed cached surrogate witness into the
+single appropriate structural target. Matching every prepared active node to the actual
+seeded computation is the remaining graph correctness bridge.
 
 ## Differences and obligations
 
