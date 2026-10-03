@@ -1,43 +1,67 @@
-# SPHINCS security in Lean 4
+# leanSPHINCS proofs in Lean 4
 
-[Scheme.lean](SphincsSecurity/Scheme.lean) defines the scheme with a 32-byte master seed: parameters, serialized hash inputs, key generation, signing, and verification. [Statement.lean](SphincsSecurity/Statement.lean) imports it and defines the SUF-CMA game, hash-query budget, and 127-bit security target. Public parameters, signing secrets, and signing randomizers are derived in separate hash domains. Every hash call in the experiment counts, including derivation, signing failures, repeated calls and final verification.
+**Status: candidate correctness and component probability bounds are checked; the six
+127-bit lifetime security proofs and end-to-end completeness are unfinished.** A successful
+build must not be read as completion of those claims.
 
-[Completeness.lean](SphincsSecurity/Completeness.lean) states the other side. Correctness, for every hash function: a signature the signer produces verifies. Completeness, against the same random oracle: the sum over all messages of the probability that sampling a seed, generating a key, signing and verifying fails is at most $2^{-256}$, where failing means the signer returned no signature or the verifier rejected it. This is the union-bound budget for one key signing every message. `sphincs_is_correct` and `sphincs_is_complete` prove the two statements; [PROOF.md](PROOF.md#completeness) outlines the route.
+`LeanSphincs/` models the candidate: one height-26 tree, 24 height-10 FORS trees, 64 WOTS+C
+chains with four positions and sum 120, two message-digest calls, and pruning with surrogate
+siblings. `Scheme.lean` models the seeded signer; `Randomized.lean` defines the requested
+variant with truly uniform independent randomizers. The SUF-CMA game is in
+[Statement.lean](LeanSphincs/Statement.lean).
 
-The public adversary may use private randomness adaptively and has no running-time or memory bound. The probability is over the master seed, the shared consistent random oracle and the adversary's private randomness. Private sampling does not count toward the hash-query budget. [Proof/Adversary](SphincsSecurity/Proof/Adversary) identifies this game with the internal probabilistic game, preserving success probabilities and query counts exactly.
+The unchanged `SphincsSecurity/` library is the earlier **three-layer leanVM scheme** from
+commit `b7a107256`, credited here and in the checkpoint commits. Its theorem
+`sphincs_has_127_bits_of_classical_security` applies only to that older scheme.
+Its historical documentation is [LEANVM_README.md](LEANVM_README.md) and
+[LEANVM_PROOF.md](LEANVM_PROOF.md).
 
-The theorem `sphincs_has_127_bits_of_classical_security` proves this claim for at most `2^24` signing requests per key. The reduction in [Proof/Deterministic](SphincsSecurity/Proof/Deterministic) couples seed derivation to independent secrets and signing trials, handles repeated requests, bounds adaptive seed guesses, and transfers the query budget. The public-parameter derivation consumes a query, leaving enough slack to absorb the seed-guessing loss without weakening the 127-bit bound.
+## Checked candidate claims
 
-## Build and audit
+Names below are in `LeanSphincs` (with `Completeness` or `Concrete` as indicated).
+[Axioms.lean](LeanSphincs/Axioms.lean) pins every public candidate theorem using `#guard_msgs`;
+all dependencies are drawn from `propext`, `Classical.choice`, and `Quot.sound`.
 
-Use the pinned Lean toolchain and VCVio revision:
+| Claim | Theorem / file | Scope |
+| --- | --- | --- |
+| A successful seeded signature verifies | `Completeness.correct`, [Correctness](LeanSphincs/Correctness.lean) | Every hash function, seed, message, and pruning height 0–26 |
+| A signature assembled from any landed randomizer verifies | `Completeness.verify_of_finishSign`, [RandomizedCorrectness](LeanSphincs/RandomizedCorrectness.lean) | Independent of how that randomizer was selected |
+| Computed subtree and surrogate path recover the root | `Completeness.eval_treeFold_pruned_path`, [Pruning](LeanSphincs/Pruning.lean) | Every retained leaf |
+| Exact WOTS+C code size | `Completeness.codeCount_exact`, [Code](LeanSphincs/Code.lean) | 410356077965267834847013187094862224 words |
+| Valid encodings cannot be moved forward to different valid encodings | `Completeness.encoding_antichain`, [Code](LeanSphincs/Code.lean) | All valid words |
+| WOTS+C counter exhaustion ≤ 2^(-4194304) | `Completeness.encoding_exhaustion_bound`, [Encoding](LeanSphincs/Encoding.lean) | Counter inputs must initially be fresh |
+| Fresh digest lands with probability 2^(b−26) | `fresh_landing_probability_inv`, [Landing](LeanSphincs/Landing.lean) | A fresh uniform first digest block |
+| Seeded grinding exhaustion ≤ 2^(-2^(b+5)) | `Completeness.digest_exhaustion_bound`, [Digest](LeanSphincs/Digest.lean) | Initial randomizer and message inputs fresh; collisions accounted for |
+| Exact FORS coverage probability | `Concrete.fresh_fors_coverage`, [ForsCoverage](LeanSphincs/ForsCoverage.lean) | Fixed disclosure sets and a fresh independent uniform digest |
+| Serialized signature length = 5684 | `signature_size`, [Layout](LeanSphincs/Layout.lean) | Every signature, including malformed ones |
+| WOTS verification walks exactly 72 chain steps | `Completeness.verification_chain_steps`, [Code](LeanSphincs/Code.lean) | Every admissible encoding; the full 391-compression execution theorem is not yet proved |
+
+## Lifetime targets still open
+
+`Lifetimes.RequestedSecurity` states all six targets in the candidate game. None has yet been
+proved. Each counts every hash call in the modeled experiment, including honest-party calls,
+repeated inputs, and final verification; private sampling is free.
+
+| Subtree height b | Requested signature limit N |
+| --- | ---: |
+| 26 | 1,200,000,000 |
+| 20 | 23,700,000 |
+| 13 | 240,000 |
+| 14 | 460,000 |
+| 12 | 125,000 |
+| 10 | 33 |
+
+The b=10 target is the user's literal 33, while the spec says 33,000. The full-key target is
+1.2 billion, while the current spec advertises 2^30. Other modeling differences and the remaining
+proof obligations are recorded in [PROOF.md](PROOF.md).
+
+## Build
 
 ```sh
 cd formal/sphincs
-lake exe cache get
-lake build
+env LEAN_NUM_THREADS=2 nice -n 19 lake exe cache get
+env LEAN_NUM_THREADS=2 nice -n 19 lake build
 ```
 
-The cache command is needed on initial setup. The root module pins the axiom footprint of every theorem to `propext`, `Classical.choice` and `Quot.sound` with `#guard_msgs`, so the build fails if it ever grows. [scripts/Reach.lean](scripts/Reach.lean) is a maintenance script: `lake env lean scripts/Reach.lean` writes `reach.txt`, listing every local declaration with the line range of its source block and whether the proof terms of the public theorems reach it, which is how dead code is found before pruning.
-
-## Where to work
-
-[PROOF.md](PROOF.md) explains the route, the constants, the component facades that seal each component's parameters, and which modules must change if a component changes. The proof is split by component:
-
-| Entry | Purpose |
-| --- | --- |
-| [SphincsSecurity.lean](SphincsSecurity.lean) | The public theorems. |
-| [Completeness](SphincsSecurity/Completeness) | Correctness and completeness: recovery, the reduction of failure to signing returning `none`, and the bounds on signing's four searches. |
-| [Proof/Deterministic](SphincsSecurity/Proof/Deterministic) | Seed derivation, coupling to independent secrets, and the final security bound. |
-| [Proof/Security127Completion.lean](SphincsSecurity/Proof/Security127Completion.lean) | Combines the large-budget and small-budget bounds into `security127`. |
-| [Proof/Base](SphincsSecurity/Proof/Base) | Scheme-independent tooling: uniform tables and their exact adaptive posteriors, query caps, pauses and traces, oracle query charges, moment bounds. |
-| [Proof/Scheme](SphincsSecurity/Proof/Scheme) | The concrete game over a query cache, honest computation and witness extraction from an accepting signature. |
-| [Proof/Hypertree](SphincsSecurity/Proof/Hypertree) | The canonical graph of honest hash inputs, frontier oracles, structural matches, layer and hypertree witnesses. |
-| [Proof/Chains](SphincsSecurity/Proof/Chains) | Abstract chain tables and their adaptive query bounds, independent of the scheme. |
-| [Proof/Ots](SphincsSecurity/Proof/Ots) | The one-time signature: prefix simulation, contacts, encoding neighbors, markers and matches on the concrete chains, the OTS verifier witness. |
-| [Proof/Fts](SphincsSecurity/Proof/Fts) | The few-time signature and message digest: target certificates, the banked monitor, proposal words, the terminal certificate price, cache exceptions. |
-| [Proof/Reference](SphincsSecurity/Proof/Reference) | The reference experiment: sampled reference family, forgery source, verifier classification, primitive-event union, query allocation, certificate coverage. |
-| [Proof/Residual](SphincsSecurity/Proof/Residual) | The retained residual monitor on the original game and the large-budget theorem. |
-| [Proof/Forced](SphincsSecurity/Proof/Forced) | The secret-guess interpreter, the forced FTS games, their monitored runs and the small-budget arithmetic. |
-
-Superseded proof routes and their planning notes are in the Git history.
+The default build includes the candidate, its axiom guards, the retained leanVM proof, and the
+legacy query-budget regression check. No `sorry`, `native_decide`, or new axioms are used.
