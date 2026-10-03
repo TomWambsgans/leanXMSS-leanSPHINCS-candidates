@@ -18,6 +18,8 @@
 
 * { box-sizing: border-box; }
 
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 body {
   margin: 0;
   background: #ffffff;
@@ -97,6 +99,7 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
 .cmp thead th { font-weight: 600; white-space: nowrap; padding-bottom: 0.1rem; }
 .cmp thead tr:last-child th { border-bottom: 1px solid var(--rule); padding-bottom: 0.4rem; }
 .cmp .hd { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; }
+.cmp .hd > * { flex: none; }
 .cmp .dev { font-weight: 400; color: var(--muted); }
 .cmp .dev .info::after { left: auto; right: 0; }
 .info.r::after { left: auto; right: 0; }
