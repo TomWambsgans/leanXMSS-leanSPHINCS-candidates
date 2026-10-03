@@ -31,8 +31,19 @@ indices, proving the exact probability 2^b/2^26. `Digest.lean` tracks previously
 randomizers: their mass costs at most 2^32/2^128 per attempt. This leaves at least
 2^(-(27-b)) acceptance mass. The halving lemma in `Decay.lean` gives 2^(-2^(b+5)) failure
 mass for the seeded loop, conditional on the stated initial cache freshness. At b=10 this
-is 2^-32768. These conditional component results still need composition with key generation
-and the rest of signing; they are not an end-to-end completeness theorem.
+is 2^-32768. `RandomizedDigest.lean` proves the same bound for independent uniform randomizers
+sampled with replacement, including repeated-randomizer cache hits.
+
+`Fresh.lean` proves that key generation (including surrogates) leaves the message and encoding
+domains unused, and that FORS preparation preserves encoding freshness. `Complete.lean`
+composes both exhaustion bounds with actual key generation and randomized signing.
+`RandomizedSupport.lean` replays every shared-ROM execution against a function extending its
+final cache, connects a successful randomizer search to a landed digest, and applies fixed-function
+correctness. `Honest.honest_completeness` therefore proves a failure bound of
+2^(-2^(b+5)) + 2^(-4194304) for key generation followed by signing and verification of any
+fixed message. `Lifetimes.requested_completeness` specializes this to ≤2^-32767 for all six
+instances. This is a single honest experiment, not a theorem about arbitrary adversarially
+populated initial caches or simultaneous success of unlimited signing calls.
 
 `ForsCoverage.lean` proves the 266-bit digest's index/leaf decomposition is bijective. For
 fixed sets R[i,t] of distinct disclosed leaves, a fresh uniform digest is covered with probability
@@ -43,18 +54,32 @@ This uses actual set cardinalities, not the number of repeated signatures. It is
 point for the new lifetime analysis, not a justification for treating adversarially cached digest
 queries or adaptively selected transcripts as independent.
 
+`SecurityDigest.lean` connects this count to the actual two-call random oracle. It also treats
+a cached first block and fresh second block: only ten new bits remain, so the denominator is
+2^10 rather than 2^266. `SecurityAdaptive.lean` proves the conditional expectation identity and
+an adaptive union bound for trials with two fresh inputs, keeping their current disclosure
+table explicit. Cached trials and the honest disclosure distribution still need a reduction.
+
+`LifetimeCoverage.lean` proves a degree-26 upper bound on (1-(1-p)^r)^24 using Bonferroni
+inequalities. `LifetimeMoments.lean` expands its binomial moments into Stirling numbers and
+descending factorials. `LifetimeBounds.lean` checks six integer certificates for exactly the
+requested N values, with no floating point or native proof evaluation. `LifetimeProbability.lean`
+expresses these bounds as probabilities and covers every smaller N. They prove the scripts'
+binomial occupancy expression is ≤2^-127; connecting that expression to the adaptive signing
+transcript remains necessary.
+
 ## Differences and obligations
 
 - The old proof's thirteenth/fourteenth moments, pinned FORS group, three-layer witnesses,
   and closing constants do not carry over automatically. The candidate needs bounds for its
   24-tree disclosure process, adaptive cached queries, primitive hash events, and the shared
-  query allocation. The six exact numerical closers must then prove
+  query allocation. The checked six numerical closers must then be connected to
   `Lifetimes.RequestedSecurity` without assuming the desired advantage bound.
 - `Randomized.sign` samples fresh independent 16-byte randomizers with replacement, as
   requested. Rust derives them from the seed and message. The candidate security target is
   for the independent-randomizer variant; transferring it to Rust would require a separate
-  derivation reduction. The currently checked grinding probability theorem concerns the
-  seeded loop under explicit freshness hypotheses; the randomized-loop bridge is still open.
+  derivation reduction. Both seeded and independently randomized grinding bounds are now
+  checked; end-to-end honest completeness uses the latter.
 - The formal signer returns `none` after 2^32 randomizer trials. Rust uses `(0u32..)` and
   `.find(...).unwrap()` without this explicit failure case; overflow/wrapping and failure behavior
   are not modeled. Rust also panics on WOTS counter exhaustion. These discrepancies have
@@ -63,12 +88,15 @@ queries or adaptively selected transcripts as independent.
   tree and rebuilds FORS via stored arrays. The byte inputs and recovered values were ported
   by source inspection; this is not a mechanized Rust refinement or an exact hash-trace
   equivalence. A security transfer using total experiment query counts must account for caching.
-- End-to-end completeness must discharge the fresh-input hypotheses after key generation,
-  compose the two searches, and connect to the independently randomized signing experiment.
+- Verification does not enforce membership in the retained subtree. The security extraction
+  must account explicitly for forgeries entering through a surrogate sibling, as well as
+  ordinary WOTS/FORS/tree hash events.
 - Requested N at b=10 is 33, versus 33,000 in the spec/prior plan. Requested N at b=26 is
   1,200,000,000, versus 2^30 in the current spec. Both requested values are preserved exactly.
-- `Layout.signature_size` proves the actual serializer length. `Code.verification_chain_steps`
-  proves the 72 remaining WOTS chain steps. The complete 391-compression trace is still open.
+- `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums
+  BLAKE2s block costs of the verifier's actual logged hash-input lengths. Accepted signatures
+  cost exactly 391 compressions; all signatures cost at most 391. This includes the 72 WOTS
+  chain steps established by the constant-sum code.
 
 `Axioms.lean` uses `#guard_msgs` to pin each public candidate theorem to its exact dependency
 list, a subset of `propext`, `Classical.choice`, and `Quot.sound`. The default build checks

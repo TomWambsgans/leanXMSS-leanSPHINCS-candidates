@@ -1,8 +1,8 @@
 # leanSPHINCS proofs in Lean 4
 
-**Status: candidate correctness and component probability bounds are checked; the six
-127-bit lifetime security proofs and end-to-end completeness are unfinished.** A successful
-build must not be read as completion of those claims.
+**Status: candidate correctness, end-to-end honest completeness, and all six exact FORS
+lifetime arithmetic bounds are checked. The adaptive SUF-CMA security reduction is unfinished.**
+A successful build must not be read as completion of the six security claims.
 
 `LeanSphincs/` models the candidate: one height-26 tree, 24 height-10 FORS trees, 64 WOTS+C
 chains with four positions and sum 120, two message-digest calls, and pruning with surrogate
@@ -26,20 +26,28 @@ all dependencies are drawn from `propext`, `Classical.choice`, and `Quot.sound`.
 | --- | --- | --- |
 | A successful seeded signature verifies | `Completeness.correct`, [Correctness](LeanSphincs/Correctness.lean) | Every hash function, seed, message, and pruning height 0–26 |
 | A signature assembled from any landed randomizer verifies | `Completeness.verify_of_finishSign`, [RandomizedCorrectness](LeanSphincs/RandomizedCorrectness.lean) | Independent of how that randomizer was selected |
+| Every successful randomized signature verifies in the shared ROM | `Completeness.verify_of_keygen_sign_support`, [RandomizedSupport](LeanSphincs/RandomizedSupport.lean) | Actual successive keygen, sign and verify runs; any initial cache |
+| Honest keygen, signing and verification fail with probability ≤ 2^(-2^(b+5)) + 2^(-4194304) | `Completeness.honest_completeness`, [Honest](LeanSphincs/Honest.lean) | Every fixed message, fresh generated key and empty initial cache; no freshness assumptions remain |
+| All six requested instances have honest failure probability ≤ 2^-32767 | `Lifetimes.requested_completeness`, [Honest](LeanSphincs/Honest.lean) | One honest sign-and-verify experiment |
 | Computed subtree and surrogate path recover the root | `Completeness.eval_treeFold_pruned_path`, [Pruning](LeanSphincs/Pruning.lean) | Every retained leaf |
 | Exact WOTS+C code size | `Completeness.codeCount_exact`, [Code](LeanSphincs/Code.lean) | 410356077965267834847013187094862224 words |
 | Valid encodings cannot be moved forward to different valid encodings | `Completeness.encoding_antichain`, [Code](LeanSphincs/Code.lean) | All valid words |
 | WOTS+C counter exhaustion ≤ 2^(-4194304) | `Completeness.encoding_exhaustion_bound`, [Encoding](LeanSphincs/Encoding.lean) | Counter inputs must initially be fresh |
 | Fresh digest lands with probability 2^(b−26) | `fresh_landing_probability_inv`, [Landing](LeanSphincs/Landing.lean) | A fresh uniform first digest block |
 | Seeded grinding exhaustion ≤ 2^(-2^(b+5)) | `Completeness.digest_exhaustion_bound`, [Digest](LeanSphincs/Digest.lean) | Initial randomizer and message inputs fresh; collisions accounted for |
+| Independently randomized grinding has the same bound | `Completeness.randomized_digest_exhaustion_bound`, [RandomizedDigest](LeanSphincs/RandomizedDigest.lean) | Initial message inputs fresh; repeated randomizers accounted for |
 | Exact FORS coverage probability | `Concrete.fresh_fors_coverage`, [ForsCoverage](LeanSphincs/ForsCoverage.lean) | Fixed disclosure sets and a fresh independent uniform digest |
+| Actual fresh two-query digest has that coverage probability | `Security.probEvent_messageDigest_covered`, [SecurityDigest](LeanSphincs/SecurityDigest.lean) | Both inputs fresh; a separate theorem handles cached first blocks |
+| Adaptive fresh-digest trials satisfy an explicit union bound | `Security.probEvent_adaptiveCoverageSearch_le`, [SecurityAdaptive](LeanSphincs/SecurityAdaptive.lean) | Requires a bound on the expected disclosure-table coverage rate |
+| All six exact FORS lifetime expressions are ≤ 2^-127 | `Lifetime.fors_lifetime_ennreal_*`, [LifetimeProbability](LeanSphincs/LifetimeProbability.lean) | Independent binomial occupancy formula; all n≤N; not yet a game reduction |
 | Serialized signature length = 5684 | `signature_size`, [Layout](LeanSphincs/Layout.lean) | Every signature, including malformed ones |
-| WOTS verification walks exactly 72 chain steps | `Completeness.verification_chain_steps`, [Code](LeanSphincs/Code.lean) | Every admissible encoding; the full 391-compression execution theorem is not yet proved |
+| Accepted verification uses exactly 391 compressions | `Cost.verification_compressions`, [VerificationCost](LeanSphincs/VerificationCost.lean) | Actual logged hash inputs; every execution costs at most 391 |
 
 ## Lifetime targets still open
 
-`Lifetimes.RequestedSecurity` states all six targets in the candidate game. None has yet been
-proved. Each counts every hash call in the modeled experiment, including honest-party calls,
+`Lifetimes.RequestedSecurity` states all six targets in the candidate game. The numerical
+FORS expression is now proved for every requested N, but none of the six game-level security
+claims is yet proved. Each counts every hash call in the modeled experiment, including honest-party calls,
 repeated inputs, and final verification; private sampling is free.
 
 | Subtree height b | Requested signature limit N |
