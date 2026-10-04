@@ -90,13 +90,34 @@ b=10 and b=8 at their certified maxima, below the site's 33K and 9K).
      SignerPost,InterpSupport,ForsPotential,ForsGame,Replay,ForsAssembly,Targeting}.
  1d. H0*.lean: Poisson factorial-moment domination, product-form moment majorant, exact rational
      covers checked by `decide +kernel`; tightest headroom ~0.001 bit at x ~ 2^-53 (b = 12-14).
-Stage 2 (small budgets; about 15-20K lines): port leanVM's refined route to the candidate:
- 2a. Chains (generic, reuse) and our `SecurityPrefix*` (already ported) for contacts and
-     two-edge completions; markers with the WOTS+C neighbour counts (b1 = 63, b2 = 4032).
- 2b. Continuing secret-guess interpreter (reuse `Forced/SecretGuess*`), near-cover x guess and
-     two-guess bounds for FORS secrets.
- 2c. Primitive union with a shared query allocation; closing arithmetic for x <= x0.
-Then: Statement numbers, six theorems, axiom guards, docs.
+Stage 2 (target: 80% of the best-known-attack lifetime N_att; revised 2026-10-04).
+N_att (exact multinomial model, criterion E[max(X, 1/2)] <= 1): 1.203e9 / 23.80e6 / 466.9K /
+242.3K / 125.7K / 33.8K / 9.07K for b = 26/20/14/13/12/10/8; stage 1 proves 0.34-0.45 of these.
+Findings (scratchpad numerics, exact Poisson expectations of Z):
+ - The stage-1 criterion is capped at 0.451 N_att for every b: at large x the pool coins of the
+   virtual future (an independent coin per cached item in every remaining slot) inflate the loads
+   to N/(1-x), and at x = 1/2 the criterion needs E[Z at 2N] <= 1/4. A fresh-randomizer signer can
+   be asked to sign one message N times, which is what forces a coin per slot.
+ - Small budgets need the refined route: a single chain or FORS-leaf contact is not a forgery.
+ - Unit-neighbour encoding markers (<= 4032 per word, 63 per lowered chain) make the WOTS contact
+   route first-order once a marker exists; a marker-state potential handles this up to x ~ 2^-7.
+Decision (user, 2026-10-04): target the Rust signer, whose randomizers are derived from the seed
+and the message, so a repeated request returns the same signature.
+Plan, with the ideal (exact-expectation) result 0.90 / 0.90 / 0.88 / 0.87 / 0.86 / 0.84 / 0.82:
+ C. Deterministic signer. New statement over `Seeded.sign`; reduce it to the fresh-randomizer game
+    of the memoizing adversary (each message signed once; seed-named randomizer inputs join the
+    seed-hit event). FORS potential with one coin per cached item instead of one per slot (valid
+    for adversaries that never repeat a message); H0 loads N/2^b without the 1/(1-x) inflation.
+ A. Linear route for x <= x_h (x_h ~ 2^-7.5 at b=8 ... 2^-19.5 at b=26). Expose the chain values
+    at and above each prepared word at the start (they are only ever public). Stop at every correct
+    guess (rate 1/2 per hidden row query). First-order: structural, encoding, forward-chain and
+    FORS-node matches (1/2), two-edge completions (3/4 amortized via credits). Second order:
+    contact x marker, contact first (63 markers), two contacts, FORS leaf contact x near cover.
+    Marker-state potential W = max(r b0, V_u) with V_u' = max(3/2, 1 + 63y, 1 + 4032(2y - V_u)),
+    so the non-FORS rate is r(x) = V_u(x)/(2x) in [3/4, 1). Criterion E[max(Z, r(x))] + o(1) <= 1.
+    Large route (stage 1, no inflation) on [x_h, 1/2].
+ D. Tighter H0 certificates (exact single-leaf Poisson sums above a cutoff, product majorant
+    below), for both criteria; the current majorant loses 10-40x in E[(Z-1)^+] at 0.8 N_att.
 
 R6. Resolve the reference caching/query-count transfer before claiming security of Rust itself.
 
