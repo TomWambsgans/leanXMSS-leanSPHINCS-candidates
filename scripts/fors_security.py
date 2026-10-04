@@ -19,6 +19,11 @@ attack in one of two ways:
   sum: -log2(2^(-8n) + P)        used by the original SPHINCS+ parameter script
 
 Only n, h, a and k enter the bound; d and w do not.
+
+This is the *average* rate of a fresh digest. A forger that collects its signatures first and then
+chooses between the FORS search and another 2^-127-per-query search gets E[max(X, 1)] instead, so
+at 127 bits these limits are not safe; `adaptive_lifetime.py` computes the leanSphincs lifetimes
+that are.
 """
 
 import argparse

@@ -8,6 +8,7 @@ BLAKE2s: hashing l bytes costs max(1, ceil(l / 64)). Every call hashes tw (16 B)
 import argparse
 import math
 
+from adaptive_lifetime import max_signatures
 from fors_security import Params, forgery_bits_exact, max_log2_sigs
 
 N = 16  # bytes per hash value
@@ -69,11 +70,12 @@ def main():
     verify = blocks * msg_block + k * (step + a * node) + fors_roots + enc + ((q - 1) * v - T) * step + wots_pk + h * node
     keygen = derive + 2**h * leaf + (2**h - 1) * node
     size = N + k * (1 + a) * N + 4 + v * N + h * N
-    L = max_log2_sigs(127, Params("", 16, h, a, k, 30), "exact", "max")  # the FORS term at 2^-127 per query
+    L = max_log2_sigs(127, Params("", 16, h, a, k, 30), "exact", "max")  # average FORS rate 2^-127 per query
 
-    def pruned_log2_sigs(b, level=127):
-        """Lifetime of a key that keeps a subtree of 2^b leaves: the signatures spread over its 2^b FORS
-        instances, and a forger's digest must also land in the subtree (probability 2^(b - h))."""
+    def average_log2_sigs(b, level=127):
+        """Lifetime from the *average* FORS rate of a fresh digest (signatures spread over 2^b FORS
+        instances, the digest landing in the subtree with probability 2^(b - h)). Not safe against
+        forgers that choose between the FORS and WOTS searches after seeing their signatures."""
         def bits(log2_q):
             return min(8 * N, (h - b) + forgery_bits_exact(log2_q, b, a, k))
         lo, hi = 0.0, b + 12.0
@@ -106,7 +108,11 @@ def main():
           f"FORS roots {fors_roots}, randomizer {rnd}, digest {blocks} x {msg_block}")
     print(f"  WOTS encoding: {math.log2(n_sum(v, q, T)):.2f} bits of valid encodings, "
           f"expected {1 / alpha:.0f} counters")
-    print(f"  lifetime at 127 bits: 2^{L:.2f} signatures")
+    if (h, a, k) == (26, 10, 24):
+        print(f"  lifetime at 127 bits against adaptive forgers (adaptive_lifetime.py): "
+              f"2^{math.log2(max_signatures(h)):.2f} signatures; average-rate estimate 2^{L:.2f}")
+    else:
+        print(f"  average-rate lifetime estimate at 127 bits (not adaptive-safe): 2^{L:.2f} signatures")
     print(f"  verification: {verify} compressions")
     print(f"  WOTS leaf {leaf}; key generation {keygen:,} ({fmt(keygen)})")
     for mib in x.cache_mib:
@@ -120,7 +126,9 @@ def main():
         base = grind + (blocks - 1) * msg_block + fors_sign + wots_sign
         signs = ", ".join(f"{fmt(base + tree_cost(b, nodes(kib / 1024)))} with {kib:g} KiB"
                           for kib in x.pruned_cache_kib)
-        print(f"  pruned, 2^{b} leaves: lifetime 2^{pruned_log2_sigs(b):.2f}, key generation {fmt(kg)}, "
+        life = (f"lifetime 2^{math.log2(max_signatures(b)):.2f} (average-rate estimate 2^{average_log2_sigs(b):.2f})"
+                if (h, a, k) == (26, 10, 24) else f"average-rate lifetime 2^{average_log2_sigs(b):.2f}")
+        print(f"  pruned, 2^{b} leaves: {life}, key generation {fmt(kg)}, "
               f"signing {signs} (grinding {fmt(grind)})")
 
     # Threshold signing (adapted from PRAWNS): every FORS secret is F(addr) for a threshold PRF F. A one-time
@@ -132,7 +140,8 @@ def main():
     try_cost = comp(N + 4) + msg_block  # R = H(R_0, ctr), then the first digest call
     grind = 2 ** (h - b) * try_cost
     rebuild = k * (2**a - 1) * node  # the combiner rebuilds the 24 FORS paths from the public leaves
-    print(f"  threshold, 2^{b} kept leaves (lifetime 2^{pruned_log2_sigs(b):.2f}): {fmt(mpc_hashes)} MPC hashes at keygen, public data "
+    life = max_signatures(b) if (h, a, k) == (26, 10, 24) else 2 ** average_log2_sigs(b)
+    print(f"  threshold, 2^{b} kept leaves (lifetime 2^{math.log2(life):.2f}): {fmt(mpc_hashes)} MPC hashes at keygen, public data "
           f"{public / 1e9:.3g} GB; signing: grinding {fmt(grind)} + FORS paths {fmt(rebuild)} compressions, no MPC")
     # Keygen with a DKG: n-party replicated-sharing MPC, t = (n + 1) / 2, hash-based F. Bytes per operator for
     # one FORS leaf and one 3-step WOTS chain, measured by `cargo run --release -p rss --bin bench`.
