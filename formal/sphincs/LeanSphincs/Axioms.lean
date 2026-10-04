@@ -9230,3 +9230,23 @@ import LeanSphincs.BridgeSignerFors
 /-- info: 'LeanSphincs.Security.Domination.creations_tsum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Domination.creations_tsum
+
+/-- info: 'LeanSphincs.Security.GraphView.blk_ne_of_ne' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphView.blk_ne_of_ne
+
+/-- info: 'LeanSphincs.Security.GraphView.avoids_finish_other' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphView.avoids_finish_other
+
+/-- info: 'LeanSphincs.Security.GraphView.freshNewWeight_finish' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphView.freshNewWeight_finish
+
+/-- info: 'LeanSphincs.Security.GraphView.trial_bound_fresh' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphView.trial_bound_fresh
+
+/-- info: 'LeanSphincs.Security.GraphView.loop_bound_fresh' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphView.loop_bound_fresh
