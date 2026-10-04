@@ -605,12 +605,53 @@ theorem pot_le_core (tg : Targeting HashInput HashOutput Coordinate) (initial : 
 
 end Order
 
+/-! ### Counting cached randomizers -/
+
+section Count
+
+variable {parameter : PublicParameter} {data : PublicData}
+
+theorem blk_zero_injective (m : Message) : Function.Injective fun ρ : Randomness => blk parameter data m ρ 0 := by
+  intro ρ ρ' h
+  by_contra hne
+  exact blk_ne_of_ne parameter data m ρ ρ' 0 0 (Or.inl hne) h
+
+variable (parameter data) in
+/-- Block-0 inputs of a message. -/
+noncomputable def zeroInputs (m : Message) : Finset HashInput :=
+  Finset.univ.image fun ρ => blk parameter data m ρ 0
+
+theorem cachedCount_eq (m : Message) (s : State) :
+    cachedCount parameter data m s = ((zeroInputs parameter data m).filter fun x => s.cache x ≠ none).card := by
+  unfold cachedCount zeroInputs
+  rw [Finset.filter_image, Finset.card_image_of_injective _ (blk_zero_injective m)]
+
+theorem card_filter_store_of_not_mem (T : Finset HashInput) (s : State) (x : HashInput) (hx : x ∉ T)
+    (u : HashOutput) :
+    (T.filter fun y => (s.store x u).cache y ≠ none).card = (T.filter fun y => s.cache y ≠ none).card := by
+  congr 1
+  refine Finset.filter_congr fun y hy => ?_
+  rw [store_cache_ne s x y (fun h => hx (h ▸ hy)) u]
+
+theorem count_withPair (m : Message) (s : State) (p : Pair) (u0 u1 : HashOutput) :
+    cachedCount parameter data m (withPair parameter data s p u0 u1) ≤ cachedCount parameter data m s + 1 := by
+  rw [cachedCount_eq, cachedCount_eq]
+  unfold withPair
+  rw [card_filter_store_of_not_mem _ _ _ ?_ u1]
+  · exact card_filter_store_le _ _ _ _
+  · intro hmem
+    obtain ⟨ρ, _, hρ⟩ := Finset.mem_image.1 hmem
+    exact absurd (pblk_injective parameter data (show pblk parameter data (m, ρ) 0 = pblk parameter data p 1 from hρ)).2
+      (by decide)
+
+end Count
+
 /-! ### Paid programs -/
 
 section Good
 
 variable (parameter : PublicParameter) (data : PublicData) (wbar b0 : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight)))
-  {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
+  (Qtot : ℕ) {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
   (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
 /-- The final value: a FORS cover with no decided hit. -/
@@ -620,10 +661,14 @@ noncomputable def finalValue (R : List Coordinate) (out : Run HashInput Coordina
     if HiddenBridge.ForsCover parameter data.root outcome (R ++ out.1.2.1) out.2.cache ∧ ¬Realized tg initial out.2
     then 1 else 0
 
+/-- Cached block-0 entries of every message, plus the remaining budget, stay bounded. -/
+def CountInv (s : State) (budget : ℕ) : Prop :=
+  ∀ m : Message, cachedCount parameter data m s + budget ≤ Qtot
+
 /-- A program whose final value is paid by the potential and the baseline payments. -/
 def Good (L : QueryLog SigningSpec) (prog : OracleComp CostSpec HiddenBridge.Outcome) : Prop :=
   ∀ budget (s : State) (P : List Pair) (d : Multiset View) (R : List Coordinate),
-    Prepared initial s → PInv parameter data s P → DInv R d →
+    Prepared initial s → PInv parameter data s P → DInv R d → CountInv parameter data Qtot s budget →
       ∑' out, Pr[= out | interp tg initial model prog budget s] * finalValue parameter data tg initial R out ≤
         pot parameter data wbar b0 Fail tg initial s P L d budget + b0 * expectedFlagged tg initial model prog budget s
 
@@ -652,16 +697,16 @@ theorem pot_grow (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) {s s' : State} (hext : Ext
 
 theorem good_draw (L : QueryLog SigningSpec) (draw : ℕ)
     (next : Fin (draw + 1) → OracleComp CostSpec HiddenBridge.Outcome)
-    (h : ∀ v, Good parameter data wbar b0 Fail tg initial model L (next v)) :
-    Good parameter data wbar b0 Fail tg initial model L
+    (h : ∀ v, Good parameter data wbar b0 Fail Qtot tg initial model L (next v)) :
+    Good parameter data wbar b0 Fail Qtot tg initial model L
       (liftM (CostSpec.query (.inl (.inl draw))) >>= next) := by
-  intro budget s P d R hprep hP hD
+  intro budget s P d R hprep hP hD hC
   unfold expectedFlagged
   rw [interp_draw, tsum_probOutput_bind_mul, tsum_probOutput_bind_mul]
   calc _ ≤ ∑' v, Pr[= v | (liftM (unifSpec.query draw) : ProbComp (Fin (draw + 1)))] *
         (pot parameter data wbar b0 Fail tg initial s P L d budget +
           b0 * expectedFlagged tg initial model (next v) budget s) :=
-        ENNReal.tsum_le_tsum fun v => mul_le_mul_right (h v budget s P d R hprep hP hD) _
+        ENNReal.tsum_le_tsum fun v => mul_le_mul_right (h v budget s P d R hprep hP hD hC) _
     _ ≤ _ := by
         simp only [mul_add, ENNReal.tsum_add, ENNReal.tsum_mul_right]
         refine add_le_add (mul_le_of_le_one_left' tsum_probOutput_le_one) (le_of_eq ?_)
@@ -826,16 +871,17 @@ theorem tsum_swap2 {α : Type} (w : α → ℝ≥0∞) (C : α → α → ℝ≥
 section OrdinaryGood
 
 variable (parameter : PublicParameter) (data : PublicData) (wbar b0 : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight)))
-  {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
+  (Qtot : ℕ) {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
   (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
 /-- The sibling of a new pair, presampled after the first read. -/
 theorem new_pair_bound (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) (L : QueryLog SigningSpec)
     (next : HashOutput → OracleComp CostSpec HiddenBridge.Outcome)
-    (h : ∀ v, Good parameter data wbar b0 Fail tg initial model L (next v))
+    (h : ∀ v, Good parameter data wbar b0 Fail Qtot tg initial model L (next v))
     (budget : ℕ) (hb : 1 ≤ budget) (s : State) (P : List Pair) (d : Multiset View) (R : List Coordinate)
-    (hprep : Prepared initial s) (hP : PInv parameter data s P) (hD : DInv R d) (p : Pair)
+    (hprep : Prepared initial s) (hP : PInv parameter data s P) (hD : DInv R d)
+    (hC : CountInv parameter data Qtot s budget) (p : Pair)
     (hp0 : s.cache (pblk parameter data p 0) = none) (hp1 : s.cache (pblk parameter data p 1) = none)
     (call : Fin 2) :
     ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
@@ -887,9 +933,14 @@ theorem new_pair_bound (hkind : ∀ p call, tg.kind (pblk parameter data p call)
       unfold withPair
       exact prepared_store initial _ (prepared_store initial s hprep _ a hp0) _ b
         (by rw [store_cache_ne s _ _ (Ne.symm (pblk_ne_call parameter data p))]; exact hp1)
+    have hC2 : ∀ a b, CountInv parameter data Qtot (withPair parameter data s p a b) (budget - 1) := by
+      intro a b m
+      have h1 := count_withPair (parameter := parameter) (data := data) m s p a b
+      have h2 := hC m
+      omega
     split_ifs with hc
-    · exact h u (budget - 1) _ _ d R (hprep2 u u') (pinv_withPair hP hp0 u u') hD
-    · exact h u (budget - 1) _ _ d R (hprep2 u' u) (pinv_withPair hP hp0 u' u) hD
+    · exact h u (budget - 1) _ _ d R (hprep2 u u') (pinv_withPair hP hp0 u u') hD (hC2 u u')
+    · exact h u (budget - 1) _ _ d R (hprep2 u' u) (pinv_withPair hP hp0 u' u) hD (hC2 u' u)
   refine le_trans (ENNReal.tsum_le_tsum fun u => mul_le_mul_right (hone u) _) ?_
   simp only [mul_add, ENNReal.tsum_add]
   rw [← add_assoc]
@@ -949,10 +1000,10 @@ theorem good_ordinary (hparse : ∀ p call, model.parse (pblk parameter data p c
     (hdigest : ∀ p call, tg.digest (pblk parameter data p call))
     (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) (L : QueryLog SigningSpec) (x : HashInput)
     (next : HashOutput → OracleComp CostSpec HiddenBridge.Outcome)
-    (h : ∀ v, Good parameter data wbar b0 Fail tg initial model L (next v)) :
-    Good parameter data wbar b0 Fail tg initial model L
+    (h : ∀ v, Good parameter data wbar b0 Fail Qtot tg initial model L (next v)) :
+    Good parameter data wbar b0 Fail Qtot tg initial model L
       (liftM (CostSpec.query (.inl (.inr (.inl x)))) >>= next) := by
-  intro budget s P d R hprep hP hD
+  intro budget s P d R hprep hP hD hC
   by_cases hb : 1 ≤ budget
   swap
   · rw [interp_ordinary, if_neg hb, tsum_probOutput_pure_mul, finalValue_abort]
@@ -973,8 +1024,8 @@ theorem good_ordinary (hparse : ∀ p call, model.parse (pblk parameter data p c
         if Realized tg initial s then 0 else 1 := by
       by_cases hr : Realized tg initial s <;> simp [pays, hdigest p call, hr]
     rw [hpay]
-    exact new_pair_bound parameter data wbar b0 Fail tg initial model hkind hw hb0 L next h budget hb s P d R
-      hprep hP hD p hp0 hp1 call
+    exact new_pair_bound parameter data wbar b0 Fail Qtot tg initial model hkind hw hb0 L next h budget hb s P d R
+      hprep hP hD hC p hp0 hp1 call
   · -- the items are kept
     calc _ ≤ ∑' r, Pr[= r | ordinaryStep model x s.known s] *
           (pot parameter data wbar b0 Fail tg initial s P L d budget +
@@ -985,8 +1036,15 @@ theorem good_ordinary (hparse : ∀ p call, model.parse (pblk parameter data p c
             have hext := ordinaryStep_extends model x s r hr
             obtain ⟨hP', hview⟩ := same_items parameter data hext
               (ordinaryStep_cache_ne model x s r hr) hnew hP
+            have hcnt : CountInv parameter data Qtot r.2 (budget - 1) := by
+              intro m
+              have h1 : cachedCount parameter data m r.2 ≤ cachedCount parameter data m s + 1 := by
+                rw [cachedCount_eq, cachedCount_eq]
+                exact costStep_card_le model _ (.inl (.inr (.inl x))) s r (by rw [costStep_ordinary]; exact hr)
+              have h2 := hC m
+              omega
             refine le_trans (h r.1 (budget - 1) r.2 P d R
-              (fun i o hi => hext.1 i o (hprep i o hi)) hP' hD) (add_le_add ?_ le_rfl)
+              (fun i o hi => hext.1 i o (hprep i o hi)) hP' hD hcnt) (add_le_add ?_ le_rfl)
             exact pot_grow parameter data wbar b0 Fail tg initial hw hb0 hext hview L d (Nat.sub_le _ _)
           · rw [probOutput_eq_zero_of_not_mem_support hr, zero_mul, zero_mul]
       _ ≤ _ := by
@@ -996,5 +1054,1007 @@ theorem good_ordinary (hparse : ∀ p call, model.parse (pblk parameter data p c
           simp only [mul_left_comm _ b0, ENNReal.tsum_mul_left]
 
 end OrdinaryGood
+
+/-! ### Leaves and verification -/
+
+section Leaf
+
+variable (parameter : PublicParameter) (data : PublicData) (wbar b0 : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight)))
+  (Qtot : ℕ) {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
+  (model : HiddenRows.Model HashInput HashOutput A Coordinate)
+
+/-- A covered view has a positive witness count. -/
+theorem witness_pos_of_covered {R : List Coordinate} {d : Multiset View} (hD : DInv R d) (digest : MessageDigest)
+    (hcov : Covered (HiddenBridge.revealedSet R) (fullDigestView digest)) :
+    1 ≤ witness (Lifetime.localDigestView digest) d := by
+  unfold witness
+  refine Finset.one_le_prod' fun t _ => ?_
+  have hmem := hcov t
+  simp only [fullDigestView, HiddenBridge.revealedSet, Finset.mem_filter, Finset.mem_univ, true_and] at hmem
+  obtain ⟨w, hw, h1, h2⟩ := hD _ _ _ hmem
+  unfold matchCount
+  refine Multiset.card_pos.2 fun hzero => ?_
+  have : w ∈ d.filter fun view => view.1 = (Lifetime.localDigestView digest).1 ∧
+      view.2 t = (Lifetime.localDigestView digest).2 t :=
+    Multiset.mem_filter.2 ⟨hw, by rw [localDigestView_fst, localDigestView_snd]; exact ⟨h1, h2⟩⟩
+  rw [hzero] at this
+  exact absurd this (Multiset.notMem_zero _)
+
+/-- **Leaf.** A FORS cover with no decided hit is paid by the potential. -/
+theorem good_pure (hw : wbar ≤ 1) (L : QueryLog SigningSpec) (forgery : Forgery) (verified : Bool) :
+    Good parameter data wbar b0 Fail Qtot tg initial model L (pure (forgery, L, verified)) := by
+  intro budget s P d R hprep hP hD hC
+  rw [interp_pure, tsum_probOutput_pure_mul]
+  refine le_trans ?_ le_self_add
+  unfold finalValue
+  simp only [Option.elim, List.append_nil]
+  split_ifs with hcov
+  swap
+  · exact bot_le
+  obtain ⟨⟨hvalid, digest, hdig, hland, hunsigned, hcovered⟩, hreal⟩ := hcov
+  set q : Pair := (forgery.message, forgery.signature.randomness) with hq
+  -- the pair's two blocks are cached
+  unfold HiddenBridge.cachedDigest at hdig
+  cases h0 : s.cache (pblk parameter data q 0) with
+  | none =>
+      have h0' : s.cache (tweakableHashInput parameter (.message 0)
+          (messageDigestPayload data.root forgery.message forgery.signature.randomness)) = none := h0
+      rw [h0'] at hdig; cases hdig
+  | some a =>
+      cases h1 : s.cache (pblk parameter data q 1) with
+      | none =>
+          have h0' : s.cache (tweakableHashInput parameter (.message 0)
+              (messageDigestPayload data.root forgery.message forgery.signature.randomness)) = some a := h0
+          have h1' : s.cache (tweakableHashInput parameter (.message 1)
+              (messageDigestPayload data.root forgery.message forgery.signature.randomness)) = none := h1
+          rw [h0', h1'] at hdig; cases hdig
+      | some b =>
+          have h0' : s.cache (tweakableHashInput parameter (.message 0)
+              (messageDigestPayload data.root forgery.message forgery.signature.randomness)) = some a := h0
+          have h1' : s.cache (tweakableHashInput parameter (.message 1)
+              (messageDigestPayload data.root forgery.message forgery.signature.randomness)) = some b := h1
+          rw [h0', h1'] at hdig
+          have hdig' : truncateMessageDigest a b = digest := by
+            simpa using hdig
+          subst hdig'
+          have hlanded : LandedIn parameter data s q := ⟨a, h0, by rwa [Completeness.digestIndex_truncate] at hland⟩
+          have hqP := (hP.mem q).2 hlanded
+          have hv : pview parameter data s q = Lifetime.localDigestView (truncateMessageDigest a b) := by
+            simp only [pview, h0, h1, Option.elim, viewOf]
+          unfold pot
+          rw [if_neg (by
+            rintro (h | h)
+            · exact hreal h
+            · exact absurd hvalid (by simp [SigningTranscript.Valid]; omega))]
+          unfold core
+          refine le_trans ?_ (le_trans (List.le_sum_of_mem (List.mem_map_of_mem hqP)) (le_self_add.trans le_self_add))
+          unfold cand
+          rw [if_pos (show Unsigned L q from hunsigned)]
+          split_ifs
+          · exact le_rfl
+          · unfold candValue
+            calc (1 : ℝ≥0∞) ≤ witnessFn (pview parameter data s q) d := by
+                  unfold witnessFn
+                  rw [hv]
+                  exact_mod_cast witness_pos_of_covered hD _ hcovered
+              _ ≤ virtual Finset.univ wbar (witnessFn (pview parameter data s q))
+                    (signatureLimit - L.length) (items parameter data s (P.erase q)) d :=
+                  base_le_virtual Finset.univ_nonempty hw (witness_props _).1 (witness_props _).2.1
+                    (witness_props _).2.2 _ _ d
+              _ ≤ _ := creations_mono_count (k := 0) Finset.univ_nonempty landing_le_one
+                    (virtual_cons_le wbar hw (witness_props _) _ d) (virtual_perm' wbar _ d) (Nat.zero_le _) _
+
+/-- Lifted hash computations are sequences of ordinary queries. -/
+theorem good_liftHash (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
+    (hdigest : ∀ p call, tg.digest (pblk parameter data p call))
+    (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) (L : QueryLog SigningSpec) {α : Type} (computation : OracleComp HashSpec α)
+    (next : α → OracleComp CostSpec HiddenBridge.Outcome)
+    (h : ∀ a, Good parameter data wbar b0 Fail Qtot tg initial model L (next a)) :
+    Good parameter data wbar b0 Fail Qtot tg initial model L
+      ((liftM computation : OracleComp CostSpec α) >>= next) := by
+  induction computation using OracleComp.inductionOn with
+  | pure value => simpa only [liftM_pure, pure_bind] using h value
+  | query_bind query rest ih =>
+      rw [liftM_bind, bind_assoc]
+      exact good_ordinary parameter data wbar b0 Fail Qtot tg initial model hparse hkind hdigest hw hb0 L query _ ih
+
+end Leaf
+
+/-! ### What a signing call adds -/
+
+/-- The pairs that are not excluded. -/
+noncomputable def others (excl : Pair → Prop) (P : List Pair) : List Pair := P.filter fun q => ¬excl q
+
+theorem mem_others {excl : Pair → Prop} {P : List Pair} {q : Pair} : q ∈ others excl P ↔ q ∈ P ∧ ¬excl q := by
+  unfold others; simp
+
+theorem others_nodup {excl : Pair → Prop} {P : List Pair} (h : P.Nodup) : (others excl P).Nodup := h.filter _
+
+section SignDefs
+
+variable (parameter : PublicParameter) (data : PublicData) (m : Message) (s : State)
+
+/-- Randomizers of the message whose block 0 is new and lands. -/
+noncomputable def newRand (s' : State) : Finset Randomness :=
+  Finset.univ.filter fun ρ => s.cache (blk parameter data m ρ 0) = none ∧ LandedIn parameter data s' (m, ρ)
+
+/-- Pairs created by a signing call. -/
+noncomputable def newPairs (s' : State) : List Pair := (newRand parameter data m s s').toList.map fun ρ => (m, ρ)
+
+/-- Disclosure of an existing pair signed by the call. -/
+noncomputable def poolDisc (out : Run HashInput Coordinate (Option Signature) × State) : Multiset View :=
+  out.1.1.elim 0 fun r => r.elim 0 fun sig =>
+    if s.cache (blk parameter data m sig.randomness 0) = none then 0
+    else {pview parameter data out.2 (m, sig.randomness)}
+
+/-- Disclosures after a signing call. -/
+noncomputable def discAfter (d : Multiset View) (out : Run HashInput Coordinate (Option Signature) × State) :
+    Multiset View :=
+  d + ((newPairs parameter data m s out.2).map (pview parameter data out.2) : Multiset View) +
+    poolDisc parameter data m s out
+
+theorem newPairs_nodup (s' : State) : (newPairs parameter data m s s').Nodup :=
+  (Finset.nodup_toList _).map fun _ _ h => (Prod.ext_iff.1 h).2
+
+theorem mem_newPairs {s' : State} {q : Pair} :
+    q ∈ newPairs parameter data m s s' ↔ q.1 = m ∧ s.cache (pblk parameter data q 0) = none ∧
+      LandedIn parameter data s' q := by
+  unfold newPairs newRand
+  simp only [List.mem_map, Finset.mem_toList, Finset.mem_filter, Finset.mem_univ, true_and]
+  constructor
+  · rintro ⟨ρ, ⟨h0, hl⟩, rfl⟩
+    exact ⟨rfl, h0, hl⟩
+  · rintro ⟨hm, h0, hl⟩
+    exact ⟨q.2, ⟨by rw [← hm]; exact h0, by rw [← hm]; exact hl⟩, by rw [← hm]⟩
+
+/-- A pool sum over the randomizers of a message is at most the sum over the other items. -/
+theorem pool_sum_le {P : List Pair} (hP : PInv parameter data s P) (excl : Pair → Prop) (g : View → ℝ≥0∞) :
+    ∑ ρ, poolValue parameter data m s (fun ρ v => if excl (m, ρ) then 0 else g v) ρ ≤
+      ((others excl P).map fun q => g (pview parameter data s q)).sum := by
+  classical
+  have hpoint : ∀ ρ, poolValue parameter data m s (fun ρ v => if excl (m, ρ) then 0 else g v) ρ =
+      if (m, ρ) ∈ others excl P then g (pview parameter data s (m, ρ)) else 0 := by
+    intro ρ
+    unfold poolValue
+    cases h0 : s.cache (blk parameter data m ρ 0) with
+    | none =>
+        have : (m, ρ) ∉ P := fun hmem => by
+          obtain ⟨u, hu, _⟩ := (hP.mem _).1 hmem
+          change s.cache (blk parameter data m ρ 0) = some u at hu
+          rw [h0] at hu; cases hu
+        simp [mem_others, this]
+    | some u0 =>
+        simp only [Option.elim]
+        by_cases hl : Landed parameter (blockIndex u0)
+        · have hland : LandedIn parameter data s (m, ρ) := ⟨u0, h0, hl⟩
+          have hmem := (hP.mem _).2 hland
+          obtain ⟨u1, h1⟩ := Option.ne_none_iff_exists'.1 (hP.second _ hland)
+          rw [if_pos hl]
+          change (s.cache (blk parameter data m ρ 1)).elim _ _ = _
+          rw [h1]
+          simp only [Option.elim]
+          have hv : pview parameter data s (m, ρ) = viewOf u0 u1 := by
+            simp only [pview]
+            change ((s.cache (blk parameter data m ρ 0)).elim _ fun u0 =>
+              (s.cache (blk parameter data m ρ 1)).elim _ fun u1 => viewOf u0 u1) = _
+            rw [h0, h1]
+            rfl
+          by_cases hx : excl (m, ρ)
+          · simp [hx, mem_others]
+          · simp [hx, mem_others, hmem, hv]
+        · have : (m, ρ) ∉ P := fun hmem => by
+            obtain ⟨u, hu, hlu⟩ := (hP.mem _).1 hmem
+            change s.cache (blk parameter data m ρ 0) = some u at hu
+            rw [h0] at hu; cases hu; exact hl hlu
+          rw [if_neg hl]
+          simp [mem_others, this]
+  simp only [hpoint]
+  rw [← Finset.sum_filter]
+  have hnodup : (others excl P).Nodup := others_nodup hP.nodup
+  rw [← List.sum_toFinset _ hnodup]
+  calc ∑ ρ ∈ Finset.univ.filter (fun ρ => (m, ρ) ∈ others excl P), g (pview parameter data s (m, ρ))
+      = ∑ q ∈ (Finset.univ.filter (fun ρ => (m, ρ) ∈ others excl P)).image (fun ρ => (m, ρ)),
+          g (pview parameter data s q) := by
+        rw [Finset.sum_image fun _ _ _ _ h => (Prod.ext_iff.1 h).2]
+    _ ≤ _ := by
+        refine Finset.sum_le_sum_of_subset fun q hq => ?_
+        obtain ⟨ρ, hρ, rfl⟩ := Finset.mem_image.1 hq
+        rw [Finset.mem_filter] at hρ
+        exact List.mem_toFinset.2 hρ.2
+
+end SignDefs
+
+/-! ### The three shapes of a completed signing call -/
+
+section SignShape
+
+variable (parameter : PublicParameter) (data : PublicData) (Fail : Finset (Fin (2 ^ subtreeHeight)))
+  (m : Message) {s : State}
+
+theorem newRand_eq_empty {s' : State} (h : ∀ ρ, RelatedAt parameter data m s s' ρ) :
+    newRand parameter data m s s' = ∅ := by
+  refine Finset.eq_empty_of_forall_notMem fun ρ hρ => ?_
+  simp only [newRand, Finset.mem_filter, Finset.mem_univ, true_and] at hρ
+  obtain ⟨h0, u, hu, hl⟩ := hρ
+  rcases (h ρ).2 with he | ⟨_, u', hu', hnl⟩
+  · change s'.cache (blk parameter data m ρ 0) = some u at hu
+    rw [he, h0] at hu; cases hu
+  · change s'.cache (blk parameter data m ρ 0) = some u at hu
+    rw [hu'] at hu; cases hu; exact hnl hl
+
+theorem newRand_eq_single {s' : State} {ρ : Randomness} (h : ∀ ρ', ρ' ≠ ρ → RelatedAt parameter data m s s' ρ')
+    (h0 : s.cache (blk parameter data m ρ 0) = none) (hl : LandedIn parameter data s' (m, ρ)) :
+    newRand parameter data m s s' = {ρ} := by
+  ext ρ'
+  simp only [newRand, Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_singleton]
+  constructor
+  · rintro ⟨h0', u, hu, hl'⟩
+    by_contra hne
+    rcases (h ρ' hne).2 with he | ⟨_, u', hu', hnl⟩
+    · change s'.cache (blk parameter data m ρ' 0) = some u at hu
+      rw [he, h0'] at hu; cases hu
+    · change s'.cache (blk parameter data m ρ' 0) = some u at hu
+      rw [hu'] at hu; cases hu; exact hnl hl'
+  · rintro rfl
+    exact ⟨h0, hl⟩
+
+theorem newRand_eq_empty_of_pool {s' : State} {ρ : Randomness} (h : ∀ ρ', ρ' ≠ ρ → RelatedAt parameter data m s s' ρ')
+    (h0 : s.cache (blk parameter data m ρ 0) ≠ none) : newRand parameter data m s s' = ∅ := by
+  refine Finset.eq_empty_of_forall_notMem fun ρ' hρ' => ?_
+  simp only [newRand, Finset.mem_filter, Finset.mem_univ, true_and] at hρ'
+  obtain ⟨h0', u, hu, hl'⟩ := hρ'
+  by_cases hne : ρ' = ρ
+  · subst hne; exact h0 h0'
+  · rcases (h ρ' hne).2 with he | ⟨_, u', hu', hnl⟩
+    · change s'.cache (blk parameter data m ρ' 0) = some u at hu
+      rw [he, h0'] at hu; cases hu
+    · change s'.cache (blk parameter data m ρ' 0) = some u at hu
+      rw [hu'] at hu; cases hu; exact hnl hl'
+
+/-- **Shapes.** A completed signing call adds nothing, one fresh landed pair, or signs a cached
+landed pair. -/
+theorem sign_shape {reveals : List Coordinate} {r : Option Signature} {s' : State}
+    (post : SignPost parameter data m Fail s s' reveals r)
+    (out : Run HashInput Coordinate (Option Signature) × State) (hout2 : out.2 = s') (hres : out.1.1 = some r) :
+    (newRand parameter data m s s' = ∅ ∧ poolDisc parameter data m s out = 0) ∨
+    (∃ ρ u0 u1, newRand parameter data m s s' = {ρ} ∧ poolDisc parameter data m s out = 0 ∧
+      s'.cache (blk parameter data m ρ 0) = some u0 ∧ Landed parameter (blockIndex u0) ∧
+      s'.cache (blk parameter data m ρ 1) = some u1 ∧ s.cache (blk parameter data m ρ 0) = none ∧
+      (∀ ρ', ρ' ≠ ρ → RelatedAt parameter data m s s' ρ') ∧
+      (r = none → (viewOf u0 u1).1 ∈ Fail) ∧ (∀ sig, r = some sig → sig.randomness = ρ)) ∨
+    (∃ ρ u0 u1 sig, newRand parameter data m s s' = ∅ ∧ poolDisc parameter data m s out = {viewOf u0 u1} ∧
+      r = some sig ∧ sig.randomness = ρ ∧ s.cache (blk parameter data m ρ 0) = some u0 ∧
+      s'.cache (blk parameter data m ρ 0) = some u0 ∧ s'.cache (blk parameter data m ρ 1) = some u1) := by
+  subst hout2
+  rcases post with ⟨hrn, _, hrel⟩ | ⟨ρ, u0, u1, ⟨hs0, hl, hs1, hs0r, _, hothers⟩, _, hsig, hfl⟩
+  · left
+    refine ⟨newRand_eq_empty parameter data m hrel, ?_⟩
+    unfold poolDisc; rw [hres, hrn]; rfl
+  · rcases hs0r with hn | he
+    · -- fresh
+      right; left
+      refine ⟨ρ, u0, u1, newRand_eq_single parameter data m hothers hn ⟨u0, hs0, hl⟩, ?_, hs0, hl, hs1, hn,
+        hothers, fun hrn => (hfl hrn).2 hn, hsig⟩
+      unfold poolDisc
+      rw [hres]
+      rcases r with _ | sig
+      · rfl
+      · simp only [Option.elim]
+        rw [hsig sig rfl, if_pos hn]
+    · rcases r with _ | sig
+      · left
+        refine ⟨newRand_eq_empty_of_pool parameter data m hothers (by rw [he]; exact Option.some_ne_none _), ?_⟩
+        unfold poolDisc; rw [hres]; rfl
+      · right; right
+        refine ⟨ρ, u0, u1, sig, newRand_eq_empty_of_pool parameter data m hothers (by rw [he]; exact Option.some_ne_none _),
+          ?_, rfl, hsig sig rfl, he, hs0, hs1⟩
+        unfold poolDisc
+        rw [hres]
+        simp only [Option.elim]
+        rw [hsig sig rfl, if_neg (by rw [he]; exact Option.some_ne_none _)]
+        congr 1
+        simp only [pview]
+        change ((out.2.cache (blk parameter data m ρ 0)).elim _ fun u0 =>
+          (out.2.cache (blk parameter data m ρ 1)).elim _ fun u1 => viewOf u0 u1) = _
+        rw [hs0, hs1]
+        rfl
+
+end SignShape
+
+/-! ### Upper values of a signing outcome -/
+
+section SignUpper
+
+variable (parameter : PublicParameter) (data : PublicData) (wbar : ℝ≥0∞) (m : Message) (s : State) (n : ℕ)
+  (d : Multiset View) (f : Multiset View → ℝ≥0∞)
+
+/-- The value without disclosure. -/
+noncomputable def baseV (J : List View) : ℝ≥0∞ := virtual Finset.univ wbar f n J d
+
+/-- Gain of a fresh view that is disclosed and becomes an item. -/
+noncomputable def gainF (J : List View) (u : View) : ℝ≥0∞ :=
+  virtual Finset.univ wbar f n (u :: J) (d + {u}) - baseV wbar n d f J
+
+/-- Gain of disclosing an existing item. -/
+noncomputable def gainP (J : List View) (v : View) : ℝ≥0∞ :=
+  virtual Finset.univ wbar f n J (d + {v}) - baseV wbar n d f J
+
+/-- Upper value of one signing outcome, for future items `J`. -/
+noncomputable def upper (excl : Pair → Prop) (out : Run HashInput Coordinate (Option Signature) × State)
+    (J : List View) : ℝ≥0∞ :=
+  baseV wbar n d f J + freshNewWeight parameter data m s (gainF wbar n d f J) out +
+    outWeight parameter data m s 0 (fun ρ v => if excl (m, ρ) then 0 else gainP wbar n d f J v) out
+
+theorem related_self : Related parameter data m s s := ⟨fun _ => rfl, fun _ => Or.inl rfl⟩
+
+variable {parameter data wbar m s n d f}
+
+theorem pview_of_cached {s' : State} {q : Pair} {u0 u1 : HashOutput} (h0 : s'.cache (pblk parameter data q 0) = some u0)
+    (h1 : s'.cache (pblk parameter data q 1) = some u1) : pview parameter data s' q = viewOf u0 u1 := by
+  simp only [pview, h0, h1, Option.elim]
+
+/-- **Pointwise upper value.** -/
+theorem upper_point (Fail : Finset (Fin (2 ^ subtreeHeight))) (hw : wbar ≤ 1)
+    (hf : Monotone' f ∧ Supermodular f ∧ ∀ D, f D ≠ ⊤) {P : List Pair} (hP : PInv parameter data s P)
+    (excl : Pair → Prop) (out : Run HashInput Coordinate (Option Signature) × State) (r : Option Signature)
+    (hres : out.1.1 = some r)
+    (shape : (newRand parameter data m s out.2 = ∅ ∧ poolDisc parameter data m s out = 0) ∨
+      (∃ ρ u0 u1, newRand parameter data m s out.2 = {ρ} ∧ poolDisc parameter data m s out = 0 ∧
+        out.2.cache (blk parameter data m ρ 0) = some u0 ∧ Landed parameter (blockIndex u0) ∧
+        out.2.cache (blk parameter data m ρ 1) = some u1 ∧ s.cache (blk parameter data m ρ 0) = none ∧
+        (∀ ρ', ρ' ≠ ρ → RelatedAt parameter data m s out.2 ρ') ∧
+        (r = none → (viewOf u0 u1).1 ∈ Fail) ∧ (∀ sig, r = some sig → sig.randomness = ρ)) ∨
+      (∃ ρ u0 u1 sig, newRand parameter data m s out.2 = ∅ ∧ poolDisc parameter data m s out = {viewOf u0 u1} ∧
+        r = some sig ∧ sig.randomness = ρ ∧ s.cache (blk parameter data m ρ 0) = some u0 ∧
+        out.2.cache (blk parameter data m ρ 0) = some u0 ∧ out.2.cache (blk parameter data m ρ 1) = some u1))
+    (hex : ∀ sig, r = some sig → s.cache (blk parameter data m sig.randomness 0) ≠ none → ¬excl (m, sig.randomness))
+    (J : List View) :
+    virtual Finset.univ wbar f n (((newPairs parameter data m s out.2).map (pview parameter data out.2)) ++ J)
+        (discAfter parameter data m s d out) ≤ upper parameter data wbar m s n d f excl out J := by
+  have hprops := fun I => virtual_props Finset.univ_nonempty hw hf.1 hf.2.1 hf.2.2 n I
+  unfold upper discAfter newPairs
+  rcases shape with ⟨hnew, hpool⟩ | ⟨ρ, u0, u1, hnew, hpool, h0, hl, h1, hs0, _, _, _⟩ |
+      ⟨ρ, u0, u1, sig, hnew, hpool, hr, hsig, hs0, h0, h1⟩
+  · rw [hnew, hpool]
+    simp only [Finset.toList_empty, List.map_nil, List.nil_append, Multiset.coe_nil, add_zero]
+    exact le_trans le_self_add le_self_add
+  · rw [hnew, hpool, Finset.toList_singleton]
+    have hv : pview parameter data out.2 (m, ρ) = viewOf u0 u1 := pview_of_cached h0 h1
+    simp only [List.map_cons, List.map_nil, hv, List.cons_append, List.nil_append, add_zero]
+    rw [show ((([viewOf u0 u1] : List View)) : Multiset View) = {viewOf u0 u1} from rfl]
+    have hbase : baseV wbar n d f J ≤ virtual Finset.univ wbar f n (viewOf u0 u1 :: J) (d + {viewOf u0 u1}) :=
+      le_trans (virtual_le_cons Finset.univ_nonempty hw hf.1 hf.2.1 hf.2.2 n J _ d)
+        ((hprops _).1 _ _ (Multiset.le_add_right _ _))
+    rw [← add_tsub_cancel_of_le hbase]
+    refine le_trans (add_le_add le_rfl ?_) le_self_add
+    -- the fresh pair is counted in the fresh weight
+    unfold freshNewWeight
+    rw [if_pos (by rw [hres]; rfl)]
+    have hs1 : s.cache (blk parameter data m ρ 1) = none := hP.first (m, ρ) hs0
+    refine le_trans (le_of_eq ?_) (Finset.single_le_sum (f := fun ρ' => if s.cache (blk parameter data m ρ' 1) = none then
+      (out.2.cache (blk parameter data m ρ' 0)).elim 0 (fun u0 =>
+        (out.2.cache (blk parameter data m ρ' 1)).elim 0 fun u1 =>
+          if Landed parameter (blockIndex u0) then gainF wbar n d f J (viewOf u0 u1) else 0) else 0)
+      (fun _ _ => bot_le) (Finset.mem_univ ρ))
+    simp only [hs1, h0, h1, Option.elim, if_true, if_pos hl]
+    rfl
+  · rw [hnew, hpool]
+    simp only [Finset.toList_empty, List.map_nil, List.nil_append, Multiset.coe_nil, add_zero]
+    have hbase : baseV wbar n d f J ≤ virtual Finset.univ wbar f n J (d + {viewOf u0 u1}) :=
+      (hprops _).1 _ _ (Multiset.le_add_right _ _)
+    rw [← add_tsub_cancel_of_le hbase]
+    refine le_trans (add_le_add le_rfl ?_) (add_le_add le_self_add le_rfl)
+    -- the pool pair is counted in the pool weight
+    unfold outWeight
+    rw [hres, hr]
+    simp only
+    rw [hsig, h0, h1]
+    simp only [Option.elim, pairWeight, hs0, reduceCtorEq, if_false]
+    have hne : s.cache (blk parameter data m sig.randomness 0) ≠ none := by
+      rw [hsig, hs0]; exact Option.some_ne_none _
+    have hx := hex sig hr hne
+    rw [hsig] at hx
+    rw [if_neg hx]
+    rfl
+
+end SignUpper
+
+/-! ### Expected upper values -/
+
+section SignExpect
+
+variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
+  (model : HiddenRows.Model HashInput HashOutput A Coordinate)
+  (parameter : PublicParameter) (data : PublicData) (wbar : ℝ≥0∞) (m : Message) (s : State) (n : ℕ)
+  (d : Multiset View) (f : Multiset View → ℝ≥0∞)
+
+/-- The fair-share hypotheses of the grinding signer. -/
+structure Fair (Cmax : ℕ) : Prop where
+  ne_top : wbar ≠ ⊤
+  le_one : wbar ≤ 1
+  cmax : Cmax ≤ 2 ^ 128
+  share : ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ ≤ wbar * (((2 ^ 128 - Cmax : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞)) * landing
+
+variable {parameter data wbar m s n d f}
+
+theorem upper_expect (hparse : ∀ ρ call, model.parse (blk parameter data m ρ call) = none)
+    {Cmax : ℕ} (hfair : Fair wbar Cmax) (hf : Monotone' f ∧ Supermodular f ∧ ∀ D, f D ≠ ⊤)
+    {P : List Pair} (hP : PInv parameter data s P) (excl : Pair → Prop) (attempts budget : ℕ)
+    (hcount : cachedCount parameter data m s + attempts ≤ Cmax) (J : List View) :
+    ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] *
+        upper parameter data wbar m s n d f excl out J ≤
+      baseV wbar n d f J + freshAvg Finset.univ (gainF wbar n d f J) +
+        wbar * ∑ ρ, poolValue parameter data m s (fun ρ v => if excl (m, ρ) then 0 else gainP wbar n d f J v) ρ := by
+  have hprops := virtual_props Finset.univ_nonempty hfair.le_one hf.1 hf.2.1 hf.2.2 n J
+  have hnob1 : ∀ ρ, s.cache (blk parameter data m ρ 0) = none → s.cache (blk parameter data m ρ 1) = none :=
+    fun ρ h => hP.first (m, ρ) h
+  have hlandb1 : ∀ ρ u0, s.cache (blk parameter data m ρ 0) = some u0 → Landed parameter (blockIndex u0) →
+      s.cache (blk parameter data m ρ 1) ≠ none := fun ρ u0 h0 hl => hP.second (m, ρ) ⟨u0, h0, hl⟩
+  set B : ℝ≥0∞ := ∑ v : View, virtual Finset.univ wbar f n J (d + {v}) with hB
+  have hBfin : B ≠ ⊤ := ENNReal.sum_ne_top.2 fun v _ => hprops.2.2 _
+  have hgp : ∀ ρ v, (fun ρ v => if excl (m, ρ) then 0 else gainP wbar n d f J v) ρ v ≤ B := by
+    intro ρ v
+    simp only
+    split_ifs
+    · exact bot_le
+    · exact le_trans tsub_le_self (Finset.single_le_sum (f := fun v => virtual Finset.univ wbar f n J (d + {v}))
+        (fun _ _ => bot_le) (Finset.mem_univ v))
+  have hpool := loop_bound tg initial model parameter data m hparse s hnob1 (fun _ => 0)
+    (fun ρ v => if excl (m, ρ) then 0 else gainP wbar n d f J v) B hBfin (fun _ => bot_le) hgp wbar hfair.ne_top
+    Cmax hfair.cmax hfair.share attempts budget s (related_self parameter data m s) hcount
+  have hfresh := loop_bound_fresh tg initial model parameter data m hparse s hnob1 hlandb1 (gainF wbar n d f J)
+    attempts budget s (related_self parameter data m s)
+  unfold upper
+  simp only [mul_add, ENNReal.tsum_add, ENNReal.tsum_mul_right]
+  refine add_le_add (add_le_add (mul_le_of_le_one_left' tsum_probOutput_le_one) hfresh) (le_trans hpool ?_)
+  simp [freshAvg]
+
+/-- The pool sum fits in the coins of the items. -/
+theorem slot_combine (Fail : Finset (Fin (2 ^ subtreeHeight))) (hw : wbar ≤ 1)
+    (hf : Monotone' f ∧ Supermodular f ∧ ∀ D, f D ≠ ⊤)
+    {P : List Pair} (hP : PInv parameter data s P) (excl : Pair → Prop) (news : List View) :
+    baseV wbar n d f (news ++ items parameter data s (others excl P)) +
+        freshAvg Finset.univ (gainF wbar n d f (news ++ items parameter data s (others excl P))) +
+        wbar * ∑ ρ, poolValue parameter data m s (fun ρ v => if excl (m, ρ) then 0 else
+          gainP wbar n d f (news ++ items parameter data s (others excl P)) v) ρ ≤
+      virtual Finset.univ wbar f (n + 1) (news ++ items parameter data s (others excl P)) d := by
+  set J := news ++ items parameter data s (others excl P) with hJ
+  refine le_trans (add_le_add le_rfl ?_) (slot_ge Finset.univ_nonempty hw hf.1 hf.2.1 hf.2.2 n J d)
+  refine le_trans (mul_le_mul_right (pool_sum_le parameter data m s hP excl (gainP wbar n d f J)) wbar) ?_
+  rw [← List.sum_map_mul_left]
+  have hsplit : (J.map fun w => wbar * (virtual Finset.univ wbar f n J (d + {w}) - virtual Finset.univ wbar f n J d)).sum =
+      (news.map fun w => wbar * gainP wbar n d f J w).sum +
+        ((items parameter data s (others excl P)).map fun w => wbar * gainP wbar n d f J w).sum := by
+    rw [hJ, List.map_append, List.sum_append]
+    rfl
+  rw [hsplit]
+  refine le_trans (le_of_eq ?_) le_add_self
+  unfold items
+  rw [List.map_map]
+  rfl
+
+/-- **A dominated term.** Averaged over a signing call, the upper value of a term is at most its
+value with one more virtual slot. -/
+theorem term_expect (hparse : ∀ ρ call, model.parse (blk parameter data m ρ call) = none)
+    (Fail : Finset (Fin (2 ^ subtreeHeight))) {Cmax : ℕ} (hfair : Fair wbar Cmax)
+    (hf : Monotone' f ∧ Supermodular f ∧ ∀ D, f D ≠ ⊤)
+    {P : List Pair} (hP : PInv parameter data s P) (excl : Pair → Prop) (attempts budget k : ℕ)
+    (hcount : cachedCount parameter data m s + attempts ≤ Cmax) :
+    ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] *
+        creations Finset.univ landing (fun J => upper parameter data wbar m s n d f excl out J) k
+          (items parameter data s (others excl P)) ≤
+      creations Finset.univ landing (fun J => virtual Finset.univ wbar f (n + 1) J d) k
+        (items parameter data s (others excl P)) := by
+  rw [creations_tsum]
+  refine creations_mono_suffix k _ fun news => ?_
+  exact le_trans (upper_expect tg initial model hparse hfair hf hP excl attempts budget hcount _)
+    (slot_combine Fail hfair.le_one hf hP excl news)
+
+end SignExpect
+
+/-! ### The state after a signing call -/
+
+section SignParams
+
+variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
+  (model : HiddenRows.Model HashInput HashOutput A Coordinate)
+  (parameter : PublicParameter) (data : PublicData) (Fail : Finset (Fin (2 ^ subtreeHeight))) (Qtot : ℕ)
+  (m : Message)
+
+variable {parameter data m}
+
+theorem other_message_kept (attempts budget : ℕ) (s : State)
+    (out : Run HashInput Coordinate (Option Signature) × State)
+    (hout : out ∈ support (interp tg initial model (signCostSourceLoop parameter data m attempts) budget s))
+    (q : Pair) (hq : q.1 ≠ m) (call : Fin 2) :
+    out.2.cache (pblk parameter data q call) = s.cache (pblk parameter data q call) := by
+  refine interp_avoids_cache tg initial model _ _ (avoids_loop parameter data m attempts) budget s out hout _ ⟨?_, ?_⟩
+  · exact msgInput_digestInput parameter data.root q.1 q.2 call
+  · intro ρ c h
+    exact hq (congrArg Prod.fst
+      (pblk_injective parameter data (show pblk parameter data q call = pblk parameter data (m, ρ) c from h)).1)
+
+theorem landed_of_cached {s : State} {P : List Pair} (hP : PInv parameter data s P) {q : Pair}
+    (hq : q ∈ P) : ∃ u0 u1, s.cache (pblk parameter data q 0) = some u0 ∧ Landed parameter (blockIndex u0) ∧
+      s.cache (pblk parameter data q 1) = some u1 := by
+  obtain ⟨u0, h0, hl⟩ := (hP.mem q).1 hq
+  obtain ⟨u1, h1⟩ := Option.ne_none_iff_exists'.1 (hP.second q ⟨u0, h0, hl⟩)
+  exact ⟨u0, u1, h0, hl, h1⟩
+
+/-- **The state after a signing call.** -/
+theorem sign_params (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hfail : ∀ ρ digest budget (s1 : State), Prepared initial s1 →
+      ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
+        out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
+    (attempts budget : ℕ) (s : State) (P : List Pair) (d : Multiset View) (R : List Coordinate)
+    (hprep : Prepared initial s) (hP : PInv parameter data s P) (hD : DInv R d)
+    (hC : CountInv parameter data Qtot s budget)
+    (out : Run HashInput Coordinate (Option Signature) × State)
+    (hout : out ∈ support (interp tg initial model (signCostSourceLoop parameter data m attempts) budget s))
+    (r : Option Signature) (hr : out.1.1 = some r) :
+    Prepared initial out.2 ∧ PInv parameter data out.2 (newPairs parameter data m s out.2 ++ P) ∧
+      DInv (R ++ out.1.2.1) (discAfter parameter data m s d out) ∧
+      CountInv parameter data Qtot out.2 (budget - traceCost out.1.2.2.1) ∧
+      (∀ q ∈ P, pview parameter data out.2 q = pview parameter data s q) := by
+  have hext := interp_extends tg initial model _ budget s out hout
+  have hpost := loop_post tg initial model parameter data m (fun ρ call => hparse (m, ρ) call) Fail hfail
+    attempts budget s hprep out hout r hr
+  have hother := other_message_kept tg initial model attempts budget s out hout
+  -- every randomizer of the message is related, or the selected one
+  have hrelOr : ∀ ρ, RelatedAt parameter data m s out.2 ρ ∨
+      ∃ u0 u1, Selected parameter data m s out.2 ρ u0 u1 := by
+    intro ρ
+    rcases hpost with ⟨_, _, hrel⟩ | ⟨ρs, u0, u1, hsel, _⟩
+    · exact Or.inl (hrel ρ)
+    · by_cases h : ρ = ρs
+      · subst h; exact Or.inr ⟨u0, u1, hsel⟩
+      · exact Or.inl (hsel.2.2.2.2.2 ρ h)
+  have hgrow : ∀ q call u, s.cache (pblk parameter data q call) = some u →
+      out.2.cache (pblk parameter data q call) = some u := fun q call u h => hext.1 _ u h
+  refine ⟨fun x v hx => hext.1 x v (hprep x v hx), ⟨?_, fun q => ?_, fun q hq => ?_, fun q hq => ?_⟩, ?_, ?_, ?_⟩
+  · -- no duplicate items
+    refine List.nodup_append.2 ⟨newPairs_nodup parameter data m s out.2, hP.nodup, fun a ha b hb hab => ?_⟩
+    subst hab
+    obtain ⟨_, h0, _⟩ := (mem_newPairs parameter data m s).1 ha
+    obtain ⟨u, hu, _⟩ := (hP.mem a).1 hb
+    rw [h0] at hu; cases hu
+  · -- the items are the landed pairs
+    rw [List.mem_append, mem_newPairs]
+    constructor
+    · rintro (⟨_, _, hl⟩ | hq)
+      · exact hl
+      · obtain ⟨u0, h0, hl⟩ := (hP.mem q).1 hq
+        exact ⟨u0, hgrow q 0 u0 h0, hl⟩
+    · rintro ⟨u0, h0, hl⟩
+      cases hs0 : s.cache (pblk parameter data q 0) with
+      | none =>
+          left
+          refine ⟨?_, rfl, ⟨u0, h0, hl⟩⟩
+          by_contra hm
+          rw [hother q hm 0, hs0] at h0
+          cases h0
+      | some u =>
+          right
+          have := hgrow q 0 u hs0
+          rw [h0] at this
+          cases this
+          exact (hP.mem q).2 ⟨u0, hs0, hl⟩
+  · -- landed pairs have both blocks
+    obtain ⟨u0, h0, hl⟩ := hq
+    cases hs0 : s.cache (pblk parameter data q 0) with
+    | some u =>
+        have := hgrow q 0 u hs0
+        rw [h0] at this
+        cases this
+        obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.1 (hP.second q ⟨u0, hs0, hl⟩)
+        rw [hgrow q 1 v hv]
+        exact Option.some_ne_none _
+    | none =>
+        have hm : q.1 = m := by
+          by_contra hm
+          rw [hother q hm 0, hs0] at h0
+          cases h0
+        obtain ⟨msg, ρ⟩ := q
+        simp only at hm
+        subst hm
+        rcases hrelOr ρ with hrel | ⟨u0', u1', hsel⟩
+        · rcases hrel.2 with he | ⟨_, u, hu, hnl⟩
+          · change out.2.cache (blk parameter data msg ρ 0) = some u0 at h0
+            rw [he] at h0
+            change s.cache (blk parameter data msg ρ 0) = none at hs0
+            rw [hs0] at h0; cases h0
+          · change out.2.cache (blk parameter data msg ρ 0) = some u0 at h0
+            rw [hu] at h0; cases h0; exact absurd hl hnl
+        · change out.2.cache (blk parameter data msg ρ 1) ≠ none
+          rw [hsel.2.2.1]
+          exact Option.some_ne_none _
+  · -- no pair has only its second block
+    have hs0 : s.cache (pblk parameter data q 0) = none := by
+      cases hc : s.cache (pblk parameter data q 0) with
+      | none => rfl
+      | some u => rw [hgrow q 0 u hc] at hq; cases hq
+    have hs1 := hP.first q hs0
+    by_cases hm : q.1 = m
+    · obtain ⟨msg, ρ⟩ := q
+      simp only at hm
+      subst hm
+      rcases hrelOr ρ with hrel | ⟨u0', u1', hsel⟩
+      · change out.2.cache (blk parameter data msg ρ 1) = none
+        rw [hrel.1]; exact hs1
+      · change out.2.cache (blk parameter data msg ρ 0) = none at hq
+        rw [hsel.1] at hq; cases hq
+    · rw [hother q hm 1]; exact hs1
+  · -- every revealed secret has a disclosed view
+    intro i t l hmem
+    rcases List.mem_append.1 hmem with hR | hrev
+    · obtain ⟨v, hv, h1, h2⟩ := hD i t l hR
+      exact ⟨v, Multiset.mem_add.2 (Or.inl (Multiset.mem_add.2 (Or.inl hv))), h1, h2⟩
+    · rcases hpost with ⟨_, hnil, _⟩ | ⟨ρs, u0, u1, hsel, hfts, hsig, hfl⟩
+      · rw [hnil] at hrev; cases hrev
+      · obtain ⟨hi, hl⟩ := hfts _ hrev i t l rfl
+        refine ⟨viewOf u0 u1, ?_, by rw [hi]; rfl, by rw [hl]; rfl⟩
+        have hv : pview parameter data out.2 (m, ρs) = viewOf u0 u1 := pview_of_cached hsel.1 hsel.2.2.1
+        rcases r with _ | sig
+        · rw [(hfl rfl).1] at hrev; cases hrev
+        · unfold discAfter
+          rcases hsel.2.2.2.1 with hn | he
+          · have hnew : (m, ρs) ∈ newPairs parameter data m s out.2 :=
+              (mem_newPairs parameter data m s).2 ⟨rfl, hn, ⟨u0, hsel.1, hsel.2.1⟩⟩
+            refine Multiset.mem_add.2 (Or.inl (Multiset.mem_add.2 (Or.inr ?_)))
+            rw [Multiset.mem_coe, ← hv]
+            exact List.mem_map_of_mem hnew
+          · refine Multiset.mem_add.2 (Or.inr ?_)
+            unfold poolDisc
+            rw [hr]
+            simp only [Option.elim]
+            rw [hsig sig rfl, he, if_neg (Option.some_ne_none _), hv]
+            exact Multiset.mem_singleton_self _
+  · -- the count of cached randomizers
+    intro m'
+    have h1 : cachedCount parameter data m' out.2 ≤ cachedCount parameter data m' s + traceCost out.1.2.2.1 := by
+      rw [cachedCount_eq, cachedCount_eq]
+      exact interp_card_le tg initial model _ _ budget s out hout
+    have h2 := interp_traceCost_le tg initial model _ budget s out hout
+    have h3 := hC m'
+    omega
+  · -- items keep their views
+    intro q hq
+    obtain ⟨u0, u1, h0, _, h1⟩ := landed_of_cached hP hq
+    rw [pview_of_cached h0 h1, pview_of_cached (hgrow q 0 u0 h0) (hgrow q 1 u1 h1)]
+
+end SignParams
+
+/-! ### The potential after a signing call -/
+
+section SignPoint
+
+variable (parameter : PublicParameter) (data : PublicData) (wbar b0 : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight)))
+  (m : Message) (s : State) (P : List Pair) (L : QueryLog SigningSpec) (d : Multiset View)
+
+omit [Params] in
+theorem erase_eq_filter' {P : List Pair} (hP : P.Nodup) (q : Pair) : P.erase q = others (· = q) P := by
+  rw [hP.erase_eq_filter]
+  unfold others
+  congr 1
+  funext q'
+  rw [Bool.eq_iff_iff]
+  simp [bne_iff_ne]
+
+omit [Params] in
+theorem filter_false' (P : List Pair) : others (fun _ => False) P = P := by unfold others; simp
+
+/-- Bound for one outcome of a signing call. -/
+noncomputable def canon (n k : ℕ) (out : Run HashInput Coordinate (Option Signature) × State) : ℝ≥0∞ :=
+  freshNewWeight parameter data m s (fun v => if v.1 ∈ Fail then 1 else 0) out +
+  (P.map fun q => if Unsigned L q then (if (pview parameter data s q).1 ∈ Fail then 1 else
+      creations Finset.univ landing (fun J => upper parameter data wbar m s n d (witnessFn (pview parameter data s q))
+        (· = q) out J) k (items parameter data s (others (· = q) P))) else 0).sum +
+  k * (creations Finset.univ landing (fun J => upper parameter data wbar m s n d (excess b0) (fun _ => False) out J) k
+      (items parameter data s (others (fun _ => False) P)) + failMass Fail) +
+  n * failMass Fail
+
+variable {parameter data wbar b0 Fail m s P L d}
+
+theorem freshNewWeight_ge {out : Run HashInput Coordinate (Option Signature) × State} {r : Option Signature}
+    (hres : out.1.1 = some r) {ρ : Randomness} {u0 u1 : HashOutput}
+    (hs1 : s.cache (blk parameter data m ρ 1) = none) (h0 : out.2.cache (blk parameter data m ρ 0) = some u0)
+    (hl : Landed parameter (blockIndex u0)) (h1 : out.2.cache (blk parameter data m ρ 1) = some u1)
+    (g : View → ℝ≥0∞) : g (viewOf u0 u1) ≤ freshNewWeight parameter data m s g out := by
+  unfold freshNewWeight
+  rw [if_pos (by rw [hres]; rfl)]
+  refine le_trans (le_of_eq ?_) (Finset.single_le_sum (f := fun ρ' => if s.cache (blk parameter data m ρ' 1) = none then
+    (out.2.cache (blk parameter data m ρ' 0)).elim 0 (fun u0 =>
+      (out.2.cache (blk parameter data m ρ' 1)).elim 0 fun u1 =>
+        if Landed parameter (blockIndex u0) then g (viewOf u0 u1) else 0) else 0)
+    (fun _ _ => bot_le) (Finset.mem_univ ρ))
+  simp only [hs1, h0, h1, Option.elim, if_true, if_pos hl]
+
+theorem unsigned_of_append {L : QueryLog SigningSpec} {e : (t : Message) × Option Signature} {q : Pair}
+    (h : Unsigned (L ++ [e]) q) : Unsigned L q :=
+  fun entry he sig hs => h entry (List.mem_append_left _ he) sig hs
+
+theorem not_unsigned_signed {L : QueryLog SigningSpec} {sig : Signature} :
+    ¬Unsigned (L ++ [⟨m, some sig⟩]) (m, sig.randomness) := fun h =>
+  h ⟨m, some sig⟩ (List.mem_append_right _ (List.mem_singleton_self _)) sig rfl ⟨rfl, rfl⟩
+
+end SignPoint
+
+/-- New items in front, fewer future pairs, then a pointwise bound. -/
+theorem post_term_le {wbar : ℝ≥0∞} (hw : wbar ≤ 1) {f : Multiset View → ℝ≥0∞}
+    (hf : Monotone' f ∧ Supermodular f ∧ ∀ D, f D ≠ ⊤) (pre I : List View) (n : ℕ) (d' : Multiset View)
+    {k' k : ℕ} (hk : k' ≤ k) (U : List View → ℝ≥0∞) (hU : ∀ J, virtual Finset.univ wbar f n (pre ++ J) d' ≤ U J) :
+    creations Finset.univ landing (fun J => virtual Finset.univ wbar f n J d') k' (pre ++ I) ≤
+      creations Finset.univ landing U k I := by
+  rw [creations_prepend (virtual_perm' wbar n d') pre]
+  refine le_trans (creations_mono_count Finset.univ_nonempty landing_le_one ?_ ?_ hk I) (creations_mono hU k I)
+  · intro v J
+    rw [virtual_perm n (List.perm_middle (a := v) (l₁ := pre) (l₂ := J)) d']
+    exact virtual_cons_le wbar hw hf n d' v _
+  · intro J J' hJ
+    exact virtual_perm n (hJ.append_left pre) d'
+
+section SignPointMain
+
+variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
+  (model : HiddenRows.Model HashInput HashOutput A Coordinate)
+  (parameter : PublicParameter) (data : PublicData) (wbar b0 : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight)))
+  (Qtot : ℕ) (m : Message)
+
+/-- **The potential after one signing outcome.** -/
+theorem sign_point (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hfail : ∀ ρ digest budget (s1 : State), Prepared initial s1 →
+      ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
+        out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
+    (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) (attempts budget : ℕ) (s : State) (P : List Pair) (L : QueryLog SigningSpec)
+    (d : Multiset View) (R : List Coordinate) (hprep : Prepared initial s) (hP : PInv parameter data s P)
+    (hD : DInv R d) (hC : CountInv parameter data Qtot s budget)
+    (out : Run HashInput Coordinate (Option Signature) × State)
+    (hout : out ∈ support (interp tg initial model (signCostSourceLoop parameter data m attempts) budget s))
+    (r : Option Signature) (hr : out.1.1 = some r) {k' : ℕ} (hk : k' ≤ budget) :
+    pot parameter data wbar b0 Fail tg initial out.2 (newPairs parameter data m s out.2 ++ P) (L ++ [⟨m, r⟩])
+        (discAfter parameter data m s d out) k' ≤
+      if Realized tg initial s ∨ signatureLimit ≤ L.length then 0
+      else canon parameter data wbar b0 Fail m s P L d (signatureLimit - (L.length + 1)) budget out := by
+  obtain ⟨_, hP', _, _, hview⟩ := sign_params tg initial model Fail Qtot hparse hfail attempts budget
+    s P d R hprep hP hD hC out hout r hr
+  have hext := interp_extends tg initial model _ budget s out hout
+  have hpost := loop_post tg initial model parameter data m (fun ρ call => hparse (m, ρ) call) Fail hfail
+    attempts budget s hprep out hout r hr
+  have hshape := sign_shape parameter data Fail m hpost out rfl hr
+  unfold pot
+  by_cases hcase : Realized tg initial out.2 ∨ signatureLimit < (L ++ [⟨m, r⟩] : QueryLog SigningSpec).length
+  · rw [if_pos hcase]; exact bot_le
+  rw [if_neg hcase]
+  have hreal : ¬Realized tg initial s := fun h => hcase (Or.inl (realized_of_extends tg initial hext h))
+  have hlen : L.length < signatureLimit := by
+    have := hcase
+    simp only [List.length_append, List.length_singleton, not_or, not_lt] at this
+    omega
+  rw [if_neg (by push_neg; exact ⟨hreal, hlen⟩)]
+  have hn : signatureLimit - (L ++ [⟨m, r⟩] : QueryLog SigningSpec).length = signatureLimit - (L.length + 1) := by simp
+  rw [hn]
+  set n := signatureLimit - (L.length + 1) with hndef
+  set pre := (newPairs parameter data m s out.2).map (pview parameter data out.2) with hpre
+  have hnotnew : ∀ q ∈ P, q ∉ newPairs parameter data m s out.2 := by
+    intro q hq hnew
+    obtain ⟨_, h0, _⟩ := (mem_newPairs parameter data m s).1 hnew
+    obtain ⟨u, hu, _⟩ := (hP.mem q).1 hq
+    rw [h0] at hu; cases hu
+  have hitemsP : ∀ (l : List Pair), (∀ q ∈ l, q ∈ P) →
+      items parameter data out.2 (newPairs parameter data m s out.2 ++ l) = pre ++ items parameter data s l := by
+    intro l hl
+    unfold items
+    rw [List.map_append]
+    congr 1
+    exact List.map_congr_left fun q hq => hview q (hl q hq)
+  unfold core canon
+  rw [List.map_append, List.sum_append]
+  refine add_le_add (add_le_add (add_le_add ?_ ?_) ?_) le_rfl
+  · -- new pairs: only a failed fresh pair stays a candidate
+    rcases hshape with ⟨hnew, _⟩ | ⟨ρ, u0, u1, hnew, _, h0, hl, h1, hs0, _, hfl, hsig⟩ |
+        ⟨_, _, _, _, hnew, _⟩
+    · unfold newPairs; rw [hnew]; simp
+    · have hs1 : s.cache (blk parameter data m ρ 1) = none := hP.first (m, ρ) hs0
+      have hv : pview parameter data out.2 (m, ρ) = viewOf u0 u1 := pview_of_cached h0 h1
+      have hlist : newPairs parameter data m s out.2 = [(m, ρ)] := by
+        unfold newPairs; rw [hnew, Finset.toList_singleton]; rfl
+      rw [hlist]
+      simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, add_zero]
+      refine le_trans ?_ (freshNewWeight_ge hr hs1 h0 hl h1 (fun v => if v.1 ∈ Fail then 1 else 0))
+      unfold cand
+      rw [hv]
+      split_ifs with hu hF hF'
+      · exact le_rfl
+      · exfalso
+        rcases r with _ | sig
+        · exact hF (hfl rfl)
+        · exact not_unsigned_signed (m := m) (L := L) (sig := sig) (by rw [hsig sig rfl]; exact hu)
+      · exact bot_le
+      · exact le_rfl
+    · unfold newPairs; rw [hnew]; simp
+  · -- old candidates
+    refine List.sum_le_sum fun q hq => ?_
+    unfold cand
+    by_cases hU' : Unsigned (L ++ [⟨m, r⟩] : QueryLog SigningSpec) q
+    · have hU := unsigned_of_append hU'
+      rw [if_pos hU', if_pos hU, hview q hq]
+      split_ifs with hF
+      · exact le_rfl
+      · unfold candValue
+        rw [hview q hq, List.erase_append_right _ (hnotnew q hq), erase_eq_filter' hP.nodup q,
+          hitemsP _ fun q' hq' => (mem_others.1 hq').1]
+        refine post_term_le hw (witness_props _) pre _ n _ hk _ fun J => ?_
+        refine upper_point Fail hw (witness_props _) hP (· = q) out r hr hshape (fun sig hsig _ heq => ?_) J
+        subst hsig
+        exact not_unsigned_signed (m := m) (L := L) (by rw [heq]; exact hU')
+    · rw [if_neg hU']
+      exact bot_le
+  · -- the excess forecast
+    refine mul_le_mul' (by exact_mod_cast hk) (add_le_add ?_ le_rfl)
+    unfold hValue
+    rw [hitemsP P fun q hq => hq, filter_false']
+    refine post_term_le hw (excess_props b0 hb0) pre _ n _ hk _ fun J => ?_
+    exact upper_point Fail hw (excess_props b0 hb0) hP (fun _ => False) out r hr hshape (fun _ _ _ h => h) J
+
+/-- **The signing step in expectation.** -/
+theorem sign_expect (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    {Cmax : ℕ} (hfair : Fair wbar Cmax) (hb0 : b0 ≠ ⊤) (attempts budget : ℕ) (s : State) (P : List Pair)
+    (L : QueryLog SigningSpec) (d : Multiset View) (hP : PInv parameter data s P)
+    (hcount : cachedCount parameter data m s + attempts ≤ Cmax) :
+    ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] *
+        (if Realized tg initial s ∨ signatureLimit ≤ L.length then 0
+          else canon parameter data wbar b0 Fail m s P L d (signatureLimit - (L.length + 1)) budget out) ≤
+      pot parameter data wbar b0 Fail tg initial s P L d budget := by
+  by_cases hcase : Realized tg initial s ∨ signatureLimit ≤ L.length
+  · simp only [if_pos hcase, mul_zero, tsum_zero]
+    exact bot_le
+  simp only [if_neg hcase]
+  have hcase' : ¬Realized tg initial s ∧ L.length < signatureLimit := by push_neg at hcase; exact hcase
+  have hlen := hcase'.2
+  unfold pot
+  rw [if_neg (by rintro (h | h); exact hcase'.1 h; omega)]
+  set n := signatureLimit - (L.length + 1) with hn
+  have hn1 : signatureLimit - L.length = n + 1 := by omega
+  rw [hn1]
+  have hparse' : ∀ ρ call, model.parse (blk parameter data m ρ call) = none := fun ρ call => hparse (m, ρ) call
+  have hnob1 : ∀ ρ, s.cache (blk parameter data m ρ 0) = none → s.cache (blk parameter data m ρ 1) = none :=
+    fun ρ h => hP.first (m, ρ) h
+  have hlandb1 : ∀ ρ u0, s.cache (blk parameter data m ρ 0) = some u0 → Landed parameter (blockIndex u0) →
+      s.cache (blk parameter data m ρ 1) ≠ none := fun ρ u0 h0 hl => hP.second (m, ρ) ⟨u0, h0, hl⟩
+  have hmass : ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] ≤ 1 :=
+    tsum_probOutput_le_one
+  -- the four parts
+  have hFN := loop_bound_fresh tg initial model parameter data m hparse' s hnob1 hlandb1
+    (fun v => if v.1 ∈ Fail then 1 else 0) attempts budget s (related_self parameter data m s)
+  have hT : ∀ q ∈ P, ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] *
+      (if Unsigned L q then (if (pview parameter data s q).1 ∈ Fail then 1 else
+        creations Finset.univ landing (fun J => upper parameter data wbar m s n d (witnessFn (pview parameter data s q))
+          (· = q) out J) budget (items parameter data s (others (· = q) P))) else 0) ≤
+      cand parameter data wbar Fail s P L d (n + 1) budget q := by
+    intro q _
+    unfold cand
+    split_ifs
+    · rw [ENNReal.tsum_mul_right, mul_one]; exact hmass
+    · unfold candValue
+      rw [erase_eq_filter' hP.nodup q]
+      exact term_expect tg initial model hparse' Fail hfair (witness_props _) hP (· = q) attempts budget budget hcount
+    · simp
+  have hH := term_expect tg initial model (n := n) (d := d) hparse' Fail hfair (excess_props b0 hb0) hP (fun _ => False)
+    attempts budget budget hcount
+  rw [filter_false'] at hH
+  unfold canon core
+  simp only [mul_add, ENNReal.tsum_add, filter_false']
+  rw [tsum_list_sum]
+  have hφ : freshAvg Finset.univ (fun v : View => if v.1 ∈ Fail then (1 : ℝ≥0∞) else 0) = failMass Fail := rfl
+  rw [hφ] at hFN
+  calc _ ≤ failMass Fail + (P.map (cand parameter data wbar Fail s P L d (n + 1) budget)).sum +
+        (budget * hValue parameter data wbar b0 s P d (n + 1) budget + budget * failMass Fail) + n * failMass Fail := by
+        refine add_le_add (add_le_add (add_le_add hFN (List.sum_le_sum hT)) (add_le_add ?_ ?_)) ?_
+        · simp only [mul_left_comm _ (budget : ℝ≥0∞), ENNReal.tsum_mul_left]
+          exact mul_le_mul_left' hH _
+        · rw [ENNReal.tsum_mul_right]; exact mul_le_of_le_one_left' hmass
+        · rw [ENNReal.tsum_mul_right]; exact mul_le_of_le_one_left' hmass
+    _ = _ := by push_cast; ring
+
+end SignPointMain
+
+/-! ### The signing step -/
+
+section SignGood
+
+variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
+  (model : HiddenRows.Model HashInput HashOutput A Coordinate)
+  (parameter : PublicParameter) (data : PublicData) (wbar b0 : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight)))
+  (Qtot : ℕ)
+
+theorem interpThen_some {α β : Type} (next : α → OracleComp CostSpec β) (budget : ℕ)
+    (o1 : Run HashInput Coordinate α × State) (v : α) (hv : o1.1.1 = some v) :
+    interpThen tg initial model next budget o1 =
+      (fun o2 => ((o2.1.1, o1.1.2.1 ++ o2.1.2.1, o1.1.2.2.1 ++ o2.1.2.2.1, o1.1.2.2.2 ++ o2.1.2.2.2), o2.2)) <$>
+        interp tg initial model (next v) (budget - traceCost o1.1.2.2.1) o1.2 := by
+  unfold interpThen
+  rw [hv]
+
+theorem interpThen_none {α β : Type} (next : α → OracleComp CostSpec β) (budget : ℕ)
+    (o1 : Run HashInput Coordinate α × State) (hv : o1.1.1 = none) :
+    interpThen tg initial model next budget o1 = pure ((none, o1.1.2.1, o1.1.2.2.1, o1.1.2.2.2), o1.2) := by
+  unfold interpThen
+  rw [hv]
+
+/-- **One signing call.** -/
+theorem good_sign (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hfail : ∀ m ρ digest budget (s1 : State), Prepared initial s1 →
+      ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
+        out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
+    {Cmax : ℕ} (hfair : Fair wbar Cmax) (hb0 : b0 ≠ ⊤) (hQ : Qtot + digestAttemptLimit ≤ Cmax)
+    (L : QueryLog SigningSpec) (m : Message) (next : Option Signature → OracleComp CostSpec HiddenBridge.Outcome)
+    (h : ∀ r, Good parameter data wbar b0 Fail Qtot tg initial model (L ++ [⟨m, r⟩]) (next r)) :
+    Good parameter data wbar b0 Fail Qtot tg initial model L (signCostSource parameter data m >>= next) := by
+  intro budget s P d R hprep hP hD hC
+  have hcount : cachedCount parameter data m s + digestAttemptLimit ≤ Cmax := by
+    have := hC m; omega
+  unfold signCostSource
+  set sign := signCostSourceLoop parameter data m digestAttemptLimit with hsign
+  -- the continuation's flagged count
+  set cont : Run HashInput Coordinate (Option Signature) × State → ℝ≥0∞ := fun o1 =>
+    o1.1.1.elim 0 fun r => expectedFlagged tg initial model (next r) (budget - traceCost o1.1.2.2.1) o1.2 with hcont
+  set canonR : Run HashInput Coordinate (Option Signature) × State → ℝ≥0∞ := fun o1 =>
+    if Realized tg initial s ∨ signatureLimit ≤ L.length then 0
+    else canon parameter data wbar b0 Fail m s P L d (signatureLimit - (L.length + 1)) budget o1 with hcanonR
+  -- each outcome of the signing call
+  have hpoint : ∀ o1 ∈ support (interp tg initial model sign budget s),
+      ∑' out, Pr[= out | interpThen tg initial model next budget o1] * finalValue parameter data tg initial R out ≤
+        canonR o1 + b0 * cont o1 := by
+    intro o1 ho1
+    cases hres : o1.1.1 with
+    | none =>
+        rw [interpThen_none tg initial model next budget o1 hres, tsum_probOutput_pure_mul]
+        exact bot_le
+    | some r =>
+        rw [interpThen_some tg initial model next budget o1 r hres, tsum_probOutput_map_mul]
+        obtain ⟨hprep', hP', hD', hC', _⟩ := sign_params tg initial model Fail Qtot hparse (hfail m)
+          digestAttemptLimit budget s P d R hprep hP hD hC o1 ho1 r hres
+        have hIH := h r (budget - traceCost o1.1.2.2.1) o1.2 _ _ _ hprep' hP' hD' hC'
+        have hpot := sign_point tg initial model parameter data wbar b0 Fail Qtot m hparse (hfail m) hfair.le_one hb0
+          digestAttemptLimit budget s P L d R hprep hP hD hC o1 ho1 r hres (Nat.sub_le budget (traceCost o1.1.2.2.1))
+        have heq : ∀ o2 : Run HashInput Coordinate HiddenBridge.Outcome × State,
+            finalValue parameter data tg initial R
+              ((o2.1.1, o1.1.2.1 ++ o2.1.2.1, o1.1.2.2.1 ++ o2.1.2.2.1, o1.1.2.2.2 ++ o2.1.2.2.2), o2.2) =
+            finalValue parameter data tg initial (R ++ o1.1.2.1) o2 := by
+          intro o2
+          unfold finalValue
+          simp only [List.append_assoc]
+        simp only [heq]
+        refine le_trans hIH (add_le_add hpot ?_)
+        simp only [hcont, hres, Option.elim, le_refl]
+  -- the payments of the whole run cover the continuations
+  have hflag : ∑' o1, Pr[= o1 | interp tg initial model sign budget s] * cont o1 ≤
+      expectedFlagged tg initial model (sign >>= next) budget s := by
+    unfold expectedFlagged
+    rw [interp_bind, tsum_probOutput_bind_mul]
+    refine ENNReal.tsum_le_tsum fun o1 => mul_le_mul_right ?_ _
+    cases hres : o1.1.1 with
+    | none => simp only [hcont, hres, Option.elim]; exact bot_le
+    | some r =>
+        simp only [hcont, hres, Option.elim]
+        rw [interpThen_some tg initial model next budget o1 r hres, tsum_probOutput_map_mul]
+        unfold expectedFlagged
+        refine ENNReal.tsum_le_tsum fun o2 => mul_le_mul_right ?_ _
+        simp only [flaggedCount_append, Nat.cast_add]
+        exact le_add_self
+  rw [interp_bind, tsum_probOutput_bind_mul]
+  calc _ ≤ ∑' o1, Pr[= o1 | interp tg initial model sign budget s] * (canonR o1 + b0 * cont o1) := by
+        refine ENNReal.tsum_le_tsum fun o1 => ?_
+        by_cases ho1 : o1 ∈ support (interp tg initial model sign budget s)
+        · exact mul_le_mul_right (hpoint o1 ho1) _
+        · rw [probOutput_eq_zero_of_not_mem_support ho1, zero_mul, zero_mul]
+    _ = ∑' o1, Pr[= o1 | interp tg initial model sign budget s] * canonR o1 +
+          b0 * ∑' o1, Pr[= o1 | interp tg initial model sign budget s] * cont o1 := by
+        simp only [mul_add, ENNReal.tsum_add, mul_left_comm _ b0, ENNReal.tsum_mul_left]
+    _ ≤ _ := add_le_add (sign_expect tg initial model parameter data wbar b0 Fail m hparse hfair hb0
+          digestAttemptLimit budget s P L d hP hcount) (mul_le_mul_left' hflag _)
+
+end SignGood
 
 end LeanSphincs.Security.ForsPotential

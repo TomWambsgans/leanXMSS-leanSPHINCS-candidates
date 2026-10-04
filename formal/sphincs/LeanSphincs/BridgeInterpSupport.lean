@@ -313,4 +313,102 @@ theorem interp_bind_mem {α β : Type} (first : OracleComp (SourceCostSpec D R �
       obtain ⟨o2, ho2, rfl⟩ := hout
       exact Or.inr ⟨v, rfl, o2, ho2, rfl, rfl, rfl⟩
 
+/-! ### Costs and cache growth -/
+
+theorem interp_traceCost_le {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) :
+    ∀ budget (state : DebtState D R ι), ∀ out ∈ support (interp tg initial model computation budget state),
+      traceCost out.1.2.2.1 ≤ budget := by
+  induction computation using OracleComp.inductionOn with
+  | pure value =>
+      intro budget state out hout
+      rw [interp_pure, support_pure, Set.mem_singleton_iff] at hout
+      rw [hout]; simp [traceCost]
+  | query_bind input next ih =>
+      intro budget state out hout
+      rw [interp_query_bind] at hout
+      split_ifs at hout with hcost
+      · rw [support_bind] at hout
+        simp only [Set.mem_iUnion, support_map, Set.mem_image] at hout
+        obtain ⟨result, _, inner, hinner, rfl⟩ := hout
+        simp only [traceCost_append, recorded_cost]
+        have := ih result.1 _ result.2 inner hinner
+        omega
+      · rw [support_pure, Set.mem_singleton_iff] at hout
+        rw [hout]; simp [traceCost]
+
+theorem card_filter_store_le (T : Finset D) (state : DebtState D R ι) (x : D) (u : R) :
+    (T.filter fun y => (state.store x u).cache y ≠ none).card ≤ (T.filter fun y => state.cache y ≠ none).card + 1 := by
+  calc (T.filter fun y => (state.store x u).cache y ≠ none).card
+      ≤ (insert x (T.filter fun y => state.cache y ≠ none)).card := by
+        refine Finset.card_le_card fun y hy => ?_
+        rw [Finset.mem_filter] at hy
+        rw [Finset.mem_insert, Finset.mem_filter]
+        by_cases h : y = x
+        · exact Or.inl h
+        · exact Or.inr ⟨hy.1, by rw [store_cache_ne state x y h u] at hy; exact hy.2⟩
+    _ ≤ _ := Finset.card_insert_le _ _
+
+theorem costStep_card_le (T : Finset D) (input : (SourceCostSpec D R ι).Domain) (state : DebtState D R ι) :
+    ∀ r ∈ support (costStep model input state),
+      (T.filter fun y => r.2.cache y ≠ none).card ≤ (T.filter fun y => state.cache y ≠ none).card + sourceCost input := by
+  intro r hr
+  have hread : ∀ (bytes : D) (s' : DebtState D R ι), s'.cache = state.cache → ∀ r ∈ support (readOutside bytes s'),
+      (T.filter fun y => r.2.cache y ≠ none).card ≤ (T.filter fun y => state.cache y ≠ none).card + 1 := by
+    intro bytes s' hs' r hr
+    rcases readOutside_support bytes s' r hr with h | ⟨_, h⟩
+    · rw [h, hs']; exact Nat.le_succ _
+    · rw [h]
+      have := card_filter_store_le T s' bytes r.1
+      rw [hs'] at this
+      exact this
+  rcases input with (draw | (bytes | coordinate)) | amount
+  · change r ∈ support ((fun v => (v, state)) <$> (liftM (unifSpec.query draw) : ProbComp _)) at hr
+    rw [support_map] at hr
+    obtain ⟨v, _, rfl⟩ := hr
+    exact Nat.le_add_right _ _
+  · rw [costStep_ordinary] at hr
+    unfold ordinaryStep at hr
+    change _ ≤ _ + 1
+    split at hr
+    · exact hread bytes state rfl r hr
+    · split at hr
+      · exact hread bytes (state.record _) rfl r hr
+      · split at hr
+        · rw [support_map] at hr
+          obtain ⟨r', hr', rfl⟩ := hr
+          rw [sampleCoordinate_expose _ state r' hr']
+          exact Nat.le_succ _
+        · exact hread bytes state rfl r hr
+  · change r ∈ support (sampleCoordinate coordinate state) at hr
+    rw [sampleCoordinate_expose _ state r hr]
+    exact Nat.le_add_right _ _
+  · change r ∈ support (pure ((), state) : ProbComp _) at hr
+    rw [support_pure, Set.mem_singleton_iff] at hr
+    rw [hr]
+    exact Nat.le_add_right _ _
+
+/-- Each unit of cost adds at most one cache entry. -/
+theorem interp_card_le (T : Finset D) {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) :
+    ∀ budget (state : DebtState D R ι), ∀ out ∈ support (interp tg initial model computation budget state),
+      (T.filter fun y => out.2.cache y ≠ none).card ≤
+        (T.filter fun y => state.cache y ≠ none).card + traceCost out.1.2.2.1 := by
+  induction computation using OracleComp.inductionOn with
+  | pure value =>
+      intro budget state out hout
+      rw [interp_pure, support_pure, Set.mem_singleton_iff] at hout
+      rw [hout]; simp [traceCost]
+  | query_bind input next ih =>
+      intro budget state out hout
+      rw [interp_query_bind] at hout
+      split_ifs at hout with hcost
+      · rw [support_bind] at hout
+        simp only [Set.mem_iUnion, support_map, Set.mem_image] at hout
+        obtain ⟨result, hresult, inner, hinner, rfl⟩ := hout
+        simp only [traceCost_append, recorded_cost]
+        have h1 := ih result.1 _ result.2 inner hinner
+        have h2 := costStep_card_le model T input state result hresult
+        omega
+      · rw [support_pure, Set.mem_singleton_iff] at hout
+        rw [hout]; simp [traceCost]
+
 end LeanSphincs.Security.HiddenDebt
