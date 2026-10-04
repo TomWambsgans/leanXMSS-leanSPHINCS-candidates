@@ -602,4 +602,134 @@ theorem creations_tsum {β : Type} (weights : β → ℝ≥0∞) (G : β → Lis
 
 end Creation
 
+/-! ### More on future pairs and slots -/
+
+section More
+
+variable {U : Finset V} {land wbar : ℝ≥0∞} {f : Multiset V → ℝ≥0∞}
+
+theorem creations_perm {G : List V → ℝ≥0∞} (hperm : ∀ a b, a.Perm b → G a = G b) :
+    ∀ k (a b : List V), a.Perm b → creations U land G k a = creations U land G k b := by
+  intro k
+  induction k with
+  | zero => intro a b hab; exact hperm a b hab
+  | succ k ih =>
+      intro a b hab
+      simp only [creations]
+      rw [ih a b hab, show (fun x => creations U land G k (x :: a)) =
+        (fun x => creations U land G k (x :: b)) from funext fun x => ih _ _ (hab.cons x)]
+
+/-- Existing items can be moved into the base function. -/
+theorem creations_prepend {G : List V → ℝ≥0∞} (hperm : ∀ a b, a.Perm b → G a = G b) (extra : List V) :
+    ∀ k items, creations U land G k (extra ++ items) = creations U land (fun J => G (extra ++ J)) k items := by
+  intro k
+  induction k with
+  | zero => intro items; rfl
+  | succ k ih =>
+      intro items
+      simp only [creations]
+      rw [ih items, show (fun v => creations U land G k (v :: (extra ++ items))) =
+        (fun v => creations U land (fun J => G (extra ++ J)) k (v :: items)) from funext fun v => by
+          rw [creations_perm hperm k (v :: (extra ++ items)) (extra ++ v :: items) List.perm_middle.symm]
+          exact ih (v :: items)]
+
+theorem creations_mono_count (hU : U.Nonempty) (hland : land ≤ 1) {G : List V → ℝ≥0∞}
+    (hG : ∀ v items, G items ≤ G (v :: items)) (hperm : ∀ items items', items.Perm items' → G items = G items')
+    {k k' : ℕ} (hk : k ≤ k') (items : List V) : creations U land G k items ≤ creations U land G k' items := by
+  induction hk with
+  | refl => exact le_rfl
+  | step _ ih => exact le_trans ih (creations_le_succ hU hland hG hperm _ items)
+
+theorem creations_zero_fun : ∀ k (items : List V), creations U land (fun _ => 0) k items = 0
+  | 0, _ => rfl
+  | k + 1, items => by
+      simp only [creations, creations_zero_fun k]
+      simp [freshAvg]
+
+theorem creations_finset_sum {κ : Type} [DecidableEq κ] (S : Finset κ) (G : κ → List V → ℝ≥0∞) (k : ℕ) (items : List V) :
+    creations U land (fun I => ∑ i ∈ S, G i I) k items = ∑ i ∈ S, creations U land (G i) k items := by
+  induction S using Finset.induction_on with
+  | empty => simpa using creations_zero_fun k items
+  | insert a S ha ih =>
+      simp only [Finset.sum_insert ha]
+      rw [creations_add (G a) (fun I => ∑ i ∈ S, G i I), ih]
+
+theorem virtual_zero_fun : ∀ m (items : List V) d, virtual U wbar (fun _ => 0) m items d = 0 := by
+  intro m items d
+  have h := virtual_const_mul (U := U) (wbar := wbar) 0 (fun _ => (1 : ℝ≥0∞)) m items d
+  simpa using h
+
+theorem virtual_finset_sum (hU : U.Nonempty) {κ : Type} [DecidableEq κ] (S : Finset κ) (g : κ → Multiset V → ℝ≥0∞) (m : ℕ)
+    (items : List V) (d : Multiset V) :
+    virtual U wbar (fun D => ∑ i ∈ S, g i D) m items d = ∑ i ∈ S, virtual U wbar (g i) m items d := by
+  induction S using Finset.induction_on generalizing m items d with
+  | empty => simpa using virtual_zero_fun m items d
+  | insert a S ha ih =>
+      simp only [Finset.sum_insert ha]
+      rw [virtual_add hU (g a) (fun D => ∑ i ∈ S, g i D), ih]
+
+/-- The virtual future of an average is the average of the virtual futures. -/
+theorem virtual_freshAvg (hU : U.Nonempty) {W : Type} [DecidableEq W] (T : Finset W) (g : W → Multiset V → ℝ≥0∞) (m : ℕ)
+    (items : List V) (d : Multiset V) :
+    virtual U wbar (fun D => freshAvg T fun i => g i D) m items d =
+      freshAvg T fun i => virtual U wbar (g i) m items d := by
+  unfold freshAvg
+  rw [virtual_const_mul, virtual_finset_sum hU]
+
+theorem creations_freshAvg {W : Type} [DecidableEq W] (T : Finset W) (G : W → List V → ℝ≥0∞) (k : ℕ) (items : List V) :
+    creations U land (fun I => freshAvg T fun i => G i I) k items =
+      freshAvg T fun i => creations U land (G i) k items := by
+  unfold freshAvg
+  rw [creations_const_mul, creations_finset_sum]
+
+/-- **The virtual slot dominates a base value plus its fresh and pool gains.** -/
+theorem slot_ge (hU : U.Nonempty) (hw : wbar ≤ 1) (hmono : Monotone' f) (hsuper : Supermodular f)
+    (hfin : ∀ m, f m ≠ ⊤) (m : ℕ) (items : List V) (d : Multiset V) :
+    virtual U wbar f m items d +
+      freshAvg U (fun u => virtual U wbar f m (u :: items) (d + {u}) - virtual U wbar f m items d) +
+      (items.map fun w => wbar * (virtual U wbar f m items (d + {w}) - virtual U wbar f m items d)).sum ≤
+    virtual U wbar f (m + 1) items d := by
+  have hprops := fun items' => virtual_props hU hw hmono hsuper hfin m items'
+  set base := virtual U wbar f m items d with hbase
+  set gf : V → ℝ≥0∞ := fun u => virtual U wbar f m (u :: items) (d + {u}) - base
+  set gp : V → ℝ≥0∞ := fun v => virtual U wbar f m items (d + {v}) - base
+  have hgf : ∀ u, virtual U wbar f m (u :: items) (d + {u}) = base + gf u := by
+    intro u
+    refine (add_tsub_cancel_of_le ?_).symm
+    exact le_trans (virtual_le_cons hU hw hmono hsuper hfin m items u d)
+      ((hprops (u :: items)).1 _ _ (Multiset.le_add_right _ _))
+  simp only [virtual]
+  have hslot : ∀ u, base + gf u + (items.map fun w => wbar * gp w).sum ≤
+      slotValue (virtual U wbar f m (u :: items)) (d + {u}) (itemCoins wbar items) := by
+    intro u
+    have hcoins := coins_gain (virtual U wbar f m (u :: items)) (hprops (u :: items)).1
+      (hprops (u :: items)).2.1 (hprops (u :: items)).2.2 (items.map fun w => (wbar, w))
+      (by intro i hi; obtain ⟨w, _, rfl⟩ := List.mem_map.1 hi; exact hw) (d + {u}) (d + {u}) le_rfl
+    have hcoins' : coinsOf (items.map fun w => (wbar, w)) = itemCoins wbar items := by
+      simp [coinsOf, itemCoins, Function.comp_def]
+    rw [hcoins', List.map_map] at hcoins
+    refine le_trans ?_ hcoins
+    rw [← hgf u]
+    refine add_le_add le_rfl (List.sum_le_sum fun w _ => ?_)
+    simp only [Function.comp_apply]
+    refine mul_le_mul_right ?_ wbar
+    have hfin1 := (hprops (u :: items)).2.2
+    have hle1 : gp w ≤ gain (virtual U wbar f m (u :: items)) d w :=
+      tsub_le_tsub_of_add _ _ _ _ ((hprops (u :: items)).1 _ _ (Multiset.le_add_right _ _)) (hfin1 d)
+        (by rw [add_comm (virtual U wbar f m items (d + {w}))]
+            exact virtual_item_disclosure hU hw hmono hsuper hfin m items u d {w})
+    have hle2 : gain (virtual U wbar f m (u :: items)) d w ≤
+        gain (virtual U wbar f m (u :: items)) (d + {u}) w := by
+      have h := gain_le_of_le (virtual U wbar f m (u :: items)) (hprops (u :: items)).1
+        (hprops (u :: items)).2.1 hfin1 d (d + {u}) (Multiset.le_add_right _ _) w
+      unfold gain at h ⊢
+      exact ENNReal.le_sub_of_add_le_left (hfin1 _) h
+    exact le_trans hle1 hle2
+  calc base + freshAvg U gf + (items.map fun w => wbar * gp w).sum
+      = freshAvg U (fun u => base + gf u + (items.map fun w => wbar * gp w).sum) := by
+        rw [freshAvg_add, freshAvg_add, freshAvg_const U hU, freshAvg_const U hU]
+    _ ≤ _ := freshAvg_mono U fun u _ => hslot u
+
+end More
+
 end LeanSphincs.Security.Domination
