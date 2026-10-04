@@ -1,9 +1,44 @@
 # Candidate proof route and remaining work
 
-The candidate development is in `LeanSphincs/`. Its SUF-CMA lifetime theorem is **not finished**.
+The candidate development is in `LeanSphincs/`. Its six SUF-CMA lifetime claims are **proved**
+(`Lifetimes.requestedSecurity`) at the lowered limits listed in [README.md](README.md); the route
+is summarized in the next section, and the earlier groundwork follows it.
 The retained `SphincsSecurity/` proof establishes the older three-layer leanVM instance;
 [LEANVM_PROOF.md](LEANVM_PROOF.md) preserves its original route. The source and adapted recovery,
 byte-layout, code-counting, uniformity, and search lemmas are credited to leanVM `b7a107256`.
+
+## The stage-1 proof of the six claims
+
+Units: S = 2^128 digests, x = q/S. The proof bounds the forging advantage by q/2^127 = 2x.
+
+1. **Reduction to a lazy run.** `forgeAdvantage_le_prep` removes the seed (loss q/2^256) and moves
+   to a stopped experiment over independent material, hidden coordinates and prepared encoding
+   searches. `win_implies_bad` shows a win is a cached target hit or a FORS cover of an unsigned,
+   landed, cached forgery digest. [BridgeForsAssembly](LeanSphincs/BridgeForsAssembly.lean)
+   (`stopped_le_interp`) couples the stopped run to the guess-recording comparison, defers the
+   hidden table, and rewrites everything as one interpreted lazy run (`interp`,
+   [BridgeInterp](LeanSphincs/BridgeInterp.lean)), crediting the keygen cost K.
+2. **Saturation.** [BridgeSaturation](LeanSphincs/BridgeSaturation.lean): along the run,
+   Pr[hit] plus a baseline b0 ≈ 2^-127 (1−2x)/(1−x) paid per digest query made before any hit is
+   decided is at most 1 − (1−x)^2. [BridgeTargeting](LeanSphincs/BridgeTargeting.lean) shows cached
+   target hits and correct hidden-row guesses are such hits.
+3. **FORS potential.** [BridgeForsPotential](LeanSphincs/BridgeForsPotential.lean),
+   [BridgeForsGame](LeanSphincs/BridgeForsGame.lean): every cached landed message/randomizer pair
+   is an item; each unsigned one is a candidate valued by the virtual-future forecast of its witness
+   count (a count over disclosed views, supermodular, unlike the cover indicator). The virtual future
+   ([BridgeVirtual](LeanSphincs/BridgeVirtual.lean)) gives every remaining signature one fresh
+   uniform disclosed view and an independent coin per item; future pairs the budget may create are
+   added in front. A new pair touched by a query is paid by the saturation baseline plus one excess
+   forecast; a signing call is dominated by one virtual slot through the signer's fair share
+   (`loop_bound`, `loop_bound_fresh`, [BridgeSignerFors](LeanSphincs/BridgeSignerFors.lean)) and
+   supermodularity (`slot_ge`). Pairs whose prepared search fails are valued one; such indices have
+   expected share ≤ 2^-201 (`expectedFail_le`).
+4. **Excess bound.** [H0Lifetimes](LeanSphincs/H0Lifetimes.lean) and its imports bound the start
+   value q'·H0 (q' = q−K) by x'^2 + K/2^127 minus a 2^-200 slack: Poisson domination of joint
+   factorial moments of the virtual future, a product-form moment majorant of the excess, and exact
+   rational interval covers of all budgets checked by the kernel.
+5. **Closing.** `stage1_close` adds the pieces; `requestedSecurity` instantiates them for the six
+   parameter sets.
 
 ## What is checked
 
@@ -296,11 +331,12 @@ the final composition remain open.
 
 ## Differences and obligations
 
-- The old proof's thirteenth/fourteenth moments, pinned FORS group, three-layer witnesses,
-  and closing constants do not carry over automatically. The candidate needs bounds for its
-  24-tree disclosure process, adaptive cached queries, primitive hash events, and the shared
-  query allocation. The checked six numerical closers must then be connected to
-  `Lifetimes.RequestedSecurity` without assuming the desired advantage bound.
+- The six claims are proved by the stage-1 route above, not by the old proof's moments and
+  witnesses. Several earlier lemmas described in "What is checked" (independent-target lifetime
+  bounds, ideal interleaving, pool balance, occupancy) are not used by the final theorem; the
+  "still open" remarks there refer to those alternative routes.
+- The requested limits were lowered (README) because adaptive FORS/WOTS switching defeats the
+  expected-coverage criterion behind the earlier targets.
 - `Randomized.sign` samples fresh independent 16-byte randomizers with replacement, as
   requested. Rust derives them from the seed and message. The candidate security target is
   for the independent-randomizer variant; transferring it to Rust would require a separate
@@ -317,8 +353,8 @@ the final composition remain open.
 - Verification does not enforce membership in the retained subtree. The security extraction
   must account explicitly for forgeries entering through a surrogate sibling, as well as
   ordinary WOTS/FORS/tree hash events.
-- Requested N at b=10 is 33, versus 33,000 in the spec/prior plan. Requested N at b=26 is
-  1,200,000,000, versus 2^30 in the current spec. Both requested values are preserved exactly.
+- Requested N at b=10 is 33, versus 33,000 in the spec/prior plan; it is preserved exactly. The
+  proved N at b=26 is 540,000,000, below the 2^30 of the current spec.
 - `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums
   BLAKE2s block costs of the verifier's actual logged hash-input lengths. Accepted signatures
   cost exactly 391 compressions; all signatures cost at most 391. This includes the 72 WOTS

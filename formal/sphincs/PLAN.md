@@ -78,17 +78,17 @@ Done: seed removal, hidden-coordinate stop, lazy outside oracle, rich program, p
 encoding searches (`forgeAdvantage_le_prep`); win implication on non-stopped runs
 (`HiddenBridge.win_implies_bad`: target hit or FORS cover with <= N signing calls).
 
-Stage 1 (large budgets; about 10-15K lines):
- 1a. Done (`BridgeSaturation.hit_bound_start`): along the lazy comparison, Pr[hit] plus the
-     baseline (2(N-q)+1)(N-2q)/(N(N-q)^2) per digest query made before any hit is decided is
-     at most 1 - (1 - q/N)^2.
- 1b. Proposal bank and signer coupling: fair-share selection symmetry
-     (`LifetimePoolGrinding.poolGrindRandomness_factor`), Ville-type pool concentration,
-     rejection bridge (reuse leanVM's generic proposal-word kit), proposal-count exception.
- 1c. Witness-count domination F_t <= E[Psi(M) | past]; Doob martingale; Jensen with the
-     baseline; excess term q E[(Psi - b)^+].
- 1d. Certified bounds on E[(Z - theta)^+] for the multinomial word (exact tails per leaf,
-     Poisson comparison or direct multinomial bounds); closing arithmetic for x >= x0.
+Stage 1: DONE (2026-10-04). `Lifetimes.requestedSecurity` (StageOne.lean) proves the six claims at
+540000000 / 10650000 / 185000 / 93000 / 47000 / 33 signatures (b = 26/20/14/13/12/10).
+ 1a. Saturation: `BridgeSaturation.hit_bound_start`, `HiddenDebt.interp_hit_bound`.
+ 1b/1c. FORS potential instead of a proposal bank: witness counts over disclosed views, a virtual
+     future (fresh uniform view per remaining signature, a coin per item, future pairs in front),
+     signer fair share on the lazy run (`loop_bound`, `loop_bound_fresh`), domination by one
+     virtual slot (`slot_ge`), presampled sibling blocks, failing-index candidates; through any
+     adversary (`good_advProg`). Files Bridge{Domination,Virtual,Presample,Signer,SignerFors,
+     SignerPost,InterpSupport,ForsPotential,ForsGame,Replay,ForsAssembly,Targeting}.
+ 1d. H0*.lean: Poisson factorial-moment domination, product-form moment majorant, exact rational
+     covers checked by `decide +kernel`; tightest headroom ~0.001 bit at x ~ 2^-53 (b = 12-14).
 Stage 2 (small budgets; about 15-20K lines): port leanVM's refined route to the candidate:
  2a. Chains (generic, reuse) and our `SecurityPrefix*` (already ported) for contacts and
      two-edge completions; markers with the WOTS+C neighbour counts (b1 = 63, b2 = 4032).

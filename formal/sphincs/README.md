@@ -1,9 +1,9 @@
 # leanSPHINCS proofs in Lean 4
 
-**Status: candidate correctness, honest completeness, and all six exact FORS lifetime bounds
-after actual signing calls are checked for a fresh independent target. The adaptive SUF-CMA
-security reduction is unfinished.**
-A successful build must not be read as completion of the six security claims.
+**Status: the six requested 127-bit SUF-CMA lifetime claims are proved for the candidate game
+(`Lifetimes.requestedSecurity`, [StageOne.lean](LeanSphincs/StageOne.lean)), at signature limits
+lowered to account for adaptive FORS/WOTS switching (see below).** The proof uses only `propext`,
+`Classical.choice` and `Quot.sound`; it is pinned in [Axioms.lean](LeanSphincs/Axioms.lean).
 
 `LeanSphincs/` models the candidate: one height-26 tree, 24 height-10 FORS trees, 64 WOTS+C
 chains with four positions and sum 120, two message-digest calls, and pruning with surrogate
@@ -25,6 +25,12 @@ all dependencies are drawn from `propext`, `Classical.choice`, and `Quot.sound`.
 
 | Claim | Theorem / file | Scope |
 | --- | --- | --- |
+| **All six requested lifetimes have 127 bits of classical SUF-CMA security** | `Lifetimes.requestedSecurity`, [StageOne](LeanSphincs/StageOne.lean) | The game of [Statement.lean](LeanSphincs/Statement.lean): every adversary, every q≥1 hash queries (keygen, signing and verification included) |
+| Stage 1 closes for any parameter set with the targeting and an excess bound | `ForsPotential.stage1_close`, [BridgeForsAssembly](LeanSphincs/BridgeForsAssembly.lean) | Saturation of fixed/hidden targets plus the FORS potential of the start; seed, failing-search and cache terms included |
+| The FORS potential pays for any adaptive adversary | `ForsPotential.good_advProg`, [BridgeForsGame](LeanSphincs/BridgeForsGame.lean), [BridgeForsPotential](LeanSphincs/BridgeForsPotential.lean) | Draws, hash queries (new pairs paid by the saturation baseline), grinding signer with cache pool selection, verification |
+| Certified excess-forecast bound for the six lifetimes | `H0.h0_bound_*`, [H0Lifetimes](LeanSphincs/H0Lifetimes.lean) | Poisson factorial-moment domination of the virtual future; exact rational covers checked by `decide +kernel` |
+| Cached target hits and correct guesses are saturation hits | `HiddenBridge.exists_targeting`, [BridgeTargeting](LeanSphincs/BridgeTargeting.lean) | Every prepared sample; row addresses target their output coordinate |
+| Pr[hit] plus the baseline per flagged digest query is ≤ 1 − (1 − q/2^128)^2 | `HiddenDebt.interp_hit_bound`, [BridgeSaturation](LeanSphincs/BridgeSaturation.lean), [BridgeInterp](LeanSphincs/BridgeInterp.lean) | Lazy comparison of the whole rich program |
 | A successful seeded signature verifies | `Completeness.correct`, [Correctness](LeanSphincs/Correctness.lean) | Every hash function, seed, message, and pruning height 0–26 |
 | A signature assembled from any landed randomizer verifies | `Completeness.verify_of_finishSign`, [RandomizedCorrectness](LeanSphincs/RandomizedCorrectness.lean) | Independent of how that randomizer was selected |
 | Every successful randomized signature verifies in the shared ROM | `Completeness.verify_of_keygen_sign_support`, [RandomizedSupport](LeanSphincs/RandomizedSupport.lean) | Actual successive keygen, sign and verify runs; any initial cache |
@@ -93,25 +99,32 @@ all dependencies are drawn from `propext`, `Classical.choice`, and `Quot.sound`.
 | Serialized signature length = 5684 | `signature_size`, [Layout](LeanSphincs/Layout.lean) | Every signature, including malformed ones |
 | Accepted verification uses exactly 391 compressions | `Cost.verification_compressions`, [VerificationCost](LeanSphincs/VerificationCost.lean) | Actual logged hash inputs; every execution costs at most 391 |
 
-## Lifetime targets still open
+## Proved lifetimes
 
-`Lifetimes.RequestedSecurity` states all six targets in the candidate game. The FORS expression
-is connected to actual complete signing calls and a fresh target, but none of the six SUF-CMA
-claims is yet proved. Each counts every hash call in the modeled experiment, including honest-party calls,
-repeated inputs, and final verification; private sampling is free.
+`Lifetimes.RequestedSecurity` states all six targets in the candidate game, and
+`Lifetimes.requestedSecurity` proves them. Each counts every hash call in the modeled experiment,
+including honest-party calls, repeated inputs, and final verification; private sampling is free.
 
-| Subtree height b | Requested signature limit N |
-| --- | ---: |
-| 26 | 1,200,000,000 |
-| 20 | 23,700,000 |
-| 13 | 240,000 |
-| 14 | 460,000 |
-| 12 | 125,000 |
-| 10 | 33 |
+A forger can collect signatures and spend each hash call where it pays best: on the FORS search
+when the realised openings are favourable, on chain/tree/encoding searches otherwise. Bounding
+only the expected FORS coverage (the earlier targets) does not cover this switching, so the limits
+were lowered to those the stage-1 argument proves (see [PROOF.md](PROOF.md) and
+`scripts/adaptive_lifetime.py`):
 
-The b=10 target is the user's literal 33, while the spec says 33,000. The full-key target is
-1.2 billion, while the current spec advertises 2^30. Other modeling differences and the remaining
-proof obligations are recorded in [PROOF.md](PROOF.md).
+| Subtree height b | Proved signature limit N | Earlier target |
+| --- | ---: | ---: |
+| 26 | 540,000,000 | 1,200,000,000 |
+| 20 | 10,650,000 | 23,700,000 |
+| 14 | 185,000 | 460,000 |
+| 13 | 93,000 | 240,000 |
+| 12 | 47,000 | 125,000 |
+| 10 | 33 | 33 |
+
+The b=10 target is the user's literal 33, while the spec says 33,000; the full-key limit is below
+the 2^30 the spec advertises. A refined small-budget
+analysis (leanVM's route, "stage 2" in [PLAN.md](PLAN.md)) is expected to raise the other limits
+to roughly 82–97% of the earlier targets; it is not done. Modeling differences are recorded in
+[PROOF.md](PROOF.md).
 
 ## Build
 

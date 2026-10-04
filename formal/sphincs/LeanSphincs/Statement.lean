@@ -86,7 +86,8 @@ abbrev pruned12 : Params := ⟨12, 47000, by decide⟩
 /-- The user requested exactly 33; the spec's 33000 is a separate, stronger target. -/
 abbrev pruned10 : Params := ⟨10, 33, by decide⟩
 
-/-- The six requested claims, still to be established for this candidate game. -/
+/-- The six requested claims for this candidate game; proved by `Lifetimes.requestedSecurity`
+(StageOne.lean). -/
 def RequestedSecurity : Prop :=
   @Security.HasClassicalSecurityBits full 127 ∧
   @Security.HasClassicalSecurityBits pruned20 127 ∧
