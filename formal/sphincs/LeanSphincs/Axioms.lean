@@ -188,6 +188,7 @@ import LeanSphincs.BridgeSaturation
 import LeanSphincs.BridgeDomination
 import LeanSphincs.BridgeInterp
 import LeanSphincs.BridgeVirtual
+import LeanSphincs.BridgePresample
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -8870,3 +8871,75 @@ import LeanSphincs.BridgeVirtual
 /-- info: 'LeanSphincs.Security.Domination.signing_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Domination.signing_step
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_cached' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_cached
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_fresh' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_fresh
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.store_comm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.store_comm
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.store_cache_ne' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.store_cache_ne
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_readOutside' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_readOutside
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.debts_store_untargeted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.debts_store_untargeted
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.realized_store_untargeted' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.realized_store_untargeted
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.realized_presample' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.realized_presample
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_known' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_known
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_record' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_record
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_setKnown' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_setKnown
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_sampleCoordinate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_sampleCoordinate
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_readOutside_record' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_readOutside_record
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.costStep_ordinary' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.costStep_ordinary
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_ordinaryStep' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_ordinaryStep
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_indep' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_indep
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_costStep' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_costStep
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.presample_interp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.presample_interp
