@@ -9174,3 +9174,59 @@ import LeanSphincs.BridgeSignerFors
 /-- info: 'LeanSphincs.Security.GraphView.loop_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.GraphView.loop_bound
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_add' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_add
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_const_mul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_const_mul
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_const' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_const
+
+/-- info: 'LeanSphincs.Security.Domination.virtual_add' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.virtual_add
+
+/-- info: 'LeanSphincs.Security.Domination.virtual_const_mul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.virtual_const_mul
+
+/-- info: 'LeanSphincs.Security.Domination.virtual_const' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.virtual_const
+
+/-- info: 'LeanSphincs.Security.Domination.virtual_mono_base' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.virtual_mono_base
+
+/-- info: 'LeanSphincs.Security.Domination.base_le_virtual' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.base_le_virtual
+
+/-- info: 'LeanSphincs.Security.Domination.creations_mono' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.creations_mono
+
+/-- info: 'LeanSphincs.Security.Domination.creations_add' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.creations_add
+
+/-- info: 'LeanSphincs.Security.Domination.creations_const_mul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.creations_const_mul
+
+/-- info: 'LeanSphincs.Security.Domination.creations_const' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.creations_const
+
+/-- info: 'LeanSphincs.Security.Domination.creations_le_succ' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.creations_le_succ
+
+/-- info: 'LeanSphincs.Security.Domination.creations_tsum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.creations_tsum

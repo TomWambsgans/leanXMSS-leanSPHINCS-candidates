@@ -387,4 +387,219 @@ theorem signing_step (hU : U.Nonempty) (hw : wbar ≤ 1) (hmono : Monotone' f) (
 
 end Step
 
+/-! ### Linearity and order in the base function -/
+
+section Linear
+
+variable {U : Finset V} {wbar : ℝ≥0∞}
+
+theorem slotValue_add (f g : Multiset V → ℝ≥0∞) :
+    ∀ (coins : List (ℝ≥0∞ × Multiset V)) current,
+      slotValue (fun m => f m + g m) current coins = slotValue f current coins + slotValue g current coins
+  | [], current => rfl
+  | (p, s) :: rest, current => by
+      simp only [slotValue, slotValue_add f g rest]
+      ring
+
+theorem slotValue_const_mul (c : ℝ≥0∞) (f : Multiset V → ℝ≥0∞) :
+    ∀ (coins : List (ℝ≥0∞ × Multiset V)) current,
+      slotValue (fun m => c * f m) current coins = c * slotValue f current coins
+  | [], current => rfl
+  | (p, s) :: rest, current => by
+      simp only [slotValue, slotValue_const_mul c f rest]
+      ring
+
+theorem slotValue_const (c : ℝ≥0∞) :
+    ∀ (coins : List (ℝ≥0∞ × Multiset V)), (∀ x ∈ coins, x.1 ≤ 1) → ∀ current,
+      slotValue (fun _ => c) current coins = c
+  | [], _, current => rfl
+  | (p, s) :: rest, h, current => by
+      simp only [slotValue, slotValue_const c rest (fun x hx => h x (List.mem_cons_of_mem _ hx))]
+      rw [← add_mul, add_tsub_cancel_of_le (h _ (List.mem_cons_self ..)), one_mul]
+
+theorem virtual_add (hU : U.Nonempty) (f g : Multiset V → ℝ≥0∞) :
+    ∀ m items d, virtual U wbar (fun x => f x + g x) m items d =
+      virtual U wbar f m items d + virtual U wbar g m items d
+  | 0, _, _ => rfl
+  | m + 1, items, d => by
+      simp only [virtual]
+      rw [← freshAvg_add]
+      congr 1
+      funext u
+      rw [← slotValue_add]
+      exact slotValue_congr (fun e => virtual_add hU f g m (u :: items) e) _ _
+
+theorem virtual_const_mul (c : ℝ≥0∞) (f : Multiset V → ℝ≥0∞) :
+    ∀ m items d, virtual U wbar (fun x => c * f x) m items d = c * virtual U wbar f m items d
+  | 0, _, _ => rfl
+  | m + 1, items, d => by
+      simp only [virtual]
+      rw [← freshAvg_mul]
+      congr 1
+      funext u
+      rw [← slotValue_const_mul]
+      exact slotValue_congr (fun e => virtual_const_mul c f m (u :: items) e) _ _
+
+theorem virtual_const (hU : U.Nonempty) (hw : wbar ≤ 1) (c : ℝ≥0∞) :
+    ∀ m items d, virtual U wbar (fun _ => c) m items d = c
+  | 0, _, _ => rfl
+  | m + 1, items, d => by
+      simp only [virtual]
+      have h : ∀ u, slotValue (virtual U wbar (fun _ => c) m (u :: items)) (d + {u}) (itemCoins wbar items) = c := by
+        intro u
+        rw [slotValue_congr (fun e => virtual_const hU hw c m (u :: items) e)]
+        exact slotValue_const c _ (itemCoins_le hw items) _
+      simp only [h]
+      exact freshAvg_const U hU c
+
+theorem virtual_mono_base {f g : Multiset V → ℝ≥0∞} (hfg : ∀ x, f x ≤ g x) :
+    ∀ m items d, virtual U wbar f m items d ≤ virtual U wbar g m items d
+  | 0, _, d => hfg d
+  | m + 1, items, d => by
+      simp only [virtual]
+      refine freshAvg_mono U fun u _ => ?_
+      exact slotValue_le_of_le (fun e => virtual_mono_base hfg m (u :: items) e) _ _
+
+/-- The virtual future only adds disclosures. -/
+theorem base_le_virtual (hU : U.Nonempty) (hw : wbar ≤ 1) {f : Multiset V → ℝ≥0∞} (hmono : Monotone' f)
+    (hsuper : Supermodular f) (hfin : ∀ m, f m ≠ ⊤) :
+    ∀ m items d, f d ≤ virtual U wbar f m items d
+  | 0, _, d => le_rfl
+  | m + 1, items, d => by
+      simp only [virtual]
+      have hprops := fun u => virtual_props hU hw hmono hsuper hfin m (u :: items)
+      calc f d = freshAvg U (fun _ => f d) := (freshAvg_const U hU _).symm
+        _ ≤ _ := freshAvg_mono U fun u _ => by
+            calc f d ≤ virtual U wbar f m (u :: items) (d + {u}) :=
+                  le_trans (hmono _ _ (Multiset.le_add_right _ _)) (base_le_virtual hU hw hmono hsuper hfin m _ _)
+              _ = slotValue (virtual U wbar f m (u :: items)) (d + {u}) [] := rfl
+              _ ≤ _ := by
+                  have hcoins := coins_gain (virtual U wbar f m (u :: items)) (hprops u).1 (hprops u).2.1
+                    (hprops u).2.2 (items.map fun w => (wbar, w))
+                    (by intro i hi; obtain ⟨w, _, rfl⟩ := List.mem_map.1 hi; exact hw) (d + {u}) (d + {u}) le_rfl
+                  have hc' : coinsOf (items.map fun w => (wbar, w)) = itemCoins wbar items := by
+                    simp [coinsOf, itemCoins, Function.comp_def]
+                  rw [hc'] at hcoins
+                  exact le_trans le_self_add hcoins
+
+end Linear
+
+/-! ### Future pairs created by the remaining budget -/
+
+section Creation
+
+variable (U : Finset V) (land : ℝ≥0∞)
+
+/-- Expected value after `k` future pairs, each an item with a uniform view with probability
+`land`. -/
+noncomputable def creations (G : List V → ℝ≥0∞) : ℕ → List V → ℝ≥0∞
+  | 0, items => G items
+  | k + 1, items => (1 - land) * creations G k items + land * freshAvg U (fun v => creations G k (v :: items))
+
+variable {U land}
+
+theorem creations_mono {G H : List V → ℝ≥0∞} (hGH : ∀ items, G items ≤ H items) :
+    ∀ k items, creations U land G k items ≤ creations U land H k items
+  | 0, items => hGH items
+  | k + 1, items => by
+      simp only [creations]
+      gcongr
+      · exact creations_mono hGH k items
+      · exact freshAvg_mono U fun v _ => creations_mono hGH k (v :: items)
+
+theorem creations_add (G H : List V → ℝ≥0∞) :
+    ∀ k items, creations U land (fun I => G I + H I) k items =
+      creations U land G k items + creations U land H k items
+  | 0, items => rfl
+  | k + 1, items => by
+      simp only [creations]
+      rw [creations_add G H k items]
+      have : (fun v => creations U land (fun I => G I + H I) k (v :: items)) =
+          fun v => creations U land G k (v :: items) + creations U land H k (v :: items) := by
+        funext v; exact creations_add G H k (v :: items)
+      rw [this, freshAvg_add]
+      ring
+
+theorem creations_const_mul (c : ℝ≥0∞) (G : List V → ℝ≥0∞) :
+    ∀ k items, creations U land (fun I => c * G I) k items = c * creations U land G k items
+  | 0, items => rfl
+  | k + 1, items => by
+      simp only [creations]
+      rw [creations_const_mul c G k items]
+      have : (fun v => creations U land (fun I => c * G I) k (v :: items)) =
+          fun v => c * creations U land G k (v :: items) := by
+        funext v; exact creations_const_mul c G k (v :: items)
+      rw [this, freshAvg_mul]
+      ring
+
+theorem creations_const (hU : U.Nonempty) (hland : land ≤ 1) (c : ℝ≥0∞) :
+    ∀ k items, creations U land (fun _ => c) k items = c
+  | 0, _ => rfl
+  | k + 1, items => by
+      simp only [creations]
+      have : (fun v => creations U land (fun _ => c) k (v :: items)) = fun _ => c := by
+        funext v; exact creations_const hU hland c k (v :: items)
+      rw [this, freshAvg_const U hU, creations_const hU hland c k items, ← add_mul,
+        tsub_add_cancel_of_le hland, one_mul]
+
+/-- If the base value grows with items, so does the number of future pairs. -/
+theorem creations_le_succ (hU : U.Nonempty) (hland : land ≤ 1) {G : List V → ℝ≥0∞}
+    (hG : ∀ v items, G items ≤ G (v :: items)) (hperm : ∀ items items', items.Perm items' → G items = G items') :
+    ∀ k items, creations U land G k items ≤ creations U land G (k + 1) items := by
+  -- adding one future pair in front is the same as adding it at the end
+  have hmono : ∀ k items v, creations U land G k items ≤ creations U land G k (v :: items) := by
+    intro k
+    induction k with
+    | zero => intro items v; exact hG v items
+    | succ k ih =>
+        intro items v
+        simp only [creations]
+        gcongr
+        · exact ih items v
+        · refine freshAvg_mono U fun w _ => ?_
+          calc creations U land G k (w :: items) ≤ creations U land G k (v :: w :: items) := ih _ v
+            _ = creations U land G k (w :: v :: items) := by
+                have hp : ∀ k' (a b : List V), a.Perm b → creations U land G k' a = creations U land G k' b := by
+                  intro k'
+                  induction k' with
+                  | zero => intro a b hab; exact hperm a b hab
+                  | succ k' ih' =>
+                      intro a b hab
+                      simp only [creations]
+                      rw [ih' a b hab, show (fun x => creations U land G k' (x :: a)) =
+                        (fun x => creations U land G k' (x :: b)) from funext fun x => ih' _ _ (hab.cons x)]
+                exact hp k _ _ (List.Perm.swap w v items)
+  intro k items
+  simp only [creations]
+  calc creations U land G k items = (1 - land) * creations U land G k items + land * creations U land G k items := by
+        rw [← add_mul, tsub_add_cancel_of_le hland, one_mul]
+    _ ≤ _ := by
+        gcongr
+        calc creations U land G k items = freshAvg U (fun _ => creations U land G k items) :=
+              (freshAvg_const U hU _).symm
+          _ ≤ _ := freshAvg_mono U fun v _ => hmono k items v
+
+/-- Expectations over an outcome commute with future pairs. -/
+theorem creations_tsum {β : Type} (weights : β → ℝ≥0∞) (G : β → List V → ℝ≥0∞) :
+    ∀ k items, ∑' x, weights x * creations U land (G x) k items =
+      creations U land (fun I => ∑' x, weights x * G x I) k items
+  | 0, items => rfl
+  | k + 1, items => by
+      simp only [creations]
+      rw [← creations_tsum weights G k items]
+      have : (fun v => creations U land (fun I => ∑' x, weights x * G x I) k (v :: items)) =
+          fun v => ∑' x, weights x * creations U land (G x) k (v :: items) := by
+        funext v; exact (creations_tsum weights G k (v :: items)).symm
+      rw [this]
+      simp only [mul_add, ENNReal.tsum_add, freshAvg, Finset.mul_sum]
+      congr 1
+      · rw [← ENNReal.tsum_mul_left]
+        exact tsum_congr fun x => by ring
+      · rw [Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
+        refine Finset.sum_congr rfl fun v _ => ?_
+        rw [← ENNReal.tsum_mul_left, ← ENNReal.tsum_mul_left]
+        exact tsum_congr fun x => by ring
+
+end Creation
+
 end LeanSphincs.Security.Domination
