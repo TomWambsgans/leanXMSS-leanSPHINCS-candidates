@@ -2,6 +2,7 @@ import LeanSphincs.BridgeAssemblyA
 import LeanSphincs.BridgePotentialA8
 import LeanSphincs.BridgeContactBound
 import LeanSphincs.H0SplitCert
+import LeanSphincs.BridgeContactHalf
 
 /-! One sample of the small-budget route: the stopped experiment with the above-word values exposed
 is bounded by the linear potential (guesses, first-order hits, WOTS second-order events, FORS
@@ -227,7 +228,7 @@ theorem sample_boundS (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
           (signatureLimit * matchRate +
             (q - keygenCost : ℕ) * (((2 ^ 128 - ((q - keygenCost) + 2 ^ 32) : ℕ) : ℝ≥0∞))⁻¹) +
         (((q - keygenCost : ℕ) : ℝ≥0∞) * contactRate) *
-          ((q - keygenCost : ℕ) * (ENNReal.ofReal (c : ℝ) + failMass (failSet prepared.1)) +
+          ((q - keygenCost : ℕ) * (ENNReal.ofReal ((c / 2 : ℚ) : ℝ) + failMass (failSet prepared.1)) +
             signatureLimit * failMass (failSet prepared.1)) := by
   set param := truncateHash parameterOutput with hparam
   set data := sampleData parameterOutput fixed highs remaining with hdata
@@ -244,7 +245,7 @@ theorem sample_boundS (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
   -- the contact bounds
   have hA4a := a4a_bound_fair adversary hnr q hq2 parameterOutput fixed highs remaining prepared hprepared tgA hmsg
     known known
-  have hA4b := a4b_bound_check adversary hnr q b N qb m c hbb hNN hnear hqb parameterOutput fixed highs remaining
+  have hA4b := a4b_bound_check_half adversary hnr q b N qb m c hbb hNN hnear hqb parameterOutput fixed highs remaining
     prepared hprepared tgA hmsg known known
   -- the linear potential, after the keygen tick
   have hA3 : ∑' out, Pr[= out | run] * (endValue pay out.2 + b0 * (digestCount tgA out.1.2.2.1 : ℝ≥0∞)) ≤

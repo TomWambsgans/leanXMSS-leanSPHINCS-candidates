@@ -36,7 +36,7 @@ noncomputable def smallFail (q : ℕ) : ℝ≥0∞ :=
     (((q - keygenCost : ℕ) : ℝ≥0∞) * contactRate) * (((q - keygenCost : ℕ) : ℝ≥0∞) + signatureLimit)
 
 set_option maxRecDepth 100000 in
-/-- **Small budgets, seed-free win.** -/
+/-- **Small budgets, seed-free win.** The near term enters at half the certified near H-term `c`. -/
 theorem small_seedFree_bound (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (hq : q < 2 ^ 256) (hq2 : 2 * (q - keygenCost) ≤ 2 ^ 128)
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
@@ -44,9 +44,9 @@ theorem small_seedFree_bound (hb : 0 < subtreeHeight) (adversary : Adversary) (h
     (t : H0.PoisTable) (o : H0.OptS) (hthr : H0.checkThreshS b N t o = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128)
     (qb m : ℕ) (c : ℚ) (hnear : H0.checkNear b N qb m c = true) (hqb : q - keygenCost ≤ qb) :
     Pr[Win | seedFreeExperiment (internalize adversary) q] ≤
-      smallMain ρ q o.B c + smallFail q * expectedFail := by
+      smallMain ρ q o.B (c / 2) + smallFail q * expectedFail := by
   refine le_trans (seedFree_le_exposeP adversary q) ?_
-  set A := smallMain ρ q o.B c with hA
+  set A := smallMain ρ q o.B (c / 2) with hA
   set C := smallFail q with hC
   have hsample : ∀ parameterOutput fixed highs remaining prepared,
       prepared ∈ support (preparation parameterOutput fixed highs remaining) →
@@ -87,7 +87,7 @@ theorem det_small (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ)
     (t : H0.PoisTable) (o : H0.OptS) (hthr : H0.checkThreshS b N t o = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128)
     (qb m : ℕ) (c : ℚ) (hnear : H0.checkNear b N qb m c = true) (hqb : q - keygenCost ≤ qb) :
     Det.forgeAdvantageDet adversary ≤
-      smallMain ρ q o.B c + smallFail q * (2 : ℝ≥0∞)⁻¹ ^ 201 + 2 * ((q : ℝ≥0∞) / 2 ^ 256) := by
+      smallMain ρ q o.B (c / 2) + smallFail q * (2 : ℝ≥0∞)⁻¹ ^ 201 + 2 * ((q : ℝ≥0∞) / 2 ^ 256) := by
   refine le_trans (Det.forgeAdvantageDet_le_seedFree adversary q hbound) (add_le_add ?_ le_rfl)
   refine le_trans (small_seedFree_bound hb (Memo.memoAdv adversary) (Memo.memoAdv_noRepeat adversary) q hq hq2 ρ hN
     b N hbb hNN t o hthr hcthr qb m c hnear hqb) ?_
