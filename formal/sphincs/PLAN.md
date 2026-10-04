@@ -31,62 +31,68 @@ preparation; supported preparation-cache cleanliness and exact surrogate-target 
 full seeded-game cache-change reduction with derivation-only loss and a shared-budget partition;
 actual conditional prequeried-source selection, joint-pair forecasts, and exact pool mass balance.
 
-## Paper proof of the target bound (checked by hand, 2026-10-03)
+## Adaptive FORS/WOTS switching (2026-10-03)
 
-Goal: Adv(A) ≤ q/2^127 whenever every run of the experiment counts at most q hash calls
-(adversary, signer, verifier, plus keygen's 258·2^b + 2(26-b) honest calls). If q ≥ 2^127 the
-bound is trivial, so assume q < 2^127.
+A forger can collect its signatures and spend each hash call where it is best: on the FORS
+search when the realised openings beat the per-call budget, on chain/tree/encoding searches
+otherwise. Its rate is E[max(X, r)] where X is the realised FORS rate (units of 2^-127 per digest
+query) and r the best other rate. Bounding only E[X] (the old lifetimes) is not enough; at b=12
+and 125000 signatures the switching gain is about 12%. `scripts/adaptive_lifetime.py` computes
+lifetimes that are provable with the current, crude per-call accounting (11–17% of the old ones).
+The plan below aims at 82–97% of the old lifetimes.
 
-1. Seed. Replace the seed-derived secrets by independent uniform material; the runs differ only
-   if some query names the seed: loss ≤ q/2^256. (Formal: `Reduce.forgeAdvantage_le_seedFree`.)
-2. Hidden coordinates. Chain values at positions 0..2 of retained leaves and FORS secrets are
-   independent uniform 128-bit coordinates, revealed only by signing. Stop the run at the first
-   ordinary query that names a still-hidden coordinate; the stop is charged 2^-128 per row query
-   in a forced-failure comparison run. (Formal: `forgeAdvantage_le_prep`,
-   `HiddenOutside.table_stop_or_bad_bound`.)
-3. Classification. In a non-stopped winning run, the accepted forgery is either
-   (a) a tree/surrogate/WOTS-leaf/chain/FORS-node/encoding exception, i.e. some cached
-   non-canonical answer hits the single target of its tweak (graph label or canonical encoding
-   output, all fixed before the run once every leaf's encoding search is pre-run); or
-   (b) a canonical opening of an unsigned (M, R) whose cached digest lands and whose 24 FORS
-   openings were all revealed (resubmitting a signed (M, R) reproduces the signature, and an
-   undisclosed secret or a chain value below the canonical word would have stopped the run).
-4. Budget (common comparison run, per ordinary query): row input: stop 1 + target 1; structural
-   or encoding input: target ≤ 1; message-digest input: no target, no stop, FORS budget 2;
-   seed/other inputs: 0. Weights are in units of 2^-128, so the total is ≤ 2·(#ordinary queries)
-   ≤ 2(q − K) with K the keygen tick. Hence Adv ≤ (2q − 2K)/2^128 + q/2^256 ≤ q/2^127, because
-   q/2^256 ≤ 2K/2^128 for q < 2^127.
-5. FORS term. Needed: Pr[(b)] ≤ 2^-127 · E[#message-digest queries]. Each unsigned landed
-   candidate costs two adversary/verifier block queries (a landed signer trial is always
-   signed), so a per-candidate hazard ≤ 2^-126 suffices. For a fresh digest against N signed
-   digests drawn uniformly from the kept subtree the hazard is forsBound(b, N):
-   0.956, 0.929, 0.837, 0.759, 0.898 × 2^-127 (full, b=20, 13, 14, 12) and 2^-231 (b=10).
+## Paper proof (target)
 
-   Pool bias: a signer's grinding trial may hit a pair (R, M_j) the adversary already queried;
-   the selected digest is then a known one, and the adversary chooses M_j adaptively. Per
-   signature, P(selected digest ∈ A | past) ≤ (1−π)·|A|/|kept| + w·|pool(M_j) ∩ A|, with
-   w ≤ 2^(27−b−128) per cached landed point. The crude union over covering patterns and pool
-   tuples inflates each covering signature by a factor (1 + q/2^127).
-   * b=10, N=33: the inflation is at most 2^24 and the hazard stays below 2^-200 per candidate,
-     so the crude argument proves the claim with enormous slack.
-   * The other five: the crude argument only covers q up to roughly 2^119–2^123. The true
-     adaptive gain is much smaller (with a single message the selected digest is exactly
-     uniform; only the choice among message pools biases it), but proving that is a separate
-     concentration argument that is not worked out. These five stay conditional for now.
+Units: N = 2^128, x = q/N, h = 2^-127. Z = Psi(M)/h, where M is a multinomial word of Nbar
+uniform kept-leaf proposals (Nbar = N + O(2^12)) and Psi(M) = 2^-266 sum_l P_iota(M_l) is the
+count-based coverage price (P_iota(m) ~ m^24 with block weights iota(k) ~ 1 for k <= 8; it bounds
+every realised coverage, collisions included).
 
-## Remaining formal plan
+F. FORS forecast domination (pool steering included). Every first-touch digest query's
+   forecast F_t satisfies F_t <= E[Psi(M) | past]: a proposal bank coupled to the signer by
+   rejection sampling (fair-share selection symmetry, Ville-type concentration of cached pools
+   per message/leaf and per candidate/block), plus a witness count over tree-to-signature maps.
+   Hence for any per-call rate r of the other attacks, by Jensen:
+       Adv <= q E[max(Psi, r)] + Pr[Bad] + (other terms).
+L. Large budgets (x >= x0 ~ 2^-13): crude hazards (hidden guess + target per call) composed
+   multiplicatively through a pending-debt potential V = 1 - (1 - U(r)) (1 - 2^-128)^debt on the
+   lazy-table comparison; digest queries pay the baseline (1 - 2x) h additively. Gives
+   Adv <= 2x - 2x^2 + 2x E[(Z - 1 + 2x)^+] + exceptions; needs E[(Z - 1)^+] <~ x0/2.
+S. Small budgets (x <= x0): refined chain analysis (leanVM's route): one-step contacts are not
+   forgeries; prefix rate 3/2 (two-edge completions), encoding rate 1 + markers (4032 unit
+   neighbours), other 1; FORS secret guesses need a near-covered digest. Gives
+   Adv <= 2x E[max(Z, r/2)] + C x^2 with r ~ 1.56 at x0; closes for x <= ~2^-13.
 
-R1. Finish `win_implies_bad` (step 3; all case lemmas are proved, only the assembly remains;
-    split it further, since the one-piece proof stalls elaboration). Add the Valid-log
-    condition (≤ N signatures) to `ForsCover`.
-R2. Comparison-world target bound: initial prepared cache is clean for `compTable`;
-    `weighted_output_bound` with per-input weight |targets| ≤ 1, charged to trace entries.
-R3. Compose with the guess charge into Adv ≤ E[Σ entry weights]/2^128 + Pr[ForsCover] + q/2^256,
-    state the FORS rate as an explicit hypothesis, and do the arithmetic of step 4. This gives
-    all six claims conditional on one stated FORS-coverage hypothesis per instance.
-R4. Prove the FORS hypothesis for b=10 (step 5, crude argument), preferably via a standalone
-    adaptive FORS game and a simulation reduction from the comparison world.
-R5. Leave the five tight FORS hypotheses explicit; record precisely what is open.
+Projected provable lifetimes (E[(Z-1)^+] <= 2^-13.5, Poisson upper model):
+    full 1.16e9 (97%), b=20 21.9e6 (92%), b=14 402e3 (87%), b=13 202e3 (84%), b=12 103e3 (82%);
+    b=10 keeps 33. Unproved exact-coverage references: 1.19e9, 22.3e6, 395e3, 202e3, 103e3.
+Stage 1 alone (F + L, no S; tolerance 2^((b-118)/2) from keygen slack and x^2): about 40-60%.
+
+## Formal plan
+
+Done: seed removal, hidden-coordinate stop, lazy outside oracle, rich program, prepared
+encoding searches (`forgeAdvantage_le_prep`); win implication on non-stopped runs
+(`HiddenBridge.win_implies_bad`: target hit or FORS cover with <= N signing calls).
+
+Stage 1 (large budgets; about 10-15K lines):
+ 1a. Saturating potential on the lazy-table comparison (`HiddenReveal.comparison`): guesses
+     create debt resolved when the coordinate is sampled, target hits are first-hit events,
+     digest queries pay the baseline. Reuse `SphincsSecurity...PrimitiveMessagePotential`.
+ 1b. Proposal bank and signer coupling: fair-share selection symmetry
+     (`LifetimePoolGrinding.poolGrindRandomness_factor`), Ville-type pool concentration,
+     rejection bridge (reuse leanVM's generic proposal-word kit), proposal-count exception.
+ 1c. Witness-count domination F_t <= E[Psi(M) | past]; Doob martingale; Jensen with the
+     baseline; excess term q E[(Psi - b)^+].
+ 1d. Certified bounds on E[(Z - theta)^+] for the multinomial word (exact tails per leaf,
+     Poisson comparison or direct multinomial bounds); closing arithmetic for x >= x0.
+Stage 2 (small budgets; about 15-20K lines): port leanVM's refined route to the candidate:
+ 2a. Chains (generic, reuse) and our `SecurityPrefix*` (already ported) for contacts and
+     two-edge completions; markers with the WOTS+C neighbour counts (b1 = 63, b2 = 4032).
+ 2b. Continuing secret-guess interpreter (reuse `Forced/SecretGuess*`), near-cover x guess and
+     two-guess bounds for FORS secrets.
+ 2c. Primitive union with a shared query allocation; closing arithmetic for x <= x0.
+Then: Statement numbers, six theorems, axiom guards, docs.
+
 R6. Resolve the reference caching/query-count transfer before claiming security of Rust itself.
 
 The bridge files `LeanSphincs/Bridge*.lean` implement steps 1–3 (branch
