@@ -40,6 +40,51 @@ Units: S = 2^128 digests, x = q/S. The proof bounds the forging advantage by q/2
 5. **Closing.** `stage1_close` adds the pieces; `requestedSecurity` instantiates them for the seven
    parameter sets.
 
+## The stage-2 proof for the deterministic signer
+
+`LifetimesDet.requestedSecurityDet` proves 127 bits for `Seeded.sign` (randomizers derived from the
+seed and the message) at 80–90% of the attack lifetime (README). Units as above; K is the keygen
+cost and q' = q − K.
+
+1. **Statement and memo reduction.** [StatementDet](LeanSphincs/StatementDet.lean) changes only the
+   signing oracle. `Det.forgeAdvantageDet_le_seedFree` ([BridgeDet](LeanSphincs/BridgeDet.lean))
+   bounds the advantage by the seed-free win of the memoizing adversary, which never asks for the
+   same message twice, plus 2q/2^256. So each cached randomizer gets one coin instead of one per
+   remaining signature, and the FORS loads are N/2^b without the 1/(1−x) inflation of stage 1.
+2. **Exposure and refined classification.** [BridgeExpose](LeanSphincs/BridgeExpose.lean) reveals at
+   the start every root-tree chain value at or above the prepared word of a landed leaf.
+   `win_implies_badA` ([BridgeImplicationA](LeanSphincs/BridgeImplicationA.lean)) shows a win is one
+   of the following:
+   - a first-order hit;
+   - a WOTS second-order event: a two-edge completion, a contact together with a unit-neighbour
+     encoding marker, or two contacts;
+   - a FORS leaf contact that was revealed later or that has no guess record;
+   - two FORS contacts;
+   - a near cover or a full cover of an unsigned cached pair.
+
+   [BridgeAssemblyA](LeanSphincs/BridgeAssemblyA.lean) keeps the valid finished outcome.
+3. **Two routes, split at q_h.**
+   - **Small budgets (q' ≤ q_h)**, [BridgeSmallSample](LeanSphincs/BridgeSmallSample.lean), [BridgeSmallClose](LeanSphincs/BridgeSmallClose.lean):
+     - *Linear potential.* [BridgePotentialA](LeanSphincs/BridgePotentialA.lean)–A8 pay first-order hits, WOTS events, unrecorded and paired FORS contacts and correct guesses at ρ/2^128 per query, with ρ = max(3/2, 2 − 1/(1+4032x), 1+66x).
+     - *Cover potential.* The one-coin FORS potential at baseline ρ/2^128 pays covers. Its excess is certified by `checkThreshS`.
+     - *Revealed contacts.* A contact at a leaf revealed later costs x·N/(2^b·2^10) ([BridgeContactA](LeanSphincs/BridgeContactA.lean)).
+     - *Near-covered contacts.* A contact at a near-covered leaf costs (x/2)·q'·H_near, where H_near is a Touchard-23 bound checked by `checkNear`. The sum potential C·P(y) + 2^-128·Σ_{j<y} P(j) over budget levels gives the half, because one query is never both a FORS query and a digest query ([BridgeContactHalf](LeanSphincs/BridgeContactHalf.lean)).
+     - *Closing.* `small_close` ([BridgeSmallFinal](LeanSphincs/BridgeSmallFinal.lean)) reduces the bound to the rational check `checkSmall`: ρ + 2^128 B + N/2^(b+10) + q_h/(2^128−q_h−2^32) + q_h c/2 + 2^-60 ≤ 2.
+   - **Large budgets (q' ≥ q_h).** `det_large` ([BridgeRoutesLarge](LeanSphincs/BridgeRoutesLarge.lean)) runs stage 1 with one coin per item. It uses the Poisson-domination and Chernoff-split certificates of [H0Split](LeanSphincs/H0Split.lean) and [H0SplitCert](LeanSphincs/H0SplitCert.lean), which cover every budget from q_h to 2^127.
+4. **Closing.** `det_bits` ([BridgeDetFinal](LeanSphincs/BridgeDetFinal.lean)) combines the two routes. [H0DetCheck](LeanSphincs/H0DetCheck.lean) holds the kernel-checked certificates (`decide +kernel`, exact rationals) for each parameter set, with q_h ≈ 2^(128+lx):
+
+   | b | lx |
+   | ---: | ---: |
+   | 26 | −19 |
+   | 20 | −11.75 |
+   | 14 | −9.22 |
+   | 13 | −9.06 |
+   | 12 | −8.91 |
+   | 10 | −8.63 |
+   | 8 | −8.41 |
+
+   At b = 20 and 26 the large route alone limits N; at the other heights both routes are close to tight at the chosen N.
+
 ## What is checked
 
 `Scheme.lean` ports the previous agent's draft to a separate namespace and build target.
@@ -338,9 +383,9 @@ the final composition remain open.
 - The requested limits were lowered (README) because adaptive FORS/WOTS switching defeats the
   expected-coverage criterion behind the earlier targets.
 - `Randomized.sign` samples fresh independent 16-byte randomizers with replacement, as
-  requested. Rust derives them from the seed and message. The candidate security target is
-  for the independent-randomizer variant; transferring it to Rust would require a separate
-  derivation reduction. Both seeded and independently randomized grinding bounds are now
+  requested. Rust derives them from the seed and message; that signer is `Seeded.sign`, whose
+  game (StatementDet.lean) carries the stage-2 lifetimes. Both statements are about the
+  functional model, not the Rust code (see the caching remark below). Both seeded and independently randomized grinding bounds are now
   checked; end-to-end honest completeness uses the latter.
 - The formal signer returns `none` after 2^32 randomizer trials. Rust uses `(0u32..)` and
   `.find(...).unwrap()` without this explicit failure case; overflow/wrapping and failure behavior

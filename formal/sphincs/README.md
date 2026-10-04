@@ -2,8 +2,11 @@
 
 **Status: the requested 127-bit SUF-CMA lifetime claims (seven parameter sets) are proved for the candidate game
 (`Lifetimes.requestedSecurity`, [StageOne.lean](LeanSphincs/StageOne.lean)), at signature limits
-lowered to account for adaptive FORS/WOTS switching (see below).** The proof uses only `propext`,
-`Classical.choice` and `Quot.sound`; it is pinned in [Axioms.lean](LeanSphincs/Axioms.lean).
+lowered to account for adaptive FORS/WOTS switching (see below). For the signer of the Rust
+implementation (seed-derived randomizers), 127 bits are proved at 80–90% of the best known attack's
+lifetime (`LifetimesDet.requestedSecurityDet`, [LifetimesDet.lean](LeanSphincs/LifetimesDet.lean)).**
+Both proofs use only `propext`, `Classical.choice` and `Quot.sound`; they are pinned in
+[Axioms.lean](LeanSphincs/Axioms.lean).
 
 `LeanSphincs/` models the candidate: one height-26 tree, 24 height-10 FORS trees, 64 WOTS+C
 chains with four positions and sum 120, two message-digest calls, and pruning with surrogate
@@ -25,6 +28,8 @@ all dependencies are drawn from `propext`, `Classical.choice`, and `Quot.sound`.
 
 | Claim | Theorem / file | Scope |
 | --- | --- | --- |
+| **The deterministic signer has 127 bits at 80–90% of the attack lifetimes** | `LifetimesDet.requestedSecurityDet`, [LifetimesDet](LeanSphincs/LifetimesDet.lean) | The game of [StatementDet.lean](LeanSphincs/StatementDet.lean) (`Seeded.sign`, randomizers derived from the seed and the message): every adversary, every q≥1 hash queries |
+| Two routes close the deterministic signer from rational checks | `ForsPotential.det_bits`, [BridgeDetFinal](LeanSphincs/BridgeDetFinal.lean) | Small budgets (q−K ≤ q_h): linear potential, cover potential at baseline ρ/2^128, FORS contact bounds; large budgets: one-coin split certificates |
 | **All requested lifetimes have 127 bits of classical SUF-CMA security** | `Lifetimes.requestedSecurity`, [StageOne](LeanSphincs/StageOne.lean) | The game of [Statement.lean](LeanSphincs/Statement.lean): every adversary, every q≥1 hash queries (keygen, signing and verification included) |
 | Stage 1 closes for any parameter set with the targeting and an excess bound | `ForsPotential.stage1_close`, [BridgeForsAssembly](LeanSphincs/BridgeForsAssembly.lean) | Saturation of fixed/hidden targets plus the FORS potential of the start; seed, failing-search and cache terms included |
 | The FORS potential pays for any adaptive adversary | `ForsPotential.good_advProg`, [BridgeForsGame](LeanSphincs/BridgeForsGame.lean), [BridgeForsPotential](LeanSphincs/BridgeForsPotential.lean) | Draws, hash queries (new pairs paid by the saturation baseline), grinding signer with cache pool selection, verification |
@@ -122,10 +127,30 @@ were lowered to those the stage-1 argument proves (see [PROOF.md](PROOF.md) and
 | 8 | 3,046 | 9,000 (site) |
 
 The b=10 and b=8 limits are the largest the stage-1 certificates reach; the site's 33K and 9K
-threshold lifetimes are not proved. The full-key limit is below the 2^30 the spec advertises. A refined small-budget
-analysis (leanVM's route, "stage 2" in [PLAN.md](PLAN.md)) is expected to raise the other limits
-to roughly 82–97% of the earlier targets; it is not done. Modeling differences are recorded in
-[PROOF.md](PROOF.md).
+threshold lifetimes are not proved for this game. The full-key limit is below the 2^30 the spec advertises.
+Modeling differences are recorded in [PROOF.md](PROOF.md).
+
+## Proved lifetimes for the deterministic signer
+
+`LifetimesDet.requestedSecurityDet` proves 127 bits for the signer of the Rust implementation
+(`Seeded.sign`: the randomizer is derived from the seed and the message, so a repeated request
+returns the same signature), in the game of [StatementDet.lean](LeanSphincs/StatementDet.lean),
+which is the game of Statement.lean with only the signing oracle changed. N_att is the best known
+attack's lifetime: the largest N with E[max(X, 1/2)] ≤ 1, where X is the FORS cover rate per digest
+query of the adaptive forger (distinct revealed leaves, exact multinomial loads over the 2^b
+indices) in units of 2^-127, and 1/2 is the rate of the other (chain, tree, encoding) searches.
+
+| Subtree height b | Proved signature limit N | N_att | N / N_att |
+| --- | ---: | ---: | ---: |
+| 26 | 1,084,000,000 | 1,203,133,390 | 90.1% |
+| 20 | 21,450,000 | 23,797,911 | 90.1% |
+| 14 | 401,000 | 466,871 | 85.9% |
+| 13 | 205,000 | 242,291 | 84.6% |
+| 12 | 105,000 | 125,715 | 83.5% |
+| 10 | 27,700 | 33,809 | 81.9% |
+| 8 | 7,290 | 9,074 | 80.3% |
+
+The route is summarized in [PROOF.md](PROOF.md) ("The stage-2 proof for the deterministic signer").
 
 ## Build
 
