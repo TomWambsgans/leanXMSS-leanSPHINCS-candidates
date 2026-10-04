@@ -1,5 +1,6 @@
 import LeanSphincs.BridgeForsAssembly
 import LeanSphincs.H0Lifetimes
+import LeanSphincs.BridgeTargeting
 
 /-! The six requested lifetimes from the stage-1 argument: saturation of fixed and hidden targets,
 the FORS potential through any adaptive adversary, and the certified excess-forecast bound. -/
@@ -39,5 +40,21 @@ theorem pruned12_of_targeting (h : @TargetingAll pruned12) : @HasClassicalSecuri
 theorem pruned10_of_targeting (h : @TargetingAll pruned10) : @HasClassicalSecurityBits pruned10 127 :=
   @stage1_close pruned10 (by decide) (by decide) h _ (fun q' hq => @H0.h0_fair pruned10 q' hq)
     (fun q' hq => @H0.h0_bound_pruned10 pruned10 rfl rfl q' hq)
+
+/-- Every prepared sample has a targeting, at every pruning height `b ≥ 1`. -/
+theorem targetingAll [Params] (hb : 0 < subtreeHeight) : TargetingAll := by
+  intro parameterOutput fixed highs remaining prepared hprepared
+  obtain ⟨tg, htrunc, hcompat, hmsg, hhit⟩ :=
+    exists_targeting hb parameterOutput fixed highs remaining prepared hprepared
+  exact ⟨tg, hcompat, uniformTruncation_of_trunc tg htrunc, hmsg, hhit⟩
+
+/-- **The six requested 127-bit lifetime claims.** -/
+theorem requestedSecurity : RequestedSecurity :=
+  ⟨full_of_targeting (@targetingAll full (by decide)),
+    pruned20_of_targeting (@targetingAll pruned20 (by decide)),
+    pruned13_of_targeting (@targetingAll pruned13 (by decide)),
+    pruned14_of_targeting (@targetingAll pruned14 (by decide)),
+    pruned12_of_targeting (@targetingAll pruned12 (by decide)),
+    pruned10_of_targeting (@targetingAll pruned10 (by decide))⟩
 
 end LeanSphincs.Lifetimes
