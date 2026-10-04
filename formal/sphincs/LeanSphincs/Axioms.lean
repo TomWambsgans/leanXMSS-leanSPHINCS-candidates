@@ -263,6 +263,11 @@ import LeanSphincs.BridgeFleafA3
 import LeanSphincs.BridgeFleafGame
 import LeanSphincs.BridgeFleafA4a
 import LeanSphincs.BridgeFleafSmall
+import LeanSphincs.BridgeSatW
+import LeanSphincs.BridgeSatWSigner
+import LeanSphincs.BridgeSatWFors
+import LeanSphincs.BridgeSatWRoutes
+import LeanSphincs.BridgeDetW
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -13829,3 +13834,219 @@ import LeanSphincs.BridgeFleafSmall
 /-- info: 'LeanSphincs.Security.ForsPotential.det_bitsF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.ForsPotential.det_bitsF
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.debts_finiteW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.debts_finiteW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.survival_le_of_extendsW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.survival_le_of_extendsW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.weight_le_of_extendsW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.weight_le_of_extendsW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.weight_store_untargetedW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.weight_store_untargetedW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.weight_presampleW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.weight_presampleW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.meanWeight_le_of_supportW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.meanWeight_le_of_supportW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.readOutside_weight_leW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.readOutside_weight_leW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.meanWeight_costStep_leW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.meanWeight_costStep_leW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.interp_weight_leW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.interp_weight_leW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.interp_weight_mul_leW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.interp_weight_mul_leW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.wflag_pure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.wflag_pure
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.wflag_query_bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.wflag_query_bind
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.wpays_le_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.wpays_le_one
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.wpays_presampleW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.wpays_presampleW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.wflag_bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.wflag_bind
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.wflag_presample_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.wflag_presample_le
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.step_goodW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.step_goodW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.saturationW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.saturationW
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.saturationW_start' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.saturationW_start
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.two_reads_bound₂W' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.two_reads_bound₂W
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.baselineW_ne_top' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.baselineW_ne_top
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.baselineW_payment' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.baselineW_payment
+
+/-- info: 'LeanSphincs.Security.GraphView.finish_bound₂W' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphView.finish_bound₂W
+
+/-- info: 'LeanSphincs.Security.GraphView.trial_boundW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphView.trial_boundW
+
+/-- info: 'LeanSphincs.Security.GraphView.loop_boundW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphView.loop_boundW
+
+/-- info: 'LeanSphincs.Security.GraphView.trial_bound_freshW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphView.trial_bound_freshW
+
+/-- info: 'LeanSphincs.Security.GraphView.loop_bound_freshW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.GraphView.loop_bound_freshW
+
+/-- info: 'LeanSphincs.Security.ForsPotential.interp_weight_constW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.interp_weight_constW
+
+/-- info: 'LeanSphincs.Security.ForsPotential.upper_expectW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.upper_expectW
+
+/-- info: 'LeanSphincs.Security.ForsPotential.term_expectW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.term_expectW
+
+/-- info: 'LeanSphincs.Security.ForsPotential.sign_expectW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.sign_expectW
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodW_draw' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodW_draw
+
+/-- info: 'LeanSphincs.Security.ForsPotential.finalValueW_ordinary' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.finalValueW_ordinary
+
+/-- info: 'LeanSphincs.Security.ForsPotential.wflag_ordinary' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.wflag_ordinary
+
+/-- info: 'LeanSphincs.Security.ForsPotential.new_pair_boundW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.new_pair_boundW
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodW_ordinary' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodW_ordinary
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodW_pure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodW_pure
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodW_liftHash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodW_liftHash
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodW_sign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodW_sign
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodW_finish' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodW_finish
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodW_advProg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodW_advProg
+
+/-- info: 'LeanSphincs.Security.ForsPotential.baselineW_eq_betaWQ' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.baselineW_eq_betaWQ
+
+/-- info: 'LeanSphincs.Security.ForsPotential.baselineW_ge' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.baselineW_ge
+
+/-- info: 'LeanSphincs.Security.ForsPotential.baselineW_ge_betaWQ' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.baselineW_ge_betaWQ
+
+/-- info: 'LeanSphincs.Security.ForsPotential.hit_or_cover_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.hit_or_cover_le
+
+/-- info: 'LeanSphincs.Security.ForsPotential.rest_boundW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.rest_boundW
+
+/-- info: 'LeanSphincs.Security.ForsPotential.sample_boundW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.sample_boundW
+
+/-- info: 'LeanSphincs.Security.ForsPotential.stage1_seedFree_boundW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.stage1_seedFree_boundW
+
+/-- info: 'LeanSphincs.Security.ForsPotential.det_largeW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.det_largeW
+
+/-- info: 'LeanSphincs.Security.H0.chainSW_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.H0.chainSW_sound
+
+/-- info: 'LeanSphincs.Security.H0.checkEntrySW_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.H0.checkEntrySW_sound
+
+/-- info: 'LeanSphincs.Security.H0.bound_of_entrySW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.H0.bound_of_entrySW
+
+/-- info: 'LeanSphincs.Security.H0.h0SW_bound_of_cover' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.H0.h0SW_bound_of_cover
+
+/-- info: 'LeanSphincs.Security.ForsPotential.det_bitsFW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.det_bitsFW
