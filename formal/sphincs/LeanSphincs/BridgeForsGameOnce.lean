@@ -41,7 +41,7 @@ theorem noRepeat_sign {α : Type} (m : Message)
   Iff.rfl
 
 /-- An adversary that never requests a signature on the same message twice. -/
-def Adversary.NoRepeat (adversary : Adversary) : Prop :=
+def _root_.LeanSphincs.Security.Adversary.NoRepeat (adversary : Adversary) : Prop :=
   ∀ pk, ForsPotential.NoRepeat (adversary.main pk) []
 
 section Induction
