@@ -1,0 +1,390 @@
+import LeanSphincs.BridgeDomination
+
+open OracleComp
+
+/-! The virtual future used by the FORS forecast potentials. A slot is one future signature:
+a fresh uniform view, disclosed and kept as an item (plus, with probability `eps`, a second
+one), and an independent coin of probability `wbar` for every existing item, disclosing that
+item's view again. All potentials are expectations of a monotone supermodular base function of
+the final multiset of disclosures. -/
+
+open ENNReal
+
+namespace LeanSphincs.Security.Domination
+
+variable {V : Type}
+
+/-! ### Coins with a fixed list -/
+
+theorem slotValue_mono (f : Multiset V → ℝ≥0∞) (hmono : Monotone' f) :
+    ∀ (coins : List (ℝ≥0∞ × Multiset V)), Monotone' fun current => slotValue f current coins
+  | [], small, large, hle => hmono small large hle
+  | (p, extra) :: rest, small, large, hle => by
+      simp only [slotValue]
+      gcongr
+      · exact slotValue_mono f hmono rest _ _ (add_le_add hle le_rfl)
+      · exact slotValue_mono f hmono rest _ _ hle
+
+theorem slotValue_super (f : Multiset V → ℝ≥0∞) (hsuper : Supermodular f) :
+    ∀ (coins : List (ℝ≥0∞ × Multiset V)), Supermodular fun current => slotValue f current coins
+  | [], small, large, extra, hle => hsuper small large extra hle
+  | (p, add) :: rest, small, large, extra, hle => by
+      simp only [slotValue]
+      have h1 := slotValue_super f hsuper rest (small + add) (large + add) extra (add_le_add hle le_rfl)
+      have h2 := slotValue_super f hsuper rest small large extra hle
+      have e1 : small + extra + add = small + add + extra := by abel
+      have e2 : large + extra + add = large + add + extra := by abel
+      rw [e1, e2]
+      calc p * slotValue f (small + add + extra) rest + (1 - p) * slotValue f (small + extra) rest +
+            (p * slotValue f (large + add) rest + (1 - p) * slotValue f large rest)
+          = p * (slotValue f (small + add + extra) rest + slotValue f (large + add) rest) +
+            (1 - p) * (slotValue f (small + extra) rest + slotValue f large rest) := by ring
+        _ ≤ p * (slotValue f (large + add + extra) rest + slotValue f (small + add) rest) +
+            (1 - p) * (slotValue f (large + extra) rest + slotValue f small rest) := by gcongr
+        _ = _ := by ring
+
+theorem slotValue_swap (f : Multiset V → ℝ≥0∞) (first second : ℝ≥0∞ × Multiset V)
+    (rest : List (ℝ≥0∞ × Multiset V)) (current : Multiset V) :
+    slotValue f current (first :: second :: rest) = slotValue f current (second :: first :: rest) := by
+  obtain ⟨p, s⟩ := first
+  obtain ⟨q, t⟩ := second
+  simp only [slotValue]
+  have e : current + s + t = current + t + s := by abel
+  rw [e]
+  ring
+
+theorem slotValue_perm (f : Multiset V → ℝ≥0∞) {coins coins' : List (ℝ≥0∞ × Multiset V)}
+    (hperm : coins.Perm coins') : ∀ current, slotValue f current coins = slotValue f current coins' := by
+  induction hperm with
+  | nil => intro current; rfl
+  | cons head _ ih =>
+      intro current
+      obtain ⟨p, s⟩ := head
+      simp only [slotValue, ih]
+  | swap first second rest =>
+      intro current
+      exact slotValue_swap f second first rest current
+  | trans _ _ ih1 ih2 => intro current; rw [ih1, ih2]
+
+theorem slotValue_congr {f g : Multiset V → ℝ≥0∞} (hfg : ∀ m, f m = g m) :
+    ∀ (coins : List (ℝ≥0∞ × Multiset V)) current, slotValue f current coins = slotValue g current coins
+  | [], current => hfg current
+  | (p, s) :: rest, current => by
+      simp only [slotValue, slotValue_congr hfg rest]
+
+theorem slotValue_le_of_le {f g : Multiset V → ℝ≥0∞} (hfg : ∀ m, f m ≤ g m) :
+    ∀ (coins : List (ℝ≥0∞ × Multiset V)) current, slotValue f current coins ≤ slotValue g current coins
+  | [], current => hfg current
+  | (p, s) :: rest, current => by
+      simp only [slotValue]
+      gcongr
+      · exact slotValue_le_of_le hfg rest _
+      · exact slotValue_le_of_le hfg rest _
+
+/-! ### Closure properties -/
+
+theorem mono_translate {h : Multiset V → ℝ≥0∞} (hh : Monotone' h) (shift : Multiset V) :
+    Monotone' fun d => h (d + shift) := fun _ _ hle => hh _ _ (add_le_add hle le_rfl)
+
+theorem super_translate {h : Multiset V → ℝ≥0∞} (hh : Supermodular h) (shift : Multiset V) :
+    Supermodular fun d => h (d + shift) := by
+  intro small large extra hle
+  have := hh (small + shift) (large + shift) extra (add_le_add hle le_rfl)
+  simpa only [add_right_comm _ extra shift] using this
+
+theorem mono_freshAvg (U : Finset V) {h : V → Multiset V → ℝ≥0∞} (hh : ∀ u, Monotone' (h u)) :
+    Monotone' fun d => freshAvg U fun u => h u d :=
+  fun _ _ hle => freshAvg_mono U fun u _ => hh u _ _ hle
+
+theorem super_freshAvg (U : Finset V) {h : V → Multiset V → ℝ≥0∞} (hh : ∀ u, Supermodular (h u)) :
+    Supermodular fun d => freshAvg U fun u => h u d := by
+  intro small large extra hle
+  simp only [← freshAvg_add]
+  exact freshAvg_mono U fun u _ => hh u small large extra hle
+
+/-- Coins attached to items with a common probability. -/
+def itemCoins (wbar : ℝ≥0∞) (items : List V) : List (ℝ≥0∞ × Multiset V) :=
+  items.map fun w => (wbar, ({w} : Multiset V))
+
+/-! ### The virtual future -/
+
+section Virtual
+
+variable (U : Finset V) (wbar : ℝ≥0∞) (f : Multiset V → ℝ≥0∞)
+
+/-- Expected base value after `m` virtual slots, from the items and the disclosures. -/
+noncomputable def virtual : ℕ → List V → Multiset V → ℝ≥0∞
+  | 0, _, d => f d
+  | m + 1, items, d => freshAvg U fun u => slotValue (virtual m (u :: items)) (d + {u}) (itemCoins wbar items)
+
+variable {U wbar f}
+
+theorem itemCoins_le (hw : wbar ≤ 1) (items : List V) : ∀ c ∈ itemCoins wbar items, c.1 ≤ 1 := by
+  intro c hc
+  obtain ⟨w, _, rfl⟩ := List.mem_map.1 hc
+  exact hw
+
+theorem freshAvg_ne_top {g : V → ℝ≥0∞} (hU : U.Nonempty) (hg : ∀ u, g u ≠ ⊤) : freshAvg U g ≠ ⊤ := by
+  unfold freshAvg
+  refine ENNReal.mul_ne_top ?_ (ENNReal.sum_ne_top.2 fun u _ => hg u)
+  exact ENNReal.inv_ne_top.2 (by exact_mod_cast hU.card_pos.ne')
+
+/-- Monotone, supermodular and finite in the disclosures. -/
+theorem virtual_props (hU : U.Nonempty) (hw : wbar ≤ 1) (hmono : Monotone' f) (hsuper : Supermodular f)
+    (hfin : ∀ m, f m ≠ ⊤) :
+    ∀ m items, Monotone' (virtual U wbar f m items) ∧ Supermodular (virtual U wbar f m items) ∧
+      ∀ d, virtual U wbar f m items d ≠ ⊤
+  | 0, _ => ⟨hmono, hsuper, hfin⟩
+  | m + 1, items => by
+      have ih := fun u => virtual_props hU hw hmono hsuper hfin m (u :: items)
+      refine ⟨?_, ?_, ?_⟩
+      · exact mono_freshAvg U fun u => mono_translate (slotValue_mono _ (ih u).1 _) {u}
+      · exact super_freshAvg U fun u => super_translate (slotValue_super _ (ih u).2.1 _) {u}
+      · intro d
+        exact freshAvg_ne_top hU fun u => slotValue_ne_top _ (ih u).2.2 _ _ (itemCoins_le hw items)
+
+end Virtual
+
+/-! ### Items -/
+
+section Items
+
+variable {U : Finset V} {wbar : ℝ≥0∞} {f : Multiset V → ℝ≥0∞}
+
+theorem slotValue_additive {F1 F2 F3 F4 : Multiset V → ℝ≥0∞} (h : ∀ e, F1 e + F2 e ≤ F3 e + F4 e) :
+    ∀ (coins : List (ℝ≥0∞ × Multiset V)) e,
+      slotValue F1 e coins + slotValue F2 e coins ≤ slotValue F3 e coins + slotValue F4 e coins
+  | [], e => h e
+  | (p, T) :: rest, e => by
+      simp only [slotValue]
+      have h1 := slotValue_additive h rest (e + T)
+      have h2 := slotValue_additive h rest e
+      calc p * slotValue F1 (e + T) rest + (1 - p) * slotValue F1 e rest +
+            (p * slotValue F2 (e + T) rest + (1 - p) * slotValue F2 e rest)
+          = p * (slotValue F1 (e + T) rest + slotValue F2 (e + T) rest) +
+            (1 - p) * (slotValue F1 e rest + slotValue F2 e rest) := by ring
+        _ ≤ p * (slotValue F3 (e + T) rest + slotValue F4 (e + T) rest) +
+            (1 - p) * (slotValue F3 e rest + slotValue F4 e rest) := by gcongr
+        _ = _ := by ring
+
+theorem slotValue_translate (H : Multiset V → ℝ≥0∞) (shift : Multiset V) :
+    ∀ (coins : List (ℝ≥0∞ × Multiset V)) e,
+      slotValue (fun x => H (x + shift)) e coins = slotValue H (e + shift) coins
+  | [], e => rfl
+  | (p, T) :: rest, e => by
+      simp only [slotValue, slotValue_translate H shift rest]
+      rw [add_right_comm e T shift]
+
+theorem virtual_perm : ∀ (m : ℕ) {items items' : List V}, items.Perm items' →
+    ∀ d, virtual U wbar f m items d = virtual U wbar f m items' d
+  | 0, _, _, _, d => rfl
+  | m + 1, items, items', hperm, d => by
+      simp only [virtual]
+      congr 1
+      funext u
+      rw [slotValue_congr (fun e => virtual_perm m (hperm.cons u) e)]
+      exact slotValue_perm _ (hperm.map _) _
+
+theorem itemCoins_cons (w : V) (items : List V) :
+    itemCoins wbar (w :: items) = (wbar, ({w} : Multiset V)) :: itemCoins wbar items := rfl
+
+/-- More items, more virtual disclosures. -/
+theorem virtual_le_cons (hU : U.Nonempty) (hw : wbar ≤ 1) (hmono : Monotone' f) (hsuper : Supermodular f)
+    (hfin : ∀ m, f m ≠ ⊤) :
+    ∀ (m : ℕ) (items : List V) (w : V) d, virtual U wbar f m items d ≤ virtual U wbar f m (w :: items) d
+  | 0, _, _, d => le_rfl
+  | m + 1, items, w, d => by
+      simp only [virtual]
+      refine freshAvg_mono U fun u _ => ?_
+      have hstep1 : ∀ e, virtual U wbar f m (u :: items) e ≤ virtual U wbar f m (u :: w :: items) e := by
+        intro e
+        rw [virtual_perm m (List.Perm.swap w u items) e]
+        exact virtual_le_cons hU hw hmono hsuper hfin m (u :: items) w e
+      have hG := virtual_props hU hw hmono hsuper hfin m (u :: w :: items)
+      refine le_trans (slotValue_le_of_le hstep1 _ _) ?_
+      rw [itemCoins_cons]
+      simp only [slotValue]
+      set a := slotValue (virtual U wbar f m (u :: w :: items)) (d + {u} + {w}) (itemCoins wbar items)
+      set b := slotValue (virtual U wbar f m (u :: w :: items)) (d + {u}) (itemCoins wbar items)
+      have hab : b ≤ a := slotValue_mono _ hG.1 _ _ _ (Multiset.le_add_right _ _)
+      calc b = wbar * b + (1 - wbar) * b := by rw [← add_mul, add_tsub_cancel_of_le hw, one_mul]
+        _ ≤ wbar * a + (1 - wbar) * b := by gcongr
+
+/-- Increasing differences between an item and a disclosure. -/
+theorem virtual_item_disclosure (hU : U.Nonempty) (hw : wbar ≤ 1) (hmono : Monotone' f)
+    (hsuper : Supermodular f) (hfin : ∀ m, f m ≠ ⊤) :
+    ∀ (m : ℕ) (items : List V) (w : V) (d S : Multiset V),
+      virtual U wbar f m (w :: items) d + virtual U wbar f m items (d + S) ≤
+        virtual U wbar f m (w :: items) (d + S) + virtual U wbar f m items d
+  | 0, _, _, d, S => le_of_eq (add_comm _ _)
+  | m + 1, items, w, d, S => by
+      simp only [virtual]
+      rw [← freshAvg_add, ← freshAvg_add]
+      refine freshAvg_mono U fun u _ => ?_
+      set G := virtual U wbar f m (u :: w :: items)
+      set H := virtual U wbar f m (u :: items)
+      set C := itemCoins wbar items
+      have hGprops := virtual_props hU hw hmono hsuper hfin m (u :: w :: items)
+      have hHprops := virtual_props hU hw hmono hsuper hfin m (u :: items)
+      -- the induction hypothesis, lifted through the coins
+      have hih : ∀ e, G e + H (e + S) ≤ G (e + S) + H e := by
+        intro e
+        have := virtual_item_disclosure hU hw hmono hsuper hfin m (u :: items) w e S
+        rwa [virtual_perm m (List.Perm.swap u w items) e, virtual_perm m (List.Perm.swap u w items) (e + S)] at this
+      have hlift : ∀ e, slotValue G e C + slotValue H (e + S) C ≤ slotValue G (e + S) C + slotValue H e C := by
+        intro e
+        have := slotValue_additive (F1 := G) (F2 := fun x => H (x + S)) (F3 := fun x => G (x + S)) (F4 := H)
+          hih C e
+        rwa [slotValue_translate, slotValue_translate] at this
+      have hfinG : ∀ e, slotValue G e C ≠ ⊤ := fun e => slotValue_ne_top _ hGprops.2.2 _ _ (itemCoins_le hw items)
+      have hsupG := slotValue_super G hGprops.2.1 C
+      rw [itemCoins_cons]
+      simp only [slotValue]
+      have e1 : d + S + {u} = d + {u} + S := by abel
+      rw [e1]
+      set e := d + {u}
+      have hinner : slotValue G (e + {w}) C + slotValue H (e + S) C ≤
+          slotValue G (e + S + {w}) C + slotValue H e C := by
+        have hs := hsupG e (e + {w}) S (Multiset.le_add_right _ _)
+        have hl := hlift e
+        have e2 : e + S + {w} = e + {w} + S := by abel
+        rw [e2]
+        have hsum : (slotValue G (e + {w}) C + slotValue H (e + S) C) + (slotValue G e C + slotValue G (e + S) C) ≤
+            (slotValue G (e + {w} + S) C + slotValue H e C) + (slotValue G e C + slotValue G (e + S) C) := by
+          calc (slotValue G (e + {w}) C + slotValue H (e + S) C) + (slotValue G e C + slotValue G (e + S) C)
+              = (slotValue G (e + S) C + slotValue G (e + {w}) C) + (slotValue G e C + slotValue H (e + S) C) := by
+                ring
+            _ ≤ (slotValue G (e + {w} + S) C + slotValue G e C) + (slotValue G (e + S) C + slotValue H e C) :=
+                add_le_add hs hl
+            _ = (slotValue G (e + {w} + S) C + slotValue H e C) + (slotValue G e C + slotValue G (e + S) C) := by
+                ring
+        exact (ENNReal.add_le_add_iff_right (ENNReal.add_ne_top.2 ⟨hfinG e, hfinG (e + S)⟩)).1 hsum
+      have hw1 := mul_le_mul_right hinner wbar
+      have hw2 := mul_le_mul_right (hlift e) (1 - wbar)
+      calc wbar * slotValue G (e + {w}) C + (1 - wbar) * slotValue G e C + slotValue H (e + S) C
+          = wbar * (slotValue G (e + {w}) C + slotValue H (e + S) C) +
+            (1 - wbar) * (slotValue G e C + slotValue H (e + S) C) := by
+              rw [mul_add, mul_add]
+              have : slotValue H (e + S) C = wbar * slotValue H (e + S) C + (1 - wbar) * slotValue H (e + S) C := by
+                rw [← add_mul, add_tsub_cancel_of_le hw, one_mul]
+              conv_lhs => rw [this]
+              ring
+        _ ≤ wbar * (slotValue G (e + S + {w}) C + slotValue H e C) +
+            (1 - wbar) * (slotValue G (e + S) C + slotValue H e C) := add_le_add hw1 hw2
+        _ = wbar * slotValue G (e + S + {w}) C + (1 - wbar) * slotValue G (e + S) C + slotValue H e C := by
+              rw [mul_add, mul_add]
+              have : slotValue H e C = wbar * slotValue H e C + (1 - wbar) * slotValue H e C := by
+                rw [← add_mul, add_tsub_cancel_of_le hw, one_mul]
+              conv_rhs => rw [this]
+              ring
+
+end Items
+
+/-! ### One signing step against one virtual slot -/
+
+theorem tsub_le_tsub_of_add (a b c e : ℝ≥0∞) (he : e ≤ c) (hefin : e ≠ ⊤) (h : a + e ≤ c + b) :
+    a - b ≤ c - e := by
+  rw [tsub_le_iff_right]
+  calc a = a + e - e := (ENNReal.add_sub_cancel_right hefin).symm
+    _ ≤ c + b - e := tsub_le_tsub_right h e
+    _ = c - e + b := (ENNReal.sub_add_eq_add_sub he hefin).symm
+
+/-- What a signing call discloses: nothing, a fresh view (which becomes an item), or the view of
+an existing item. -/
+inductive Pick (V : Type) where
+  | none
+  | fresh (view : V)
+  | pool (view : V)
+
+section Step
+
+variable {U : Finset V} {wbar : ℝ≥0∞} {f : Multiset V → ℝ≥0∞}
+
+/-- The continuation value after a pick. -/
+noncomputable def afterPick (U : Finset V) (wbar : ℝ≥0∞) (f : Multiset V → ℝ≥0∞) (m : ℕ) (items : List V)
+    (d : Multiset V) : Pick V → ℝ≥0∞
+  | .none => virtual U wbar f m items d
+  | .fresh u => virtual U wbar f m (u :: items) (d + {u})
+  | .pool v => virtual U wbar f m items (d + {v})
+
+/-- Fresh weight of a pick. -/
+def freshPart (g : V → ℝ≥0∞) : Pick V → ℝ≥0∞
+  | .fresh u => g u
+  | _ => 0
+
+/-- Pool weight of a pick. -/
+def poolPart (g : V → ℝ≥0∞) : Pick V → ℝ≥0∞
+  | .pool v => g v
+  | _ => 0
+
+/-- **Signing step.** A signing call whose fresh disclosures are at most uniform and which picks
+each item with probability at most `wbar` is dominated by one virtual slot. -/
+theorem signing_step (hU : U.Nonempty) (hw : wbar ≤ 1) (hmono : Monotone' f) (hsuper : Supermodular f)
+    (hfin : ∀ m, f m ≠ ⊤) (m : ℕ) (items : List V) (d : Multiset V) {β : Type} (step : ProbComp β)
+    (pick : β → Pick V)
+    (hfresh : ∀ g : V → ℝ≥0∞, ∑' x, Pr[= x | step] * freshPart g (pick x) ≤ freshAvg U g)
+    (hpool : ∀ g : V → ℝ≥0∞, ∑' x, Pr[= x | step] * poolPart g (pick x) ≤
+      (items.map fun w => wbar * g w).sum) :
+    ∑' x, Pr[= x | step] * afterPick U wbar f m items d (pick x) ≤ virtual U wbar f (m + 1) items d := by
+  have hprops := fun items' => virtual_props hU hw hmono hsuper hfin m items'
+  set base := virtual U wbar f m items d with hbase
+  -- gains
+  set gf : V → ℝ≥0∞ := fun u => virtual U wbar f m (u :: items) (d + {u}) - base
+  set gp : V → ℝ≥0∞ := fun v => virtual U wbar f m items (d + {v}) - base
+  have hgf : ∀ u, virtual U wbar f m (u :: items) (d + {u}) = base + gf u := by
+    intro u
+    refine (add_tsub_cancel_of_le ?_).symm
+    exact le_trans (virtual_le_cons hU hw hmono hsuper hfin m items u d)
+      ((hprops (u :: items)).1 _ _ (Multiset.le_add_right _ _))
+  have hgp : ∀ v, virtual U wbar f m items (d + {v}) = base + gp v := by
+    intro v
+    exact (add_tsub_cancel_of_le ((hprops items).1 _ _ (Multiset.le_add_right _ _))).symm
+  have hpoint : ∀ o, afterPick U wbar f m items d o = base + freshPart gf o + poolPart gp o := by
+    intro o
+    cases o with
+    | none => simp [afterPick, freshPart, poolPart, hbase]
+    | fresh u => simp [afterPick, freshPart, poolPart, hgf]
+    | pool v => simp [afterPick, freshPart, poolPart, hgp]
+  have hupper : ∑' x, Pr[= x | step] * afterPick U wbar f m items d (pick x) ≤
+      base + freshAvg U gf + (items.map fun w => wbar * gp w).sum := by
+    simp only [hpoint, mul_add, ENNReal.tsum_add, ENNReal.tsum_mul_right]
+    exact add_le_add (add_le_add (mul_le_of_le_one_left' tsum_probOutput_le_one) (hfresh gf)) (hpool gp)
+  refine le_trans hupper ?_
+  -- lower bound for the virtual slot
+  simp only [virtual]
+  have hslot : ∀ u, base + gf u + (items.map fun w => wbar * gp w).sum ≤
+      slotValue (virtual U wbar f m (u :: items)) (d + {u}) (itemCoins wbar items) := by
+    intro u
+    have hcoins := coins_gain (virtual U wbar f m (u :: items)) (hprops (u :: items)).1
+      (hprops (u :: items)).2.1 (hprops (u :: items)).2.2 (items.map fun w => (wbar, w))
+      (by intro i hi; obtain ⟨w, _, rfl⟩ := List.mem_map.1 hi; exact hw) (d + {u}) (d + {u}) le_rfl
+    have hcoins' : coinsOf (items.map fun w => (wbar, w)) = itemCoins wbar items := by
+      simp [coinsOf, itemCoins, Function.comp_def]
+    rw [hcoins', List.map_map] at hcoins
+    refine le_trans ?_ hcoins
+    rw [← hgf u]
+    refine add_le_add le_rfl (List.sum_le_sum fun w _ => ?_)
+    simp only [Function.comp_apply]
+    refine mul_le_mul_right ?_ wbar
+    have hfin1 := (hprops (u :: items)).2.2
+    -- the gain of disclosing `w` grows with the new item `u` ...
+    have hle1 : gp w ≤ gain (virtual U wbar f m (u :: items)) d w :=
+      tsub_le_tsub_of_add _ _ _ _ ((hprops (u :: items)).1 _ _ (Multiset.le_add_right _ _)) (hfin1 d)
+        (by rw [add_comm (virtual U wbar f m items (d + {w}))]
+            exact virtual_item_disclosure hU hw hmono hsuper hfin m items u d {w})
+    -- ... and with the base
+    have hle2 : gain (virtual U wbar f m (u :: items)) d w ≤
+        gain (virtual U wbar f m (u :: items)) (d + {u}) w := by
+      have h := gain_le_of_le (virtual U wbar f m (u :: items)) (hprops (u :: items)).1
+        (hprops (u :: items)).2.1 hfin1 d (d + {u}) (Multiset.le_add_right _ _) w
+      unfold gain at h ⊢
+      exact ENNReal.le_sub_of_add_le_left (hfin1 _) h
+    exact le_trans hle1 hle2
+  calc base + freshAvg U gf + (items.map fun w => wbar * gp w).sum
+      = freshAvg U (fun u => base + gf u + (items.map fun w => wbar * gp w).sum) := by
+        rw [freshAvg_add, freshAvg_add, freshAvg_const U hU, freshAvg_const U hU]
+    _ ≤ _ := freshAvg_mono U fun u _ => hslot u
+
+end Step
+
+end LeanSphincs.Security.Domination

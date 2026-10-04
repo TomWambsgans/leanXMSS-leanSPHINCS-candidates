@@ -186,6 +186,8 @@ import LeanSphincs.BridgeImplication
 import LeanSphincs.BridgeDebt
 import LeanSphincs.BridgeSaturation
 import LeanSphincs.BridgeDomination
+import LeanSphincs.BridgeInterp
+import LeanSphincs.BridgeVirtual
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -8724,3 +8726,147 @@ import LeanSphincs.BridgeDomination
 /-- info: 'LeanSphincs.Security.Domination.domination' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Domination.domination
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.interp_pure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.interp_pure
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.interp_query_bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.interp_query_bind
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.lazyRun_map' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.lazyRun_map
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.lazyRun_erase_query_bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.lazyRun_erase_query_bind
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.lazyRun_wrapped' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.lazyRun_wrapped
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.flaggedCount_append' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.flaggedCount_append
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.flaggedCount_touch' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.flaggedCount_touch
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.monitor_map' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.monitor_map
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.monitor_wrapped' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.monitor_wrapped
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.bounded_map' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.bounded_map
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.bounded_withReveals' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.bounded_withReveals
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.bounded_trace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.bounded_trace
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.endPayments_wrapped' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.endPayments_wrapped
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.interp_hit_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.interp_hit_bound
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.interp_bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.interp_bind
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_mono' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_mono
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_super' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_super
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_swap' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_swap
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_perm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_perm
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_congr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_congr
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_le_of_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_le_of_le
+
+/-- info: 'LeanSphincs.Security.Domination.mono_translate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.mono_translate
+
+/-- info: 'LeanSphincs.Security.Domination.super_translate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.super_translate
+
+/-- info: 'LeanSphincs.Security.Domination.mono_freshAvg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.mono_freshAvg
+
+/-- info: 'LeanSphincs.Security.Domination.super_freshAvg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.super_freshAvg
+
+/-- info: 'LeanSphincs.Security.Domination.itemCoins_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.itemCoins_le
+
+/-- info: 'LeanSphincs.Security.Domination.freshAvg_ne_top' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.freshAvg_ne_top
+
+/-- info: 'LeanSphincs.Security.Domination.virtual_props' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.virtual_props
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_additive' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_additive
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_translate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_translate
+
+/-- info: 'LeanSphincs.Security.Domination.virtual_perm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.virtual_perm
+
+/-- info: 'LeanSphincs.Security.Domination.itemCoins_cons' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.itemCoins_cons
+
+/-- info: 'LeanSphincs.Security.Domination.virtual_le_cons' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.virtual_le_cons
+
+/-- info: 'LeanSphincs.Security.Domination.virtual_item_disclosure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.virtual_item_disclosure
+
+/-- info: 'LeanSphincs.Security.Domination.tsub_le_tsub_of_add' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.tsub_le_tsub_of_add
+
+/-- info: 'LeanSphincs.Security.Domination.signing_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.signing_step
