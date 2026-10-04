@@ -416,8 +416,8 @@ theorem noQ_bind {bad : HashInput → Prop} [DecidablePred bad] {α β : Type} {
 
 /-- The encoding search queries only encoding inputs. -/
 theorem noQ_search {bad : HashInput → Prop} [DecidablePred bad]
-    (hbad : ∀ parameter lay tree leaf payload, ¬bad (tweakableHashInput parameter (.encoding lay tree leaf) payload))
-    (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : Digest) :
+    (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : Digest)
+    (hbad : ∀ payload, ¬bad (tweakableHashInput parameter (.encoding lay tree leaf) payload)) :
     ∀ attempts start, (ReferenceChoice.search parameter lay tree leaf message attempts start :
       OracleComp HashSpec (Option (Counter × Encoding))).IsQueryBoundP bad 0
   | 0, _ => trivial
@@ -428,9 +428,9 @@ theorem noQ_search {bad : HashInput → Prop} [DecidablePred bad]
         refine noQ_bind (noQ_bind ?_ fun _ => trivial) fun _ => trivial
         simp only [oracleHash, HasQuery.query]
         rw [isQueryBoundP_query_iff]
-        exact fun hm => absurd hm (hbad _ _ _ _ _)
+        exact fun hm => absurd hm (hbad _)
       · cases found with
-        | none => exact noQ_search hbad parameter lay tree leaf message attempts (start + 1)
+        | none => exact noQ_search parameter lay tree leaf message hbad attempts (start + 1)
         | some _ => trivial
 
 /-- Encoding inputs are not hidden rows. -/
@@ -514,9 +514,9 @@ theorem finishRest_fail (parameterOutput : HashOutput) (fixed : HiddenGraph.Tabl
         ((sampleData parameterOutput fixed highs remaining).forsKey (digestIndex digest)) encodingAttemptLimit 0) :
         OracleComp CostSpec _) (budget - traceCost o1.1.2.2.1) o1.2) := ho3
   have hrow := noQ_search (bad := fun x => model.parse x ≠ none)
-    (fun parameter lay tree leaf payload h => h (not_row_encoding parameterOutput highs parameter lay tree leaf payload))
     (truncateHash parameterOutput) topLayer rootTree (digestIndex digest)
-    ((sampleData parameterOutput fixed highs remaining).forsKey (digestIndex digest)) encodingAttemptLimit 0
+    ((sampleData parameterOutput fixed highs remaining).forsKey (digestIndex digest))
+    (fun payload h => h (not_row_encoding parameterOutput highs _ _ _ _ payload)) encodingAttemptLimit 0
   have hstep := interp_liftHash_replay (D := HashInput) (R := HashOutput) tg prepared.2 model
     (ReferenceChoice.search (truncateHash parameterOutput) topLayer rootTree (digestIndex digest)
       ((sampleData parameterOutput fixed highs remaining).forsKey (digestIndex digest)) encodingAttemptLimit 0 :
@@ -619,5 +619,348 @@ theorem stage1_forge_bound (hb : 0 < subtreeHeight) (adversary : Adversary) (q :
     hsample parameterOutput fixed highs remaining prepared hprepared
 
 end Total
+
+/-! ### The prepared cache holds no message-digest input -/
+
+section Clean
+
+open HiddenBridge Completeness SeedModel Graph Assembly Reduce Internalize
+
+theorem noQ_sequenceFin {bad : HashInput → Prop} [DecidablePred bad] {α : Type} :
+    ∀ {n : ℕ} (f : Fin n → OracleComp HashSpec α), (∀ i, (f i).IsQueryBoundP bad 0) →
+      (Concrete.sequenceFin f).IsQueryBoundP bad 0
+  | 0, _, _ => trivial
+  | n + 1, f, h => by
+      unfold Concrete.sequenceFin
+      exact noQ_bind (h 0) fun _ => noQ_bind (noQ_sequenceFin (fun i : Fin n => f i.succ) fun i => h i.succ)
+        fun _ => trivial
+
+theorem msg_not_graph (parameter : PublicParameter) (position : Position) (payload x : HashInput)
+    (hx : IsMsgInput x) : x ≠ tweakableHashInput parameter position.domain payload := by
+  obtain ⟨p', call, payload', rfl⟩ := hx
+  intro heq
+  have htag := congrArg TweakFields.tag (tweakableInput_injective heq).1
+  cases position <;> simp [Position.domain, hashDomainFields, tweakFields] at htag
+
+/-- **The prepared cache holds no message-digest input.** -/
+theorem prepared_clean (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
+    (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining)) :
+    ∀ x, IsMsgInput x → prepared.2 x = none := by
+  intro x hx
+  have hrun : prepared ∈ support ((simulateQ (randomOracle (spec := HashSpec))
+      (Concrete.sequenceFin fun leaf => ReferenceChoice.search (truncateHash parameterOutput) topLayer rootTree leaf
+        ((sampleData parameterOutput fixed highs remaining).forsKey leaf) encodingAttemptLimit 0)).run
+      (structCache (splitMaterial parameterOutput highs remaining fixed) (splitAnswers highs remaining fixed))) :=
+    hprepared
+  rw [randomOracle_run_avoid (P := IsMsgInput) _
+    (noQ_sequenceFin _ fun leaf => noQ_search (bad := IsMsgInput) _ _ _ _ _
+      (fun payload => not_msg_tweakable _ _ payload (by simp [hashDomainFields, tweakFields])) _ _) _ prepared hrun x hx]
+  unfold structCache
+  exact programGraphCache_empty_none _ _ _ _ _ x fun position _ => msg_not_graph _ position _ x hx
+
+end Clean
+
+/-! ### Few prepared searches fail -/
+
+section FailBound
+
+open HiddenBridge Completeness SeedModel Graph Assembly Reduce Internalize
+
+attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
+  remainingSampleable
+
+theorem search_eq_searchLoop (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (message : Digest) : ∀ (n t : ℕ),
+    (ReferenceChoice.search parameter lay tree leaf message n t : OracleComp HashSpec (Option (Counter × Encoding))) =
+      searchLoop (fun c => tweakableHashInput parameter (.encoding lay tree leaf)
+          (bytesLE 16 message ++ bytesLE 4 (BitVec.ofNat counterBits c)))
+        (fun out => TargetSum.decodeDigest (truncateHash out))
+        (fun c encoding => pure (BitVec.ofNat counterBits c, encoding)) n t := by
+  intro n
+  induction n with
+  | zero => intro t; rfl
+  | succ n ih =>
+      intro t
+      rw [ReferenceChoice.search, searchLoop]
+      simp only [encode, tweakableHash, oracleHash, bind_assoc, pure_bind, map_eq_bind_pure_comp,
+        Function.comp_def, ih]
+      refine bind_congr fun answer => ?_
+      cases TargetSum.decodeDigest (truncateHash answer) <;> rfl
+
+/-- One search over fresh counters fails with at most the rejection share to the trial budget. -/
+theorem search_fail_le (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (message : Digest) (cache : QueryCache HashSpec)
+    (hfresh : ∀ s, s < encodingAttemptLimit → cache (encodeInput parameter lay tree leaf message s) = none) :
+    Pr[fun r => r.1 = none | (simulateQ (randomOracle (spec := HashSpec))
+        (ReferenceChoice.search parameter lay tree leaf message encodingAttemptLimit 0)).run cache] ≤
+      Completeness.failMass (fun out => TargetSum.decodeDigest (truncateHash out)) ^ encodingAttemptLimit := by
+  rw [search_eq_searchLoop]
+  exact probEvent_searchLoop _ _ _ encodingAttemptLimit
+    (fun s s' hs hs' heq => encodeInput_inj parameter lay tree leaf message hs hs' heq)
+    encodingAttemptLimit 0 (by simp) cache (fun s _ hsb => hfresh s hsb)
+
+theorem encoding_not_graph (parameter parameter' : PublicParameter) (position : Position) (payload payload' : HashInput)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) :
+    tweakableHashInput parameter' (.encoding lay tree leaf) payload' ≠
+      tweakableHashInput parameter position.domain payload := by
+  intro heq
+  have htag := congrArg TweakFields.tag (tweakableInput_injective heq).1
+  cases position <;> simp [Position.domain, hashDomainFields, tweakFields] at htag
+
+/-- **One prepared search fails rarely.** -/
+theorem prep_fail_le (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
+    (remaining : RemainingOutputs) (i : Index) :
+    Pr[fun prepared => prepared.1 i = none | preparation parameterOutput fixed highs remaining] ≤
+      Completeness.failMass (fun out => TargetSum.decodeDigest (truncateHash out)) ^ encodingAttemptLimit := by
+  set key := (sampleData parameterOutput fixed highs remaining).forsKey with hkey
+  set param := truncateHash parameterOutput with hparam
+  change Pr[fun prepared => prepared.1 i = none | (simulateQ (randomOracle (spec := HashSpec))
+      (Concrete.sequenceFin fun leaf => ReferenceChoice.search param topLayer rootTree leaf (key leaf)
+        encodingAttemptLimit 0)).run
+      (structCache (splitMaterial parameterOutput highs remaining fixed) (splitAnswers highs remaining fixed))] ≤ _
+  refine sequenceFin_prob (D := HashInput) (R := HashOutput)
+    (fun c => ∀ s, s < encodingAttemptLimit → c (encodeInput param topLayer rootTree i (key i) s) = none)
+    (fun r => r = none) _ _ i ?_ ?_ _ ?_
+  · -- other searches never touch this leaf's counters
+    intro j hj c hc r hr s hs
+    have hkeep := randomOracle_run_avoid (P := fun x => ∃ t, x = encodeInput param topLayer rootTree i (key i) t) _
+      (noQ_search (bad := fun x => ∃ t, x = encodeInput param topLayer rootTree i (key i) t) _ _ _ j (key j)
+        (fun payload ⟨t, ht⟩ => hj (encoding_fields_injective (tweakableInput_injective ht).1)) _ _)
+      c r hr _ ⟨s, rfl⟩
+    rw [hkeep]
+    exact hc s hs
+  · intro c hc
+    exact search_fail_le param topLayer rootTree i (key i) c hc
+  · intro s _
+    unfold structCache
+    exact programGraphCache_empty_none _ _ _ _ _ _ fun position _ => encoding_not_graph _ _ position _ _ _ _ _
+
+/-- Bernoulli: `(1 - 2⁻¹⁰) ^ 2¹⁰ ≤ 1/2`. -/
+theorem one_sub_pow_le_half : (1 - (2 : ℝ)⁻¹ ^ 10) ^ (2 ^ 10) ≤ 1 / 2 := by
+  set a : ℝ := (2 : ℝ)⁻¹ ^ 10 with ha
+  have ha0 : 0 ≤ a := by positivity
+  have ha1 : a ≤ 1 := by rw [ha]; norm_num
+  have hbern : 1 + ((2 ^ 10 : ℕ) : ℝ) * a ≤ (1 + a) ^ (2 ^ 10) := one_add_mul_le_pow (by linarith) _
+  have hna : ((2 ^ 10 : ℕ) : ℝ) * a = 1 := by rw [ha]; norm_num
+  rw [hna] at hbern
+  have hprod : (1 - a) ^ (2 ^ 10) * (1 + a) ^ (2 ^ 10) ≤ 1 := by
+    rw [← mul_pow]
+    have h0 : 0 ≤ (1 - a) * (1 + a) := mul_nonneg (by linarith) (by linarith)
+    have h1 : (1 - a) * (1 + a) ≤ 1 := by nlinarith
+    exact pow_le_one₀ h0 h1
+  have hpos : 0 < (1 + a) ^ (2 ^ 10) := by positivity
+  rw [div_eq_mul_inv, one_mul]
+  calc (1 - a) ^ (2 ^ 10) = (1 - a) ^ (2 ^ 10) * (1 + a) ^ (2 ^ 10) / (1 + a) ^ (2 ^ 10) := by
+        field_simp
+    _ ≤ 1 / (1 + a) ^ (2 ^ 10) := by gcongr
+    _ ≤ 1 / 2 := by gcongr; linarith
+    _ = 2⁻¹ := by norm_num
+
+/-- The trial budget makes a prepared search fail with negligible probability. -/
+theorem fail_pow_le :
+    Completeness.failMass (fun out => TargetSum.decodeDigest (truncateHash out)) ^ encodingAttemptLimit ≤
+      (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 22) := by
+  set fm := Completeness.failMass (fun out => TargetSum.decodeDigest (truncateHash out)) with hfm
+  have hadd := Completeness.failMass_encoding_add_le
+  have hle : fm ≤ ENNReal.ofReal (1 - (2 : ℝ)⁻¹ ^ 10) := by
+    have htop : ((2 : ℝ≥0∞) ^ 10)⁻¹ ≠ ⊤ := by simp
+    have h1 : fm ≤ 1 - ((2 : ℝ≥0∞) ^ 10)⁻¹ := ENNReal.le_sub_of_add_le_right htop hadd
+    refine h1.trans (le_of_eq ?_)
+    rw [ENNReal.ofReal_sub _ (by positivity), ENNReal.ofReal_one]
+    congr 1
+    rw [ENNReal.ofReal_pow (by norm_num), ENNReal.ofReal_inv_of_pos (by norm_num), ENNReal.ofReal_ofNat,
+      ENNReal.inv_pow]
+  calc fm ^ encodingAttemptLimit ≤ ENNReal.ofReal (1 - (2 : ℝ)⁻¹ ^ 10) ^ (2 ^ 10 * 2 ^ 22) := by
+        rw [show encodingAttemptLimit = 2 ^ 10 * 2 ^ 22 from rfl]
+        exact pow_le_pow_left' hle _
+    _ = (ENNReal.ofReal ((1 - (2 : ℝ)⁻¹ ^ 10) ^ (2 ^ 10))) ^ (2 ^ 22) := by
+        rw [pow_mul, ENNReal.ofReal_pow (by norm_num)]
+    _ ≤ (ENNReal.ofReal (1 / 2)) ^ (2 ^ 22) := pow_le_pow_left' (ENNReal.ofReal_le_ofReal one_sub_pow_le_half) _
+    _ = (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 22) := by
+        rw [one_div, ENNReal.ofReal_inv_of_pos (by norm_num), ENNReal.ofReal_ofNat]
+
+theorem failMass_le_count (R : Index → Option (Counter × Encoding)) :
+    failMass (failSet R) ≤ ∑ i : Index, (R i).elim (1 : ℝ≥0∞) fun _ => 0 := by
+  by_cases h : ∃ i, R i = none
+  · obtain ⟨i, hi⟩ := h
+    calc failMass (failSet R) ≤ 1 := by
+          unfold failMass
+          calc _ ≤ freshAvg Finset.univ (fun _ : View => (1 : ℝ≥0∞)) :=
+                freshAvg_mono _ fun v _ => by split_ifs <;> simp
+            _ = 1 := freshAvg_const _ Finset.univ_nonempty 1
+      _ = (R i).elim (1 : ℝ≥0∞) fun _ => 0 := by rw [hi]; rfl
+      _ ≤ _ := Finset.single_le_sum (f := fun i : Index => (R i).elim (1 : ℝ≥0∞) fun _ => 0)
+          (fun _ _ => bot_le) (Finset.mem_univ i)
+  · push Not at h
+    have hempty : failSet R = ∅ := by
+      refine Finset.eq_empty_of_forall_notMem fun l hl => ?_
+      obtain ⟨i, _, hi⟩ := (Finset.mem_filter.1 hl).2
+      exact h i hi
+    rw [hempty]
+    unfold failMass freshAvg
+    simp only [Finset.notMem_empty, if_false, Finset.sum_const_zero, mul_zero]
+    exact bot_le
+
+theorem tsum_elim_le {β : Type} (mx : ProbComp ((Index → Option β) × QueryCache HashSpec)) (i : Index) :
+    ∑' x, Pr[= x | mx] * (x.1 i).elim (1 : ℝ≥0∞) (fun _ => 0) ≤ Pr[fun x => x.1 i = none | mx] := by
+  rw [probEvent_eq_tsum_indicator]
+  refine ENNReal.tsum_le_tsum fun x => ?_
+  cases hx : x.1 i with
+  | none =>
+      rw [Set.indicator_of_mem (show x ∈ {x | x.1 i = none} from hx)]
+      simp
+  | some v => simp
+
+/-- **Expected share of failing indices.** -/
+theorem expectedFail_le : expectedFail ≤ (2 : ℝ≥0∞)⁻¹ ^ 201 := by
+  have hinner : ∀ parameterOutput fixed highs remaining,
+      ∑' prepared, Pr[= prepared | preparation parameterOutput fixed highs remaining] *
+        failMass (failSet prepared.1) ≤ (2 : ℝ≥0∞)⁻¹ ^ 201 := by
+    intro parameterOutput fixed highs remaining
+    calc _ ≤ ∑' prepared, Pr[= prepared | preparation parameterOutput fixed highs remaining] *
+          ∑ i : Index, (prepared.1 i).elim (1 : ℝ≥0∞) (fun _ => 0) :=
+          ENNReal.tsum_le_tsum fun prepared => mul_le_mul_right (failMass_le_count prepared.1) _
+      _ = ∑ i : Index, ∑' prepared, Pr[= prepared | preparation parameterOutput fixed highs remaining] *
+          (prepared.1 i).elim (1 : ℝ≥0∞) (fun _ => 0) := by
+          simp only [Finset.mul_sum]
+          rw [Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
+      _ ≤ ∑ i : Index, Pr[fun prepared => prepared.1 i = none | preparation parameterOutput fixed highs remaining] :=
+          Finset.sum_le_sum fun i _ => tsum_elim_le _ i
+      _ ≤ ∑ _i : Index, (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 22) :=
+          Finset.sum_le_sum fun i _ => (prep_fail_le parameterOutput fixed highs remaining i).trans fail_pow_le
+      _ = (2 ^ 26 : ℕ) * (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 22) := by
+          rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+          rfl
+      _ ≤ (2 : ℝ≥0∞)⁻¹ ^ 201 := by
+          have hsplit : (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 22) = (2 : ℝ≥0∞)⁻¹ ^ 26 * ((2 : ℝ≥0∞)⁻¹ ^ 201 *
+              (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 22 - 227)) := by
+            rw [← pow_add, ← pow_add]
+            congr 1
+          rw [hsplit, Nat.cast_pow, Nat.cast_ofNat, ← mul_assoc, ← mul_pow,
+            ENNReal.mul_inv_cancel (by norm_num) (by norm_num), one_pow, one_mul]
+          exact mul_le_of_le_one_right' (pow_le_one₀ bot_le (by norm_num))
+  have hconst : ∀ {α : Type} (mx : ProbComp α) (g : α → ℝ≥0∞) (c : ℝ≥0∞), (∀ x, g x ≤ c) →
+      ∑' x, Pr[= x | mx] * g x ≤ c := by
+    intro α mx g c hg
+    calc _ ≤ ∑' x, Pr[= x | mx] * c := ENNReal.tsum_le_tsum fun x => mul_le_mul_right (hg x) _
+      _ ≤ c := by rw [ENNReal.tsum_mul_right]; exact mul_le_of_le_one_left' tsum_probOutput_le_one
+  unfold expectedFail
+  exact hconst _ _ _ fun parameterOutput => hconst _ _ _ fun fixed => hconst _ _ _ fun highs =>
+    hconst _ _ _ fun remaining => hinner parameterOutput fixed highs remaining
+
+end FailBound
+
+/-! ### Closing the stage-1 bound -/
+
+section Close
+
+open HiddenBridge Completeness SeedModel Graph Assembly Reduce Internalize
+
+attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
+  remainingSampleable
+
+/-- The targeting facts of one prepared sample. -/
+def TargetingFor (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
+    (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec) : Prop :=
+  ∃ tg : Targeting HashInput HashOutput Coordinate,
+    Compatible tg (sampleModel parameterOutput highs) ∧ UniformTruncation (R := HashOutput) tg ∧
+    (∀ x, IsMsgInput x → tg.kind x = .none ∧ tg.digest x) ∧
+    ∀ table, tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table →
+      ∀ s : State, Prepared prepared.2 s → Agrees s.known table →
+        (CorrectGuess table s ∨ CacheMatch.Bad (TargetAssignment.targets (truncateHash parameterOutput)
+          (compTable parameterOutput fixed highs remaining table prepared.1)) s.cache) →
+        Hit tg prepared.2 table s
+
+theorem budget_zero_zero : budget 0 0 = 1 := by
+  unfold budget
+  have h := spaceReal_pos
+  simp [div_self h.ne']
+
+theorem two_mul_inv_pow_succ (n : ℕ) : (2 : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ (n + 1) = (2 : ℝ≥0∞)⁻¹ ^ n := by
+  rw [pow_succ, mul_comm, mul_assoc, ENNReal.inv_mul_cancel (by norm_num) (by norm_num), mul_one]
+
+theorem div_two_pow (x : ℝ≥0∞) (n : ℕ) : x / 2 ^ n = x * (2 : ℝ≥0∞)⁻¹ ^ n := by
+  rw [div_eq_mul_inv, ENNReal.inv_pow]
+
+/-- **Stage 1 closes** once the targeting exists and the excess forecast is small. -/
+theorem stage1_close (hb : 0 < subtreeHeight) (hN : signatureLimit ≤ 2 ^ 70)
+    (htarget : ∀ parameterOutput fixed highs remaining prepared,
+      prepared ∈ support (preparation parameterOutput fixed highs remaining) →
+      TargetingFor parameterOutput fixed highs remaining prepared)
+    (wbar : ℕ → ℝ≥0∞) (hfair : ∀ q' : ℕ, 2 * q' ≤ 2 ^ 128 → Fair (wbar q') (q' + digestAttemptLimit))
+    (hH0 : ∀ q' : ℕ, 2 * q' ≤ 2 ^ 128 →
+      (1 - budget 0 q') + (q' : ℝ≥0∞) * startExcess (wbar q') (baseline q') q' +
+        ((q' + keygenCost + signatureLimit : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
+      ((q' + keygenCost : ℕ) : ℝ≥0∞) / 2 ^ 127) :
+    Security.HasClassicalSecurityBits 127 := by
+  intro q hq1 adversary hbound
+  have hcast : (((2 ^ 127 : ℕ)) : ℝ≥0∞) = (2 : ℝ≥0∞) ^ 127 := by rw [Nat.cast_pow, Nat.cast_ofNat]
+  rw [hcast]
+  by_cases hbig : 2 ^ 127 ≤ q
+  · refine le_trans probEvent_le_one ?_
+    rw [ENNReal.le_div_iff_mul_le (Or.inl (by positivity)) (Or.inl (by simp)), one_mul]
+    exact_mod_cast hbig
+  push Not at hbig
+  set q' := q - keygenCost with hq'
+  have hq'le : 2 * q' ≤ 2 ^ 128 := by omega
+  have htotal : 2 * ((q' : ℕ) : ℝ) + 2 ≤ spaceReal := by
+    unfold spaceReal
+    have : (2 * q' + 2 : ℕ) ≤ 2 ^ 128 := by omega
+    exact_mod_cast this
+  have hmain := stage1_forge_bound hb adversary q hbound (by omega) htarget
+    (fun _ _ _ _ _ hprep => prepared_clean _ _ _ _ _ hprep) (wbar q') (hfair q' hq'le) htotal
+  refine le_trans hmain ?_
+  have hE := expectedFail_le
+  have hq1' : (1 : ℝ≥0∞) ≤ q := by exact_mod_cast hq1
+  by_cases hK : keygenCost ≤ q
+  · have hsum : q' + keygenCost = q := by omega
+    -- the negligible terms fit in the slack
+    have hslack : ((q' : ℝ≥0∞) + signatureLimit) * expectedFail + (q : ℝ≥0∞) / 2 ^ 256 ≤
+        ((q' + keygenCost + signatureLimit : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200 := by
+      have h256 : (q : ℝ≥0∞) / 2 ^ 256 ≤ (((q' + keygenCost : ℕ) : ℝ≥0∞)) * (2 : ℝ≥0∞)⁻¹ ^ 201 := by
+        rw [div_two_pow, hsum]
+        exact mul_le_mul' le_rfl (pow_le_pow_of_le_one (by norm_num) (by norm_num) (by norm_num))
+      have hnat : ((q' : ℝ≥0∞) + signatureLimit) + ((q' + keygenCost : ℕ) : ℝ≥0∞) ≤
+          2 * ((q' + keygenCost + signatureLimit : ℕ) : ℝ≥0∞) := by
+        have h : (q' + signatureLimit) + (q' + keygenCost) ≤ 2 * (q' + keygenCost + signatureLimit) := by omega
+        have h' : (((q' + signatureLimit) + (q' + keygenCost) : ℕ) : ℝ≥0∞) ≤
+            ((2 * (q' + keygenCost + signatureLimit) : ℕ) : ℝ≥0∞) := by exact_mod_cast h
+        push_cast at h' ⊢
+        exact h'
+      calc _ ≤ ((q' : ℝ≥0∞) + signatureLimit) * (2 : ℝ≥0∞)⁻¹ ^ 201 +
+            (((q' + keygenCost : ℕ) : ℝ≥0∞)) * (2 : ℝ≥0∞)⁻¹ ^ 201 := add_le_add (mul_le_mul' le_rfl hE) h256
+        _ = (((q' : ℝ≥0∞) + signatureLimit) + ((q' + keygenCost : ℕ) : ℝ≥0∞)) * (2 : ℝ≥0∞)⁻¹ ^ 201 := by
+            ring
+        _ ≤ (2 * ((q' + keygenCost + signatureLimit : ℕ) : ℝ≥0∞)) * (2 : ℝ≥0∞)⁻¹ ^ 201 :=
+            mul_le_mul' hnat le_rfl
+        _ = _ := by rw [mul_comm (2 : ℝ≥0∞), mul_assoc, two_mul_inv_pow_succ]
+    calc _ ≤ ((1 - budget 0 q') + (q' : ℝ≥0∞) * startExcess (wbar q') (baseline q') q') +
+          ((q' + keygenCost + signatureLimit : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200 := by
+          rw [add_assoc]
+          exact add_le_add le_rfl hslack
+      _ ≤ ((q' + keygenCost : ℕ) : ℝ≥0∞) / 2 ^ 127 := hH0 q' hq'le
+      _ = (q : ℝ≥0∞) / 2 ^ 127 := by rw [hsum]
+  · -- the keygen tick does not fit: only negligible terms remain
+    have hq0 : q - keygenCost = 0 := by omega
+    simp only [hq0, budget_zero_zero, tsub_self, Nat.cast_zero, zero_mul, add_zero, zero_add]
+    have hN' : (signatureLimit : ℝ≥0∞) ≤ 2 ^ 70 := by exact_mod_cast hN
+    have h1 : (signatureLimit : ℝ≥0∞) * expectedFail ≤ (q : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 128 := by
+      calc (signatureLimit : ℝ≥0∞) * expectedFail ≤ 2 ^ 70 * (2 : ℝ≥0∞)⁻¹ ^ 201 := mul_le_mul' hN' hE
+        _ = (2 : ℝ≥0∞)⁻¹ ^ 131 := by
+            rw [show (201 : ℕ) = 70 + 131 by norm_num, pow_add, ← mul_assoc, ← mul_pow,
+              ENNReal.mul_inv_cancel (by norm_num) (by norm_num), one_pow, one_mul]
+        _ ≤ 1 * (2 : ℝ≥0∞)⁻¹ ^ 128 := by
+            rw [one_mul]
+            exact pow_le_pow_of_le_one (by norm_num) (by norm_num) (by norm_num)
+        _ ≤ _ := mul_le_mul' hq1' le_rfl
+    have h2 : (q : ℝ≥0∞) / 2 ^ 256 ≤ (q : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 128 := by
+      rw [div_two_pow]
+      exact mul_le_mul' le_rfl (pow_le_pow_of_le_one (by norm_num) (by norm_num) (by norm_num))
+    calc _ ≤ (q : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 128 + (q : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 128 := add_le_add h1 h2
+      _ = (q : ℝ≥0∞) / 2 ^ 127 := by
+          rw [← two_mul, div_two_pow, mul_left_comm, two_mul_inv_pow_succ]
+
+end Close
 
 end LeanSphincs.Security.ForsPotential
