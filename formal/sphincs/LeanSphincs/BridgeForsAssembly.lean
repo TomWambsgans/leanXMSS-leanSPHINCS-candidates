@@ -1,4 +1,5 @@
 import LeanSphincs.BridgeForsGame
+import LeanSphincs.BridgeReplay
 
 /-! Saturation and the FORS potential on the same lazy run: a decided hit, or a FORS cover
 without one, costs at most the saturation budget plus the potential of the start. -/
@@ -396,5 +397,227 @@ theorem sample_bound (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ) 
     · cases hres
 
 end Chain
+
+/-! ### Failing indices of the prepared searches -/
+
+section FailSet
+
+open HiddenBridge Completeness SeedModel Graph Assembly Reduce Internalize
+
+attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
+  remainingSampleable
+
+omit [Params] in
+theorem noQ_bind {bad : HashInput → Prop} [DecidablePred bad] {α β : Type} {oa : OracleComp HashSpec α}
+    {next : α → OracleComp HashSpec β} (h : oa.IsQueryBoundP bad 0)
+    (hnext : ∀ value, (next value).IsQueryBoundP bad 0) : (oa >>= next).IsQueryBoundP bad 0 := by
+  have := isQueryBoundP_bind (n := 0) (m := 0) h (fun value _ => hnext value)
+  simpa using this
+
+/-- The encoding search queries only encoding inputs. -/
+theorem noQ_search {bad : HashInput → Prop} [DecidablePred bad]
+    (hbad : ∀ parameter lay tree leaf payload, ¬bad (tweakableHashInput parameter (.encoding lay tree leaf) payload))
+    (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : Digest) :
+    ∀ attempts start, (ReferenceChoice.search parameter lay tree leaf message attempts start :
+      OracleComp HashSpec (Option (Counter × Encoding))).IsQueryBoundP bad 0
+  | 0, _ => trivial
+  | attempts + 1, start => by
+      rw [ReferenceChoice.search]
+      refine noQ_bind ?_ fun found => ?_
+      · unfold Concrete.encode Concrete.tweakableHash
+        refine noQ_bind (noQ_bind ?_ fun _ => trivial) fun _ => trivial
+        simp only [oracleHash, HasQuery.query]
+        rw [isQueryBoundP_query_iff]
+        exact fun hm => absurd hm (hbad _ _ _ _ _)
+      · cases found with
+        | none => exact noQ_search hbad parameter lay tree leaf message attempts (start + 1)
+        | some _ => trivial
+
+/-- Encoding inputs are not hidden rows. -/
+theorem not_row_encoding (parameterOutput : HashOutput) (highs : CoordinateHighs) (parameter : PublicParameter)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (payload : HashInput) :
+    (sampleModel parameterOutput highs).parse (tweakableHashInput parameter (.encoding lay tree leaf) payload) = none := by
+  rw [sampleModel_parse]
+  cases h : HiddenGraph.parse (truncateHash parameterOutput) (candidateActive (truncateHash parameterOutput))
+      (tweakableHashInput parameter (.encoding lay tree leaf) payload) with
+  | none => rfl
+  | some query =>
+      obtain ⟨heq, _⟩ := (HiddenGraph.parse_some_iff _ _ _ query).1 h
+      have hfields := (tweakableInput_injective heq).1
+      have htag := congrArg TweakFields.tag hfields
+      rcases query with ⟨address, value⟩
+      cases address <;> simp [Address.position, Position.domain, hashDomainFields, tweakFields] at htag
+
+/-- Every prepared search result was recorded inside the prepared cache. -/
+theorem preparation_parts (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
+    (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining)) (i : Index) :
+    ∃ c0, ∃ r ∈ support ((simulateQ (randomOracle (spec := HashSpec))
+        (ReferenceChoice.search (truncateHash parameterOutput) topLayer rootTree i
+          ((sampleData parameterOutput fixed highs remaining).forsKey i) encodingAttemptLimit 0)).run c0),
+      r.1 = prepared.1 i ∧ ∀ x v, r.2 x = some v → prepared.2 x = some v :=
+  sequenceFin_parts (D := HashInput) (R := HashOutput)
+    (fun leaf => ReferenceChoice.search (truncateHash parameterOutput) topLayer rootTree leaf
+      ((sampleData parameterOutput fixed highs remaining).forsKey leaf) encodingAttemptLimit 0)
+    (structCache (splitMaterial parameterOutput highs remaining fixed) (splitAnswers highs remaining fixed))
+    prepared hprepared i
+
+/-- Local indices of some index whose prepared search failed. -/
+noncomputable def failSet (results : Index → Option (Counter × Encoding)) : Finset (Fin (2 ^ subtreeHeight)) :=
+  Finset.univ.filter fun l => ∃ i : Index, ForsPotential.localIdx i = l ∧ results i = none
+
+/-- **A failed final assembly is at a failing index.** -/
+theorem finishRest_fail (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
+    (remaining : RemainingOutputs)
+    (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
+    (tg : Targeting HashInput HashOutput Coordinate) (m : Message) (ρ : Randomness) (digest : MessageDigest)
+    (budget : ℕ) (s1 : State) (hprep : Prepared prepared.2 s1)
+    (out : Run HashInput Coordinate (Option Signature) × State)
+    (hout : out ∈ support (interp tg prepared.2 (sampleModel parameterOutput highs)
+      (finishRest (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining) m ρ digest) budget s1))
+    (hnone : out.1.1 = some none) :
+    (Lifetime.localDigestView digest).1 ∈ failSet prepared.1 := by
+  set model := sampleModel parameterOutput highs
+  rw [localDigestView_fst]
+  unfold failSet
+  rw [Finset.mem_filter]
+  refine ⟨Finset.mem_univ _, digestIndex digest, rfl, ?_⟩
+  unfold finishRest at hout
+  obtain ⟨o1, ho1, h1⟩ := interp_bind_mem tg prepared.2 model _ _ budget s1 out hout
+  rcases h1 with ⟨_, hn, _⟩ | ⟨_, _, o2, ho2, hres2, _, _⟩
+  · rw [hnone] at hn; cases hn
+  have hext1 := interp_extends tg prepared.2 model _ budget s1 o1 ho1
+  obtain ⟨o3, ho3, h3⟩ := interp_bind_mem tg prepared.2 model _ _ _ _ o2 ho2
+  rcases h3 with ⟨_, hn, _⟩ | ⟨found, hfound, o4, ho4, hres4, _, _⟩
+  · rw [hres2, hn] at hnone; cases hnone
+  -- the search returned nothing
+  have hfnone : found = none := by
+    rcases found with _ | ⟨counter, word⟩
+    · rfl
+    · exfalso
+      have hmem := interp_result_mem tg prepared.2 model _ _ _ o4 ho4 none (by rw [← hres4, ← hres2, hnone])
+      revert hmem
+      dsimp only
+      intro hmem
+      refine post_bind (fun v => v ≠ none) _ (fun _ => post_bind _ _ fun _ => post_bind _ _ fun _ => ?_) none hmem rfl
+      intro v hv
+      rw [support_pure, Set.mem_singleton_iff] at hv
+      rw [hv]
+      exact fun h => by cases h
+  subst hfnone
+  -- the recorded search of the same index
+  obtain ⟨c0, r, hr, hr1, hr2⟩ := preparation_parts parameterOutput fixed highs remaining prepared hprepared
+    (digestIndex digest)
+  have ho3' : o3 ∈ support (interp tg prepared.2 model
+      (liftM (ReferenceChoice.search (truncateHash parameterOutput) topLayer rootTree (digestIndex digest)
+        ((sampleData parameterOutput fixed highs remaining).forsKey (digestIndex digest)) encodingAttemptLimit 0) :
+        OracleComp CostSpec _) (budget - traceCost o1.1.2.2.1) o1.2) := ho3
+  have hrow := noQ_search (bad := fun x => model.parse x ≠ none)
+    (fun parameter lay tree leaf payload h => h (not_row_encoding parameterOutput highs parameter lay tree leaf payload))
+    (truncateHash parameterOutput) topLayer rootTree (digestIndex digest)
+    ((sampleData parameterOutput fixed highs remaining).forsKey (digestIndex digest)) encodingAttemptLimit 0
+  have hstep := interp_liftHash_replay (D := HashInput) (R := HashOutput) tg prepared.2 model
+    (ReferenceChoice.search (truncateHash parameterOutput) topLayer rootTree (digestIndex digest)
+      ((sampleData parameterOutput fixed highs remaining).forsKey (digestIndex digest)) encodingAttemptLimit 0 :
+        OracleComp HashSpec (Option (Counter × Encoding)))
+  have hreplay := hstep hrow c0 r hr _ o1.2 (fun x v hx => hext1.1 x v (hprep x v (hr2 x v hx))) o3 ho3' none hfound
+  rw [← hr1, ← hreplay]
+
+end FailSet
+
+/-! ### All samples -/
+
+section Total
+
+open HiddenBridge Completeness SeedModel Graph Assembly Reduce Internalize
+
+attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
+  remainingSampleable
+
+/-- The excess forecast of a new pair at the start of the run. -/
+noncomputable def startExcess (wbar b0 : ℝ≥0∞) (k : ℕ) : ℝ≥0∞ :=
+  creations Finset.univ landing (fun I => virtual Finset.univ wbar (excess b0) signatureLimit I 0) k []
+
+theorem hValue_start (parameter : PublicParameter) (data : PublicData) (wbar b0 : ℝ≥0∞) (s : State) (k : ℕ) :
+    hValue parameter data wbar b0 s [] 0 signatureLimit k = startExcess wbar b0 k := rfl
+
+/-- A bound per sample, averaged. -/
+theorem tsum_bound_le {α : Type} (mx : ProbComp α) (g : α → ℝ≥0∞) (A C : ℝ≥0∞) (φ : α → ℝ≥0∞)
+    (h : ∀ x ∈ support mx, g x ≤ A + C * φ x) :
+    ∑' x, Pr[= x | mx] * g x ≤ A + C * ∑' x, Pr[= x | mx] * φ x := by
+  calc ∑' x, Pr[= x | mx] * g x ≤ ∑' x, Pr[= x | mx] * (A + C * φ x) := by
+        refine ENNReal.tsum_le_tsum fun x => ?_
+        by_cases hx : x ∈ support mx
+        · exact mul_le_mul_right (h x hx) _
+        · rw [probOutput_eq_zero_of_not_mem_support hx, zero_mul, zero_mul]
+    _ = (∑' x, Pr[= x | mx]) * A + C * ∑' x, Pr[= x | mx] * φ x := by
+        simp only [mul_add, ENNReal.tsum_add, ENNReal.tsum_mul_right, mul_left_comm _ C, ENNReal.tsum_mul_left]
+    _ ≤ A + C * ∑' x, Pr[= x | mx] * φ x := add_le_add (mul_le_of_le_one_left' tsum_probOutput_le_one) le_rfl
+
+/-- Expected share of failing indices over the samples and their preparations. -/
+noncomputable def expectedFail : ℝ≥0∞ :=
+  ∑' parameterOutput, Pr[= parameterOutput | ($ᵗ HashOutput : ProbComp HashOutput)] *
+  ∑' fixed, Pr[= fixed | ($ᵗ HiddenGraph.Table : ProbComp HiddenGraph.Table)] *
+  ∑' highs, Pr[= highs | ($ᵗ CoordinateHighs : ProbComp CoordinateHighs)] *
+  ∑' remaining, Pr[= remaining | ($ᵗ RemainingOutputs : ProbComp RemainingOutputs)] *
+  ∑' prepared, Pr[= prepared | preparation parameterOutput fixed highs remaining] *
+    failMass (failSet prepared.1)
+
+/-- **The stage-1 bound on the forging advantage.** -/
+theorem stage1_forge_bound (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ)
+    (hbound : HasHashQueryBound adversary q) (hq : q < 2 ^ 256)
+    (htarget : ∀ parameterOutput fixed highs remaining prepared,
+      prepared ∈ support (preparation parameterOutput fixed highs remaining) →
+      ∃ tg : Targeting HashInput HashOutput Coordinate,
+        Compatible tg (sampleModel parameterOutput highs) ∧ UniformTruncation (R := HashOutput) tg ∧
+        (∀ x, IsMsgInput x → tg.kind x = .none ∧ tg.digest x) ∧
+        ∀ table, tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table →
+          ∀ s : State, Prepared prepared.2 s → Agrees s.known table →
+            (CorrectGuess table s ∨ CacheMatch.Bad (TargetAssignment.targets (truncateHash parameterOutput)
+              (compTable parameterOutput fixed highs remaining table prepared.1)) s.cache) →
+            Hit tg prepared.2 table s)
+    (hclean : ∀ parameterOutput fixed highs remaining prepared,
+      prepared ∈ support (preparation parameterOutput fixed highs remaining) → ∀ x, IsMsgInput x → prepared.2 x = none)
+    (wbar : ℝ≥0∞) (hfair : Fair wbar (q - keygenCost + digestAttemptLimit))
+    (htotal : 2 * ((q - keygenCost : ℕ) : ℝ) + 2 ≤ spaceReal) :
+    forgeAdvantage adversary ≤
+      ((1 - budget 0 (q - keygenCost)) + (q - keygenCost : ℕ) * startExcess wbar (baseline (q - keygenCost))
+        (q - keygenCost)) +
+      ((q - keygenCost : ℕ) + signatureLimit) * expectedFail + q / (2 : ℝ≥0∞) ^ 256 := by
+  refine le_trans (forgeAdvantage_le_prep adversary q hbound) (add_le_add ?_ le_rfl)
+  set A := (1 - budget 0 (q - keygenCost)) + (q - keygenCost : ℕ) * startExcess wbar (baseline (q - keygenCost))
+    (q - keygenCost) with hA
+  set C : ℝ≥0∞ := ((q - keygenCost : ℕ) + signatureLimit) with hC
+  -- one sample
+  have hsample : ∀ parameterOutput fixed highs remaining prepared,
+      prepared ∈ support (preparation parameterOutput fixed highs remaining) →
+      Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
+          (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
+            (sampleData parameterOutput fixed highs remaining))))
+          (knownOf (truncateHash parameterOutput) fixed) prepared.2] ≤ A + C * failMass (failSet prepared.1) := by
+    intro parameterOutput fixed highs remaining prepared hprepared
+    obtain ⟨tg, hcompat, htrunc, hmsg, hhit⟩ := htarget parameterOutput fixed highs remaining prepared hprepared
+    refine le_trans (sample_bound hb adversary q hq parameterOutput fixed highs remaining prepared hprepared tg hhit
+      hcompat htrunc hmsg (hclean _ _ _ _ _ hprepared) (failSet prepared.1)
+      (fun m ρ digest budget s1 hprep out hout hnone => finishRest_fail parameterOutput fixed highs remaining prepared
+        hprepared tg m ρ digest budget s1 hprep out hout hnone) wbar htotal hfair) (le_of_eq ?_)
+    rw [hValue_start, hA, hC]
+    push_cast
+    ring
+  -- average
+  simp only [probEvent_bind_eq_tsum]
+  refine le_trans (tsum_bound_le _ _ A C (fun parameterOutput => ∑' fixed, Pr[= fixed | ($ᵗ HiddenGraph.Table : ProbComp HiddenGraph.Table)] *
+    ∑' highs, Pr[= highs | ($ᵗ CoordinateHighs : ProbComp CoordinateHighs)] *
+    ∑' remaining, Pr[= remaining | ($ᵗ RemainingOutputs : ProbComp RemainingOutputs)] *
+    ∑' prepared, Pr[= prepared | preparation parameterOutput fixed highs remaining] *
+      failMass (failSet prepared.1)) fun parameterOutput _ => ?_) le_rfl
+  refine tsum_bound_le _ _ A C _ fun fixed _ => ?_
+  refine tsum_bound_le _ _ A C _ fun highs _ => ?_
+  refine tsum_bound_le _ _ A C _ fun remaining _ => ?_
+  exact tsum_bound_le _ _ A C _ fun prepared hprepared =>
+    hsample parameterOutput fixed highs remaining prepared hprepared
+
+end Total
 
 end LeanSphincs.Security.ForsPotential
