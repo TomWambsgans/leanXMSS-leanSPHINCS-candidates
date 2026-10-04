@@ -232,6 +232,8 @@ import LeanSphincs.H0Poisson
 import LeanSphincs.H0Split
 import LeanSphincs.H0SplitCert
 import LeanSphincs.H0SplitCheck
+import LeanSphincs.BridgeRoutes
+import LeanSphincs.BridgeRoutesLarge
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -12106,3 +12108,19 @@ import LeanSphincs.H0SplitCheck
 /-- info: 'LeanSphincs.Security.H0.h0S_bound_b26' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.H0.h0S_bound_b26
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.seedFree_le_prep' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.seedFree_le_prep
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.seedFree_le_exposeP' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.seedFree_le_exposeP
+
+/-- info: 'LeanSphincs.Security.ForsPotential.stage1_seedFree_boundO' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.stage1_seedFree_boundO
+
+/-- info: 'LeanSphincs.Security.ForsPotential.det_large' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.det_large
