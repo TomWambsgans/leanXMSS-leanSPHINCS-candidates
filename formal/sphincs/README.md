@@ -3,7 +3,7 @@
 **Status: the requested 127-bit SUF-CMA lifetime claims (seven parameter sets) are proved for the candidate game
 (`Lifetimes.requestedSecurity`, [StageOne.lean](LeanSphincs/StageOne.lean)), at signature limits
 lowered to account for adaptive FORS/WOTS switching (see below). For the signer of the Rust
-implementation (seed-derived randomizers), 127 bits are proved at 80–90% of the best known attack's
+implementation (seed-derived randomizers), 127 bits are proved at 81–96% of the best known attack's
 lifetime (`LifetimesDet.requestedSecurityDet`, [LifetimesDet.lean](LeanSphincs/LifetimesDet.lean)).**
 Both proofs use only `propext`, `Classical.choice` and `Quot.sound`; they are pinned in
 [Axioms.lean](LeanSphincs/Axioms.lean).
@@ -28,8 +28,8 @@ all dependencies are drawn from `propext`, `Classical.choice`, and `Quot.sound`.
 
 | Claim | Theorem / file | Scope |
 | --- | --- | --- |
-| **The deterministic signer has 127 bits at 80–90% of the attack lifetimes** | `LifetimesDet.requestedSecurityDet`, [LifetimesDet](LeanSphincs/LifetimesDet.lean) | The game of [StatementDet.lean](LeanSphincs/StatementDet.lean) (`Seeded.sign`, randomizers derived from the seed and the message): every adversary, every q≥1 hash queries |
-| Two routes close the deterministic signer from rational checks | `ForsPotential.det_bits`, [BridgeDetFinal](LeanSphincs/BridgeDetFinal.lean) | Small budgets (q−K ≤ q_h): linear potential, cover potential at baseline ρ/2^128, FORS contact bounds; large budgets: one-coin split certificates |
+| **The deterministic signer has 127 bits at 81–96% of the attack lifetimes** | `LifetimesDet.requestedSecurityDet`, [LifetimesDet](LeanSphincs/LifetimesDet.lean) | The game of [StatementDet.lean](LeanSphincs/StatementDet.lean) (`Seeded.sign`, randomizers derived from the seed and the message): every adversary, every q≥1 hash queries |
+| Two routes close the deterministic signer from rational checks | `ForsPotential.det_bitsFW`, [BridgeDetW](LeanSphincs/BridgeDetW.lean) | Small budgets (q−K ≤ q_h): linear potential (also paying FORS-leaf contact risk), cover potential at baseline ρ/2^128, FORS contact bounds; large budgets: one-coin split certificates at the survival-weighted baseline |
 | **All requested lifetimes have 127 bits of classical SUF-CMA security** | `Lifetimes.requestedSecurity`, [StageOne](LeanSphincs/StageOne.lean) | The game of [Statement.lean](LeanSphincs/Statement.lean): every adversary, every q≥1 hash queries (keygen, signing and verification included) |
 | Stage 1 closes for any parameter set with the targeting and an excess bound | `ForsPotential.stage1_close`, [BridgeForsAssembly](LeanSphincs/BridgeForsAssembly.lean) | Saturation of fixed/hidden targets plus the FORS potential of the start; seed, failing-search and cache terms included |
 | The FORS potential pays for any adaptive adversary | `ForsPotential.good_advProg`, [BridgeForsGame](LeanSphincs/BridgeForsGame.lean), [BridgeForsPotential](LeanSphincs/BridgeForsPotential.lean) | Draws, hash queries (new pairs paid by the saturation baseline), grinding signer with cache pool selection, verification |
@@ -142,13 +142,19 @@ indices) in units of 2^-127, and 1/2 is the rate of the other (chain, tree, enco
 
 | Subtree height b | Proved signature limit N | N_att | N / N_att |
 | --- | ---: | ---: | ---: |
-| 26 | 1,084,000,000 | 1,203,133,390 | 90.1% |
-| 20 | 21,450,000 | 23,797,911 | 90.1% |
-| 14 | 401,000 | 466,871 | 85.9% |
-| 13 | 205,000 | 242,291 | 84.6% |
-| 12 | 105,000 | 125,715 | 83.5% |
-| 10 | 27,700 | 33,809 | 81.9% |
-| 8 | 7,290 | 9,074 | 80.3% |
+| 26 | 1,156,000,000 | 1,203,133,390 | 96.1% |
+| 20 | 22,000,000 | 23,797,911 | 92.4% |
+| 14 | 402,000 | 466,871 | 86.1% |
+| 13 | 206,000 | 242,291 | 85.0% |
+| 12 | 105,800 | 125,715 | 84.2% |
+| 10 | 27,800 | 33,809 | 82.2% |
+| 8 | 7,340 | 9,074 | 80.9% |
+
+N_att's model omits a real attack: a forger can choose the FORS public key a WOTS key signs, grind
+the WOTS counter until the encoding is a unit neighbour of the published word (4032 such words,
+about 2^116 hashes), and then needs a single chain preimage. Above ~2^116 queries this makes the
+non-FORS search rate close to 2^-127 per query rather than 2^-128. With it, the attack lifetimes are
+about 100 / 99.7 / 97.0 / 96.2 / 95.2 / 93.2 / 91.5% of N_att (b = 26 … 8).
 
 The route is summarized in [PROOF.md](PROOF.md) ("The stage-2 proof for the deterministic signer").
 
