@@ -258,6 +258,11 @@ import LeanSphincs.BridgeSmallFinal
 import LeanSphincs.BridgeDetFinal
 import LeanSphincs.H0DetCheck
 import LeanSphincs.LifetimesDet
+import LeanSphincs.BridgeFleafLinear
+import LeanSphincs.BridgeFleafA3
+import LeanSphincs.BridgeFleafGame
+import LeanSphincs.BridgeFleafA4a
+import LeanSphincs.BridgeFleafSmall
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -13644,3 +13649,183 @@ import LeanSphincs.LifetimesDet
 /-- info: 'LeanSphincs.LifetimesDet.requestedSecurityDet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.LifetimesDet.requestedSecurityDet
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.fleafCount_append' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.fleafCount_append
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.fleafCount_nil' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.fleafCount_nil
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.fleafCount_cons_inr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.fleafCount_cons_inr
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.fleafCount_cons_inl' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.fleafCount_cons_inl
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.fleafCount_recorded_inl' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.fleafCount_recorded_inl
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.fleafCount_recorded_eq_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.fleafCount_recorded_eq_zero
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.interp_mass' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.interp_mass
+
+/-- info: 'LeanSphincs.Security.HiddenDebt.interp_potential2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenDebt.interp_potential2
+
+/-- info: 'LeanSphincs.Security.PotentialA.arith_fleaf' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.PotentialA.arith_fleaf
+
+/-- info: 'LeanSphincs.Security.PotentialA.Ctx.one_add_slack_le_rate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.PotentialA.Ctx.one_add_slack_le_rate
+
+/-- info: 'LeanSphincs.Security.PotentialA.Ctx.arithForsF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.PotentialA.Ctx.arithForsF
+
+/-- info: 'LeanSphincs.Security.PotentialA.Ctx.fresh_forsF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.PotentialA.Ctx.fresh_forsF
+
+/-- info: 'LeanSphincs.Security.PotentialA.Ctx.guess_freshF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.PotentialA.Ctx.guess_freshF
+
+/-- info: 'LeanSphincs.Security.PotentialA.Ctx.guess_cachedF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.PotentialA.Ctx.guess_cachedF
+
+/-- info: 'LeanSphincs.Security.PotentialA.Ctx.pot_same_slack' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.PotentialA.Ctx.pot_same_slack
+
+/-- info: 'LeanSphincs.Security.PotentialA.Ctx.stepFors' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.PotentialA.Ctx.stepFors
+
+/-- info: 'LeanSphincs.Security.PotentialA.Ctx.digestCount_fleaf' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.PotentialA.Ctx.digestCount_fleaf
+
+/-- info: 'LeanSphincs.Security.PotentialA.Ctx.stepF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.PotentialA.Ctx.stepF
+
+/-- info: 'LeanSphincs.Security.PotentialA.smallRoute_potentialF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.PotentialA.smallRoute_potentialF
+
+/-- info: 'LeanSphincs.Security.ForsPotential.tsum_bound_pay' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.tsum_bound_pay
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodXP_draw' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodXP_draw
+
+/-- info: 'LeanSphincs.Security.ForsPotential.new_pair_boundXP' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.new_pair_boundXP
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodXP_ordinary' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodXP_ordinary
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodXP_pure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodXP_pure
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodXP_liftHash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodXP_liftHash
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodXP_sign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodXP_sign
+
+/-- info: 'LeanSphincs.Security.ForsPotential.goodXP_advProg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.goodXP_advProg
+
+/-- info: 'LeanSphincs.Security.ForsPotential.final_le_startP' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.final_le_startP
+
+/-- info: 'LeanSphincs.Security.ForsPotential.psiAF_newPair' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.psiAF_newPair
+
+/-- info: 'LeanSphincs.Security.ForsPotential.newContacts_mean' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.newContacts_mean
+
+/-- info: 'LeanSphincs.Security.ForsPotential.psiAF_ordinary' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.psiAF_ordinary
+
+/-- info: 'LeanSphincs.Security.ForsPotential.psiAF_sign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.psiAF_sign
+
+/-- info: 'LeanSphincs.Security.ForsPotential.psiAF_final' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.psiAF_final
+
+/-- info: 'LeanSphincs.Security.ForsPotential.a4a_boundF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.a4a_boundF
+
+/-- info: 'LeanSphincs.Security.ForsPotential.a4a_bound_gameF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.a4a_bound_gameF
+
+/-- info: 'LeanSphincs.Security.ForsPotential.a4a_bound_fairF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.a4a_bound_fairF
+
+/-- info: 'LeanSphincs.Security.ForsPotential.digestCount_cons_inr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.digestCount_cons_inr
+
+/-- info: 'LeanSphincs.Security.ForsPotential.pay_le_slack' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.pay_le_slack
+
+/-- info: 'LeanSphincs.Security.ForsPotential.sample_boundSF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.sample_boundSF
+
+/-- info: 'LeanSphincs.Security.ForsPotential.small_seedFree_boundF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.small_seedFree_boundF
+
+/-- info: 'LeanSphincs.Security.ForsPotential.det_smallF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.det_smallF
+
+/-- info: 'LeanSphincs.Security.ForsPotential.small_realF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.small_realF
+
+/-- info: 'LeanSphincs.Security.ForsPotential.small_closeF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.small_closeF
+
+/-- info: 'LeanSphincs.Security.ForsPotential.checkSmallF_sound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.checkSmallF_sound
+
+/-- info: 'LeanSphincs.Security.ForsPotential.det_bitsF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.det_bitsF
