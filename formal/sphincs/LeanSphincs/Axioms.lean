@@ -207,6 +207,7 @@ import LeanSphincs.H0Price
 import LeanSphincs.H0Numeric
 import LeanSphincs.H0Bound
 import LeanSphincs.H0Lifetimes
+import LeanSphincs.StageOne
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -10405,3 +10406,27 @@ import LeanSphincs.H0Lifetimes
 /-- info: 'LeanSphincs.Security.H0.h0_bound_pruned10' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.H0.h0_bound_pruned10
+
+/-- info: 'LeanSphincs.Lifetimes.full_of_targeting' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetimes.full_of_targeting
+
+/-- info: 'LeanSphincs.Lifetimes.pruned20_of_targeting' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetimes.pruned20_of_targeting
+
+/-- info: 'LeanSphincs.Lifetimes.pruned14_of_targeting' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetimes.pruned14_of_targeting
+
+/-- info: 'LeanSphincs.Lifetimes.pruned13_of_targeting' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetimes.pruned13_of_targeting
+
+/-- info: 'LeanSphincs.Lifetimes.pruned12_of_targeting' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetimes.pruned12_of_targeting
+
+/-- info: 'LeanSphincs.Lifetimes.pruned10_of_targeting' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetimes.pruned10_of_targeting
