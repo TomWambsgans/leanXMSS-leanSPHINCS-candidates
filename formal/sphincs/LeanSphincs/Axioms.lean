@@ -250,6 +250,9 @@ import LeanSphincs.BridgePotentialA5
 import LeanSphincs.BridgePotentialA6
 import LeanSphincs.BridgePotentialA7
 import LeanSphincs.BridgePotentialA8
+import LeanSphincs.BridgeAssemblyA
+import LeanSphincs.BridgeSmallSample
+import LeanSphincs.BridgeSmallClose
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -13312,3 +13315,59 @@ import LeanSphincs.BridgePotentialA8
 /-- info: 'LeanSphincs.Security.PotentialA.smallRoute_potential_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.PotentialA.smallRoute_potential_spec
+
+/-- info: 'LeanSphincs.Security.ForsPotential.stopped_table_leV' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.stopped_table_leV
+
+/-- info: 'LeanSphincs.Security.ForsPotential.stopped_le_interpV' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.stopped_le_interpV
+
+/-- info: 'LeanSphincs.Security.ForsPotential.stopped_le_interp_exposeV' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.stopped_le_interp_exposeV
+
+/-- info: 'LeanSphincs.Security.ForsPotential.flaggedCount_touch_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.flaggedCount_touch_le
+
+/-- info: 'LeanSphincs.Security.ForsPotential.flagged_le_digest' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.flagged_le_digest
+
+/-- info: 'LeanSphincs.Security.ForsPotential.expectedFlagged_le_digest' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.expectedFlagged_le_digest
+
+/-- info: 'LeanSphincs.Security.ForsPotential.small_pointwise' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.small_pointwise
+
+/-- info: 'LeanSphincs.Security.ForsPotential.targetingA_msg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.targetingA_msg
+
+/-- info: 'LeanSphincs.Security.ForsPotential.numeric_mono' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.numeric_mono
+
+/-- info: 'LeanSphincs.Security.ForsPotential.probEvent_le_endValue' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.probEvent_le_endValue
+
+/-- info: 'LeanSphincs.Security.ForsPotential.probEvent_const_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.probEvent_const_le
+
+/-- info: 'LeanSphincs.Security.ForsPotential.sample_boundS' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.sample_boundS
+
+/-- info: 'LeanSphincs.Security.ForsPotential.small_seedFree_bound' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.small_seedFree_bound
+
+/-- info: 'LeanSphincs.Security.ForsPotential.det_small' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.det_small
