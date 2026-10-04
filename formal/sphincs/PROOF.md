@@ -40,10 +40,10 @@ Units: S = 2^128 digests, x = q/S. The proof bounds the forging advantage by q/2
 5. **Closing.** `stage1_close` adds the pieces; `requestedSecurity` instantiates them for the seven
    parameter sets.
 
-## The stage-2 proof for the deterministic signer
+## The stage-2 and stage-3 proof for the deterministic signer
 
 `LifetimesDet.requestedSecurityDet` proves 127 bits for `Seeded.sign` (randomizers derived from the
-seed and the message) at 80–90% of the attack lifetime (README). Units as above; K is the keygen
+seed and the message) at 83–96% of the attack lifetime (README). Units as above; K is the keygen
 cost and q' = q − K.
 
 1. **Statement and memo reduction.** [StatementDet](LeanSphincs/StatementDet.lean) changes only the
@@ -58,32 +58,36 @@ cost and q' = q − K.
    - a first-order hit;
    - a WOTS second-order event: a two-edge completion, a contact together with a unit-neighbour
      encoding marker, or two contacts;
-   - a FORS leaf contact that was revealed later or that has no guess record;
+   - a FORS leaf contact that was revealed later or that has no guess record (needed for strong
+     unforgeability: a second preimage at a revealed leaf mauls an honest signature);
    - two FORS contacts;
    - a near cover or a full cover of an unsigned cached pair.
 
    [BridgeAssemblyA](LeanSphincs/BridgeAssemblyA.lean) keeps the valid finished outcome.
-3. **Two routes, split at q_h.**
-   - **Small budgets (q' ≤ q_h)**, [BridgeSmallSample](LeanSphincs/BridgeSmallSample.lean), [BridgeSmallClose](LeanSphincs/BridgeSmallClose.lean):
-     - *Linear potential.* [BridgePotentialA](LeanSphincs/BridgePotentialA.lean)–A8 pay first-order hits, WOTS events, unrecorded and paired FORS contacts and correct guesses at ρ/2^128 per query, with ρ = max(3/2, 2 − 1/(1+4032x), 1+66x).
-     - *Cover potential.* The one-coin FORS potential at baseline ρ/2^128 pays covers. Its excess is certified by `checkThreshS`.
-     - *Revealed contacts.* A contact at a leaf revealed later costs x·N/(2^b·2^10) ([BridgeContactA](LeanSphincs/BridgeContactA.lean)).
-     - *Near-covered contacts.* A contact at a near-covered leaf costs (x/2)·q'·H_near, where H_near is a Touchard-23 bound checked by `checkNear`. The sum potential C·P(y) + 2^-128·Σ_{j<y} P(j) over budget levels gives the half, because one query is never both a FORS query and a digest query ([BridgeContactHalf](LeanSphincs/BridgeContactHalf.lean)).
-     - *Closing.* `small_close` ([BridgeSmallFinal](LeanSphincs/BridgeSmallFinal.lean)) reduces the bound to the rational check `checkSmall`: ρ + 2^128 B + N/2^(b+10) + q_h/(2^128−q_h−2^32) + q_h c/2 + 2^-60 ≤ 2.
-   - **Large budgets (q' ≥ q_h).** `det_large` ([BridgeRoutesLarge](LeanSphincs/BridgeRoutesLarge.lean)) runs stage 1 with one coin per item. It uses the Poisson-domination and Chernoff-split certificates of [H0Split](LeanSphincs/H0Split.lean) and [H0SplitCert](LeanSphincs/H0SplitCert.lean), which cover every budget from q_h to 2^127.
-4. **Closing.** `det_bits` ([BridgeDetFinal](LeanSphincs/BridgeDetFinal.lean)) combines the two routes. [H0DetCheck](LeanSphincs/H0DetCheck.lean) holds the kernel-checked certificates (`decide +kernel`, exact rationals) for each parameter set, with q_h ≈ 2^(128+lx):
+3. **Small budgets (q' ≤ q_h).**
+   - *Linear potential.* [BridgePotentialA](LeanSphincs/BridgePotentialA.lean)–A8 charge ρ/2^128 per query, ρ = max(3/2, 2 − 1/(1+4032x), 1+66x). They pay first-order hits, WOTS events, unrecorded and paired FORS contacts and correct guesses.
+   - *Two extra payments from the same slack.* The linear potential also pays (ρ − 1 − x)/2^128 per FORS leaf query out of its own slack ([BridgeFleafA3](LeanSphincs/BridgeFleafA3.lean)). That payment covers:
+     - the signature part of "contact at a leaf revealed later" (N/(2^b 2^10) per query, [BridgeFleafA4a](LeanSphincs/BridgeFleafA4a.lean));
+     - most of the near-cover contact term ([BridgeArmA4b](LeanSphincs/BridgeArmA4b.lean)).
+   - *Near-cover contact term.* Each contact's near forecast is capped at one. The remaining shortfall of a FORS leaf query at a near-covered leaf, κ = 2 − ρ + x + N/(2^b 2^10), is paid by κ·2^-128·Σ_{j<y} potNear(j) over budget levels. The near term therefore enters at κ·q_h·c/2 instead of q_h·c.
+   - *Cover potential.* The one-coin FORS potential at baseline ρ/2^128 pays covers (`checkThreshS`).
+   - *Closing.* The rational check is `checkSmallA` ([BridgeArmSmall](LeanSphincs/BridgeArmSmall.lean)).
+4. **Large budgets (q' ≥ q_h).** `det_largeW` ([BridgeSatWRoutes](LeanSphincs/BridgeSatWRoutes.lean)) runs stage 1 with one coin per item, and each digest query pays the baseline times the current survival weight ([BridgeSatW](LeanSphincs/BridgeSatW.lean), [BridgeSatWFors](LeanSphincs/BridgeSatWFors.lean)). The baseline is then ≈ 2^-127 (1 − x) instead of 2^-127 (1 − 2x)/(1 − x), which removes the 0.90 cap near q = 2^127. The Poisson-domination and Chernoff-split certificates (`checkCoverSW`, [BridgeDetW](LeanSphincs/BridgeDetW.lean)) cover every budget from q_h to 2^127.
+5. **Closing.** `det_bitsAW` ([BridgeDetAW](LeanSphincs/BridgeDetAW.lean)) combines the routes. [H0DetCheckAW](LeanSphincs/H0DetCheckAW.lean) holds the kernel-checked certificates for each parameter set, with q_h ≈ 2^(128+lx):
 
    | b | lx |
    | ---: | ---: |
-   | 26 | −19 |
-   | 20 | −11.75 |
-   | 14 | −9.22 |
-   | 13 | −9.06 |
-   | 12 | −8.91 |
-   | 10 | −8.63 |
-   | 8 | −8.41 |
+   | 26 | −11 |
+   | 20 | −8.78 |
+   | 14 | −7.75 |
+   | 13 | −7.5 |
+   | 12 | −7.38 |
+   | 10 | −7.16 |
+   | 8 | −6.97 |
 
-   At b = 20 and 26 the large route alone limits N; at the other heights both routes are close to tight at the chosen N.
+   For b ≤ 20 both routes are tight at the chosen N; for b = 26 the large route alone limits N.
+
+**Attack model.** N_att (cover-only FORS search against rate-1/2 other searches) omits a WOTS attack. The forger picks any FORS opening for a message landing on a signed leaf, so it controls the FORS public key the WOTS key signs. It grinds the WOTS counter until the encoding is one of the 4032 unit neighbours of the published word (about 2^116 hashes), then needs one chain preimage (about 2^127 hashes at 2·2^-128 each). With it the attack lifetimes are about 100 / 99.7 / 97.0 / 96.2 / 95.2 / 93.2 / 91.5% of N_att. The proved limits are 91–96% of those.
 
 ## What is checked
 

@@ -119,12 +119,15 @@ Plan, with the ideal (exact-expectation) result 0.90 / 0.90 / 0.88 / 0.87 / 0.86
  D. Tighter H0 certificates (exact single-leaf Poisson sums above a cutoff, product majorant
     below), for both criteria; the current majorant loses 10-40x in E[(Z-1)^+] at 0.8 N_att.
 
-Status (2026-10-04): stage 2 done for the deterministic signer. `LifetimesDet.requestedSecurityDet`
-proves 127 bits at N = 1,084,000,000 / 21,450,000 / 401,000 / 205,000 / 105,000 / 27,700 / 7,290
-(b = 26/20/14/13/12/10/8; 90.1/90.1/85.9/84.6/83.5/81.9/80.3% of N_att). The near-cover contact
-term is halved by a sum potential over budget levels (BridgeContactHalf). At b = 20 and 26 the
-large route alone limits N (~0.90 N_att); counting revealed leaves with multiplicity (k^24 price
-instead of distinct leaves) accounts for only ~2.5% of that gap.
+Status (2026-10-04): stages 2 and 3 done for the deterministic signer. `LifetimesDet.requestedSecurityDet`
+proves 127 bits at N = 1,156,000,000 / 22,380,000 / 412,500 / 211,900 / 108,700 / 28,600 / 7,530
+(b = 26/20/14/13/12/10/8; 96.1/94.0/88.4/87.5/86.5/84.6/83.0% of N_att). Stage 3 added the
+survival-weighted large-route baseline (BridgeSatW*), the FORS-leaf payment of the
+contact-before-reveal term (BridgeFleaf*) and near covers arming the linear potential (BridgeArm*).
+Against an attack model that includes the WOTS unit-neighbour attack (ceilings 100/99.7/97.0/96.2/
+95.2/93.2/91.5% of N_att) the proved limits are 91–96% of the ceiling. Remaining losses: the k^24
+price instead of distinct leaves (~2.5–3%), the coin part of the contact-before-reveal term, and the
+large route's rate-1 charge for non-FORS queries at moderate budgets.
 
 R6. Resolve the reference caching/query-count transfer before claiming security of Rust itself.
 
