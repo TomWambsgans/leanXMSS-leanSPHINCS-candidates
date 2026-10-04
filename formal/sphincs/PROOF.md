@@ -1,6 +1,6 @@
 # Candidate proof route and remaining work
 
-The candidate development is in `LeanSphincs/`. Its six SUF-CMA lifetime claims are **proved**
+The candidate development is in `LeanSphincs/`. Its SUF-CMA lifetime claims are **proved**
 (`Lifetimes.requestedSecurity`) at the lowered limits listed in [README.md](README.md); the route
 is summarized in the next section, and the earlier groundwork follows it.
 The retained `SphincsSecurity/` proof establishes the older three-layer leanVM instance;
@@ -37,7 +37,7 @@ Units: S = 2^128 digests, x = q/S. The proof bounds the forging advantage by q/2
    value q'·H0 (q' = q−K) by x'^2 + K/2^127 minus a 2^-200 slack: Poisson domination of joint
    factorial moments of the virtual future, a product-form moment majorant of the excess, and exact
    rational interval covers of all budgets checked by the kernel.
-5. **Closing.** `stage1_close` adds the pieces; `requestedSecurity` instantiates them for the six
+5. **Closing.** `stage1_close` adds the pieces; `requestedSecurity` instantiates them for the seven
    parameter sets.
 
 ## What is checked
@@ -353,8 +353,9 @@ the final composition remain open.
 - Verification does not enforce membership in the retained subtree. The security extraction
   must account explicitly for forgeries entering through a surrogate sibling, as well as
   ordinary WOTS/FORS/tree hash events.
-- Requested N at b=10 is 33, versus 33,000 in the spec/prior plan; it is preserved exactly. The
-  proved N at b=26 is 540,000,000, below the 2^30 of the current spec.
+- The proved N are 12,006 at b=10 and 3,046 at b=8, versus 33K and 9K on the site's threshold
+  tables (an earlier literal target of 33 at b=10 was a typo for 33K). The proved N at b=26 is
+  540,000,000, below the 2^30 of the current spec.
 - `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums
   BLAKE2s block costs of the verifier's actual logged hash-input lengths. Accepted signatures
   cost exactly 391 compressions; all signatures cost at most 391. This includes the 72 WOTS

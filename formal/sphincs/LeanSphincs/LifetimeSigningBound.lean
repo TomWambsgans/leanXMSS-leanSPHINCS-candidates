@@ -100,12 +100,12 @@ FORS target. This theorem is not the adaptive SUF-CMA claim `RequestedSecurity`.
 theorem requested_signing_lifetime_bounds :
     @SigningLifetimeBound full ∧ @SigningLifetimeBound pruned20 ∧
     @SigningLifetimeBound pruned13 ∧ @SigningLifetimeBound pruned14 ∧
-    @SigningLifetimeBound pruned12 ∧ @SigningLifetimeBound pruned10 := by
+    @SigningLifetimeBound pruned12 ∧ @SigningLifetimeBound legacyPruned10 := by
   exact ⟨@signingLifetimeBound_of_fors full (fun _ h => fors_lifetime_ennreal_full (h.trans (by decide))),
     @signingLifetimeBound_of_fors pruned20 (fun _ h => fors_lifetime_ennreal_pruned20 (h.trans (by decide))),
     @signingLifetimeBound_of_fors pruned13 (fun _ h => fors_lifetime_ennreal_pruned13 (h.trans (by decide))),
     @signingLifetimeBound_of_fors pruned14 (fun _ h => fors_lifetime_ennreal_pruned14 (h.trans (by decide))),
     @signingLifetimeBound_of_fors pruned12 (fun _ h => fors_lifetime_ennreal_pruned12 (h.trans (by decide))),
-    @signingLifetimeBound_of_fors pruned10 (fun _ h => fors_lifetime_ennreal_pruned10 h)⟩
+    @signingLifetimeBound_of_fors legacyPruned10 (fun _ h => fors_lifetime_ennreal_pruned10 h)⟩
 
 end LeanSphincs.Lifetimes

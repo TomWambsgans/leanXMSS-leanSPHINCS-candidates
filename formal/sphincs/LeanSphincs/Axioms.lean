@@ -10575,3 +10575,15 @@ import LeanSphincs.BridgeTargeting
 /-- info: 'LeanSphincs.Lifetimes.requestedSecurity' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Lifetimes.requestedSecurity
+
+/-- info: 'LeanSphincs.Security.H0.cover_pruned8_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.H0.cover_pruned8_ok
+
+/-- info: 'LeanSphincs.Security.H0.h0_bound_pruned8' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.H0.h0_bound_pruned8
+
+/-- info: 'LeanSphincs.Lifetimes.pruned8_of_targeting' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Lifetimes.pruned8_of_targeting

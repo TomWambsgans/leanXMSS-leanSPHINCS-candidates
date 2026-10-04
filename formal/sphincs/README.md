@@ -1,6 +1,6 @@
 # leanSPHINCS proofs in Lean 4
 
-**Status: the six requested 127-bit SUF-CMA lifetime claims are proved for the candidate game
+**Status: the requested 127-bit SUF-CMA lifetime claims (seven parameter sets) are proved for the candidate game
 (`Lifetimes.requestedSecurity`, [StageOne.lean](LeanSphincs/StageOne.lean)), at signature limits
 lowered to account for adaptive FORS/WOTS switching (see below).** The proof uses only `propext`,
 `Classical.choice` and `Quot.sound`; it is pinned in [Axioms.lean](LeanSphincs/Axioms.lean).
@@ -25,10 +25,10 @@ all dependencies are drawn from `propext`, `Classical.choice`, and `Quot.sound`.
 
 | Claim | Theorem / file | Scope |
 | --- | --- | --- |
-| **All six requested lifetimes have 127 bits of classical SUF-CMA security** | `Lifetimes.requestedSecurity`, [StageOne](LeanSphincs/StageOne.lean) | The game of [Statement.lean](LeanSphincs/Statement.lean): every adversary, every q≥1 hash queries (keygen, signing and verification included) |
+| **All requested lifetimes have 127 bits of classical SUF-CMA security** | `Lifetimes.requestedSecurity`, [StageOne](LeanSphincs/StageOne.lean) | The game of [Statement.lean](LeanSphincs/Statement.lean): every adversary, every q≥1 hash queries (keygen, signing and verification included) |
 | Stage 1 closes for any parameter set with the targeting and an excess bound | `ForsPotential.stage1_close`, [BridgeForsAssembly](LeanSphincs/BridgeForsAssembly.lean) | Saturation of fixed/hidden targets plus the FORS potential of the start; seed, failing-search and cache terms included |
 | The FORS potential pays for any adaptive adversary | `ForsPotential.good_advProg`, [BridgeForsGame](LeanSphincs/BridgeForsGame.lean), [BridgeForsPotential](LeanSphincs/BridgeForsPotential.lean) | Draws, hash queries (new pairs paid by the saturation baseline), grinding signer with cache pool selection, verification |
-| Certified excess-forecast bound for the six lifetimes | `H0.h0_bound_*`, [H0Lifetimes](LeanSphincs/H0Lifetimes.lean) | Poisson factorial-moment domination of the virtual future; exact rational covers checked by `decide +kernel` |
+| Certified excess-forecast bound for the seven lifetimes | `H0.h0_bound_*`, [H0Lifetimes](LeanSphincs/H0Lifetimes.lean) | Poisson factorial-moment domination of the virtual future; exact rational covers checked by `decide +kernel` |
 | Cached target hits and correct guesses are saturation hits | `HiddenBridge.exists_targeting`, [BridgeTargeting](LeanSphincs/BridgeTargeting.lean) | Every prepared sample; row addresses target their output coordinate |
 | Pr[hit] plus the baseline per flagged digest query is ≤ 1 − (1 − q/2^128)^2 | `HiddenDebt.interp_hit_bound`, [BridgeSaturation](LeanSphincs/BridgeSaturation.lean), [BridgeInterp](LeanSphincs/BridgeInterp.lean) | Lazy comparison of the whole rich program |
 | A successful seeded signature verifies | `Completeness.correct`, [Correctness](LeanSphincs/Correctness.lean) | Every hash function, seed, message, and pruning height 0–26 |
@@ -101,7 +101,7 @@ all dependencies are drawn from `propext`, `Classical.choice`, and `Quot.sound`.
 
 ## Proved lifetimes
 
-`Lifetimes.RequestedSecurity` states all six targets in the candidate game, and
+`Lifetimes.RequestedSecurity` states all seven targets in the candidate game, and
 `Lifetimes.requestedSecurity` proves them. Each counts every hash call in the modeled experiment,
 including honest-party calls, repeated inputs, and final verification; private sampling is free.
 
@@ -118,10 +118,11 @@ were lowered to those the stage-1 argument proves (see [PROOF.md](PROOF.md) and
 | 14 | 185,000 | 460,000 |
 | 13 | 93,000 | 240,000 |
 | 12 | 47,000 | 125,000 |
-| 10 | 33 | 33 |
+| 10 | 12,006 | 33,000 (site) |
+| 8 | 3,046 | 9,000 (site) |
 
-The b=10 target is the user's literal 33, while the spec says 33,000; the full-key limit is below
-the 2^30 the spec advertises. A refined small-budget
+The b=10 and b=8 limits are the largest the stage-1 certificates reach; the site's 33K and 9K
+threshold lifetimes are not proved. The full-key limit is below the 2^30 the spec advertises. A refined small-budget
 analysis (leanVM's route, "stage 2" in [PLAN.md](PLAN.md)) is expected to raise the other limits
 to roughly 82–97% of the earlier targets; it is not done. Modeling differences are recorded in
 [PROOF.md](PROOF.md).

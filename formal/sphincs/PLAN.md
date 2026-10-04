@@ -78,8 +78,9 @@ Done: seed removal, hidden-coordinate stop, lazy outside oracle, rich program, p
 encoding searches (`forgeAdvantage_le_prep`); win implication on non-stopped runs
 (`HiddenBridge.win_implies_bad`: target hit or FORS cover with <= N signing calls).
 
-Stage 1: DONE (2026-10-04). `Lifetimes.requestedSecurity` (StageOne.lean) proves the six claims at
-540000000 / 10650000 / 185000 / 93000 / 47000 / 33 signatures (b = 26/20/14/13/12/10).
+Stage 1: DONE (2026-10-04). `Lifetimes.requestedSecurity` (StageOne.lean) proves the claims at
+540000000 / 10650000 / 185000 / 93000 / 47000 / 12006 / 3046 signatures (b = 26/20/14/13/12/10/8;
+b=10 and b=8 at their certified maxima, below the site's 33K and 9K).
  1a. Saturation: `BridgeSaturation.hit_bound_start`, `HiddenDebt.interp_hit_bound`.
  1b/1c. FORS potential instead of a proposal bank: witness counts over disclosed views, a virtual
      future (fresh uniform view per remaining signature, a coin per item, future pairs in front),
@@ -102,6 +103,6 @@ R6. Resolve the reference caching/query-count transfer before claiming security 
 The bridge files `LeanSphincs/Bridge*.lean` implement steps 1–3 (branch
 `leansphincs-lifetime-bridge`).
 
-Preserve b=10,N=33 as literally requested. No threshold/MPC work, changes to the spec,
+b=10 targets the site's 33K (the earlier literal 33 was a typo); stage 1 proves 12006. No threshold/MPC work, changes to the spec,
 Rust or site, or pushes. Run Lake with nice -n 19 and LEAN_NUM_THREADS=2. Every public
 candidate theorem must retain an axiom guard in LeanSphincs/Axioms.lean.

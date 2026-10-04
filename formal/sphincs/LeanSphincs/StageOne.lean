@@ -41,6 +41,10 @@ theorem pruned10_of_targeting (h : @TargetingAll pruned10) : @HasClassicalSecuri
   @stage1_close pruned10 (by decide) (by decide) h _ (fun q' hq => @H0.h0_fair pruned10 q' hq)
     (fun q' hq => @H0.h0_bound_pruned10 pruned10 rfl rfl q' hq)
 
+theorem pruned8_of_targeting (h : @TargetingAll pruned8) : @HasClassicalSecurityBits pruned8 127 :=
+  @stage1_close pruned8 (by decide) (by decide) h _ (fun q' hq => @H0.h0_fair pruned8 q' hq)
+    (fun q' hq => @H0.h0_bound_pruned8 pruned8 rfl rfl q' hq)
+
 /-- Every prepared sample has a targeting, at every pruning height `b ≥ 1`. -/
 theorem targetingAll [Params] (hb : 0 < subtreeHeight) : TargetingAll := by
   intro parameterOutput fixed highs remaining prepared hprepared
@@ -48,13 +52,14 @@ theorem targetingAll [Params] (hb : 0 < subtreeHeight) : TargetingAll := by
     exists_targeting hb parameterOutput fixed highs remaining prepared hprepared
   exact ⟨tg, hcompat, uniformTruncation_of_trunc tg htrunc, hmsg, hhit⟩
 
-/-- **The six requested 127-bit lifetime claims.** -/
+/-- **The requested 127-bit lifetime claims.** -/
 theorem requestedSecurity : RequestedSecurity :=
   ⟨full_of_targeting (@targetingAll full (by decide)),
     pruned20_of_targeting (@targetingAll pruned20 (by decide)),
     pruned13_of_targeting (@targetingAll pruned13 (by decide)),
     pruned14_of_targeting (@targetingAll pruned14 (by decide)),
     pruned12_of_targeting (@targetingAll pruned12 (by decide)),
-    pruned10_of_targeting (@targetingAll pruned10 (by decide))⟩
+    pruned10_of_targeting (@targetingAll pruned10 (by decide)),
+    pruned8_of_targeting (@targetingAll pruned8 (by decide))⟩
 
 end LeanSphincs.Lifetimes

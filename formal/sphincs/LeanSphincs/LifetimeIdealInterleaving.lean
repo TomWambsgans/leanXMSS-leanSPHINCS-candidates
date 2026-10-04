@@ -193,12 +193,12 @@ omit [Params] in
 theorem requested_ideal_interleaving_bounds :
     @IdealInterleavingLifetimeBound full ∧ @IdealInterleavingLifetimeBound pruned20 ∧
     @IdealInterleavingLifetimeBound pruned13 ∧ @IdealInterleavingLifetimeBound pruned14 ∧
-    @IdealInterleavingLifetimeBound pruned12 ∧ @IdealInterleavingLifetimeBound pruned10 := by
+    @IdealInterleavingLifetimeBound pruned12 ∧ @IdealInterleavingLifetimeBound legacyPruned10 := by
   exact ⟨@idealInterleavingLifetimeBound_of_fors full (fun _ h => fors_lifetime_ennreal_full (h.trans (by decide))),
     @idealInterleavingLifetimeBound_of_fors pruned20 (fun _ h => fors_lifetime_ennreal_pruned20 (h.trans (by decide))),
     @idealInterleavingLifetimeBound_of_fors pruned13 (fun _ h => fors_lifetime_ennreal_pruned13 (h.trans (by decide))),
     @idealInterleavingLifetimeBound_of_fors pruned14 (fun _ h => fors_lifetime_ennreal_pruned14 (h.trans (by decide))),
     @idealInterleavingLifetimeBound_of_fors pruned12 (fun _ h => fors_lifetime_ennreal_pruned12 (h.trans (by decide))),
-    @idealInterleavingLifetimeBound_of_fors pruned10 (fun _ h => fors_lifetime_ennreal_pruned10 h)⟩
+    @idealInterleavingLifetimeBound_of_fors legacyPruned10 (fun _ h => fors_lifetime_ennreal_pruned10 h)⟩
 
 end LeanSphincs.Lifetime

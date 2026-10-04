@@ -83,10 +83,14 @@ abbrev pruned20 : Params := ⟨20, 10650000, by decide⟩
 abbrev pruned13 : Params := ⟨13, 93000, by decide⟩
 abbrev pruned14 : Params := ⟨14, 185000, by decide⟩
 abbrev pruned12 : Params := ⟨12, 47000, by decide⟩
-/-- The user requested exactly 33; the spec's 33000 is a separate, stronger target. -/
-abbrev pruned10 : Params := ⟨10, 33, by decide⟩
+/-- The site advertises 33000 at b=10; 12006 is the largest limit the stage-1 argument certifies. -/
+abbrev pruned10 : Params := ⟨10, 12006, by decide⟩
+/-- The site advertises 9000 at b=8; 3046 is the largest limit the stage-1 argument certifies. -/
+abbrev pruned8 : Params := ⟨8, 3046, by decide⟩
+/-- The earlier literal b=10 target (33), kept only for the legacy non-adaptive summaries. -/
+abbrev legacyPruned10 : Params := ⟨10, 33, by decide⟩
 
-/-- The six requested claims for this candidate game; proved by `Lifetimes.requestedSecurity`
+/-- The requested claims for this candidate game; proved by `Lifetimes.requestedSecurity`
 (StageOne.lean). -/
 def RequestedSecurity : Prop :=
   @Security.HasClassicalSecurityBits full 127 ∧
@@ -94,7 +98,8 @@ def RequestedSecurity : Prop :=
   @Security.HasClassicalSecurityBits pruned13 127 ∧
   @Security.HasClassicalSecurityBits pruned14 127 ∧
   @Security.HasClassicalSecurityBits pruned12 127 ∧
-  @Security.HasClassicalSecurityBits pruned10 127
+  @Security.HasClassicalSecurityBits pruned10 127 ∧
+  @Security.HasClassicalSecurityBits pruned8 127
 
 end Lifetimes
 
