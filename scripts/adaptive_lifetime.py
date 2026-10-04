@@ -32,10 +32,12 @@ generation, K * 2^-127 with K = 258 * 2^b + 2 * (26 - b) honest hash calls.
     of each level (a leaf at load m may still receive m0 - 1 - m signatures), and
     s (N - s)^r <= N^(r+1) r^r / (r+1)^(r+1), the forecast must stay below 2^-127.
 
-The bounds are deliberately the ones a proof can check; the true safe lifetimes are larger. The
-`--estimate` option prints a heuristic, unproved reference: the N at which E[(X - 1)^+] reaches
-2^-13.5, the excess the leanVM proof absorbs with its refined WOTS analysis, from a simulation in
-which X only depends on per-leaf signature counts.
+These bounds are the ones the current, crude per-call accounting can prove. The `--target`
+option prints the lifetimes aimed at by the stronger proof plan in formal/sphincs/PLAN.md, which
+charges hidden-value guesses as second-order events below q ~ 2^115 and uses saturation above:
+the largest N with E[(Z - 1)^+] <= 2^-13.5, where Z is the count-based FORS price (in units of
+2^-127 per digest query) of a word of N + 2^12 uniform kept-leaf proposals. The `--estimate`
+option prints a cruder unproved simulation of the same tolerance with expected coverage.
 """
 
 import argparse
@@ -206,6 +208,71 @@ def estimate(b, upper, samples):
     return lo
 
 
+def target_excess(b, N, bank=2**12):
+    """The best of `split_excess` over several heavy-leaf thresholds; each one is an upper bound."""
+    return min(split_excess(b, N, bank, share) for share in (0.01, 0.05, 0.2, 0.5, 1.0))
+
+
+def split_excess(b, N, bank, share):
+    """E[(Z - 1)^+] for Z = 2^101 * sum over leaves (M_l / 1024)^24, the count-based terminal price
+    (units of 2^-127) of a word of N + bank uniform kept-leaf proposals, with Poisson leaf loads
+    (an upper model for the multinomial word). Heavy leaves are a compound Poisson sum computed
+    exactly up to three of them (later ones add their mean); the light bulk is bounded through
+    its mean plus 8 standard deviations, with Bernstein's inequality for the remainder."""
+    lam = (N + bank) / 2**b
+    leaves = 2**b
+    top = int(lam + 60 * math.sqrt(lam) + 200)
+    mass = [math.exp(-lam + c * math.log(lam) - math.lgamma(c + 1)) for c in range(top)]
+    g = [2.0**101 * (c / 1024.0) ** KEEP for c in range(top)]
+    heavy, tail = top, 0.0
+    for c in range(top - 1, -1, -1):
+        tail += mass[c]
+        if leaves * tail > share:
+            heavy = c + 1
+            break
+    mu = leaves * sum(mass[heavy:])
+    light_mean = leaves * sum(mass[c] * g[c] for c in range(heavy))
+    light_var = leaves * sum(mass[c] * g[c] ** 2 for c in range(heavy))
+    spread = 8 * math.sqrt(light_var)
+    shift = 1 - light_mean - spread
+    if shift <= 0:
+        return math.inf
+    total_heavy = sum(mass[heavy:])
+    cond = [(g[c], mass[c] / total_heavy) for c in range(heavy, top) if mass[c] > 1e-30 * total_heavy]
+    mean_heavy = sum(v * p for v, p in cond)
+    one = sum(p * max(0.0, v - shift) for v, p in cond)
+    two = [0.0]
+    pairs = sorted((v1 + v2, p1 * p2) for v1, p1 in cond for v2, p2 in cond)
+    two = sum(p * max(0.0, v - shift) for v, p in pairs)
+    three = sum(p * p3 * max(0.0, v + v3 - shift) for v, p in pairs for v3, p3 in cond if v + v3 > shift)
+    # (A + B + C + D - s)^+ <= (A + B + C - s)^+ + D for the fourth and later heavy leaves
+    result = math.exp(-mu) * (mu * one + mu**2 / 2 * two + mu**3 / 6 * three)
+    rest = 1 - math.exp(-mu) * (1 + mu + mu**2 / 2 + mu**3 / 6)
+    result += rest * (three + mu * mean_heavy + 3 * mean_heavy)
+    # E[(A - E A - spread)^+] by Bernstein's inequality (light values are at most g[heavy - 1])
+    bound = g[heavy - 1] if heavy > 0 else 0.0
+    step = spread / 64 if spread > 0 else 0.0
+    u, integral = spread, 0.0
+    while step > 0:
+        density = math.exp(-u * u / (2 * (light_var + bound * u / 3)))
+        integral += density * step
+        if density < 1e-30:
+            break
+        u += step
+    return result + integral
+
+
+def target_signatures(b, tolerance=2.0**-13.5, precision=2000):
+    lo, hi = 1, 2 ** (b + 6)
+    while hi - lo > max(1, lo // precision):
+        mid = (lo + hi) // 2
+        if target_excess(b, mid) <= tolerance:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
 REQUESTED = {26: 1200000000, 20: 23700000, 14: 460000, 13: 240000, 12: 125000, 10: 33}
 
 
@@ -214,6 +281,8 @@ def main():
     ap.add_argument("--b", type=int, nargs="+", default=list(REQUESTED), help="log2 kept leaves")
     ap.add_argument("--estimate", action="store_true", help="also print the unproved leanVM-style estimate")
     ap.add_argument("--samples", type=int, default=6000)
+    ap.add_argument("--target", action="store_true",
+                    help="also print the lifetimes targeted by the proof plan in formal/sphincs/PLAN.md")
     x = ap.parse_args()
     print(f"i_occ = {I_OCC}, i_cov = {I_COV}; slack K 2^-127 with K = 258 2^b + 2 (26 - b)")
     for b in x.b:
@@ -224,6 +293,8 @@ def main():
                 f"no leaf >= {m0} (2^{top:.1f}), {levels_text}; slack 2^{slack_log2(b):.1f}")
         if b in REQUESTED:
             line += f"; previously {REQUESTED[b]:,}"
+        if x.target and b in REQUESTED and REQUESTED[b] > 1000:
+            line += f"; plan target {target_signatures(b):,}"
         if x.estimate and b in REQUESTED and REQUESTED[b] > 1000:
             line += f"; unproved estimate ~{estimate(b, REQUESTED[b], x.samples):,}"
         print(line)
