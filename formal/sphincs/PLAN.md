@@ -66,7 +66,11 @@ S. Small budgets (x <= x0): refined chain analysis (leanVM's route): one-step co
 Projected provable lifetimes (E[(Z-1)^+] <= 2^-13.5, Poisson upper model):
     full 1.16e9 (97%), b=20 21.9e6 (92%), b=14 402e3 (87%), b=13 202e3 (84%), b=12 103e3 (82%);
     b=10 keeps 33. Unproved exact-coverage references: 1.19e9, 22.3e6, 395e3, 202e3, 103e3.
-Stage 1 alone (F + L, no S; tolerance 2^((b-118)/2) from keygen slack and x^2): about 40-60%.
+Stage 1 alone (F + L, no S): for every x, 2x E[(Z_x - beta(x))^+] <= x^2 + K h, with
+beta(x) = (1 - 2x)/(1 - x) (the proved baseline) and Z_x at loads N/((1 - x) 2^b) (pool steering
+dominated by independent coins on cached landed blocks). Estimated (Poisson loads, Chernoff
+light part): b=12 48K, b=13 96K, b=14 189K, b=20 10.7M, b=26 541M (39-45% of the old values).
+This is the first end-to-end target; S then lifts it to the projections above.
 
 ## Formal plan
 
@@ -75,9 +79,9 @@ encoding searches (`forgeAdvantage_le_prep`); win implication on non-stopped run
 (`HiddenBridge.win_implies_bad`: target hit or FORS cover with <= N signing calls).
 
 Stage 1 (large budgets; about 10-15K lines):
- 1a. Saturating potential on the lazy-table comparison (`HiddenReveal.comparison`): guesses
-     create debt resolved when the coordinate is sampled, target hits are first-hit events,
-     digest queries pay the baseline. Reuse `SphincsSecurity...PrimitiveMessagePotential`.
+ 1a. Done (`BridgeSaturation.hit_bound_start`): along the lazy comparison, Pr[hit] plus the
+     baseline (2(N-q)+1)(N-2q)/(N(N-q)^2) per digest query made before any hit is decided is
+     at most 1 - (1 - q/N)^2.
  1b. Proposal bank and signer coupling: fair-share selection symmetry
      (`LifetimePoolGrinding.poolGrindRandomness_factor`), Ville-type pool concentration,
      rejection bridge (reuse leanVM's generic proposal-word kit), proposal-count exception.

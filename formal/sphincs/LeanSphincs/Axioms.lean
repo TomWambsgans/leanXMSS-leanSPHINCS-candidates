@@ -185,6 +185,7 @@ import LeanSphincs.BridgeClassify
 import LeanSphincs.BridgeImplication
 import LeanSphincs.BridgeDebt
 import LeanSphincs.BridgeSaturation
+import LeanSphincs.BridgeDomination
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -8671,3 +8672,55 @@ import LeanSphincs.BridgeSaturation
 /-- info: 'LeanSphincs.Security.HiddenDebt.one_sub_budget_zero' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenDebt.one_sub_budget_zero
+
+/-- info: 'LeanSphincs.Security.Domination.slotValue_ne_top' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slotValue_ne_top
+
+/-- info: 'LeanSphincs.Security.Domination.list_sum_ne_top' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.list_sum_ne_top
+
+/-- info: 'LeanSphincs.Security.Domination.supermodular_sum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.supermodular_sum
+
+/-- info: 'LeanSphincs.Security.Domination.slot_lower' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slot_lower
+
+/-- info: 'LeanSphincs.Security.Domination.add_gain' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.add_gain
+
+/-- info: 'LeanSphincs.Security.Domination.gain_le_of_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.gain_le_of_le
+
+/-- info: 'LeanSphincs.Security.Domination.coins_gain' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.coins_gain
+
+/-- info: 'LeanSphincs.Security.Domination.freshAvg_const' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.freshAvg_const
+
+/-- info: 'LeanSphincs.Security.Domination.freshAvg_add' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.freshAvg_add
+
+/-- info: 'LeanSphincs.Security.Domination.freshAvg_mono' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.freshAvg_mono
+
+/-- info: 'LeanSphincs.Security.Domination.freshAvg_mul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.freshAvg_mul
+
+/-- info: 'LeanSphincs.Security.Domination.slot_lower_gain' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.slot_lower_gain
+
+/-- info: 'LeanSphincs.Security.Domination.domination' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.Domination.domination
