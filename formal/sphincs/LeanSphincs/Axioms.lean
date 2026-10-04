@@ -195,6 +195,7 @@ import LeanSphincs.BridgeSignerFors
 import LeanSphincs.BridgeInterpSupport
 import LeanSphincs.BridgeSignerPost
 import LeanSphincs.BridgeForsPotential
+import LeanSphincs.BridgeForsGame
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -9817,3 +9818,31 @@ import LeanSphincs.BridgeForsPotential
 /-- info: 'LeanSphincs.Security.ForsPotential.good_sign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.ForsPotential.good_sign
+
+/-- info: 'LeanSphincs.Security.ForsPotential.costRestX_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.costRestX_eq
+
+/-- info: 'LeanSphincs.Security.ForsPotential.advProg_pure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.advProg_pure
+
+/-- info: 'LeanSphincs.Security.ForsPotential.advProg_draw' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.advProg_draw
+
+/-- info: 'LeanSphincs.Security.ForsPotential.advProg_hash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.advProg_hash
+
+/-- info: 'LeanSphincs.Security.ForsPotential.advProg_sign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.advProg_sign
+
+/-- info: 'LeanSphincs.Security.ForsPotential.good_finish' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.good_finish
+
+/-- info: 'LeanSphincs.Security.ForsPotential.good_advProg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPotential.good_advProg
