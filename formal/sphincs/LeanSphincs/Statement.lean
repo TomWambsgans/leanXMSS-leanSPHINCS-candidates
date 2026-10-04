@@ -76,11 +76,13 @@ end Security
 
 namespace Lifetimes
 
-abbrev full : Params := ⟨26, 1200000000, by decide⟩
-abbrev pruned20 : Params := ⟨20, 23700000, by decide⟩
-abbrev pruned13 : Params := ⟨13, 240000, by decide⟩
-abbrev pruned14 : Params := ⟨14, 460000, by decide⟩
-abbrev pruned12 : Params := ⟨12, 125000, by decide⟩
+/-! Signature limits proved for this candidate game against adaptive FORS/WOTS switching
+(stage 1: saturation, FORS forecast domination, certified excess bound). -/
+abbrev full : Params := ⟨26, 540000000, by decide⟩
+abbrev pruned20 : Params := ⟨20, 10650000, by decide⟩
+abbrev pruned13 : Params := ⟨13, 93000, by decide⟩
+abbrev pruned14 : Params := ⟨14, 185000, by decide⟩
+abbrev pruned12 : Params := ⟨12, 47000, by decide⟩
 /-- The user requested exactly 33; the spec's 33000 is a separate, stronger target. -/
 abbrev pruned10 : Params := ⟨10, 33, by decide⟩
 
