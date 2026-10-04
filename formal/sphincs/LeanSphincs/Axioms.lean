@@ -189,6 +189,7 @@ import LeanSphincs.BridgeDomination
 import LeanSphincs.BridgeInterp
 import LeanSphincs.BridgeVirtual
 import LeanSphincs.BridgePresample
+import LeanSphincs.BridgeForsPrice
 
 /-! Exact allowed-axiom guards for every public candidate theorem. -/
 
@@ -8943,3 +8944,59 @@ import LeanSphincs.BridgePresample
 /-- info: 'LeanSphincs.Security.HiddenDebt.presample_interp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenDebt.presample_interp
+
+/-- info: 'LeanSphincs.Security.ForsPrice.matchCount_add' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.matchCount_add
+
+/-- info: 'LeanSphincs.Security.ForsPrice.matchCount_mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.matchCount_mono
+
+/-- info: 'LeanSphincs.Security.ForsPrice.prod_increasing_differences' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.prod_increasing_differences
+
+/-- info: 'LeanSphincs.Security.ForsPrice.witness_mono' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.witness_mono
+
+/-- info: 'LeanSphincs.Security.ForsPrice.witness_super' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.witness_super
+
+/-- info: 'LeanSphincs.Security.ForsPrice.super_const_mul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.super_const_mul
+
+/-- info: 'LeanSphincs.Security.ForsPrice.mono_const_mul' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.mono_const_mul
+
+/-- info: 'LeanSphincs.Security.ForsPrice.price_mono' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.price_mono
+
+/-- info: 'LeanSphincs.Security.ForsPrice.price_super' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.price_super
+
+/-- info: 'LeanSphincs.Security.ForsPrice.price_ne_top' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.price_ne_top
+
+/-- info: 'LeanSphincs.Security.ForsPrice.real_excess' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.real_excess
+
+/-- info: 'LeanSphincs.Security.ForsPrice.toReal_tsub' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.toReal_tsub
+
+/-- info: 'LeanSphincs.Security.ForsPrice.excess_super' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.excess_super
+
+/-- info: 'LeanSphincs.Security.ForsPrice.excess_mono' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ForsPrice.excess_mono
