@@ -32,11 +32,12 @@ def chainInput (leaf : Index) (chain : ChainIndex) (step : ChainStep) (payload :
 def forsLeafInput (index : Index) (tree : FtsTree) (leaf : FtsLeaf) (secret : Digest) : HashInput :=
   tweakableHashInput parameter (.ftsLeaf index tree leaf) (bytesLE 16 secret)
 
-/-- Inputs whose single hit is not a forgery event by itself: a root-tree chain step that is not
-at or above the prepared word of a landed leaf, and a FORS leaf. -/
+/-- Inputs whose single hit is not a forgery event by itself: a chain step other than a root-tree
+step at or above the prepared word of a landed leaf, and a FORS leaf. -/
 def SecondOrderInput (input : HashInput) : Prop :=
-  (∃ leaf chain step payload, input = chainInput parameter leaf chain step payload ∧
-    ¬(Landed parameter leaf ∧ (preparedWord results leaf chain).val ≤ step.val)) ∨
+  (∃ (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (chain : ChainIndex) (step : ChainStep) (payload : Digest),
+    input = tweakableHashInput parameter (.chain lay tree leaf chain step) (bytesLE 16 payload) ∧
+    ¬(lay = topLayer ∧ tree = rootTree ∧ Landed parameter leaf ∧ (preparedWord results leaf chain).val ≤ step.val)) ∨
   ∃ index tree leaf secret, input = forsLeafInput parameter index tree leaf secret
 
 /-- First-order targets. -/

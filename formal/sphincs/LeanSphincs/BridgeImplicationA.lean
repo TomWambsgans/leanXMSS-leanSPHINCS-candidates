@@ -26,14 +26,14 @@ variable [Params]
 theorem secondOrder_tweakable {parameter : PublicParameter} {results : Index → Option (Counter × Encoding)}
     {domain : HashDomain} {payload : HashInput}
     (h : SecondOrderInput parameter results (tweakableHashInput parameter domain payload)) :
-    (∃ leaf chain step, domain = .chain topLayer rootTree leaf chain step ∧
-      ¬(Landed parameter leaf ∧ (preparedWord results leaf chain).val ≤ step.val)) ∨
+    (∃ lay tree leaf chain step, domain = .chain lay tree leaf chain step ∧
+      ¬(lay = topLayer ∧ tree = rootTree ∧ Landed parameter leaf ∧
+        (preparedWord results leaf chain).val ≤ step.val)) ∨
     ∃ index tree leaf, domain = .ftsLeaf index tree leaf := by
-  rcases h with ⟨leaf, chain, step, payload', heq, hnot⟩ | ⟨index, tree, leaf, secret, heq⟩
-  · unfold chainInput at heq
-    have hf := (tweakableInput_injective heq).1
+  rcases h with ⟨lay, tree, leaf, chain, step, payload', heq, hnot⟩ | ⟨index, tree, leaf, secret, heq⟩
+  · have hf := (tweakableInput_injective heq).1
     left
-    refine ⟨leaf, chain, step, ?_, hnot⟩
+    refine ⟨lay, tree, leaf, chain, step, ?_, hnot⟩
     cases domain with
     | chain => exact hashFields_injective trivial trivial hf
     | _ => simp [hashDomainFields, tweakFields] at hf
@@ -52,7 +52,7 @@ theorem not_secondOrder (parameter : PublicParameter) (results : Index → Optio
     (hfts : ∀ index tree leaf, domain ≠ .ftsLeaf index tree leaf) :
     ¬SecondOrderInput parameter results (tweakableHashInput parameter domain payload) := by
   intro h
-  rcases secondOrder_tweakable h with ⟨leaf, chain, step, heq, -⟩ | ⟨index, tree, leaf, heq⟩
+  rcases secondOrder_tweakable h with ⟨lay, tree, leaf, chain, step, heq, -⟩ | ⟨index, tree, leaf, heq⟩
   · exact hchain _ _ _ _ _ heq
   · exact hfts _ _ _ heq
 
@@ -63,10 +63,10 @@ theorem not_secondOrder_chain (parameter : PublicParameter) (results : Index →
     ¬SecondOrderInput parameter results (chainInput parameter leaf chain step payload) := by
   intro hs
   rcases secondOrder_tweakable (domain := .chain topLayer rootTree leaf chain step) hs with
-    ⟨leaf', chain', step', heq, hnot⟩ | ⟨index, tree, leaf', heq⟩
+    ⟨lay', tree', leaf', chain', step', heq, hnot⟩ | ⟨index, tree, leaf', heq⟩
   · simp only [HashDomain.chain.injEq] at heq
-    obtain ⟨-, -, rfl, rfl, rfl⟩ := heq
-    exact hnot h
+    obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := heq
+    exact hnot ⟨rfl, rfl, h⟩
   · cases heq
 
 section Sample
