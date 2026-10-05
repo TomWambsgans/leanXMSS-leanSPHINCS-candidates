@@ -76,7 +76,7 @@ body[data-v="spice"] .old::after { content: ""; position: absolute; left: -0.2em
 .titlerow { position: relative; }
 .toggle { position: absolute; left: calc(100% + 1.5rem); top: 50%; transform: translateY(-50%); z-index: 2; white-space: nowrap; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 3px; background: #fff; }
 .page { position: relative; }
-.notes { position: absolute; visibility: hidden; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.95rem; color: var(--muted); white-space: nowrap; }
+.notes { position: absolute; z-index: 3; visibility: hidden; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.95rem; color: var(--muted); white-space: nowrap; }
 .arrow { position: absolute; display: none; overflow: visible; pointer-events: none; }
 .arrow .line { fill: none; stroke: #c48c8c; stroke-width: 1.3; stroke-linecap: round; }
 .arrow .head { fill: #c48c8c; }
@@ -225,7 +225,7 @@ footer a + a { margin-left: 1.25rem; }
   <div class="text">
     <header>
       <div class="titlerow"><h1>A proposal for leanSphincs</h1><div class="toggle" role="group" aria-label="Variant"><button type="button" data-v="vanilla" aria-pressed="true">vanilla</button><button type="button" data-v="spice" aria-pressed="false">spice</button></div></div>
-      <div class="notes"><ul class="pro"><li>25% smaller signatures</li><li>18% faster verification</li></ul><ul class="con"><li>more complex</li><li>2× worse threshold</li></ul></div>
+      <div class="notes"><ul class="pro"><li>25% smaller signatures</li><li>18% faster verification<span class="info" tabindex="0" data-tip="Measured in hash compressions: 391 → 321">i</span></li></ul><ul class="con"><li>more complex</li><li>2× worse threshold</li></ul></div>
       <svg class="arrow" aria-hidden="true"><path class="line"/><path class="head"/></svg>
       <p class="by">by Tom Wambsgans</p>
     </header>
