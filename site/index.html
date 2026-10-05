@@ -76,14 +76,14 @@ body[data-v="spice"] .old::after { content: ""; position: absolute; left: -0.2em
 .titlerow { position: relative; }
 .toggle { position: absolute; left: calc(100% + 1.5rem); top: 50%; transform: translateY(-50%); z-index: 2; white-space: nowrap; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 3px; background: #fff; }
 .page { position: relative; }
-.notes { position: absolute; visibility: hidden; display: flex; gap: 1.75rem; font-size: 0.95rem; color: var(--muted); white-space: nowrap; }
+.notes { position: absolute; visibility: hidden; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.95rem; color: var(--muted); white-space: nowrap; }
 .arrow { position: absolute; display: none; overflow: visible; pointer-events: none; }
 .arrow .line { fill: none; stroke: #c48c8c; stroke-width: 1.3; stroke-linecap: round; }
 .arrow .head { fill: #c48c8c; }
-.notes.flow { position: static; visibility: visible; margin: 0.9rem 0 0; }
+.notes.flow { position: static; visibility: visible; margin: 1.7rem 0 0.6rem; }
 .notes ul { margin: 0; padding: 0; list-style: none; }
-.notes li::before { display: inline-block; width: 1em; }
-.notes .pro li::before { content: "+"; color: var(--spice); }
+.notes li::before { display: inline-flex; align-items: center; justify-content: center; width: 1.15em; height: 1.15em; margin-right: 0.5em; border: 1px solid currentColor; border-radius: 50%; font-size: 0.85em; line-height: 1; vertical-align: 0.1em; }
+.notes .pro li::before { content: "+"; color: var(--ink); }
 .notes .con li::before { content: "−"; }
 .toggle button { font: inherit; font-size: 1.1rem; border: 0; background: none; color: var(--muted); padding: 0.35rem 1.4rem; border-radius: 999px; cursor: pointer; }
 .toggle button[aria-pressed="true"] { background: var(--ink); color: #fff; }
@@ -201,7 +201,7 @@ footer a + a { margin-left: 1.25rem; }
   figure { min-height: 0; }
   figure svg { position: static; height: auto; }
   .toggle { position: static; transform: none; margin: 0.9rem 0 0.2rem; }
-  .notes { position: static; visibility: visible; margin: 0.9rem 0 0; }
+  .notes { position: static; visibility: visible; margin: 1.7rem 0 0.6rem; }
   .split { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
   .scroll { overflow-x: auto; }
   .cmp { table-layout: auto; width: auto; }
@@ -225,10 +225,10 @@ footer a + a { margin-left: 1.25rem; }
   <div class="text">
     <header>
       <div class="titlerow"><h1>A proposal for leanSphincs</h1><div class="toggle" role="group" aria-label="Variant"><button type="button" data-v="vanilla" aria-pressed="true">vanilla</button><button type="button" data-v="spice" aria-pressed="false">spice</button></div></div>
+      <div class="notes"><ul class="pro"><li>25% smaller signatures</li><li>18% faster verification</li></ul><ul class="con"><li>more complex</li><li>2× worse threshold</li></ul></div>
+      <svg class="arrow" aria-hidden="true"><path class="line"/><path class="head"/></svg>
       <p class="by">by Tom Wambsgans</p>
     </header>
-    <div class="notes"><ul class="pro"><li>25% smaller signatures</li><li>18% faster verification</li></ul><ul class="con"><li>more complex</li><li>2× worse threshold</li></ul></div>
-    <svg class="arrow" aria-hidden="true"><path class="line"/><path class="head"/></svg>
     <div class="params">
       <div class="scroll">
       <table>
@@ -674,20 +674,27 @@ document.querySelectorAll('.toggle button').forEach(function (b) {
     notes.classList.remove('flow');
     notes.style.left = notes.style.top = '';
     arrow.style.display = 'none';
-    if (matchMedia('(max-width: 1150px)').matches) return;
-    // measure the table in its widest (spice) state, so the notes do not move when switching
-    var mode = document.body.dataset.v;
-    document.body.dataset.v = 'spice';
-    var t = table.getBoundingClientRect();
-    document.body.dataset.v = mode;
-    var p = page.getBoundingClientRect(), d = tree.getBoundingClientRect();
-    var b = spice.getBoundingClientRect(), w = notes.offsetWidth;
-    if (d.left - t.right < w + 48) { notes.classList.add('flow'); return; }
-    var left = (t.right + d.left) / 2 - w / 2, top = b.bottom + 44;
-    notes.style.left = (left - p.left) + 'px';
-    notes.style.top = (top - p.top) + 'px';
-    notes.style.visibility = 'visible';
-    var x1 = b.left + b.width / 2, y1 = b.bottom + 6, x2 = left + w / 2, y2 = top - 7;
+    var p = page.getBoundingClientRect(), b = spice.getBoundingClientRect(), w = notes.offsetWidth;
+    var flow = matchMedia('(max-width: 1150px)').matches;
+    if (!flow) {
+      // measure the table in its widest (spice) state, so the notes do not move when switching
+      var mode = document.body.dataset.v;
+      document.body.dataset.v = 'spice';
+      var t = table.getBoundingClientRect();
+      document.body.dataset.v = mode;
+      var d = tree.getBoundingClientRect();
+      flow = d.left - t.right < w + 48;
+      if (!flow) {
+        notes.style.left = ((t.right + d.left) / 2 - w / 2 - p.left) + 'px';
+        notes.style.top = (b.bottom + 44 - p.top) + 'px';
+        notes.style.visibility = 'visible';
+      }
+    }
+    if (flow) notes.classList.add('flow');
+    var n = notes.getBoundingClientRect();
+    var x1 = b.left + b.width / 2, y1 = b.bottom + 6, y2 = n.top - 7;
+    var x2 = flow ? Math.min(Math.max(x1, n.left + 12), n.right - 12) : n.left + n.width / 2;
+    if (y2 - y1 < 12) return;
     var x0 = Math.min(x1, x2) - 10, y0 = y1;
     arrow.style.left = (x0 - p.left) + 'px';
     arrow.style.top = (y0 - p.top) + 'px';
