@@ -13,7 +13,7 @@
   --muted: #5e5e5e;
   --rule: #e8e8e8;
   --tree: #cfcfcf;
-  --spice: #8b1a1a;
+  --spicy: #8b1a1a;
   --sans: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
@@ -69,10 +69,10 @@ h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height:
 
 figure { margin: 0; position: relative; min-height: 18rem; }
 figure svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-body:not([data-v="spice"]) .s-only, body[data-v="spice"] .v-only, body:not([data-v="spice"]) .fts-spice, body[data-v="spice"] .fts-vanilla { display: none !important; }
+body:not([data-v="spicy"]) .s-only, body[data-v="spicy"] .v-only, body:not([data-v="spicy"]) .fts-spicy, body[data-v="spicy"] .fts-vanilla { display: none !important; }
 .old { position: relative; display: inline-block; }
-body[data-v="spice"] .old::after { content: ""; position: absolute; left: -0.2em; right: -0.2em; top: 52%; border-top: 1.5px solid rgba(139, 26, 26, 0.45); transform: rotate(-16deg); pointer-events: none; }
-.new { color: var(--spice); margin-left: 0.45em; }
+body[data-v="spicy"] .old::after { content: ""; position: absolute; left: -0.2em; right: -0.2em; top: 52%; border-top: 1.5px solid rgba(139, 26, 26, 0.45); transform: rotate(-16deg); pointer-events: none; }
+.new { color: var(--spicy); margin-left: 0.45em; }
 .titlerow { position: relative; }
 .toggle { position: absolute; left: calc(100% + 1.5rem); top: 50%; transform: translateY(-50%); z-index: 2; white-space: nowrap; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 3px; background: #fff; }
 .page { position: relative; }
@@ -87,7 +87,7 @@ body[data-v="spice"] .old::after { content: ""; position: absolute; left: -0.2em
 .notes .con li::before { content: "−"; }
 .toggle button { font: inherit; font-size: 1.1rem; border: 0; background: none; color: var(--muted); padding: 0.35rem 1.4rem; border-radius: 999px; cursor: pointer; }
 .toggle button[aria-pressed="true"] { background: var(--ink); color: #fff; }
-.toggle button[data-v="spice"][aria-pressed="true"] { background: var(--spice); }
+.toggle button[data-v="spicy"][aria-pressed="true"] { background: var(--spicy); }
 
 svg text { font-family: var(--sans); }
 svg .lb { font-size: 15px; fill: var(--muted); }
@@ -224,7 +224,7 @@ footer a + a { margin-left: 1.25rem; }
 <div class="page">
   <div class="text">
     <header>
-      <div class="titlerow"><h1>A proposal for leanSphincs</h1><div class="toggle" role="group" aria-label="Variant"><button type="button" data-v="vanilla" aria-pressed="true">vanilla</button><button type="button" data-v="spice" aria-pressed="false">spice</button></div></div>
+      <div class="titlerow"><h1>A proposal for leanSphincs</h1><div class="toggle" role="group" aria-label="Variant"><button type="button" data-v="vanilla" aria-pressed="true">vanilla</button><button type="button" data-v="spicy" aria-pressed="false">spicy</button></div></div>
       <div class="notes"><ul class="pro"><li>25% smaller signatures</li><li>18% faster verification<span class="info" tabindex="0" data-tip="Measured in hash compressions: 391 → 321">i</span></li></ul><ul class="con"><li>more complex</li><li>2× worse threshold</li></ul></div>
       <svg class="arrow" aria-hidden="true"><path class="line"/><path class="head"/></svg>
       <p class="by">by Tom Wambsgans</p>
@@ -544,7 +544,7 @@ footer a + a { margin-left: 1.25rem; }
         <g class="tree"><line x1="106.2" y1="444" x2="368.2" y2="444"/><line x1="106.2" y1="440" x2="106.2" y2="448"/><line x1="368.2" y1="440" x2="368.2" y2="448"/></g>
         <text x="237.2" y="466" class="pv" text-anchor="middle"><tspan class="it">k</tspan> = 24</text>
         </g>
-        <g class="fts-spice">
+        <g class="fts-spicy">
         <path class="brace" d="M106.2,392 Q106.2,385.0 113.2,385.0 L230.2,385.0 Q237.2,385.0 237.2,378 Q237.2,385.0 244.2,385.0 L361.2,385.0 Q368.2,385.0 368.2,392"/>
         <g class="fors">
           <polygon points="122.6,399 111.6,417 133.6,417"/>
@@ -607,7 +607,7 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th></th><th><div class="hd">Light<span class="dev">Ledger Nano S+<span class="info" tabindex="0" data-tip="33K compressions per second">i</span></span></div></th><th><div class="hd">Standard<span class="dev">weak CPU<span class="info" tabindex="0" data-tip="128M compressions per second">i</span></span></div></th><th><div class="hd">Full<span class="dev">powerful CPU<span class="info" tabindex="0" data-tip="1B compressions per second">i</span></span></div></th></tr>
         </thead>
         <tbody>
-          <tr><th>Lifetime<span class="info v-only" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><span class="info s-only" tabindex="0" data-tip="Vanilla: proved in Lean;&#10;spice: best known attack, proof in progress">i</span></th><td>210K signatures (subtree of 2<sup>13</sup>)</td><td>22M signatures (subtree of 2<sup>20</sup>)</td><td>1.15B signatures (full tree of 2<sup>26</sup>)</td></tr>
+          <tr><th>Lifetime<span class="info v-only" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><span class="info s-only" tabindex="0" data-tip="Vanilla: proved in Lean;&#10;spicy: best known attack, proof in progress">i</span></th><td>210K signatures (subtree of 2<sup>13</sup>)</td><td>22M signatures (subtree of 2<sup>20</sup>)</td><td>1.15B signatures (full tree of 2<sup>26</sup>)</td></tr>
           <tr><th>Key generation</th><td><div class="hd"><span>2.24M compressions</span><span class="ex">68&nbsp;s</span></div></td><td><div class="hd"><span>287M compressions</span><span class="ex">2.2&nbsp;s</span></div></td><td><div class="hd"><span>18.4B compressions</span><span class="ex">18&nbsp;s</span></div></td></tr>
           <tr><th>Signing</th><td><div class="hd"><span>111K compressions, 16&nbsp;KiB cache</span><span class="ex">3.4&nbsp;s</span></div></td><td><div class="hd"><span>84K compressions, 1&nbsp;MiB cache</span><span class="ex">0.7&nbsp;ms</span></div></td><td><div class="hd"><span>110K compressions, 16&nbsp;MiB cache</span><span class="ex">0.1&nbsp;ms</span></div></td></tr>
         </tbody>
@@ -622,7 +622,7 @@ footer a + a { margin-left: 1.25rem; }
           <div class="scroll">
           <table class="cmp">
             <colgroup><col class="label"><col><col><col></colgroup>
-            <thead><tr><th>Lifetime<span class="info v-only" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><span class="info s-only" tabindex="0" data-tip="Vanilla: proved in Lean;&#10;spice: best known attack, proof in progress">i</span></th><th>7.5K signatures<br><span class="sub">(subtree of 2<sup>8</sup>)</span></th><th>28.5K signatures<br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th>108K signatures<br><span class="sub">(subtree of 2<sup>12</sup>)</span></th></tr></thead>
+            <thead><tr><th>Lifetime<span class="info v-only" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><span class="info s-only" tabindex="0" data-tip="Vanilla: proved in Lean;&#10;spicy: best known attack, proof in progress">i</span></th><th>7.5K signatures<br><span class="sub">(subtree of 2<sup>8</sup>)</span></th><th>28.5K signatures<br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th>108K signatures<br><span class="sub">(subtree of 2<sup>12</sup>)</span></th></tr></thead>
             <tbody>
               <tr><th>2-of-3</th><td><span class="old">11</span><span class="new s-only">21</span>&nbsp;GB</td><td><span class="old">43</span><span class="new s-only">85</span>&nbsp;GB</td><td><span class="old">172</span><span class="new s-only">342</span>&nbsp;GB</td></tr>
               <tr><th>3-of-5</th><td><span class="old">13</span><span class="new s-only">26</span>&nbsp;GB</td><td><span class="old">52</span><span class="new s-only">103</span>&nbsp;GB</td><td><span class="old">207</span><span class="new s-only">410</span>&nbsp;GB</td></tr>
@@ -637,7 +637,7 @@ footer a + a { margin-left: 1.25rem; }
           <div class="scroll">
           <table class="cmp">
             <colgroup><col class="label"><col><col><col></colgroup>
-            <thead><tr><th>Lifetime<span class="info v-only" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><span class="info s-only" tabindex="0" data-tip="Vanilla: proved in Lean;&#10;spice: best known attack, proof in progress">i</span></th><th>28.5K signatures<br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th>108K signatures<br><span class="sub">(subtree of 2<sup>12</sup>)</span></th><th>410K signatures<br><span class="sub">(subtree of 2<sup>14</sup>)</span></th></tr></thead>
+            <thead><tr><th>Lifetime<span class="info v-only" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><span class="info s-only" tabindex="0" data-tip="Vanilla: proved in Lean;&#10;spicy: best known attack, proof in progress">i</span></th><th>28.5K signatures<br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th>108K signatures<br><span class="sub">(subtree of 2<sup>12</sup>)</span></th><th>410K signatures<br><span class="sub">(subtree of 2<sup>14</sup>)</span></th></tr></thead>
             <tbody>
               <tr><th>Public data</th><td><span class="old">404&nbsp;MB</span><span class="new s-only">806&nbsp;MB</span></td><td><span class="old">1.6&nbsp;GB</span><span class="new s-only">3.2&nbsp;GB</span></td><td><span class="old">6.5&nbsp;GB</span><span class="new s-only">12.9&nbsp;GB</span></td></tr>
             </tbody>
@@ -664,22 +664,22 @@ document.querySelectorAll('.toggle button').forEach(function (b) {
 </script>
 <script>
 // Desktop: the notes sit just below the toggle, centred between the parameter table and the diagram,
-// with an arrow from the spice button.
+// with an arrow from the spicy button.
 (function () {
   var notes = document.querySelector('.notes'), page = document.querySelector('.page');
   var arrow = document.querySelector('.arrow'), line = arrow.querySelector('.line'), head = arrow.querySelector('.head');
   var table = document.querySelector('.params table'), tree = document.querySelector('figure svg .tree');
-  var spice = document.querySelector('.toggle button[data-v="spice"]');
+  var spicy = document.querySelector('.toggle button[data-v="spicy"]');
   function place() {
     notes.classList.remove('flow');
     notes.style.left = notes.style.top = '';
     arrow.style.display = 'none';
-    var p = page.getBoundingClientRect(), b = spice.getBoundingClientRect(), w = notes.offsetWidth;
+    var p = page.getBoundingClientRect(), b = spicy.getBoundingClientRect(), w = notes.offsetWidth;
     var flow = matchMedia('(max-width: 1150px)').matches;
     if (!flow) {
-      // measure the table in its widest (spice) state, so the notes do not move when switching
+      // measure the table in its widest (spicy) state, so the notes do not move when switching
       var mode = document.body.dataset.v;
-      document.body.dataset.v = 'spice';
+      document.body.dataset.v = 'spicy';
       var t = table.getBoundingClientRect();
       document.body.dataset.v = mode;
       var d = tree.getBoundingClientRect();
