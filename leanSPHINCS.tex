@@ -11,6 +11,9 @@
 \usepackage{xcolor}
 \usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
 \usepackage{cleveref}
+\usepackage{tikz}
+\usetikzlibrary{calc,decorations.pathreplacing}
+\definecolor{newfts}{RGB}{20,70,170}
 
 \newcommand{\Th}{\mathsf{Th}}
 \newcommand{\hash}{\mathsf{H}}
@@ -35,6 +38,7 @@
 \end{center}
 
 \section{The scheme}
+\label{sec:scheme}
 
 Same shape as SLH-DSA-128-24 from NIST's recent SP~800-230~\cite{SP800230} (single XMSS layer), with the differences:
   \begin{itemize}
@@ -94,6 +98,7 @@ surrogate siblings).
 \end{itemize}
 
 \subsection{Threshold signing}
+\label{sec:threshold}
 
 \begin{itemize}
   \item $t$-of-$n$
@@ -196,6 +201,177 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
   \end{itemize}
 \end{itemize}
 
+{\color{newfts}
+\section{Smaller signatures: a two-level WOTS forest}
+\label{sec:twolevel}
+
+FORS can be replaced by a few-time signature (FTS) built from small WOTS keys. Signatures are 25\% smaller
+and verification 18\% cheaper, with slightly faster signing and the same lifetimes. The idea is inspired by Jonas Nick's (Blockstream) sig.golf
+submission~\cite{siggolf}.
+This variant is not covered by the Lean proofs yet.
+
+\begin{center}
+\begin{tabular}{lrrr}
+  \toprule
+  FTS & size & verification & FTS signing \\
+  \midrule
+  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 B & 391 & $74\cdot10^3$ \\
+  two-level WOTS forest & 4\,276 B & 321 & $68\cdot10^3$ \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{WOTS keys.} The FTS is built from small WOTS keys: 6 chains of length 5, with leaf
+$\hash(\text{6 chain tops})$. A codeword is a vector $d\in\{0,\dots,4\}^6$ with $\sum_i d_i=5$; there are 246 of them.
+Signing at $d$ reveals each chain $d_i$ steps below its top. The verifier hashes up to the tops: always 5
+steps. The fixed sum acts as the checksum: from one signature, hashing forward cannot reach any other codeword. From
+several signatures by the same key, it reaches exactly the codewords below their componentwise max.
+
+\paragraph{Trees.} The FTS has 8 independent trees of height 4, and its public key hashes their 8 roots. Each of
+the 16 leaves of a tree is $\hash(R_0,R_1)$, where $R_0$ and $R_1$ are the roots of two subtrees of height 3 over 8
+WOTS keys each. In each tree, the message picks a leaf, and in both of its subtrees a WOTS key and a codeword.
+
+\begin{center}
+\begin{tikzpicture}[x=1cm,y=1cm,line join=round,
+  tree/.style={draw=newfts!40,line width=0.5pt},
+  path/.style={draw=newfts,line width=1.3pt,line cap=round},
+  on/.style={circle,draw=newfts,line width=0.9pt,fill=white,minimum size=6pt,inner sep=0pt},
+  auth/.style={circle,draw=newfts,line width=0.5pt,fill=newfts!18,minimum size=5.5pt,inner sep=0pt},
+  off/.style={circle,draw=newfts!40,line width=0.4pt,fill=white,minimum size=4.5pt,inner sep=0pt},
+  rev/.style={circle,draw=newfts,fill=newfts,minimum size=5pt,inner sep=0pt},
+  hid/.style={circle,draw=newfts!40,line width=0.4pt,fill=white,minimum size=5pt,inner sep=0pt},
+  lab/.style={font=\footnotesize,text=newfts},
+  note/.style={font=\scriptsize,text=newfts!80}]
+% ---------- top tree, height 4
+\draw[tree] (0,6.4) -- (-2.6,3.6) -- (2.6,3.6) -- cycle;
+\coordinate (t0) at (0,6.4);   \coordinate (t1) at (-0.55,5.7);
+\coordinate (t2) at (-0.15,5.0); \coordinate (t3) at (-0.6,4.3); \coordinate (t4) at (-0.3,3.6);
+\foreach \i/\j/\dx in {0/1/1.0,1/2/-0.75,2/3/0.8,3/4/-0.6} {
+  \draw[tree] (t\i) -- ($(t\j)+(\dx,0)$);
+  \node[auth] at ($(t\j)+(\dx,0)$) {};}
+\draw[path] (t0) -- (t1) -- (t2) -- (t3) -- (t4);
+\foreach \i in {0,...,3} \node[on] at (t\i) {};
+\node[on,minimum size=9pt,fill=newfts!55] (sc) at (t4) {};
+% ---------- two subtrees, height 3
+\foreach \k/\cx/\pk in {0/-2.4/2,1/1.8/5} {
+  \coordinate (r\k) at (\cx,2.7);
+  \draw[tree] (r\k) -- (\cx-1.35,1.0) -- (\cx+1.35,1.0) -- cycle;
+  \foreach \i in {0,...,7} \node[off] (c\k\i) at (\cx-1.12+0.32*\i,0.78) {};
+  \coordinate (u3) at (c\k\pk);
+  \coordinate (u1) at ($(r\k)!0.36!(u3)$); \coordinate (u2) at ($(r\k)!0.7!(u3)$);
+  \draw[tree] (u1) -- ++(0.55,-0.6); \node[auth] at ($(u1)+(0.55,-0.6)$) {};
+  \draw[tree] (u2) -- ++(-0.45,-0.5); \node[auth] at ($(u2)+(-0.45,-0.5)$) {};
+  \node[auth] at ($(u3)+(\ifnum\pk>3 -0.32\else 0.32\fi,0)$) {};
+  \draw[path] (sc) -- (r\k) -- (u3);
+  \node[on] at (r\k) {};
+  \node[on,fill=newfts!55] at (u3) {};
+}
+\node[note,anchor=south east] at ($(r0)+(-0.12,0.05)$) {$R_0$};
+\node[note,anchor=south west] at ($(r1)+(0.12,0.05)$) {$R_1$};
+% ---------- zoom on one WOTS key
+\coordinate (B) at (-4.15,-2.9);   % lower-left chain node
+\draw[newfts!40,line width=0.4pt,dashed] (c02) -- ($(B)+(-0.6,2.45)$);
+\draw[newfts!40,line width=0.4pt,dashed] (c02) -- ($(B)+(2.85,2.45)$);
+\draw[newfts!40,line width=0.5pt,rounded corners=3pt,fill=newfts!3] ($(B)+(-0.6,-0.6)$) rectangle ($(B)+(2.85,2.45)$);
+\foreach \i/\d in {1/0,2/2,3/0,4/1,5/0,6/2} {
+  \pgfmathsetmacro{\xx}{0.45*(\i-1)}
+  \pgfmathtruncatemacro{\rv}{4-\d}
+  \foreach \j in {0,...,3} \draw[newfts!40,line width=0.4pt] ($(B)+(\xx,0.42*\j)$) -- ($(B)+(\xx,0.42*\j+0.42)$);
+  \foreach \j in {0,...,4} {\ifnum\j=\rv \node[rev] at ($(B)+(\xx,0.42*\j)$) {};
+      \else \node[hid] at ($(B)+(\xx,0.42*\j)$) {}; \fi}
+  \ifnum\rv<4 \draw[path,line width=0.9pt] ($(B)+(\xx,0.42*\rv+0.09)$) -- ($(B)+(\xx,1.59)$); \fi
+  \node[note] at ($(B)+(\xx,-0.33)$) {$\d$};
+}
+\node[note] at ($(B)+(-0.38,-0.33)$) {$d$};
+\draw[newfts!60,line width=0.4pt] ($(B)+(-0.1,1.88)$) -- ($(B)+(2.35,1.88)$);
+\node[note,anchor=south] at ($(B)+(1.125,1.92)$) {leaf $=\hash(\text{6 chain tops})$};
+% ---------- labels (right column)
+\node[lab,anchor=west] at (3.0,5.9)  {tree, height 4};
+\node[note,anchor=west] at (3.0,5.55) {16 leaves; 4 bits};
+\node[lab,anchor=west] at (3.0,3.95) {leaf $\hash(R_0,R_1)$};
+\draw[newfts!40,line width=0.4pt,densely dotted] (2.95,3.95) -- ($(sc)+(0.2,0.05)$);
+\node[lab,anchor=west] at (3.6,1.95) {two subtrees, height 3};
+\node[note,anchor=west] at (3.6,1.6) {both opened, 8 WOTS keys each};
+\node[note,anchor=west] at (3.6,1.3) {per subtree: 3 bits $+$ 8-bit table index};
+\node[lab,anchor=west] at (-0.9,-0.9) {one WOTS key: 6 chains of length 5};
+\node[note,anchor=west] at (-0.9,-1.25) {codeword $d=(0,2,0,1,0,2)$, $\textstyle\sum d_i=5$};
+% ---------- legend
+\node[rev] at (-0.75,-2.0) {}; \node[note,anchor=west] at (-0.6,-2.0) {chain value in the signature};
+\node[auth] at (-0.75,-2.4) {}; \node[note,anchor=west] at (-0.6,-2.4) {authentication node in the signature};
+\draw[path] (-0.9,-2.8) -- (-0.6,-2.8); \node[note,anchor=west] at (-0.5,-2.8) {recomputed by the verifier};
+\end{tikzpicture}
+
+\small One of the 8 trees.
+\end{center}
+
+\paragraph{Encoding.} Bit fields and one 256-entry table, and every digest is accepted. Each tree takes 26 bits:
+4 for the leaf, then, per subtree, 3 for the WOTS key and 8 for a table index. The table lists the 246 codewords in
+lexicographic order, followed by the first 10 again. With the 26 bits of the instance index, the digest is 234 bits,
+so it still takes one hash.
+
+\paragraph{Costs.} Per tree:
+\begin{itemize}
+  \item size: 22 values, i.e.\ 6 chain values and 3 nodes per subtree, plus 4 nodes in the tree
+  \item verification: 25 compressions, i.e.\ per subtree 5 chain steps, 2 for the leaf and 3 for the path, then 1 for
+        $\hash(R_0,R_1)$ and 4 for the path in the tree
+  \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 32 compressions each
+\end{itemize}
+Every signature has the same size and verification cost, and keygen is unchanged.
+
+\paragraph{Security.} A forgery at an instance with $r$ prior signatures needs every tree to be covered: in
+both subtrees, the target WOTS key must have been opened, and the target codeword must lie below the componentwise
+max of those openings. Let $f_t$ be the probability that $t$ random signatures by one WOTS key cover a random codeword
+($f_1=0.0042$, $f_2=0.077$, $f_3=0.19$). Then
+\[
+\mathrm{cover}(r)=\Big(\sum_{u\ge1}\mathrm{Bin}(r,\tfrac1{16})(u)\Big[\sum_{t\ge1}\mathrm{Bin}(u,\tfrac18)(t)\,f_t\Big]^2\Big)^8 .
+\]
+The lifetime is the largest $N$ with $2^{127}\,2^{b-26}\,\mathbb{E}_{r\sim\mathrm{Poisson}(N/2^b)}[\mathrm{cover}(r)]\le1$.
+This is the rule that defines the best known attack on FORS~\cite{proofs}, and the two-level forest is 10--12\%
+ahead at every subtree height:
+\begin{center}
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{lrrrrrrr}
+  \toprule
+  $b$ & 26 & 20 & 14 & 13 & 12 & 10 & 8 \\
+  \midrule
+  FORS & $1.20\cdot10^9$ & $2.38\cdot10^7$ & $4.67\cdot10^5$ & $2.42\cdot10^5$ & $1.26\cdot10^5$ & $3.38\cdot10^4$ & $9.1\cdot10^3$ \\
+  two-level forest & $1.35\cdot10^9$ & $2.66\cdot10^7$ & $5.19\cdot10^5$ & $2.69\cdot10^5$ & $1.39\cdot10^5$ & $3.74\cdot10^4$ & $1.0\cdot10^4$ \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Still to do.}
+\begin{itemize}
+  \item Bound attacks that invert a chain. The WOTS keys reveal values below the chain tops, so a chain preimage
+        combined with a partial cover is a possible route, as for WOTS$^+$C.
+  \item Adapt the Lean proofs~\cite{proofs}. Only their FORS-specific part, the cover price and its certificates,
+        changes.
+\end{itemize}
+
+\paragraph{Threshold signing.} In \cref{sec:threshold}, a signature reveals FORS secrets, which are outputs $F(\mathit{addr})$
+of the threshold PRF, so signing needs no MPC. Here a signature reveals $x_{i,4-d_i}$, i.e.\ the secret hashed
+$4-d_i$ times, which no threshold PRF outputs. To keep signing free of MPC, the keygen also shares the middle of every
+chain:
+\begin{itemize}
+  \item position 0, the secret: $F(\mathit{addr})$, as before
+  \item positions 1 to 3: computed by the keygen MPC and never opened; each operator keeps its shares of them. The
+        sharing is linear, so the masks of the context-aware opening apply unchanged
+  \item position 4, the top: opened, and part of the public data
+\end{itemize}
+Signing is unchanged except that each signer sends a part for every revealed secret value (positions 0 to 3): 48 on
+average and at most 80, instead of 24. Per instance of the kept subtree:
+\begin{itemize}
+  \item keygen MPC: 4 hashes per chain, $2048\cdot6\cdot4 = 49\,152$, instead of $24\cdot2^{10} = 24\,576$ FORS leaves:
+        about twice the traffic
+  \item public data: the chain tops, $2048\cdot6\cdot16$~B $= 192$~KiB instead of 384~KiB of FORS leaves, e.g.\
+        0.8~GB instead of 1.6~GB for $b=12$
+  \item secret storage: the shares of positions 1 to 3, $2048\cdot6\cdot3\cdot16$~B $= 576$~KiB per share held, e.g.\
+        2.4~GB for $b=12$. With the replicated sharing of the MPC, an operator holds $\binom{n-1}{t-1}$ shares of each
+        value (2 for 2-of-3); converting them to Shamir shares over $\mathrm{GF}(2^{128})$ brings this to one
+\end{itemize}
+Chains of length 2 would avoid the shares (every revealed value is then a secret or a top), for a smaller gain.
+}
+
 \begin{thebibliography}{9}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
   Cases}. NIST SP~800-230 (draft), 2026. \url{https://csrc.nist.gov/pubs/sp/800/230/ipd}.
@@ -217,6 +393,8 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
   \url{https://eprint.iacr.org/2019/1390}.
 \bibitem{PRAWNS} D.~Boneh, B.~B\"unz, J.~D., Y.~Litchev, K.~Nazirkhanova. \emph{PRAWNS: Threshold Hash-Based
   Signatures from Threshold PRFs}, 2026. \url{https://eprint.iacr.org/2026/2142}.
+{\color{newfts}\bibitem{siggolf} J.~Nick (Blockstream). \emph{WCT-9: a WOTS-child forest replaces BPORS}, sig.golf
+  submission, 2026. \url{https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0}.}
 \end{thebibliography}
 
 \end{document}
