@@ -100,7 +100,7 @@ theorem uniform_joined_outputs :
         (PMF.uniformOfFintype CoordinateHighs).bind (fun highs =>
           (PMF.uniformOfFintype RemainingOutputs).map (assemble lows highs))) := by
   rw [uniform_join coordinateCell coordinateCell_injective, uniform_coordinate_rows]
-  simp only [PMF.bind_bind, PMF.bind_map, Function.comp_def, assemble]
+  simp only [PMF.bind_bind, PMF.bind_map, Function.comp_def]
   rfl
 
 def joinedSecrets (outputs : JoinedOutputs) : SecretOutputs := outputs ∘ Sum.inl
@@ -158,37 +158,11 @@ theorem completed_active_label (active : Position → Prop) (initial answers : C
     completedLabels (graphOrder active) initial answers position = answers position := by
   simp only [completedLabels, (mem_graphOrder active position).mpr hactive, ↓reduceIte]
 
-/-- Boundary masking in pruned graph preparation does not affect any programmed row output. -/
-theorem completed_row_outgoing (active : Position → Prop)
-    (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-    (ftsSecret : Index → FtsTree → FtsLeaf → Digest)
-    (initial answers : CanonicalGraphLabels) (address : Address) (hactive : active address.position) :
-    coordinates otsSecret ftsSecret (completedLabels (graphOrder active) initial answers)
-      address.outputCoordinate = coordinates otsSecret ftsSecret answers address.outputCoordinate := by
-  rw [coordinates_outgoing, coordinates_outgoing, completed_active_label _ _ _ _ hactive]
-
 theorem completed_row_high (active : Position → Prop) (initial answers : CanonicalGraphLabels)
     (address : Address) (hactive : active address.position) :
     highHalves (completedLabels (graphOrder active) initial answers) address = highHalves answers address := by
   unfold highHalves
   rw [completed_active_label _ _ _ _ hactive]
-
-/-- A retained WOTS chain also retains its predecessor. FORS-leaf inputs are material
-secrets, so neither kind of active row reads a masked inactive graph coordinate. -/
-theorem completed_pruned_incoming [Params] (parameter : PublicParameter)
-    (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-    (ftsSecret : Index → FtsTree → FtsLeaf → Digest)
-    (initial answers : CanonicalGraphLabels) (address : Address)
-    (hactive : candidateActive parameter address) :
-    coordinates otsSecret ftsSecret
-      (completedLabels (graphOrder (PrunedGraph.active parameter)) initial answers)
-      address.inputCoordinate = coordinates otsSecret ftsSecret answers address.inputCoordinate := by
-  cases address with
-  | chain lay tree leaf chainIdx step =>
-      fin_cases step <;>
-        simp_all [coordinates, Address.inputCoordinate, Address.position, candidateActive,
-          completedLabels, mem_graphOrder, PrunedGraph.active, chainLength, winternitzBits]
-  | ftsLeaf index tree leaf => rfl
 
 noncomputable local instance : SampleableType SecretOutputs := secretOutputsSampleableType
 noncomputable local instance : SampleableType CanonicalGraphLabels := graphLabelsSampleable

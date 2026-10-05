@@ -204,10 +204,6 @@ private theorem testBit_div_pow (value level : Nat) :
     (value / 2 ^ level).testBit 0 = value.testBit level := by
   simpa only [Nat.zero_add] using (Nat.testBit_add value 0 level).symm
 
-private theorem div_pow_succ (value level : Nat) :
-    value / 2 ^ (level + 1) = value / 2 ^ level / 2 := by
-  rw [pow_succ, Nat.div_div_eq_div_mul]
-
 private theorem parts_odd (value level : Nat) (hbit : value.testBit level = true) :
     value / 2 ^ level = 2 * (value / 2 ^ (level + 1)) + 1
       ∧ Nat.xor (value / 2 ^ level) 1 = 2 * (value / 2 ^ (level + 1)) := by
@@ -372,6 +368,5 @@ theorem eval_ftsRecover (parameter : PublicParameter) (index : Index) (seed : Ma
     exact Nat.div_eq_of_lt (leaves (ftsIndexOf tree)).isLt
   simp only [ftsRecover, Seeded.ftsKey, eval_sequenceFin, evalWithAnswerFn_bind, hroot,
     ftsNodeValue]
-
 
 end LeanSphincs.Completeness

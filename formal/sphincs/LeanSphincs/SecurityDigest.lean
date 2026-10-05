@@ -3,12 +3,9 @@ import LeanSphincs.Bytes
 import LeanSphincs.Search
 
 /-!
-The candidate's actual two-call digest in the lazy random oracle. Both block inputs must be
-fresh. The hypothesis is deliberately explicit: querying a cached digest is not an independent
-uniform trial, and a security reduction must account for such queries separately.
-
-The fixed-table coverage identity is from `ForsCoverage`; the query-cache simulation uses the
-same VCVio lazy oracle as the security experiment. Adapted from the leanVM proof methodology.
+The candidate's two-call message digest: joining the first block with the low ten bits of the
+second is a bijection, so two independent uniform blocks give the uniform 266-bit digest law; and
+the two block inputs of a digest call are distinct.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -100,103 +97,5 @@ theorem digestInput_injective (parameter : PublicParameter) (root : Digest)
   have hposition := congrArg TweakFields.position hfields
   apply Fin.ext
   exact ofNat_inj_of_lt (by have := left.isLt; omega) (by have := right.isLt; omega) hposition
-
-/-- Freshness for both separately tweaked blocks, relative to the history before the trial. -/
-def DigestFresh (parameter : PublicParameter) (root : Digest) (message : Message)
-    (randomness : Randomness) (cache : QueryCache HashSpec) : Prop :=
-  ∀ call : Fin 2, cache (digestInput parameter root message randomness call) = none
-
-theorem run_messageDigest_fresh (parameter : PublicParameter) (root : Digest)
-    (message : Message) (randomness : Randomness) (cache : QueryCache HashSpec)
-    (hfresh : DigestFresh parameter root message randomness cache) :
-    (simulateQ randomOracle
-      (messageDigest parameter root message randomness : OracleComp HashSpec MessageDigest)).run cache =
-    (do
-      let first ← ($ᵗ HashOutput : ProbComp HashOutput)
-      let second ← ($ᵗ HashOutput : ProbComp HashOutput)
-      pure (truncateMessageDigest first second,
-        (cache.cacheQuery (digestInput parameter root message randomness 0) first).cacheQuery
-          (digestInput parameter root message randomness 1) second)) := by
-  have hne : digestInput parameter root message randomness 1 ≠
-      digestInput parameter root message randomness 0 := by
-    intro h
-    have := digestInput_injective parameter root message randomness h
-    exact (by decide : (1 : Fin 2) ≠ 0) this
-  simp only [messageDigest, messageDigestCall, oracleHash, HasQuery.query,
-    simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-  rw [randomOracle, QueryImpl.withCaching_run_none _ (hfresh 0)]
-  simp only [map_eq_bind_pure_comp, bind_assoc, Function.comp_def, pure_bind]
-  apply bind_congr
-  intro first
-  rw [QueryImpl.withCaching_run_none _
-    ((QueryCache.cacheQuery_of_ne cache first hne).trans (hfresh 1))]
-  simp [uniformSampleImpl, simulateQ_pure]
-
-/-- Reading a fresh digest from the actual cache has the uniform digest marginal. -/
-theorem evalDist_messageDigest_fresh (parameter : PublicParameter) (root : Digest)
-    (message : Message) (randomness : Randomness) (cache : QueryCache HashSpec)
-    (hfresh : DigestFresh parameter root message randomness cache) :
-    𝒟[Prod.fst <$> (simulateQ randomOracle
-      (messageDigest parameter root message randomness : OracleComp HashSpec MessageDigest)).run cache] =
-      𝒟[($ᵗ MessageDigest : ProbComp MessageDigest)] := by
-  rw [run_messageDigest_fresh parameter root message randomness cache hfresh]
-  simpa only [map_bind, map_pure] using evalDist_digestBlocks_uniform
-
-/-- Coverage probability for the concrete two-query digest, after any fixed prior history. -/
-theorem probEvent_messageDigest_covered (parameter : PublicParameter) (root : Digest)
-    (message : Message) (randomness : Randomness) (cache : QueryCache HashSpec)
-    (hfresh : DigestFresh parameter root message randomness cache) (revealed : Disclosures) :
-    Pr[fun result => Covered revealed (fullDigestView result.1) |
-      (simulateQ randomOracle
-        (messageDigest parameter root message randomness : OracleComp HashSpec MessageDigest)).run cache] =
-      ((∑ index : Index, ∏ tree : FtsTree, (revealed index tree).card : Nat) : ℝ≥0∞) /
-        ((2 ^ 266 : Nat) : ℝ≥0∞) := by
-  change Pr[(fun d => Covered revealed (fullDigestView d)) ∘ Prod.fst | _] = _
-  rw [← probEvent_map]
-  rw [probEvent_congr' (fun _ _ => Iff.rfl)
-    (evalDist_messageDigest_fresh parameter root message randomness cache hfresh)]
-  exact fresh_fors_coverage revealed
-
-/-- In the signer's finishing phase, the accepted first block is already cached. Only the
-second block is sampled, so conditional uniformity is over ten remaining digest bits. -/
-theorem run_messageDigest_cached_first (parameter : PublicParameter) (root : Digest)
-    (message : Message) (randomness : Randomness) (cache : QueryCache HashSpec)
-    (first : HashOutput)
-    (hfirst : cache (digestInput parameter root message randomness 0) = some first)
-    (hsecond : cache (digestInput parameter root message randomness 1) = none) :
-    (simulateQ randomOracle
-      (messageDigest parameter root message randomness : OracleComp HashSpec MessageDigest)).run cache =
-    (do
-      let second ← ($ᵗ HashOutput : ProbComp HashOutput)
-      pure (truncateMessageDigest first second,
-        cache.cacheQuery (digestInput parameter root message randomness 1) second)) := by
-  simp only [messageDigest, messageDigestCall, oracleHash, HasQuery.query,
-    simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-  rw [randomOracle, QueryImpl.withCaching_run_some _ hfirst, pure_bind,
-    QueryImpl.withCaching_run_none _ hsecond]
-  simp [uniformSampleImpl, simulateQ_pure]
-
-/-- Exact cached-prefix coverage probability. Replacing this by `fresh_fors_coverage` would be
-invalid: all but ten of the digest bits have already been fixed by the prior transcript. -/
-theorem probEvent_messageDigest_cached_first_covered
-    (parameter : PublicParameter) (root : Digest) (message : Message) (randomness : Randomness)
-    (cache : QueryCache HashSpec) (first : HashOutput)
-    (hfirst : cache (digestInput parameter root message randomness 0) = some first)
-    (hsecond : cache (digestInput parameter root message randomness 1) = none)
-    (revealed : Disclosures) :
-    Pr[fun result => Covered revealed (fullDigestView result.1) |
-      (simulateQ randomOracle
-        (messageDigest parameter root message randomness : OracleComp HashSpec MessageDigest)).run cache] =
-      ((Finset.univ.filter (fun suffix : BitVec 10 =>
-        Covered revealed (fullDigestView (joinDigest (first, suffix))))).card : ℝ≥0∞) /
-        ((2 ^ 10 : Nat) : ℝ≥0∞) := by
-  rw [run_messageDigest_cached_first parameter root message randomness cache first hfirst hsecond]
-  simp only [bind_pure_comp, probEvent_map, Function.comp_def, truncateMessageDigest_eq_join]
-  change Pr[(fun suffix => Covered revealed (fullDigestView (joinDigest (first, suffix)))) ∘
-    (fun second : HashOutput => second.extractLsb' 0 10) |
-    ($ᵗ HashOutput : ProbComp HashOutput)] = _
-  rw [← probEvent_map, probEvent_congr' (fun _ _ => Iff.rfl)
-    (evalDist_hashOutput_extract_uniform (width := 10) (by decide))]
-  rw [probEvent_uniformSample, card_bitVec]
 
 end LeanSphincs.Security

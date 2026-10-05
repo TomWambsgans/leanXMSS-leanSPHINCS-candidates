@@ -113,36 +113,6 @@ theorem run_sequenceFin_fresh {n : Nat} (inputs : Fin n → D)
       simp only [bind_pure_comp, Functor.map_map, cacheFin]
       rfl
 
-theorem sequenceFin_map {m : Type → Type} [Monad m] [LawfulMonad m] {A B : Type} {n : Nat}
-    (f : A → B) (computation : Fin n → m A) :
-    Concrete.sequenceFin (fun i => f <$> computation i) =
-      (fun values i => f (values i)) <$> Concrete.sequenceFin computation := by
-  induction n with
-  | zero =>
-      simp only [Concrete.sequenceFin, map_pure]
-      congr 1
-      funext i
-      exact i.elim0
-  | succ n ih =>
-      simp only [Concrete.sequenceFin, bind_map_left, ih, map_bind, bind_pure_comp, Functor.map_map]
-      apply bind_congr
-      intro head
-      congr 1
-      funext tail i
-      cases i using Fin.cases <;> rfl
-
-theorem evalDist_sequenceFin_congr {A : Type} {n : Nat}
-    (left right : Fin n → ProbComp A) (h : ∀ i, 𝒟[left i] = 𝒟[right i]) :
-    𝒟[Concrete.sequenceFin left] = 𝒟[Concrete.sequenceFin right] := by
-  induction n with
-  | zero => rfl
-  | succ n ih =>
-      simp only [Concrete.sequenceFin, bind_pure_comp, evalDist_bind]
-      rw [h 0]
-      congr 1
-      funext head
-      rw [evalDist_map, evalDist_map, ih _ _ (fun i => h i.succ)]
-
 theorem evalDist_sequenceFin_uniform [Fintype R] (n : Nat) :
     𝒟[Concrete.sequenceFin fun _ : Fin n => ($ᵗ R : ProbComp R)] =
       𝒟[$ᵗ (Fin n → R)] := by
@@ -231,7 +201,6 @@ theorem evalDist_queryTable_fresh (inputs : J → D) (hinj : Function.Injective 
   simp only [cacheTable, Equiv.symm_apply_apply]
 
 end LeanSphincs.Security.SeedCoupling
-
 
 namespace LeanSphincs.Security.SeedCoupling
 open SeedModel Completeness
@@ -434,7 +403,6 @@ theorem evalDist_presample_computation {α β : Type} (computation : OracleComp 
         | inr input => exact evalDist_presample_query computation cache input
       · exact evalDist_bind_congr' _ (fun result => ih result.1 result.2)
 
-
 /-- Every complete continuation has the same output distribution after table preparation.
 The seed is fixed in this statement, so the continuation may perform actual seeded keygen,
 signing, and verification. Its oracle state still contains the seed-addressed entries. -/
@@ -463,16 +431,6 @@ theorem simulateQ_countHashQueries {α : Type} (computation : OracleComp OracleW
   funext input
   cases input <;> rfl
 
-/-- Preparation preserves the *joint* distribution of output and the actual call counter.
-Calls used only to prepare the table are outside this counter. -/
-theorem evalDist_prepared_counted {α : Type} (computation : OracleComp OracleWorld α)
-    (seed : MasterSeed) :
-    𝒟[(simulateQ countedOracle computation).run.run' ∅] =
-      𝒟[sampleMaterial >>= fun material =>
-        (simulateQ countedOracle computation).run.run' (programCache ∅ seed material)] := by
-  simpa only [simulateQ_countHashQueries] using
-    evalDist_prepared_continuation (countHashQueries computation) seed
-
 /-- Uniform hidden seed sampling can be moved after seed-independent material sampling.
 The oracle cache in the continuation remains programmed at the sampled seed's addresses. -/
 theorem evalDist_seeded_prepared {α : Type} (next : MasterSeed → OracleComp OracleWorld α) :
@@ -487,7 +445,6 @@ theorem evalDist_seeded_prepared {α : Type} (next : MasterSeed → OracleComp O
     intro seed
     exact evalDist_prepared_continuation (next seed) seed
   · exact evalDist_bind_bind_swap _ _ _
-
 
 theorem countHashQueries_query_bind {α : Type} (input : OracleWorld.Domain)
     (next : OracleWorld.Range input → OracleComp OracleWorld α) :
@@ -541,10 +498,6 @@ noncomputable def gameAfterSeed (adversary : Adversary) (seed : MasterSeed) :
   let verified ← liftM (Concrete.verify pk forgery.message forgery.signature : OracleComp HashSpec Bool)
   return decide (SigningTranscript.Valid log ∧ ¬SigningTranscript.Contains log forgery) && verified
 
-theorem gameCore_eq_sampling (adversary : Adversary) :
-    gameCore adversary = (liftM sampleMasterSeed : OracleComp OracleWorld MasterSeed) >>=
-      gameAfterSeed adversary := rfl
-
 /-- The seeded experiment with independently sampled full-output material programmed first.
 The cache is seed-dependent; deriving a seed-independent adversarial view still requires hiding
 the programmed addresses until the first explicit seed hit. -/
@@ -552,144 +505,5 @@ noncomputable def preparedExperiment (adversary : Adversary) : ProbComp (Bool ×
   let material ← sampleMaterial
   let seed ← sampleMasterSeed
   (simulateQ countedOracle (gameAfterSeed adversary seed)).run.run' (programCache ∅ seed material)
-
-/-- Exact equality for the actual experiment, including its total hash-call count. -/
-theorem evalDist_experiment_prepared (adversary : Adversary) :
-    𝒟[experiment adversary] = 𝒟[preparedExperiment adversary] := by
-  rw [experiment, gameCore_eq_sampling]
-  exact evalDist_seeded_prepared_counted (gameAfterSeed adversary)
-
-attribute [local irreducible] preparedExperiment experiment gameCore gameAfterSeed
-
-/-- The public query-budget assumption transfers unchanged to the prepared experiment. -/
-theorem preparedExperiment_hashQueryBound (adversary : Adversary) (q : Nat)
-    (hbound : HasHashQueryBound adversary q) :
-    ∀ result ∈ support (preparedExperiment adversary), result.2 ≤ q := by
-  intro result hresult
-  exact hbound result ((mem_support_iff_of_evalDist_eq
-    (evalDist_experiment_prepared adversary) result).mpr hresult)
-
-/-- The actual strong-forgery advantage is exactly the advantage of the prepared experiment. -/
-theorem forgeAdvantage_prepared (adversary : Adversary) :
-    forgeAdvantage adversary =
-      Pr[fun result => result.1 = true | preparedExperiment adversary] := by
-  rw [forgeAdvantage, probEvent_def, probEvent_def, evalDist_experiment_prepared]
-
-
-end LeanSphincs.Security.SeedCoupling
-
-namespace LeanSphincs.Security.SeedCoupling
-open SeedModel Completeness
-set_option backward.isDefEq.respectTransparency false
-attribute [local irreducible] programCache
-attribute [local instance] Classical.propDecidable
-
-/-- Cache updates outside the hidden seed's domain commute with table programming. -/
-theorem programCache_cacheQuery_outside (base : QueryCache HashSpec) (seed : MasterSeed)
-    (material : Material) (input : HashInput) (answer : HashOutput)
-    (hnot : ¬SeedGuess.SeedHit input seed) :
-    programCache (base.cacheQuery input answer) seed material =
-      (programCache base seed material).cacheQuery input answer := by
-  funext query
-  by_cases hquery : query = input
-  · subst query
-    rw [programCache_agreeOutside _ _ _ _ hnot, QueryCache.cacheQuery_self,
-      QueryCache.cacheQuery_self]
-  · rw [QueryCache.cacheQuery_of_ne _ _ hquery]
-    unfold programCache
-    split
-    · rfl
-    · split
-      · rfl
-      · exact QueryCache.cacheQuery_of_ne _ _ hquery
-
-/-- Until a seed hit, a real lazy-oracle step has the same answer and the corresponding
-programmed next cache. This is equality of computations, stronger than a probability bound. -/
-theorem run_query_programCache_outside (base : QueryCache HashSpec) (seed : MasterSeed)
-    (material : Material) (input : HashInput) (hnot : ¬SeedGuess.SeedHit input seed) :
-    (randomOracle (spec := HashSpec) input).run (programCache base seed material) =
-      (fun result => (result.1, programCache result.2 seed material)) <$>
-        (randomOracle (spec := HashSpec) input).run base := by
-  have hagree := programCache_agreeOutside base seed material input hnot
-  cases hcached : base input with
-  | some answer =>
-      rw [QueryImpl.withCaching_run_some _ hcached,
-        QueryImpl.withCaching_run_some _ (hagree.trans hcached), map_pure]
-  | none =>
-      rw [QueryImpl.withCaching_run_none _ hcached,
-        QueryImpl.withCaching_run_none _ (hagree.trans hcached), Functor.map_map]
-      congr 1
-      funext answer
-      exact congrArg (fun cache => (answer, cache))
-        (programCache_cacheQuery_outside base seed material input answer hnot).symm
-
-/-- Only an explicit hash query can be a seed hit; private randomness never is. -/
-def worldSeedHit (seed : MasterSeed) : OracleWorld.Domain → Prop
-  | .inl _ => False
-  | .inr input => SeedGuess.SeedHit input seed
-
-/-- Stop before a seed-bearing hash query is answered. This wrapper belongs around an
-adversarial hash computation; honest seed derivations must separately be served from material. -/
-noncomputable def stopBeforeSeed {α : Type} (seed : MasterSeed)
-    (computation : OracleComp OracleWorld α) : OracleComp OracleWorld (Option α) := by
-  classical
-  exact OracleComp.construct (fun value => pure (some value))
-    (fun input _ next => if worldSeedHit seed input then pure none else do
-      let answer ← liftM (OracleWorld.query input)
-      next answer) computation
-
-theorem stopBeforeSeed_pure {α : Type} (seed : MasterSeed) (value : α) :
-    stopBeforeSeed seed (pure value) = pure (some value) := rfl
-
-theorem stopBeforeSeed_query_bind {α : Type} (seed : MasterSeed) (input : OracleWorld.Domain)
-    (next : OracleWorld.Range input → OracleComp OracleWorld α) :
-    stopBeforeSeed seed (liftM (OracleWorld.query input) >>= next) =
-      (if worldSeedHit seed input then pure none else do
-        let answer ← liftM (OracleWorld.query input)
-        stopBeforeSeed seed (next answer)) := by
-  classical
-  rfl
-
-/-- Stopping at the first explicit seed hit exactly hides the programmed table from arbitrary
-adaptive hash computations, including their private sampling and their retained output state. -/
-theorem run_stopBeforeSeed_programCache {α : Type} (seed : MasterSeed) (material : Material)
-    (computation : OracleComp OracleWorld α) (base : QueryCache HashSpec) :
-    (simulateQ romImpl (stopBeforeSeed seed computation)).run (programCache base seed material) =
-      (fun result => (result.1, programCache result.2 seed material)) <$>
-        (simulateQ romImpl (stopBeforeSeed seed computation)).run base := by
-  classical
-  induction computation using OracleComp.inductionOn generalizing base with
-  | pure value => simp only [stopBeforeSeed_pure, simulateQ_pure, StateT.run_pure, map_pure]
-  | query_bind input next ih =>
-      rw [stopBeforeSeed_query_bind]
-      by_cases hhit : worldSeedHit seed input
-      · simp only [if_pos hhit, simulateQ_pure, StateT.run_pure, map_pure]
-      · rw [if_neg hhit]
-        simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, map_bind]
-        cases input with
-        | inl input =>
-            have hrun (cache : QueryCache HashSpec) :
-                (romImpl (.inl input)).run cache =
-                  (fun answer => (answer, cache)) <$> (liftM (unifSpec.query input) : ProbComp _) := rfl
-            simp only [hrun, bind_map_left]
-            apply bind_congr
-            intro answer
-            exact ih answer base
-        | inr input =>
-            dsimp only [OracleWorld, OracleSpec.Range, OracleSpec.add_apply_inr] at next ih ⊢
-            change ((randomOracle (spec := HashSpec) input).run (programCache base seed material) >>= _) =
-              ((randomOracle (spec := HashSpec) input).run base >>= _)
-            rw [run_query_programCache_outside base seed material input hhit, bind_map_left]
-            apply bind_congr
-            intro result
-            exact ih result.1 result.2
-
-/-- Dropping the cache from the stopped execution gives literally identical computations. -/
-theorem run'_stopBeforeSeed_programCache {α : Type} (seed : MasterSeed) (material : Material)
-    (computation : OracleComp OracleWorld α) (base : QueryCache HashSpec) :
-    (simulateQ romImpl (stopBeforeSeed seed computation)).run' (programCache base seed material) =
-      (simulateQ romImpl (stopBeforeSeed seed computation)).run' base := by
-  rw [StateT.run'_eq, StateT.run'_eq, run_stopBeforeSeed_programCache, Functor.map_map]
-
 
 end LeanSphincs.Security.SeedCoupling

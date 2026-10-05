@@ -79,32 +79,3 @@ theorem Opening.covered_or_hidden (f : QueryImpl HashSpec Id) (parameter : Publi
       (Opening.trueSecretQuery f parameter index seed leaves secrets paths hopening tree)⟩
 
 end LeanSphincs.Security.Fors
-
-namespace LeanSphincs.Security.SignatureWitness
-open Concrete
-variable [Params]
-
-/-- The unconditional signature classifier splits canonical forgeries into covered message
-digests and actual queries of undisclosed FORS secrets. -/
-theorem accepted_coverage_or_query (f : QueryImpl HashSpec Id) (pk : PublicKey)
-    (seed : MasterSeed) (message : Message) (signature : Signature) (revealed : Disclosures)
-    (hb : 0 < subtreeHeight)
-    (hroot : pk.root = evalWithAnswerFn f
-      (Seeded.treeRoot pk.parameter topLayer rootTree seed : OracleComp HashSpec Digest))
-    (hverified : evalWithAnswerFn f
-      (Concrete.verify pk message signature : OracleComp HashSpec Bool) = true) :
-    (Landed pk.parameter (index f pk message signature) ∧
-      Covered revealed (fullDigestView (verificationDigest f pk message signature))) ∨
-    ChosenException f pk seed message signature ∨
-    Fors.HiddenSecretQuery f pk.parameter seed revealed (trace f pk message signature) := by
-  rcases accepted_chosen_classification f pk seed message signature hb hroot hverified with
-    ⟨counter, _, hcanonical⟩ | hexception
-  · rcases Fors.Opening.covered_or_hidden f pk.parameter (index f pk message signature) seed
-        (digestLeaves (verificationDigest f pk message signature)) signature.ftsSecret signature.ftsPath
-        revealed (trace f pk message signature) hcanonical.2.2.2.2
-        (verification_fors_run f pk message signature) with hcovered | hhidden
-    · exact Or.inl ⟨hcanonical.1, hcovered⟩
-    · exact Or.inr (Or.inr hhidden)
-  · exact Or.inr (Or.inl hexception)
-
-end LeanSphincs.Security.SignatureWitness

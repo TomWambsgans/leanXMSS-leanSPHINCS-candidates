@@ -103,33 +103,6 @@ def reveal (coordinate : Coordinate) : OracleComp HashViewSpec Digest :=
 def fixedView (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table) : QueryImpl HashViewSpec Id :=
   f + (show QueryImpl (Coordinate →ₒ Digest) Id from table)
 
-omit [Params] in
-theorem eval_lift_hash (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table)
-    {α : Type} (computation : OracleComp HashSpec α) :
-    evalWithAnswerFn (fixedView f table) (liftM computation : OracleComp HashViewSpec α) =
-      evalWithAnswerFn f computation :=
-  QueryImpl.simulateQ_add_liftM_left f table computation
-
-omit [Params] in
-theorem eval_reveal (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table) (coordinate : Coordinate) :
-    evalWithAnswerFn (fixedView f table) (reveal coordinate) = table coordinate := by
-  rfl
-
-omit [Params] in
-theorem eval_sequence_reveal (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table)
-    {n : Nat} (which : Fin n → Coordinate) :
-    evalWithAnswerFn (fixedView f table) (sequenceFin fun index => reveal (which index)) =
-      fun index => table (which index) := by
-  induction n with
-  | zero =>
-      simp only [sequenceFin, evalWithAnswerFn_pure]
-      funext index
-      exact index.elim0
-  | succ n ih =>
-      simp only [sequenceFin, evalWithAnswerFn_bind, eval_reveal, evalWithAnswerFn_pure, ih]
-      funext index
-      cases index using Fin.cases <;> rfl
-
 /-- No coordinate is revealed when WOTS encoding fails. On success only the 64 frontiers
 and 24 selected FORS secrets are read; all path values are public structural labels. -/
 def finishSource (parameter : PublicParameter) (data : PublicData)
@@ -157,23 +130,6 @@ noncomputable def assembled (f : QueryImpl HashSpec Id) (parameter : PublicParam
       data.forsPath index (digestLeaves digest),
       Fin.cases (⟨pair.1, (fun chain => table (.chain topLayer rootTree index chain (pair.2 chain))),
         data.treePath index⟩ : LayerSignature topLayer) (fun i => Fin.elim0 i)⟩
-
-theorem eval_finishSource (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (data : PublicData) (table : HiddenGraph.Table) (message : Message) (randomness : Randomness) :
-    evalWithAnswerFn (fixedView f table) (finishSource parameter data message randomness) =
-      assembled f parameter data table message randomness := by
-  simp only [finishSource, assembled, evalWithAnswerFn_bind, eval_lift_hash,
-    ReferenceChoice.eval_search]
-  cases hs : firstEncoding f parameter topLayer rootTree
-      (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
-        OracleComp HashSpec MessageDigest)))
-      (data.forsKey (digestIndex (evalWithAnswerFn f
-        (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest))))
-      encodingAttemptLimit 0 with
-  | none => simp only [evalWithAnswerFn_pure, Option.map_none]
-  | some pair =>
-      obtain ⟨counter, word⟩ := pair
-      simp only [evalWithAnswerFn_pure, evalWithAnswerFn_bind, eval_sequence_reveal, Option.map_some]
 
 theorem eval_finishSign_assembled (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (data : PublicData) (table : HiddenGraph.Table)
@@ -208,19 +164,6 @@ theorem eval_finishSign_assembled (f : QueryImpl HashSpec Id) (parameter : Publi
           OracleComp HashSpec MessageDigest))) seed : OracleComp HashSpec Digest))
       encodingAttemptLimit 0 <;>
     simp only [Option.map_none, Option.map_some, evalWithAnswerFn_pure, evalWithAnswerFn_bind,
-      hchains, derivedSecrets, Completeness.otsSecret, Completeness.ftsSecret, ftsIndexOf]
-
-/-- Exact output equality between real honest assembly and the coordinate-reveal frontend. -/
-theorem finishSource_correct (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (seed : MasterSeed) (data : PublicData) (table : HiddenGraph.Table)
-    (hdata : DataCorrect f parameter seed data)
-    (htable : CoordinatesCorrect f parameter seed table)
-    (message : Message) (randomness : Randomness)
-    (hland : Landed parameter (digestIndex (evalWithAnswerFn f
-      (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest)))) :
-    evalWithAnswerFn (fixedView f table) (finishSource parameter data message randomness) =
-      evalWithAnswerFn f (Randomized.finishSign ⟨seed, parameter, data.root⟩ message randomness) := by
-  rw [eval_finishSource, ← eval_finishSign_assembled f parameter seed data table hdata htable
-    message randomness hland]
+      derivedSecrets, Completeness.otsSecret, Completeness.ftsSecret, ftsIndexOf]
 
 end LeanSphincs.Security.GraphView

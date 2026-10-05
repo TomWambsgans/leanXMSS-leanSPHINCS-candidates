@@ -1,10 +1,12 @@
 import LeanSphincs.SecurityPreparedScheme
-import LeanSphincs.SecurityGameSupport
+import LeanSphincs.Statement
+import LeanSphincs.RandomizedSupport
+import LeanSphincs.SecurityTreeWitness
 
 /-!
-Composing privileged honest-code compilation with an unchanged shared adversarial oracle.
-The prepared material table stays in the cache throughout this stage. This is the bridge needed
-before comparing the seed-independent frontend's programmed and empty initial caches.
+Composing privileged honest-code compilation with an unchanged shared adversarial oracle: the
+honest computations, and the whole game after the seed, are related to their compiled forms, with
+the prepared material table kept in the shared cache throughout.
 -/
 
 open OracleComp OracleSpec
@@ -157,7 +159,7 @@ theorem counted_ordinaryWorld_query (input : OracleWorld.Domain) :
   cases input <;> rw [ordinaryWorld, simulateQ_spec_query] <;> rfl
 
 /-- Ordinary calls, including arbitrary adversarial hash inputs, use exactly the same shared
-cache and call counter on the two sides at this stage. -/
+cache and call counter on the two sides. -/
 theorem Related.ordinary {α : Type} (known : QueryCache HashSpec)
     (computation : OracleComp OracleWorld α) :
     Related known computation (simulateQ ordinaryWorld computation) := by
@@ -235,7 +237,6 @@ theorem Related.adversary (seed : MasterSeed) (material : Material) (root : Dige
       simp only [QueryImpl.add_apply_inr, signingOracle, materialSigningOracle,
         QueryImpl.run_withLogging_apply, bind_pure_comp]
       exact (Related.sign seed material root message).map _
-
 
 omit [Params] in
 theorem targetRun_map {α β : Type} (f : α → β) (computation : OracleComp PreparedWorld α)
@@ -330,33 +331,5 @@ theorem Related.gameAfterSeed (seed : MasterSeed) (material : Material) (adversa
       exact Related.rest seed material root adversary)
   rw [gameAfterSeed_eq_bind, materialGame_eq_bind, keygen_map_root, liftM_map, bind_map_left]
   simpa only [bind_map_left, reseedKey] using hgame
-
-/-- The actual prepared game and the independent-material frontend have the same result/count
-joint distribution when both start with the same seed-addressed material table. -/
-theorem evalDist_gameAfterSeed (seed : MasterSeed) (material : Material) (adversary : Adversary) :
-    𝒟[(simulateQ countedOracle (gameAfterSeed adversary seed)).run.run'
-      (programCache ∅ seed material)] =
-      𝒟[(simulateQ preparedCountedOracle (materialGame material adversary)).run.run'
-        (programCache ∅ seed material)] := by
-  have h := Related.gameAfterSeed seed material adversary (programCache ∅ seed material) le_rfl
-  rw [sourceRun_eq_counted, targetRun_eq_counted] at h
-  exact evalDist_map_eq_of_evalDist_eq h Prod.fst
-
-/-- Exact distributional reduction of the actual experiment to a seed-independent program
-whose only remaining seed dependence is its initial shared oracle cache. -/
-theorem evalDist_experiment_material (adversary : Adversary) :
-    𝒟[experiment adversary] = 𝒟[do
-      let material ← sampleMaterial
-      let seed ← sampleMasterSeed
-      (simulateQ preparedCountedOracle (materialGame material adversary)).run.run'
-        (programCache ∅ seed material)] := by
-  rw [evalDist_experiment_prepared]
-  unfold preparedExperiment
-  apply evalDist_bind_congr'
-  intro material
-  apply evalDist_bind_congr'
-  intro seed
-  exact evalDist_gameAfterSeed seed material adversary
-
 
 end LeanSphincs.Security.MaterialGameCoupling

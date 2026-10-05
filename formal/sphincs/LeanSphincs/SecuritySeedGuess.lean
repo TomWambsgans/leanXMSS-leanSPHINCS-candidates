@@ -2,10 +2,10 @@ import LeanSphincs.SecurityDomains
 import LeanSphincs.Uniform
 
 /-!
-Exact derivation-input parsing and adaptive hidden-seed guessing. The hidden seed in this module
-is sampled independently of the strategy's initial state and private randomness. The strategy
-learns only whether each selected input names that seed, and may adapt after every failed guess.
-Connecting this experiment to the actual seeded signature game remains a separate coupling proof.
+Exact derivation-input parsing and hidden-seed guessing. An input names at most one seed, so it
+names a uniform seed with probability at most `2^-256`. In the adaptive guessing experiment the
+seed is sampled independently of the strategy's initial state and private randomness, and the
+strategy learns only whether each selected input names that seed.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -76,27 +76,6 @@ theorem seedHit_probability_le (input : HashInput) :
   rw [show Fintype.card MasterSeed = 2 ^ 256 by simp, Nat.cast_pow, Nat.cast_ofNat]
   exact ENNReal.div_le_div_right (by exact_mod_cast hcard) _
 
-def SeedHitLog (inputs : List HashInput) (seed : MasterSeed) : Prop :=
-  ∃ input ∈ inputs, SeedHit input seed
-
-/-- A seed-independent query list of length `q` names at most `q` candidate seeds. -/
-theorem seedHitLog_probability_le (inputs : List HashInput) :
-    Pr[SeedHitLog inputs | sampleMasterSeed] ≤ (inputs.length : ℝ≥0∞) / (2 : ℝ≥0∞) ^ 256 := by
-  induction inputs with
-  | nil => simp [SeedHitLog]
-  | cons input inputs ih =>
-      have hevent : SeedHitLog (input :: inputs) =
-          fun seed => SeedHit input seed ∨ SeedHitLog inputs seed := by
-        funext seed
-        simp [SeedHitLog]
-      rw [hevent]
-      calc
-        _ ≤ Pr[SeedHit input | sampleMasterSeed] + Pr[SeedHitLog inputs | sampleMasterSeed] :=
-          probEvent_or_le _ _ _
-        _ ≤ 1 / (2 : ℝ≥0∞) ^ 256 + (inputs.length : ℝ≥0∞) / (2 : ℝ≥0∞) ^ 256 :=
-          add_le_add (seedHit_probability_le input) ih
-        _ = _ := by simp [List.length_cons, Nat.cast_add, ENNReal.add_div, add_comm]
-
 /-- An adaptive query choice and its state transition after an equality-oracle reply. -/
 structure Trial (σ : Type) where
   input : HashInput
@@ -118,54 +97,5 @@ noncomputable def monitor {σ : Type} (choose : Strategy σ) (seed : MasterSeed)
 /-- The hidden seed is sampled once and retained for every adaptive guess. -/
 noncomputable def experiment {σ : Type} (choose : Strategy σ) (q : Nat) (state : σ) : ProbComp Bool :=
   sampleMasterSeed >>= fun seed => monitor choose seed q state
-
-private theorem probe_then_continue_le (input : HashInput) (tail : MasterSeed → ProbComp Bool) :
-    Pr[fun hit => hit = true | sampleMasterSeed >>= fun seed =>
-      if parseSeed input = some seed then pure true else tail seed] ≤
-        Pr[SeedHit input | sampleMasterSeed] +
-          Pr[fun hit => hit = true | sampleMasterSeed >>= tail] := by
-  classical
-  rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_ite (p := SeedHit input),
-    probEvent_bind_eq_tsum, ← ENNReal.tsum_add]
-  apply ENNReal.tsum_le_tsum
-  intro seed
-  by_cases hhit : SeedHit input seed
-  · have hparse := (parseSeed_eq_some_iff _ _).2 hhit
-    simp only [hparse, ↓reduceIte, probEvent_pure, hhit, mul_one]
-    exact le_add_right le_rfl
-  · have hparse : parseSeed input ≠ some seed := fun h => hhit ((parseSeed_eq_some_iff _ _).1 h)
-    simp [hhit, hparse]
-
-/-- Private randomness and failed-guess feedback do not improve `q` equality guesses beyond
-`q / 2^256`. The strategy may select completely different inputs after each failure. -/
-theorem adaptive_seed_guess_bound {σ : Type} (choose : Strategy σ) : ∀ (q : Nat) (state : σ),
-    Pr[fun hit => hit = true | experiment choose q state] ≤ (q : ℝ≥0∞) / (2 : ℝ≥0∞) ^ 256 := by
-  intro q
-  induction q with
-  | zero => intro state; simp [experiment, monitor]
-  | succ q ih =>
-      intro state
-      rw [experiment]
-      simp only [monitor]
-      rw [probEvent_bind_bind_swap]
-      apply probEvent_bind_le_of_forall_le
-      intro selection _
-      cases selection with
-      | none => simp
-      | some trial =>
-          calc
-            _ ≤ Pr[SeedHit trial.input | sampleMasterSeed] +
-                Pr[fun hit => hit = true | experiment choose q (trial.next false)] :=
-              probe_then_continue_le trial.input _
-            _ ≤ 1 / (2 : ℝ≥0∞) ^ 256 + (q : ℝ≥0∞) / (2 : ℝ≥0∞) ^ 256 :=
-              add_le_add (seedHit_probability_le _) (ih _)
-            _ = _ := by rw [Nat.cast_add, Nat.cast_one, ENNReal.add_div, add_comm]
-
-/-- A privately randomized initial state remains safe when sampled independently of the seed. -/
-theorem initialized_adaptive_seed_guess_bound {σ : Type} (choose : Strategy σ) (q : Nat)
-    (initial : ProbComp σ) :
-    Pr[fun hit => hit = true | initial >>= fun state => experiment choose q state] ≤
-      (q : ℝ≥0∞) / (2 : ℝ≥0∞) ^ 256 :=
-  probEvent_bind_le_of_forall_le (fun state _ => adaptive_seed_guess_bound choose q state)
 
 end LeanSphincs.Security.SeedGuess

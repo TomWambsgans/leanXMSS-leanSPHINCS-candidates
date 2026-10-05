@@ -111,32 +111,6 @@ theorem verified_tree (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Me
 
 variable [Params]
 
-/-- The exact generated-key invariant consumed by the structural extraction. -/
-theorem keygen_root (f : QueryImpl HashSpec Id) (seed : MasterSeed) (pk : PublicKey)
-    (sk : Seeded.SecretKey)
-    (hkey : evalWithAnswerFn f (Seeded.keygenFromSeed seed) = (pk, sk)) :
-    pk.root = evalWithAnswerFn f
-      (Seeded.treeRoot pk.parameter topLayer rootTree seed : OracleComp HashSpec Digest) := by
-  simp only [Seeded.keygenFromSeed, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
-    Prod.mk.injEq] at hkey
-  rw [← hkey.1]
-
-theorem keygen_secret_fields (f : QueryImpl HashSpec Id) (seed : MasterSeed) (pk : PublicKey)
-    (sk : Seeded.SecretKey)
-    (hkey : evalWithAnswerFn f (Seeded.keygenFromSeed seed) = (pk, sk)) :
-    sk.seed = seed ∧ sk.parameter = pk.parameter ∧ sk.root = pk.root := by
-  simp only [Seeded.keygenFromSeed, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
-    Prod.mk.injEq] at hkey
-  rw [← hkey.1, ← hkey.2]
-  exact ⟨rfl, rfl, rfl⟩
-
-/-- The canonical retained-leaf opening, including its authentication path. -/
-def TreeOpening (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed)
-    (leaf : LeafIndex) (path : Nat → Digest) (value : Digest) : Prop :=
-  Landed parameter leaf ∧ value = Completeness.node f parameter topLayer rootTree seed 0 leaf.val ∧
-    ∀ level, level < totalHeight →
-      path level = canonicalTreePath f parameter topLayer rootTree seed leaf level
-
 /-- All structural exceptions at the single pruned Merkle layer. -/
 def TreeException (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed)
     (leaf : LeafIndex) (path : Nat → Digest) (value : Digest) : Prop :=
@@ -146,36 +120,5 @@ def TreeException (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (see
       value (Completeness.node f parameter topLayer rootTree seed 0 reference.val) level) ∨
   ∃ level, level < totalHeight ∧
     SurrogatePreimage f parameter topLayer rootTree seed leaf path value level
-
-/-- Accepted verification yields an exact retained-tree opening or an explicit structural event.
-The root hypothesis is the key-generation invariant, not a cryptographic assumption. -/
-theorem verified_pruned_tree (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
-    (message : Message) (signature : Signature) (hb : 0 < subtreeHeight)
-    (hroot : pk.root = evalWithAnswerFn f
-      (Seeded.treeRoot pk.parameter topLayer rootTree seed : OracleComp HashSpec Digest))
-    (hverified : evalWithAnswerFn f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = true) :
-    ∃ value,
-      evalWithAnswerFn f (otsLeaf pk.parameter topLayer rootTree
-        (digestIndex (verificationDigest f pk message signature)) (verificationFors f pk message signature)
-        (signature.layers topLayer).counter (signature.layers topLayer).chainValues :
-        OracleComp HashSpec (Option Digest)) = some value ∧
-      (TreeOpening f pk.parameter seed (digestIndex (verificationDigest f pk message signature))
-        (signaturePath signature topLayer) value ∨
-       TreeException f pk.parameter seed (digestIndex (verificationDigest f pk message signature))
-        (signaturePath signature topLayer) value) := by
-  obtain ⟨value, hleaf, hfold, _, _⟩ := verified_tree f pk message signature hverified
-  refine ⟨value, hleaf, ?_⟩
-  let index := digestIndex (verificationDigest f pk message signature)
-  by_cases hland : Landed pk.parameter index
-  · rcases inside_subtree_treeFold_witness f pk.parameter topLayer rootTree seed index
-      (signaturePath signature topLayer) value hland (hfold.trans hroot) with hopen | hmatch
-    · exact Or.inl ⟨hland, hopen⟩
-    · exact Or.inr (Or.inl ⟨index, hland, hmatch⟩)
-  · let reference := keptLeafEquiv pk.parameter ⟨0, Nat.two_pow_pos _⟩
-    rcases outside_subtree_treeFold_witness f pk.parameter topLayer rootTree seed index reference.val
-      (signaturePath signature topLayer) value hb reference.property hland (hfold.trans hroot)
-      with hmatch | hsurrogate
-    · exact Or.inr (Or.inl ⟨reference.val, reference.property, hmatch⟩)
-    · exact Or.inr (Or.inr hsurrogate)
 
 end LeanSphincs.Security

@@ -39,10 +39,6 @@ noncomputable def compileWorld (seed : MasterSeed) (material : Material) :
     QueryImpl OracleWorld (OracleComp PreparedWorld) :=
   QueryImpl.addLift (QueryImpl.ofLift unifSpec (OracleComp PreparedWorld)) (compileHash seed material)
 
-/-- Public and private key fields are related explicitly: the seed is not part of the public view. -/
-def KeyRel (material : Material) (left right : Seeded.SecretKey) : Prop :=
-  left.parameter = parameter material ∧ right.parameter = parameter material ∧ left.root = right.root
-
 theorem simulate_sequenceFin {I : Type} {spec : OracleSpec I} {m : Type → Type}
     [Monad m] [LawfulMonad m] {α : Type} {n : Nat} (impl : QueryImpl spec m)
     (computations : Fin n → OracleComp spec α) :
@@ -217,7 +213,6 @@ theorem compiled_treePath_eq (left right : MasterSeed) (material : Material)
   · exact compiled_treeNode_eq left right material lay tree _ _
   · exact compiled_surrogate_eq left right material _
 
-
 omit [Params] in
 theorem compiled_ftsNode_eq (left right : MasterSeed) (material : Material)
     (index : Index) (tree : FtsTree) (level node : Nat) :
@@ -334,7 +329,6 @@ theorem compiled_finishSign_eq (left right : MasterSeed) (material : Material) (
   intro layer
   cases layer <;> simp only [simulateQ_pure, pure_bind]
 
-
 theorem compile_signAttempt (seed : MasterSeed) (material : Material)
     (p : PublicParameter) (root : Digest) (message : Message) (randomness : Randomness) :
     simulateQ (compileHash seed material)
@@ -387,21 +381,6 @@ noncomputable def sign (material : Material) (root : Digest) (message : Message)
 theorem compile_sign (seed : MasterSeed) (material : Material) (root : Digest) (message : Message) :
     simulateQ (compileWorld seed material) (Randomized.sign ⟨seed, parameter material, root⟩ message) =
       sign material root message := compiled_sign_eq seed 0 material root message
-
-/-- The precise private-key relation suffices for signing equivalence. Seed fields may differ. -/
-theorem compile_sign_of_keyRel (material : Material) (left right : Seeded.SecretKey)
-    (hrel : KeyRel material left right) (message : Message) :
-    simulateQ (compileWorld left.seed material) (Randomized.sign left message) =
-      simulateQ (compileWorld right.seed material) (Randomized.sign right message) := by
-  rcases left with ⟨seed, p, root⟩
-  rcases right with ⟨seed', p', root'⟩
-  rcases hrel with ⟨hp, hp', hroot⟩
-  dsimp only at hp hp' hroot
-  subst p
-  subst p'
-  subst root'
-  exact compiled_sign_eq seed seed' material root message
-
 
 end LeanSphincs.Security.PreparedScheme
 
@@ -489,22 +468,6 @@ theorem run_compileHash_query (base : QueryCache HashSpec) (seed : MasterSeed) (
           exact congrArg (fun cache => (answer, cache))
             (programCache_cacheQuery_none base seed material input answer htable).symm
 
-/-- Exact replay of every honest hash computation against the programmed cache. The material
-compiler removes only privileged cache entries; ordinary oracle state remains shared. -/
-theorem run_compileHash {α : Type} (seed : MasterSeed) (material : Material)
-    (computation : OracleComp HashSpec α) (base : QueryCache HashSpec) :
-    (simulateQ randomOracle computation).run (programCache base seed material) =
-      (fun result => (result.1, programCache result.2 seed material)) <$>
-        (simulateQ preparedHashOracle (simulateQ (compileHash seed material) computation)).run base := by
-  induction computation using OracleComp.inductionOn generalizing base with
-  | pure value => simp only [simulateQ_pure, StateT.run_pure, map_pure]
-  | query_bind input next ih =>
-      simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, map_bind]
-      rw [run_compileHash_query, bind_map_left]
-      apply bind_congr
-      intro result
-      exact ih result.1 result.2
-
 theorem preparedRom_lift_hash {α : Type} (computation : OracleComp PreparedHashSpec α) :
     simulateQ preparedRom (liftM computation : OracleComp PreparedWorld α) =
       simulateQ preparedHashOracle computation :=
@@ -546,7 +509,6 @@ theorem run_compileWorld {α : Type} (seed : MasterSeed) (material : Material)
       apply bind_congr
       intro result
       exact ih result.1 result.2
-
 
 /-- Both ordinary hash queries and virtual derivation queries count; private draws do not. -/
 noncomputable def countPreparedQueries {α : Type} (computation : OracleComp PreparedWorld α) :
@@ -633,24 +595,7 @@ theorem run_compileWorld_counted {α : Type} (seed : MasterSeed) (material : Mat
   rw [← simulateQ_countHashQueries, run_compileWorld, ← countPrepared_compileWorld,
     simulateQ_countPreparedQueries]
 
-/-- Cache-erased form, preserving the original output/count pair as an equality of computations. -/
-theorem run'_compileWorld_counted {α : Type} (seed : MasterSeed) (material : Material)
-    (computation : OracleComp OracleWorld α) (base : QueryCache HashSpec) :
-    (simulateQ countedOracle computation).run.run' (programCache base seed material) =
-      (simulateQ preparedCountedOracle (simulateQ (compileWorld seed material) computation)).run.run' base := by
-  rw [StateT.run'_eq, StateT.run'_eq, run_compileWorld_counted, Functor.map_map]
-
 variable [Params]
-
-/-- Actual seeded signing on the prepared cache equals the seed-independent material signer,
-including the count of all its original derivations, ordinary hashes, and cached calls. -/
-theorem run_sign_counted (seed : MasterSeed) (material : Material) (root : Digest)
-    (message : Message) (base : QueryCache HashSpec) :
-    (simulateQ countedOracle
-      (Randomized.sign ⟨seed, parameter material, root⟩ message)).run.run' (programCache base seed material) =
-      (simulateQ preparedCountedOracle (sign material root message)).run.run' base := by
-  rw [run'_compileWorld_counted, compile_sign]
-
 
 /-- Prepared key generation returns its material parameter and a dummy-seed private key. -/
 theorem keygen_eq (material : Material) :
@@ -661,17 +606,6 @@ theorem keygen_eq (material : Material) :
       return (⟨root, parameter material⟩, ⟨0, parameter material, root⟩)) := by
   simp only [keygen, Seeded.keygenFromSeed, simulateQ_bind, compile_parameter,
     bind_assoc, pure_bind, simulateQ_pure]
-
-/-- Actual key generation has the same public result and count; only its private seed field
-is restored when returning to the original scheme's key representation. -/
-theorem run_keygen_counted (seed : MasterSeed) (material : Material) (base : QueryCache HashSpec) :
-    (simulateQ countedOracle (liftM (Seeded.keygenFromSeed seed) : OracleComp OracleWorld _)).run.run'
-      (programCache base seed material) =
-      (fun result => ((result.1.1, reseedKey seed result.1.2), result.2)) <$>
-        (simulateQ preparedCountedOracle (liftM (keygen material) : OracleComp PreparedWorld _)).run.run' base := by
-  rw [run'_compileWorld_counted, compileWorld_lift_hash, compile_keygen, liftM_map,
-    simulateQ_map, WriterT.run_map]
-  simp only [StateT.run'_eq, StateT.run_map, Functor.map_map]
 
 /-- Ordinary adversarial queries bypass the privileged honest-code compiler completely. -/
 noncomputable def ordinaryWorld : QueryImpl OracleWorld (OracleComp PreparedWorld)
@@ -693,29 +627,5 @@ noncomputable def materialGame (material : Material) (adversary : Adversary) :
       materialSigningOracle material pk.root) (adversary.main pk)).run
   let verified ← liftM (Concrete.verify pk forgery.message forgery.signature : OracleComp HashSpec Bool)
   return decide (SigningTranscript.Valid log ∧ ¬SigningTranscript.Contains log forgery) && verified
-
-noncomputable def materialExperiment (material : Material) (adversary : Adversary) : ProbComp (Bool × Nat) :=
-  (simulateQ preparedCountedOracle (materialGame material adversary)).run.run' ∅
-
-omit [Params] in
-/-- The ordinary adversary interface agrees with the original shared ROM up to its first
-explicit seed hit. Unlike honest derivations, these queries never receive privileged answers. -/
-theorem run_ordinaryWorld_query_outside (base : QueryCache HashSpec) (seed : MasterSeed)
-    (material : Material) (input : OracleWorld.Domain) (hnot : ¬worldSeedHit seed input) :
-    (romImpl input).run (programCache base seed material) =
-      (fun result => (result.1, programCache result.2 seed material)) <$>
-        (simulateQ preparedRom (ordinaryWorld input)).run base := by
-  cases input with
-  | inl input =>
-      rw [ordinaryWorld, simulateQ_spec_query]
-      change ((fun answer => (answer, programCache base seed material)) <$>
-        (liftM (unifSpec.query input) : ProbComp _)) = _
-      rw [show (preparedRom (.inl input)).run base =
-        (fun answer => (answer, base)) <$> (liftM (unifSpec.query input) : ProbComp _) from rfl,
-        Functor.map_map]
-  | inr input =>
-      rw [ordinaryWorld, simulateQ_spec_query]
-      exact run_query_programCache_outside base seed material input hnot
-
 
 end LeanSphincs.Security.PreparedScheme

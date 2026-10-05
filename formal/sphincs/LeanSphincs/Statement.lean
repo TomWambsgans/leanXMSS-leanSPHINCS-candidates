@@ -2,9 +2,10 @@ import LeanSphincs.Randomized
 import VCVio.OracleComp.QueryTracking.WriterCost
 
 /-!
-The candidate SUF-CMA target, adapted from leanVM b7a107256 to pruning and genuinely random
-randomizers. This module states the target; it does not prove the lifetime security claims.
-All hash calls in the experiment count, including repeated calls and honest-party calls.
+The SUF-CMA experiment, adapted from leanVM b7a107256 to pruning: forgeries, signing transcripts and
+their tests, adversaries, and the counted experiment with the randomized signer (genuinely random
+randomizers). All hash calls in the experiment count, including repeated calls and honest-party
+calls. The security target, for the deterministic signer, is in `StatementDet`.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -62,37 +63,6 @@ noncomputable def countedOracle :=
 noncomputable def experiment (adversary : Adversary) : ProbComp (Bool × Nat) :=
   (simulateQ countedOracle (gameCore adversary)).run.run' ∅
 
-noncomputable def forgeAdvantage (adversary : Adversary) : ℝ≥0∞ :=
-  Pr[fun result => result.1 = true | experiment adversary]
-
-def HasHashQueryBound (adversary : Adversary) (q : Nat) : Prop :=
-  ∀ result ∈ support (experiment adversary), result.2 ≤ q
-
-def HasClassicalSecurityBits (bits : Nat) : Prop :=
-  ∀ q, 1 ≤ q → ∀ adversary, HasHashQueryBound adversary q →
-    forgeAdvantage adversary ≤ q / ((2 ^ bits : Nat) : ℝ≥0∞)
-
 end Security
-
-namespace Lifetimes
-
-abbrev full : Params := ⟨26, 1200000000, by decide⟩
-abbrev pruned20 : Params := ⟨20, 23700000, by decide⟩
-abbrev pruned13 : Params := ⟨13, 240000, by decide⟩
-abbrev pruned14 : Params := ⟨14, 460000, by decide⟩
-abbrev pruned12 : Params := ⟨12, 125000, by decide⟩
-/-- The user requested exactly 33; the spec's 33000 is a separate, stronger target. -/
-abbrev pruned10 : Params := ⟨10, 33, by decide⟩
-
-/-- The six requested claims, still to be established for this candidate game. -/
-def RequestedSecurity : Prop :=
-  @Security.HasClassicalSecurityBits full 127 ∧
-  @Security.HasClassicalSecurityBits pruned20 127 ∧
-  @Security.HasClassicalSecurityBits pruned13 127 ∧
-  @Security.HasClassicalSecurityBits pruned14 127 ∧
-  @Security.HasClassicalSecurityBits pruned12 127 ∧
-  @Security.HasClassicalSecurityBits pruned10 127
-
-end Lifetimes
 
 end LeanSphincs

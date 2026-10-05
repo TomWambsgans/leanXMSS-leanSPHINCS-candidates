@@ -60,15 +60,6 @@ noncomputable def targets (parameter : PublicParameter) (table : Table) (input :
     | none => ∅
     | some entry => if entry.canonicalInput = some input then ∅ else {entry.value}
 
-theorem targets_card_le_one (parameter : PublicParameter) (table : Table) (input : HashInput) :
-    (targets parameter table input).card ≤ 1 := by
-  rw [targets]
-  split
-  · simp
-  · split
-    · simp
-    · split <;> simp
-
 theorem targets_at_entry (parameter : PublicParameter) (table : Table) (domain : HashDomain)
     (payload : HashInput) (entry : Entry) (hentry : table (hashDomainFields domain) = some entry) :
     targets parameter table (tweakableHashInput parameter domain payload) =
@@ -81,36 +72,5 @@ theorem canonical_input_excluded (parameter : PublicParameter) (table : Table) (
     targets parameter table input = ∅ := by
   simp only [targets, (parseFields_some_iff parameter input fields).2 hfields, hentry,
     hcanonical, ↓reduceIte]
-
-/-- Any cached distinct-input structural match is a cached target hit for this reference table. -/
-theorem distinct_match_bad (parameter : PublicParameter) (table : Table) (cache : QueryCache HashSpec)
-    (domain : HashDomain) (payload canonical : HashInput) (value : Digest) (answer : HashOutput)
-    (hentry : table (hashDomainFields domain) = some ⟨some canonical, value⟩)
-    (hne : tweakableHashInput parameter domain payload ≠ canonical)
-    (hcache : cache (tweakableHashInput parameter domain payload) = some answer)
-    (hvalue : truncateHash answer = value) : CacheMatch.Bad (targets parameter table) cache := by
-  refine ⟨_, answer, hcache, ?_⟩
-  rw [targets_at_entry parameter table domain payload _ hentry]
-  simp only [Option.some.injEq, if_neg (Ne.symm hne), Finset.mem_singleton]
-  exact hvalue
-
-/-- Surrogates are targets with no exempt canonical node input at their address. -/
-theorem surrogate_match_bad (parameter : PublicParameter) (table : Table) (cache : QueryCache HashSpec)
-    (domain : HashDomain) (payload : HashInput) (value : Digest) (answer : HashOutput)
-    (hentry : table (hashDomainFields domain) = some ⟨none, value⟩)
-    (hcache : cache (tweakableHashInput parameter domain payload) = some answer)
-    (hvalue : truncateHash answer = value) : CacheMatch.Bad (targets parameter table) cache := by
-  refine ⟨_, answer, hcache, ?_⟩
-  rw [targets_at_entry parameter table domain payload _ hentry]
-  simpa using hvalue
-
-theorem counted_structural_target_bound {α : Type} (parameter : PublicParameter) (table : Table)
-    (oa : OracleComp OracleWorld α) (cache : QueryCache HashSpec)
-    (hclean : ¬CacheMatch.Bad (targets parameter table) cache) (q : Nat)
-    (hbound : ∀ result ∈ support (countedRun oa cache), result.1.2 ≤ q) :
-    Pr[fun result => CacheMatch.Bad (targets parameter table) result.2 |
-      (simulateQ romImpl oa).run cache] ≤ (q : ℝ≥0∞) / (2 : ℝ≥0∞) ^ 128 := by
-  simpa using CacheMatch.counted_program_bound (targets parameter table) 1
-    (targets_card_le_one parameter table) oa cache hclean q hbound
 
 end LeanSphincs.Security.TargetAssignment

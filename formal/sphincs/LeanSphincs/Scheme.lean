@@ -27,7 +27,6 @@ def digestBits : Nat := 128
 def hashOutputBits : Nat := 256
 def messageBits : Nat := 256
 def publicParameterBits : Nat := 128
-def randomnessBits : Nat := 128
 def counterBits : Nat := 32
 def winternitzBits : Nat := 2
 def chainLength : Nat := 2 ^ winternitzBits
@@ -84,7 +83,6 @@ abbrev HashInput := List UInt8
 def layerHeight (_lay : Layer) : Nat := maxLayerHeight
 
 def topLayer : Layer := ⟨0, by decide⟩
-def bottomLayer : Layer := ⟨numLayers - 1, by decide⟩
 
 /-- `sum_{j < lay} h_j`, the index bits above layer `lay`. -/
 def heightAbove (lay : Layer) : Nat := ∑ j : Layer, if j.val < lay.val then layerHeight j else 0

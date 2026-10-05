@@ -49,7 +49,7 @@ theorem honest_completeness (message : Message) :
         verified.1 ∅ key.2 signed.2 verified.2 hkey hsign hverified
       simp [htrue] at hfalse
 
-/-- Uniform negligible bound for all six requested pruning heights. -/
+/-- Uniform negligible bound for every subtree height of at least 10. -/
 theorem honest_completeness_negligible (hb : 10 ≤ subtreeHeight) (message : Message) :
     Pr[fun r => r.1 = false | (simulateQ romImpl (honestExperiment message)).run ∅]
       ≤ (2⁻¹ : ℝ≥0∞) ^ 32767 := by
@@ -79,30 +79,3 @@ theorem honest_completeness_all_messages (hb : 10 ≤ subtreeHeight) :
       exact two_pow_div_two_pow 256 256
 
 end LeanSphincs.Completeness
-
-namespace LeanSphincs.Lifetimes
-
-open Completeness
-
-/-- All requested parameter instances meet the concrete honest completeness bound. -/
-theorem requested_completeness (message : Message) :
-    Pr[fun r => r.1 = false | (simulateQ romImpl (@honestExperiment full message)).run ∅]
-        ≤ (2⁻¹ : ℝ≥0∞) ^ 32767 ∧
-    Pr[fun r => r.1 = false | (simulateQ romImpl (@honestExperiment pruned20 message)).run ∅]
-        ≤ (2⁻¹ : ℝ≥0∞) ^ 32767 ∧
-    Pr[fun r => r.1 = false | (simulateQ romImpl (@honestExperiment pruned13 message)).run ∅]
-        ≤ (2⁻¹ : ℝ≥0∞) ^ 32767 ∧
-    Pr[fun r => r.1 = false | (simulateQ romImpl (@honestExperiment pruned14 message)).run ∅]
-        ≤ (2⁻¹ : ℝ≥0∞) ^ 32767 ∧
-    Pr[fun r => r.1 = false | (simulateQ romImpl (@honestExperiment pruned12 message)).run ∅]
-        ≤ (2⁻¹ : ℝ≥0∞) ^ 32767 ∧
-    Pr[fun r => r.1 = false | (simulateQ romImpl (@honestExperiment pruned10 message)).run ∅]
-        ≤ (2⁻¹ : ℝ≥0∞) ^ 32767 :=
-  ⟨@honest_completeness_negligible full (by decide) message,
-   @honest_completeness_negligible pruned20 (by decide) message,
-   @honest_completeness_negligible pruned13 (by decide) message,
-   @honest_completeness_negligible pruned14 (by decide) message,
-   @honest_completeness_negligible pruned12 (by decide) message,
-   @honest_completeness_negligible pruned10 (by decide) message⟩
-
-end LeanSphincs.Lifetimes

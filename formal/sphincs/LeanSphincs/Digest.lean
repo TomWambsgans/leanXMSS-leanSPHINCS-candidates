@@ -4,9 +4,9 @@ import LeanSphincs.Bytes
 import LeanSphincs.Landing
 
 /-!
-Randomizer grinding for the candidate, with repeated-randomizer collisions accounted for.
-Adapted from leanVM b7a107256. The inputs must initially be fresh as stated explicitly below;
-discharging that condition after key generation is a separate completeness obligation.
+Randomizer grinding for the candidate: the digest input of a trial, the share of fresh answers the
+landing test rejects, and the per-trial failure share `digestFactor`, which also accounts for
+repeated randomizers, with its numerical bound after `2^32` trials. Adapted from leanVM b7a107256.
 -/
 
 open OracleComp OracleSpec ENNReal Finset
@@ -17,27 +17,11 @@ variable [Params]
 
 open Concrete
 
-/-- The input a digest trial hashes to derive its randomizer. -/
-abbrev randInput (secretKey : Seeded.SecretKey) (message : Message) (trial : Nat) : HashInput :=
-  randomizerHashInput secretKey.parameter secretKey.seed message (BitVec.ofNat 32 trial)
-
 /-- The input a digest trial hashes to test its randomizer. -/
 abbrev msgInput (secretKey : Seeded.SecretKey) (message : Message) (randomness : Randomness) :
     HashInput :=
   tweakableHashInput secretKey.parameter (.message 0)
     (messageDigestPayload secretKey.root message randomness)
-
-omit [Params] in
-theorem randInput_inj (secretKey : Seeded.SecretKey) (message : Message) {t t' : Nat}
-    (ht : t < 2 ^ 32) (ht' : t' < 2 ^ 32)
-    (h : randInput secretKey message t = randInput secretKey message t') : t = t' := by
-  simp only [randInput, randomizerHashInput] at h
-  have hfields := LeanSphincs.fieldBytes_injective
-    (List.append_cancel_right (List.append_cancel_right (List.append_cancel_right h)))
-  simp only [TweakFields.mk.injEq, true_and, and_true] at hfields
-  have hv := congrArg BitVec.toNat hfields
-  simp only [BitVec.toNat_ofNat] at hv
-  rwa [Nat.mod_eq_of_lt ht, Nat.mod_eq_of_lt ht'] at hv
 
 omit [Params] in
 theorem msgInput_inj (secretKey : Seeded.SecretKey) (message : Message)
@@ -48,21 +32,6 @@ theorem msgInput_inj (secretKey : Seeded.SecretKey) (message : Message)
   have hpayload := List.append_cancel_left h
   exact LeanSphincs.bytesLE_injective
     (List.append_cancel_right (List.append_cancel_right hpayload))
-
-omit [Params] in
-theorem randInput_ne_msgInput (secretKey : Seeded.SecretKey) (message : Message) (trial : Nat)
-    (randomness : Randomness) :
-    randInput secretKey message trial ≠ msgInput secretKey message randomness := by
-  intro h
-  have h' : fieldBytes ⟨7#8, 0#8, 0#32, BitVec.ofNat 32 trial, 0#32⟩ ++ bytesLE 16 secretKey.parameter
-        ++ (bytesLE 32 secretKey.seed ++ bytesLE 32 message)
-      = fieldBytes (hashDomainFields (.message 0)) ++ bytesLE 16 secretKey.parameter
-        ++ messageDigestPayload secretKey.root message randomness := by
-    simpa only [randInput, msgInput, randomizerHashInput, tweakableHashInput, tweakBytes,
-      List.append_assoc] using h
-  exact fieldInput_ne_of_tag_ne secretKey.parameter
-    (fields1 := ⟨7#8, 0#8, 0#32, BitVec.ofNat 32 trial, 0#32⟩)
-    (fields2 := hashDomainFields (.message 0)) (by simp [hashDomainFields, tweakFields]) _ _ h'
 
 omit [Params] in
 theorem cached_run (input : HashInput) (cache : QueryCache HashSpec) (answer : HashOutput)
@@ -102,106 +71,6 @@ theorem tsum_uniform_ite (P : HashOutput → Prop) [DecidablePred P] (x y : ℝ�
 /-- One trial's failure share. -/
 noncomputable def digestFactor (parameter : PublicParameter) : ℝ≥0∞ := digestReject parameter + (2 : ℝ≥0∞) ^ 32 / (2 : ℝ≥0∞) ^ 128
 
-omit [Params] in
-theorem probEvent_truncate_mem_le (R : Finset Randomness) (hR : R.card ≤ 2 ^ 32) :
-    Pr[fun u : HashOutput => truncateHash u ∈ R | ($ᵗ HashOutput : ProbComp HashOutput)]
-      ≤ (2 : ℝ≥0∞) ^ 32 / (2 : ℝ≥0∞) ^ 128 := by
-  rw [LeanSphincs.probEvent_uniform_truncateHash_mem R,
-    show Fintype.card Digest = 2 ^ 128 by simp [digestBits], Nat.cast_pow, Nat.cast_ofNat]
-  have hcast : (R.card : ℝ≥0∞) ≤ (2 : ℝ≥0∞) ^ 32 := by exact_mod_cast hR
-  gcongr
-
-set_option maxHeartbeats 1000000 in
-/-- The randomizer search exhausts `n` trials with probability at most `(digestFactor sk.parameter) ^ n`. -/
-theorem probEvent_signDigestLoop (sk : Seeded.SecretKey) (message : Message) :
-    ∀ (n t : Nat) (cache : QueryCache HashSpec) (R : Finset Randomness),
-      t + n ≤ 2 ^ 32 → R.card ≤ t →
-      (∀ s, t ≤ s → s < 2 ^ 32 → cache (randInput sk message s) = none) →
-      (∀ ρ, ρ ∉ R → cache (msgInput sk message ρ) = none) →
-      Pr[fun r => r.1 = none | (simulateQ randomOracle
-          (Seeded.signDigestLoop sk message n t
-            : OracleComp HashSpec (Option (Randomness × Index)))).run cache]
-        ≤ (digestFactor sk.parameter) ^ n := by
-  intro n
-  induction n with
-  | zero => intro t cache R _ _ _ _; simp [Seeded.signDigestLoop]
-  | succ n ih =>
-      intro t cache R hbound hcard hrand hmsg
-      rw [Seeded.signDigestLoop]
-      simp only [deriveRandomizer, Seeded.signAttempt, messageDigestCall, oracleHash, HasQuery.query,
-        simulateQ_bind, simulateQ_spec_query, StateT.run_bind, bind_assoc, pure_bind]
-      rw [fresh_run _ cache (hrand t le_rfl (by omega))]
-      refine (ENNReal.tsum_le_tsum (g := fun u => (Fintype.card HashOutput : ℝ≥0∞)⁻¹
-        * (if truncateHash u ∈ R then (digestFactor sk.parameter) ^ n else (digestReject sk.parameter) * (digestFactor sk.parameter) ^ n))
-        fun u => mul_le_mul_right ?_ _).trans ?_
-      · dsimp only
-        have hc1rand : ∀ s, t + 1 ≤ s → s < 2 ^ 32 →
-            (QueryCache.cacheQuery cache (randInput sk message t) u) (randInput sk message s)
-              = none := by
-          intro s hs hsb
-          exact (QueryCache.cacheQuery_of_ne cache u (fun h => by
-            have := randInput_inj sk message hsb (by omega) h
-            omega)).trans (hrand s (by omega) hsb)
-        have hc1msg : ∀ ρ', (QueryCache.cacheQuery cache (randInput sk message t) u)
-            (msgInput sk message ρ') = cache (msgInput sk message ρ') := fun ρ' =>
-          QueryCache.cacheQuery_of_ne cache u (fun h => randInput_ne_msgInput sk message t ρ' h.symm)
-        cases hmc : (QueryCache.cacheQuery cache (randInput sk message t) u)
-            (msgInput sk message (truncateHash u)) with
-        | some v =>
-            have hρR : truncateHash u ∈ R := by
-              by_contra hρ
-              have hnone := hmsg _ hρ
-              rw [← hc1msg, hmc] at hnone
-              simp at hnone
-            rw [if_pos hρR, cached_run _ _ v hmc, pure_bind]
-            by_cases hadm : Landed sk.parameter (blockIndex v)
-            · simp [hadm]
-            · simp only [hadm, if_false, simulateQ_pure, StateT.run_pure, pure_bind]
-              exact ih (t + 1) _ R (by omega) (by omega) hc1rand
-                (fun ρ' hρ' => (hc1msg ρ').trans (hmsg ρ' hρ'))
-        | none =>
-            rw [fresh_run _ _ hmc]
-            refine (ENNReal.tsum_le_tsum (g := fun v => (Fintype.card HashOutput : ℝ≥0∞)⁻¹
-              * (if Landed sk.parameter (blockIndex v) then 0 else (digestFactor sk.parameter) ^ n))
-              fun v => mul_le_mul_right ?_ _).trans ?_
-            · dsimp only
-              by_cases hadm : Landed sk.parameter (blockIndex v)
-              · simp [hadm]
-              · simp only [hadm, if_false, simulateQ_pure, StateT.run_pure, pure_bind]
-                refine ih (t + 1) _ (insert (truncateHash u) R) (by omega)
-                  ((Finset.card_insert_le _ _).trans (by omega)) (fun s hs hsb => ?_)
-                  (fun ρ' hρ' => ?_)
-                · exact (QueryCache.cacheQuery_of_ne
-                    (QueryCache.cacheQuery cache (randInput sk message t) u) v
-                    (fun h => randInput_ne_msgInput sk message s (truncateHash u) h)).trans
-                    (hc1rand s hs hsb)
-                · rw [Finset.mem_insert, not_or] at hρ'
-                  exact ((QueryCache.cacheQuery_of_ne
-                    (QueryCache.cacheQuery cache (randInput sk message t) u) v
-                    (fun h => hρ'.1 (msgInput_inj sk message h))).trans (hc1msg ρ')).trans
-                    (hmsg ρ' hρ'.2)
-            · rw [tsum_uniform_ite]
-              simp only [zero_mul, zero_add]
-              change (digestFactor sk.parameter) ^ n * (digestReject sk.parameter) ≤ _
-              by_cases hρR : truncateHash u ∈ R
-              · rw [if_pos hρR]
-                exact mul_le_of_le_one_right' (digestReject_le_one sk.parameter)
-              · rw [if_neg hρR, mul_comm]
-      · rw [tsum_uniform_ite]
-        have hcoll := probEvent_truncate_mem_le R (by omega)
-        calc (digestFactor sk.parameter) ^ n * Pr[fun u : HashOutput => truncateHash u ∈ R |
-                ($ᵗ HashOutput : ProbComp HashOutput)]
-              + (digestReject sk.parameter) * (digestFactor sk.parameter) ^ n * Pr[fun u : HashOutput => ¬ truncateHash u ∈ R |
-                ($ᵗ HashOutput : ProbComp HashOutput)]
-            ≤ (digestFactor sk.parameter) ^ n * ((2 : ℝ≥0∞) ^ 32 / (2 : ℝ≥0∞) ^ 128)
-              + (digestReject sk.parameter) * (digestFactor sk.parameter) ^ n * 1 :=
-              add_le_add (mul_le_mul_right hcoll _) (mul_le_mul_right probEvent_le_one _)
-          _ = (digestFactor sk.parameter) ^ (n + 1) := by
-              have hF : (digestFactor sk.parameter) = (digestReject sk.parameter) + (2 : ℝ≥0∞) ^ 32 / (2 : ℝ≥0∞) ^ 128 := rfl
-              generalize (2 : ℝ≥0∞) ^ 32 / (2 : ℝ≥0∞) ^ 128 = C at hF ⊢
-              rw [pow_succ, hF]
-              ring
-
 /-- Even after accounting for repeated randomizers, each trial has at least half the fresh
 landing probability available. -/
 theorem digestFactor_room (parameter : PublicParameter) :
@@ -235,20 +104,5 @@ theorem digestFactor_pow_bound (parameter : PublicParameter) :
     omega
   rw [hsplit, pow_mul]
   exact pow_le_pow_left₀ (by positivity) hhalf _
-
-/-- Collision-aware exhaustion bound for the actual seeded grinding loop, with its initial
-freshness requirements explicit. In particular, `b ≥ 10` gives at most `2^(-32768)`. -/
-theorem digest_exhaustion_bound (sk : Seeded.SecretKey) (message : Message)
-    (cache : QueryCache HashSpec)
-    (hrand : ∀ s, s < digestAttemptLimit → cache (randInput sk message s) = none)
-    (hmsg : ∀ ρ, cache (msgInput sk message ρ) = none) :
-    Pr[fun r => r.1 = none | (simulateQ randomOracle
-      (Seeded.signDigestLoop sk message digestAttemptLimit 0
-        : OracleComp HashSpec (Option (Randomness × Index)))).run cache]
-      ≤ (2⁻¹ : ℝ≥0∞) ^ (2 ^ (subtreeHeight + 5)) := by
-  apply (probEvent_signDigestLoop sk message digestAttemptLimit 0 cache ∅
-    (by simp [digestAttemptLimit]) (by simp)
-    (fun s _ hs => hrand s hs) (fun ρ _ => hmsg ρ)).trans
-  exact digestFactor_pow_bound sk.parameter
 
 end LeanSphincs.Completeness

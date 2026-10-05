@@ -281,64 +281,6 @@ def SurrogatePreimage (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     leaf.val path value (level - 1))) =
       evalWithAnswerFn f (Seeded.surrogate parameter seed level : OracleComp HashSpec Digest)
 
-omit [Params] in
-theorem surrogatePreimage_queried (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (path : Nat → Digest)
-    (value : Digest) (level : Nat) (hlevel : level < totalHeight) :
-    merkleInput f parameter (fun height index => .node lay tree height index)
-      leaf.val path value (level - 1) ∈
-      queriedInputs f (treeFold parameter lay tree leaf path totalHeight value :
-        OracleComp HashSpec Digest) := by
-  rw [← merkleFold_treeFold]
-  exact merkleInput_mem f parameter _ leaf.val path value totalHeight (level - 1) (by omega)
-
-/-- A pruned root can be reached outside the retained subtree only by an explicit node match
-or by a query producing a surrogate. The positive-height assumption holds for every requested
-key size and ensures that the surrogate is reached by a hash query, rather than a raw leaf. -/
-theorem outside_subtree_treeFold_witness (f : QueryImpl HashSpec Id)
-    (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (seed : MasterSeed)
-    (leaf reference : LeafIndex) (path : Nat → Digest) (value : Digest)
-    (hb : 0 < subtreeHeight) (hreference : Landed parameter reference)
-    (houtside : ¬Landed parameter leaf)
-    (hfold : evalWithAnswerFn f (treeFold parameter lay tree leaf path totalHeight value :
-      OracleComp HashSpec Digest) =
-      evalWithAnswerFn f (Seeded.treeRoot parameter lay tree seed : OracleComp HashSpec Digest)) :
-    (∃ level, level < totalHeight ∧
-      MerkleMatch f parameter (fun height index => .node lay tree height index)
-        leaf.val reference.val path (canonicalTreePath f parameter lay tree seed reference)
-        value (Completeness.node f parameter lay tree seed 0 reference.val) level) ∨
-    ∃ level, level < totalHeight ∧
-      SurrogatePreimage f parameter lay tree seed leaf path value level := by
-  have hparent : leaf.val / 2 ^ totalHeight = reference.val / 2 ^ totalHeight := by
-    have hl : leaf.val < 2 ^ totalHeight := leaf.isLt
-    have hr : reference.val < 2 ^ totalHeight := reference.isLt
-    rw [Nat.div_eq_of_lt hl, Nat.div_eq_of_lt hr]
-  have hroot := canonicalTreePath_root f parameter lay tree seed reference hreference
-  have hfold' : merkleValue f parameter (fun height index => .node lay tree height index)
-      leaf.val path value totalHeight =
-      merkleValue f parameter (fun height index => .node lay tree height index)
-        reference.val (canonicalTreePath f parameter lay tree seed reference)
-        (Completeness.node f parameter lay tree seed 0 reference.val) totalHeight := by
-    rw [hroot, merkleValue, merkleFold_treeFold]
-    exact hfold
-  rcases merkleFold_classification f parameter (fun height index => .node lay tree height index)
-    leaf.val reference.val path (canonicalTreePath f parameter lay tree seed reference)
-    value (Completeness.node f parameter lay tree seed 0 reference.val) totalHeight hparent hfold'
-    with hgood | ⟨level, hlevel, hparent, _, hcross⟩ | hmatch
-  · have heq : leaf = reference := Fin.ext hgood.1
-    exact False.elim (houtside (heq ▸ hreference))
-  · have hlower : subtreeHeight ≤ level := by
-      by_contra hnot
-      have hle : level + 1 ≤ subtreeHeight := by omega
-      have hquot := quotient_eq_above hle hparent
-      apply houtside
-      exact hquot.trans hreference
-    have hpositive : 0 < level := lt_of_lt_of_le hb hlower
-    refine Or.inr ⟨level, hlevel, hlower, hpositive, ?_⟩
-    rw [← merkleValue_succ, Nat.sub_add_cancel (by omega : 1 ≤ level), hcross,
-      canonicalTreePath_surrogate f parameter lay tree seed reference level hlower hlevel]
-  · exact Or.inl hmatch
-
 /-- Within the retained subtree the only alternatives are the exact canonical opening or a
 different queried input producing a canonical node value. -/
 theorem inside_subtree_treeFold_witness (f : QueryImpl HashSpec Id)

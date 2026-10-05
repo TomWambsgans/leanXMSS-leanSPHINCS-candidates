@@ -1,6 +1,8 @@
 import LeanSphincs.SecurityPosition
 import LeanSphincs.SecurityTargetAssignment
-import LeanSphincs.SecurityGameSupport
+import LeanSphincs.Statement
+import LeanSphincs.RandomizedSupport
+import LeanSphincs.SecurityTreeWitness
 
 /-! Canonical structural graph preparation. The retained positions can be any subset;
 positions omitted by pruning retain their initial labels (in particular surrogate values).
@@ -53,60 +55,6 @@ theorem canonicalGraphInput_congr (position : Position) (left right : CanonicalG
   cases position <;> simp only [canonicalGraphSlots] <;>
     first | rfl | exact hmap | (split_ifs <;> first | rfl | exact hmap)
 
-def readCanonicalGraph (f : QueryImpl HashSpec Id) : List Position → CanonicalGraphLabels → CanonicalGraphLabels
-  | [], labels => labels
-  | position :: rest, labels =>
-      readCanonicalGraph f rest (Function.update labels position
-        (f (canonicalGraphInput parameter otsSecret ftsSecret position labels)))
-
-theorem readCanonicalGraph_preserves (f : QueryImpl HashSpec Id) (positions : List Position)
-    (labels : CanonicalGraphLabels) (position : Position) (hposition : position ∉ positions) :
-    readCanonicalGraph parameter otsSecret ftsSecret f positions labels position = labels position := by
-  induction positions generalizing labels with
-  | nil => rfl
-  | cons first rest ih =>
-      have hne : position ≠ first := fun h => hposition (by simp [h])
-      have hrest : position ∉ rest := fun h => hposition (List.mem_cons_of_mem _ h)
-      change readCanonicalGraph parameter otsSecret ftsSecret f rest
-        (Function.update labels first (f (canonicalGraphInput parameter otsSecret ftsSecret first labels))) position = _
-      rw [ih _ hrest, Function.update_of_ne hne]
-
-theorem readCanonicalGraph_consistent (f : QueryImpl HashSpec Id) (positions : List Position)
-    (hnodup : positions.Nodup)
-    (hsorted : positions.Pairwise (fun left right => left.depth ≤ right.depth))
-    (labels : CanonicalGraphLabels) :
-    ∀ position ∈ positions,
-      readCanonicalGraph parameter otsSecret ftsSecret f positions labels position =
-        f (canonicalGraphInput parameter otsSecret ftsSecret position
-          (readCanonicalGraph parameter otsSecret ftsSecret f positions labels)) := by
-  induction positions generalizing labels with
-  | nil => simp
-  | cons first rest ih =>
-      obtain ⟨hfirst, hrest⟩ := List.nodup_cons.mp hnodup
-      obtain ⟨hdepth, hsorted⟩ := List.pairwise_cons.mp hsorted
-      intro position hposition
-      rcases List.mem_cons.mp hposition with hposition | hposition
-      · subst position
-        have hinput : canonicalGraphInput parameter otsSecret ftsSecret first
-            (readCanonicalGraph parameter otsSecret ftsSecret f (first :: rest) labels) =
-              canonicalGraphInput parameter otsSecret ftsSecret first labels := by
-          apply canonicalGraphInput_congr
-          intro child hchild
-          apply congrArg truncateHash
-          apply readCanonicalGraph_preserves
-          intro hmem
-          have hlt := Position.depth_lt_of_mem_children hchild
-          rcases List.mem_cons.mp hmem with heq | hmem
-          · subst child
-            omega
-          · have := hdepth child hmem
-            omega
-        rw [hinput]
-        change readCanonicalGraph parameter otsSecret ftsSecret f rest
-          (Function.update labels first (f (canonicalGraphInput parameter otsSecret ftsSecret first labels))) first = _
-        rw [readCanonicalGraph_preserves _ _ _ _ _ _ _ hfirst, Function.update_self]
-      · exact ih hrest hsorted _ position hposition
-
 noncomputable def graphOrder (active : Position → Prop) : List Position := by
   classical
   exact ((Finset.univ : Finset Position).filter active).toList.mergeSort
@@ -137,50 +85,5 @@ def prepare : List Position → CanonicalGraphLabels → OracleComp HashSpec Can
   | position :: rest, labels => do
       let answer ← liftM (HashSpec.query (canonicalGraphInput parameter otsSecret ftsSecret position labels))
       prepare rest (Function.update labels position answer)
-
-theorem eval_prepare (f : QueryImpl HashSpec Id) (positions : List Position)
-    (labels : CanonicalGraphLabels) :
-    evalWithAnswerFn f (prepare parameter otsSecret ftsSecret positions labels) =
-      readCanonicalGraph parameter otsSecret ftsSecret f positions labels := by
-  induction positions generalizing labels with
-  | nil => rfl
-  | cons position rest ih =>
-      simp only [prepare, evalWithAnswerFn_bind,
-        show evalWithAnswerFn f (liftM (HashSpec.query
-          (canonicalGraphInput parameter otsSecret ftsSecret position labels))) =
-          f (canonicalGraphInput parameter otsSecret ftsSecret position labels) from
-          simulateQ_spec_query f _, ih, readCanonicalGraph]
-
-theorem input_read_above (f : QueryImpl HashSpec Id) (position : Position)
-    (positions : List Position) (labels : CanonicalGraphLabels)
-    (hdepth : ∀ next ∈ positions, position.depth ≤ next.depth) :
-    canonicalGraphInput parameter otsSecret ftsSecret position
-      (readCanonicalGraph parameter otsSecret ftsSecret f positions labels) =
-        canonicalGraphInput parameter otsSecret ftsSecret position labels := by
-  apply canonicalGraphInput_congr
-  intro child hchild
-  apply congrArg truncateHash
-  apply readCanonicalGraph_preserves
-  intro hmem
-  have := hdepth child hmem
-  have := Position.depth_lt_of_mem_children hchild
-  omega
-
-/-- Every prepared query is its position's final canonical input. Later preparation cannot
-change its payload, since all of its children are at smaller depths. -/
-theorem prepare_queriedInputs (f : QueryImpl HashSpec Id) (positions : List Position)
-    (labels : CanonicalGraphLabels)
-    (hsorted : positions.Pairwise (fun left right => left.depth ≤ right.depth)) :
-    queriedInputs f (prepare parameter otsSecret ftsSecret positions labels) =
-      positions.map (fun position => canonicalGraphInput parameter otsSecret ftsSecret position
-        (readCanonicalGraph parameter otsSecret ftsSecret f positions labels)) := by
-  induction positions generalizing labels with
-  | nil => rfl
-  | cons position rest ih =>
-      obtain ⟨hfirst, hrest⟩ := List.pairwise_cons.mp hsorted
-      rw [prepare, queriedInputs_query_bind, ih _ hrest, List.map_cons]
-      congr 1
-      exact (input_read_above parameter otsSecret ftsSecret f position (position :: rest) labels
-        (by intro next h; rcases List.mem_cons.mp h with rfl | h; exact le_rfl; exact hfirst next h)).symm
 
 end LeanSphincs.Security.Graph

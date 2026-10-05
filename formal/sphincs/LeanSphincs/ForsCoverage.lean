@@ -2,9 +2,8 @@ import LeanSphincs.Uniform
 import Mathlib.Data.BitVec
 
 /-!
-Exact FORS coverage for a fresh uniform 266-bit digest. These are probability identities for a
-fixed disclosure table, not a bound on an adaptive SUF-CMA adversary. The latter must justify when
-this fresh-digest law applies and bound the distribution of the disclosure table.
+The full view of a 266-bit message digest (its index and one leaf per FORS tree) is a bijection,
+so a uniform digest gives a uniform view; and FORS coverage of a view by a fixed disclosure table.
 The bit-decomposition argument is adapted from leanVM b7a107256 for 24 unpinned trees.
 -/
 
@@ -79,41 +78,5 @@ def Covered (revealed : Disclosures) (view : FullDigestView) : Prop :=
 
 instance (revealed : Disclosures) : DecidablePred (Covered revealed) :=
   fun view => inferInstanceAs (Decidable (∀ tree : FtsTree, view.2 tree ∈ revealed view.1 tree))
-
-/-- Enumerating covered digests is choosing an index, then one disclosed leaf per tree. -/
-def coveredEquiv (revealed : Disclosures) :
-    (Σ index : Index, (tree : FtsTree) → {leaf : FtsLeaf // leaf ∈ revealed index tree}) ≃
-      {view : FullDigestView // Covered revealed view} where
-  toFun choice := ⟨(choice.1, fun tree => (choice.2 tree).val), fun tree => (choice.2 tree).property⟩
-  invFun view := ⟨view.val.1, fun tree => ⟨view.val.2 tree, view.property tree⟩⟩
-  left_inv := by rintro ⟨index, leaves⟩; rfl
-  right_inv := by rintro ⟨⟨index, leaves⟩, h⟩; rfl
-
-/-- Exact coverage numerator: sum over indices of the product of DISTINCT leaf counts. -/
-theorem covered_card (revealed : Disclosures) :
-    (Finset.univ.filter (Covered revealed)).card =
-      ∑ index : Index, ∏ tree : FtsTree, (revealed index tree).card := by
-  rw [← Fintype.card_subtype, ← Fintype.card_congr (coveredEquiv revealed), Fintype.card_sigma]
-  apply Finset.sum_congr rfl
-  intro index _
-  rw [Fintype.card_pi]
-  apply Finset.prod_congr rfl
-  intro tree _
-  simp
-
-/-- For a fresh uniform digest, full FORS reuse has exactly this probability. -/
-theorem fresh_fors_coverage (revealed : Disclosures) :
-    Pr[fun digest => Covered revealed (fullDigestView digest) |
-      ($ᵗ MessageDigest : ProbComp MessageDigest)] =
-      ((∑ index : Index, ∏ tree : FtsTree, (revealed index tree).card : Nat) : ℝ≥0∞) /
-        ((2 ^ 266 : Nat) : ℝ≥0∞) := by
-  rw [show (fun digest => Covered revealed (fullDigestView digest)) =
-    (Covered revealed) ∘ fullDigestView from rfl, ← probEvent_map]
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) evalDist_fullDigestView_uniform,
-    probEvent_uniformSample, covered_card]
-  have hcard : Fintype.card FullDigestView = 2 ^ 266 := by
-    rw [← Fintype.card_congr (Equiv.ofBijective fullDigestView fullDigestView_bijective)]
-    simp [messageDigestBits, totalHeight, ftsTrees, ftsTreeHeight]
-  rw [hcard]
 
 end LeanSphincs.Concrete

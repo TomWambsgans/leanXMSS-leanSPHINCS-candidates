@@ -1,4 +1,7 @@
-import LeanSphincs.SecurityUnsignedWitness
+import LeanSphincs.Statement
+import LeanSphincs.RandomizedSupport
+import LeanSphincs.SecurityTreeWitness
+import LeanSphincs.SecuritySignatureWitness
 import LeanSphincs.SecurityDomains
 import LeanSphincs.Uniform
 import SphincsSecurity.Proof.Chains.PartialChainEndpoint
@@ -82,83 +85,16 @@ noncomputable def answer (segment : Segment) (tables : Fin segment.digit.val →
     | none => outside bytes
     | some query => combine (tables query.1 query.2) (high query)
 
-theorem answer_input (segment : Segment) (tables : Fin segment.digit.val → Digest → Digest)
-    (high : Query segment → High) (outside : QueryImpl HashSpec Id) (query : Query segment) :
-    answer segment tables high outside (input segment query) =
-      combine (tables query.1 query.2) (high query) := by
-  simp only [answer, parse_input]
-
-theorem answer_outside (segment : Segment) (tables : Fin segment.digit.val → Digest → Digest)
-    (high : Query segment → High) (outside : QueryImpl HashSpec Id) (bytes : HashInput)
-    (h : parse segment bytes = none) : answer segment tables high outside bytes = outside bytes := by
-  simp only [answer, h]
-
 def lows (segment : Segment) (f : QueryImpl HashSpec Id) : Fin segment.digit.val → Digest → Digest :=
   fun index value => truncateHash (f (input segment (index, value)))
 
 def highs (segment : Segment) (f : QueryImpl HashSpec Id) : Query segment → High :=
   fun query => (splitHashOutput digestBits (f (input segment query))).2
 
-theorem answer_original (segment : Segment) (f : QueryImpl HashSpec Id) :
-    answer segment (lows segment f) (highs segment f) f = f := by
-  funext bytes
-  cases hparse : parse segment bytes with
-  | none => simp only [answer, hparse]
-  | some query =>
-      have hinput := (parse_some_iff segment bytes query).mp hparse
-      rw [hinput, answer_input]
-      exact combine_split (f (input segment query))
-
-theorem lows_answer (segment : Segment) (tables : Fin segment.digit.val → Digest → Digest)
-    (high : Query segment → High) (outside : QueryImpl HashSpec Id) :
-    lows segment (answer segment tables high outside) = tables := by
-  funext level value
-  rw [lows, answer_input, truncate_combine]
-
-/-- The generic chain-prefix model evaluates exactly the candidate's serialized chain walk. -/
-theorem evaluate_lows (segment : Segment) (f : QueryImpl HashSpec Id) (secret : Digest) :
-    SphincsSecurity.Concrete.PartialChainEndpoint.evaluate (lows segment f) secret =
-      evalWithAnswerFn f (chainWalk segment.parameter segment.lay segment.tree segment.leaf
-        segment.chainIdx 0 segment.digit.val secret : OracleComp HashSpec Digest) := by
-  rcases segment with ⟨parameter, lay, tree, leaf, chainIdx, ⟨digit, hdigit⟩⟩
-  change digit < 4 at hdigit
-  interval_cases digit <;>
-    simp [SphincsSecurity.Concrete.PartialChainEndpoint.evaluate, lows, input, step,
-      chainWalk, evalWithAnswerFn_bind, Completeness.eval_tweakableHash, chainLength, winternitzBits,
-      Fin.tail]
-
-/-- Replacing this oracle prefix changes the honest frontier precisely to the modeled endpoint. -/
-theorem evaluate_answer (segment : Segment) (tables : Fin segment.digit.val → Digest → Digest)
-    (high : Query segment → High) (outside : QueryImpl HashSpec Id) (secret : Digest) :
-    evalWithAnswerFn (answer segment tables high outside)
-      (chainWalk segment.parameter segment.lay segment.tree segment.leaf segment.chainIdx
-        0 segment.digit.val secret : OracleComp HashSpec Digest) =
-      SphincsSecurity.Concrete.PartialChainEndpoint.evaluate tables secret := by
-  rw [← evaluate_lows, lows_answer]
-
 /-- The exact byte-query oracle agrees outside this prefix, without asserting anything about
 whether the public computation actually avoids it. -/
 def Avoids (segment : Segment) {α : Type} (f : QueryImpl HashSpec Id)
     (oa : OracleComp HashSpec α) : Prop :=
   ∀ bytes ∈ queriedInputs f oa, parse segment bytes = none
-
-/-- A deterministic computation whose actual trace avoids this prefix is unchanged after the
-prefix's low and high outputs are replaced. This is the explicit disclosure/erasure obligation. -/
-theorem eval_answer_of_avoids (segment : Segment) (tables : Fin segment.digit.val → Digest → Digest)
-    (high : Query segment → High) (outside : QueryImpl HashSpec Id) {α : Type}
-    (oa : OracleComp HashSpec α) (havoid : Avoids segment outside oa) :
-    evalWithAnswerFn (answer segment tables high outside) oa = evalWithAnswerFn outside oa := by
-  induction oa using OracleComp.inductionOn with
-  | pure value => rfl
-  | query_bind bytes next ih =>
-      have hbytes := havoid bytes (by rw [queriedInputs_query_bind]; exact List.mem_cons_self)
-      have hanswer := answer_outside segment tables high outside bytes hbytes
-      rw [evalWithAnswerFn_bind, evalWithAnswerFn_bind]
-      change evalWithAnswerFn (answer segment tables high outside)
-        (next (answer segment tables high outside bytes)) = evalWithAnswerFn outside (next (outside bytes))
-      rw [hanswer]
-      apply ih
-      intro input hinput
-      exact havoid input (by rw [queriedInputs_query_bind]; exact List.mem_cons_of_mem bytes hinput)
 
 end LeanSphincs.Security.Prefix

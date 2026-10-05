@@ -39,18 +39,4 @@ theorem fieldBytes_injective {t1 t2 : TweakFields} (h : fieldBytes t1 = fieldByt
   simp only [bytesLE_injective htag, bytesLE_injective hlayer, bytesLE_injective htree,
     bytesLE_injective hposition, bytesLE_injective hindex]
 
-namespace Completeness
-/-- Two hash inputs whose tweak fields differ in the tag differ, whatever their payloads. -/
-theorem fieldInput_ne_of_tag_ne (parameter : PublicParameter) {fields1 fields2 : TweakFields}
-    (htag : fields1.tag ≠ fields2.tag) (payload1 payload2 : HashInput) :
-    fieldBytes fields1 ++ bytesLE 16 parameter ++ payload1
-      ≠ fieldBytes fields2 ++ bytesLE 16 parameter ++ payload2 := by
-  intro h
-  apply htag
-  obtain ⟨hprefix, _⟩ := List.append_inj h (by
-    simp [fieldBytes, bytesLE_length])
-  obtain ⟨hfields, _⟩ := List.append_inj' hprefix (by simp [bytesLE_length])
-  rw [LeanSphincs.fieldBytes_injective hfields]
-
-end Completeness
 end LeanSphincs

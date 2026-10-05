@@ -98,31 +98,6 @@ def ChainHit (position : Nat) (hposition : position < chainLength - 1) (payload 
         (.chain lay tree leaf chainIdx ⟨position, hposition⟩) ((bytesLE 16) payload)))
       = honestChain f parameter lay tree leaf chainIdx secret (position + 1)
 
-/-- **The first divergence in a chain.** -/
-theorem chainWalk_extract (start : Nat) (value : Digest) (steps : Nat)
-    (hrange : start + steps ≤ chainLength - 1)
-    (hwalk : walkValue f parameter lay tree leaf chainIdx start value steps
-      = honestChain f parameter lay tree leaf chainIdx secret (start + steps)) :
-    value = honestChain f parameter lay tree leaf chainIdx secret start
-      ∨ ∃ (offset : Nat) (hoffset : start + offset < chainLength - 1), offset < steps
-          ∧ ChainHit f parameter lay tree leaf chainIdx secret (start + offset) hoffset
-              (walkValue f parameter lay tree leaf chainIdx start value offset) := by
-  induction steps with
-  | zero =>
-      left
-      simpa [walkValue, chainWalk] using hwalk
-  | succ steps ih =>
-      have hlt : start + steps < chainLength - 1 := by omega
-      by_cases hagree : walkValue f parameter lay tree leaf chainIdx start value steps
-          = honestChain f parameter lay tree leaf chainIdx secret (start + steps)
-      · rcases ih (by omega) hagree with hvalue | ⟨offset, hoffset, hlt', hhit⟩
-        · exact Or.inl hvalue
-        · exact Or.inr ⟨offset, hoffset, by omega, hhit⟩
-      · refine Or.inr ⟨steps, hlt, by omega, hagree, ?_⟩
-        rw [← walkValue_succ f parameter lay tree leaf chainIdx start value steps hlt, hwalk,
-          show start + (steps + 1) = start + steps + 1 by omega]
-
-
 theorem chainWalk_extract_above (start : Nat) (value : Digest) (steps cutoff : Nat)
     (hrange : start + steps ≤ chainLength - 1) (hcutoff : cutoff ≤ steps)
     (hwalk : walkValue f parameter lay tree leaf chainIdx start value steps
@@ -152,7 +127,6 @@ theorem chainWalk_extract_above (start : Nat) (value : Digest) (steps cutoff : N
         rw [← walkValue_succ f parameter lay tree leaf chainIdx start value steps hlt, hwalk,
           show start + (steps + 1) = start + steps + 1 by omega]
 
-
 theorem chainWalk_query_mem (lay : Layer) (tree : TreeIndex) (leafIdx : LeafIndex)
     (chainIdx : ChainIndex) (start steps : Nat) (value : Digest) (offset : Nat)
     (hoffset : offset < steps) (hrange : start + offset < chainLength - 1) :
@@ -173,17 +147,6 @@ theorem chainWalk_query_mem (lay : Layer) (tree : TreeIndex) (leafIdx : LeafInde
       · rw [queriedInputs_bind]
         apply List.mem_append_left
         exact ih offset (by omega) hrange
-
-
-/-- Different chain predecessors produce distinct complete byte inputs at the same address. -/
-theorem ChainHit.input_ne {position : Nat} {hposition : position < chainLength - 1}
-    {payload : Digest} (h : ChainHit f parameter lay tree leaf chainIdx secret position hposition payload) :
-    tweakableHashInput parameter (.chain lay tree leaf chainIdx ⟨position, hposition⟩)
-        (bytesLE 16 payload) ≠
-      tweakableHashInput parameter (.chain lay tree leaf chainIdx ⟨position, hposition⟩)
-        (bytesLE 16 (honestChain f parameter lay tree leaf chainIdx secret position)) := by
-  intro heq
-  exact h.1 (bytesLE_injective (List.append_cancel_left heq))
 
 /-- A different predecessor queried at or above the published chain position. -/
 def ForwardMatch (reference : Digit) (trace : List HashInput) : Prop :=
@@ -323,17 +286,6 @@ theorem chain_input_address_injective (parameter : PublicParameter) (lay : Layer
   have hnat := ofNat_inj_of_lt (by omega : 4 * chain.val + step.val < 2 ^ 32)
     (by omega : 4 * chain'.val + step'.val < 2 ^ 32) hposition
   exact ⟨Fin.ext (by omega), Fin.ext (by omega)⟩
-
-/-- The two-edge witness always contains two distinct complete hash inputs. -/
-theorem TwoEdge.distinct_queries (reference : Digit) (frontier : Digest)
-    {trace : List HashInput}
-    (h : TwoEdge f parameter lay tree leaf chainIdx reference frontier trace) :
-    ∃ input input', input ∈ trace ∧ input' ∈ trace ∧ input ≠ input' := by
-  obtain ⟨first, second, payload, middle, hnext, _, hfirst, hsecond, _, _⟩ := h
-  refine ⟨_, _, hfirst, hsecond, fun heq => ?_⟩
-  have hstep := (chain_input_address_injective parameter lay tree leaf payload middle heq).2
-  have := congrArg Fin.val hstep
-  omega
 
 end Chain
 end LeanSphincs.Security

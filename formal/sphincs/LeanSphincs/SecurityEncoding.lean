@@ -22,13 +22,6 @@ theorem UnitNeighborAt.ne {reference candidate : Encoding} {lowered : ChainIndex
   rw [he] at hd
   omega
 
-theorem UnitNeighborAt.lowered_unique {reference candidate : Encoding} {left right : ChainIndex}
-    (hleft : UnitNeighborAt reference candidate left) (hright : UnitNeighborAt reference candidate right) : left = right := by
-  by_contra hne
-  have hle := hleft.2.2.2 right (Ne.symm hne)
-  have hd := hright.2.2.1
-  omega
-
 noncomputable def unitNeighbors (reference : Encoding) (lowered : ChainIndex) : Finset Encoding :=
   Finset.univ.filter (fun candidate => UnitNeighborAt reference candidate lowered)
 
@@ -214,7 +207,6 @@ theorem valid_encoding_classification {reference candidate : Encoding} (hreferen
   · exact Or.inr (Or.inl (unitNeighbor_of_backwardWeight_one hreference hcandidate hone))
   exact Or.inr (Or.inr (backwardWeight_two_witness (by omega)))
 
-
 /-- All 128 digest bits occur in the candidate's 64 two-bit digits. -/
 theorem digestEncoding_injective : Function.Injective digestEncoding := by
   intro left right hencoding
@@ -269,22 +261,5 @@ theorem decodingDigests_card_le (words : Finset Encoding) :
     obtain ⟨rightWord, _, hright⟩ := mem_decodingDigests.mp hr
     simp only [hleft, hright, Option.getD_some] at he
     exact decode_some_injective hleft (by rw [he]; exact hright)
-
-/-- A fresh encoding hash hits a prescribed word set with mass at most its size / 2^128. -/
-theorem decodingDigests_uniform_le (words : Finset Encoding) :
-    Pr[fun output : HashOutput => truncateHash output ∈ decodingDigests words |
-      ($ᵗ HashOutput : ProbComp HashOutput)] ≤ (words.card : ℝ≥0∞) / (2 : ℝ≥0∞) ^ 128 := by
-  rw [probEvent_uniform_truncateHash_mem,
-    show Fintype.card Digest = 2 ^ 128 by simp [digestBits], Nat.cast_pow, Nat.cast_ofNat]
-  exact ENNReal.div_le_div_right (Nat.cast_le.mpr (decodingDigests_card_le words)) _
-
-/-- The only encodings needing just one backward chain step have at most 4032 digest preimages. -/
-theorem unit_neighbor_probability (reference : Encoding) :
-    Pr[fun output : HashOutput =>
-      truncateHash output ∈ decodingDigests (allUnitNeighbors reference) |
-      ($ᵗ HashOutput : ProbComp HashOutput)] ≤ (4032 : ℝ≥0∞) / (2 : ℝ≥0∞) ^ 128 := by
-  apply (decodingDigests_uniform_le _).trans
-  apply ENNReal.div_le_div_right
-  exact_mod_cast (allUnitNeighbors_card_le reference)
 
 end LeanSphincs.Security.EncodingCode

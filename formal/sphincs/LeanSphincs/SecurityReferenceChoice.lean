@@ -36,24 +36,6 @@ theorem firstEncoding_sound (attempts start : Nat) (counter : Counter) (word : E
           simp only [firstEncoding, he, Option.some.injEq, Prod.mk.injEq] at h
           simpa only [h.1, h.2] using he
 
-theorem firstEncoding_none_at (attempts start offset : Nat) (hoffset : offset < attempts)
-    (h : firstEncoding f parameter lay tree leaf referenceMessage attempts start = none) :
-    evalWithAnswerFn f (encode parameter lay tree leaf referenceMessage
-      (BitVec.ofNat counterBits (start + offset)) : OracleComp HashSpec (Option Encoding)) = none := by
-  induction attempts generalizing start offset with
-  | zero => omega
-  | succ attempts ih =>
-      cases he : evalWithAnswerFn f
-        (encode parameter lay tree leaf referenceMessage (BitVec.ofNat counterBits start) :
-          OracleComp HashSpec (Option Encoding)) with
-      | some found => simp only [firstEncoding, he, reduceCtorEq] at h
-      | none =>
-          simp only [firstEncoding, he] at h
-          cases offset with
-          | zero => simpa only [Nat.add_zero] using he
-          | succ offset =>
-              simpa only [Nat.add_assoc, Nat.add_comm 1 offset] using ih (start + 1) offset (by omega) h
-
 noncomputable def selection : Option (Counter × Encoding) :=
   firstEncoding f parameter lay tree leaf referenceMessage encodingAttemptLimit 0
 
@@ -96,31 +78,6 @@ theorem same_word_target (message : Digest) (counter : Counter)
   EncodingCode.decode_some_injective
     (Wots.decode_of_encode f parameter lay tree leaf message counter _ h)
     (target_decodes f parameter lay tree leaf referenceMessage)
-
-theorem none_canonical_encoding (counter : Counter)
-    (h : selection f parameter lay tree leaf referenceMessage = none) :
-    evalWithAnswerFn f (encode parameter lay tree leaf referenceMessage counter :
-      OracleComp HashSpec (Option Encoding)) = none := by
-  have hcounter : counter.toNat < encodingAttemptLimit := by
-    simpa only [encodingAttemptLimit, counterBits] using counter.isLt
-  have he := firstEncoding_none_at f parameter lay tree leaf referenceMessage
-    encodingAttemptLimit 0 counter.toNat hcounter h
-  simpa only [Nat.zero_add, BitVec.ofNat_toNat, BitVec.setWidth_eq] using he
-
-/-- Every canonical counter trial is clean for the valid dummy target when search exhausts. -/
-theorem none_canonical_target_ne (counter : Counter)
-    (h : selection f parameter lay tree leaf referenceMessage = none) :
-    truncateHash (f (Wots.encodingInput parameter lay tree leaf referenceMessage counter)) ≠
-      target f parameter lay tree leaf referenceMessage := by
-  intro heq
-  have hn := none_canonical_encoding f parameter lay tree leaf referenceMessage counter h
-  have hd := target_decodes f parameter lay tree leaf referenceMessage
-  have he : evalWithAnswerFn f (encode parameter lay tree leaf referenceMessage counter :
-      OracleComp HashSpec (Option Encoding)) = some (word f parameter lay tree leaf referenceMessage) := by
-    simpa only [encode, evalWithAnswerFn_bind, eval_tweakableHash, evalWithAnswerFn_pure,
-      ← heq, Wots.encodingInput] using hd
-  rw [hn] at he
-  cases he
 
 /-- One target per encoding tweak; the canonical successful input is its only exemption. -/
 def EncodingMatch (trace : List HashInput) : Prop :=
@@ -171,19 +128,5 @@ theorem otsLeaf_classification (secret : ChainIndex → Digest) (message : Diges
         hrun.bind_left _ (Wots.encode_query_mem f parameter lay tree leaf message counter), ht⟩)
   · exact Or.inr (Or.inr (Or.inl hmatch))
   · exact Or.inr (Or.inr (Or.inr hchain))
-
-omit referenceMessage in
-/-- The actual fixed FORS-key choice discharges the frontier simulation's cutoff premise. -/
-theorem chosen_cutoff (seed : MasterSeed) (chain : ChainIndex) :
-    ReferenceCutoff
-      ⟨parameter, lay, tree, leaf, chain,
-        word f parameter lay tree leaf
-          (evalWithAnswerFn f (Seeded.ftsKey parameter leaf seed : OracleComp HashSpec Digest)) chain⟩ f seed := by
-  intro counter chosen hselected
-  have hw := word_of_some f parameter lay tree leaf
-    (evalWithAnswerFn f (Seeded.ftsKey parameter leaf seed : OracleComp HashSpec Digest)) counter chosen hselected
-  change (word f parameter lay tree leaf
-    (evalWithAnswerFn f (Seeded.ftsKey parameter leaf seed : OracleComp HashSpec Digest)) chain).val ≤ _
-  rw [hw]
 
 end LeanSphincs.Security.ReferenceChoice

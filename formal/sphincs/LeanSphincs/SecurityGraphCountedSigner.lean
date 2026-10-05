@@ -1,8 +1,9 @@
 import LeanSphincs.SecurityGraphCost
 import LeanSphincs.SecurityPrefixErasedGame
 
-/-! The graph-reveal signer preserves the joint law of the actual signature and its
-original hash cost. Internal graph work is charged even when encoding exhausts. -/
+/-! The counted graph-reveal signer. Its final assembly preserves the joint law of the actual
+signature and its original hash cost on a fixed answer function. Internal graph work is charged
+even when encoding exhausts. -/
 
 open OracleComp OracleSpec
 
@@ -22,16 +23,6 @@ noncomputable def fixedCostSource (f : QueryImpl HashSpec Id) (table : HiddenGra
 
 theorem fixedCostSource_lift_hash (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table)
     {α : Type} (computation : OracleComp HashSpec α) :
-    simulateQ (fixedCostSource f table) (liftM computation : OracleComp CostSpec α) =
-      simulateQ (fixedWorldCost f) (liftM computation : OracleComp OracleWorld α) := by
-  induction computation using OracleComp.inductionOn with
-  | pure value => simp only [liftM_pure, simulateQ_pure]
-  | query_bind input next ih =>
-      simp only [liftM_bind, simulateQ_bind, ih]
-      rfl
-
-theorem fixedCostSource_lift_prob (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table)
-    {α : Type} (computation : ProbComp α) :
     simulateQ (fixedCostSource f table) (liftM computation : OracleComp CostSpec α) =
       simulateQ (fixedWorldCost f) (liftM computation : OracleComp OracleWorld α) := by
   induction computation using OracleComp.inductionOn with
@@ -142,7 +133,7 @@ theorem fixed_finishCostSource (f : QueryImpl HashSpec Id) (parameter : PublicPa
       obtain ⟨counter, word⟩ := pair
       simp only [simulateQ_bind, fixedCostSource_sequence_reveal, pure_bind,
         fixedCostSource_tick, simulateQ_pure, WriterT.run_bind, WriterT.run_pure,
-        AddWriterT.run_addTell, ← PMF.monad_pure_eq_pure, pure_bind,
+        AddWriterT.run_addTell, pure_bind,
         Option.map_some, Option.isSome_some, ↓reduceIte, map_pure, mul_one]
       simp only [← ofAdd_add, ← Nat.add_assoc]
 
@@ -171,52 +162,8 @@ noncomputable def signCostSourceLoop (parameter : PublicParameter) (data : Publi
         finishCostSource parameter data message randomness
       else signCostSourceLoop parameter data message attempts
 
-theorem fixed_signCostSourceLoop (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (seed : MasterSeed) (data : PublicData) (table : HiddenGraph.Table)
-    (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
-    (message : Message) (attempts : Nat) :
-    simulateQ (fixedCostSource f table) (signCostSourceLoop parameter data message attempts) =
-      simulateQ (fixedWorldCost f) (do
-        let some randomness ← Randomized.signDigestLoop ⟨seed, parameter, data.root⟩ message attempts
-          | return none
-        liftM (Randomized.finishSign ⟨seed, parameter, data.root⟩ message randomness)) := by
-  induction attempts with
-  | zero => simp only [signCostSourceLoop, Randomized.signDigestLoop, pure_bind, simulateQ_pure]
-  | succ attempts ih =>
-      simp only [signCostSourceLoop, Randomized.signDigestLoop, bind_assoc, simulateQ_bind,
-        fixedCostSource_lift_prob, fixedCostSource_lift_hash, fixedWorldCost_lift_hash]
-      apply bind_congr
-      intro randomness
-      simp only [hashCalls_signAttempt, hashCalls_messageDigestCall]
-      apply WriterT.ext
-      simp only [WriterT.run_bind, WriterT.run_mk, ← PMF.monad_pure_eq_pure, pure_bind,
-        Seeded.signAttempt, evalWithAnswerFn_bind, evalWithAnswerFn_pure, hashCalls_signAttempt]
-      by_cases hland : Landed parameter (blockIndex (evalWithAnswerFn f
-        (messageDigestCall parameter data.root message randomness 0 : OracleComp HashSpec HashOutput)))
-      · have hland' : Landed parameter (digestIndex (evalWithAnswerFn f
-            (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest))) := by
-          simpa only [messageDigest, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
-            digestIndex_truncate] using hland
-        simp only [hland, ↓reduceIte, evalWithAnswerFn_pure, simulateQ_pure, pure_bind,
-          finishCostSource_correct f parameter seed data table hdata htable message randomness hland',
-          WriterT.run_pure, ← PMF.monad_pure_eq_pure, pure_bind, one_mul,
-          Prod.mk.eta, Functor.map_id]
-        rw [Functor.map_map]
-      · simp only [hland, ↓reduceIte, evalWithAnswerFn_pure, simulateQ_pure, pure_bind]
-        rw [ih]
-        simp only [simulateQ_bind, WriterT.run_bind]
-
 noncomputable def signCostSource (parameter : PublicParameter) (data : PublicData)
     (message : Message) : OracleComp CostSpec (Option Signature) :=
   signCostSourceLoop parameter data message digestAttemptLimit
-
-/-- Both searches, including exhaustion, preserve the joint output and original-cost law. -/
-theorem signCostSource_correct (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (seed : MasterSeed) (data : PublicData) (table : HiddenGraph.Table)
-    (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
-    (message : Message) :
-    simulateQ (fixedCostSource f table) (signCostSource parameter data message) =
-      simulateQ (fixedWorldCost f) (Randomized.sign ⟨seed, parameter, data.root⟩ message) :=
-  fixed_signCostSourceLoop f parameter seed data table hdata htable message digestAttemptLimit
 
 end LeanSphincs.Security.GraphView

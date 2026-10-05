@@ -1,7 +1,8 @@
 import LeanSphincs.SecurityPrefixFullSign
 
-/-! Exact hash-call cost of the frontier-factored signer. Internal hidden-prefix edges may be
-omitted from the simulated transcript, but their original cost remains charged. -/
+/-! Exact hash-call counts (`hashCalls`) of the honest seeded computations on a fixed answer
+function: wrappers, chains, one-time keys, tree and FORS nodes, encodings, message digests and
+signing attempts. -/
 
 open OracleComp OracleSpec
 
@@ -92,94 +93,12 @@ theorem hashCalls_ftsNode (f : QueryImpl HashSpec Id) (parameter : PublicParamet
       rw [pow_succ]
       omega
 
-theorem hashCalls_ftsKey (f g : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (seed : MasterSeed) :
-    hashCalls f (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest) =
-    hashCalls g (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest) := by
-  simp only [Seeded.ftsKey, hashCalls_bind, hashCalls_sequenceFin, hashCalls_ftsNode,
-    hashCalls_tweakableHash]
-
-theorem hashCalls_ftsOpen (f g : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (leaves : IndexGroup → FtsLeaf) (seed : MasterSeed) :
-    hashCalls f (Seeded.ftsOpen parameter index leaves seed :
-      OracleComp HashSpec (FtsTree → Fin ftsTreeHeight → Digest)) =
-    hashCalls g (Seeded.ftsOpen parameter index leaves seed :
-      OracleComp HashSpec (FtsTree → Fin ftsTreeHeight → Digest)) := by
-  simp only [Seeded.ftsOpen, hashCalls_sequenceFin, hashCalls_ftsNode]
-
 theorem hashCalls_encode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : Digest) (counter : Counter) :
     hashCalls f (encode parameter lay tree leaf message counter : OracleComp HashSpec (Option Encoding)) = 1 := by
   simp only [encode, hashCalls_bind, hashCalls_tweakableHash, hashCalls_pure, Nat.add_zero]
 
-theorem hashCalls_otsSignFrom_answer (segment : Segment)
-    (tables : Fin segment.digit.val → Digest → Digest) (high : Query segment → High)
-    (outside : QueryImpl HashSpec Id) (seed : MasterSeed) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (message : Digest) (attempts counter : Nat) :
-    hashCalls (answer segment tables high outside)
-      (Seeded.otsSignFrom segment.parameter lay tree leaf seed message attempts counter :
-        OracleComp HashSpec (Option (Counter × (ChainIndex → Digest)))) =
-    hashCalls outside
-      (Seeded.otsSignFrom segment.parameter lay tree leaf seed message attempts counter :
-        OracleComp HashSpec (Option (Counter × (ChainIndex → Digest)))) := by
-  induction attempts generalizing counter with
-  | zero => rfl
-  | succ attempts ih =>
-      simp only [Seeded.otsSignFrom, hashCalls_bind, hashCalls_encode, encode_answer]
-      cases evalWithAnswerFn outside (encode segment.parameter lay tree leaf message
-        (BitVec.ofNat counterBits counter) : OracleComp HashSpec (Option Encoding)) with
-      | none => rw [ih]
-      | some word =>
-          simp only [hashCalls_bind, hashCalls_sequenceFin, hashCalls_deriveKey,
-            hashCalls_pure, Nat.add_zero]
-          apply congrArg (fun value => 1 + value)
-          apply Finset.sum_congr rfl
-          intro chain _
-          have hsteps : 0 + (word chain).val ≤ chainLength - 1 := by
-            have := (word chain).isLt
-            omega
-          rw [hashCalls_chainWalk _ _ _ _ _ _ _ _ _ hsteps,
-            hashCalls_chainWalk _ _ _ _ _ _ _ _ _ hsteps]
-
 variable [Params]
-
-omit [Params] in
-theorem hashCalls_surrogate (f g : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (seed : MasterSeed) (level : Nat) :
-    hashCalls f (Seeded.surrogate parameter seed level : OracleComp HashSpec Digest) =
-    hashCalls g (Seeded.surrogate parameter seed level : OracleComp HashSpec Digest) := by
-  unfold Seeded.surrogate
-  split <;> simp only [hashCalls_deriveKey, hashCalls_pure]
-
-theorem hashCalls_treePath (f g : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (lay : Layer) (tree : TreeIndex) (seed : MasterSeed) (leaf : LeafIndex) :
-    hashCalls f (Seeded.treePath parameter lay tree seed leaf : OracleComp HashSpec (Fin (layerHeight lay) → Digest)) =
-    hashCalls g (Seeded.treePath parameter lay tree seed leaf : OracleComp HashSpec (Fin (layerHeight lay) → Digest)) := by
-  simp only [Seeded.treePath, hashCalls_sequenceFin]
-  apply Finset.sum_congr rfl
-  intro level _
-  split
-  · simp only [hashCalls_treeNode]
-  · exact hashCalls_surrogate f g parameter seed level.val
-
-theorem hashCalls_signLayer_answer (segment : Segment)
-    (tables : Fin segment.digit.val → Digest → Digest) (high : Query segment → High)
-    (outside : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (index : Index) (lay : Layer)
-    (hparameter : sk.parameter = segment.parameter) :
-    hashCalls (answer segment tables high outside)
-      (Seeded.signLayer sk index lay : OracleComp HashSpec (Option (LayerSignature lay))) =
-    hashCalls outside
-      (Seeded.signLayer sk index lay : OracleComp HashSpec (Option (LayerSignature lay))) := by
-  simp only [Seeded.signLayer, Seeded.layerMessage, hashCalls_bind, hparameter, ftsKey_answer,
-    Seeded.otsSign, hashCalls_otsSignFrom_answer, otsSignFrom_eq_firstEncoding, firstEncoding_answer]
-  rw [hashCalls_ftsKey (answer segment tables high outside) outside]
-  cases firstEncoding outside segment.parameter lay (treeIndexAt index lay) (leafIndexAt index lay)
-    (evalWithAnswerFn outside (Seeded.ftsKey segment.parameter index sk.seed : OracleComp HashSpec Digest))
-    encodingAttemptLimit 0 with
-  | none => simp only [Option.map_none, hashCalls_pure]
-  | some pair =>
-      simp only [Option.map_some, hashCalls_bind, hashCalls_pure, Nat.add_zero]
-      rw [hashCalls_treePath (answer segment tables high outside) outside]
 
 omit [Params] in
 theorem hashCalls_sequenceLayers {α : Layer → Type} (f : QueryImpl HashSpec Id)
@@ -204,25 +123,5 @@ theorem hashCalls_signAttempt (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey
     hashCalls f (Seeded.signAttempt sk message randomness : OracleComp HashSpec (Option Index)) = 1 := by
   rw [Seeded.signAttempt, hashCalls_bind, hashCalls_messageDigestCall]
   split <;> rfl
-
-theorem hashCalls_finishSign_answer (segment : Segment)
-    (tables : Fin segment.digit.val → Digest → Digest) (high : Query segment → High)
-    (outside : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (message : Message) (randomness : Randomness)
-    (hparameter : sk.parameter = segment.parameter) :
-    hashCalls (answer segment tables high outside) (Randomized.finishSign sk message randomness) =
-    hashCalls outside (Randomized.finishSign sk message randomness) := by
-  simp only [Randomized.finishSign, hashCalls_bind, hashCalls_messageDigest, hparameter,
-    messageDigest_answer, hashCalls_sequenceFin, hashCalls_deriveKey, hashCalls_sequenceLayers]
-  simp only [hashCalls_ftsOpen (answer segment tables high outside) outside,
-    hashCalls_signLayer_answer segment tables high outside sk _ _ hparameter]
-  cases evalWithAnswerFn (answer segment tables high outside)
-    (sequenceLayers fun lay => Seeded.signLayer sk
-      (digestIndex (evalWithAnswerFn outside
-        (messageDigest segment.parameter sk.root message randomness : OracleComp HashSpec MessageDigest))) lay)
-  <;> cases evalWithAnswerFn outside
-    (sequenceLayers fun lay => Seeded.signLayer sk
-      (digestIndex (evalWithAnswerFn outside
-        (messageDigest segment.parameter sk.root message randomness : OracleComp HashSpec MessageDigest))) lay)
-  <;> simp only [hashCalls_pure]
 
 end LeanSphincs.Security.Prefix

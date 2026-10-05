@@ -1,9 +1,9 @@
 import LeanSphincs.SecurityReferenceChoice
 import LeanSphincs.SecurityGraphCache
 
-/-! Preparing the canonical encoding reference queries only rejected trials and its one
-exempt successful trial. Thus its actual lazy-oracle cache is clean for the selected target,
-including complete counter exhaustion. -/
+/-! The canonical encoding reference search queries only rejected trials and its one exempt
+successful trial. So no queried input of the search hits its structural target, including under
+complete counter exhaustion. -/
 
 open OracleComp OracleSpec
 
@@ -97,34 +97,5 @@ theorem search_targets_empty_or_miss (f : QueryImpl HashSpec Id) (parameter : Pu
           (bytesLE 16 message ++ bytesLE 4 counter)) := hexempt
     rw [if_pos hexempt']
     exact Finset.notMem_empty _
-
-/-- A reference table fixed from the completed search is clean after actual preparation,
-provided its initial cache was clean. No success or fresh-counter hypothesis is needed. -/
-theorem search_cache_clean (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (message : Digest) (cache cache' : QueryCache HashSpec)
-    (result : Option (Counter × Encoding))
-    (hmem : (result, cache') ∈ support ((simulateQ randomOracle
-      (search parameter lay tree leaf message encodingAttemptLimit 0)).run cache))
-    (f : QueryImpl HashSpec Id) (hf : cache'.AgreesWithFn f) (table : Table)
-    (hentry : table (hashDomainFields (.encoding lay tree leaf)) =
-      some ⟨exemptInput f parameter lay tree leaf message, target f parameter lay tree leaf message⟩)
-    (hclean : ¬CacheMatch.Bad (targets parameter table) cache) :
-    ¬CacheMatch.Bad (targets parameter table) cache' := by
-  rintro ⟨input, answer, hcached, hhit⟩
-  rcases Graph.hash_cache_origin _ cache result cache' hmem f hf input answer hcached with hold | hquery
-  · exact hclean ⟨input, answer, hold, hhit⟩
-  · have hanswer := hf hcached
-    rw [← hanswer] at hhit
-    exact search_targets_empty_or_miss f parameter lay tree leaf message table hentry input hquery hhit
-
-theorem search_support_selection (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (message : Digest) (cache cache' : QueryCache HashSpec)
-    (result : Option (Counter × Encoding))
-    (hmem : (result, cache') ∈ support ((simulateQ randomOracle
-      (search parameter lay tree leaf message encodingAttemptLimit 0)).run cache))
-    (f : QueryImpl HashSpec Id) (hf : cache'.AgreesWithFn f) :
-    selection f parameter lay tree leaf message = result := by
-  rw [selection, ← eval_search]
-  exact (replay_hash_support _ _ _ _ hmem f hf).2
 
 end LeanSphincs.Security.ReferenceChoice

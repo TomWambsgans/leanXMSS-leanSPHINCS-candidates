@@ -1,8 +1,9 @@
 import LeanSphincs.SecurityPrefixMaterialSampling
 
-/-! Replacing a selected prepared OTS secret leaves the reconstructed public computation
-unchanged. The outside oracle's derivation row changes too; this module accounts for that
-change explicitly instead of treating the outside function as independent without proof. -/
+/-! Public agreement of two answer functions: they agree on every tweakable hash input and on the
+FORS secret derivations. Then every reconstructed public computation (chains, encodings, FORS
+nodes, keys and openings, digests, tree nodes and paths, layer signatures and the final assembly)
+evaluates identically under both. -/
 
 open OracleComp OracleSpec
 
@@ -118,15 +119,6 @@ theorem values (secrets : Secrets) (frontier : Digest) (lay : Layer) (tree : Tre
 
 variable [Params]
 
-theorem spine (secrets : Secrets) (frontier : Digest) (surrogates : Nat → Digest)
-    (lay : Layer) (tree : TreeIndex) (steps : Nat) :
-    publicSpine segment left secrets frontier surrogates lay tree steps =
-      publicSpine segment right secrets frontier surrogates lay tree steps := by
-  subst parameter
-  induction steps with
-  | zero => exact h.node segment rfl _ _ _ _ _ _
-  | succ steps ih => simp only [publicSpine, ih, h.tweakable]
-
 theorem path (secrets : Secrets) (frontier : Digest) (surrogates : Nat → Digest)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) :
     publicPath segment left secrets frontier surrogates lay tree leaf =
@@ -154,40 +146,5 @@ theorem cutoff : ReferenceCutoff segment left seed ↔ ReferenceCutoff segment r
   simp only [ReferenceCutoff, h.forsKey, h.firstEncoding_eq]
 
 end PublicAgreement
-
-/-- The only changed derivation is OTS, so both verifier hashes and all FORS computations agree. -/
-theorem prepared_replaceMaterial_agreement (segment : Segment) (outside : QueryImpl HashSpec Id)
-    (material : Material) (value : Digest) (seed : MasterSeed) :
-    PublicAgreement (parameter material) seed
-      (preparedOracle outside seed (replaceMaterial segment material value))
-      (preparedOracle outside seed material) := by
-  constructor
-  · intro domain payload
-    rw [preparedOracle_verifier, preparedOracle_verifier]
-  · intro index tree leaf
-    have hnew := eval_secret_prepared _ seed (replaceMaterial segment material value)
-      (preparedOracle_agreement outside seed (replaceMaterial segment material value))
-      (.inr (.inl (index, tree, leaf)))
-    have hold := eval_secret_prepared _ seed material
-      (preparedOracle_agreement outside seed material) (.inr (.inl (index, tree, leaf)))
-    simp only [replaceMaterial_parameter, secretDomain] at hnew hold
-    rw [hnew, hold, replaceMaterial_other segment material value _ (by simp)]
-
-variable [Params]
-
-/-- The public assembly view is independent of the selected material coordinate, even though
-the oracle used for all other material derivations is explicitly programmed. -/
-theorem publicFinishSign_replaceMaterial (segment : Segment) (outside : QueryImpl HashSpec Id)
-    (material : Material) (replacement frontier : Digest) (surrogates : Nat → Digest)
-    (seed : MasterSeed) (root : Digest) (message : Message) (randomness : Randomness)
-    (hparameter : parameter material = segment.parameter) :
-    publicFinishSign segment (preparedOracle outside seed (replaceMaterial segment material replacement))
-      (materialSecrets (replaceMaterial segment material replacement)) frontier surrogates
-      seed root message randomness =
-    publicFinishSign segment (preparedOracle outside seed material) (materialSecrets material)
-      frontier surrogates seed root message randomness := by
-  rw [materialSecrets_replaceMaterial, publicFinishSign_replaceSecret]
-  exact (prepared_replaceMaterial_agreement segment outside material replacement seed).finishSign
-    segment hparameter _ _ _ _ _ _
 
 end LeanSphincs.Security.Prefix

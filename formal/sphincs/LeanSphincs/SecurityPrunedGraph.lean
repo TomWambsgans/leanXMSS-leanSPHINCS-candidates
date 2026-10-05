@@ -104,20 +104,6 @@ theorem initialLabels_boundary (parameter : PublicParameter) (surrogates : Fin t
   change ((0 : BitVec 128) ++ value).extractLsb' 0 128 = value
   exact BitVec.extractLsb'_append_eq_right
 
-theorem prepared_boundary_value (parameter : PublicParameter)
-    (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-    (ftsSecret : Index → FtsTree → FtsLeaf → Digest) (surrogates : Fin totalHeight → Digest)
-    (labels : CanonicalGraphLabels) (cache cache' : QueryCache HashSpec)
-    (hmem : (labels, cache') ∈ support ((simulateQ randomOracle
-      (prepare parameter otsSecret ftsSecret (graphOrder (active parameter))
-        (initialLabels parameter surrogates))).run cache))
-    (position : Position) (value : Digest) (hboundary : boundary parameter surrogates position = some value) :
-    truncateHash (labels position) = value := by
-  rw [prepare_labels_boundary parameter otsSecret ftsSecret (active parameter)
-    (initialLabels parameter surrogates) labels cache cache' hmem position
-    (boundary_inactive parameter surrogates position value hboundary)]
-  exact initialLabels_boundary parameter surrogates position value hboundary
-
 /-- The precise address extracted from an outside-subtree forgery has one surrogate target
 and no exempt canonical input in the retained graph. -/
 theorem referenceTable_surrogate (parameter : PublicParameter)
@@ -133,37 +119,5 @@ theorem referenceTable_surrogate (parameter : PublicParameter)
   exact referenceTable_boundary parameter otsSecret ftsSecret (active parameter)
     (boundary parameter surrogates) labels (boundaryPosition parameter lay tree level hpositive)
     (boundary_inactive parameter surrogates _ _ hb) _ hb
-
-/-- An addressed surrogate witness already in the real oracle cache is a hit of the one
-boundary target at that tweak. There is no union over possible surrogate values. -/
-theorem cached_surrogate_bad (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-    (ftsSecret : Index → FtsTree → FtsLeaf → Digest) (surrogates : Fin totalHeight → Digest)
-    (labels : CanonicalGraphLabels) (cache : QueryCache HashSpec) (hf : cache.AgreesWithFn f)
-    (lay : Layer) (tree : TreeIndex) (seed : MasterSeed) (leaf : LeafIndex)
-    (path : Nat → Digest) (value : Digest) (level : Fin totalHeight)
-    (hpreimage : SurrogatePreimage f parameter lay tree seed leaf path value level.val)
-    (haddress : leaf.val / 2 ^ level.val = boundaryIndex parameter level.val)
-    (hvalue : surrogates level = evalWithAnswerFn f
-      (Seeded.surrogate parameter seed level.val : OracleComp HashSpec Digest))
-    (answer : HashOutput)
-    (hcache : cache (merkleInput f parameter (fun height index => .node lay tree height index)
-      leaf.val path value (level.val - 1)) = some answer) :
-    CacheMatch.Bad (targets parameter (referenceTable parameter otsSecret ftsSecret
-      (active parameter) (boundary parameter surrogates) labels)) cache := by
-  obtain ⟨hlower, hpositive, hhit⟩ := hpreimage
-  let payload := orderedPayload (leaf.val.testBit (level.val - 1))
-    (merkleValue f parameter (fun height index => .node lay tree height index)
-      leaf.val path value (level.val - 1)) (path (level.val - 1))
-  have hinput : merkleInput f parameter (fun height index => .node lay tree height index)
-      leaf.val path value (level.val - 1) =
-        tweakableHashInput parameter (.node lay tree level.val (boundaryIndex parameter level.val)) payload := by
-    simp only [merkleInput, Nat.sub_add_cancel hpositive, haddress, payload]
-  have hanswer := hf hcache
-  rw [hanswer, ← hvalue] at hhit
-  rw [hinput] at hcache
-  exact surrogate_match_bad parameter _ cache _ payload (surrogates level) answer
-    (referenceTable_surrogate parameter otsSecret ftsSecret surrogates labels lay tree level
-      hpositive hlower) hcache hhit
 
 end LeanSphincs.Security.PrunedGraph

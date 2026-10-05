@@ -24,8 +24,4 @@ theorem signature_size (signature : Signature) : (serializeSignature signature).
     Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul]
   decide
 
-/-- The 266 digest bits require the two distinct 256-bit message calls used by the scheme. -/
-theorem message_digest_size : messageDigestBits = 266 ∧
-    hashOutputBits < messageDigestBits ∧ messageDigestBits ≤ 2 * hashOutputBits := by decide
-
 end LeanSphincs

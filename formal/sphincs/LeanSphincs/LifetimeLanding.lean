@@ -2,9 +2,9 @@ import LeanSphincs.Landing
 import LeanSphincs.SecurityDigest
 
 /-!
-The exact conditional law of a fresh digest that lands in a pruned subtree. Conditioning on
-the landing test leaves the local index and all 24 FORS selectors jointly uniform. This lemma
-concerns a fresh digest trial; relating a whole grinding loop to these trials is separate.
+The kept view of a digest (its local index in the pruned subtree and all 24 FORS selectors), and
+the law of a fresh uniform digest that lands: landing with a kept view in a set costs exactly the
+reciprocal number of subtrees times the uniform probability of that set.
 -/
 
 namespace LeanSphincs.Lifetime
@@ -77,40 +77,5 @@ theorem probEvent_landed_localDigest (parameter : PublicParameter)
   simp only [div_eq_mul_inv,
     ENNReal.mul_inv (Or.inr (ENNReal.natCast_ne_top _)) (Or.inl (ENNReal.natCast_ne_top _))]
   ring
-
-theorem probEvent_fullDigest_landed (parameter : PublicParameter) :
-    Pr[fun digest => Landed parameter (digestIndex digest) |
-      ($ᵗ MessageDigest : ProbComp MessageDigest)] =
-        ((2 ^ (totalHeight - subtreeHeight) : Nat) : ℝ≥0∞)⁻¹ := by
-  simpa only [and_true, probEvent_True_eq_sub, probFailure_uniformSample, tsub_zero, mul_one]
-    using probEvent_landed_localDigest parameter (fun _ => True)
-
-/-- Conditional on acceptance, the kept index and all FORS coordinates have uniform product law. -/
-theorem conditional_landed_digest_uniform (parameter : PublicParameter)
-    (P : KeptDigestView → Prop) [DecidablePred P] :
-    Pr[fun digest => Landed parameter (digestIndex digest) ∧ P (localDigestView digest) |
-      ($ᵗ MessageDigest : ProbComp MessageDigest)] /
-        Pr[fun digest => Landed parameter (digestIndex digest) |
-          ($ᵗ MessageDigest : ProbComp MessageDigest)] =
-      Pr[P | ($ᵗ KeptDigestView : ProbComp KeptDigestView)] := by
-  rw [probEvent_landed_localDigest, probEvent_fullDigest_landed]
-  rw [div_eq_mul_inv, mul_comm _ (Pr[P | ($ᵗ KeptDigestView : ProbComp KeptDigestView)]),
-    mul_assoc, ENNReal.mul_inv_cancel (by simp) (by simp), mul_one]
-
-/-- The same joint law for the actual pair of fresh, separately tweaked hash calls. -/
-theorem probEvent_messageDigest_landed_local (parameter : PublicParameter) (root : Digest)
-    (message : Message) (randomness : Randomness) (cache : QueryCache HashSpec)
-    (hfresh : Security.DigestFresh parameter root message randomness cache)
-    (P : KeptDigestView → Prop) [DecidablePred P] :
-    Pr[fun result => Landed parameter (digestIndex result.1) ∧ P (localDigestView result.1) |
-      (simulateQ randomOracle
-        (messageDigest parameter root message randomness : OracleComp HashSpec MessageDigest)).run cache] =
-      ((2 ^ (totalHeight - subtreeHeight) : Nat) : ℝ≥0∞)⁻¹ *
-        Pr[P | ($ᵗ KeptDigestView : ProbComp KeptDigestView)] := by
-  change Pr[(fun digest => Landed parameter (digestIndex digest) ∧ P (localDigestView digest)) ∘
-    Prod.fst | _] = _
-  rw [← probEvent_map, probEvent_congr' (fun _ _ => Iff.rfl)
-    (Security.evalDist_messageDigest_fresh parameter root message randomness cache hfresh)]
-  exact probEvent_landed_localDigest parameter P
 
 end LeanSphincs.Lifetime

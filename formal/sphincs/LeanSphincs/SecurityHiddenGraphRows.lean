@@ -53,17 +53,6 @@ theorem coordinates_input (address : Address) :
       simp [input, Address.inputCoordinate, Address.position, coordinates, canonicalGraphInput,
         canonicalGraphSlots, Position.domain]
 
-/-- Every canonical programmed row returns the exact full256-bit graph label, including
-the high half seen by arbitrary raw-oracle adversaries. -/
-theorem answer_graph_label (active : Address → Prop) (outside : HashInput → HashOutput)
-    (address : Address) (hactive : active address) :
-    answer parameter active (coordinates otsSecret ftsSecret labels) (highHalves labels) outside
-      (canonicalGraphInput parameter otsSecret ftsSecret address.position labels) =
-        labels address.position := by
-  rw [← coordinates_input parameter otsSecret ftsSecret labels address,
-    answer_canonical _ _ _ _ _ _ hactive, coordinates_outgoing]
-  exact Prefix.combine_split _
-
 attribute [local irreducible] canonicalGraphInput canonicalGraphSlots
 
 /-- Programming other distinct structural addresses preserves an already correct entry. -/
@@ -153,17 +142,5 @@ theorem programGraphCache_row_lookup (positions : List Position) (cache : QueryC
     exact programGraphCache_label parameter otsSecret ftsSecret labels positions cache _ hposition
   · rw [if_neg heq]
     exact programGraphCache_row_miss parameter otsSecret ftsSecret labels positions cache address value heq
-
-/-- At every active hidden row, preparation and the concrete programmed oracle agree. -/
-theorem answer_agrees_programGraphCache (active : Position → Prop) (cache : QueryCache HashSpec)
-    (outside : HashInput → HashOutput) (address : Address) (hactive : active address.position) :
-    Graph.programGraphCache parameter otsSecret ftsSecret (graphOrder active) labels cache
-      (canonicalGraphInput parameter otsSecret ftsSecret address.position labels) =
-        some (answer parameter (fun row => active row.position)
-          (coordinates otsSecret ftsSecret labels) (highHalves labels) outside
-          (canonicalGraphInput parameter otsSecret ftsSecret address.position labels)) := by
-  rw [answer_graph_label _ _ _ _ _ _ _ hactive]
-  apply programGraphCache_label
-  exact (mem_graphOrder active address.position).mpr hactive
 
 end LeanSphincs.Security.HiddenGraph

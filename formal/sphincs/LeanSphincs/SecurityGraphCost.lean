@@ -107,7 +107,8 @@ theorem hashCalls_signLayer_exact (f : QueryImpl HashSpec Id) (sk : Seeded.Secre
       encodingAttemptLimit 0 <;>
     simp only [Option.map_none, Option.map_some, Option.isSome_none, Option.isSome_some,
       Bool.false_eq_true, ↓reduceIte, hashCalls_pure, hashCalls_bind, hashCalls_treePath_exact,
-      Nat.add_zero] <;> omega
+      Nat.add_zero]
+  omega
 
 noncomputable def finishHashCost (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (data : PublicData) (message : Message) (randomness : Randomness) : Nat :=

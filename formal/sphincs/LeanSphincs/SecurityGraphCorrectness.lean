@@ -2,8 +2,8 @@ import LeanSphincs.SecurityPrunedGraph
 import LeanSphincs.SecurityForsWitness
 
 /-! Canonical graph labels agree with actual seeded computations. The only graph hypotheses are
-its query-response consistency and untouched surrogate boundary, both supplied by preparation.
-No correctness of the labels is assumed. -/
+its query-response consistency and untouched surrogate boundary, which `BridgeAssembly` supplies
+for every sample. No correctness of the labels is assumed. -/
 
 open OracleComp OracleSpec
 namespace LeanSphincs.Security.GraphCorrectness
@@ -17,7 +17,7 @@ attribute [local reducible] digestBits HashSpec Id
 set_option allowUnsafeReducibility false
 attribute [local irreducible] Seeded.treeNode Seeded.ftsNode Seeded.spineNode chainWalk sequenceFin
 
-variable [Params]
+variable [inst : Params]
 
 omit [Params] in
 theorem one_lt_leaf_capacity : 1 < 2 ^ maxLayerHeight := by decide
@@ -45,8 +45,9 @@ def BoundaryCorrect (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (s
   ∀ position value, boundary parameter (surrogates f parameter seed) position = some value →
     truncateHash (labels position) = value
 
+-- The instance is passed explicitly so that `unusedSectionVars` sees `hconsistent` use it.
 variable (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed)
-  (labels : CanonicalGraphLabels) (hconsistent : Consistent f parameter seed labels)
+  (labels : CanonicalGraphLabels) (hconsistent : @Consistent inst f parameter seed labels)
 
 include hconsistent in
 theorem chain_value (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
@@ -239,7 +240,6 @@ theorem tree_value_below (lay : Layer) (tree : TreeIndex) (level : Nat)
         ih (by omega) (by omega) _ (by change 2 * index.val < _; omega) hleft,
         ih (by omega) (by omega) _ hchildren hright]
 
-
 omit f seed labels hconsistent in
 theorem spineIndex_range (level : Nat) (hlower : subtreeHeight ≤ level)
     (hupper : level ≤ maxLayerHeight) : spineIndex parameter level < 2 ^ (maxLayerHeight - level) := by
@@ -387,8 +387,6 @@ theorem spine_value (hboundary : BoundaryCorrect f parameter seed labels)
         simp only [orderedPayload, hb', Bool.false_eq_true, ↓reduceIte]
         rw [hi, hs, hidx]
 
-
-
 include hconsistent in
 theorem chain_input (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
     (hland : Landed parameter leaf) (chain : ChainIndex) (step : ChainStep) :
@@ -534,7 +532,6 @@ theorem tree_path_input (hboundary : BoundaryCorrect f parameter seed labels)
   have hbit : (leaf.val / 2 ^ level).testBit 0 = leaf.val.testBit level := by
     simpa only [Nat.zero_add] using (Nat.testBit_add leaf.val 0 level).symm
   rw [hbit, Nat.div_div_eq_div_mul, ← Nat.pow_succ]
-
 
 omit f seed labels hconsistent in
 theorem tree_path_active (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
@@ -700,65 +697,5 @@ theorem materialSurrogates_eq (material : SeedModel.Material)
   unfold surrogates
   rw [Seeded.surrogate, dif_pos level.isLt]
   exact (SeedModel.eval_secret_prepared f seed material hagrees (.inr (.inr level))).symm
-
-omit parameter hconsistent in
-/-- Actual supported preparation supplies every canonical graph response equation. -/
-theorem prepared_consistent (material : SeedModel.Material)
-    (hagrees : SeedModel.PreparedAgreement f seed material) (cache cache' : QueryCache HashSpec)
-    (hf : cache'.AgreesWithFn f)
-    (hmem : (labels, cache') ∈ support ((simulateQ randomOracle
-      (prepare (SeedModel.parameter material) (materialOts material) (materialFts material)
-        (graphOrder (active (SeedModel.parameter material)))
-        (initialLabels (SeedModel.parameter material) (materialSurrogates material)))).run cache)) :
-    Consistent f (SeedModel.parameter material) seed labels := by
-  intro position hactive
-  rw [← materialOts_eq f seed material hagrees, ← materialFts_eq f seed material hagrees]
-  exact prepare_labels_consistent _ _ _ _ _ _ cache cache' hmem f hf position hactive
-
-omit parameter hconsistent in
-/-- Actual supported preparation preserves every seeded off-spine surrogate. -/
-theorem prepared_boundary (material : SeedModel.Material)
-    (hagrees : SeedModel.PreparedAgreement f seed material) (cache cache' : QueryCache HashSpec)
-    (hmem : (labels, cache') ∈ support ((simulateQ randomOracle
-      (prepare (SeedModel.parameter material) (materialOts material) (materialFts material)
-        (graphOrder (active (SeedModel.parameter material)))
-        (initialLabels (SeedModel.parameter material) (materialSurrogates material)))).run cache)) :
-    BoundaryCorrect f (SeedModel.parameter material) seed labels := by
-  intro position value hboundary
-  rw [← materialSurrogates_eq f seed material hagrees] at hboundary
-  exact prepared_boundary_value _ _ _ _ labels cache cache' hmem position value hboundary
-
-omit parameter hconsistent in
-/-- The root label of an actual supported preparation equals the concrete seeded key root. -/
-theorem prepared_root_value (material : SeedModel.Material)
-    (hagrees : SeedModel.PreparedAgreement f seed material) (cache cache' : QueryCache HashSpec)
-    (hf : cache'.AgreesWithFn f)
-    (hmem : (labels, cache') ∈ support ((simulateQ randomOracle
-      (prepare (SeedModel.parameter material) (materialOts material) (materialFts material)
-        (graphOrder (active (SeedModel.parameter material)))
-        (initialLabels (SeedModel.parameter material) (materialSurrogates material)))).run cache))
-    (lay : Layer) (tree : TreeIndex) :
-    truncateHash (labels (treePosition lay tree totalHeight le_rfl ⟨0, by decide⟩)) =
-      evalWithAnswerFn f (Seeded.treeRoot (SeedModel.parameter material) lay tree seed :
-        OracleComp HashSpec Digest) :=
-  tree_root_value f (SeedModel.parameter material) seed labels
-    (prepared_consistent f seed labels material hagrees cache cache' hf hmem)
-    (prepared_boundary f seed labels material hagrees cache cache' hmem) lay tree
-
-omit parameter hconsistent in
-/-- All FORS-key labels in the prepared table equal the concrete seeded FORS keys. -/
-theorem prepared_fors_key_value (material : SeedModel.Material)
-    (hagrees : SeedModel.PreparedAgreement f seed material) (cache cache' : QueryCache HashSpec)
-    (hf : cache'.AgreesWithFn f)
-    (hmem : (labels, cache') ∈ support ((simulateQ randomOracle
-      (prepare (SeedModel.parameter material) (materialOts material) (materialFts material)
-        (graphOrder (active (SeedModel.parameter material)))
-        (initialLabels (SeedModel.parameter material) (materialSurrogates material)))).run cache))
-    (index : Index) :
-    truncateHash (labels (.ftsRoots index)) =
-      evalWithAnswerFn f (Seeded.ftsKey (SeedModel.parameter material) index seed :
-        OracleComp HashSpec Digest) :=
-  fors_key_value f (SeedModel.parameter material) seed labels
-    (prepared_consistent f seed labels material hagrees cache cache' hf hmem) index
 
 end LeanSphincs.Security.GraphCorrectness

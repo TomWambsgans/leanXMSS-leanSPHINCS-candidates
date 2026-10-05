@@ -1,7 +1,7 @@
 import LeanSphincs.Scheme
 
 /-!
-The requested variant with truly uniform independent randomizers. Key derivation and surrogate
+The signer variant with truly uniform independent randomizers. Key derivation and surrogate
 derivation still use the master seed and the same shared hash oracle as the reference scheme.
 This is distinct from Rust's seed-derived randomizers; no equivalence is assumed.
 -/

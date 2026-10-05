@@ -5,8 +5,7 @@ import LeanSphincs.SecurityPrunedGraph
 
 /-! A concrete programmed graph for the candidate's one-digest hash inputs. Canonical
 chain and FORS-leaf answers are programmed from independent digest coordinates. Ordinary
-queries are monitored before a hidden input can expose its successor. The comparison
-compiler accesses coordinates only through explicit reveal/guess operations. -/
+queries are monitored before a hidden input can expose its successor. -/
 
 open OracleComp OracleSpec ENNReal
 namespace LeanSphincs.Security.HiddenGraph
@@ -105,14 +104,6 @@ theorem answer_canonical (parameter : PublicParameter) (active : Address → Pro
   rw [answer, parse_input _ _ _ hactive]
   exact if_pos rfl
 
-theorem answer_other (parameter : PublicParameter) (active : Address → Prop) (table : Table)
-    (high : Address → Prefix.High) (outside : HashInput → HashOutput) (address : Address)
-    (value : Digest) (hactive : active address) (hne : value ≠ table address.inputCoordinate) :
-    answer parameter active table high outside (input parameter (address, value)) =
-      outside (input parameter (address, value)) := by
-  rw [answer, parse_input _ _ _ hactive]
-  exact if_neg hne
-
 /-- The parser enforces the candidate's complete byte layout and retained-row selection.
 The generic compiler therefore has only one possible input coordinate for each raw query. -/
 noncomputable def rowModel (parameter : PublicParameter) (active : Address → Prop)
@@ -128,13 +119,7 @@ theorem rowModel_answer (parameter : PublicParameter) (active : Address → Prop
       answer parameter active table high outside := rfl
 
 abbrev SourceSpec := HiddenRows.SourceSpec HashInput HashOutput Coordinate
-abbrev IsOrdinary : SourceSpec.Domain → Prop := HiddenRows.IsOrdinary (R := HashOutput)
 abbrev KnownAgrees := @HiddenRows.KnownAgrees Coordinate
-
-noncomputable abbrev compile {α : Type} (parameter : PublicParameter) (active : Address → Prop)
-    (high : Address → Prefix.High) (outside : HashInput → HashOutput)
-    (computation : OracleComp SourceSpec α) (known : Knowledge) :=
-  HiddenRows.compile (rowModel parameter active high) outside computation known
 
 noncomputable abbrev stopped {α : Type} (parameter : PublicParameter) (active : Address → Prop)
     (table : Table) (high : Address → Prefix.High) (outside : HashInput → HashOutput)
@@ -145,44 +130,5 @@ noncomputable abbrev stoppedExperiment {α : Type} (parameter : PublicParameter)
     (active : Address → Prop) (high : Address → Prefix.High) (outside : HashInput → HashOutput)
     (computation : OracleComp SourceSpec α) (known : Knowledge) :=
   HiddenRows.stoppedExperiment (rowModel parameter active high) outside computation known
-
-theorem run_compile {α : Type} (parameter : PublicParameter) (active : Address → Prop)
-    (table : Table) (high : Address → Prefix.High) (outside : HashInput → HashOutput)
-    (computation : OracleComp SourceSpec α) (known : Knowledge) (hknown : KnownAgrees table known) :
-    HiddenReveal.run table (compile parameter active high outside computation known) known =
-      stopped parameter active table high outside computation known :=
-  HiddenRows.run_compile (rowModel parameter active high) table outside computation known hknown
-
-theorem compile_queryBound {α : Type} (parameter : PublicParameter) (active : Address → Prop)
-    (high : Address → Prefix.High) (outside : HashInput → HashOutput)
-    (computation : OracleComp SourceSpec α) (known : Knowledge) (q : Nat)
-    (hbound : computation.IsQueryBoundP IsOrdinary q) :
-    (compile parameter active high outside computation known).IsQueryBoundP HiddenReveal.IsGuess q :=
-  HiddenRows.compile_queryBound (rowModel parameter active high) outside computation known q hbound
-
-/-- Concrete stopped execution of the candidate's programmed rows has the same distribution
-as an actual independent table with adaptive reveals and monitored equality guesses. -/
-theorem stoppedExperiment_eq {α : Type} (parameter : PublicParameter) (active : Address → Prop)
-    (high : Address → Prefix.High) (outside : HashInput → HashOutput)
-    (computation : OracleComp SourceSpec α) (known : Knowledge) :
-    stoppedExperiment parameter active high outside computation known =
-      HiddenReveal.experiment (compile parameter active high outside computation known) known :=
-  HiddenRows.stoppedExperiment_eq (rowModel parameter active high) outside computation known
-
-theorem stopped_hidden_input_bound_charge {α : Type} (parameter : PublicParameter)
-    (active : Address → Prop) (high : Address → Prefix.High) (outside : HashInput → HashOutput)
-    (computation : OracleComp SourceSpec α) (known : Knowledge) :
-    Pr[= none | stoppedExperiment parameter active high outside computation known] ≤
-      HiddenReveal.expectedGuessCharge (compile parameter active high outside computation known) known /
-        (2 : ℝ≥0∞) ^ 128 :=
-  HiddenRows.stopped_hidden_input_bound_charge (rowModel parameter active high) outside computation known
-
-theorem stopped_hidden_input_bound {α : Type} (parameter : PublicParameter)
-    (active : Address → Prop) (high : Address → Prefix.High) (outside : HashInput → HashOutput)
-    (computation : OracleComp SourceSpec α) (known : Knowledge) (q : Nat)
-    (hbound : computation.IsQueryBoundP IsOrdinary q) :
-    Pr[= none | stoppedExperiment parameter active high outside computation known] ≤
-      q / (2 : ℝ≥0∞) ^ 128 :=
-  HiddenRows.stopped_hidden_input_bound (rowModel parameter active high) outside computation known q hbound
 
 end LeanSphincs.Security.HiddenGraph

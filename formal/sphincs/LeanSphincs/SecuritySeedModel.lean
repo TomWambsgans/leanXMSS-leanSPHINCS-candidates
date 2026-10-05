@@ -72,15 +72,6 @@ theorem secretDomain_ne_parameter (position : SecretPosition) : secretDomain pos
   | inl p => rcases p with ⟨_, _, _, _⟩; simp [secretDomain]
   | inr p => cases p <;> simp [secretDomain]
 
-/-- Every non-parameter derivation, including every surrogate, has exactly one table position. -/
-theorem secretDomain_complete (domain : KeygenDomain) (h : domain ≠ .parameter) :
-    ∃ position, secretDomain position = domain := by
-  cases domain with
-  | parameter => exact False.elim (h rfl)
-  | ots lay tree leaf chain => exact ⟨.inl (lay, tree, leaf, chain), rfl⟩
-  | fts index tree leaf => exact ⟨.inr (.inl (index, tree, leaf)), rfl⟩
-  | surrogate level => exact ⟨.inr (.inr level), rfl⟩
-
 def parameterInput (seed : MasterSeed) : HashInput := keygenHashInput 0 .parameter seed
 
 def secretInput (seed : MasterSeed) (material : Material) (position : SecretPosition) : HashInput :=
@@ -149,82 +140,15 @@ theorem programCache_verifier (base : QueryCache HashSpec) (seed : MasterSeed) (
   rintro ⟨p', domain', heq⟩
   exact keygenInput_ne_hashInput p' p domain' domain seed payload heq
 
-/-- Freshness required before the programming operation preserves the original cache. -/
-def TableFresh (base : QueryCache HashSpec) (seed : MasterSeed) (material : Material) : Prop :=
-  base (parameterInput seed) = none ∧ ∀ position, base (secretInput seed material position) = none
-
-theorem programCache_extends (base : QueryCache HashSpec) (seed : MasterSeed) (material : Material)
-    (hfresh : TableFresh base seed material) : base ≤ programCache base seed material := by
-  intro input answer hcached
-  rw [programCache_other]
-  · exact hcached
-  · intro heq
-    rw [heq, hfresh.1] at hcached
-    cases hcached
-  · intro position heq
-    rw [heq, hfresh.2 position] at hcached
-    cases hcached
-
 /-- An answer function extends the complete prepared derivation table. -/
 def PreparedAgreement (f : QueryImpl HashSpec Id) (seed : MasterSeed) (material : Material) : Prop :=
   f (parameterInput seed) = material.1 ∧
     ∀ position, f (secretInput seed material position) = material.2 position
 
-theorem programCache_agrees (base : QueryCache HashSpec) (seed : MasterSeed) (material : Material)
-    (f : QueryImpl HashSpec Id) (hbase : base.AgreesWithFn f)
-    (hprepared : PreparedAgreement f seed material) :
-    (programCache base seed material).AgreesWithFn f := by
-  intro input answer hanswer
-  unfold programCache at hanswer
-  split at hanswer
-  next heq =>
-    cases Option.some.inj hanswer
-    rw [heq]
-    exact hprepared.1
-  next =>
-    split at hanswer
-    next h =>
-      cases Option.some.inj hanswer
-      exact (congrArg (fun input : HashInput => (f input : HashOutput))
-        (Classical.choose_spec h)).trans (hprepared.2 _)
-    next => exact hbase hanswer
-
-theorem preparedAgreement_of_programCache (base : QueryCache HashSpec) (seed : MasterSeed)
-    (material : Material) (f : QueryImpl HashSpec Id)
-    (h : (programCache base seed material).AgreesWithFn f) : PreparedAgreement f seed material :=
-  ⟨h (programCache_parameter base seed material), fun position => h (programCache_secret base seed material position)⟩
-
 /-- A total oracle implementing the prepared table, with the supplied oracle everywhere else. -/
 noncomputable def preparedOracle (fallback : QueryImpl HashSpec Id) (seed : MasterSeed)
     (material : Material) : QueryImpl HashSpec Id := fun input =>
   (programCache ∅ seed material input).getD (fallback input)
-
-theorem preparedOracle_agreement (fallback : QueryImpl HashSpec Id) (seed : MasterSeed) (material : Material) :
-    PreparedAgreement (preparedOracle fallback seed material) seed material := by
-  constructor
-  · simp [preparedOracle, programCache_parameter]
-  · intro position
-    simp [preparedOracle, programCache_secret]
-
-theorem preparedOracle_outside (fallback : QueryImpl HashSpec Id) (seed : MasterSeed) (material : Material)
-    (input : HashInput) (hnot : ¬SeedGuess.SeedHit input seed) :
-    preparedOracle fallback seed material input = fallback input := by
-  rw [preparedOracle, programCache_agreeOutside ∅ seed material input hnot]
-  rfl
-
-theorem preparedOracle_verifier (fallback : QueryImpl HashSpec Id) (seed : MasterSeed) (material : Material)
-    (p : PublicParameter) (domain : HashDomain) (payload : HashInput) :
-    preparedOracle fallback seed material (tweakableHashInput p domain payload) =
-      fallback (tweakableHashInput p domain payload) := by
-  rw [preparedOracle, programCache_verifier]
-  rfl
-
-/-- Parameter derivation reads its full sampled answer at `P=0`, then keeps the low128bits. -/
-theorem eval_parameter_prepared (f : QueryImpl HashSpec Id) (seed : MasterSeed) (material : Material)
-    (h : PreparedAgreement f seed material) :
-    evalWithAnswerFn f (deriveKey 0 .parameter seed : OracleComp HashSpec Digest) = parameter material := by
-  rw [Completeness.eval_deriveKey]
-  exact congrArg truncateHash h.1
 
 /-- Every OTS/FORS/surrogate derivation reads the sampled table at the actual public parameter. -/
 theorem eval_secret_prepared (f : QueryImpl HashSpec Id) (seed : MasterSeed) (material : Material)
@@ -233,20 +157,5 @@ theorem eval_secret_prepared (f : QueryImpl HashSpec Id) (seed : MasterSeed) (ma
       OracleComp HashSpec Digest) = truncateHash (material.2 position) := by
   rw [Completeness.eval_deriveKey]
   exact congrArg truncateHash (h.2 position)
-
-/-- Ordinary tweakable hashes continue to use the supplied non-programmed oracle. -/
-theorem eval_tweakableHash_prepared (fallback : QueryImpl HashSpec Id) (seed : MasterSeed)
-    (material : Material) (p : PublicParameter) (domain : HashDomain) (payload : HashInput) :
-    evalWithAnswerFn (preparedOracle fallback seed material)
-      (Concrete.tweakableHash p domain payload : OracleComp HashSpec Digest) =
-      evalWithAnswerFn fallback (Concrete.tweakableHash p domain payload : OracleComp HashSpec Digest) := by
-  rw [Completeness.eval_tweakableHash, Completeness.eval_tweakableHash, preparedOracle_verifier]
-
-/-- Independently sampled seed and material can be exchanged before any later computation.
-This says nothing about the distribution of a preexisting seeded-game cache. -/
-theorem material_seed_swap {α : Type} (next : Material → MasterSeed → ProbComp α) :
-    𝒟[sampleMaterial >>= fun material => sampleMasterSeed >>= next material] =
-      𝒟[sampleMasterSeed >>= fun seed => sampleMaterial >>= fun material => next material seed] :=
-  evalDist_bind_bind_swap _ _ _
 
 end LeanSphincs.Security.SeedModel

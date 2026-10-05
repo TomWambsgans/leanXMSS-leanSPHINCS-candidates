@@ -166,36 +166,4 @@ theorem keygen_fresh (seed : MasterSeed)
     exact PreservesFresh.keygenFromSeed
       (structuralFresh_message r.1.2.parameter r.1.2.root message randomness 0) seed ∅ r hr rfl
 
-/-- An honest key generation followed by one signature, with independent uniform randomizers. -/
-noncomputable def honestSign (message : Message) : OracleComp OracleWorld (Option Signature) := do
-  let seed ← liftM sampleMasterSeed
-  let (_, sk) ← liftM (Seeded.keygenFromSeed seed)
-  Randomized.sign sk message
-
-/-- End-to-end exhaustion bound, with all freshness conditions discharged from the empty cache. -/
-theorem honest_sign_exhaustion_bound (message : Message) :
-    Pr[fun r => r.1 = none | (simulateQ romImpl (honestSign message)).run ∅]
-      ≤ (2⁻¹ : ℝ≥0∞) ^ (2 ^ (subtreeHeight + 5)) + (2⁻¹ : ℝ≥0∞) ^ (2 ^ 22) := by
-  rw [honestSign, simulateQ_bind, StateT.run_bind, run_lift_prob]
-  simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
-  apply probEvent_bind_le_of_forall_le
-  intro seed _
-  rw [simulateQ_bind, StateT.run_bind, simulate_lift_hash]
-  apply probEvent_bind_le_of_forall_le
-  intro r hr
-  obtain ⟨hencoding, hmessage⟩ := keygen_fresh seed r hr
-  exact randomized_sign_exhaustion_bound r.1.2 message r.2 hencoding (hmessage message)
-
-/-- Every requested pruning height has a per-signature exhaustion probability below 2^-32767. -/
-theorem honest_sign_exhaustion_negligible (hb : 10 ≤ subtreeHeight) (message : Message) :
-    Pr[fun r => r.1 = none | (simulateQ romImpl (honestSign message)).run ∅]
-      ≤ (2⁻¹ : ℝ≥0∞) ^ 32767 := by
-  refine (honest_sign_exhaustion_bound message).trans ?_
-  have he : 2 ^ 15 ≤ (2 : Nat) ^ (subtreeHeight + 5) :=
-    Nat.pow_le_pow_right (by decide) (by omega)
-  calc
-    _ ≤ (2⁻¹ : ℝ≥0∞) ^ (32767 + 1) + (2⁻¹ : ℝ≥0∞) ^ (32767 + 1) :=
-      add_le_add (inv_two_pow_anti he) (inv_two_pow_anti (by decide))
-    _ = _ := inv_two_pow_succ_add 32767
-
 end LeanSphincs.Completeness

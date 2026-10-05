@@ -20,7 +20,6 @@ namespace LeanSphincs.Completeness
 
 open TargetSum
 
-
 /-- A base above every coefficient, so the coefficients are the digits. -/
 def base : Nat := 2 ^ 129
 
@@ -63,7 +62,6 @@ theorem weight_pow (B : Nat) :
   rw [Finset.prod_pow_eq_pow_sum]
   rfl
 
-
 /-- The number of codewords of digit sum `s`. -/
 def codeCount (s : Nat) : Nat := (Finset.univ.filter (fun x : Encoding => TargetSum.sum x = s)).card
 
@@ -101,7 +99,6 @@ theorem codeCount_target :
 theorem two_pow_le_codeCount : 2 ^ 118 ≤ codeCount targetSum := by
   rw [codeCount_target, weight_eq]
   decide
-
 
 /-- A bounded-digit sum stays below the next power. -/
 theorem sum_digits_lt (B : Nat) (hB : 0 < B) (v : Nat → Nat) (hv : ∀ j, v j < B) :
@@ -166,11 +163,6 @@ theorem two_pow_le_card_accepting :
   · intro left _ right _ heq
     have h := congrArg digestEncoding heq
     simpa only [digestEncoding_pack] using h
-
-/-- The exact coefficient, checked by kernel arithmetic rather than native evaluation. -/
-theorem codeCount_exact : codeCount targetSum = 410356077965267834847013187094862224 := by
-  rw [codeCount_target, weight_eq]
-  decide
 
 /-- Forward chain walks cannot turn a disclosed valid encoding into a different valid encoding. -/
 theorem encoding_antichain {x y : Encoding} (hx : Valid x) (hy : Valid y)

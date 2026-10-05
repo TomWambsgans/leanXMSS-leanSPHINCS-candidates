@@ -153,17 +153,10 @@ def children : Position → List Position
       List.ofFn fun tree : FtsTree =>
         .ftsNode index tree ⟨ftsTreeHeight - 1, by decide⟩ ⟨0, by positivity⟩
 
-/-- The widest payload of the instance is a one-time leaf's `v` chain endpoints. -/
-theorem children_length_le (p : Position) : p.children.length ≤ numChains := by
-  have htwo := (show 2 ≤ numChains by decide)
-  have hroots := (show ftsTrees ≤ numChains by decide)
-  cases p <;> simp only [children] <;> (try split_ifs) <;>
-    simp only [List.length_ofFn, List.length_cons, List.length_nil] <;> omega
+/-! ### Depth and separated addresses
 
-/-! ### Children and parent agree
-
-No position has two parents, which is what keeps the accounting's charge on a position's settling
-from being paid twice, and every child of a position is charged there. -/
+A position's children are strictly below it, and distinct positions have distinct serialized
+inputs. -/
 
 /-- A measure the payload recursion descends: a position's children are strictly below it. -/
 def depth : Position → Nat
