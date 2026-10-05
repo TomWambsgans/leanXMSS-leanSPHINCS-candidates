@@ -64,6 +64,10 @@ h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height:
 .params tbody tr:first-child > * { padding-top: 0.5rem; }
 .params tbody.out tr:first-child > * { border-top: 1px solid var(--rule); padding-top: 0.5rem; }
 .params .unit { color: var(--muted); }
+.params td.pre { padding-right: 0.55rem; }
+.params td.brace { position: relative; vertical-align: middle; white-space: nowrap; padding-left: 0.95rem; color: var(--muted); }
+.params td.brace svg { position: absolute; left: 0; top: 0.3rem; width: 0.5rem; height: calc(100% - 0.6rem); overflow: visible; }
+.params td.brace path { fill: none; stroke: currentColor; stroke-width: 1.1; vector-effect: non-scaling-stroke; }
 
 figure { margin: 0; position: relative; min-height: 18rem; }
 figure svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -201,17 +205,17 @@ footer a + a { margin-left: 1.25rem; }
       <div class="scroll">
       <table>
         <tbody>
-          <tr><th>XMSS</th><td>2 layers of <i>h</i>&nbsp;=&nbsp;16</td></tr>
-          <tr><th>OTS</th><td>WOTS+C</td></tr>
-          <tr><th><i>w</i></th><td>4</td></tr>
-          <tr><th><i>ℓ</i></th><td>58<span class="info" tabindex="0" data-tip="64 base-4 digits: grinding forces the last 6&#10;to 0, so their chains are dropped">i</span></td></tr>
-          <tr><th>Target sum</th><td>106<span class="info" tabindex="0" data-tip="2²⁰ grinding tries">i</span></td></tr>
-          <tr><th>Hash</th><td>BLAKE2s<span class="info" tabindex="0" data-tip="A placeholder: SHA-2 would also work">i</span></td></tr>
+          <tr><th>XMSS</th><td colspan="2">2 layers of <i>h</i>&nbsp;=&nbsp;16</td></tr>
+          <tr><th>OTS</th><td colspan="2">WOTS+C</td></tr>
+          <tr><th><i>w</i></th><td colspan="2">4</td></tr>
+          <tr><th><i>ℓ</i></th><td colspan="2">58<span class="info" tabindex="0" data-tip="64 base-4 digits: grinding forces the last 6&#10;to 0, so their chains are dropped">i</span></td></tr>
+          <tr><th>Target sum</th><td colspan="2">106<span class="info" tabindex="0" data-tip="2²⁰ grinding tries">i</span></td></tr>
+          <tr><th>Hash</th><td colspan="2">BLAKE2s<span class="info" tabindex="0" data-tip="A placeholder: SHA-2 would also work">i</span></td></tr>
         </tbody>
         <tbody class="out">
-          <tr><th>Lifetime</th><td>2<sup>32</sup> slots<span class="info" tabindex="0" data-tip="1,361 years of 10-second slots">i</span></td></tr>
-          <tr><th>Signature</th><td>2 × 1,200 bytes<span class="info" tabindex="0" data-tip="The top half is the same for 2¹⁶ slots:&#10;it can be sent once and cached">i</span></td></tr>
-          <tr><th>Verification<br><span class="unit">(compressions)</span></th><td>201<span class="info" tabindex="0" data-tip="100 per layer, plus 1: the attestation&#39;s&#10;digest spans two blocks">i</span></td></tr>
+          <tr><th>Lifetime</th><td colspan="2">2<sup>32</sup> slots<span class="info" tabindex="0" data-tip="1,361 years of 10-second slots">i</span></td></tr>
+          <tr><th>Size</th><td class="pre">2 × 1,200 bytes<span class="info" tabindex="0" data-tip="The top half is the same for 2¹⁶ slots:&#10;it can be sent once and cached">i</span></td><td class="brace" rowspan="2"><svg viewBox="0 0 10 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0,1 C4,1 5,4 5,10 L5,42 C5,47 6,50 10,50 C6,50 5,53 5,58 L5,90 C5,96 4,99 0,99"/></svg>482K byte·compressions<span class="info r" tabindex="0" data-tip="Signature size × compressions per verification">i</span></td></tr>
+          <tr><th>Verification<br><span class="unit">(compressions)</span></th><td class="pre">201</td></tr>
         </tbody>
       </table>
       </div>
