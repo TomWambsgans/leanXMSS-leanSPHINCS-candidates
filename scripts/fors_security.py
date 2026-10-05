@@ -19,6 +19,9 @@ attack in one of two ways:
   sum: -log2(2^(-8n) + P)        used by the original SPHINCS+ parameter script
 
 Only n, h, a and k enter the bound; d and w do not.
+
+This is the average rate of a fresh digest, an estimate. The leanSphincs lifetimes proved in Lean
+(formal/sphincs/README.md) are lower: an adaptive forger can choose between this search and others.
 """
 
 import argparse
