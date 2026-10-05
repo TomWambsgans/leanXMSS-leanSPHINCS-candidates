@@ -327,7 +327,8 @@ max of those openings. Let $f_t$ be the probability that $t$ random signatures b
 \]
 The lifetime is the largest $N$ with $2^{127}\,2^{b-26}\,\mathbb{E}_{r\sim\mathrm{Poisson}(N/2^b)}[\mathrm{cover}(r)]\le1$.
 This is the rule that defines the best known attack on FORS~\cite{proofs}, and the two-level forest is 10--12\%
-ahead at every subtree height:
+ahead at every subtree height. Counting also the WOTS$^+$C unit-neighbour attack (unchanged), it is about 12\% ahead
+for $b \ge 20$ and 9\% for $b \le 14$:
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{lrrrrrrr}
@@ -350,26 +351,23 @@ ahead at every subtree height:
 
 \paragraph{Threshold signing.} In \cref{sec:threshold}, a signature reveals FORS secrets, which are outputs $F(\mathit{addr})$
 of the threshold PRF, so signing needs no MPC. Here a signature reveals $x_{i,4-d_i}$, i.e.\ the secret hashed
-$4-d_i$ times, which no threshold PRF outputs. To keep signing free of MPC, the keygen also shares the middle of every
-chain:
+$4-d_i$ times, which no threshold PRF outputs. As for the key refresh, the keygen publishes these values encrypted
+under $F$:
 \begin{itemize}
   \item position 0, the secret: $F(\mathit{addr})$, as before
-  \item positions 1 to 3: computed by the keygen MPC and never opened; each operator keeps its shares of them. The
-        sharing is linear, so the masks of the context-aware opening apply unchanged
-  \item position 4, the top: opened, and part of the public data
+  \item positions $j = 1$ to 3: computed by the keygen MPC, and published as $x_{i,j} \oplus F(\mathit{addr}_{i,j})$, for a
+        fresh address $\mathit{addr}_{i,j}$
+  \item position 4, the top: published
 \end{itemize}
-Signing is unchanged except that each signer sends a part for every revealed secret value (positions 0 to 3): 48 on
-average and at most 80, instead of 24. Per instance of the kept subtree:
+Revealing $x_{i,j}$ is then one context-aware evaluation of $F$, as for a FORS secret, so signing still needs no MPC.
+Each signer sends a part for every revealed value below the top: 48 on average and at most 80, instead of 24. Per
+instance of the kept subtree:
 \begin{itemize}
   \item keygen MPC: 4 hashes per chain, $2048\cdot6\cdot4 = 49\,152$, instead of $24\cdot2^{10} = 24\,576$ FORS leaves:
         about twice the traffic
-  \item public data: the chain tops, $2048\cdot6\cdot16$~B $= 192$~KiB instead of 384~KiB of FORS leaves, e.g.\
-        0.8~GB instead of 1.6~GB for $b=12$
-  \item secret storage: the shares of positions 1 to 3, $2048\cdot6\cdot3\cdot16$~B $= 576$~KiB per share held, e.g.\
-        2.4~GB for $b=12$. With the replicated sharing of the MPC, an operator holds $\binom{n-1}{t-1}$ shares of each
-        value (2 for 2-of-3); converting them to Shamir shares over $\mathrm{GF}(2^{128})$ brings this to one
+  \item public data: 4 values per chain (the top and 3 encrypted values), $2048\cdot6\cdot4\cdot16$~B $= 768$~KiB instead
+        of 384~KiB of FORS leaves, e.g.\ 3.2~GB instead of 1.6~GB for $b=12$
 \end{itemize}
-Chains of length 2 would avoid the shares (every revealed value is then a secret or a top), for a smaller gain.
 }
 
 \begin{thebibliography}{9}
