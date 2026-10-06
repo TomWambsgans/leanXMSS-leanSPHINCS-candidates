@@ -11,8 +11,14 @@ pub struct ForsOpening {
     pub paths: [[Digest; A]; K],
 }
 
+/// The `hi` field of a FORS address: tree `kappa < 32`, `level < 16`, and the leaf or node `j < 2^10`.
+fn fors_position(kappa: usize, level: usize, j: usize) -> u32 {
+    debug_assert!(kappa < 32 && level < 16 && j < 1 << 10);
+    (kappa + 32 * level + 512 * j) as u32
+}
+
 pub fn fors_secret_tweak(idx: u64, kappa: usize, j: usize) -> Tweak {
-    tweak(TWEAK_FTS_PRF, kappa, idx as u32, 0, j as u32)
+    tweak(TWEAK_FTS_PRF, fors_position(kappa, 0, j), idx as u32)
 }
 
 /// `s_{idx,kappa,j} = Th(P, tw_ftsprf(idx, kappa, j), S)`.
@@ -21,7 +27,7 @@ pub fn fors_secret(pp: &PublicParam, master: &MasterSecret, idx: u64, kappa: usi
 }
 
 pub fn fors_leaf_tweak(idx: u64, kappa: usize, j: usize) -> Tweak {
-    tweak(TWEAK_FTS_LEAF, kappa, idx as u32, 0, j as u32)
+    tweak(TWEAK_FTS_LEAF, fors_position(kappa, 0, j), idx as u32)
 }
 
 pub fn fors_leaf(pp: &PublicParam, idx: u64, kappa: usize, j: usize, secret: &Digest) -> Digest {
@@ -29,12 +35,12 @@ pub fn fors_leaf(pp: &PublicParam, idx: u64, kappa: usize, j: usize, secret: &Di
 }
 
 fn fors_node(pp: &PublicParam, idx: u64, kappa: usize, level: usize, j: usize, left: &Digest, right: &Digest) -> Digest {
-    th_digests(pp, &tweak(TWEAK_FTS_NODE, kappa, idx as u32, level as u32, j as u32), &[*left, *right])
+    th_digests(pp, &tweak(TWEAK_FTS_NODE, fors_position(kappa, level, j), idx as u32), &[*left, *right])
 }
 
 /// The FORS public key: `Th` over the `k` roots.
 pub fn fors_key_of_roots(pp: &PublicParam, idx: u64, roots: &[Digest; K]) -> Digest {
-    th_digests(pp, &tweak(TWEAK_FTS_ROOTS, 0, idx as u32, 0, 0), roots)
+    th_digests(pp, &tweak(TWEAK_FTS_ROOTS, 0, idx as u32), roots)
 }
 
 /// A FORS instance whose leaves are known: every tree level, kept for the openings.

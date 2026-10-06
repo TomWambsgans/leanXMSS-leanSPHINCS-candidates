@@ -2,7 +2,9 @@
 """Sizes, compression counts and lifetime of the leanSphincs candidate (the numbers in leanSPHINCS.tex).
 
 Costs count compression-function calls of a hash with 64-byte blocks and no padding overhead, such as
-BLAKE2s: hashing l bytes costs max(1, ceil(l / 64)). Every call hashes tw (16 B) || P (16 B) || input.
+BLAKE2s: hashing l bytes costs max(1, ceil(l / 64)). Every call hashes P (16 B) || address (8 B) || input.
+A pruned signer tries the randomizers R_0 + i, with R_0 one hash of the seed and the message. The digest's
+first block does not depend on the randomizer, so an attempt costs one compression.
 """
 
 import argparse
@@ -11,7 +13,7 @@ import math
 from fors_security import Params, forgery_bits_exact, max_log2_sigs
 
 N = 16  # bytes per hash value
-PREFIX = 32  # tweak and public parameter
+PREFIX = 24  # the public parameter and the address
 
 
 def comp(input_bytes):
@@ -57,8 +59,10 @@ def main():
     # per-call costs (input after the 32-byte prefix)
     derive, step, node, enc = comp(32), comp(N), comp(2 * N), comp(N + 4)
     wots_pk, fors_roots = comp(v * N), comp(k * N)
-    rnd, msg_block = comp(32 + 32), comp(N + N + 32)  # S || m ;  rho || root || m
+    rnd, msg_block = comp(32 + 32), comp(32 + 8 + N)  # S || m ;  m || 0^8 || rho
     blocks = math.ceil((h + k * a) / 256)
+    digest = blocks * msg_block
+    attempt = 1  # the second block of the first digest call, at randomizer R_0 + i
 
     if not 0 <= T <= v * (q - 1):
         ap.error(f"--T must be between 0 and {v * (q - 1)}")
@@ -66,7 +70,7 @@ def main():
     leaf = v * derive + v * (q - 1) * step + wots_pk
     fors_sign = k * (2**a * (derive + step) + (2**a - 1) * node) + fors_roots
     wots_sign = enc / alpha + v * derive + T * step
-    verify = blocks * msg_block + k * (step + a * node) + fors_roots + enc + ((q - 1) * v - T) * step + wots_pk + h * node
+    verify = digest + k * (step + a * node) + fors_roots + enc + ((q - 1) * v - T) * step + wots_pk + h * node
     keygen = derive + 2**h * leaf + (2**h - 1) * node
     size = N + k * (1 + a) * N + 4 + v * N + h * N
     L = max_log2_sigs(127, Params("", 16, h, a, k, 30), "exact", "max")  # the FORS term at 2^-127 per query
@@ -101,9 +105,9 @@ def main():
 
     print(f"leanSphincs candidate: h={h} a={a} k={k}, WOTS+C with {v} chains of length {q} and T={T}; "
           f"costs in 64-byte compressions")
-    print(f"  signature {size} B (rho 16, FORS {k * (1 + a) * N}, counter 4, WOTS {v * N}, path {h * N}); pk 32 B")
+    print(f"  signature {size} B (rho 16, FORS {k * (1 + a) * N}, counter 4, WOTS {v * N}, path {h * N}); pk {2 * N} B")
     print(f"  per call: derive {derive}, chain {step}, node {node}, encode {enc}, WOTS leaf {wots_pk}, "
-          f"FORS roots {fors_roots}, randomizer {rnd}, digest {blocks} x {msg_block}")
+          f"FORS roots {fors_roots}, randomizer {rnd}, digest {digest}")
     print(f"  WOTS encoding: {math.log2(n_sum(v, q, T)):.2f} bits of valid encodings, "
           f"expected {1 / alpha:.0f} counters")
     print(f"  lifetime at 127 bits: 2^{L:.2f} signatures")
@@ -111,13 +115,13 @@ def main():
     print(f"  WOTS leaf {leaf}; key generation {keygen:,} ({fmt(keygen)})")
     for mib in x.cache_mib:
         tree = tree_cost(h, nodes(mib))
-        sign = rnd + blocks * msg_block + fors_sign + wots_sign + tree
+        sign = rnd + digest + fors_sign + wots_sign + tree
         print(f"  signing with a {mib:g} MiB cache: {fmt(sign)} "
               f"(tree {fmt(tree)}, FORS {fmt(fors_sign)}, WOTS {fmt(wots_sign)})")
     for b in x.pruned:
         kg = derive + 2**b * leaf + (2**b - 1) * node + (h - b) * (derive + node)  # subtree + surrogate path
-        grind = 2 ** (h - b) * (rnd + msg_block)  # idx is in the first digest block
-        base = grind + (blocks - 1) * msg_block + fors_sign + wots_sign
+        grind = 2 ** (h - b) * attempt  # idx is in the first digest call
+        base = grind + rnd + digest - attempt + fors_sign + wots_sign
         signs = ", ".join(f"{fmt(base + tree_cost(b, nodes(kib / 1024)))} with {kib:g} KiB"
                           for kib in x.pruned_cache_kib)
         print(f"  pruned, 2^{b} leaves: lifetime 2^{pruned_log2_sigs(b):.2f}, key generation {fmt(kg)}, "
@@ -129,7 +133,7 @@ def main():
     b = x.threshold
     mpc_hashes = 2**b * (k * 2**a + v * (q - 1))
     public = 2**b * (k * 2**a * N + v * N + 4)
-    try_cost = comp(N + 4) + msg_block  # R = H(R_0, ctr), then the first digest call
+    try_cost = 1  # R = R_0 + i, then the second block of the first digest call
     grind = 2 ** (h - b) * try_cost
     rebuild = k * (2**a - 1) * node  # the combiner rebuilds the 24 FORS paths from the public leaves
     print(f"  threshold, 2^{b} kept leaves (lifetime 2^{pruned_log2_sigs(b):.2f}): {fmt(mpc_hashes)} MPC hashes at keygen, public data "

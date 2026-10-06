@@ -59,6 +59,17 @@ Properties:
   \item lifetime: up to $2^{30}$ signatures.
 \end{itemize}
 
+\paragraph{Hash inputs.} Every hash input is $P \concat \mathit{address} \concat \mathit{data}$: the public
+parameter (16 bytes), then an 8-byte address (two fields of 4 and 3 bytes, and 1 byte for the type of the call
+and the step in a chain).
+\begin{itemize}
+  \item a chain step and a tree node each fit in one 64-byte block
+  \item the message digest hashes $m\concat 0^{8}\concat R$: 8 zero bytes, so that the randomizer $R$ is the second
+        block. A pruned signer tries $R = R_0 + i$ for $i = 0, 1, \dots$, with $R_0$ a hash of the secret key and $m$,
+        and keeps the first one that lands in its subtree. The first block is hashed once, so each try costs 1
+        compression
+\end{itemize}
+
 \section{Usage}
 
 \subsection{Full \texorpdfstring{$2^{30}$}{2\textasciicircum 30} lifetime}
@@ -81,7 +92,7 @@ For weaker devices. The trick is to trade smaller lifetime for faster keygen, us
 \begin{itemize}
   \item lifetime: $2.1\cdot10^5$ signatures ($2^{17.7}$)
   \item keygen: $2.2\cdot10^6$ compressions
-  \item signing: $111\cdot10^3$ compressions, with a 16~KiB cache (including $33\cdot10^3$ compressions of grinding)
+  \item signing: $86\cdot10^3$ compressions, with a 16~KiB cache (including $8\cdot10^3$ compressions of grinding)
 \end{itemize}
 
 \emph{A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.}
@@ -94,7 +105,7 @@ surrogate siblings).
 \begin{itemize}
   \item lifetime: $2.2\cdot10^7$ signatures ($2^{24.4}$)
   \item keygen: $287\cdot10^6$ compressions
-  \item signing: $84\cdot10^3$ compressions, with a 1~MiB cache (including 256 compressions of grinding)
+  \item signing: $84\cdot10^3$ compressions, with a 1~MiB cache (including 64 compressions of grinding)
 \end{itemize}
 
 \subsection{Threshold signing}
@@ -153,7 +164,7 @@ Parts from signings of different $(m,J)$ don't combine, so aborted signings reve
 \begin{enumerate}
   \item agree on $m$
   \item each signer commits to a random $r_i$, then reveals it; $R_0=\hash(r_1,\dots,r_t,m)$, and the signers
-        grind $R=\hash(R_0,\mathit{ctr})$ into the kept subtree. No signer may choose $R$: it could steer
+        take the first $R=R_0+i$ that lands in the kept subtree. No signer may choose $R$: it could steer
         signatures to the FORS instances of its choice~\cite{PRAWNS}
   \item open $F$ at the 24 FORS addresses; check each against its leaf
   \item output $R$, the 24 secrets and paths, the WOTS signature, the authentication path

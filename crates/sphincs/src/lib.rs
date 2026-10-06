@@ -6,8 +6,9 @@
 
 //! The leanSphincs candidate over BLAKE2s.
 //!
-//! `Th(P, tw, M) = BLAKE2s(tw | P | M)` truncated to `n = 16` bytes. Every hash call goes through
-//! [`hash`], which also counts BLAKE2s compressions (thread-local) so tests can check the note's costs.
+//! `Th(P, tw, M) = BLAKE2s(P | tw | M)` truncated to `n = 16` bytes, with an 8-byte address `tw`.
+//! Every hash call goes through [`hash`], which also counts BLAKE2s compressions (thread-local) so
+//! tests can check the note's costs.
 
 mod hash;
 pub use hash::*;

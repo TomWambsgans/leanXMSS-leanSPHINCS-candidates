@@ -10,13 +10,13 @@ pub fn wots_secret(pp: &PublicParam, master: &MasterSecret, e: u32, i: usize) ->
 }
 
 pub fn wots_secret_tweak(e: u32, i: usize) -> Tweak {
-    tweak(TWEAK_PRF, 0, 0, i as u32, e)
+    tweak(TWEAK_PRF, i as u32, e)
 }
 
 /// The tweak of the step of chain `i` (leaf `e`) that lands on position `to`, in `1..CHAIN_LEN`.
 pub fn chain_tweak(e: u32, i: usize, to: usize) -> Tweak {
     debug_assert!((1..CHAIN_LEN).contains(&to));
-    tweak(TWEAK_CHAIN, 0, 0, (CHAIN_LEN * i + to - 1) as u32, e)
+    tweak(TWEAK_CHAIN, i as u32, e).step(to - 1)
 }
 
 /// `steps` chain steps of chain `i` from position `start`.
@@ -27,7 +27,7 @@ pub fn chain(pp: &PublicParam, e: u32, i: usize, start: usize, steps: usize, val
 
 /// The Merkle leaf of a one-time key: `Th` over its 64 chain ends.
 pub fn wots_leaf_hash(pp: &PublicParam, e: u32, ends: &[Digest; V]) -> Digest {
-    th_digests(pp, &tweak(TWEAK_LEAF, 0, 0, 0, e), ends)
+    th_digests(pp, &tweak(TWEAK_LEAF, 0, e), ends)
 }
 
 /// `Enc(P, e, M, c)`: the codeword, or `None` if this counter's digest is not one.
@@ -35,7 +35,7 @@ pub fn encode(pp: &PublicParam, e: u32, m: &Digest, c: u32) -> Option<[u8; V]> {
     let mut payload = [0u8; N + COUNTER_LEN];
     payload[..N].copy_from_slice(m);
     payload[N..].copy_from_slice(&c.to_le_bytes());
-    codeword(&th(pp, &tweak(TWEAK_ENC, 0, 0, 0, e), &payload))
+    codeword(&th(pp, &tweak(TWEAK_ENC, 0, e), &payload))
 }
 
 /// The 128 digest bits as 64 chunks of 2 bits, little endian; a codeword if they sum to `T`.
