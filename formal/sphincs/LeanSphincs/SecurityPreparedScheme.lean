@@ -69,7 +69,35 @@ theorem compile_secret (seed : MasterSeed) (material : Material) (position : Sec
   simp only [deriveKey, simulateQ_bind, simulateQ_pure, compile_oracleHash]
   rw [show keygenHashInput (parameter material) (secretDomain position) seed =
       secretInput seed material position from rfl, compileHash, programCache_secret]
+  simp only [bind_assoc, pure_bind, secretHalf_pairOutput]
+
+/-- The hash that gives two values compiles to one virtual query and the two halves of the
+programmed answer, which do not depend on the seed. -/
+theorem compile_pair (seed : MasterSeed) (material : Material) (position : SecretPosition) :
+    simulateQ (compileHash seed material)
+      (derivePair (parameter material) (secretDomain position) seed : OracleComp HashSpec (Digest × Digest)) =
+      (do let _ ← tick; pure (truncateHash (pairOutput material.2 position),
+        truncateHashHigh (pairOutput material.2 position))) := by
+  simp only [derivePair, simulateQ_bind, simulateQ_pure, compile_oracleHash]
+  rw [show keygenHashInput (parameter material) (secretDomain position) seed =
+      secretInput seed material position from rfl, compileHash, programCache_secret]
   simp only [bind_assoc, pure_bind]
+
+theorem compile_otsPair (seed : MasterSeed) (material : Material) (lay : Layer)
+    (tree : TreeIndex) (leaf : LeafIndex) (chain : ChainIndex) :
+    simulateQ (compileHash seed material)
+      (derivePair (parameter material) (.ots lay tree leaf chain) seed : OracleComp HashSpec (Digest × Digest)) =
+      (do let _ ← tick; pure (truncateHash (pairOutput material.2 (.inl (lay, tree, leaf, chain))),
+        truncateHashHigh (pairOutput material.2 (.inl (lay, tree, leaf, chain))))) := by
+  simpa only [secretDomain] using compile_pair seed material (.inl (lay, tree, leaf, chain))
+
+theorem compile_ftsPair (seed : MasterSeed) (material : Material) (index : Index)
+    (tree : FtsTree) (leaf : FtsLeaf) :
+    simulateQ (compileHash seed material)
+      (derivePair (parameter material) (.fts index tree leaf) seed : OracleComp HashSpec (Digest × Digest)) =
+      (do let _ ← tick; pure (truncateHash (pairOutput material.2 (.inr (.inl (index, tree, leaf)))),
+        truncateHashHigh (pairOutput material.2 (.inr (.inl (index, tree, leaf)))))) := by
+  simpa only [secretDomain] using compile_pair seed material (.inr (.inl (index, tree, leaf)))
 
 theorem compile_ots (seed : MasterSeed) (material : Material) (lay : Layer)
     (tree : TreeIndex) (leaf : LeafIndex) (chain : ChainIndex) :
@@ -146,18 +174,24 @@ theorem compile_encode (seed : MasterSeed) (material : Material)
         liftM (encode p lay tree leaf message counter : OracleComp HashSpec (Option Encoding)) := by
   simp only [encode, simulateQ_bind, compile_tweakableHash, simulateQ_pure, liftM_bind, liftM_pure]
 
+/-- Changing the seed in the source code does not change the compiled chain values. -/
+theorem compiled_otsValues_eq (left right : MasterSeed) (material : Material)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (steps : ChainIndex → Nat) :
+    simulateQ (compileHash left material)
+      (Seeded.otsValues (parameter material) lay tree leaf left steps : OracleComp HashSpec _) =
+    simulateQ (compileHash right material)
+      (Seeded.otsValues (parameter material) lay tree leaf right steps : OracleComp HashSpec _) := by
+  simp only [Seeded.otsValues, simulate_sequenceFin, simulateQ_bind, compile_otsPair,
+    compile_chainWalk, simulateQ_pure]
+
 /-- Changing the seed in the source code does not change the compiled OTS public key. -/
 theorem compiled_oneTimePublicKey_eq (left right : MasterSeed) (material : Material)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) :
     simulateQ (compileHash left material)
       (Seeded.oneTimePublicKey (parameter material) lay tree leaf left : OracleComp HashSpec _) =
     simulateQ (compileHash right material)
-      (Seeded.oneTimePublicKey (parameter material) lay tree leaf right : OracleComp HashSpec _) := by
-  simp only [Seeded.oneTimePublicKey, simulate_sequenceFin, simulateQ_bind]
-  congr 1
-  funext chain
-  rw [compile_ots, compile_ots]
-  simp only [compile_chainWalk]
+      (Seeded.oneTimePublicKey (parameter material) lay tree leaf right : OracleComp HashSpec _) :=
+  compiled_otsValues_eq left right material lay tree leaf _
 
 theorem compiled_treeNode_eq (left right : MasterSeed) (material : Material)
     (lay : Layer) (tree : TreeIndex) (level node : Nat) :
@@ -224,7 +258,12 @@ theorem compiled_ftsNode_eq (left right : MasterSeed) (material : Material)
   | zero =>
       simp only [Seeded.ftsNode, simulateQ_bind, compile_fts, ftsLeafHash, compile_tweakableHash]
   | succ level ih =>
-      simp only [Seeded.ftsNode, simulateQ_bind, ih, compile_tweakableHash]
+      cases level with
+      | zero =>
+          simp only [Nat.zero_add, Seeded.ftsNode, simulateQ_bind, compile_ftsPair, ftsLeafHash,
+            compile_tweakableHash]
+      | succ level =>
+          simp only [Seeded.ftsNode, simulateQ_bind, ih, compile_tweakableHash]
 
 omit [Params] in
 theorem compiled_ftsKey_eq (left right : MasterSeed) (material : Material) (index : Index) :
@@ -260,8 +299,7 @@ theorem compiled_otsSignFrom_eq (left right : MasterSeed) (material : Material)
       cases encoded with
       | none => exact ih _
       | some encoded =>
-          simp only [simulateQ_bind, simulate_sequenceFin, compile_ots,
-            compile_chainWalk, simulateQ_pure]
+          simp only [simulateQ_bind, compiled_otsValues_eq left right, simulateQ_pure]
 
 /-- Replace only the private seed field, retaining the public fields used by signing. -/
 def reseedKey (seed : MasterSeed) (key : Seeded.SecretKey) : Seeded.SecretKey :=

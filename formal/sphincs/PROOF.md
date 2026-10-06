@@ -2,7 +2,25 @@
 
 `Lifetimes.requestedSecurity` proves 127 bits of SUF-CMA security for `Seeded.sign` at the limits in
 [README.md](README.md). Units: S = 2^128 digests, a budget of q hash queries is x = q/S, and the
-target is q/2^127 = 2x. K is the key-generation cost and q' = q − K.
+target is q/2^127 = 2x. K = 226·2^b + 2(26 − b) is the key-generation cost in hash calls
+(`keygenCost`, `Prefix.hashCalls_keygenFromSeed`) and q' = q − K.
+
+0. **Secrets.** One hash of the seed gives two secrets, the two halves of its 32-byte output: two
+   chain starts of a one-time key, or two secrets of a FORS tree
+   ([Scheme](LeanSphincs/Scheme.lean): `keygenDomainFields`, `secretHalf`, `derivePair`). The proof
+   keeps one uniform 256-bit value per secret, of which the low half is the secret
+   (`SeedModel.Material`), and programs the answer of each such hash as the two low halves joined
+   (`SeedModel.pairOutput`, `programCache`). That map is the restriction of an involution of the
+   table (`SeedModel.mix_involutive`), and distinct hashes have distinct inputs
+   (`SeedCoupling.hashInputs_injective`), so the programmed answers are independent uniform
+   outputs (`SeedCoupling.evalDist_hashAnswers`) and the game is unchanged
+   (`SeedCoupling.evalDist_prepared_continuation`). Every secret is still an independent uniform
+   value read only through a hash input that contains the 256-bit seed; the later steps see the
+   secret at a position (`PreparedScheme.compile_secret`) and are unchanged. An honest hash of
+   the seed costs one query whether it gives one secret or two, so the signer's query counts go
+   down: 224 calls per one-time key (was 256), 152 for the opened chain values (was 184), 61,417
+   for a FORS key and 61,152 for its openings (were 73,705 and 73,416), 122,595 calls per
+   signature before the WOTS search (was 147,147).
 
 1. **Statement and memo reduction.** [StatementDet](LeanSphincs/StatementDet.lean) is the SUF-CMA game
    of [Statement](LeanSphincs/Statement.lean) with the signing oracle `Seeded.sign`.
@@ -102,7 +120,11 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
   `.find(...).unwrap()` without this explicit failure case; overflow/wrapping and failure behavior are
   not modeled. Rust also panics on WOTS counter exhaustion.
 - The functional model recomputes tree/FORS nodes from the seed. Rust keeps the generated tree and
-  rebuilds FORS via stored arrays. The byte inputs and recovered values were ported by source
+  rebuilds FORS via stored arrays. In the model a subtree of 2^l FORS leaves, l ≥ 1, takes 2^(l−1)
+  hashes of the seed, a single leaf (the level-0 sibling of an opening, or a revealed secret)
+  takes one, and a one-time key takes 32, as `wots_secrets`, `fors_secret_pair` and `fors_secret`
+  do. The hash-call counts above are those of the model; key generation makes the same calls in
+  Rust (241 compressions per leaf there, 17 of them for the leaf hash). The byte inputs and recovered values were ported by source
   inspection; this is not a mechanized Rust refinement or an exact hash-trace equivalence. A
   security transfer using total experiment query counts must account for caching.
 - Verification does not enforce membership in the retained subtree. The proof accounts for forgeries

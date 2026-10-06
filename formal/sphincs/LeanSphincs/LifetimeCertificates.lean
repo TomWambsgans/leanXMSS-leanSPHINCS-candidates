@@ -131,9 +131,9 @@ budgets `q' ≥ 2^(128 -6.96875)`. -/
 theorem h0_bound_b8 [Params] (hb : subtreeHeight = 8) (hN : signatureLimit = 7530) (q' : ℕ)
     (hq0 : 2716668597607663370492372386760884224 ≤ q') (hq : 2 * q' ≤ 2 ^ 128) :
     (1 - HiddenDebt.budget 0 q') + (q' : ℝ≥0∞) * hOfOW q' +
-        ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
+      ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
   h0SW_bound_of_cover 8 7530 2716668597607663370492372386760884224 cover_b8 cover_b8_ok hb hN q' hq0 hq
 
 /-- Small-route threshold option for subtree height 8: baseline `ρ / 2^128` at `qh = 2716668597607663370492372386760884224`. -/
@@ -272,9 +272,9 @@ budgets `q' ≥ 2^(128 -7.15625)`. -/
 theorem h0_bound_b10 [Params] (hb : subtreeHeight = 10) (hN : signatureLimit = 28600) (q' : ℕ)
     (hq0 : 2385577546783380400171387171683434496 ≤ q') (hq : 2 * q' ≤ 2 ^ 128) :
     (1 - HiddenDebt.budget 0 q') + (q' : ℝ≥0∞) * hOfOW q' +
-        ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
+      ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
   h0SW_bound_of_cover 10 28600 2385577546783380400171387171683434496 cover_b10 cover_b10_ok hb hN q' hq0 hq
 
 /-- Small-route threshold option for subtree height 10: baseline `ρ / 2^128` at `qh = 2385577546783380400171387171683434496`. -/
@@ -412,9 +412,9 @@ budgets `q' ≥ 2^(128 -7.375)`. -/
 theorem h0_bound_b12 [Params] (hb : subtreeHeight = 12) (hN : signatureLimit = 108700) (q' : ℕ)
     (hq0 : 2049949804534797888604160119780933632 ≤ q') (hq : 2 * q' ≤ 2 ^ 128) :
     (1 - HiddenDebt.budget 0 q') + (q' : ℝ≥0∞) * hOfOW q' +
-        ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
+      ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
   h0SW_bound_of_cover 12 108700 2049949804534797888604160119780933632 cover_b12 cover_b12_ok hb hN q' hq0 hq
 
 /-- Small-route threshold option for subtree height 12: baseline `ρ / 2^128` at `qh = 2049949804534797888604160119780933632`. -/
@@ -552,9 +552,9 @@ budgets `q' ≥ 2^(128 -7.5)`. -/
 theorem h0_bound_b13 [Params] (hb : subtreeHeight = 13) (hN : signatureLimit = 211900) (q' : ℕ)
     (hq0 : 1879812259125035374945945504540786688 ≤ q') (hq : 2 * q' ≤ 2 ^ 128) :
     (1 - HiddenDebt.budget 0 q') + (q' : ℝ≥0∞) * hOfOW q' +
-        ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
+      ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
   h0SW_bound_of_cover 13 211900 1879812259125035374945945504540786688 cover_b13 cover_b13_ok hb hN q' hq0 hq
 
 /-- Small-route threshold option for subtree height 13: baseline `ρ / 2^128` at `qh = 1879812259125035374945945504540786688`. -/
@@ -706,9 +706,9 @@ budgets `q' ≥ 2^(128 -7.75)`. -/
 theorem h0_bound_b14 [Params] (hb : subtreeHeight = 14) (hN : signatureLimit = 412500) (q' : ℕ)
     (hq0 : 1580727390048228830862881339350188032 ≤ q') (hq : 2 * q' ≤ 2 ^ 128) :
     (1 - HiddenDebt.budget 0 q') + (q' : ℝ≥0∞) * hOfOW q' +
-        ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
+      ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
   h0SW_bound_of_cover 14 412500 1580727390048228830862881339350188032 cover_b14 cover_b14_ok hb hN q' hq0 hq
 
 /-- Small-route threshold option for subtree height 14: baseline `ρ / 2^128` at `qh = 1580727390048228830862881339350188032`. -/
@@ -850,9 +850,9 @@ budgets `q' ≥ 2^(128 -8.78125)`. -/
 theorem h0_bound_b20 [Params] (hb : subtreeHeight = 20) (hN : signatureLimit = 22380000) (q' : ℕ)
     (hq0 : 773427830839001786045950191225274368 ≤ q') (hq : 2 * q' ≤ 2 ^ 128) :
     (1 - HiddenDebt.budget 0 q') + (q' : ℝ≥0∞) * hOfOW q' +
-        ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
+      ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
   h0SW_bound_of_cover 20 22380000 773427830839001786045950191225274368 cover_b20 cover_b20_ok hb hN q' hq0 hq
 
 /-- Small-route threshold option for subtree height 20: baseline `ρ / 2^128` at `qh = 773427830839001786045950191225274368`. -/
@@ -1027,9 +1027,9 @@ budgets `q' ≥ 2^(128 -11)`. -/
 theorem h0_bound_b26 [Params] (hb : subtreeHeight = 26) (hN : signatureLimit = 1156000000) (q' : ℕ)
     (hq0 : 166153499473114484112975882535043072 ≤ q') (hq : 2 * q' ≤ 2 ^ 128) :
     (1 - HiddenDebt.budget 0 q') + (q' : ℝ≥0∞) * hOfOW q' +
-        ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
+      ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
   h0SW_bound_of_cover 26 1156000000 166153499473114484112975882535043072 cover_b26 cover_b26_ok hb hN q' hq0 hq
 
 /-- Small-route threshold option for subtree height 26: baseline `ρ / 2^128` at `qh = 166153499473114484112975882535043072`. -/

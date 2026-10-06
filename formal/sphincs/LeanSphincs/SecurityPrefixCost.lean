@@ -11,7 +11,7 @@ open Concrete
 
 attribute [local irreducible] encodingAttemptLimit digestAttemptLimit Seeded.treeNode
   Seeded.ftsNode Seeded.ftsKey Seeded.ftsOpen Seeded.treePath Seeded.signLayer chainWalk
-  deriveKey
+  deriveKey derivePair
 set_option backward.isDefEq.respectTransparency false
 
 def hashCalls {α : Type} (f : QueryImpl HashSpec Id) (computation : OracleComp HashSpec α) : Nat :=
@@ -39,6 +39,12 @@ theorem hashCalls_bind {α β : Type} (f : QueryImpl HashSpec Id)
     hashCalls f (deriveKey parameter domain seed : OracleComp HashSpec Digest) = 1 := by
   simp only [deriveKey, hashCalls_bind, hashCalls_oracleHash, hashCalls_pure, Nat.add_zero]
 
+/-- One hash of the seed gives the two values. -/
+@[simp] theorem hashCalls_derivePair (f : QueryImpl HashSpec Id)
+    (parameter : PublicParameter) (domain : KeygenDomain) (seed : MasterSeed) :
+    hashCalls f (derivePair parameter domain seed : OracleComp HashSpec (Digest × Digest)) = 1 := by
+  simp only [derivePair, hashCalls_bind, hashCalls_oracleHash, hashCalls_pure, Nat.add_zero]
+
 theorem hashCalls_sequenceFin {α : Type} {n : Nat} (f : QueryImpl HashSpec Id)
     (computation : Fin n → OracleComp HashSpec α) :
     hashCalls f (sequenceFin computation) = ∑ i, hashCalls f (computation i) := by
@@ -57,22 +63,49 @@ theorem hashCalls_chainWalk (f : QueryImpl HashSpec Id) (parameter : PublicParam
   | succ steps ih =>
       rw [chainWalk, hashCalls_bind, dif_pos (by omega), hashCalls_tweakableHash, ih _ _ (by omega)]
 
+/-- A sum over the 64 chains, pair by pair. -/
+theorem sum_chains_eq_sum_pairs (g : ChainIndex → Nat) :
+    ∑ chain, g chain = ∑ pair : Fin (numChains / 2), (g (Seeded.evenChain pair) + g (Seeded.oddChain pair)) := by
+  have h := Fintype.sum_equiv (finProdFinEquiv (m := 32) (n := 2))
+    (fun x => g (finProdFinEquiv x)) g (fun _ => rfl)
+  rw [Fintype.sum_prod_type] at h
+  refine h.symm.trans (Fintype.sum_congr _ _ fun pair => ?_)
+  rw [Fin.sum_univ_two]
+  have heven : (finProdFinEquiv (pair, (0 : Fin 2)) : Fin (32 * 2)) = Seeded.evenChain pair :=
+    Fin.ext (by simp [finProdFinEquiv, Seeded.evenChain])
+  have hodd : (finProdFinEquiv (pair, (1 : Fin 2)) : Fin (32 * 2)) = Seeded.oddChain pair :=
+    Fin.ext (by simp [finProdFinEquiv, Seeded.oddChain]; omega)
+  rw [heven, hodd]
+
+/-- The chain values of a one-time key take 32 hashes of the seed, two chain starts each, and the
+chain steps. -/
+theorem hashCalls_otsValues (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (seed : MasterSeed) (steps : ChainIndex → Nat)
+    (hsteps : ∀ chain, steps chain ≤ chainLength - 1) :
+    hashCalls f (Seeded.otsValues parameter lay tree leaf seed steps :
+      OracleComp HashSpec (ChainIndex → Digest)) = numChains / 2 + ∑ chain, steps chain := by
+  have walk (chain : ChainIndex) (value : Digest) :
+      hashCalls f (chainWalk parameter lay tree leaf chain 0 (steps chain) value :
+        OracleComp HashSpec Digest) = steps chain :=
+    hashCalls_chainWalk f parameter lay tree leaf chain 0 (steps chain) value (by
+      have := hsteps chain; omega)
+  simp only [Seeded.otsValues, hashCalls_bind, hashCalls_sequenceFin, hashCalls_derivePair,
+    hashCalls_pure, walk, Nat.add_zero]
+  rw [sum_chains_eq_sum_pairs, Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ,
+    Fintype.card_fin, smul_eq_mul, mul_one]
+
+/-- A one-time public key takes 32 hashes of the seed and 192 chain steps. -/
 theorem hashCalls_oneTimePublicKey (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (seed : MasterSeed) :
     hashCalls f (Seeded.oneTimePublicKey parameter lay tree leaf seed :
-      OracleComp HashSpec (ChainIndex → Digest)) = 256 := by
-  simp only [Seeded.oneTimePublicKey, hashCalls_sequenceFin, hashCalls_bind, hashCalls_deriveKey]
-  have walk (chain : ChainIndex) (value : Digest) :
-      hashCalls f (chainWalk parameter lay tree leaf chain 0 (chainLength - 1) value :
-        OracleComp HashSpec Digest) = chainLength - 1 :=
-    hashCalls_chainWalk f parameter lay tree leaf chain 0 (chainLength - 1) value (by omega)
-  simp only [walk]
+      OracleComp HashSpec (ChainIndex → Digest)) = 224 := by
+  rw [Seeded.oneTimePublicKey, hashCalls_otsValues f parameter lay tree leaf seed _ (fun _ => le_rfl)]
   decide
 
 theorem hashCalls_treeNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (seed : MasterSeed) (level nodeIdx : Nat) :
     hashCalls f (Seeded.treeNode parameter lay tree seed level nodeIdx : OracleComp HashSpec Digest) =
-      258 * 2 ^ level - 1 := by
+      226 * 2 ^ level - 1 := by
   induction level generalizing nodeIdx with
   | zero => simp [Seeded.treeNode, hashCalls_bind, hashCalls_oneTimePublicKey, leafHash]
   | succ level ih =>
@@ -81,17 +114,26 @@ theorem hashCalls_treeNode (f : QueryImpl HashSpec Id) (parameter : PublicParame
       rw [pow_succ]
       omega
 
+/-- The hash calls of a FORS node over `2^level` leaves: a single leaf takes one hash of the seed
+and its leaf hash; from level 1 on, each pair of leaves takes one hash of the seed. -/
+def ftsNodeCost (level : Nat) : Nat := if level = 0 then 2 else 5 * 2 ^ (level - 1) - 1
+
 theorem hashCalls_ftsNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (tree : FtsTree) (seed : MasterSeed) (level nodeIdx : Nat) :
     hashCalls f (Seeded.ftsNode parameter index tree seed level nodeIdx : OracleComp HashSpec Digest) =
-      3 * 2 ^ level - 1 := by
+      ftsNodeCost level := by
   induction level generalizing nodeIdx with
-  | zero => simp [Seeded.ftsNode, hashCalls_bind, ftsLeafHash]
+  | zero => simp [Seeded.ftsNode, hashCalls_bind, ftsLeafHash, ftsNodeCost]
   | succ level ih =>
-      simp only [Seeded.ftsNode, hashCalls_bind, ih, hashCalls_tweakableHash]
-      have hpos : 0 < 2 ^ level := Nat.two_pow_pos level
-      rw [pow_succ]
-      omega
+      cases level with
+      | zero =>
+          simp [Seeded.ftsNode, hashCalls_bind, ftsLeafHash, ftsNodeCost]
+      | succ level =>
+          simp only [Seeded.ftsNode, hashCalls_bind, ih, hashCalls_tweakableHash]
+          have hpos : 0 < 2 ^ level := Nat.two_pow_pos level
+          simp only [ftsNodeCost, Nat.succ_ne_zero, if_false, Nat.add_sub_cancel]
+          rw [pow_succ]
+          omega
 
 theorem hashCalls_encode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : Digest) (counter : Counter) :

@@ -193,7 +193,11 @@ def randomizerHashInput (parameter : PublicParameter) (seed : MasterSeed)
   bytesLE 16 parameter ++ fieldBytes ⟨7#5, 0#3, 0#24, 0#32⟩ ++
     bytesLE 32 seed ++ bytesLE 32 message
 
-/-- The values derived from the seed. -/
+/-- Keep output bits `128 .. 255`, bytes `16 .. 31` of the hash output. -/
+def truncateHashHigh (output : HashOutput) : Digest :=
+  output.extractLsb' digestBits digestBits
+
+/-- The values derived from the seed. A domain names one value; two values may share a hash. -/
 inductive KeygenDomain where
   | parameter
   | ots (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (chain : ChainIndex)
@@ -201,12 +205,26 @@ inductive KeygenDomain where
   | surrogate (level : Fin totalHeight)
 deriving DecidableEq
 
-/-- `TWEAK_PARAMETER = 5`, `TWEAK_PRF = 0`, `TWEAK_FTS_PRF = 8`, `TWEAK_SURROGATE = 13`. -/
+/-- `TWEAK_PARAMETER = 5`, `TWEAK_PRF = 0`, `TWEAK_FTS_PRF = 8`, `TWEAK_SURROGATE = 13`. One hash of
+the seed gives two secrets: the starts of chains `2 t` and `2 t + 1` of a one-time key share the
+address with `hi = t`, and the secrets of leaves `2 t` and `2 t + 1` of a FORS tree `kappa` share the
+address with `hi = kappa + 512 * t` (`wots_secret_tweak`, `fors_secret_tweak`). -/
 def keygenDomainFields : KeygenDomain → TweakFields
   | .parameter => tweakFields 5 0 0 0
-  | .ots _ _ leaf chain => tweakFields 0 0 chain leaf
-  | .fts index tree leaf => tweakFields 8 0 (tree + 512 * leaf) index
+  | .ots _ _ leaf chain => tweakFields 0 0 (chain / 2) leaf
+  | .fts index tree leaf => tweakFields 8 0 (tree + 512 * (leaf / 2)) index
   | .surrogate level => tweakFields 13 0 level 0
+
+/-- Whether a derived value is the second half (bytes `16 .. 31`) of its hash output: the odd chain
+starts and the odd FORS secrets. Every other value is the first half. -/
+def KeygenDomain.second : KeygenDomain → Bool
+  | .ots _ _ _ chain => chain.val % 2 == 1
+  | .fts _ _ leaf => leaf.val % 2 == 1
+  | _ => false
+
+/-- The half of the 32-byte output that is the value of this domain. -/
+def secretHalf (domain : KeygenDomain) (output : HashOutput) : Digest :=
+  if domain.second then truncateHashHigh output else truncateHash output
 
 /-- `P || A || S`; parameter derivation uses `P = 0`. -/
 def keygenHashInput (parameter : PublicParameter) (domain : KeygenDomain)
@@ -502,9 +520,17 @@ instance (parameter : PublicParameter) (index : Index) : Decidable (Landed param
 
 end Pruning
 
+/-- One derived value: one hash of the seed, of which the value is one 16-byte half. -/
 def deriveKey {m : Type → Type} [Monad m] [HasQuery HashSpec m]
     (parameter : PublicParameter) (domain : KeygenDomain) (seed : MasterSeed) : m Digest := do
-  return truncateHash (← Concrete.oracleHash (keygenHashInput parameter domain seed))
+  return secretHalf domain (← Concrete.oracleHash (keygenHashInput parameter domain seed))
+
+/-- Two derived values for one hash of the seed (`th_pair`): the two 16-byte halves of the output at
+the address of `domain`. -/
+def derivePair {m : Type → Type} [Monad m] [HasQuery HashSpec m]
+    (parameter : PublicParameter) (domain : KeygenDomain) (seed : MasterSeed) : m (Digest × Digest) := do
+  let output ← Concrete.oracleHash (keygenHashInput parameter domain seed)
+  return (truncateHash output, truncateHashHigh output)
 
 def deriveRandomizer {m : Type → Type} [Monad m] [HasQuery HashSpec m]
     (parameter : PublicParameter) (seed : MasterSeed)
@@ -526,11 +552,31 @@ structure SecretKey where
 
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
+/-- Chains `2 t` and `2 t + 1`. -/
+def evenChain (pair : Fin (numChains / 2)) : ChainIndex := ⟨2 * pair.val, by have := pair.isLt; simp only [numChains] at *; omega⟩
+def oddChain (pair : Fin (numChains / 2)) : ChainIndex := ⟨2 * pair.val + 1, by have := pair.isLt; simp only [numChains] at *; omega⟩
+/-- The pair `t` of chain `2 t` or `2 t + 1`. -/
+def chainPair (chainIdx : ChainIndex) : Fin (numChains / 2) :=
+  ⟨chainIdx.val / 2, by have := chainIdx.isLt; simp only [numChains] at *; omega⟩
+
+/-- Read 32 pairs as 64 values: pair `t` holds the values of chains `2 t` and `2 t + 1`. -/
+def unpairChains {α : Type} (pairs : Fin (numChains / 2) → α × α) : ChainIndex → α :=
+  fun chainIdx => if chainIdx.val % 2 = 0 then (pairs (chainPair chainIdx)).1 else (pairs (chainPair chainIdx)).2
+
+/-- Walk every chain of the one-time key at `leaf` from its start by `steps` (`wots_secrets`, then
+`chain`): 32 hashes of the seed give the 64 starts, two per hash. -/
+def otsValues (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (seed : MasterSeed) (steps : ChainIndex → Nat) : m (ChainIndex → Digest) := do
+  let pairs ← sequenceFin fun pair : Fin (numChains / 2) => do
+    let secrets ← derivePair parameter (.ots lay tree leaf (evenChain pair)) seed
+    let first ← chainWalk parameter lay tree leaf (evenChain pair) 0 (steps (evenChain pair)) secrets.1
+    let second ← chainWalk parameter lay tree leaf (oddChain pair) 0 (steps (oddChain pair)) secrets.2
+    return (first, second)
+  return unpairChains pairs
+
 def oneTimePublicKey (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (seed : MasterSeed) : m (ChainIndex → Digest) :=
-  sequenceFin fun chainIdx => do
-    let secret ← deriveKey parameter (.ots lay tree leaf chainIdx) seed
-    chainWalk parameter lay tree leaf chainIdx 0 (chainLength - 1) secret
+  otsValues parameter lay tree leaf seed fun _ => chainLength - 1
 
 def otsSignFrom (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
     (seed : MasterSeed) (message : Digest) :
@@ -539,9 +585,7 @@ def otsSignFrom (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (
   | attempts + 1, counter => do
       match ← encode parameter lay tree leaf message (BitVec.ofNat counterBits counter) with
       | some encoding => do
-          let values ← sequenceFin fun chainIdx => do
-            let secret ← deriveKey parameter (.ots lay tree leaf chainIdx) seed
-            chainWalk parameter lay tree leaf chainIdx 0 (encoding chainIdx).val secret
+          let values ← otsValues parameter lay tree leaf seed fun chainIdx => (encoding chainIdx).val
           return some (BitVec.ofNat counterBits counter, values)
       | none => otsSignFrom parameter lay tree leaf seed message attempts (counter + 1)
 
@@ -609,16 +653,24 @@ open Concrete
 
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
+/-- A node of a FORS tree, computed from the secrets below it. A single leaf takes one hash of the
+seed and uses one half of it; the two leaves under a level-1 node share one hash of the seed
+(`fors_secret_pair`), so a subtree of `2^level` leaves, `level >= 1`, takes `2^(level-1)` of them. -/
 def ftsNode (parameter : PublicParameter) (index : Index) (tree : FtsTree)
     (seed : MasterSeed) : Nat → Nat → m Digest
   | 0, nodeIdx => do
       let leaf := ftsLeafOfNat nodeIdx
       let secret ← deriveKey parameter (.fts index tree leaf) seed
       ftsLeafHash parameter index tree leaf secret
-  | level + 1, nodeIdx => do
-      let left ← ftsNode parameter index tree seed level (2 * nodeIdx)
-      let right ← ftsNode parameter index tree seed level (2 * nodeIdx + 1)
-      tweakableHash parameter (.ftsNode index tree (level + 1) nodeIdx) (nodePayload left right)
+  | 1, nodeIdx => do
+      let secrets ← derivePair parameter (.fts index tree (ftsLeafOfNat (2 * nodeIdx))) seed
+      let left ← ftsLeafHash parameter index tree (ftsLeafOfNat (2 * nodeIdx)) secrets.1
+      let right ← ftsLeafHash parameter index tree (ftsLeafOfNat (2 * nodeIdx + 1)) secrets.2
+      tweakableHash parameter (.ftsNode index tree 1 nodeIdx) (nodePayload left right)
+  | level + 2, nodeIdx => do
+      let left ← ftsNode parameter index tree seed (level + 1) (2 * nodeIdx)
+      let right ← ftsNode parameter index tree seed (level + 1) (2 * nodeIdx + 1)
+      tweakableHash parameter (.ftsNode index tree (level + 2) nodeIdx) (nodePayload left right)
 
 /-- The FORS key of instance `idx`: every tree root, then the hash of the roots. -/
 def ftsKey (parameter : PublicParameter) (index : Index)
@@ -682,6 +734,7 @@ def sign (secretKey : SecretKey) (message : Message) : m (Option Signature) := d
   let digest ← messageDigest secretKey.parameter secretKey.root message randomness
   let index := digestIndex digest
   let leaves := digestLeaves digest
+  -- one hash of the seed per revealed secret, of which the secret is one half (`fors_secret`)
   let secrets ← sequenceFin fun tree =>
     deriveKey secretKey.parameter (.fts index tree (leaves (ftsIndexOf tree))) secretKey.seed
   let ftsPath ← ftsOpen secretKey.parameter index leaves secretKey.seed

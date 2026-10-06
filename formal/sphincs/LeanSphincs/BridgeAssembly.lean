@@ -97,7 +97,8 @@ theorem preparedCache_parameter (material : Material) (seed : MasterSeed) (answe
 
 theorem preparedCache_secret (material : Material) (seed : MasterSeed) (answers : CanonicalGraphLabels)
     (position : SecretPosition) :
-    preparedCache material seed answers (secretInput seed material position) = some (material.2 position) := by
+    preparedCache material seed answers (secretInput seed material position) =
+      some (pairOutput material.2 position) := by
   rw [preparedCache_other material seed answers (secretInput seed material position)
     (fun other => keygenInput_ne_hashInput _ _ _ _ _ _), programCache_secret]
 

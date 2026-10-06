@@ -24,8 +24,30 @@ theorem tweakableInput_injective {parameter parameter' : PublicParameter}
       parameter = parameter' ∧ payload = payload' :=
   fieldInput_injective h
 
-theorem deriveFields_injective : Function.Injective keygenDomainFields := by
-  intro left right h
+/-- The first of the two derived values that share the hash of `domain`: the even chain start, the
+even FORS secret. Every other value has its own hash. -/
+def pairDomain : KeygenDomain → KeygenDomain
+  | .ots lay tree leaf chain =>
+      .ots lay tree leaf ⟨2 * (chain.val / 2), Nat.lt_of_le_of_lt (Nat.mul_div_le _ 2) chain.isLt⟩
+  | .fts index tree leaf =>
+      .fts index tree ⟨2 * (leaf.val / 2), Nat.lt_of_le_of_lt (Nat.mul_div_le _ 2) leaf.isLt⟩
+  | domain => domain
+
+theorem pairDomain_fields (domain : KeygenDomain) :
+    keygenDomainFields (pairDomain domain) = keygenDomainFields domain := by
+  cases domain with
+  | parameter => rfl
+  | surrogate level => rfl
+  | ots lay tree leaf chain =>
+      simp only [pairDomain, keygenDomainFields]
+      rw [show 2 * (chain.val / 2) / 2 = chain.val / 2 by omega]
+  | fts index tree leaf =>
+      simp only [pairDomain, keygenDomainFields]
+      rw [show 2 * (leaf.val / 2) / 2 = leaf.val / 2 by omega]
+
+/-- Two derived values have the same address only if they are the two halves of one hash. -/
+theorem deriveFields_pair {left right : KeygenDomain}
+    (h : keygenDomainFields left = keygenDomainFields right) : pairDomain left = pairDomain right := by
   cases left <;> cases right <;>
     simp only [keygenDomainFields, tweakFields, TweakFields.mk.injEq] at h
   all_goals try { simp at h; done }
@@ -34,15 +56,17 @@ theorem deriveFields_injective : Function.Injective keygenDomainFields := by
     obtain ⟨_, _, hchain, hleaf⟩ := h
     have hl : lay = lay' := layer_eq _ _
     have ht : tree = tree' := treeIndex_eq _ _
-    have hc : chain = chain' := by
-      apply Fin.ext
-      exact ofNat_inj_of_lt (chain.isLt.trans_le (by decide))
-        (chain'.isLt.trans_le (by decide)) hchain
+    have hc := chain.isLt
+    have hc' := chain'.isLt
+    simp only [numChains] at hc hc'
+    have hnat := ofNat_inj_of_lt (w := 24) (a := chain.val / 2) (b := chain'.val / 2)
+      (by omega) (by omega) hchain
     have he : leaf = leaf' := by
       apply Fin.ext
       exact ofNat_inj_of_lt (leaf.isLt.trans_le (by decide))
         (leaf'.isLt.trans_le (by decide)) hleaf
-    cases hl; cases ht; cases he; cases hc; rfl
+    cases hl; cases ht; cases he
+    simp only [pairDomain, hnat]
   · rename_i index tree leaf index' tree' leaf'
     obtain ⟨_, _, hpacked, hindex⟩ := h
     have hi : index = index' := by
@@ -54,11 +78,12 @@ theorem deriveFields_injective : Function.Injective keygenDomainFields := by
     have hl := leaf.isLt
     have hl' := leaf'.isLt
     simp only [ftsTrees, ftsTreeHeight] at ht ht' hl hl'
-    have hnat := ofNat_inj_of_lt (a := tree.val + 512 * leaf.val) (b := tree'.val + 512 * leaf'.val)
-      (by omega) (by omega) hpacked
+    have hnat := ofNat_inj_of_lt (w := 24) (a := tree.val + 512 * (leaf.val / 2))
+      (b := tree'.val + 512 * (leaf'.val / 2)) (by omega) (by omega) hpacked
     have htree : tree = tree' := Fin.ext (by omega)
-    have hleaf : leaf = leaf' := Fin.ext (by omega)
-    cases hi; cases htree; cases hleaf; rfl
+    have hleaf : leaf.val / 2 = leaf'.val / 2 := by omega
+    cases hi; cases htree
+    simp only [pairDomain, hleaf]
   · rename_i level level'
     obtain ⟨_, _, hlevel, _⟩ := h
     have hl : level = level' := by
@@ -67,13 +92,20 @@ theorem deriveFields_injective : Function.Injective keygenDomainFields := by
         (level'.isLt.trans_le (by decide)) hlevel
     cases hl; rfl
 
-/-- No two seed-derivation queries have the same input unless their full arguments agree. -/
+/-- Two seed-derivation queries have the same input only if their parameters and seeds agree and
+they derive the same value or the two halves of one hash. -/
 theorem keygenInput_injective {parameter parameter' : PublicParameter}
     {domain domain' : KeygenDomain} {seed seed' : MasterSeed}
     (h : keygenHashInput parameter domain seed = keygenHashInput parameter' domain' seed') :
-    parameter = parameter' ∧ domain = domain' ∧ seed = seed' := by
+    parameter = parameter' ∧ pairDomain domain = pairDomain domain' ∧ seed = seed' := by
   obtain ⟨hfields, hp, hs⟩ := fieldInput_injective h
-  exact ⟨hp, deriveFields_injective hfields, bytesLE_injective hs⟩
+  exact ⟨hp, deriveFields_pair hfields, bytesLE_injective hs⟩
+
+/-- The two halves of one hash have the same input. -/
+theorem keygenHashInput_pairDomain (parameter : PublicParameter) (domain : KeygenDomain)
+    (seed : MasterSeed) :
+    keygenHashInput parameter (pairDomain domain) seed = keygenHashInput parameter domain seed := by
+  simp only [keygenHashInput, pairDomain_fields]
 
 /-- Every verification-domain tag is distinct from every seed-derivation tag. -/
 theorem derive_tag_ne_hash_tag (derive : KeygenDomain) (hash : HashDomain) :

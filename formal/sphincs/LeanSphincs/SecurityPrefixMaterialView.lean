@@ -64,7 +64,11 @@ theorem forsNode (index : Index) (tree : FtsTree) (level nodeIdx : Nat) :
       evalWithAnswerFn right (Seeded.ftsNode parameter index tree seed level nodeIdx : OracleComp HashSpec Digest) := by
   induction level generalizing nodeIdx with
   | zero => simp only [Seeded.ftsNode, evalWithAnswerFn_bind, h.fors, ftsLeafHash, h.tweakable]
-  | succ level ih => simp only [Seeded.ftsNode, evalWithAnswerFn_bind, ih, h.tweakable]
+  | succ level ih =>
+      have hleft := ftsNodeValue_succ left parameter index tree seed level nodeIdx
+      have hright := ftsNodeValue_succ right parameter index tree seed level nodeIdx
+      simp only [ftsNodeValue] at hleft hright
+      rw [hleft, hright, ih, ih, h.hash]
 
 theorem forsKey (index : Index) :
     evalWithAnswerFn left (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest) =

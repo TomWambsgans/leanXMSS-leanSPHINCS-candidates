@@ -18,6 +18,85 @@ open OracleComp
 set_option maxRecDepth 100000
 set_option maxHeartbeats 1000000
 
+namespace LeanSphincs
+
+/-! ## Two secrets for one derivation -/
+
+open Seeded in
+theorem evenChain_chainPair {chainIdx : ChainIndex} (h : chainIdx.val % 2 = 0) :
+    evenChain (chainPair chainIdx) = chainIdx :=
+  Fin.ext (by simp only [evenChain, chainPair]; omega)
+
+open Seeded in
+theorem oddChain_chainPair {chainIdx : ChainIndex} (h : chainIdx.val % 2 = 1) :
+    oddChain (chainPair chainIdx) = chainIdx :=
+  Fin.ext (by simp only [oddChain, chainPair]; omega)
+
+/-- The first and the second secret of a hash are its two halves. -/
+theorem secretHalf_of_not_second {domain : KeygenDomain} (h : domain.second = false)
+    (output : HashOutput) : secretHalf domain output = truncateHash output := by
+  simp [secretHalf, h]
+
+theorem secretHalf_of_second {domain : KeygenDomain} (h : domain.second = true)
+    (output : HashOutput) : secretHalf domain output = truncateHashHigh output := by
+  simp [secretHalf, h]
+
+@[simp] theorem secretHalf_parameter (output : HashOutput) :
+    secretHalf .parameter output = truncateHash output := rfl
+
+@[simp] theorem secretHalf_surrogate (level : Fin totalHeight) (output : HashOutput) :
+    secretHalf (.surrogate level) output = truncateHash output := rfl
+
+open Seeded in
+@[simp] theorem secretHalf_evenChain (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (pair : Fin (numChains / 2)) (output : HashOutput) :
+    secretHalf (.ots lay tree leaf (evenChain pair)) output = truncateHash output :=
+  secretHalf_of_not_second (by simp [KeygenDomain.second, evenChain]) output
+
+open Seeded in
+@[simp] theorem secretHalf_oddChain (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (pair : Fin (numChains / 2)) (output : HashOutput) :
+    secretHalf (.ots lay tree leaf (oddChain pair)) output = truncateHashHigh output :=
+  secretHalf_of_second (by simp [KeygenDomain.second, oddChain]) output
+
+open Seeded in
+/-- Chains `2 t` and `2 t + 1` are derived by the same hash. -/
+theorem keygenHashInput_oddChain (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (pair : Fin (numChains / 2)) (seed : MasterSeed) :
+    keygenHashInput parameter (.ots lay tree leaf (oddChain pair)) seed =
+      keygenHashInput parameter (.ots lay tree leaf (evenChain pair)) seed := by
+  simp only [keygenHashInput, keygenDomainFields, oddChain, evenChain]
+  rw [show (2 * pair.val + 1) / 2 = 2 * pair.val / 2 by omega]
+
+theorem ftsLeafOfNat_two_mul_val (nodeIdx : Nat) :
+    (Concrete.ftsLeafOfNat (2 * nodeIdx)).val % 2 = 0 := by
+  simp only [Concrete.ftsLeafOfNat, ftsTreeHeight]; omega
+
+theorem ftsLeafOfNat_two_mul_add_one_val (nodeIdx : Nat) :
+    (Concrete.ftsLeafOfNat (2 * nodeIdx + 1)).val % 2 = 1 := by
+  simp only [Concrete.ftsLeafOfNat, ftsTreeHeight]; omega
+
+@[simp] theorem secretHalf_fts_even (index : Index) (tree : FtsTree) (nodeIdx : Nat)
+    (output : HashOutput) :
+    secretHalf (.fts index tree (Concrete.ftsLeafOfNat (2 * nodeIdx))) output = truncateHash output :=
+  secretHalf_of_not_second (by simp [KeygenDomain.second, ftsLeafOfNat_two_mul_val]) output
+
+@[simp] theorem secretHalf_fts_odd (index : Index) (tree : FtsTree) (nodeIdx : Nat)
+    (output : HashOutput) :
+    secretHalf (.fts index tree (Concrete.ftsLeafOfNat (2 * nodeIdx + 1))) output =
+      truncateHashHigh output :=
+  secretHalf_of_second (by simp [KeygenDomain.second, ftsLeafOfNat_two_mul_add_one_val]) output
+
+/-- FORS leaves `2 t` and `2 t + 1` are derived by the same hash. -/
+theorem keygenHashInput_fts_odd (parameter : PublicParameter) (index : Index) (tree : FtsTree)
+    (nodeIdx : Nat) (seed : MasterSeed) :
+    keygenHashInput parameter (.fts index tree (Concrete.ftsLeafOfNat (2 * nodeIdx + 1))) seed =
+      keygenHashInput parameter (.fts index tree (Concrete.ftsLeafOfNat (2 * nodeIdx))) seed := by
+  simp only [keygenHashInput, keygenDomainFields, Concrete.ftsLeafOfNat, ftsTreeHeight]
+  rw [show (2 * nodeIdx + 1) % 2 ^ 10 / 2 = 2 * nodeIdx % 2 ^ 10 / 2 by omega]
+
+end LeanSphincs
+
 namespace LeanSphincs.Completeness
 
 open Concrete Seeded
@@ -43,8 +122,15 @@ variable (f : QueryImpl HashSpec Id)
 @[simp] theorem eval_deriveKey (parameter : PublicParameter) (domain : KeygenDomain)
     (seed : MasterSeed) :
     evalWithAnswerFn f (deriveKey parameter domain seed : OracleComp HashSpec Digest)
-      = truncateHash (f (keygenHashInput parameter domain seed)) := by
+      = secretHalf domain (f (keygenHashInput parameter domain seed)) := by
   simp [deriveKey]
+
+@[simp] theorem eval_derivePair (parameter : PublicParameter) (domain : KeygenDomain)
+    (seed : MasterSeed) :
+    evalWithAnswerFn f (derivePair parameter domain seed : OracleComp HashSpec (Digest × Digest))
+      = (truncateHash (f (keygenHashInput parameter domain seed)),
+          truncateHashHigh (f (keygenHashInput parameter domain seed))) := by
+  simp [derivePair]
 
 @[simp] theorem eval_sequenceFin {α : Type} {n : Nat} (computation : Fin n → OracleComp HashSpec α) :
     evalWithAnswerFn f (sequenceFin computation)
@@ -115,14 +201,34 @@ def otsEndpoint (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (
   walk f parameter lay tree leaf chainIdx 0 (chainLength - 1)
     (otsSecret f parameter lay tree leaf seed chainIdx)
 
+/-- The paired derivation gives every chain the value its own derivation would: chain `i` is walked
+from the half of the hash at address `i / 2` that `deriveKey` selects. -/
+theorem eval_otsValues (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (seed : MasterSeed) (steps : ChainIndex → Nat) :
+    evalWithAnswerFn f (otsValues parameter lay tree leaf seed steps
+        : OracleComp HashSpec (ChainIndex → Digest))
+      = fun chainIdx => evalWithAnswerFn f (chainWalk parameter lay tree leaf chainIdx 0 (steps chainIdx)
+          (otsSecret f parameter lay tree leaf seed chainIdx) : OracleComp HashSpec Digest) := by
+  funext chainIdx
+  simp only [otsValues, otsSecret, evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_sequenceFin,
+    eval_derivePair, eval_deriveKey, unpairChains]
+  rcases Nat.mod_two_eq_zero_or_one chainIdx.val with h | h
+  · rw [if_pos h]
+    have hc := evenChain_chainPair h
+    conv_rhs => rw [← hc]
+    rw [secretHalf_evenChain, hc]
+  · rw [if_neg (by omega)]
+    have hc := oddChain_chainPair h
+    conv_rhs => rw [← hc]
+    rw [secretHalf_oddChain, keygenHashInput_oddChain, hc]
+
 @[simp] theorem eval_oneTimePublicKey (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (seed : MasterSeed) :
     evalWithAnswerFn f (oneTimePublicKey parameter lay tree leaf seed
         : OracleComp HashSpec (ChainIndex → Digest))
       = otsEndpoint f parameter lay tree leaf seed := by
   funext chainIdx
-  simp only [oneTimePublicKey, otsEndpoint, otsSecret, walk, eval_sequenceFin,
-    evalWithAnswerFn_bind]
+  simp only [oneTimePublicKey, otsEndpoint, walk, eval_otsValues]
 
 /-- What a successful counter search produced: the counter encodes the message, and every chain value is the signer's partial walk from the derived secret. -/
 theorem otsSignFrom_spec (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
@@ -145,14 +251,14 @@ theorem otsSignFrom_spec (parameter : PublicParameter) (lay : Layer) (tree : Tre
       | none => rw [hencode] at h; exact ih (start + 1) h
       | some encoding =>
           rw [hencode] at h
-          simp only [eval_sequenceFin, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
+          simp only [evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_otsValues,
             Option.some.injEq, Prod.mk.injEq] at h
           obtain ⟨hcounter, hvalues⟩ := h
           refine ⟨encoding, ?_, ?_⟩
           · rw [← hcounter]; exact hencode
           · intro chainIdx
             rw [← hvalues]
-            simp only [walk, otsSecret]
+            simp only [walk]
 
 /-- The verifier's leaf is the leaf the signer's tree was built from. -/
 theorem eval_otsLeaf_of_otsSign (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
@@ -294,7 +400,14 @@ theorem ftsNodeValue_succ (parameter : PublicParameter) (index : Index) (tree : 
       = truncateHash (f (tweakableHashInput parameter (.ftsNode index tree (level + 1) nodeIdx)
           (nodePayload (ftsNodeValue f parameter index tree seed level (2 * nodeIdx))
             (ftsNodeValue f parameter index tree seed level (2 * nodeIdx + 1))))) := by
-  simp only [ftsNodeValue, Seeded.ftsNode, evalWithAnswerFn_bind, eval_tweakableHash]
+  cases level with
+  | zero =>
+      simp only [ftsNodeValue, Seeded.ftsNode, evalWithAnswerFn_bind, eval_tweakableHash,
+        eval_derivePair]
+      rw [evalWithAnswerFn_bind, evalWithAnswerFn_bind, eval_deriveKey, eval_deriveKey,
+        secretHalf_fts_even, secretHalf_fts_odd, keygenHashInput_fts_odd]
+  | succ level =>
+      simp only [ftsNodeValue, Seeded.ftsNode, evalWithAnswerFn_bind, eval_tweakableHash]
 
 theorem ftsNodeValue_zero (parameter : PublicParameter) (index : Index) (tree : FtsTree)
     (seed : MasterSeed) (leaf : FtsLeaf) :

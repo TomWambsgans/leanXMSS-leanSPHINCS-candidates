@@ -9,7 +9,12 @@ and `Quot.sound`; [Axioms.lean](LeanSphincs/Axioms.lean) pins every public theor
 chains with four positions and sum 120, two message-digest calls, and pruning with surrogate
 siblings. Every hash input is the 16-byte public parameter P, an 8-byte address (4 bytes `lo`,
 3 bytes `hi`, one byte type + 32·step) and the payload; the message digest hashes m ‖ 0^8 ‖ ρ (the
-root is not hashed). [Scheme.lean](LeanSphincs/Scheme.lean) is the functional model; `Seeded.sign`
+root is not hashed). One hash of the seed gives two secrets, the two 16-byte halves of its output:
+the starts of chains 2t and 2t + 1 of the one-time key at leaf e are the halves of
+H(P ‖ A(0, t, e) ‖ seed), and the secrets of leaves 2t and 2t + 1 of tree κ of FORS instance idx are
+the halves of H(P ‖ A(8, κ + 512·t, idx) ‖ seed) (`derivePair`, `otsValues`, `ftsNode`). The public
+parameter, the surrogates and R0 each take one hash and keep its first half.
+[Scheme.lean](LeanSphincs/Scheme.lean) is the functional model; `Seeded.sign`
 derives one base randomizer R0 = Th(P, A(7, 0, 0), seed ‖ m) per message and tries R0, R0 + 1, …
 (128-bit little-endian addition) until the digest index lands in the kept subtree, as the Rust
 signer does, so a repeated request returns the same signature. The SUF-CMA game is [StatementDet.lean](LeanSphincs/StatementDet.lean): every
@@ -52,6 +57,8 @@ far too rare to change the lifetimes above.
 | **127-bit SUF-CMA security at the limits above** | `Lifetimes.requestedSecurity`, [Lifetimes](LeanSphincs/Lifetimes.lean) |
 | The bound follows from rational checks on two budget routes | `ForsPotential.det_bits`, [BridgeDetClose](LeanSphincs/BridgeDetClose.lean); certificates in [LifetimeCertificates](LeanSphincs/LifetimeCertificates.lean) |
 | The deterministic signer reduces to a seed-free game of an adversary that never repeats a message | `Det.forgeAdvantageDet_le_seedFree`, [BridgeDet](LeanSphincs/BridgeDet.lean) |
+| The secrets are independent uniform values hidden behind the seed: the hash answers the proof programs, two secrets each, are independent uniform outputs | `SeedCoupling.evalDist_hashAnswers`, `SeedCoupling.evalDist_prepared_continuation`, [SecuritySeedCoupling](LeanSphincs/SecuritySeedCoupling.lean) |
+| Key generation makes exactly 226·2^b + 2(26 − b) hash calls (per leaf: 32 hashes of the seed, 192 chain steps, the leaf hash) | `Prefix.hashCalls_keygenFromSeed`, [SecurityPrefixErasedKeygen](LeanSphincs/SecurityPrefixErasedKeygen.lean) |
 | The signer that walks R0, R0 + 1, … selects a cached digest with exactly the walk probability | `GraphView.loop_bound`, [BridgeSignerFors](LeanSphincs/BridgeSignerFors.lean) |
 | One digest query adds at most (2 − 2^-(26−b)) / 2^128 selection mass to a message | `Walk.grp_step`, [BridgeGroup](LeanSphincs/BridgeGroup.lean) |
 | A successful seeded signature verifies | `Completeness.correct`, [Correctness](LeanSphincs/Correctness.lean) |

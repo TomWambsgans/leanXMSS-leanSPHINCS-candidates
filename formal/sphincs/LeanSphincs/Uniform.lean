@@ -41,6 +41,21 @@ noncomputable def splitHashOutputEquiv (width : Nat) (hwidth : width ≤ hashOut
     HashOutput ≃ BitVec width × BitVec (hashOutputBits - width) :=
   Equiv.ofBijective (splitHashOutput width) (splitHashOutput_bijective hwidth)
 
+/-- The 32-byte output whose first half is `low` and whose second half is `high`. -/
+noncomputable def joinHalves (low high : Digest) : HashOutput :=
+  (splitHashOutputEquiv digestBits (by decide)).symm (low, high)
+
+theorem truncateHash_joinHalves (low high : Digest) : truncateHash (joinHalves low high) = low :=
+  congrArg Prod.fst ((splitHashOutputEquiv digestBits (by decide)).apply_symm_apply (low, high))
+
+theorem truncateHashHigh_joinHalves (low high : Digest) :
+    truncateHashHigh (joinHalves low high) = high :=
+  congrArg Prod.snd ((splitHashOutputEquiv digestBits (by decide)).apply_symm_apply (low, high))
+
+theorem joinHalves_halves (output : HashOutput) :
+    joinHalves (truncateHash output) (truncateHashHigh output) = output :=
+  (splitHashOutputEquiv digestBits (by decide)).symm_apply_apply output
+
 theorem evalDist_hashOutput_extract_uniform {width : Nat} (hwidth : width ≤ hashOutputBits) :
     𝒟[(fun output : HashOutput => output.extractLsb' 0 width) <$>
         ($ᵗ HashOutput : ProbComp HashOutput)] =

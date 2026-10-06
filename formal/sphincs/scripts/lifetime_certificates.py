@@ -16,7 +16,9 @@ parameters. Pure Python 3, no dependencies.
 from fractions import Fraction as Fr
 import math
 
-def kcredit(b): return 258 * 2 ** b + 2 * (26 - b)
+# Key generation makes exactly 226 * 2^b + 2 (26 - b) hash calls (kCreditS, BridgeDetW.lean): per leaf 32
+# hashes of the seed (two chain starts each), 192 chain steps and the leaf hash.
+def kcredit(b): return 226 * 2 ** b + 2 * (26 - b)
 
 def floordiv_fr(x, P):
     return (x.numerator * 2 ** P) // x.denominator
@@ -413,9 +415,9 @@ budgets `q' ≥ 2^(128 %s)`. -/
 theorem h0_bound_b%d [Params] (hb : subtreeHeight = %d) (hN : signatureLimit = %d) (q' : ℕ)
     (hq0 : %d ≤ q') (hq : 2 * q' ≤ 2 ^ 128) :
     (1 - HiddenDebt.budget 0 q') + (q' : ℝ≥0∞) * hOfOW q' +
-        ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
+      ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
   h0SW_bound_of_cover %d %d %d %s %s_ok hb hN q' hq0 hq""" % (name, b, N, qh, name, b, N, '%+g' % lx, b, b, N, qh,
                                                               b, N, qh, name, name))
     c1, th, s, cthr, eC, Eh, Ee, B = [o.c1, o.th, o.s, o.cthr, o.eC, o.Eh, o.Ee, o.B]

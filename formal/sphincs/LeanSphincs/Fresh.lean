@@ -58,6 +58,11 @@ theorem deriveKey (target : HashInput) (parameter : PublicParameter) (domain : K
     PreservesFresh target (LeanSphincs.deriveKey parameter domain seed) :=
   bind (query hne) (fun _ => pure' _ _)
 
+theorem derivePair (target : HashInput) (parameter : PublicParameter) (domain : KeygenDomain)
+    (seed : MasterSeed) (hne : keygenHashInput parameter domain seed ≠ target) :
+    PreservesFresh target (LeanSphincs.derivePair parameter domain seed) :=
+  bind (query hne) (fun _ => pure' _ _)
+
 theorem sequenceFin {α : Type} {n : Nat} (target : HashInput)
     (computation : Fin n → OracleComp HashSpec α)
     (h : ∀ i, PreservesFresh target (computation i)) :
@@ -169,13 +174,19 @@ theorem chainWalk (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
       · exact tweakableHash _ _ _ _ (hs.chain _ _ _ _ _ _ _)
       · exact pure' _ _
 
+theorem otsValues (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (seed : MasterSeed) (steps : ChainIndex → Nat) :
+    PreservesFresh target (Seeded.otsValues parameter lay tree leaf seed steps) := by
+  rw [Seeded.otsValues]
+  refine bind (sequenceFin _ _ fun pair => ?_) (fun _ => pure' _ _)
+  exact bind (derivePair _ _ _ _ (hs.derive _ _ _)) (fun _ =>
+    bind (chainWalk hs _ _ _ _ _ _ _ _) (fun _ =>
+      bind (chainWalk hs _ _ _ _ _ _ _ _) (fun _ => pure' _ _)))
+
 theorem oneTimePublicKey (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (seed : MasterSeed) :
-    PreservesFresh target (Seeded.oneTimePublicKey parameter lay tree leaf seed) := by
-  rw [Seeded.oneTimePublicKey]
-  apply sequenceFin
-  intro chain
-  exact bind (deriveKey _ _ _ _ (hs.derive _ _ _)) (fun _ => chainWalk hs _ _ _ _ _ _ _ _)
+    PreservesFresh target (Seeded.oneTimePublicKey parameter lay tree leaf seed) :=
+  otsValues hs _ _ _ _ _ _
 
 theorem treeNode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (seed : MasterSeed) (level index : Nat) :
@@ -224,8 +235,16 @@ theorem ftsNode (parameter : PublicParameter) (index : Index) (tree : FtsTree)
       exact bind (deriveKey _ _ _ _ (hs.derive _ _ _))
         (fun _ => tweakableHash _ _ _ _ (hs.ftsLeaf _ _ _ _ _))
   | succ level ih =>
-      rw [Seeded.ftsNode]
-      exact bind (ih _) (fun _ => bind (ih _) (fun _ => tweakableHash _ _ _ _ (hs.ftsNode _ _ _ _ _ _)))
+      cases level with
+      | zero =>
+          rw [Seeded.ftsNode]
+          exact bind (derivePair _ _ _ _ (hs.derive _ _ _)) (fun _ =>
+            bind (tweakableHash _ _ _ _ (hs.ftsLeaf _ _ _ _ _)) (fun _ =>
+              bind (tweakableHash _ _ _ _ (hs.ftsLeaf _ _ _ _ _)) (fun _ =>
+                tweakableHash _ _ _ _ (hs.ftsNode _ _ _ _ _ _))))
+      | succ level =>
+          rw [Seeded.ftsNode]
+          exact bind (ih _) (fun _ => bind (ih _) (fun _ => tweakableHash _ _ _ _ (hs.ftsNode _ _ _ _ _ _)))
 
 omit [Params] in
 theorem ftsKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) :

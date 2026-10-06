@@ -17,7 +17,7 @@ attribute [local irreducible] firstEncoding ReferenceChoice.search encodingAttem
 
 theorem hashCalls_forsKey_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (seed : MasterSeed) :
-    hashCalls f (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest) = 73705 := by
+    hashCalls f (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest) = 61417 := by
   simp only [Seeded.ftsKey, hashCalls_bind, hashCalls_sequenceFin, hashCalls_ftsNode,
     hashCalls_tweakableHash, Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
   rfl
@@ -25,26 +25,20 @@ theorem hashCalls_forsKey_exact (f : QueryImpl HashSpec Id) (parameter : PublicP
 theorem hashCalls_forsOpen_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (leaves : IndexGroup → FtsLeaf) (seed : MasterSeed) :
     hashCalls f (Seeded.ftsOpen parameter index leaves seed :
-      OracleComp HashSpec (FtsTree → Fin ftsTreeHeight → Digest)) = 73416 := by
+      OracleComp HashSpec (FtsTree → Fin ftsTreeHeight → Digest)) = 61152 := by
   simp only [Seeded.ftsOpen, hashCalls_sequenceFin, hashCalls_ftsNode]
-  change (∑ _ : Fin 24, ∑ level : Fin 10, (3 * 2 ^ level.val - 1)) = 73416
+  change (∑ _ : Fin 24, ∑ level : Fin 10, ftsNodeCost level.val) = 61152
   decide
 
+/-- The opened chain values take 32 hashes of the seed and the 120 chain steps of a valid word. -/
 theorem hashCalls_published_values (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (seed : MasterSeed) (word : Encoding)
     (hword : TargetSum.Valid word) :
-    hashCalls f (sequenceFin fun chain => do
-      let secret ← (deriveKey parameter (.ots lay tree leaf chain) seed : OracleComp HashSpec Digest)
-      chainWalk parameter lay tree leaf chain 0 (word chain).val secret) = 184 := by
-  simp only [hashCalls_sequenceFin, hashCalls_bind, hashCalls_deriveKey]
-  have hwalk (chain : ChainIndex) (value : Digest) :
-      hashCalls f (chainWalk parameter lay tree leaf chain 0 (word chain).val value :
-        OracleComp HashSpec Digest) = (word chain).val :=
-    hashCalls_chainWalk f parameter lay tree leaf chain 0 (word chain).val value
-      (by have := (word chain).isLt; omega)
-  simp only [hwalk, Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ,
-    Fintype.card_fin, nsmul_eq_mul, mul_one]
-  change numChains + TargetSum.sum word = 184
+    hashCalls f (Seeded.otsValues parameter lay tree leaf seed fun chain => (word chain).val :
+      OracleComp HashSpec (ChainIndex → Digest)) = 152 := by
+  rw [hashCalls_otsValues f parameter lay tree leaf seed _ (fun chain => by
+    have := (word chain).isLt; omega)]
+  change numChains / 2 + TargetSum.sum word = 152
   rw [show TargetSum.sum word = targetSum from hword]
   rfl
 
@@ -54,7 +48,7 @@ theorem hashCalls_otsSignFrom_search (f : QueryImpl HashSpec Id) (parameter : Pu
     hashCalls f (Seeded.otsSignFrom parameter lay tree leaf seed message attempts start :
       OracleComp HashSpec (Option (Counter × (ChainIndex → Digest)))) =
       hashCalls f (ReferenceChoice.search parameter lay tree leaf message attempts start) +
-        if (firstEncoding f parameter lay tree leaf message attempts start).isSome then 184 else 0 := by
+        if (firstEncoding f parameter lay tree leaf message attempts start).isSome then 152 else 0 := by
   induction attempts generalizing start with
   | zero => simp only [Seeded.otsSignFrom, ReferenceChoice.search, firstEncoding, hashCalls_pure,
       Option.isSome_none, Bool.false_eq_true, ↓reduceIte, Nat.add_zero]
@@ -76,7 +70,7 @@ theorem hashCalls_otsSignFrom_search (f : QueryImpl HashSpec Id) (parameter : Pu
 variable [Params]
 
 def treePathCost : Nat :=
-  ∑ level : Fin totalHeight, if level.val < subtreeHeight then 258 * 2 ^ level.val - 1 else 1
+  ∑ level : Fin totalHeight, if level.val < subtreeHeight then 226 * 2 ^ level.val - 1 else 1
 
 theorem hashCalls_treePath_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (seed : MasterSeed) :
@@ -93,12 +87,12 @@ theorem hashCalls_treePath_exact (f : QueryImpl HashSpec Id) (parameter : Public
 theorem hashCalls_signLayer_exact (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey)
     (index : Index) (lay : Layer) :
     hashCalls f (Seeded.signLayer sk index lay : OracleComp HashSpec (Option (LayerSignature lay))) =
-      73705 + hashCalls f (ReferenceChoice.search sk.parameter lay rootTree index
+      61417 + hashCalls f (ReferenceChoice.search sk.parameter lay rootTree index
         (evalWithAnswerFn f (Seeded.ftsKey sk.parameter index sk.seed : OracleComp HashSpec Digest))
         encodingAttemptLimit 0) +
       if (firstEncoding f sk.parameter lay rootTree index
         (evalWithAnswerFn f (Seeded.ftsKey sk.parameter index sk.seed : OracleComp HashSpec Digest))
-        encodingAttemptLimit 0).isSome then 184 + treePathCost else 0 := by
+        encodingAttemptLimit 0).isSome then 152 + treePathCost else 0 := by
   simp only [Seeded.signLayer, Seeded.layerMessage, hashCalls_bind, hashCalls_forsKey_exact,
     treeIndexAt_eq, leafIndexAt_eq, Seeded.otsSign, hashCalls_otsSignFrom_search,
     otsSignFrom_eq_firstEncoding]
@@ -114,13 +108,14 @@ noncomputable def finishHashCost (f : QueryImpl HashSpec Id) (parameter : Public
     (data : PublicData) (message : Message) (randomness : Randomness) : Nat :=
   let index := digestIndex (evalWithAnswerFn f
     (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest))
-  147147 + hashCalls f (ReferenceChoice.search parameter topLayer rootTree index
+  122595 + hashCalls f (ReferenceChoice.search parameter topLayer rootTree index
     (data.forsKey index) encodingAttemptLimit 0) +
     if (firstEncoding f parameter topLayer rootTree index (data.forsKey index)
-      encodingAttemptLimit 0).isSome then 184 + treePathCost else 0
+      encodingAttemptLimit 0).isSome then 152 + treePathCost else 0
 
-/-- The 147147 calls include both digest blocks, the 24 secret derivations, all FORS
-authentication nodes, and the canonical FORS-key computation, even when WOTS fails. -/
+/-- The 122595 calls include both digest blocks, the 24 hashes of the seed for the revealed
+secrets, all FORS authentication nodes (61152), and the canonical FORS-key computation (61417),
+even when WOTS fails. In a FORS subtree two sibling leaves share one hash of the seed. -/
 theorem hashCalls_finishSign_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (data : PublicData) (hdata : DataCorrect f parameter seed data)
     (message : Message) (randomness : Randomness) :

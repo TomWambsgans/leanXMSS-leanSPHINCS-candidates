@@ -76,6 +76,12 @@ theorem Only.deriveKey (parameter : PublicParameter) (domain : KeygenDomain) (se
   refine Only.bind (Only.query ?_) (fun _ => Only.pure' _)
   simp [IsShort, bound, keygenHashInput_length]
 
+theorem Only.derivePair (parameter : PublicParameter) (domain : KeygenDomain) (seed : MasterSeed) :
+    Only (LeanSphincs.derivePair parameter domain seed : OracleComp HashSpec (Digest × Digest)) := by
+  unfold LeanSphincs.derivePair
+  refine Only.bind (Only.query ?_) (fun _ => Only.pure' _)
+  simp [IsShort, bound, keygenHashInput_length]
+
 theorem Only.sequenceFin {α : Type} {n : Nat} (computation : Fin n → OracleComp HashSpec α)
     (h : ∀ i, Only (computation i)) : Only (Concrete.sequenceFin computation) := by
   induction n with
@@ -226,12 +232,22 @@ theorem Only.verify (publicKey : PublicKey) (message : Message) (signature : Sig
 namespace Seeded
 open LeanSphincs.Seeded
 
+theorem Only.otsValues (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (seed : MasterSeed) (steps : ChainIndex → Nat) :
+    Only (otsValues parameter lay tree leaf seed steps :
+      OracleComp HashSpec (ChainIndex → Digest)) := by
+  unfold LeanSphincs.Seeded.otsValues
+  exact Short.Only.bind (Short.Only.sequenceFin _ fun _ =>
+    Short.Only.bind (Short.Only.derivePair _ _ _) (fun _ =>
+      Short.Only.bind (Short.Only.chainWalk _ _ _ _ _ _ _ _) (fun _ =>
+        Short.Only.bind (Short.Only.chainWalk _ _ _ _ _ _ _ _) (fun _ => Short.Only.pure' _))))
+    (fun _ => Short.Only.pure' _)
+
 theorem Only.oneTimePublicKey (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (seed : MasterSeed) :
     Only (oneTimePublicKey parameter lay tree leaf seed :
       OracleComp HashSpec (ChainIndex → Digest)) :=
-  Short.Only.sequenceFin _ fun _ =>
-    Short.Only.bind (Short.Only.deriveKey _ _ _) (fun _ => Short.Only.chainWalk _ _ _ _ _ _ _ _)
+  Only.otsValues _ _ _ _ _ _
 
 theorem Only.otsSignFrom (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (seed : MasterSeed) (message : Digest) :
@@ -245,9 +261,7 @@ theorem Only.otsSignFrom (parameter : PublicParameter) (lay : Layer) (tree : Tre
       cases encoding with
       | none => exact Only.otsSignFrom parameter lay tree leaf seed message attempts (counter + 1)
       | some encoding =>
-          exact Short.Only.bind (Short.Only.sequenceFin _ fun _ =>
-            Short.Only.bind (Short.Only.deriveKey _ _ _) (fun _ => Short.Only.chainWalk _ _ _ _ _ _ _ _))
-            (fun _ => Short.Only.pure' _)
+          exact Short.Only.bind (Only.otsValues _ _ _ _ _ _) (fun _ => Short.Only.pure' _)
 
 theorem Only.treeNode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (seed : MasterSeed) : ∀ level nodeIdx, Short.Only (treeNode parameter lay tree seed level nodeIdx :
@@ -268,10 +282,16 @@ theorem Only.ftsNode (parameter : PublicParameter) (index : Index) (tree : FtsTr
       rw [LeanSphincs.Seeded.ftsNode]
       exact Short.Only.bind (Short.Only.deriveKey _ _ _)
         (fun _ => Short.Only.tweakableHash _ _ _ (by rw [bytes16_length]; omega))
-  | level + 1, nodeIdx => by
+  | 1, nodeIdx => by
       rw [LeanSphincs.Seeded.ftsNode]
-      exact Short.Only.bind (Only.ftsNode parameter index tree seed level _) (fun _ =>
-        Short.Only.bind (Only.ftsNode parameter index tree seed level _) (fun _ =>
+      exact Short.Only.bind (Short.Only.derivePair _ _ _) (fun _ =>
+        Short.Only.bind (Short.Only.tweakableHash _ _ _ (by rw [bytes16_length]; omega)) (fun _ =>
+          Short.Only.bind (Short.Only.tweakableHash _ _ _ (by rw [bytes16_length]; omega)) (fun _ =>
+            Short.Only.tweakableHash _ _ _ (by rw [nodePayload_length]; omega))))
+  | level + 2, nodeIdx => by
+      rw [LeanSphincs.Seeded.ftsNode]
+      exact Short.Only.bind (Only.ftsNode parameter index tree seed (level + 1) _) (fun _ =>
+        Short.Only.bind (Only.ftsNode parameter index tree seed (level + 1) _) (fun _ =>
           Short.Only.tweakableHash _ _ _ (by rw [nodePayload_length]; omega)))
 
 theorem Only.ftsKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) :
