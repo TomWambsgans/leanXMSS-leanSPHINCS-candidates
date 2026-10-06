@@ -43,7 +43,8 @@ theorem otsSignFrom_eq_firstEncoding (f : QueryImpl HashSpec Id) (parameter : Pu
           exact ih (start + 1)
       | some word =>
           simp only [Seeded.otsSignFrom, evalWithAnswerFn_bind, firstEncoding, hencode,
-            Completeness.eval_sequenceFin, evalWithAnswerFn_pure, Option.map_some, derivedSecrets]
+            Completeness.eval_sequenceFin, Completeness.eval_otsSecrets, Completeness.otsSecret,
+            evalWithAnswerFn_pure, Option.map_some, derivedSecrets]
 
 noncomputable def publicValues (segment : Segment) (outside : QueryImpl HashSpec Id)
     (secrets : Secrets) (frontier : Digest) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)

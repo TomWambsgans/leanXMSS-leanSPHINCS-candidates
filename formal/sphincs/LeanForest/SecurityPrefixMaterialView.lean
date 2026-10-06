@@ -19,8 +19,8 @@ structure PublicAgreement (parameter : PublicParameter) (seed : MasterSeed)
   hash : ∀ domain payload, left (tweakableHashInput parameter domain payload) =
     right (tweakableHashInput parameter domain payload)
   fors : ∀ index c s j a i,
-    evalWithAnswerFn left (deriveKey parameter (.forest index c s j a i) seed : OracleComp HashSpec Digest) =
-    evalWithAnswerFn right (deriveKey parameter (.forest index c s j a i) seed : OracleComp HashSpec Digest)
+    evalWithAnswerFn left (Seeded.forestStart parameter index c s j a i seed : OracleComp HashSpec Digest) =
+    evalWithAnswerFn right (Seeded.forestStart parameter index c s j a i seed : OracleComp HashSpec Digest)
 
 namespace PublicAgreement
 
@@ -76,13 +76,18 @@ theorem chainValue (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : 
       evalWithAnswerFn right (Seeded.chainValue parameter index c s j a i seed pos : OracleComp HashSpec Digest) := by
   simp only [Seeded.chainValue, evalWithAnswerFn_bind, h.fors, h.forestChain]
 
+theorem forestSecrets (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) :
+    evalWithAnswerFn left (Seeded.forestSecrets parameter index c s j a seed : OracleComp HashSpec (FChain → Digest)) =
+      evalWithAnswerFn right (Seeded.forestSecrets parameter index c s j a seed : OracleComp HashSpec (FChain → Digest)) := by
+  simp only [eval_forestSecrets, forestSecret, h.fors]
+
 theorem subNode (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (level node : Nat) :
     evalWithAnswerFn left (Seeded.subNode parameter index c s j seed level node : OracleComp HashSpec Digest) =
       evalWithAnswerFn right (Seeded.subNode parameter index c s j seed level node : OracleComp HashSpec Digest) := by
   induction level generalizing node with
   | zero =>
-      simp only [Seeded.subNode, Seeded.childLeaf, evalWithAnswerFn_bind, eval_sequenceFin, h.chainValue,
-        childLeafHash, h.tweakable]
+      simp only [Seeded.subNode, Seeded.childLeaf, evalWithAnswerFn_bind, eval_sequenceFin, h.forestSecrets,
+        h.forestChain, childLeafHash, h.tweakable]
   | succ level ih =>
       simp only [Seeded.subNode, evalWithAnswerFn_bind, ih]
       split
@@ -113,7 +118,7 @@ theorem forsOpen (index : Index) (marks : Coord → CoordMark) :
     evalWithAnswerFn right (Seeded.forestOpen parameter index marks seed :
       OracleComp HashSpec (Coord → CoordOpening)) := by
   simp only [Seeded.forestOpen, Seeded.coordOpen, eval_sequenceFin, evalWithAnswerFn_bind,
-    evalWithAnswerFn_pure, h.chainValue, h.subNode, h.topNode]
+    evalWithAnswerFn_pure, h.forestSecrets, h.forestChain, h.subNode, h.topNode]
 
 theorem digestCall (root : Digest) (message : Message) (randomness : Randomness) :
     evalWithAnswerFn left (messageDigestCall parameter root message randomness : OracleComp HashSpec HashOutput) =

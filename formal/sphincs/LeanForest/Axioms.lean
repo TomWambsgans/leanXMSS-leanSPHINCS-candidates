@@ -378,6 +378,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Assembly.fixedHashWorld_countHashQueries
 
+/-- info: 'LeanForest.Security.Assembly.preparedCache_derivation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Assembly.preparedCache_derivation
+
 /-- info: 'LeanForest.Security.Assembly.preparedCache_label' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Assembly.preparedCache_label
@@ -389,10 +393,6 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.Assembly.preparedCache_parameter' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Assembly.preparedCache_parameter
-
-/-- info: 'LeanForest.Security.Assembly.preparedCache_secret' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.Assembly.preparedCache_secret
 
 /-- info: 'LeanForest.Security.Assembly.sample_agreement' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -5710,6 +5710,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Short.Only.deriveKey
 
+/-- info: 'LeanForest.Security.Short.Only.deriveOutput' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Short.Only.deriveOutput
+
 /-- info: 'LeanForest.Security.Short.Only.encode' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Short.Only.encode
@@ -5794,6 +5798,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Short.Seeded.Only.forestOpen
 
+/-- info: 'LeanForest.Security.Short.Seeded.Only.forestSecrets' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Short.Seeded.Only.forestSecrets
+
 /-- info: 'LeanForest.Security.Short.Seeded.Only.keygenFromSeed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Short.Seeded.Only.keygenFromSeed
@@ -5801,6 +5809,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.Short.Seeded.Only.oneTimePublicKey' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Short.Seeded.Only.oneTimePublicKey
+
+/-- info: 'LeanForest.Security.Short.Seeded.Only.otsSecrets' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Short.Seeded.Only.otsSecrets
 
 /-- info: 'LeanForest.Security.Short.Seeded.Only.otsSignFrom' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -6726,6 +6738,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.PreservesFresh.deriveKey
 
+/-- info: 'LeanForest.Completeness.PreservesFresh.deriveOutput' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Completeness.PreservesFresh.deriveOutput
+
 /-- info: 'LeanForest.Completeness.PreservesFresh.forestKey' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.PreservesFresh.forestKey
@@ -6733,6 +6749,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Completeness.PreservesFresh.forestOpen' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.PreservesFresh.forestOpen
+
+/-- info: 'LeanForest.Completeness.PreservesFresh.forestSecrets' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Completeness.PreservesFresh.forestSecrets
 
 /-- info: 'LeanForest.Completeness.PreservesFresh.forestWalk' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -6749,6 +6769,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Completeness.PreservesFresh.oneTimePublicKey' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.PreservesFresh.oneTimePublicKey
+
+/-- info: 'LeanForest.Completeness.PreservesFresh.otsSecrets' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Completeness.PreservesFresh.otsSecrets
 
 /-- info: 'LeanForest.Completeness.PreservesFresh.pure'' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8734,6 +8758,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.eval_deriveKey
 
+/-- info: 'LeanForest.Completeness.eval_deriveOutput' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Completeness.eval_deriveOutput
+
 /-- info: 'LeanForest.Completeness.eval_forestRecover' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.eval_forestRecover
@@ -8741,6 +8769,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Completeness.eval_forestRecoverChain' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.eval_forestRecoverChain
+
+/-- info: 'LeanForest.Completeness.eval_forestSecrets' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Completeness.eval_forestSecrets
 
 /-- info: 'LeanForest.Completeness.eval_oneTimePublicKey' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8753,6 +8785,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Completeness.eval_otsLeaf_of_otsSign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.eval_otsLeaf_of_otsSign
+
+/-- info: 'LeanForest.Completeness.eval_otsSecrets' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Completeness.eval_otsSecrets
 
 /-- info: 'LeanForest.Completeness.eval_recoverChain_walk' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8778,6 +8814,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.eval_tweakableHash
 
+/-- info: 'LeanForest.Completeness.forestSecret_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Completeness.forestSecret_eq
+
 /-- info: 'LeanForest.Completeness.forestWalk_add' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.forestWalk_add
@@ -8801,6 +8841,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Completeness.node_zero' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.node_zero
+
+/-- info: 'LeanForest.Completeness.otsSecret_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Completeness.otsSecret_eq
 
 /-- info: 'LeanForest.Completeness.otsSignFrom_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -9230,6 +9274,14 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.keygenInput_ne_hashInput
 
+/-- info: 'LeanForest.Security.pairSlot_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.pairSlot_injective
+
+/-- info: 'LeanForest.Security.pairSlot_lt' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.pairSlot_lt
+
 /-- info: 'LeanForest.Security.subSlot_inj' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.subSlot_inj
@@ -9534,15 +9586,15 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.GraphCorrectness.leaf_value
 
-/-- info: 'LeanForest.Security.GraphCorrectness.materialFts_eq' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'LeanForest.Security.GraphCorrectness.materialFts_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.GraphCorrectness.materialFts_eq
 
-/-- info: 'LeanForest.Security.GraphCorrectness.materialOts_eq' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'LeanForest.Security.GraphCorrectness.materialOts_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.GraphCorrectness.materialOts_eq
 
-/-- info: 'LeanForest.Security.GraphCorrectness.materialSurrogates_eq' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'LeanForest.Security.GraphCorrectness.materialSurrogates_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.GraphCorrectness.materialSurrogates_eq
 
@@ -10346,6 +10398,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Prefix.hashCalls_deriveKey
 
+/-- info: 'LeanForest.Security.Prefix.hashCalls_deriveOutput' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Prefix.hashCalls_deriveOutput
+
 /-- info: 'LeanForest.Security.Prefix.hashCalls_encode' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Prefix.hashCalls_encode
@@ -10353,6 +10409,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.Prefix.hashCalls_forestKey' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Prefix.hashCalls_forestKey
+
+/-- info: 'LeanForest.Security.Prefix.hashCalls_forestSecrets' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Prefix.hashCalls_forestSecrets
 
 /-- info: 'LeanForest.Security.Prefix.hashCalls_forestWalk' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -10373,6 +10433,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.Prefix.hashCalls_oracleHash' does not depend on any axioms -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Prefix.hashCalls_oracleHash
+
+/-- info: 'LeanForest.Security.Prefix.hashCalls_otsSecrets' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Prefix.hashCalls_otsSecrets
 
 /-- info: 'LeanForest.Security.Prefix.hashCalls_pure' does not depend on any axioms -/
 #guard_msgs (whitespace := lax) in
@@ -10490,6 +10554,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Prefix.PublicAgreement.forestChain
 
+/-- info: 'LeanForest.Security.Prefix.PublicAgreement.forestSecrets' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Prefix.PublicAgreement.forestSecrets
+
 /-- info: 'LeanForest.Security.Prefix.PublicAgreement.fors' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Prefix.PublicAgreement.fors
@@ -10590,6 +10658,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.PreparedScheme.compile_chainWalk
 
+/-- info: 'LeanForest.Security.PreparedScheme.compile_derivation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.PreparedScheme.compile_derivation
+
 /-- info: 'LeanForest.Security.PreparedScheme.compile_encode' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.PreparedScheme.compile_encode
@@ -10625,10 +10697,6 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.PreparedScheme.compile_parameter' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.PreparedScheme.compile_parameter
-
-/-- info: 'LeanForest.Security.PreparedScheme.compile_secret' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.PreparedScheme.compile_secret
 
 /-- info: 'LeanForest.Security.PreparedScheme.compile_sign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -10670,6 +10738,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.PreparedScheme.compiled_forestOpen_eq
 
+/-- info: 'LeanForest.Security.PreparedScheme.compiled_forestSecrets_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.PreparedScheme.compiled_forestSecrets_eq
+
 /-- info: 'LeanForest.Security.PreparedScheme.compiled_keygen_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.PreparedScheme.compiled_keygen_eq
@@ -10677,6 +10749,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.PreparedScheme.compiled_oneTimePublicKey_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.PreparedScheme.compiled_oneTimePublicKey_eq
+
+/-- info: 'LeanForest.Security.PreparedScheme.compiled_otsSecrets_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.PreparedScheme.compiled_otsSecrets_eq
 
 /-- info: 'LeanForest.Security.PreparedScheme.compiled_otsSignFrom_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -10870,6 +10946,18 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.SeedCoupling.cacheTable_eq_programCache
 
+/-- info: 'LeanForest.Security.SeedCoupling.card_compatible' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedCoupling.card_compatible
+
+/-- info: 'LeanForest.Security.SeedCoupling.card_fiber_derivedOutput' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedCoupling.card_fiber_derivedOutput
+
+/-- info: 'LeanForest.Security.SeedCoupling.card_filter_truncateHash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedCoupling.card_filter_truncateHash
+
 /-- info: 'LeanForest.Security.SeedCoupling.countHashQueries_lift_prob' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.SeedCoupling.countHashQueries_lift_prob
@@ -10882,13 +10970,29 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.SeedCoupling.countHashQueries_sampling_bind
 
+/-- info: 'LeanForest.Security.SeedCoupling.derivationInputs_injective' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedCoupling.derivationInputs_injective
+
+/-- info: 'LeanForest.Security.SeedCoupling.derivationInputs_ne_parameter' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedCoupling.derivationInputs_ne_parameter
+
+/-- info: 'LeanForest.Security.SeedCoupling.evalDist_derivedOutput_uniform' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedCoupling.evalDist_derivedOutput_uniform
+
 /-- info: 'LeanForest.Security.SeedCoupling.evalDist_independent_uniform_pair' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.SeedCoupling.evalDist_independent_uniform_pair
 
-/-- info: 'LeanForest.Security.SeedCoupling.evalDist_prepareMaterial' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.SeedCoupling.evalDist_map_uniform_of_fiber' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.SeedCoupling.evalDist_prepareMaterial
+#print axioms LeanForest.Security.SeedCoupling.evalDist_map_uniform_of_fiber
+
+/-- info: 'LeanForest.Security.SeedCoupling.evalDist_prepareTable' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedCoupling.evalDist_prepareTable
 
 /-- info: 'LeanForest.Security.SeedCoupling.evalDist_prepared_continuation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -10930,14 +11034,6 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.SeedCoupling.run_sequenceFin_fresh
 
-/-- info: 'LeanForest.Security.SeedCoupling.secretInputs_injective' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.SeedCoupling.secretInputs_injective
-
-/-- info: 'LeanForest.Security.SeedCoupling.secretInputs_ne_parameter' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.SeedCoupling.secretInputs_ne_parameter
-
 /-- info: 'LeanForest.Security.SeedCoupling.simulateQ_countHashQueries' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.SeedCoupling.simulateQ_countHashQueries
@@ -10974,13 +11070,89 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.SeedGuess.seedHit_unique
 
-/-- info: 'LeanForest.Security.SeedModel.eval_secret_prepared' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'LeanForest.Security.SeedModel.chainPair_evenChain' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.SeedModel.eval_secret_prepared
+#print axioms LeanForest.Security.SeedModel.chainPair_evenChain
+
+/-- info: 'LeanForest.Security.SeedModel.chainPair_oddChain' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.chainPair_oddChain
+
+/-- info: 'LeanForest.Security.SeedModel.chain_eq_of_even' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.chain_eq_of_even
+
+/-- info: 'LeanForest.Security.SeedModel.chain_eq_of_odd' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.chain_eq_of_odd
+
+/-- info: 'LeanForest.Security.SeedModel.derivationDomain_injective' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.derivationDomain_injective
+
+/-- info: 'LeanForest.Security.SeedModel.derivationDomain_ne_parameter' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.derivationDomain_ne_parameter
+
+/-- info: 'LeanForest.Security.SeedModel.derivationInput_injective' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.derivationInput_injective
+
+/-- info: 'LeanForest.Security.SeedModel.derivationInput_ne_parameterInput' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.derivationInput_ne_parameterInput
+
+/-- info: 'LeanForest.Security.SeedModel.derivedOutput_eq_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.derivedOutput_eq_iff
+
+/-- info: 'LeanForest.Security.SeedModel.eval_forest_prepared' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.eval_forest_prepared
+
+/-- info: 'LeanForest.Security.SeedModel.eval_ots_prepared' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.eval_ots_prepared
+
+/-- info: 'LeanForest.Security.SeedModel.eval_surrogate_prepared' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.eval_surrogate_prepared
+
+/-- info: 'LeanForest.Security.SeedModel.fchainPair_evenFChain' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.fchainPair_evenFChain
+
+/-- info: 'LeanForest.Security.SeedModel.fchainPair_oddFChain' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.fchainPair_oddFChain
+
+/-- info: 'LeanForest.Security.SeedModel.fchain_eq_of_even' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.fchain_eq_of_even
+
+/-- info: 'LeanForest.Security.SeedModel.fchain_eq_of_odd' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.fchain_eq_of_odd
+
+/-- info: 'LeanForest.Security.SeedModel.hashHalf_even' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.hashHalf_even
+
+/-- info: 'LeanForest.Security.SeedModel.hashHalf_odd' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.hashHalf_odd
+
+/-- info: 'LeanForest.Security.SeedModel.joinHalves_halves' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.joinHalves_halves
 
 /-- info: 'LeanForest.Security.SeedModel.programCache_agreeOutside' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.SeedModel.programCache_agreeOutside
+
+/-- info: 'LeanForest.Security.SeedModel.programCache_derivation' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.programCache_derivation
 
 /-- info: 'LeanForest.Security.SeedModel.programCache_other' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -10998,21 +11170,41 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.SeedModel.programCache_verifier
 
-/-- info: 'LeanForest.Security.SeedModel.secretDomain_injective' depends on axioms: [propext] -/
+/-- info: 'LeanForest.Security.SeedModel.secretDerivation_surjective' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.SeedModel.secretDomain_injective
+#print axioms LeanForest.Security.SeedModel.secretDerivation_surjective
 
-/-- info: 'LeanForest.Security.SeedModel.secretDomain_ne_parameter' depends on axioms: [propext] -/
+/-- info: 'LeanForest.Security.SeedModel.secretDomain_ne_parameter' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.SeedModel.secretDomain_ne_parameter
 
-/-- info: 'LeanForest.Security.SeedModel.secretInput_injective' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.SeedModel.secretHalf_derivedOutput' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.SeedModel.secretInput_injective
+#print axioms LeanForest.Security.SeedModel.secretHalf_derivedOutput
+
+/-- info: 'LeanForest.Security.SeedModel.secretInput_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.secretInput_eq
 
 /-- info: 'LeanForest.Security.SeedModel.secretInput_ne_parameterInput' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.SeedModel.secretInput_ne_parameterInput
+
+/-- info: 'LeanForest.Security.SeedModel.secret_prepared' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.secret_prepared
+
+/-- info: 'LeanForest.Security.SeedModel.split_joinHalves' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.split_joinHalves
+
+/-- info: 'LeanForest.Security.SeedModel.truncateHash_joinHalves' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.truncateHash_joinHalves
+
+/-- info: 'LeanForest.Security.SeedModel.upperHash_joinHalves' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.SeedModel.upperHash_joinHalves
 
 /-- info: 'LeanForest.Security.SignatureWitness.canonicalOpening_unique' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

@@ -297,13 +297,13 @@ theorem checkSmallF_sound {b N qh : ℕ} {ρ cthr B c : ℚ} (h : checkSmallF b 
 is checked from there to its own `qtop`, and the chain ends once every budget `q'` with
 `q' + keygenCost < 2^127` is covered. -/
 def checkCovers (b N : ℕ) : ℕ → List H0.CoverW → Bool
-  | qstart, [] => decide (2 ^ 127 ≤ qstart + (258 * 2 ^ b + 2 * (26 - b)))
+  | qstart, [] => decide (2 ^ 127 ≤ qstart + (226 * 2 ^ b + 2 * (26 - b)))
   | qstart, c :: rest => H0.checkCoverW b N qstart c && checkCovers b N (c.qtop + 1) rest
 
 omit [Params] in
 /-- Every budget from `qstart` on with `q' + keygenCost < 2^127` lies in a checked cover of the chain. -/
 theorem checkCovers_sound (b N : ℕ) : ∀ (covers : List H0.CoverW) (qstart : ℕ),
-    checkCovers b N qstart covers = true → ∀ q', qstart ≤ q' → q' + (258 * 2 ^ b + 2 * (26 - b)) < 2 ^ 127 →
+    checkCovers b N qstart covers = true → ∀ q', qstart ≤ q' → q' + (226 * 2 ^ b + 2 * (26 - b)) < 2 ^ 127 →
       ∃ c ∈ covers, ∃ qs, H0.checkCoverW b N qs c = true ∧ qs ≤ q' ∧ q' ≤ c.qtop
   | [], qstart, h, q', h0, h1 => by
       simp only [checkCovers, decide_eq_true_eq] at h
@@ -355,7 +355,7 @@ theorem det_bitsF (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b)
     rw [Rat.cast_mul, hκR, ← H0.scanMb_eq b hb]
     refine le_of_eq_of_le ?_ hcheck
     ring
-  have hkg : keygenCost = 258 * 2 ^ b + 2 * (26 - b) := by rw [← hb]; rfl
+  have hkg : keygenCost = 226 * 2 ^ b + 2 * (26 - b) := by rw [← hb]; rfl
   intro q hq1 adversary hbound
   by_cases hbig : 2 ^ 127 ≤ q
   · refine le_trans probEvent_le_one ?_
@@ -384,7 +384,7 @@ theorem det_bitsF (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b)
     have hcovb := H0.h0W_bound_of_cover b N qs cover hcv hb hN (q - keygenCost) hqs hqt
     have hfairq := H0.fair_of_cover b N qs cover hcv hb (q - keygenCost) hqt
     have h := det_largeW hb0 hN70' adversary q hbound hq127 hK hfairq (by
-      have e1 : (q - keygenCost) + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) = q - keygenCost + keygenCost :=
+      have e1 : (q - keygenCost) + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) = q - keygenCost + keygenCost :=
         rfl
       rw [e1] at hcovb
       exact hcovb)

@@ -11,6 +11,10 @@ namespace LeanForest.Security.H0
 
 open Concrete ForestPrice LeanSphincs.Security.H0 LeanSphincs.Security.Domination
 
+/-- Keygen credit `K` of the forest signer: the `226 · 2^b + 2 (26 − b)` hash calls of key
+generation (`Prefix.hashCalls_keygenFromSeed`), with one seed derivation for the starts of two chains. -/
+def kCreditF (b : ℕ) : ℕ := 226 * 2 ^ b + 2 * (26 - b)
+
 /-- A cover entry: budgets `[qa, qb]` and the index of its option. -/
 abbrev EntryF := ℕ × ℕ × ℕ
 
@@ -42,8 +46,8 @@ def checkEntryF (b N : ℕ) (opts : List OptF) (e : EntryF) : Bool :=
   | none => false
   | some o =>
       decide (2 * e.2.1 ≤ 2 ^ 128) && decide (o.cthr ≤ ForsPotential.betaWQ e.2.1) &&
-        decide ((e.2.1 : ℚ) * o.B + ((e.2.1 : ℚ) + kCredit b + N) / 2 ^ 200 ≤
-          ((e.1 : ℚ) / 2 ^ 128) ^ 2 + (kCredit b : ℚ) / 2 ^ 127)
+        decide ((e.2.1 : ℚ) * o.B + ((e.2.1 : ℚ) + kCreditF b + N) / 2 ^ 200 ≤
+          ((e.1 : ℚ) / 2 ^ 128) ^ 2 + (kCreditF b : ℚ) / 2 ^ 127)
 
 /-- Consecutive entries cover `[last, 2^127]`. -/
 def chainF (b N qtop : ℕ) (opts : List OptF) : ℕ → List EntryF → Bool
@@ -71,8 +75,8 @@ theorem chainF_sound (b N qtop : ℕ) (opts : List OptF) : ∀ (cover : List Ent
 
 theorem checkEntryF_sound {b N : ℕ} {opts : List OptF} {e : EntryF} (h : checkEntryF b N opts e = true) :
     ∃ o ∈ opts, 2 * e.2.1 ≤ 2 ^ 128 ∧ o.cthr ≤ ForsPotential.betaWQ e.2.1 ∧
-      (e.2.1 : ℚ) * o.B + ((e.2.1 : ℚ) + kCredit b + N) / 2 ^ 200 ≤
-        ((e.1 : ℚ) / 2 ^ 128) ^ 2 + (kCredit b : ℚ) / 2 ^ 127 := by
+      (e.2.1 : ℚ) * o.B + ((e.2.1 : ℚ) + kCreditF b + N) / 2 ^ 200 ≤
+        ((e.1 : ℚ) / 2 ^ 128) ^ 2 + (kCreditF b : ℚ) / 2 ^ 127 := by
   unfold checkEntryF at h
   rcases hget : opts[e.2.2]? with _ | o
   · rw [hget] at h; exact absurd h (by simp)
@@ -167,9 +171,9 @@ theorem bound_of_entryF (b N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr : ch
     (hN : signatureLimit = N) (e : EntryF) (he : checkEntryF b N opts e = true) (q : ℕ) (hqa : e.1 ≤ q)
     (hqb : q ≤ e.2.1) (hqt : q ≤ qtop) :
     (1 - HiddenDebt.budget 0 q) + (q : ℝ≥0∞) * ForsPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q +
-        ((q + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 := by
+      ((q + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 := by
   obtain ⟨o, ho, hqb2, hcthr, hmain⟩ := checkEntryF_sound he
   obtain ⟨qa, qb, j⟩ := e
   dsimp only at hqa hqb hqb2 hcthr hmain
@@ -183,30 +187,30 @@ theorem bound_of_entryF (b N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr : ch
     le_trans (ENNReal.ofReal_le_ofReal (by exact_mod_cast hcthr)) (ForsPotential.baselineW_ge q qb hqb)
   have hH : ForsPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q ≤ ENNReal.ofReal (o.B : ℝ) :=
     startExcessO_le_opt b N qtop t o hr ht hoc hb hN q hqt _ hβc
-  have hmainR : (qb : ℝ) * (o.B : ℝ) * ((1 / 2 : ℝ) / (1 - 1 / 2)) + ((qb : ℝ) + (kCredit b : ℝ) + N) / 2 ^ 200 ≤
-      ((qa : ℝ) / 2 ^ 128) ^ 2 + (kCredit b : ℝ) / 2 ^ 127 := by
+  have hmainR : (qb : ℝ) * (o.B : ℝ) * ((1 / 2 : ℝ) / (1 - 1 / 2)) + ((qb : ℝ) + (kCreditF b : ℝ) + N) / 2 ^ 200 ≤
+      ((qa : ℝ) / 2 ^ 128) ^ 2 + (kCreditF b : ℝ) / 2 ^ 127 := by
     have := (Rat.cast_le (K := ℝ)).mpr hmain
     push_cast at this
     norm_num
     linarith
-  have hfinal := final_real (q : ℝ) (qa : ℝ) (qb : ℝ) (kCredit b : ℝ) (N : ℝ) (o.B : ℝ) (1 / 2) 1
+  have hfinal := final_real (q : ℝ) (qa : ℝ) (qb : ℝ) (kCreditF b : ℝ) (N : ℝ) (o.B : ℝ) (1 / 2) 1
     (by exact_mod_cast hqa) (by exact_mod_cast hqb) (Nat.cast_nonneg _) hB0 (by norm_num) (by norm_num)
     (by norm_num) hmainR
   rw [mul_one] at hfinal
-  rw [hb, hN, show 258 * 2 ^ b + 2 * (26 - b) = kCredit b from rfl]
+  rw [hb, hN, show 226 * 2 ^ b + 2 * (26 - b) = kCreditF b from rfl]
   have hbud : 1 - HiddenDebt.budget 0 q =
       ENNReal.ofReal (1 - (((2 : ℝ) ^ 128 - 0 - q) / ((2 : ℝ) ^ 128 - 0)) ^ 2) := by
     unfold HiddenDebt.budget HiddenDebt.spaceReal
     rw [Nat.cast_zero, ← ENNReal.ofReal_one, ← ENNReal.ofReal_sub _ (sq_nonneg _)]
-  have hslackE : ((q + kCredit b + N : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200 =
-      ENNReal.ofReal (((q : ℝ) + kCredit b + N) / 2 ^ 200) := by
+  have hslackE : ((q + kCreditF b + N : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200 =
+      ENNReal.ofReal (((q : ℝ) + kCreditF b + N) / 2 ^ 200) := by
     rw [div_eq_mul_inv, ENNReal.ofReal_mul (by positivity), ← inv_pow, ENNReal.ofReal_pow (by norm_num),
       ENNReal.ofReal_inv_of_pos (by norm_num), ENNReal.ofReal_ofNat]
     congr 1
     rw [← ENNReal.ofReal_natCast]
     push_cast
     rfl
-  have hrhs : ((q + kCredit b : ℕ) : ℝ≥0∞) / 2 ^ 127 = ENNReal.ofReal (((q : ℝ) + kCredit b) / 2 ^ 127) := by
+  have hrhs : ((q + kCreditF b : ℕ) : ℝ≥0∞) / 2 ^ 127 = ENNReal.ofReal (((q : ℝ) + kCreditF b) / 2 ^ 127) := by
     rw [ENNReal.ofReal_div_of_pos (by positivity), ENNReal.ofReal_pow (by norm_num), ENNReal.ofReal_ofNat]
     congr 1
     rw [← ENNReal.ofReal_natCast]
@@ -222,16 +226,16 @@ theorem bound_of_entryF (b N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr : ch
       rw [div_le_one (by norm_num)]; linarith [show (0 : ℝ) ≤ q from Nat.cast_nonneg _]
     nlinarith
   calc 1 - HiddenDebt.budget 0 q + (q : ℝ≥0∞) * ForsPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q +
-        ((q + kCredit b + N : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200
+        ((q + kCreditF b + N : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200
       ≤ ENNReal.ofReal (1 - (((2 : ℝ) ^ 128 - 0 - q) / ((2 : ℝ) ^ 128 - 0)) ^ 2) +
           ENNReal.ofReal ((q : ℝ) * (o.B : ℝ)) +
-          ENNReal.ofReal (((q : ℝ) + kCredit b + N) / 2 ^ 200) := by
+          ENNReal.ofReal (((q : ℝ) + kCreditF b + N) / 2 ^ 200) := by
         rw [hbud, hslackE, ← hqE]
         gcongr
     _ = ENNReal.ofReal ((1 - (((2 : ℝ) ^ 128 - 0 - q) / ((2 : ℝ) ^ 128 - 0)) ^ 2) +
-          (q : ℝ) * (o.B : ℝ) + ((q : ℝ) + kCredit b + N) / 2 ^ 200) := by
+          (q : ℝ) * (o.B : ℝ) + ((q : ℝ) + kCreditF b + N) / 2 ^ 200) := by
         rw [ENNReal.ofReal_add (by positivity) (by positivity), ENNReal.ofReal_add hbud0 (by positivity)]
-    _ ≤ ENNReal.ofReal (((q : ℝ) + kCredit b) / 2 ^ 127) := ENNReal.ofReal_le_ofReal hfinal
+    _ ≤ ENNReal.ofReal (((q : ℝ) + kCreditF b) / 2 ^ 127) := ENNReal.ofReal_le_ofReal hfinal
     _ = _ := hrhs.symm
 
 /-- **The one-coin forest H-term bound at the weighted baseline from a cover certificate**, for every
@@ -240,9 +244,9 @@ theorem h0W_bound_of_cover (b N qstart : ℕ) (cover : CoverW) (hcov : checkCove
     (hb : subtreeHeight = b) (hN : signatureLimit = N) (q' : ℕ) (hq0 : qstart ≤ q') (hq : q' ≤ cover.qtop) :
     (1 - HiddenDebt.budget 0 q') +
         (q' : ℝ≥0∞) * ForsPotential.startExcessO (wbarOf q') (HiddenDebt.baselineW q') q' +
-        ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q' + (258 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 := by
+      ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 := by
   simp only [checkCoverW, Bool.and_eq_true, List.all_eq_true] at hcov
   obtain ⟨⟨⟨hr, ht⟩, hopts⟩, hchain⟩ := hcov
   obtain ⟨e, -, h1, h2, h3⟩ := chainF_sound b N cover.qtop cover.opts cover.entries qstart hchain q' hq0 hq

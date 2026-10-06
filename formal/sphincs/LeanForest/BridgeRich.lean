@@ -142,7 +142,7 @@ noncomputable def costRestX (parameter : PublicParameter) (data : PublicData) (a
 
 noncomputable def costGameX (parameter : PublicParameter) (data : PublicData) (adversary : Adversary) :
     OracleComp CostSpec Outcome := do
-  HiddenCost.tick (258 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight))
+  HiddenCost.tick (226 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight))
   costRestX parameter data adversary
 
 theorem costGame_eq_map (parameter : PublicParameter) (data : PublicData) (adversary : Adversary) :

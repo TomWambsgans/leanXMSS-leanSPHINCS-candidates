@@ -190,9 +190,9 @@ theorem otsSignFrom_eq_searchLoop (parameter : PublicParameter) (lay : Layer) (t
               (bytesLE 16 message ++ bytesLE 4 (BitVec.ofNat counterBits c)))
             (fun out => TargetSum.decodeDigest (truncateHash out))
             (fun c encoding => do
-              let values ← sequenceFin fun chainIdx => do
-                let secret ← deriveKey parameter (.ots lay tree leaf chainIdx) seed
-                chainWalk parameter lay tree leaf chainIdx 0 (encoding chainIdx).val secret
+              let secrets ← otsSecrets parameter lay tree leaf seed
+              let values ← sequenceFin fun chainIdx =>
+                chainWalk parameter lay tree leaf chainIdx 0 (encoding chainIdx).val (secrets chainIdx)
               pure (BitVec.ofNat counterBits c, values))
             n t := by
   intro n

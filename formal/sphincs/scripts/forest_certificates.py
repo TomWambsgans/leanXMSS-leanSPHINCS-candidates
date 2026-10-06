@@ -46,7 +46,7 @@ def expLow(u, J, P):
 ELOW = Fr(27182818283, 10 ** 10)
 KQ = Fr(1, 2 ** 26)
 
-def kcredit(b): return 258 * 2 ** b + 2 * (26 - b)
+def kcredit(b): return 226 * 2 ** b + 2 * (26 - b)   # key generation: 32 + 64 * 3 + 2 hashes per leaf (kCreditF)
 def betaWQ(qb): return Fr(2 * (2 ** 128 - qb) + 1, 2 ** 256)
 
 # ---------------- the moment tables ----------------

@@ -2,7 +2,8 @@ import LeanForest.SecurityPrefixFullSign
 
 /-! Exact hash-call counts (`hashCalls`) of the honest seeded computations on a fixed answer
 function: wrappers, chains, one-time keys, tree and forest nodes, encodings, message digests and
-signing attempts. -/
+signing attempts. One seed derivation gives the starts of two chains: a one-time key costs
+`32 + 64 · 3 = 224` calls and a forest child `3 + 6 · 4 + 1 = 28`. -/
 
 open OracleComp OracleSpec
 
@@ -40,6 +41,11 @@ theorem hashCalls_bind {α β : Type} (f : QueryImpl HashSpec Id)
     hashCalls f (deriveKey parameter domain seed : OracleComp HashSpec Digest) = 1 := by
   simp only [deriveKey, hashCalls_bind, hashCalls_oracleHash, hashCalls_pure, Nat.add_zero]
 
+@[simp] theorem hashCalls_deriveOutput (f : QueryImpl HashSpec Id)
+    (parameter : PublicParameter) (domain : KeygenDomain) (seed : MasterSeed) :
+    hashCalls f (deriveOutput parameter domain seed : OracleComp HashSpec HashOutput) = 1 := by
+  simp only [deriveOutput, hashCalls_oracleHash]
+
 theorem hashCalls_sequenceFin {α : Type} {n : Nat} (f : QueryImpl HashSpec Id)
     (computation : Fin n → OracleComp HashSpec α) :
     hashCalls f (sequenceFin computation) = ∑ i, hashCalls f (computation i) := by
@@ -58,11 +64,21 @@ theorem hashCalls_chainWalk (f : QueryImpl HashSpec Id) (parameter : PublicParam
   | succ steps ih =>
       rw [chainWalk, hashCalls_bind, dif_pos (by omega), hashCalls_tweakableHash, ih _ _ (by omega)]
 
+/-- The 64 chain starts of a one-time key cost 32 seed derivations. -/
+theorem hashCalls_otsSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (seed : MasterSeed) :
+    hashCalls f (Seeded.otsSecrets parameter lay tree leaf seed :
+      OracleComp HashSpec (ChainIndex → Digest)) = 32 := by
+  simp only [Seeded.otsSecrets, hashCalls_bind, hashCalls_sequenceFin, hashCalls_deriveOutput,
+    hashCalls_pure]
+  decide
+
+/-- A one-time key costs `32 + 64 · 3 = 224` calls. -/
 theorem hashCalls_oneTimePublicKey (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (seed : MasterSeed) :
     hashCalls f (Seeded.oneTimePublicKey parameter lay tree leaf seed :
-      OracleComp HashSpec (ChainIndex → Digest)) = 256 := by
-  simp only [Seeded.oneTimePublicKey, hashCalls_sequenceFin, hashCalls_bind, hashCalls_deriveKey]
+      OracleComp HashSpec (ChainIndex → Digest)) = 224 := by
+  simp only [Seeded.oneTimePublicKey, hashCalls_sequenceFin, hashCalls_bind, hashCalls_otsSecrets]
   have walk (chain : ChainIndex) (value : Digest) :
       hashCalls f (chainWalk parameter lay tree leaf chain 0 (chainLength - 1) value :
         OracleComp HashSpec Digest) = chainLength - 1 :=
@@ -73,7 +89,7 @@ theorem hashCalls_oneTimePublicKey (f : QueryImpl HashSpec Id) (parameter : Publ
 theorem hashCalls_treeNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (seed : MasterSeed) (level nodeIdx : Nat) :
     hashCalls f (Seeded.treeNode parameter lay tree seed level nodeIdx : OracleComp HashSpec Digest) =
-      258 * 2 ^ level - 1 := by
+      226 * 2 ^ level - 1 := by
   induction level generalizing nodeIdx with
   | zero => simp [Seeded.treeNode, hashCalls_bind, hashCalls_oneTimePublicKey, leafHash]
   | succ level ih =>
@@ -95,20 +111,31 @@ theorem hashCalls_chainValue (f : QueryImpl HashSpec Id) (parameter : PublicPara
     (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain)
     (seed : MasterSeed) (pos : Nat) (hpos : pos ≤ chainTop) :
     hashCalls f (Seeded.chainValue parameter index c s j a i seed pos : OracleComp HashSpec Digest) = 1 + pos := by
-  rw [Seeded.chainValue, hashCalls_bind, hashCalls_deriveKey, hashCalls_forestWalk f _ _ _ _ _ _ _ _ _ _ (by omega)]
+  rw [Seeded.chainValue, Seeded.forestStart, hashCalls_bind, hashCalls_bind, hashCalls_deriveOutput,
+    hashCalls_pure, hashCalls_forestWalk f _ _ _ _ _ _ _ _ _ _ (by omega)]
 
+/-- The 6 chain starts of a forest child cost 3 seed derivations. -/
+theorem hashCalls_forestSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (seed : MasterSeed) :
+    hashCalls f (Seeded.forestSecrets parameter index c s j a seed : OracleComp HashSpec (FChain → Digest)) = 3 := by
+  simp only [Seeded.forestSecrets, hashCalls_bind, hashCalls_sequenceFin, hashCalls_deriveOutput,
+    hashCalls_pure]
+  decide
+
+/-- A forest child costs `3 + 6 · 4 + 1 = 28` calls. -/
 theorem hashCalls_childLeaf (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (seed : MasterSeed) :
-    hashCalls f (Seeded.childLeaf parameter index c s j a seed : OracleComp HashSpec Digest) = 31 := by
-  rw [Seeded.childLeaf, hashCalls_bind, hashCalls_sequenceFin, childLeafHash, hashCalls_tweakableHash]
-  simp only [hashCalls_chainValue f parameter index c s j a _ seed chainTop le_rfl]
+    hashCalls f (Seeded.childLeaf parameter index c s j a seed : OracleComp HashSpec Digest) = 28 := by
+  rw [Seeded.childLeaf, hashCalls_bind, hashCalls_bind, hashCalls_forestSecrets, hashCalls_sequenceFin,
+    childLeafHash, hashCalls_tweakableHash]
+  simp only [hashCalls_forestWalk f parameter index c s j a _ 0 chainTop _ (Nat.le_of_eq (Nat.zero_add _))]
   decide
 
 theorem hashCalls_subNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (seed : MasterSeed) (level node : Nat)
     (hlevel : level ≤ subHeight) :
     hashCalls f (Seeded.subNode parameter index c s j seed level node : OracleComp HashSpec Digest) =
-      32 * 2 ^ level - 1 := by
+      29 * 2 ^ level - 1 := by
   induction level generalizing node with
   | zero => rw [Seeded.subNode, hashCalls_childLeaf]; rfl
   | succ level ih =>
@@ -120,7 +147,7 @@ theorem hashCalls_subNode (f : QueryImpl HashSpec Id) (parameter : PublicParamet
 
 theorem hashCalls_superNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (c : Coord) (s : SuperIdx) (seed : MasterSeed) :
-    hashCalls f (Seeded.superNode parameter index c s seed : OracleComp HashSpec Digest) = 511 := by
+    hashCalls f (Seeded.superNode parameter index c s seed : OracleComp HashSpec Digest) = 463 := by
   rw [Seeded.superNode, hashCalls_bind, hashCalls_sequenceFin, superHash, hashCalls_tweakableHash]
   simp only [hashCalls_subNode f parameter index c s _ seed subHeight 0 le_rfl]
   decide
@@ -128,7 +155,7 @@ theorem hashCalls_superNode (f : QueryImpl HashSpec Id) (parameter : PublicParam
 theorem hashCalls_topNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (c : Coord) (seed : MasterSeed) (level node : Nat) (hlevel : level ≤ topHeight) :
     hashCalls f (Seeded.topNode parameter index c seed level node : OracleComp HashSpec Digest) =
-      512 * 2 ^ level - 1 := by
+      464 * 2 ^ level - 1 := by
   induction level generalizing node with
   | zero => rw [Seeded.topNode, hashCalls_superNode]; rfl
   | succ level ih =>
@@ -138,10 +165,10 @@ theorem hashCalls_topNode (f : QueryImpl HashSpec Id) (parameter : PublicParamet
       rw [pow_succ]
       omega
 
-/-- Building the forest key costs `8 · (512 · 16 - 1) + 1 = 65529` hash calls. -/
+/-- Building the forest key costs `8 · (464 · 16 - 1) + 1 = 59385` hash calls. -/
 theorem hashCalls_forestKey (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (seed : MasterSeed) :
-    hashCalls f (Seeded.forestKey parameter index seed : OracleComp HashSpec Digest) = 65529 := by
+    hashCalls f (Seeded.forestKey parameter index seed : OracleComp HashSpec Digest) = 59385 := by
   rw [Seeded.forestKey, hashCalls_bind, hashCalls_sequenceFin, hashCalls_tweakableHash]
   simp only [hashCalls_topNode f parameter index _ seed topHeight 0 le_rfl]
   decide

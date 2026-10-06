@@ -76,6 +76,12 @@ theorem Only.deriveKey (parameter : PublicParameter) (domain : KeygenDomain) (se
   refine Only.bind (Only.query ?_) (fun _ => Only.pure' _)
   simp [IsShort, bound, keygenHashInput_length]
 
+theorem Only.deriveOutput (parameter : PublicParameter) (domain : KeygenDomain) (seed : MasterSeed) :
+    Only (LeanForest.deriveOutput parameter domain seed : OracleComp HashSpec HashOutput) := by
+  unfold LeanForest.deriveOutput
+  refine Only.query ?_
+  simp [IsShort, bound, keygenHashInput_length]
+
 theorem Only.sequenceFin {α : Type} {n : Nat} (computation : Fin n → OracleComp HashSpec α)
     (h : ∀ i, Only (computation i)) : Only (Concrete.sequenceFin computation) := by
   induction n with
@@ -269,12 +275,19 @@ theorem Only.verify (publicKey : PublicKey) (message : Message) (signature : Sig
 namespace Seeded
 open LeanForest.Seeded
 
+theorem Only.otsSecrets (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (seed : MasterSeed) :
+    Only (otsSecrets parameter lay tree leaf seed :
+      OracleComp HashSpec (ChainIndex → Digest)) :=
+  Short.Only.bind (Short.Only.sequenceFin _ fun _ => Short.Only.deriveOutput _ _ _)
+    (fun _ => Short.Only.pure' _)
+
 theorem Only.oneTimePublicKey (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (seed : MasterSeed) :
     Only (oneTimePublicKey parameter lay tree leaf seed :
       OracleComp HashSpec (ChainIndex → Digest)) :=
-  Short.Only.sequenceFin _ fun _ =>
-    Short.Only.bind (Short.Only.deriveKey _ _ _) (fun _ => Short.Only.chainWalk _ _ _ _ _ _ _ _)
+  Short.Only.bind (Only.otsSecrets _ _ _ _ _) (fun _ =>
+    Short.Only.sequenceFin _ fun _ => Short.Only.chainWalk _ _ _ _ _ _ _ _)
 
 theorem Only.otsSignFrom (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (seed : MasterSeed) (message : Digest) :
@@ -288,9 +301,9 @@ theorem Only.otsSignFrom (parameter : PublicParameter) (lay : Layer) (tree : Tre
       cases encoding with
       | none => exact Only.otsSignFrom parameter lay tree leaf seed message attempts (counter + 1)
       | some encoding =>
-          exact Short.Only.bind (Short.Only.sequenceFin _ fun _ =>
-            Short.Only.bind (Short.Only.deriveKey _ _ _) (fun _ => Short.Only.chainWalk _ _ _ _ _ _ _ _))
-            (fun _ => Short.Only.pure' _)
+          exact Short.Only.bind (Only.otsSecrets _ _ _ _ _) (fun _ =>
+            Short.Only.bind (Short.Only.sequenceFin _ fun _ => Short.Only.chainWalk _ _ _ _ _ _ _ _)
+              (fun _ => Short.Only.pure' _))
 
 theorem Only.treeNode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (seed : MasterSeed) : ∀ level nodeIdx, Short.Only (treeNode parameter lay tree seed level nodeIdx :
@@ -307,15 +320,23 @@ theorem Only.treeNode (parameter : PublicParameter) (lay : Layer) (tree : TreeIn
 theorem Only.chainValue (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
     (j : SubIdx) (a : ChildIdx) (i : FChain) (seed : MasterSeed) (pos : Nat) :
     Short.Only (chainValue parameter index c s j a i seed pos : OracleComp HashSpec Digest) :=
-  Short.Only.bind (Short.Only.deriveKey _ _ _) (fun _ => Short.Only.forestWalk _ _ _ _ _ _ _ _ _ _)
+  Short.Only.bind (Short.Only.bind (Short.Only.deriveOutput _ _ _) (fun _ => Short.Only.pure' _))
+    (fun _ => Short.Only.forestWalk _ _ _ _ _ _ _ _ _ _)
+
+theorem Only.forestSecrets (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
+    (j : SubIdx) (a : ChildIdx) (seed : MasterSeed) :
+    Short.Only (forestSecrets parameter index c s j a seed : OracleComp HashSpec (FChain → Digest)) :=
+  Short.Only.bind (Short.Only.sequenceFin _ fun _ => Short.Only.deriveOutput _ _ _)
+    (fun _ => Short.Only.pure' _)
 
 theorem Only.subNode (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
     (j : SubIdx) (seed : MasterSeed) : ∀ level node, Short.Only (subNode parameter index c s j seed level node :
       OracleComp HashSpec Digest)
   | 0, node => by
       rw [LeanForest.Seeded.subNode]
-      exact Short.Only.bind (Short.Only.sequenceFin _ fun _ => Only.chainValue _ _ _ _ _ _ _ _ _)
-        (fun _ => Short.Only.childLeafHash _ _ _ _ _ _ _)
+      exact Short.Only.bind (Only.forestSecrets _ _ _ _ _ _ _) (fun _ =>
+        Short.Only.bind (Short.Only.sequenceFin _ fun _ => Short.Only.forestWalk _ _ _ _ _ _ _ _ _ _)
+          (fun _ => Short.Only.childLeafHash _ _ _ _ _ _ _))
   | level + 1, node => by
       rw [LeanForest.Seeded.subNode]
       refine Short.Only.bind (Only.subNode parameter index c s j seed level _) (fun _ =>
@@ -362,9 +383,10 @@ theorem Only.forestOpen (parameter : PublicParameter) (index : Index) (marks : C
   unfold LeanForest.Seeded.forestOpen LeanForest.Seeded.coordOpen
   exact Short.Only.sequenceFin _ fun _ =>
     Short.Only.bind (Short.Only.sequenceFin _ fun _ =>
-      Short.Only.bind (Short.Only.sequenceFin _ fun _ => Only.chainValue _ _ _ _ _ _ _ _ _) (fun _ =>
-        Short.Only.bind (Short.Only.sequenceFin _ fun _ => Only.subNode _ _ _ _ _ _ _ _)
-          (fun _ => Short.Only.pure' _))) (fun _ =>
+      Short.Only.bind (Only.forestSecrets _ _ _ _ _ _ _) (fun _ =>
+        Short.Only.bind (Short.Only.sequenceFin _ fun _ => Short.Only.forestWalk _ _ _ _ _ _ _ _ _ _) (fun _ =>
+          Short.Only.bind (Short.Only.sequenceFin _ fun _ => Only.subNode _ _ _ _ _ _ _ _)
+            (fun _ => Short.Only.pure' _)))) (fun _ =>
       Short.Only.bind (Short.Only.sequenceFin _ fun _ => Only.topNode _ _ _ _ _ _)
         (fun _ => Short.Only.pure' _))
 

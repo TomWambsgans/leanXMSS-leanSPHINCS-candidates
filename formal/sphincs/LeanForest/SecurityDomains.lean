@@ -72,6 +72,24 @@ theorem chainSlot_injective {c c' : Coord} {s s' : SuperIdx} {j j' : SubIdx} {a 
   obtain ⟨hc, hs, hj⟩ := subSlot_inj hsub
   exact ⟨hc, hs, hj, ha, hi⟩
 
+theorem pairSlot_lt (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (pair : FPair) :
+    pairSlot c s j a pair < 12288 := by
+  have := childSlot_lt c s j a; have := pair.isLt
+  simp only [pairSlot] at *
+  omega
+
+/-- A pair slot determines the coordinate, super-child, sub-tree, child and pair of chains. -/
+theorem pairSlot_injective {c c' : Coord} {s s' : SuperIdx} {j j' : SubIdx} {a a' : ChildIdx}
+    {pair pair' : FPair} (h : pairSlot c s j a pair = pairSlot c' s' j' a' pair') :
+    c = c' ∧ s = s' ∧ j = j' ∧ a = a' ∧ pair = pair' := by
+  have hsplit : childSlot c s j a = childSlot c' s' j' a' ∧ pair = pair' := by
+    have := childSlot_lt c s j a; have := childSlot_lt c' s' j' a'
+    simp only [pairSlot] at h
+    refine ⟨?_, Fin.ext ?_⟩ <;> omega
+  obtain ⟨hsub, ha⟩ := childSlot_inj hsplit.1
+  obtain ⟨hc, hs, hj⟩ := subSlot_inj hsub
+  exact ⟨hc, hs, hj, ha, hsplit.2⟩
+
 theorem deriveFields_injective : Function.Injective keygenDomainFields := by
   intro left right h
   cases left <;> cases right <;>
@@ -97,9 +115,9 @@ theorem deriveFields_injective : Function.Injective keygenDomainFields := by
       apply Fin.ext
       exact ofNat_inj_of_lt (index.isLt.trans_le (by decide))
         (index'.isLt.trans_le (by decide)) hindex
-    have hp := ofNat_inj_of_lt ((chainSlot_lt c s j a i).trans_le (by decide))
-      ((chainSlot_lt c' s' j' a' i').trans_le (by decide)) hpos
-    obtain ⟨hc, hs, hj, ha, hi⟩ := chainSlot_injective hp
+    have hp := ofNat_inj_of_lt ((pairSlot_lt c s j a i).trans_le (by decide))
+      ((pairSlot_lt c' s' j' a' i').trans_le (by decide)) hpos
+    obtain ⟨hc, hs, hj, ha, hi⟩ := pairSlot_injective hp
     subst hidx hc hs hj ha hi; rfl
   · rename_i level level'
     obtain ⟨_, _, hlevel, _⟩ := h

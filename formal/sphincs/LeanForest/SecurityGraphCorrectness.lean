@@ -913,13 +913,13 @@ omit parameter labels hconsistent [Params] in
 theorem materialOts_eq (material : SeedModel.Material) (hagrees : SeedModel.PreparedAgreement f seed material) :
     materialOts material = otsSecrets f (SeedModel.parameter material) seed := by
   funext lay tree leaf chain
-  exact (SeedModel.eval_secret_prepared f seed material hagrees (.inl (lay, tree, leaf, chain))).symm
+  exact (SeedModel.eval_ots_prepared f seed material hagrees lay tree leaf chain).symm
 
 omit parameter labels hconsistent [Params] in
 theorem materialFts_eq (material : SeedModel.Material) (hagrees : SeedModel.PreparedAgreement f seed material) :
     materialFts material = ftsSecrets f (SeedModel.parameter material) seed := by
   funext index c s j a i
-  exact (SeedModel.eval_secret_prepared f seed material hagrees (.inr (.inl (index, c, s, j, a, i)))).symm
+  exact (SeedModel.eval_forest_prepared f seed material hagrees index c s j a i).symm
 
 omit parameter labels hconsistent [Params] in
 theorem materialSurrogates_eq (material : SeedModel.Material)
@@ -928,6 +928,6 @@ theorem materialSurrogates_eq (material : SeedModel.Material)
   funext level
   unfold surrogates
   rw [Seeded.surrogate, dif_pos level.isLt]
-  exact (SeedModel.eval_secret_prepared f seed material hagrees (.inr (.inr level))).symm
+  exact (SeedModel.eval_surrogate_prepared f seed material hagrees level).symm
 
 end LeanForest.Security.GraphCorrectness

@@ -58,6 +58,11 @@ theorem deriveKey (target : HashInput) (parameter : PublicParameter) (domain : K
     PreservesFresh target (LeanForest.deriveKey parameter domain seed) :=
   bind (query hne) (fun _ => pure' _ _)
 
+theorem deriveOutput (target : HashInput) (parameter : PublicParameter) (domain : KeygenDomain)
+    (seed : MasterSeed) (hne : keygenHashInput parameter domain seed ≠ target) :
+    PreservesFresh target (LeanForest.deriveOutput parameter domain seed) :=
+  query hne
+
 theorem sequenceFin {α : Type} {n : Nat} (target : HashInput)
     (computation : Fin n → OracleComp HashSpec α)
     (h : ∀ i, PreservesFresh target (computation i)) :
@@ -175,13 +180,17 @@ theorem chainWalk (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
       · exact tweakableHash _ _ _ _ (hs.chain _ _ _ _ _ _ _)
       · exact pure' _ _
 
+theorem otsSecrets (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (seed : MasterSeed) :
+    PreservesFresh target (Seeded.otsSecrets parameter lay tree leaf seed) := by
+  rw [Seeded.otsSecrets]
+  exact bind (sequenceFin _ _ (fun _ => deriveOutput _ _ _ _ (hs.derive _ _ _))) (fun _ => pure' _ _)
+
 theorem oneTimePublicKey (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (seed : MasterSeed) :
     PreservesFresh target (Seeded.oneTimePublicKey parameter lay tree leaf seed) := by
   rw [Seeded.oneTimePublicKey]
-  apply sequenceFin
-  intro chain
-  exact bind (deriveKey _ _ _ _ (hs.derive _ _ _)) (fun _ => chainWalk hs _ _ _ _ _ _ _ _)
+  exact bind (otsSecrets hs _ _ _ _ _) (fun _ => sequenceFin _ _ (fun _ => chainWalk hs _ _ _ _ _ _ _ _))
 
 theorem treeNode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (seed : MasterSeed) (level index : Nat) :
@@ -237,16 +246,25 @@ omit [Params] in
 theorem chainValue (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
     (a : ChildIdx) (i : FChain) (seed : MasterSeed) (pos : Nat) :
     PreservesFresh target (Seeded.chainValue parameter index c s j a i seed pos) := by
-  rw [Seeded.chainValue]
-  exact bind (deriveKey _ _ _ _ (hs.derive _ _ _)) (fun _ => forestWalk hs _ _ _ _ _ _ _ _ _ _)
+  rw [Seeded.chainValue, Seeded.forestStart]
+  exact bind (bind (deriveOutput _ _ _ _ (hs.derive _ _ _)) (fun _ => pure' _ _))
+    (fun _ => forestWalk hs _ _ _ _ _ _ _ _ _ _)
+
+omit [Params] in
+theorem forestSecrets (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
+    (j : SubIdx) (a : ChildIdx) (seed : MasterSeed) :
+    PreservesFresh target (Seeded.forestSecrets parameter index c s j a seed) := by
+  rw [Seeded.forestSecrets]
+  exact bind (sequenceFin _ _ (fun _ => deriveOutput _ _ _ _ (hs.derive _ _ _))) (fun _ => pure' _ _)
 
 omit [Params] in
 theorem childLeaf (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
     (a : ChildIdx) (seed : MasterSeed) :
     PreservesFresh target (Seeded.childLeaf parameter index c s j a seed) := by
   rw [Seeded.childLeaf]
-  exact bind (sequenceFin _ _ (fun _ => chainValue hs _ _ _ _ _ _ _ _ _))
-    (fun _ => tweakableHash _ _ _ _ (hs.childLeaf _ _ _ _ _ _ _))
+  exact bind (forestSecrets hs _ _ _ _ _ _ _) (fun _ =>
+    bind (sequenceFin _ _ (fun _ => forestWalk hs _ _ _ _ _ _ _ _ _ _))
+      (fun _ => tweakableHash _ _ _ _ (hs.childLeaf _ _ _ _ _ _ _)))
 
 omit [Params] in
 theorem subNode (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
@@ -300,8 +318,9 @@ theorem coordOpen (parameter : PublicParameter) (index : Index) (c : Coord) (mar
   rw [Seeded.coordOpen]
   refine bind (sequenceFin _ _ (fun _ => ?_)) (fun _ =>
     bind (sequenceFin _ _ (fun _ => topNode hs _ _ _ _ _ _)) (fun _ => pure' _ _))
-  exact bind (sequenceFin _ _ (fun _ => chainValue hs _ _ _ _ _ _ _ _ _)) (fun _ =>
-    bind (sequenceFin _ _ (fun _ => subNode hs _ _ _ _ _ _ _ _)) (fun _ => pure' _ _))
+  exact bind (forestSecrets hs _ _ _ _ _ _ _) (fun _ =>
+    bind (sequenceFin _ _ (fun _ => forestWalk hs _ _ _ _ _ _ _ _ _ _)) (fun _ =>
+      bind (sequenceFin _ _ (fun _ => subNode hs _ _ _ _ _ _ _ _)) (fun _ => pure' _ _)))
 
 omit [Params] in
 theorem forestOpen (parameter : PublicParameter) (index : Index)

@@ -123,14 +123,14 @@ variable [Params]
 /-- The final assembly after its digest call. -/
 noncomputable def finishRest (parameter : PublicParameter) (data : PublicData) (_message : Message)
     (randomness : Randomness) (digest : MessageDigest) : OracleComp CostSpec (Option Signature) := do
-  HiddenCost.tick 130873
+  HiddenCost.tick 118585
   let index := digestIndex digest
   let some (counter, word) ← liftM (ReferenceChoice.search parameter topLayer rootTree index
     (data.forestKey index) encodingAttemptLimit 0) | return none
   let values ← sequenceFin fun chain => HiddenCost.reveal
     (.chain topLayer rootTree index chain (word chain))
   let opening ← sequenceFin fun c => coordCostSource data index c (digestMarks digest c)
-  HiddenCost.tick (184 + treePathCost)
+  HiddenCost.tick (152 + treePathCost)
   let top : LayerSignature topLayer := ⟨counter, values, data.treePath index⟩
   return some ⟨randomness, opening, Fin.cases top (fun i => Fin.elim0 i)⟩
 

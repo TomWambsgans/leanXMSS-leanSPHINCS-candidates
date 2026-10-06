@@ -14,7 +14,7 @@ attribute [local irreducible] Seeded.treeNode
 
 def derivedSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed) : Secrets :=
   fun (lay, tree, leaf, chain) =>
-    evalWithAnswerFn f (deriveKey parameter (.ots lay tree leaf chain) seed : OracleComp HashSpec Digest)
+    evalWithAnswerFn f (Seeded.otsStart parameter lay tree leaf chain seed : OracleComp HashSpec Digest)
 
 noncomputable def publicEndpoints (segment : Segment) (outside : QueryImpl HashSpec Id)
     (secrets : Secrets) (frontier : Digest) (lay : Layer) (tree : TreeIndex)

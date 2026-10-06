@@ -45,11 +45,12 @@ Every hash input is `P ‖ A ‖ payload` (`Scheme.lean`: `tweakableHashInput`, 
 `A = lo (4 bytes) ‖ hi (3 bytes) ‖ (type + 32·step)` with `lo` and `hi` little endian (`fieldBytes`),
 then the payload. `Th` keeps the first 16 bytes of the hash. The public key is `root ‖ P`, 32 bytes.
 Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`, chain `i < 6`,
-`idx` the 26-bit instance.
+`idx` the 26-bit instance. A seed derivation of chain starts is addressed by a pair of chains `t`
+(chains `2t` and `2t + 1`): `t < 32` in a WOTS+C key, `t < 3` in a forest WOTS key.
 
 | call | type | step | hi | lo | payload |
 | --- | ---: | --- | --- | --- | --- |
-| WOTS+C chain secret | 0 | 0 | chain | leaf | seed |
+| WOTS+C chain secrets `2t`, `2t + 1` (both halves of the hash) | 0 | 0 | `t` | leaf | seed |
 | WOTS+C chain step onto position `to` | 1 | `to − 1` | chain | leaf | value |
 | WOTS+C leaf | 2 | 0 | 0 | leaf | 64 chain ends |
 | tree node | 3 | 0 | level | node | left ‖ right |
@@ -58,13 +59,22 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 | randomizer base `R0` | 7 | 0 | 0 | 0 | seed ‖ message |
 | message digest | 12 | 0 | 0 | 0 | message ‖ eight zero bytes ‖ randomizer |
 | surrogate sibling | 13 | 0 | level | 0 | seed |
-| forest chain secret | 14 | 0 | `c + 8s + 128j + 256a + 2048i` | `idx` | seed |
+| forest chain secrets `2t`, `2t + 1` (both halves of the hash) | 14 | 0 | `c + 8s + 128j + 256a + 2048t` | `idx` | seed |
 | forest chain step from position `t` | 15 | `t` | `c + 8s + 128j + 256a + 2048i` | `idx` | value |
 | forest WOTS-key leaf | 16 | 0 | `c + 8s + 128j + 256a` | `idx` | 6 chain tops |
 | subtree node, level 1 to 3 | 17 | 0 | `c + 8s + 128j + 256·level + 1024·node` | `idx` | left ‖ right |
 | tree leaf `H(R0, R1)` | 18 | 0 | `c + 8s` | `idx` | `R0 ‖ R1` |
 | forest tree node, level 1 to 4 | 19 | 0 | `c + 8·level + 64·node` | `idx` | left ‖ right |
 | few-time public key | 20 | 0 | 0 | `idx` | 8 tree roots |
+
+One hash of the seed gives two chain starts: the hash output is 32 bytes, the start of chain `2t`
+is bytes 0 to 15 and the start of chain `2t + 1` is bytes 16 to 31 (`deriveOutput`, `hashHalf`,
+`Seeded.otsSecrets`, `Seeded.forestSecrets` in `Scheme.lean`). A one-time key takes 32 derivations
+for its 64 chains and a forest WOTS key 3 for its 6 chains. The parameter, the surrogates and the
+randomizer base are one hash each and keep its first 16 bytes; so does every verification hash.
+`Seeded.otsStart`, `Seeded.forestStart` and `Seeded.chainValue` are the per-chain views (one
+derivation each), used in statements only: the signer's values are theirs
+(`Completeness.eval_otsSecrets`, `eval_forestSecrets`).
 
 The signer derives one randomizer base per message, `R0 = Th(P, A(7, 0, 0), seed ‖ message)` (one
 hash query), and attempt `i` uses the randomizer `R0 + i` (addition modulo `2^128`,
@@ -88,10 +98,47 @@ an accepted signature costs exactly 321 BLAKE2s compressions (2 for the 80-byte 
 for the forest, 116 for WOTS+C and the path), and no signature costs more
 (`verification_compressions_le`).
 
+Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
+`SecurityPrefixErasedKeygen.lean`; exact counts on any oracle):
+
+| computation | hash calls |
+| --- | ---: |
+| one-time key (`hashCalls_oneTimePublicKey`) | `32 + 64 · 3 = 224` |
+| tree node at level `l` (`hashCalls_treeNode`) | `226 · 2^l − 1` |
+| key generation (`hashCalls_keygenFromSeed`) | `226 · 2^b + 2 (26 − b)` |
+| forest WOTS key leaf (`hashCalls_childLeaf`) | `3 + 6 · 4 + 1 = 28` |
+| forest key of an instance (`hashCalls_forestKey`) | 59,385 |
+| forest opening (`hashCalls_forsOpen_exact`) | 59,200 |
+| WOTS+C values of a signature (`hashCalls_published_values`) | `32 + 120 = 152` |
+| signature after the scan (`hashCalls_finishSign_exact`) | `118,586 + counter search + 152 + path` |
+
+The Lean signer recomputes the forest instance for its key and again for the opening, and the tree
+nodes of the path; these are the counts of that signer, and the budget `q` of the theorem counts
+them.
+
 ## The proof
 
 The reduction is the one of the FORS variant (`PROOF.md`), forked module by module with the forest
-in the hash domains (`Scheme.lean`, `Security*.lean`, `Bridge*.lean`). After the deterministic
+in the hash domains (`Scheme.lean`, `Security*.lean`, `Bridge*.lean`).
+
+**Two secrets per derivation.** The seed is removed as before: the answers of all derivations are
+sampled before the seed and programmed at the seed's inputs, and the adversary sees them only by
+querying an input that contains the seed (`SecuritySeedGuess`, a `2^-256` guess per query). The
+prepared material is unchanged: one independent uniform 256-bit value per secret
+(`SeedModel.Material`), the secret being its first 16 bytes. What is programmed at the input of a
+derivation is `SeedModel.derivedOutput`: the two secrets of its pair of chains side by side, or the
+value of a surrogate. Distinct derivations have distinct inputs (`derivationInput_injective`, from
+`keygenInput_injective`) and read distinct secrets, and every secret is the half of its derivation
+that the signer takes (`secretHalf_derivedOutput`, `secret_prepared`). A table of answers comes from
+the same number of materials whatever the table (`card_fiber_derivedOutput`: one free second half
+per chain start), so uniform material programs independent uniform answers
+(`SeedCoupling.evalDist_derivedOutput_uniform`), which is the law of the random oracle on these
+inputs (`evalDist_prepareTable`, `evalDist_prepared_continuation`). Every module above the seed
+model sees `truncateHash (material.2 position)` as before, and its statements are unchanged. The
+only numbers that change are the hash-call counts of the signer above; the key-generation credit of
+the certificates is `kCreditF b = 226 · 2^b + 2 (26 − b)` (`BridgeDetW.lean`, `keygenCost`).
+
+After the deterministic
 signer is replaced by a seed-free one (`BridgeDet*`), a forgery is a first-order hit, a WOTS
 second-order event, or one of the forest events of the refined classification
 (`BridgeImplicationA`): a contact without guess record, two contacts at different chains of one

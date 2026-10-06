@@ -240,7 +240,7 @@ theorem stopped_le_interp (hb : 0 < subtreeHeight) (adversary : Adversary) (q : 
         rfl
 
 /-- Keygen cost credited before the adversary runs. -/
-abbrev keygenCost : ℕ := 258 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight)
+abbrev keygenCost : ℕ := 226 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight)
 
 end Chain
 

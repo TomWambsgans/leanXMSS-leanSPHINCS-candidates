@@ -37,7 +37,7 @@ noncomputable def costRest (parameter : PublicParameter) (data : PublicData) (ad
 
 noncomputable def costGame (parameter : PublicParameter) (data : PublicData) (adversary : Adversary) :
     OracleComp CostSpec Bool := do
-  HiddenCost.tick (258 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight))
+  HiddenCost.tick (226 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight))
   costRest parameter data adversary
 
 theorem fixedWorldCost_keygen_graph (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -46,7 +46,7 @@ theorem fixedWorldCost_keygen_graph (f : QueryImpl HashSpec Id) (parameter : Pub
     simulateQ (fixedWorldCost f) (liftM (Seeded.keygenFromSeed seed) :
       OracleComp OracleWorld (PublicKey × Seeded.SecretKey)) =
       WriterT.mk (PMF.pure ((⟨data.root, parameter⟩, ⟨seed, parameter, data.root⟩),
-        Multiplicative.ofAdd (258 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight)))) := by
+        Multiplicative.ofAdd (226 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight)))) := by
   rw [fixedWorldCost_lift_hash, hashCalls_keygenFromSeed]
   simp only [Seeded.keygenFromSeed, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
     hparameter, ← hdata.root]

@@ -46,6 +46,12 @@ variable (f : QueryImpl HashSpec Id)
       = truncateHash (f (keygenHashInput parameter domain seed)) := by
   simp [deriveKey]
 
+@[simp] theorem eval_deriveOutput (parameter : PublicParameter) (domain : KeygenDomain)
+    (seed : MasterSeed) :
+    evalWithAnswerFn f (deriveOutput parameter domain seed : OracleComp HashSpec HashOutput)
+      = f (keygenHashInput parameter domain seed) := by
+  simp [deriveOutput]
+
 @[simp] theorem eval_sequenceFin {α : Type} {n : Nat} (computation : Fin n → OracleComp HashSpec α) :
     evalWithAnswerFn f (sequenceFin computation)
       = fun index => evalWithAnswerFn f (computation index) := by
@@ -104,10 +110,25 @@ theorem eval_recoverChain_walk (parameter : PublicParameter) (lay : Layer) (tree
 
 The signer walks each chain to the digit the encoding names; the verifier walks the rest. -/
 
-/-- One chain's secret, as the seed derives it. -/
+/-- One chain's secret, as the seed derives it: a half of the derivation of its pair of chains. -/
 def otsSecret (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
     (seed : MasterSeed) (chainIdx : ChainIndex) : Digest :=
-  evalWithAnswerFn f (deriveKey parameter (.ots lay tree leaf chainIdx) seed : OracleComp HashSpec Digest)
+  evalWithAnswerFn f (otsStart parameter lay tree leaf chainIdx seed : OracleComp HashSpec Digest)
+
+theorem otsSecret_eq (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (seed : MasterSeed) (chainIdx : ChainIndex) :
+    otsSecret f parameter lay tree leaf seed chainIdx =
+      hashHalf chainIdx.val (f (keygenHashInput parameter (.ots lay tree leaf (chainPair chainIdx)) seed)) := by
+  simp only [otsSecret, otsStart, evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_deriveOutput]
+
+/-- The 32 derivations of a one-time key give the secret of each of its 64 chains. -/
+@[simp] theorem eval_otsSecrets (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (seed : MasterSeed) :
+    evalWithAnswerFn f (otsSecrets parameter lay tree leaf seed : OracleComp HashSpec (ChainIndex → Digest))
+      = otsSecret f parameter lay tree leaf seed := by
+  funext chainIdx
+  simp only [otsSecrets, otsSecret_eq, evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_sequenceFin,
+    eval_deriveOutput]
 
 /-- One chain's public endpoint. -/
 def otsEndpoint (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
@@ -121,8 +142,8 @@ def otsEndpoint (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (
         : OracleComp HashSpec (ChainIndex → Digest))
       = otsEndpoint f parameter lay tree leaf seed := by
   funext chainIdx
-  simp only [oneTimePublicKey, otsEndpoint, otsSecret, walk, eval_sequenceFin,
-    evalWithAnswerFn_bind]
+  simp only [oneTimePublicKey, otsEndpoint, walk, eval_sequenceFin,
+    evalWithAnswerFn_bind, eval_otsSecrets]
 
 /-- What a successful counter search produced: the counter encodes the message, and every chain value is the signer's partial walk from the derived secret. -/
 theorem otsSignFrom_spec (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
@@ -152,7 +173,7 @@ theorem otsSignFrom_spec (parameter : PublicParameter) (lay : Layer) (tree : Tre
           · rw [← hcounter]; exact hencode
           · intro chainIdx
             rw [← hvalues]
-            simp only [walk, otsSecret]
+            simp only [walk, eval_otsSecrets]
 
 /-- The verifier's leaf is the leaf the signer's tree was built from. -/
 theorem eval_otsLeaf_of_otsSign (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
@@ -305,9 +326,25 @@ theorem fwalk_add (start x y : Nat) (value : Digest) :
       = fwalk f parameter index c s j a i (start + x) y (fwalk f parameter index c s j a i start x value) := by
   simp only [fwalk, forestWalk_add, evalWithAnswerFn_bind]
 
-/-- The secret `x_{i,0}` of a forest chain, as the seed derives it. -/
+/-- The secret `x_{i,0}` of a forest chain, as the seed derives it: a half of the derivation of its
+pair of chains. -/
 def forestSecret (seed : MasterSeed) : Digest :=
-  evalWithAnswerFn f (deriveKey parameter (.forest index c s j a i) seed : OracleComp HashSpec Digest)
+  evalWithAnswerFn f (Seeded.forestStart parameter index c s j a i seed : OracleComp HashSpec Digest)
+
+theorem forestSecret_eq (seed : MasterSeed) :
+    forestSecret f parameter index c s j a i seed =
+      hashHalf i.val (f (keygenHashInput parameter (.forest index c s j a (fchainPair i)) seed)) := by
+  simp only [forestSecret, Seeded.forestStart, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
+    eval_deriveOutput]
+
+omit i in
+/-- The 3 derivations of a child give the secret of each of its 6 chains. -/
+@[simp] theorem eval_forestSecrets (seed : MasterSeed) :
+    evalWithAnswerFn f (Seeded.forestSecrets parameter index c s j a seed : OracleComp HashSpec (FChain → Digest))
+      = fun i => forestSecret f parameter index c s j a i seed := by
+  funext i
+  simp only [Seeded.forestSecrets, forestSecret_eq, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
+    eval_sequenceFin, eval_deriveOutput]
 
 /-- The honest forest chain value `x_{i,pos}`. -/
 def chainValueOf (seed : MasterSeed) (pos : Nat) : Digest :=
@@ -349,7 +386,7 @@ theorem eval_childLeaf (a : ChildIdx) :
     evalWithAnswerFn f (Seeded.childLeaf parameter index c s j a seed : OracleComp HashSpec Digest)
       = childLeafValue f parameter index c s j seed a := by
   simp only [Seeded.childLeaf, childLeafHash, childLeafValue, evalWithAnswerFn_bind,
-    eval_sequenceFin, eval_chainValue, eval_tweakableHash]
+    eval_sequenceFin, eval_forestSecrets, eval_tweakableHash]
   rfl
 
 /-- An honest opening of a child at any codeword recovers the honest leaf. -/
@@ -492,7 +529,7 @@ theorem eval_coordOpen (c : Coord) (mark : CoordMark) :
         fun level => topNodeValue f parameter index c seed level.val
           (Nat.xor (mark.super.val / 2 ^ level.val) 1)⟩ := by
   simp only [Seeded.coordOpen, evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_sequenceFin,
-    eval_chainValue, subNodeValue, topNodeValue]
+    eval_forestSecrets, chainValueOf, fwalk, subNodeValue, topNodeValue]
 
 /-- The verifier recovers the honest root of every coordinate. -/
 theorem eval_coordRecover (c : Coord) (mark : CoordMark) :

@@ -95,11 +95,12 @@ theorem preparedCache_parameter (material : Material) (seed : MasterSeed) (answe
   rw [preparedCache_other material seed answers (parameterInput seed)
     (fun position => keygenInput_ne_hashInput _ _ _ _ _ _), programCache_parameter]
 
-theorem preparedCache_secret (material : Material) (seed : MasterSeed) (answers : CanonicalGraphLabels)
-    (position : SecretPosition) :
-    preparedCache material seed answers (secretInput seed material position) = some (material.2 position) := by
-  rw [preparedCache_other material seed answers (secretInput seed material position)
-    (fun other => keygenInput_ne_hashInput _ _ _ _ _ _), programCache_secret]
+theorem preparedCache_derivation (material : Material) (seed : MasterSeed) (answers : CanonicalGraphLabels)
+    (derivation : Derivation) :
+    preparedCache material seed answers (derivationInput seed material derivation) =
+      some (derivedOutput material.2 derivation) := by
+  rw [preparedCache_other material seed answers (derivationInput seed material derivation)
+    (fun other => keygenInput_ne_hashInput _ _ _ _ _ _), programCache_derivation]
 
 theorem preparedCache_label (material : Material) (seed : MasterSeed) (answers : CanonicalGraphLabels)
     (position : Position) (hactive : PrunedGraph.active (parameter material) position) :
@@ -116,7 +117,7 @@ noncomputable def sampleFn (material : Material) (seed : MasterSeed) (answers : 
 theorem sample_agreement (material : Material) (seed : MasterSeed) (answers : CanonicalGraphLabels)
     (table : Eager.Table) : PreparedAgreement (sampleFn material seed answers table) seed material :=
   ⟨extend_cached (preparedCache_parameter material seed answers),
-    fun position => extend_cached (preparedCache_secret material seed answers position)⟩
+    fun derivation => extend_cached (preparedCache_derivation material seed answers derivation)⟩
 
 theorem sample_consistent (material : Material) (seed : MasterSeed) (answers : CanonicalGraphLabels)
     (table : Eager.Table) :

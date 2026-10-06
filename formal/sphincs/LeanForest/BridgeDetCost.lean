@@ -41,7 +41,7 @@ noncomputable def costRestDet (parameter : PublicParameter) (data : PublicData) 
 
 noncomputable def costGameDet (parameter : PublicParameter) (data : PublicData) (rnd : RTable)
     (adversary : Adversary) : OracleComp CostSpec Bool := do
-  HiddenCost.tick (258 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight))
+  HiddenCost.tick (226 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight))
   costRestDet parameter data rnd adversary
 
 /-- The deterministic signer from a scan of `attempts` trials starting at `start`. -/

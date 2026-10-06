@@ -12,7 +12,8 @@ outputs) with the few-time signature under each tree leaf replaced by a **two-le
   message WOTS+C signs;
 * a coordinate is a top Merkle tree of height 4 over 16 super-children; super-child `s` is
   `Th(super(idx, c, s), R_0 || R_1)` where `R_j` is the root of a height-3 Merkle tree over 8 children;
-* a child is 6 hash chains of length 5: `x_{i,0}` is derived from the seed, `x_{i,t+1} = Th(x_{i,t})`,
+* a child is 6 hash chains of length 5: `x_{i,0}` is derived from the seed (one hash of the seed
+  gives the two starts `x_{2t,0}` and `x_{2t+1,0}`, its two 16-byte halves), `x_{i,t+1} = Th(x_{i,t})`,
   and the child leaf hashes the 6 chain tops `x_{i,4}`;
 * a codeword is a deficit vector `d ∈ {0..4}^6` with `Σ d_i = 5` (246 of them); `lut` lists them in
   lexicographic order and then the first 10 again, 256 entries;
@@ -79,6 +80,8 @@ abbrev TreeIndex := Fin 1
 /-- `e`, a leaf of the tree. -/
 abbrev LeafIndex := Fin (2 ^ maxLayerHeight)
 abbrev ChainIndex := Fin numChains
+/-- A pair of chains `(2t, 2t + 1)` of a one-time key, `t < 32`: one seed derivation. -/
+abbrev ChainPair := Fin 32
 abbrev Digit := Fin chainLength
 abbrev ChainStep := Fin (chainLength - 1)
 abbrev Encoding := ChainIndex → Digit
@@ -104,6 +107,8 @@ abbrev SuperIdx := Fin (2 ^ topHeight)
 abbrev SubIdx := Fin 2
 abbrev ChildIdx := Fin (2 ^ subHeight)
 abbrev FChain := Fin childChains
+/-- A pair of chains `(2t, 2t + 1)` of a forest WOTS key, `t < 3`: one seed derivation. -/
+abbrev FPair := Fin 3
 /-- A forest chain position, `0 .. 4`. -/
 abbrev FPos := Fin (chainTop + 1)
 /-- A forest chain step, from position `t` to `t + 1`, `t < 4`. -/
@@ -127,6 +132,15 @@ def heightBelow (lay : Layer) : Nat := totalHeight - heightAbove lay - layerHeig
 /-- Keep the first 128 output bits, the low bits of the little-endian bit vector. -/
 def truncateHash (output : HashOutput) : Digest :=
   output.extractLsb' 0 digestBits
+
+/-- The second 16 bytes of a hash output (bytes 16 to 31). Only the seed derivations of chain starts
+use them. -/
+def upperHash (output : HashOutput) : Digest :=
+  output.extractLsb' digestBits digestBits
+
+/-- The half of a hash output that starts chain `n`: the first for even `n`, the second for odd `n`. -/
+def hashHalf (n : Nat) (output : HashOutput) : Digest :=
+  if n % 2 = 0 then truncateHash output else upperHash output
 
 /-! ### The codeword table -/
 
@@ -297,21 +311,36 @@ def randomizerHashInput (parameter : PublicParameter) (seed : MasterSeed)
   bytesLE 16 parameter ++ fieldBytes ⟨7#5, 0#3, 0#24, 0#32⟩ ++
     bytesLE 32 seed ++ bytesLE 32 message
 
-/-- The values derived from the seed. `forest` is the secret `x_{i,0}` of chain `i` of child
-`(idx, c, s, j, a)`. -/
+/-- The pair of chains a chain of a one-time key belongs to. -/
+def chainPair (chain : ChainIndex) : ChainPair :=
+  ⟨chain.val / 2, by have h : chain.val < 64 := chain.isLt; omega⟩
+
+/-- The pair of chains a chain of a forest WOTS key belongs to. -/
+def fchainPair (i : FChain) : FPair :=
+  ⟨i.val / 2, by have h : i.val < 6 := i.isLt; omega⟩
+
+/-- `c + 8 s + 128 j + 256 a + 2048 t`, a pair of chains of the instance. -/
+def pairSlot (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (pair : FPair) : Nat :=
+  childSlot c s j a + 2048 * pair.val
+
+/-- The seed derivations, one hash each. `ots` gives the starts of chains `2t` and `2t + 1` of the
+one-time key at a leaf, `forest` the starts `x_{2t,0}` and `x_{2t+1,0}` of chains `2t` and `2t + 1`
+of child `(idx, c, s, j, a)`: the two 16-byte halves of the hash. The parameter and a surrogate are
+the first 16 bytes of their hash. -/
 inductive KeygenDomain where
   | parameter
-  | ots (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (chain : ChainIndex)
-  | forest (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain)
+  | ots (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (pair : ChainPair)
+  | forest (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (pair : FPair)
   | surrogate (level : Fin totalHeight)
 deriving DecidableEq
 
-/-- `TWEAK_PARAMETER = 5`, `TWEAK_PRF = 0` (`hi` the chain, `lo` the leaf), `TWEAK_FOREST_PRF = 14`
-(`hi` the packed chain, `lo = idx`), `TWEAK_SURROGATE = 13` (`hi` the level). -/
+/-- `TWEAK_PARAMETER = 5`, `TWEAK_PRF = 0` (`hi` the pair of chains, `lo` the leaf),
+`TWEAK_FOREST_PRF = 14` (`hi` the packed pair of chains, `lo = idx`), `TWEAK_SURROGATE = 13` (`hi`
+the level). -/
 def keygenDomainFields : KeygenDomain → TweakFields
   | .parameter => tweakFields 5 0 0 0
-  | .ots _ _ leaf chain => tweakFields 0 0 chain leaf
-  | .forest index c s j a i => tweakFields 14 0 (chainSlot c s j a i) index
+  | .ots _ _ leaf pair => tweakFields 0 0 pair leaf
+  | .forest index c s j a pair => tweakFields 14 0 (pairSlot c s j a pair) index
   | .surrogate level => tweakFields 13 0 level 0
 
 /-- `P || A || S`; parameter derivation uses `P = 0`. -/
@@ -665,9 +694,15 @@ instance (parameter : PublicParameter) (index : Index) : Decidable (Landed param
 
 end Pruning
 
+/-- One seed derivation, first 16 bytes: the parameter and the surrogates. -/
 def deriveKey {m : Type → Type} [Monad m] [HasQuery HashSpec m]
     (parameter : PublicParameter) (domain : KeygenDomain) (seed : MasterSeed) : m Digest := do
   return truncateHash (← Concrete.oracleHash (keygenHashInput parameter domain seed))
+
+/-- One seed derivation, all 32 bytes (`th_pair`): the starts of two chains are its two halves. -/
+def deriveOutput {m : Type → Type} [Monad m] [HasQuery HashSpec m]
+    (parameter : PublicParameter) (domain : KeygenDomain) (seed : MasterSeed) : m HashOutput :=
+  Concrete.oracleHash (keygenHashInput parameter domain seed)
 
 def deriveRandomizer {m : Type → Type} [Monad m] [HasQuery HashSpec m]
     (parameter : PublicParameter) (seed : MasterSeed)
@@ -689,11 +724,25 @@ structure SecretKey where
 
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
+/-- `wots_secrets`: the starts of the 64 chains of the one-time key at a leaf, from 32 seed
+derivations. Chains `2t` and `2t + 1` start at the two halves of derivation `t`. -/
+def otsSecrets (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (seed : MasterSeed) : m (ChainIndex → Digest) := do
+  let outputs ← sequenceFin fun pair : ChainPair => deriveOutput parameter (.ots lay tree leaf pair) seed
+  return fun chainIdx => hashHalf chainIdx.val (outputs (chainPair chainIdx))
+
+/-- The start of one chain of a one-time key, by its own derivation. The signer calls `otsSecrets`;
+this is the value of each of its entries (`Completeness.eval_otsSecrets`). -/
+def otsStart (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (chainIdx : ChainIndex) (seed : MasterSeed) : m Digest := do
+  let output ← deriveOutput parameter (.ots lay tree leaf (chainPair chainIdx)) seed
+  return hashHalf chainIdx.val output
+
 def oneTimePublicKey (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (seed : MasterSeed) : m (ChainIndex → Digest) :=
-  sequenceFin fun chainIdx => do
-    let secret ← deriveKey parameter (.ots lay tree leaf chainIdx) seed
-    chainWalk parameter lay tree leaf chainIdx 0 (chainLength - 1) secret
+    (leaf : LeafIndex) (seed : MasterSeed) : m (ChainIndex → Digest) := do
+  let secrets ← otsSecrets parameter lay tree leaf seed
+  sequenceFin fun chainIdx =>
+    chainWalk parameter lay tree leaf chainIdx 0 (chainLength - 1) (secrets chainIdx)
 
 def otsSignFrom (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
     (seed : MasterSeed) (message : Digest) :
@@ -702,9 +751,9 @@ def otsSignFrom (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (
   | attempts + 1, counter => do
       match ← encode parameter lay tree leaf message (BitVec.ofNat counterBits counter) with
       | some encoding => do
-          let values ← sequenceFin fun chainIdx => do
-            let secret ← deriveKey parameter (.ots lay tree leaf chainIdx) seed
-            chainWalk parameter lay tree leaf chainIdx 0 (encoding chainIdx).val secret
+          let secrets ← otsSecrets parameter lay tree leaf seed
+          let values ← sequenceFin fun chainIdx =>
+            chainWalk parameter lay tree leaf chainIdx 0 (encoding chainIdx).val (secrets chainIdx)
           return some (BitVec.ofNat counterBits counter, values)
       | none => otsSignFrom parameter lay tree leaf seed message attempts (counter + 1)
 
@@ -772,16 +821,33 @@ open Concrete
 
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
-/-- The forest chain value `x_{i,pos}` of a child. -/
+/-- The starts `x_{i,0}` of the 6 chains of a child, from 3 seed derivations. Chains `2t` and
+`2t + 1` start at the two halves of derivation `t`. -/
+def forestSecrets (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
+    (j : SubIdx) (a : ChildIdx) (seed : MasterSeed) : m (FChain → Digest) := do
+  let outputs ← sequenceFin fun pair : FPair => deriveOutput parameter (.forest index c s j a pair) seed
+  return fun i => hashHalf i.val (outputs (fchainPair i))
+
+/-- The start `x_{i,0}` of one chain of a child, by its own derivation. The signer calls
+`forestSecrets`; this is the value of each of its entries (`Completeness.eval_forestSecrets`). -/
+def forestStart (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
+    (a : ChildIdx) (i : FChain) (seed : MasterSeed) : m Digest := do
+  let output ← deriveOutput parameter (.forest index c s j a (fchainPair i)) seed
+  return hashHalf i.val output
+
+/-- The forest chain value `x_{i,pos}` of a child, by its own derivation. The signer computes the 6
+chains of a child from one call of `forestSecrets` (`childLeaf`, `coordOpen`); this is the value of
+each of them. -/
 def chainValue (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
     (a : ChildIdx) (i : FChain) (seed : MasterSeed) (pos : Nat) : m Digest := do
-  let secret ← deriveKey parameter (.forest index c s j a i) seed
+  let secret ← forestStart parameter index c s j a i seed
   forestWalk parameter index c s j a i 0 pos secret
 
 /-- The leaf of a child, from its 6 chain tops. -/
 def childLeaf (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
     (a : ChildIdx) (seed : MasterSeed) : m Digest := do
-  let ends ← sequenceFin fun i => chainValue parameter index c s j a i seed chainTop
+  let secrets ← forestSecrets parameter index c s j a seed
+  let ends ← sequenceFin fun i => forestWalk parameter index c s j a i 0 chainTop (secrets i)
   childLeafHash parameter index c s j a ends
 
 /-- A node of a sub-tree at tree level `level`. -/
@@ -825,8 +891,10 @@ def forestKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) 
 def coordOpen (parameter : PublicParameter) (index : Index) (c : Coord) (mark : CoordMark)
     (seed : MasterSeed) : m CoordOpening := do
   let sub ← sequenceFin fun j => do
+    let secrets ← forestSecrets parameter index c mark.super j (mark.child j) seed
     let values ← sequenceFin fun i =>
-      chainValue parameter index c mark.super j (mark.child j) i seed (chainTop - (lut (mark.word j) i).val)
+      forestWalk parameter index c mark.super j (mark.child j) i 0
+        (chainTop - (lut (mark.word j) i).val) (secrets i)
     let path ← sequenceFin fun level : Fin subHeight =>
       subNode parameter index c mark.super j seed level.val (Nat.xor ((mark.child j).val / 2 ^ level.val) 1)
     return (⟨values, path⟩ : SubOpening)
