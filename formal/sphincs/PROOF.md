@@ -8,7 +8,27 @@ target is q/2^127 = 2x. K is the key-generation cost and q' = q − K.
    of [Statement](LeanSphincs/Statement.lean) with the signing oracle `Seeded.sign`.
    `Det.forgeAdvantageDet_le_seedFree` ([BridgeDet](LeanSphincs/BridgeDet.lean)) bounds the advantage
    by the seed-free win of the memoizing adversary, which never asks for the same message twice, plus
-   2q/2^256. So each cached randomizer gets one coin, and the FORS loads are N/2^b.
+   2q/2^256: the base randomizer R0 of each message is replaced by a uniform value, one per
+   message. The FORS loads are N/2^b.
+   - **The walk.** The seed-free signer samples R0 and tries R0, R0 + 1, … The statuses of the
+     randomizers of one message (unqueried, queried without landing, landed with a known view) fix
+     the law of the selected randomizer exactly (`Walk.val`, [BridgeWalk](LeanSphincs/BridgeWalk.lean);
+     `loop_bound`, [BridgeSignerFors](LeanSphincs/BridgeSignerFors.lean)): a known landed value is
+     selected when R0 lies in the run that leads to it.
+   - **One group per message.** The potentials see a base function through the selection of every
+     unsigned message (`Walk.grp`, [BridgeGroup](LeanSphincs/BridgeGroup.lean); `stateFn`, `fut`,
+     [BridgeStateFn](LeanSphincs/BridgeStateFn.lean)): a start absorbed by a known landed value
+     discloses its view, a known non-landing start that is not absorbed is credited a fresh view (a
+     scan can still turn it into a known item), an unqueried start is paid by the fresh slot of the
+     signature. The group is a convex combination of translates, so the selection probabilities,
+     which are martingales under further queries, are used exactly.
+   - **Rate.** One digest query raises the group value by at most (2 − p)/2^128 times the average
+     gain of one disclosure, p = 2^-(26−b) (`Walk.grp_step`): unqueried starts carry at most
+     (1 − p)/p to a point. The bound is met by scanning forward from a fresh start to the first
+     landing value. Future digest pairs are therefore forecast with one coin
+     w5 = (2 − p)/(2^128 p) each (`H0.wbar5`, [H0Bound5](LeanSphincs/H0Bound5.lean)). The signer
+     that drew a fresh randomizer per attempt had rate 2^128/(2^128 − q) instead, which is larger
+     at q = 2^127 and smaller for small budgets.
 2. **Lazy comparison.** The seed-free game is rewritten over a graph view of all scheme values
    (Security* modules), then as one interpreted lazy run over hidden coordinates
    ([BridgeInterp](LeanSphincs/BridgeInterp.lean), [BridgeDebt](LeanSphincs/BridgeDebt.lean)). Chain
@@ -25,15 +45,15 @@ target is q/2^127 = 2x. K is the key-generation cost and q' = q − K.
    - **Linear potential:** charges ρ/2^128 per query, with ρ = max(3/2, 2 − 1/(1+4032x), 1+66x). It pays first-order hits, WOTS events, unrecorded and paired contacts and correct guesses, and passes ρ/2^128 per digest query to the cover potential ([BridgePotentialA](LeanSphincs/BridgePotentialA.lean)–A8, [BridgeFleafA3](LeanSphincs/BridgeFleafA3.lean)).
    - **FORS-leaf payment:** from its slack the linear potential also pays (ρ − 1 − x)/2^128 per FORS leaf query.
    - **Cover potential:** the one-coin FORS potential pays covers above that baseline. Its excess is certified by `checkThreshS` ([BridgeForsPotentialOnce](LeanSphincs/BridgeForsPotentialOnce.lean), [H0SplitCert](LeanSphincs/H0SplitCert.lean)).
-   - **Contact before reveal:** a contact at a leaf revealed later costs N/(2^b 2^10) per FORS leaf query, paid from the FORS-leaf payment. Its coin part keeps a budget term ([BridgeFleafA4a](LeanSphincs/BridgeFleafA4a.lean)).
+   - **Contact before reveal:** a contact at a leaf revealed later costs N/(2^b 2^10) per FORS leaf query, paid from the FORS-leaf payment. The part where the revealing signature selects a cached digest keeps a budget term: a unit of budget is a contact attempt or a digest query, not both, so the term is 2^-128·C(q', 2)·(2 − p)/2^128 ([BridgeFleafA4a](LeanSphincs/BridgeFleafA4a.lean)).
    - **Contact at a near-covered leaf:** the per-contact near forecast is capped at one. The shortfall of a FORS leaf query at a near-covered leaf, κ = 2 − ρ + x + N/(2^b 2^10), is paid by κ·2^-128·Σ_{j<y} potNear(j) over budget levels ([BridgeArmA4b](LeanSphincs/BridgeArmA4b.lean)).
    - **Closing:** `checkSmallA` ([BridgeArmSmall](LeanSphincs/BridgeArmSmall.lean)) is
-     ρ + 2^128·B + q_h/(2^128−q_h−2^32) + κ·q_h·c/2 + 2^-60 ≤ 2, where B and c are the certified cover excess and near-cover terms.
+     ρ + 2^128·B + (2 − p)·q_h/2^129 + κ·q_h·c/2 + 2^-60 ≤ 2, where B and c are the certified cover excess and near-cover terms.
 5. **Large budgets (q' ≥ q_h).** The one-coin FORS potential is combined with the saturation of hits:
    - Every digest query pays the baseline times the current survival weight ([BridgeSatW](LeanSphincs/BridgeSatW.lean), [BridgeSatWFors](LeanSphincs/BridgeSatWFors.lean)), so the baseline is ≈ 2^-127 (1 − x).
    - Hits cost at most 1 − (1 − x)^2 in total.
    - `det_largeW` ([BridgeSatWRoutes](LeanSphincs/BridgeSatWRoutes.lean)) bounds the forgery probability for q' ≥ q_h.
-   - Poisson domination of the virtual future and Chernoff-split certificates (`checkCoverSW`, [H0Split](LeanSphincs/H0Split.lean), [BridgeDetW](LeanSphincs/BridgeDetW.lean)) cover every budget from q_h to 2^127.
+   - Poisson domination of the virtual future and Chernoff-split certificates (`checkCoverSW`, [H0Split](LeanSphincs/H0Split.lean), [H0SplitCert5](LeanSphincs/H0SplitCert5.lean), [BridgeDetW](LeanSphincs/BridgeDetW.lean)) cover every budget from q_h to 2^127. The table mean allows one extra expected load from cached digests, and (2 − p)·q/2^128 ≤ 1.
 6. **Closing.** `det_bits` ([BridgeDetClose](LeanSphincs/BridgeDetClose.lean)) combines the two routes.
    [LifetimeCertificates](LeanSphincs/LifetimeCertificates.lean), generated by
    `scripts/lifetime_certificates.py`, holds the kernel-checked certificates (`decide +kernel`, exact
@@ -75,9 +95,9 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
 
 ## Modeling differences and obligations
 
-- `Randomized.sign` samples fresh independent 16-byte randomizers. Rust derives them from the seed and
-  message; that signer is `Seeded.sign`, the one in the security statement. Honest completeness
-  is proved for the randomized variant; correctness for the seeded one.
+- `Randomized.sign` samples a uniform 16-byte base randomizer and walks from it. Rust derives the
+  base from the seed and message; that signer is `Seeded.sign`, the one in the security statement.
+  Honest completeness is proved for the randomized variant; correctness for the seeded one.
 - The formal signer returns `none` after 2^32 randomizer trials. Rust uses `(0u32..)` and
   `.find(...).unwrap()` without this explicit failure case; overflow/wrapping and failure behavior are
   not modeled. Rust also panics on WOTS counter exhaustion.
@@ -90,6 +110,18 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
 - `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums BLAKE2s
   block costs of the verifier's logged hash-input lengths: accepted signatures cost exactly 391
   compressions, all signatures at most 391.
+- Every hash input is P ‖ A ‖ payload, with the 8-byte address A = `lo` ‖ `hi` ‖ (type + 32·step).
+  The tree domains keep their layer and tree arguments, both always 0 and not serialized
+  (`TreeIndex = Fin 1`). An input determines P, the address and the payload
+  (`fieldInput_injective`, [SecurityDomains](LeanSphincs/SecurityDomains.lean)), and in-range
+  domains have distinct addresses (`hashFields_injective`,
+  [SecurityPosition](LeanSphincs/SecurityPosition.lean)), so separating inputs costs no probability
+  term. The message digest hashes m ‖ 0^8 ‖ ρ and the randomizer derivation seed ‖ m, once per
+  message: Rust keeps the BLAKE2s state after the first block of the digest and pays one
+  compression per grinding attempt; the model hashes whole inputs, and its budgets count oracle
+  queries. The root is
+  not hashed in the digest (P binds the key); `messageDigestPayload` and the digest functions keep
+  their `root` argument, which they ignore.
 
 `Axioms.lean` uses `#guard_msgs` to pin each public theorem to its exact axiom list, a subset of
 `propext`, `Classical.choice` and `Quot.sound`.

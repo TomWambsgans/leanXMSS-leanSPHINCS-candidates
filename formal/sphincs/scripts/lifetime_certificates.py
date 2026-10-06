@@ -301,8 +301,9 @@ def touch(n_row, mu):
     return sum(Fr(s) * mu ** j for j, s in enumerate(n_row))
 
 def mu_once(b, N, qb):
-    D = Fr(2) ** 128 - qb - Fr(2) ** 32
-    return Fr(N, 2 ** b) + (Fr(qb) / D) * (1 + Fr(2) ** 26 / D) ** 24 / Fr(2) ** b
+    """Mirror of H0.muOnceQ5: the coin of a future digest pair is (2 - 2^-(26-b)) / (2^128 landing)."""
+    return (Fr(N, 2 ** b) + (Fr(qb) * (2 - Fr(1, 2 ** (26 - b))) / 2 ** 128)
+            * (1 + Fr(2 ** 27 - 2 ** b, 2 ** 128)) ** 24 / Fr(2) ** b)
 
 def near_hq(b, mu):
     return 24 * Fr(2) ** b * touch(S23, mu) / Fr(2) ** 256
@@ -329,7 +330,7 @@ def check_smallA(b, N, qh, rho, cthr, B, c):
     ok = (Fr(3, 2) <= rho <= 2 and 1 + 4032 * (2 - rho) * x <= rho and 1 + 66 * x <= rho and 64 * x <= 1
           and qh <= 2 ** 127 and N <= 2 ** 70 and cthr <= rho / 2 ** 128 and B >= 0 and c >= 0
           and mr <= rho - 1 - x)
-    lhs = (rho + 2 ** 128 * B + Fr(qh, 2 ** 128 - (qh + 2 ** 32)) + (2 - rho + x + mr) * qh * c
+    lhs = (rho + 2 ** 128 * B + Fr(qh) * (2 - Fr(1, 2 ** (26 - b))) / 2 ** 129 + (2 - rho + x + mr) * qh * c
            + Fr(1, 2 ** 60))
     return ok and lhs <= 2
 

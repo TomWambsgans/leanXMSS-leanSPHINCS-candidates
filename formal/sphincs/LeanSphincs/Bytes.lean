@@ -26,17 +26,36 @@ theorem ofNat_inj_of_lt {w a b : Nat} (ha : a < 2 ^ w) (hb : b < 2 ^ w)
   have htoNat := congrArg BitVec.toNat h
   rwa [BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb] at htoNat
 
+/-- The 8 address bytes determine the type, the step and both fields. -/
 theorem fieldBytes_injective {t1 t2 : TweakFields} (h : fieldBytes t1 = fieldBytes t2) : t1 = t2 := by
-  obtain ⟨tag1, layer1, tree1, position1, index1⟩ := t1
-  obtain ⟨tag2, layer2, tree2, position2, index2⟩ := t2
+  obtain ⟨tag1, step1, hi1, lo1⟩ := t1
+  obtain ⟨tag2, step2, hi2, lo2⟩ := t2
   simp only [fieldBytes] at h
-  obtain ⟨h, hindex⟩ := List.append_inj' h (by simp [bytesLE_length])
-  obtain ⟨h, htree⟩ := List.append_inj' h (by simp [bytesLE_length])
-  obtain ⟨h, hposition⟩ := List.append_inj' h (by simp [bytesLE_length])
-  have h := List.append_left_injective [0] h
-  obtain ⟨htag, hlayer⟩ := List.append_inj' h (by simp [bytesLE_length])
-  have htag := List.append_right_injective [protocolDomainSep] htag
-  simp only [bytesLE_injective htag, bytesLE_injective hlayer, bytesLE_injective htree,
-    bytesLE_injective hposition, bytesLE_injective hindex]
+  obtain ⟨h, htag⟩ := List.append_inj' h (by simp [bytesLE_length])
+  obtain ⟨hlo, hhi⟩ := List.append_inj' h (by simp [bytesLE_length])
+  have h1 := tag1.isLt
+  have h2 := tag2.isLt
+  have h3 := step1.isLt
+  have h4 := step2.isLt
+  have htag := ofNat_inj_of_lt (by omega) (by omega) (bytesLE_injective htag)
+  have ht : tag1 = tag2 := BitVec.eq_of_toNat_eq (by omega)
+  have hs : step1 = step2 := BitVec.eq_of_toNat_eq (by omega)
+  simp only [ht, hs, bytesLE_injective hhi, bytesLE_injective hlo]
+
+/-- The layout test of `crates/sphincs/src/hash.rs`: type `10`, step `5`, `hi = 0x123456`,
+`lo = 0x89abcdef`. -/
+theorem fieldBytes_layout_example :
+    fieldBytes (tweakFields 10 5 0x123456 0x89abcdef) =
+      [0xef, 0xcd, 0xab, 0x89, 0x56, 0x34, 0x12, 0xaa] := by
+  decide
+
+/-- The scheme has one layer and one tree: these two arguments of a call are not serialized. -/
+theorem layer_eq (lay lay' : Layer) : lay = lay' := by
+  have h := lay.isLt
+  have h' := lay'.isLt
+  simp only [numLayers] at h h'
+  exact Fin.ext (by omega)
+
+theorem treeIndex_eq (tree tree' : TreeIndex) : tree = tree' := Subsingleton.elim _ _
 
 end LeanSphincs

@@ -32,8 +32,7 @@ omit [Params] in
 theorem payload_pair_injective (root : Digest) {m m' : Message} {ρ ρ' : Randomness}
     (h : messageDigestPayload root m ρ = messageDigestPayload root m' ρ') : m = m' ∧ ρ = ρ' := by
   have hparts := List.append_inj h (by simp [bytesLE_length])
-  have hfirst := List.append_inj hparts.1 (by simp [bytesLE_length])
-  exact ⟨bytesLE_injective hparts.2, bytesLE_injective hfirst.1⟩
+  exact ⟨bytesLE_injective (List.append_cancel_right hparts.1), bytesLE_injective hparts.2⟩
 
 section Defs
 
@@ -48,7 +47,7 @@ theorem pblk_injective {p q : Pair} {call call' : Fin 2}
   obtain ⟨hfields, -, hpayload⟩ := tweakableInput_injective h
   obtain ⟨hm, hρ⟩ := payload_pair_injective data.root hpayload
   refine ⟨Prod.ext hm hρ, ?_⟩
-  have := congrArg TweakFields.position hfields
+  have := congrArg TweakFields.hi hfields
   simp only [hashDomainFields, tweakFields] at this
   exact Fin.ext (by
     have h1 := call.isLt

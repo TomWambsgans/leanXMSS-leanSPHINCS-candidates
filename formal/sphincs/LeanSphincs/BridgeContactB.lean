@@ -127,13 +127,16 @@ def A4bRun (out : Run HashInput Coordinate HiddenBridge.Outcome × State) : Prop
   ∃ outcome, out.1.1 = some outcome ∧ SigningTranscript.Valid outcome.2.1 ∧
     A4b parameter data K out.2 outcome.2.1 out.1.2.1
 
-theorem potN_start (known : Knowledge Coordinate) (total : ℕ) :
+/-- The start value. Without cached digest blocks the forecast is that of the future pairs alone. -/
+theorem potN_start (hclean : ∀ p call, initial (pblk parameter data p call) = none) (known : Knowledge Coordinate)
+    (total : ℕ) :
     potN parameter data wbar Fail (DebtState.start initial known) [] [] 0 total =
       total * (startNear wbar total + failMass Fail) + signatureLimit * failMass Fail := by
   unfold potN potG
   rw [if_neg (by simp)]
   unfold coreG hValueG startNear
-  simp [coinItems, items]
+  rw [fut_clean (DebtState.start initial known) [] _ (fun m ρ => hclean (m, ρ) 0)]
+  simp
 
 end Bound
 

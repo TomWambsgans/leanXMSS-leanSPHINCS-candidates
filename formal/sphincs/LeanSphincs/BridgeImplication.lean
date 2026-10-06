@@ -881,7 +881,8 @@ theorem bad_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) 
     · right
       rcases Fors.Opening.covered_or_hidden f (truncateHash parameterOutput) _ seed _
           forgery.signature.ftsSecret forgery.signature.ftsPath (revealedSet reveals) _ hcanon.2.2.2.2
-          (SignatureWitness.verification_fors_run f _ forgery.message forgery.signature) with
+          (SignatureWitness.verification_fors_run f ⟨(sampleData parameterOutput fixed highs remaining).root,
+            truncateHash parameterOutput⟩ forgery.message forgery.signature) with
         hcovered | ⟨index, tree, leaf, hnot, hmem⟩
       · refine ⟨hvalid, _, cachedDigest_eq parameterOutput highs table cacheF f entries hagree hcached _
           forgery.message forgery.signature htrace, hcanon.1, ?_, hcovered⟩

@@ -2,7 +2,7 @@ import LeanSphincs.SecurityVerifier
 import LeanSphincs.Randomized
 import VCVio.OracleComp.QueryTracking.QueryBound
 
-/-! Every hash input of the honest algorithms and of the verifier has at most 1056 bytes.
+/-! Every hash input of the honest algorithms and of the verifier has at most 1048 bytes.
 Longer adversarial inputs never meet honest work, which lets them be simulated privately. -/
 
 open OracleComp OracleSpec
@@ -13,8 +13,8 @@ open Concrete
 
 attribute [local irreducible] digestAttemptLimit encodingAttemptLimit
 
-/-- The longest honest input: 16 tweak bytes, 16 parameter bytes and 64 chain ends. -/
-def bound : Nat := 1056
+/-- The longest honest input: 16 parameter bytes, 8 address bytes and 64 chain ends. -/
+def bound : Nat := 1048
 
 def IsShort (input : HashInput) : Prop := input.length ≤ bound
 
@@ -50,16 +50,16 @@ theorem Only.query {input : HashInput} (h : IsShort input) :
   intro hlong
   exact absurd h hlong
 
-theorem fieldBytes_length (fields : TweakFields) : (fieldBytes fields).length = 16 := by
+theorem fieldBytes_length (fields : TweakFields) : (fieldBytes fields).length = 8 := by
   simp [fieldBytes, bytesLE_length]
 
 theorem tweakableHashInput_length (parameter : PublicParameter) (domain : HashDomain)
     (payload : HashInput) :
-    (tweakableHashInput parameter domain payload).length = 32 + payload.length := by
+    (tweakableHashInput parameter domain payload).length = 24 + payload.length := by
   simp only [tweakableHashInput, tweakBytes, List.length_append, fieldBytes_length, bytesLE_length]
 
 theorem keygenHashInput_length (parameter : PublicParameter) (domain : KeygenDomain)
-    (seed : MasterSeed) : (keygenHashInput parameter domain seed).length = 64 := by
+    (seed : MasterSeed) : (keygenHashInput parameter domain seed).length = 56 := by
   simp [keygenHashInput, fieldBytes_length, bytesLE_length]
 
 theorem Only.tweakableHash (parameter : PublicParameter) (domain : HashDomain)
@@ -112,7 +112,7 @@ theorem ftsRootsPayload_length (roots : FtsTree → Digest) :
   rfl
 
 theorem messageDigestPayload_length (root : Digest) (message : Message) (randomness : Randomness) :
-    (messageDigestPayload root message randomness).length = 64 := by
+    (messageDigestPayload root message randomness).length = 56 := by
   simp [messageDigestPayload, bytesLE_length]
 
 theorem Only.chainWalk (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
@@ -334,6 +334,17 @@ theorem Only.signAttempt (secretKey : SecretKey) (message : Message) (randomness
   unfold LeanSphincs.Seeded.signAttempt
   exact Short.Only.bind (Short.Only.messageDigestCall _ _ _ _ _) (fun _ =>
     Short.Only.ite _ (Short.Only.pure' _) (Short.Only.pure' _))
+
+theorem Only.signDigestLoop (secretKey : SecretKey) (message : Message) :
+    ∀ attempts randomness, Short.Only (signDigestLoop secretKey message attempts randomness :
+      OracleComp HashSpec (Option (Randomness × Index)))
+  | 0, _ => Short.Only.pure' _
+  | attempts + 1, randomness => by
+      rw [LeanSphincs.Seeded.signDigestLoop]
+      refine Short.Only.bind (Only.signAttempt _ _ _) (fun result => ?_)
+      cases result with
+      | none => exact Only.signDigestLoop secretKey message attempts (randomness + 1)
+      | some _ => exact Short.Only.pure' _
 
 attribute [local irreducible] LeanSphincs.Seeded.treeNode LeanSphincs.Seeded.ftsNode
   LeanSphincs.Seeded.otsSignFrom LeanSphincs.Seeded.ftsKey LeanSphincs.Seeded.treePath

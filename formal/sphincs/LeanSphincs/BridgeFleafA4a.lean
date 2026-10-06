@@ -2,21 +2,19 @@ import LeanSphincs.BridgeFleafGame
 import LeanSphincs.BridgeFleafA3
 import LeanSphincs.BridgeContactBound
 
-/-! **A4a paid per FORS leaf query.** The potential
-`#revealed contacts + (#unrevealed contacts + y 2^-128) · (n 2^-b 2^-10 + wbar (#coins + y landing))`
-(`BridgeContactA`) charges, on every unit of budget, `2^-128` times the whole reveal rate of a
-future contact. Contacts arise only at FORS leaf
-queries, so the signature part of that rate, `n 2^-b 2^-10` (`n` the remaining signatures), is
-paid instead by `2^-128 N 2^-b 2^-10` at every FORS leaf query of the trace. The coin part
-`wbar (#coins + y landing)` of a future contact cannot be paid that way: the number of cached
-landed pairs at the time of a FORS leaf query is not bounded by `y landing` along a run, only in
-expectation, so it stays a budget term. The potential
+/-! **A4a paid per FORS leaf query.** A contact (a FORS leaf query that hits an unknown secret,
+probability `2^-128`) is revealed later by a signature with a fresh view (rate `n 2^-b 2^-10`, `n`
+the remaining signatures, paid by `2^-128 N 2^-b 2^-10` at every FORS leaf query), or by a
+signature that selects a cached landed digest pair. The second part is a budget term. With `A` the
+selection mass of the known landed pairs of the unsigned messages (`poolMass`, the state function
+on the card function) and `r = rate5 = (2 - landing) / 2^128` the mass one more digest query adds,
 
-`Ψ = #revealed contacts + #unrevealed contacts · n 2^-b 2^-10 +
-  (#unrevealed contacts + y 2^-128) · wbar (#coins + y landing)`
+`Ψ = #revealed + #open · n 2^-b 2^-10 + #open · (A + y r) + 2^-128 · (y A + C(y, 2) r)`
 
-pays the event up to `2^-128 N 2^-b 2^-10` per FORS leaf query, and starts at
-`(q 2^-128) (q wbar landing)`. -/
+is a supermartingale up to the payment: a unit of budget is spent either on a contact attempt
+(worth `2^-128` times the mass still to come, `A + (y - 1) r`) or on a digest query (worth `r` per
+open contact and per future contact attempt), not on both. It starts at `2^-128 · C(q, 2) · r`,
+half of the product `(q 2^-128)(q r)`. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -36,37 +34,123 @@ variable [Params]
 
 section Defs
 
-variable (parameter : PublicParameter) (K : HiddenReveal.Knowledge Coordinate) (wbar : ℝ≥0∞)
+variable (parameter : PublicParameter) (data : PublicData) (K : HiddenReveal.Knowledge Coordinate)
 
 /-- The signature part of the reveal rate of one unrevealed contact. -/
 noncomputable def sigRisk (L : QueryLog SigningSpec) : ℝ≥0∞ :=
   ((signatureLimit - L.length : ℕ) : ℝ≥0∞) * matchRate
 
-/-- The coin part of the reveal rate of one unrevealed contact: the cached landed pairs of messages
-not yet signed, and the ones of the remaining budget. -/
-noncomputable def coinRisk (P : List Pair) (L : QueryLog SigningSpec) (budget : ℕ) : ℝ≥0∞ :=
-  wbar * coinCount P L + budget * (wbar * landing)
+/-- The selection mass of the known landed pairs of the messages not yet signed. -/
+noncomputable def poolMass (s : State) (L : QueryLog SigningSpec) : ℝ≥0∞ :=
+  stateFn parameter data s L (fun _ => False) cardFn 0
+
+/-- The coin part of the reveal rate of one unrevealed contact: the mass of the known landed pairs
+and the mass the remaining budget can add. -/
+noncomputable def coinRisk (s : State) (L : QueryLog SigningSpec) (budget : ℕ) : ℝ≥0∞ :=
+  poolMass parameter data s L + budget * rate5
 
 /-- **The potential of A4a with a payment per FORS leaf query.** -/
-noncomputable def psiAF : Potential := fun s P L _ R budget =>
+noncomputable def psiAF : Potential := fun s _ L _ R budget =>
   if signatureLimit < L.length then 0
   else (revealedContacts parameter K s R).card + (openContacts parameter K s R).card * sigRisk L +
-    ((openContacts parameter K s R).card + budget * contactRate) * coinRisk wbar P L budget
+    (openContacts parameter K s R).card * coinRisk parameter data s L budget +
+    contactRate * (budget * poolMass parameter data s L + (budget.choose 2 : ℕ) * rate5)
 
 end Defs
+
+/-! ### The pool mass -/
+
+section Mass
+
+variable {parameter : PublicParameter} {data : PublicData}
+
+theorem stateFn_card (s : State) (L : QueryLog SigningSpec) (D : Multiset View) :
+    stateFn parameter data s L (fun _ => False) cardFn D =
+      stateFn parameter data s L (fun _ => False) cardFn 0 + cardFn D := by
+  have hR := rep_stateFn (parameter := parameter) (data := data) s L (fun _ => False)
+  have h1 := hR.map_translate cardFn D 0
+  rw [zero_add] at h1
+  have h2 : (fun D' : Multiset View => cardFn (D' + D)) = fun D' => cardFn D' + (fun _ => cardFn D) D' := by
+    funext D'
+    unfold cardFn
+    rw [Multiset.card_add]
+    push_cast
+    rfl
+  rw [← h1, h2, hR.map_add]
+  congr 1
+  have h3 := foldG_const (parameter := parameter) (data := data) s (fun _ => False) (cardFn D) (freshMsgs L)
+  exact congrFun h3 0
+
+theorem poolMass_newPair (s : State) (L : QueryLog SigningSpec) (p : Pair)
+    (hp0 : s.cache (pblk parameter data p 0) = none) :
+    pairE (fun u0 u1 => poolMass parameter data (withPair parameter data s p u0 u1) L) ≤
+      poolMass parameter data s L + rate5 := by
+  have h := stateFn_newPair cardFn_props s L (fun _ => False) p hp0 (fun h => h) (0 : Multiset View)
+  have havg : avgT (stateFn parameter data s L (fun _ => False) cardFn) 0 =
+      stateFn parameter data s L (fun _ => False) cardFn 0 + 1 := by
+    unfold avgT
+    have : (fun v : View => stateFn parameter data s L (fun _ => False) cardFn (0 + {v})) =
+        fun _ => stateFn parameter data s L (fun _ => False) cardFn 0 + 1 := by
+      funext v
+      rw [stateFn_card s L (0 + {v})]
+      congr 1
+      simp [cardFn]
+    rw [this, freshAvg_const _ Finset.univ_nonempty]
+  rw [havg] at h
+  refine le_trans h (le_of_eq ?_)
+  unfold poolMass
+  rw [mul_add, ← add_assoc, ← add_mul, tsub_add_cancel_of_le rate5_le_one, one_mul, mul_one]
+
+theorem poolMass_split (s : State) (L : QueryLog SigningSpec) (m : Message) (hm : ∀ entry ∈ L, entry.1 ≠ m) :
+    poolMass parameter data s L =
+      grpM parameter data m s (fun _ => False) cardFn 0 + poolMass parameter data s (L ++ [⟨m, none⟩]) := by
+  unfold poolMass
+  rw [stateFn_split s L (fun _ => False) cardFn m hm none]
+  set c0 := stateFn parameter data s (L ++ [⟨m, none⟩]) (fun _ => False) cardFn 0 with hc0
+  have hfun : stateFn parameter data s (L ++ [⟨m, none⟩]) (fun _ => False) cardFn = fun D => cardFn D + c0 := by
+    funext D
+    rw [stateFn_card s _ D, add_comm]
+  have hadd := (rep_grpM (parameter := parameter) (data := data) m s (fun _ => False)).map_add cardFn (fun _ => c0) 0
+  beta_reduce at hadd
+  have hc : grpM parameter data m s (fun _ => False) (fun _ => c0) 0 = c0 := by
+    unfold grpM
+    exact Walk.grp_const (e := succR) (L := digestAttemptLimit) landing_le_one (stat parameter data m s)
+      (exB (fun _ => False) m) c0 0
+  rw [hfun, hadd, hc]
+
+theorem poolMass_congr {s s' : State} (L : QueryLog SigningSpec)
+    (h : ∀ m, stat parameter data m s' = stat parameter data m s) :
+    poolMass parameter data s' L = poolMass parameter data s L := by
+  unfold poolMass
+  rw [stateFn_congr L _ _ fun m _ => h m]
+
+theorem poolMass_clean (s : State) (L : QueryLog SigningSpec)
+    (hclean : ∀ m ρ, s.cache (blk parameter data m ρ 0) = none) : poolMass parameter data s L = 0 := by
+  unfold poolMass
+  rw [stateFn_clean s L _ hclean]
+  exact cardFn_zero
+
+theorem choose_two_succ (j : ℕ) : ((j + 1).choose 2 : ℝ≥0∞) = j + (j.choose 2 : ℕ) := by
+  have : (j + 1).choose 2 = j + j.choose 2 := by
+    rw [Nat.choose_succ_succ j 1, Nat.choose_one_right]
+  rw [this]
+  push_cast
+  rfl
+
+end Mass
 
 /-! ### The four steps -/
 
 section Steps
 
 variable (parameter : PublicParameter) (data : PublicData) (K : HiddenReveal.Knowledge Coordinate)
-  (wbar : ℝ≥0∞) (Qtot : ℕ) {A : Type}
+  (Qtot : ℕ) {A : Type}
   (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
   (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
 /-- **A new pair.** -/
 theorem psiAF_newPair (hparse : ∀ p call, model.parse (pblk parameter data p call) = none) :
-    NewPairPays parameter data Qtot initial model (psiAF parameter K wbar) := by
+    NewPairPays parameter data Qtot initial model (psiAF parameter data K) := by
   intro budget s P L d R hb hB p hp0
   have hp1 := hB.pinv.first p hp0
   have hc : ∀ a b, contacts parameter K (withPair parameter data s p a b) = contacts parameter K s :=
@@ -75,42 +159,36 @@ theorem psiAF_newPair (hparse : ∀ p call, model.parse (pblk parameter data p c
   by_cases hL : signatureLimit < L.length
   · simp only [if_pos hL, pairE_const, le_refl]
   simp only [if_neg hL]
+  obtain ⟨j, rfl⟩ := Nat.exists_eq_add_of_le' hb
+  simp only [Nat.add_sub_cancel]
   set Rv : ℝ≥0∞ := (((contacts parameter K s).filter fun g => g.1 ∈ R).card : ℝ≥0∞)
   set U : ℝ≥0∞ := (((contacts parameter K s).filter fun g => g.1 ∉ R).card : ℝ≥0∞)
   set S0 : ℝ≥0∞ := Rv + U * sigRisk L with hS0
-  set A0 : ℝ≥0∞ := wbar * coinCount P L with hA0
-  have hpt : ∀ u0 u1 : HashOutput, S0 + (U + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate) *
-      coinRisk wbar (addPair parameter P p u0) L (budget - 1) =
-      S0 + (U + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate) * (A0 + ((budget - 1 : ℕ) : ℝ≥0∞) * (wbar * landing)) +
-        (U + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate) * wbar *
-          (if Landed parameter (blockIndex u0) then (if MsgFresh L p then 1 else 0) else 0) := by
+  set A0 : ℝ≥0∞ := poolMass parameter data s L with hA0
+  set c2 : ℝ≥0∞ := ((j.choose 2 : ℕ) : ℝ≥0∞) with hc2
+  have hpt : ∀ u0 u1 : HashOutput, S0 + U * coinRisk parameter data (withPair parameter data s p u0 u1) L j +
+      contactRate * ((j : ℝ≥0∞) * poolMass parameter data (withPair parameter data s p u0 u1) L + c2 * rate5) =
+      (S0 + U * ((j : ℝ≥0∞) * rate5) + contactRate * (c2 * rate5)) +
+        (U + contactRate * j) * poolMass parameter data (withPair parameter data s p u0 u1) L := by
     intro u0 u1
-    simp only [coinRisk, coinCount_addPair, A0]
+    simp only [coinRisk]
     ring
   refine le_trans (le_of_eq (congrArg pairE (funext fun u0 => funext fun u1 => hpt u0 u1))) ?_
-  rw [pairE_add, pairE_add, pairE_const, pairE_const, pairE_const_mul]
-  have hland : pairE (fun u0 _ => if Landed parameter (blockIndex u0) then (if MsgFresh L p then (1 : ℝ≥0∞) else 0)
-      else 0) ≤ landing := by
-    have h := pairE_landed parameter (fun _ => if MsgFresh L p then (1 : ℝ≥0∞) else 0) 0
-    simp only [mul_zero, add_zero] at h
-    have h' : pairE (fun u0 u1 => if Landed parameter (blockIndex u0) then
-        (fun _ : View => if MsgFresh L p then (1 : ℝ≥0∞) else 0) (viewOf u0 u1) else 0) ≤ landing := by
-      rw [h, freshAvg_const _ Finset.univ_nonempty]
-      split_ifs <;> simp
-    simpa using h'
-  have hbud : ((budget - 1 : ℕ) : ℝ≥0∞) + 1 = budget := by exact_mod_cast Nat.sub_add_cancel hb
-  calc S0 + (U + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate) * (A0 + ((budget - 1 : ℕ) : ℝ≥0∞) * (wbar * landing)) +
-        (U + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate) * wbar *
-          pairE (fun u0 _ => if Landed parameter (blockIndex u0) then (if MsgFresh L p then 1 else 0) else 0)
-      ≤ S0 + (U + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate) * (A0 + ((budget - 1 : ℕ) : ℝ≥0∞) * (wbar * landing)) +
-        (U + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate) * wbar * landing := by gcongr
-    _ = S0 + (U + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate) *
-          (A0 + (((budget - 1 : ℕ) : ℝ≥0∞) + 1) * (wbar * landing)) := by ring
-    _ ≤ S0 + (U + (budget : ℝ≥0∞) * contactRate) * (A0 + (budget : ℝ≥0∞) * (wbar * landing)) := by
-        rw [hbud]
+  rw [pairE_add, pairE_const, pairE_const_mul]
+  have hmass := poolMass_newPair (parameter := parameter) (data := data) s L p hp0
+  rw [choose_two_succ]
+  simp only [coinRisk]
+  push_cast
+  calc (S0 + U * ((j : ℝ≥0∞) * rate5) + contactRate * (c2 * rate5)) +
+        (U + contactRate * j) * pairE (fun u0 u1 => poolMass parameter data (withPair parameter data s p u0 u1) L)
+      ≤ (S0 + U * ((j : ℝ≥0∞) * rate5) + contactRate * (c2 * rate5)) + (U + contactRate * j) * (A0 + rate5) := by
         gcongr
-        exact Nat.sub_le budget 1
-    _ = _ := by simp only [coinRisk, A0, S0]
+    _ = S0 + U * (A0 + ((j : ℝ≥0∞) + 1) * rate5) + contactRate * ((j : ℝ≥0∞) * A0 + ((j : ℝ≥0∞) + c2) * rate5) := by
+        ring
+    _ ≤ S0 + U * (A0 + ((j : ℝ≥0∞) + 1) * rate5) +
+          contactRate * (((j : ℝ≥0∞) + 1) * A0 + ((j : ℝ≥0∞) + c2) * rate5) := by
+        gcongr
+        exact le_self_add
 
 /-- New contacts appear only at FORS leaf queries, `2^-128` of them on average. -/
 theorem newContacts_mean (hrows : FtsRows parameter model) (x : HashInput) (s : State)
@@ -137,26 +215,33 @@ theorem newContacts_mean (hrows : FtsRows parameter model) (x : HashInput) (s : 
 /-- **Any other ordinary query**, paying `2^-128 N 2^-b 2^-10` at a FORS leaf input. -/
 theorem psiAF_ordinary (hrows : FtsRows parameter model) :
     OrdinaryPaysP parameter data Qtot initial model (IsFleafIn parameter)
-      (contactRate * (signatureLimit * matchRate)) (psiAF parameter K wbar) := by
+      (contactRate * (signatureLimit * matchRate)) (psiAF parameter data K) := by
   intro budget s P L d R hb hB x hnew
   simp only [psiAF]
   by_cases hL : signatureLimit < L.length
   · simp only [if_pos hL, mul_zero, tsum_zero, zero_le]
   simp only [if_neg hL]
+  obtain ⟨j, rfl⟩ := Nat.exists_eq_add_of_le' hb
+  simp only [Nat.add_sub_cancel]
   set Rv : ℝ≥0∞ := ((revealedContacts parameter K s R).card : ℝ≥0∞) with hRv
   set U : ℝ≥0∞ := ((openContacts parameter K s R).card : ℝ≥0∞) with hU
   set σ := sigRisk L with hσ
-  set ρc := coinRisk wbar P L budget with hρc
+  set A0 : ℝ≥0∞ := poolMass parameter data s L with hA0
+  set c2 : ℝ≥0∞ := ((j.choose 2 : ℕ) : ℝ≥0∞) with hc2
   set f : ℝ≥0∞ := if IsFleafIn parameter x then 1 else 0 with hf
   set Nw : HashOutput × State → ℝ≥0∞ := fun r =>
     ((contacts parameter K r.2 \ contacts parameter K s).card : ℝ≥0∞) with hNw
   have hpt : ∀ r ∈ support (ordinaryStep model x s.known s),
       ((revealedContacts parameter K r.2 R).card : ℝ≥0∞) + ((openContacts parameter K r.2 R).card : ℝ≥0∞) * σ +
-          (((openContacts parameter K r.2 R).card : ℝ≥0∞) + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate) *
-            coinRisk wbar P L (budget - 1) ≤
-        Rv + (U + Nw r) * σ + (U + Nw r + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate) * ρc := by
+          ((openContacts parameter K r.2 R).card : ℝ≥0∞) * coinRisk parameter data r.2 L j +
+          contactRate * ((j : ℝ≥0∞) * poolMass parameter data r.2 L + c2 * rate5) ≤
+        Rv + (U + Nw r) * σ + (U + Nw r) * (A0 + (j : ℝ≥0∞) * rate5) +
+          contactRate * ((j : ℝ≥0∞) * A0 + c2 * rate5) := by
     intro r hr
     obtain ⟨_, hsub, hnew'⟩ := ordinary_contacts (K := K) hrows x s hB.cinv r hr
+    have hmass : poolMass parameter data r.2 L = A0 :=
+      poolMass_congr L (stat_same (ordinaryStep_extends model x s r hr) (ordinaryStep_cache_ne model x s r hr)
+        hnew hB.pinv)
     have hRv' : revealedContacts parameter K r.2 R = revealedContacts parameter K s R := by
       unfold revealedContacts
       ext g
@@ -181,11 +266,8 @@ theorem psiAF_ordinary (hrows : FtsRows parameter model) :
       rw [hU]
       simp only [hNw]
       exact_mod_cast hnat
-    have hρ' : coinRisk wbar P L (budget - 1) ≤ ρc := by
-      simp only [hρc, coinRisk]
-      gcongr
-      exact_mod_cast Nat.sub_le budget 1
     rw [hRv']
+    simp only [coinRisk, hmass]
     gcongr
   have hmean := newContacts_mean parameter K model hrows x s hB.cinv
   have hmass : ∑' r, Pr[= r | ordinaryStep model x s.known s] = 1 := by simp
@@ -194,44 +276,46 @@ theorem psiAF_ordinary (hrows : FtsRows parameter model) :
     rw [hσ, sigRisk]
     gcongr
     exact_mod_cast Nat.sub_le _ _
-  have hbud : ((budget - 1 : ℕ) : ℝ≥0∞) + 1 = budget := by exact_mod_cast Nat.sub_add_cancel hb
+  rw [choose_two_succ]
+  simp only [coinRisk]
+  push_cast
   calc _ ≤ ∑' r, Pr[= r | ordinaryStep model x s.known s] *
-        (Rv + (U + Nw r) * σ + (U + Nw r + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate) * ρc) := by
+        (Rv + (U + Nw r) * σ + (U + Nw r) * (A0 + (j : ℝ≥0∞) * rate5) +
+          contactRate * ((j : ℝ≥0∞) * A0 + c2 * rate5)) := by
         refine ENNReal.tsum_le_tsum fun r => ?_
         by_cases hr : r ∈ support (ordinaryStep model x s.known s)
         · exact mul_le_mul_right (hpt r hr) _
         · rw [probOutput_eq_zero_of_not_mem_support hr, zero_mul, zero_mul]
-    _ = (∑' r, Pr[= r | ordinaryStep model x s.known s]) * Rv +
-          ((∑' r, Pr[= r | ordinaryStep model x s.known s]) * U +
-            ∑' r, Pr[= r | ordinaryStep model x s.known s] * Nw r) * σ +
-          ((∑' r, Pr[= r | ordinaryStep model x s.known s]) * U +
-            ∑' r, Pr[= r | ordinaryStep model x s.known s] * Nw r +
-            (∑' r, Pr[= r | ordinaryStep model x s.known s]) * (((budget - 1 : ℕ) : ℝ≥0∞) * contactRate)) * ρc := by
-        simp only [add_mul, mul_add, ENNReal.tsum_add, ENNReal.tsum_mul_right, ← mul_assoc]
-    _ ≤ 1 * Rv + (1 * U + contactRate * f) * σ +
-          (1 * U + contactRate * f + 1 * (((budget - 1 : ℕ) : ℝ≥0∞) * contactRate)) * ρc := by
+    _ = (∑' r, Pr[= r | ordinaryStep model x s.known s]) *
+          (Rv + U * σ + U * (A0 + (j : ℝ≥0∞) * rate5) + contactRate * ((j : ℝ≥0∞) * A0 + c2 * rate5)) +
+          (∑' r, Pr[= r | ordinaryStep model x s.known s] * Nw r) * (σ + (A0 + (j : ℝ≥0∞) * rate5)) := by
+        rw [← ENNReal.tsum_mul_right, ← ENNReal.tsum_mul_right, ← ENNReal.tsum_add]
+        refine tsum_congr fun r => ?_
+        ring
+    _ ≤ 1 * (Rv + U * σ + U * (A0 + (j : ℝ≥0∞) * rate5) + contactRate * ((j : ℝ≥0∞) * A0 + c2 * rate5)) +
+          (contactRate * f) * (σ + (A0 + (j : ℝ≥0∞) * rate5)) := by
         rw [hmass]
         gcongr
-    _ = Rv + U * σ + (U + (contactRate * f + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate)) * ρc +
-          contactRate * f * σ := by ring
-    _ ≤ Rv + U * σ + (U + (budget : ℝ≥0∞) * contactRate) * ρc +
+    _ ≤ (Rv + U * σ + U * (A0 + (j : ℝ≥0∞) * rate5) + contactRate * ((j : ℝ≥0∞) * A0 + c2 * rate5)) +
+          (contactRate * f * σ + contactRate * (A0 + (j : ℝ≥0∞) * rate5)) := by
+        refine add_le_add (le_of_eq (one_mul _)) ?_
+        calc contactRate * f * (σ + (A0 + (j : ℝ≥0∞) * rate5))
+            = contactRate * f * σ + contactRate * f * (A0 + (j : ℝ≥0∞) * rate5) := mul_add _ _ _
+          _ ≤ contactRate * f * σ + contactRate * 1 * (A0 + (j : ℝ≥0∞) * rate5) := by gcongr
+          _ = _ := by rw [mul_one]
+    _ = Rv + U * σ + U * (A0 + (j : ℝ≥0∞) * rate5) +
+          contactRate * (((j : ℝ≥0∞) + 1) * A0 + ((j : ℝ≥0∞) + c2) * rate5) + contactRate * σ * f := by ring
+    _ ≤ Rv + U * σ + U * (A0 + ((j : ℝ≥0∞) + 1) * rate5) +
+          contactRate * (((j : ℝ≥0∞) + 1) * A0 + ((j : ℝ≥0∞) + c2) * rate5) +
           contactRate * ((signatureLimit : ℝ≥0∞) * matchRate) * f := by
-        gcongr ?_ + ?_
-        · gcongr
-          calc contactRate * f + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate
-              ≤ contactRate * 1 + ((budget - 1 : ℕ) : ℝ≥0∞) * contactRate := by gcongr
-            _ = (((budget - 1 : ℕ) : ℝ≥0∞) + 1) * contactRate := by ring
-            _ = _ := by rw [hbud]
-        · calc contactRate * f * σ = contactRate * σ * f := by ring
-            _ ≤ _ := by gcongr
+        gcongr
+        exact le_self_add
 
 /-- **A signing call** on a fresh message. -/
 theorem psiAF_sign (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
-    (hrows : FtsRows parameter model) {Cmax : ℕ} (hfair : Fair wbar Cmax) (hQ : Qtot + digestAttemptLimit ≤ Cmax) :
-    SignPays parameter data Qtot tg initial model (psiAF parameter K wbar) := by
+    (hrows : FtsRows parameter model) :
+    SignPays parameter data Qtot tg initial model (psiAF parameter data K) := by
   intro budget s P L d R hB m hm
-  have hcount : cachedCount parameter data m s + digestAttemptLimit ≤ Cmax := by
-    have := hB.count m; omega
   set sign := signCostSourceLoop parameter data m digestAttemptLimit with hsign
   by_cases hL : signatureLimit ≤ L.length
   · refine le_of_eq_of_le (ENNReal.tsum_eq_zero.2 fun o1 => ?_) bot_le
@@ -244,15 +328,12 @@ theorem psiAF_sign (hparse : ∀ p call, model.parse (pblk parameter data p call
   set C := contacts parameter K s with hC
   set Rv : ℝ≥0∞ := ((revealedContacts parameter K s R).card : ℝ≥0∞) with hRv
   set U : ℝ≥0∞ := ((openContacts parameter K s R).card : ℝ≥0∞) with hU
-  set Pm : ℝ≥0∞ := ((P.filter fun q => decide (q.1 = m)).length : ℝ≥0∞) with hPm
-  set cc' : ℝ≥0∞ := ((P.filter fun q => decide (MsgFresh L q ∧ q.1 ≠ m)).length : ℝ≥0∞) with hcc'
+  set G : ℝ≥0∞ := grpM parameter data m s (fun _ => False) cardFn 0 with hG
+  set A1 : ℝ≥0∞ := poolMass parameter data s (L ++ [⟨m, none⟩]) with hA1
+  set c2 : ℝ≥0∞ := ((budget.choose 2 : ℕ) : ℝ≥0∞) with hc2
   set n := signatureLimit - (L.length + 1) with hn
   have hn1 : signatureLimit - L.length = n + 1 := by omega
-  set ρ'' : ℝ≥0∞ := wbar * cc' + budget * (wbar * landing) with hρ''
-  have hcoin : coinRisk wbar P L budget = wbar * Pm + ρ'' := by
-    simp only [coinRisk, hρ'', coinCount_split P L m hm, hPm, hcc']
-    push_cast
-    ring
+  have hsplit : poolMass parameter data s L = G + A1 := poolMass_split s L m hm
   have hsig : sigRisk L = (n : ℝ≥0∞) * matchRate + matchRate := by
     simp only [sigRisk, hn1]
     push_cast
@@ -261,9 +342,10 @@ theorem psiAF_sign (hparse : ∀ p call, model.parse (pblk parameter data p call
   set X : Run HashInput Coordinate (Option Signature) × State → ℝ≥0∞ := fun o1 =>
     ∑ g ∈ openContacts parameter K s R, (if o1.1.1.isSome ∧ g.1 ∈ o1.1.2.1 then 1 else 0) with hX
   have hpt : ∀ o1 ∈ support (interp tg initial model sign budget s),
-      o1.1.1.elim 0 (fun r => psiAF parameter K wbar o1.2 (newPairs parameter data m s o1.2 ++ P) (L ++ [⟨m, r⟩])
+      o1.1.1.elim 0 (fun r => psiAF parameter data K o1.2 (newPairs parameter data m s o1.2 ++ P) (L ++ [⟨m, r⟩])
         (discAfter parameter data m s d o1) (R ++ o1.1.2.1) (budget - traceCost o1.1.2.2.1)) ≤
-      Rv + X o1 + (U * ((n : ℝ≥0∞) * matchRate) + (U + (budget : ℝ≥0∞) * contactRate) * ρ'') := by
+      Rv + X o1 + (U * ((n : ℝ≥0∞) * matchRate) + U * (A1 + (budget : ℝ≥0∞) * rate5) +
+        contactRate * ((budget : ℝ≥0∞) * A1 + c2 * rate5)) := by
     intro o1 ho1
     cases hres : o1.1.1 with
     | none => exact bot_le
@@ -271,6 +353,11 @@ theorem psiAF_sign (hparse : ∀ p call, model.parse (pblk parameter data p call
         simp only [Option.elim, psiAF]
         split_ifs with hgate
         · exact bot_le
+        have hother := other_message_kept tg initial model digestAttemptLimit budget s o1 ho1
+        have hmassA : poolMass parameter data o1.2 (L ++ [⟨m, r⟩]) = A1 := by
+          rw [hA1]
+          unfold poolMass
+          rw [stateFn_after L m r _ _ hother]
         have hcon := (interp_contacts_avoid (K := K) tg initial hrows _ (avoids_loopF parameter data m _)
           budget s hB.cinv o1 ho1).2
         simp only [revealedContacts, openContacts, hcon]
@@ -302,59 +389,59 @@ theorem psiAF_sign (hparse : ∀ p call, model.parse (pblk parameter data p call
           exact Finset.mem_filter.2 ⟨hgC, fun h => hgR (List.mem_append_left _ h)⟩
         have hσ' : sigRisk (L ++ [⟨m, r⟩]) = (n : ℝ≥0∞) * matchRate := by
           simp only [sigRisk, List.length_append, List.length_singleton, hn]
-        have hρ' : coinRisk wbar (newPairs parameter data m s o1.2 ++ P) (L ++ [⟨m, r⟩])
-            (budget - traceCost o1.1.2.2.1) ≤ ρ'' := by
-          simp only [coinRisk, coinCount_after, hρ'', hcc']
-          gcongr
-          exact_mod_cast Nat.sub_le budget _
         have hbud : ((budget - traceCost o1.1.2.2.1 : ℕ) : ℝ≥0∞) ≤ budget := by
           exact_mod_cast Nat.sub_le budget _
+        have hch : (((budget - traceCost o1.1.2.2.1).choose 2 : ℕ) : ℝ≥0∞) ≤ c2 := by
+          rw [hc2]
+          exact_mod_cast Nat.choose_le_choose 2 (Nat.sub_le budget (traceCost o1.1.2.2.1))
         rw [hσ']
-        calc _ ≤ (Rv + X o1) + U * ((n : ℝ≥0∞) * matchRate) + (U + (budget : ℝ≥0∞) * contactRate) * ρ'' := by
+        simp only [coinRisk, hmassA]
+        calc _ ≤ (Rv + X o1) + U * ((n : ℝ≥0∞) * matchRate) + U * (A1 + (budget : ℝ≥0∞) * rate5) +
+              contactRate * ((budget : ℝ≥0∞) * A1 + c2 * rate5) := by
               gcongr
           _ = _ := by ring
   -- the expected reveals of the open contacts
-  have hXe : ∑' o1, Pr[= o1 | interp tg initial model sign budget s] * X o1 ≤ U * (matchRate + wbar * Pm) := by
+  have hXe : ∑' o1, Pr[= o1 | interp tg initial model sign budget s] * X o1 ≤ U * (matchRate + G) := by
     simp only [hX, Finset.mul_sum]
     rw [Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
     calc ∑ g ∈ openContacts parameter K s R, ∑' o1, Pr[= o1 | interp tg initial model sign budget s] *
           (if o1.1.1.isSome ∧ g.1 ∈ o1.1.2.1 then 1 else 0)
-        ≤ ∑ _g ∈ openContacts parameter K s R, (matchRate + wbar * Pm) := by
+        ≤ ∑ _g ∈ openContacts parameter K s R, (matchRate + G) := by
           refine Finset.sum_le_sum fun g hg => ?_
           obtain ⟨i, t, l, ans, hgi, _, _⟩ := (Finset.mem_filter.1 (Finset.mem_filter.1 hg).1).2
           rw [hgi]
-          exact reveal_le tg initial model parameter data m hparse hB.pinv hB.prep hfair digestAttemptLimit budget
-            hcount i t l
-      _ = U * (matchRate + wbar * Pm) := by
+          exact reveal_le tg initial model parameter data m hparse hB.pinv hB.prep budget i t l
+      _ = U * (matchRate + G) := by
           rw [Finset.sum_const, nsmul_eq_mul]
   have hmass : ∑' o1, Pr[= o1 | interp tg initial model sign budget s] ≤ 1 := tsum_probOutput_le_one
   simp only [psiAF, if_neg hL', revealedContacts, openContacts]
-  calc _ ≤ ∑' o1, Pr[= o1 | interp tg initial model sign budget s] *
-        (Rv + X o1 + (U * ((n : ℝ≥0∞) * matchRate) + (U + (budget : ℝ≥0∞) * contactRate) * ρ'')) := by
+  set Z : ℝ≥0∞ := U * ((n : ℝ≥0∞) * matchRate) + U * (A1 + (budget : ℝ≥0∞) * rate5) +
+    contactRate * ((budget : ℝ≥0∞) * A1 + c2 * rate5) with hZ
+  calc _ ≤ ∑' o1, Pr[= o1 | interp tg initial model sign budget s] * (Rv + X o1 + Z) := by
         refine ENNReal.tsum_le_tsum fun o1 => ?_
         by_cases ho1 : o1 ∈ support (interp tg initial model sign budget s)
         · exact mul_le_mul_right (hpt o1 ho1) _
         · rw [probOutput_eq_zero_of_not_mem_support ho1, zero_mul, zero_mul]
     _ = (∑' o1, Pr[= o1 | interp tg initial model sign budget s]) * Rv +
           ∑' o1, Pr[= o1 | interp tg initial model sign budget s] * X o1 +
-          (∑' o1, Pr[= o1 | interp tg initial model sign budget s]) *
-            (U * ((n : ℝ≥0∞) * matchRate) + (U + (budget : ℝ≥0∞) * contactRate) * ρ'') := by
+          (∑' o1, Pr[= o1 | interp tg initial model sign budget s]) * Z := by
         simp only [mul_add, ENNReal.tsum_add, ENNReal.tsum_mul_right]
-    _ ≤ 1 * Rv + U * (matchRate + wbar * Pm) +
-          1 * (U * ((n : ℝ≥0∞) * matchRate) + (U + (budget : ℝ≥0∞) * contactRate) * ρ'') := by
+    _ ≤ 1 * Rv + U * (matchRate + G) + 1 * Z := by
         gcongr
-    _ = Rv + U * ((n : ℝ≥0∞) * matchRate + matchRate) + (U * (wbar * Pm) +
-          (U + (budget : ℝ≥0∞) * contactRate) * ρ'') := by ring
-    _ ≤ Rv + U * ((n : ℝ≥0∞) * matchRate + matchRate) + ((U + (budget : ℝ≥0∞) * contactRate) * (wbar * Pm) +
-          (U + (budget : ℝ≥0∞) * contactRate) * ρ'') := by
+    _ = Rv + U * ((n : ℝ≥0∞) * matchRate + matchRate) + U * (G + A1 + (budget : ℝ≥0∞) * rate5) +
+          contactRate * ((budget : ℝ≥0∞) * A1 + c2 * rate5) := by
+        rw [hZ]; ring
+    _ ≤ Rv + U * ((n : ℝ≥0∞) * matchRate + matchRate) + U * (G + A1 + (budget : ℝ≥0∞) * rate5) +
+          contactRate * ((budget : ℝ≥0∞) * (G + A1) + c2 * rate5) := by
         gcongr
-        exact le_self_add
-    _ = Rv + U * sigRisk L + (U + (budget : ℝ≥0∞) * contactRate) * coinRisk wbar P L budget := by
-        rw [hsig, hcoin]
-        ring
+        exact le_add_self
+    _ = _ := by
+        rw [hsig, hsplit]
+        simp only [coinRisk, hsplit]
+        rfl
 
 /-- **The end of the game.** -/
-theorem psiAF_final : FinalPays parameter data Qtot initial model (psiAF parameter K wbar) (finalA parameter K) := by
+theorem psiAF_final : FinalPays parameter data Qtot initial model (psiAF parameter data K) (finalA parameter K) := by
   intro budget s P L d R hB forgery verified
   simp only [finalA, Option.elim, psiAF]
   split_ifs with hcase hL
@@ -363,7 +450,7 @@ theorem psiAF_final : FinalPays parameter data Qtot initial model (psiAF paramet
     obtain ⟨secret, hmem⟩ := mem_contacts_of_GR parameter K hgr
     have h1 : (1 : ℝ≥0∞) ≤ (revealedContacts parameter K s R).card := by
       exact_mod_cast Finset.card_pos.2 ⟨_, Finset.mem_filter.2 ⟨hmem, hR⟩⟩
-    exact le_trans h1 (le_trans le_self_add le_self_add)
+    exact le_trans h1 (le_trans le_self_add (le_trans le_self_add le_self_add))
   · exact bot_le
   · exact bot_le
 
@@ -374,24 +461,24 @@ end Steps
 section Bound
 
 variable (parameter : PublicParameter) (data : PublicData) (K : HiddenReveal.Knowledge Coordinate)
-  (wbar : ℝ≥0∞) {A : Type}
+  {A : Type}
   (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
   (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
 /-- **Theorem (a), paid per FORS leaf query.** In the lazy run of the rest of the game of an
 adversary that never repeats a message, the game finishes with a valid transcript and a contact
 made at an unknown secret is revealed with probability at most
-`x (total wbar landing) + 2^-128 N 2^-b 2^-10 E[#FORS leaf queries]`, `x = total 2^-128`. -/
+`2^-128 C(total, 2) rate5 + 2^-128 N 2^-b 2^-10 E[#FORS leaf queries]`. -/
 theorem a4a_boundF (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
     (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     (hclean : ∀ p call, initial (pblk parameter data p call) = none)
     (hrows : FtsRows parameter model)
     (hcleanF : ∀ x a v i t l, model.parse x = some (a, v) → model.incoming a = .ftsSecret i t l → initial x = none)
-    (total : ℕ) (hfair : Fair wbar (total + digestAttemptLimit))
+    (total : ℕ)
     (M : OracleComp (OracleWorld + SigningSpec) Forgery) (hnr : NoRepeat M []) (known : Knowledge Coordinate) :
     Pr[A4aRun parameter K | interp tg initial model (advProg parameter data M []) total
         (DebtState.start initial known)] ≤
-      ((total : ℝ≥0∞) * contactRate) * (total * (wbar * landing)) +
+      contactRate * ((total.choose 2 : ℕ) * rate5) +
         (contactRate * (signatureLimit * matchRate)) *
           expectedF tg initial model (IsFleafIn parameter) (advProg parameter data M []) total
             (DebtState.start initial known) := by
@@ -402,16 +489,18 @@ theorem a4a_boundF (hparse : ∀ p call, model.parse (pblk parameter data p call
     (contactRate * (signatureLimit * matchRate)) hparse hkind hrows hFp hclean hcleanF Finset.univ
     (fun _ _ _ _ _ _ _ _ _ => Finset.mem_univ _) total
     (G := finalA parameter K) (fun _ _ => rfl) (fun o R s x u hx => finalA_store parameter K o R s x u hx)
-    (psiAF_newPair parameter data K wbar total initial model hparse)
-    (psiAF_ordinary parameter data K wbar total initial model hrows)
-    (psiAF_sign parameter data K wbar total tg initial model hparse hrows hfair le_rfl)
-    (psiAF_final parameter data K wbar total initial model) M hnr known
-  have hstart : psiAF parameter K wbar (DebtState.start initial known) [] [] 0 [] total =
-      ((total : ℝ≥0∞) * contactRate) * (total * (wbar * landing)) := by
+    (psiAF_newPair parameter data K total initial model hparse)
+    (psiAF_ordinary parameter data K total initial model hrows)
+    (psiAF_sign parameter data K total tg initial model hparse hrows)
+    (psiAF_final parameter data K total initial model) M hnr known
+  have hstart : psiAF parameter data K (DebtState.start initial known) [] [] 0 [] total =
+      contactRate * ((total.choose 2 : ℕ) * rate5) := by
     have hc : contacts parameter K (DebtState.start initial known) = ∅ := by
       unfold contacts
       rfl
-    simp only [psiAF, revealedContacts, openContacts, hc, coinRisk, coinCount]
+    have hm : poolMass parameter data (DebtState.start initial known) [] = 0 :=
+      poolMass_clean _ _ fun m ρ => hclean (m, ρ) 0
+    simp only [psiAF, revealedContacts, openContacts, hc, coinRisk, hm]
     simp
   rw [hstart] at h
   rw [probEvent_eq_tsum_ite]
@@ -440,12 +529,11 @@ theorem a4a_bound_gameF (adversary : Adversary) (hnr : adversary.NoRepeat) (q : 
     (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate) (hmsg : ∀ x, IsMsgInput x → tg.kind x = .none)
-    (K : HiddenReveal.Knowledge Coordinate) (wbar : ℝ≥0∞) (hfair : Fair wbar (q - keygenCost + digestAttemptLimit))
-    (known : Knowledge Coordinate) :
+    (K : HiddenReveal.Knowledge Coordinate) (known : Knowledge Coordinate) :
     Pr[A4aRun (truncateHash parameterOutput) K | interp tg prepared.2 (sampleModel parameterOutput highs)
         (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
           (internalize adversary)) q (DebtState.start prepared.2 known)] ≤
-      (((q - keygenCost : ℕ) : ℝ≥0∞) * contactRate) * ((q - keygenCost : ℕ) * (wbar * landing)) +
+      contactRate * (((q - keygenCost).choose 2 : ℕ) * rate5) +
         (contactRate * (signatureLimit * matchRate)) *
           ∑' out, Pr[= out | interp tg prepared.2 (sampleModel parameterOutput highs)
               (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
@@ -463,13 +551,13 @@ theorem a4a_bound_gameF (adversary : Adversary) (hnr : adversary.NoRepeat) (q : 
       unfold costGameX
       rw [interp_tick_bind tg prepared.2 model _ _ q start hK, costRestX_eq]
     rw [hrunEq, probEvent_map, tsum_probOutput_map_mul]
-    have h := a4a_boundF param data K wbar tg prepared.2 model
+    have h := a4a_boundF param data K tg prepared.2 model
       (sampleModel_parse_blk parameterOutput highs data)
       (fun p call => hmsg _ (msgInput_digestInput param data.root p.1 p.2 call))
       (fun p call => prepared_clean parameterOutput fixed highs remaining prepared hprepared _
         (msgInput_digestInput param data.root p.1 p.2 call))
       (ftsRows_sampleModel parameterOutput highs)
-      (prepared_cleanRows parameterOutput fixed highs remaining prepared hprepared) (q - keygenCost) hfair
+      (prepared_cleanRows parameterOutput fixed highs remaining prepared hprepared) (q - keygenCost)
       ((internalize adversary).main ⟨data.root, param⟩)
       (noRepeat_internalize_adversary adversary hnr ⟨data.root, param⟩) known
     refine le_trans (le_of_eq ?_) (le_trans h (le_of_eq ?_))
@@ -482,28 +570,6 @@ theorem a4a_bound_gameF (adversary : Adversary) (hnr : adversary.NoRepeat) (q : 
       exact interp_tick_bind_abort tg prepared.2 model _ _ q start hK
     rw [hrunEq, probEvent_pure, if_neg (fun ⟨_, h, _⟩ => by cases h)]
     exact zero_le
-
-/-- **Theorem (a) paid per FORS leaf query, at the fair share.** -/
-theorem a4a_bound_fairF (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
-    (hq : 2 * (q - keygenCost) ≤ 2 ^ 128)
-    (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
-    (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
-    (tg : Targeting HashInput HashOutput Coordinate) (hmsg : ∀ x, IsMsgInput x → tg.kind x = .none)
-    (K : HiddenReveal.Knowledge Coordinate) (known : Knowledge Coordinate) :
-    Pr[A4aRun (truncateHash parameterOutput) K | interp tg prepared.2 (sampleModel parameterOutput highs)
-        (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
-          (internalize adversary)) q (DebtState.start prepared.2 known)] ≤
-      (((q - keygenCost : ℕ) : ℝ≥0∞) * contactRate) *
-          ((q - keygenCost : ℕ) * (((2 ^ 128 - ((q - keygenCost) + 2 ^ 32) : ℕ) : ℝ≥0∞))⁻¹) +
-        (contactRate * (signatureLimit * matchRate)) *
-          ∑' out, Pr[= out | interp tg prepared.2 (sampleModel parameterOutput highs)
-              (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
-                (internalize adversary)) q (DebtState.start prepared.2 known)] *
-            (fleafCount (IsFleafIn (truncateHash parameterOutput)) out.1.2.2.1 : ℝ≥0∞) := by
-  have h := a4a_bound_gameF adversary hnr q parameterOutput fixed highs remaining prepared hprepared tg hmsg K
-    (H0.wbarOf (q - keygenCost)) (fair_wbarOf _ hq) known
-  rwa [wbarOf_mul_landing] at h
 
 end Sample
 

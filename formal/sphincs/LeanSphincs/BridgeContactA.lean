@@ -1,12 +1,15 @@
 import LeanSphincs.BridgeContactB
+import LeanSphincs.BridgeContact5
 
 /-! **A4a.** A contact made at an unknown FORS secret whose leaf is revealed by the run. Contacts are
 made at unexposed secrets, so a contact is revealed only by a later signature. One signing call
 reveals a given leaf only through the pair it signs: a fresh landed view, which hits the leaf with
-probability `2^-b 2^-10`, or a cached pair of the signed message, each with probability at most
-`wbar`. This file proves that reveal bound and defines the event, its final value, and the counts
-of revealed and unrevealed contacts and of coins (cached landed pairs of messages not yet signed)
-that the A4a potential of `BridgeFleafA4a` uses. -/
+probability `2^-b 2^-10`, or a cached landed pair of the signed message; under the signer that
+tries `R0, R0 + 1, ...` the cached pairs are selected with total probability at most the group of
+the message on the card function, `grpM m s (fun _ => False) cardFn 0` (`BridgeContact5`). This file
+proves that reveal bound and defines the event, its final value, and the counts of revealed and
+unrevealed contacts and of cached landed pairs of messages not yet signed (`coinCount`: a count of
+items only; their selection probabilities are not a common constant). -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -17,6 +20,7 @@ open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice F
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
+attribute [local irreducible] digestAttemptLimit
 
 variable [Params]
 
@@ -121,15 +125,14 @@ theorem list_sum_le_length {γ : Type} (l : List γ) (f : γ → ℝ≥0∞) (hf
       rw [add_comm (l.length : ℝ≥0∞)]
       exact add_le_add (hf x) ih
 
-/-- **One signing call** reveals a given leaf with probability at most `2^-b 2^-10` plus `wbar` per
-cached pair of the signed message. -/
+/-- **One signing call** reveals a given leaf with probability at most `2^-b 2^-10` plus the
+selection mass of the known landed randomizers of the signed message. -/
 theorem reveal_le (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
     {s : State} {P : List Pair} (hP : PInv parameter data s P) (hprep : Prepared initial s)
-    {wbar : ℝ≥0∞} {Cmax : ℕ} (hfair : Fair wbar Cmax) (attempts budget : ℕ)
-    (hcount : cachedCount parameter data m s + attempts ≤ Cmax) (i : Index) (t : FtsTree) (l : FtsLeaf) :
-    ∑' o1, Pr[= o1 | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] *
+    (budget : ℕ) (i : Index) (t : FtsTree) (l : FtsLeaf) :
+    ∑' o1, Pr[= o1 | interp tg initial model (signCostSourceLoop parameter data m digestAttemptLimit) budget s] *
         (if o1.1.1.isSome ∧ Coordinate.ftsSecret i t l ∈ o1.1.2.1 then 1 else 0) ≤
-      matchRate + wbar * ((P.filter fun q => decide (q.1 = m)).length : ℝ≥0∞) := by
+      matchRate + grpM parameter data m s (fun _ => False) cardFn 0 := by
   have hparse' : ∀ ρ call, model.parse (blk parameter data m ρ call) = none := fun ρ call => hparse (m, ρ) call
   have hnob1 : ∀ ρ, s.cache (blk parameter data m ρ 0) = none → s.cache (blk parameter data m ρ 1) = none :=
     fun ρ h => hP.first (m, ρ) h
@@ -141,37 +144,29 @@ theorem reveal_le (hparse : ∀ p call, model.parse (pblk parameter data p call)
     simp only [hgp, hitsAt]
     split_ifs <;> simp
   have hfresh := loop_bound_fresh tg initial model parameter data m hparse' s hnob1 hlandb1 (hitsAt i t l)
-    attempts budget s (related_self parameter data m s)
-  have hpool := loop_bound tg initial model parameter data m hparse' s hnob1 (fun _ => 0) gp 1 ENNReal.one_ne_top
-    (fun _ => zero_le_one) hgp1 wbar hfair.ne_top Cmax hfair.cmax hfair.share attempts budget s
-    (related_self parameter data m s) hcount
-  have hsum := pool_sum_le_msg parameter data m s hP (fun _ => False) (hitsAt i t l)
-  rw [filter_false'] at hsum
-  simp only [if_neg not_false] at hsum
-  have hlen : ((P.filter fun q => decide (q.1 = m)).map fun q => hitsAt i t l (pview parameter data s q)).sum ≤
-      ((P.filter fun q => decide (q.1 = m)).length : ℝ≥0∞) :=
-    list_sum_le_length _ _ fun q => by unfold hitsAt; split_ifs <;> simp
-  calc _ ≤ ∑' o1, Pr[= o1 | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] *
+    digestAttemptLimit budget s (related_self parameter data m s)
+  have hpool := le_trans (loop_bound tg initial model parameter data m hparse' s hnob1 hlandb1 (fun _ => 0) gp
+    digestAttemptLimit attemptLimit_le budget) (pool_walk_le_grpM parameter data m s gp hgp1)
+  calc _ ≤ ∑' o1, Pr[= o1 | interp tg initial model (signCostSourceLoop parameter data m digestAttemptLimit) budget s] *
         (freshNewWeight parameter data m s (hitsAt i t l) o1 + outWeight parameter data m s (fun _ => 0) gp o1) := by
         refine ENNReal.tsum_le_tsum fun o1 => ?_
-        by_cases ho1 : o1 ∈ support (interp tg initial model (signCostSourceLoop parameter data m attempts) budget s)
+        by_cases ho1 : o1 ∈ support (interp tg initial model (signCostSourceLoop parameter data m digestAttemptLimit) budget s)
         · refine mul_le_mul_right ?_ _
           split_ifs with hc
           · obtain ⟨hsome, hrev⟩ := hc
             obtain ⟨r, hr⟩ := Option.isSome_iff_exists.1 hsome
-            exact reveal_point tg initial model parameter data m hparse hP hprep attempts budget o1 ho1 r hr i t l hrev
+            exact reveal_point tg initial model parameter data m hparse hP hprep digestAttemptLimit budget o1 ho1 r hr
+              i t l hrev
           · exact bot_le
         · rw [probOutput_eq_zero_of_not_mem_support ho1, zero_mul, zero_mul]
-    _ = ∑' o1, Pr[= o1 | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] *
+    _ = ∑' o1, Pr[= o1 | interp tg initial model (signCostSourceLoop parameter data m digestAttemptLimit) budget s] *
           freshNewWeight parameter data m s (hitsAt i t l) o1 +
-        ∑' o1, Pr[= o1 | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] *
+        ∑' o1, Pr[= o1 | interp tg initial model (signCostSourceLoop parameter data m digestAttemptLimit) budget s] *
           outWeight parameter data m s (fun _ => 0) gp o1 := by
         simp only [mul_add, ENNReal.tsum_add]
-    _ ≤ freshAvg Finset.univ (hitsAt i t l) + (freshAvg Finset.univ (fun _ : View => (0 : ℝ≥0∞)) +
-          wbar * ∑ ρ, poolValue parameter data m s gp ρ) := add_le_add hfresh hpool
-    _ ≤ matchRate + wbar * ((P.filter fun q => decide (q.1 = m)).length : ℝ≥0∞) := by
-        rw [freshAvg_hitsAt, freshAvg_const _ Finset.univ_nonempty, zero_add]
-        exact add_le_add le_rfl (mul_le_mul_right (le_trans hsum hlen) _)
+    _ ≤ freshAvg Finset.univ (hitsAt i t l) + grpM parameter data m s (fun _ => False) cardFn 0 :=
+        add_le_add hfresh hpool
+    _ = _ := by rw [freshAvg_hitsAt]
 
 end Reveal
 
@@ -189,7 +184,8 @@ def A4a (s : State) (reveals : List Coordinate) : Prop :=
 noncomputable def finalA : FinalFn := fun o R s =>
   o.elim 0 fun outcome => if SigningTranscript.Valid outcome.2.1 ∧ A4a parameter K s R then 1 else 0
 
-/-- Cached landed pairs of messages not yet signed. -/
+/-- Cached landed pairs of messages not yet signed (a count of items, not a bound on their
+selection probabilities). -/
 noncomputable def coinCount (P : List Pair) (L : QueryLog SigningSpec) : ℕ := (P.filter fun q => decide (MsgFresh L q)).length
 
 /-- Revealed contacts. -/

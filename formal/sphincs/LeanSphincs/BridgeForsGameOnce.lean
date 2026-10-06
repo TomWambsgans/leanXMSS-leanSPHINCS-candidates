@@ -43,11 +43,11 @@ variable (parameter : PublicParameter) (data : PublicData) (wbar b0 : ℝ≥0∞
 theorem goodO_finish (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
     (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     (hdigest : ∀ p call, tg.digest (pblk parameter data p call))
-    (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) (L : QueryLog SigningSpec) (forgery : Forgery) :
+    (hfair : Fair5 wbar) (hb0 : b0 ≠ ⊤) (L : QueryLog SigningSpec) (forgery : Forgery) :
     GoodO parameter data wbar b0 Fail Qtot tg initial model L (finishGame parameter data L forgery) := by
   unfold finishGame
-  exact goodO_liftHash parameter data wbar b0 Fail Qtot tg initial model hparse hkind hdigest hw hb0 L _ _
-    fun v => goodO_pure parameter data wbar b0 Fail Qtot tg initial model hw L forgery v
+  exact goodO_liftHash parameter data wbar b0 Fail Qtot tg initial model hparse hkind hdigest hfair hb0 L _ _
+    fun v => goodO_pure parameter data wbar b0 Fail Qtot tg initial model hfair.le_one L forgery v
 
 /-- **The one-coin potential through any adversary that never repeats a message.** -/
 theorem goodO_advProg (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
@@ -56,7 +56,7 @@ theorem goodO_advProg (hparse : ∀ p call, model.parse (pblk parameter data p c
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
-    {Cmax : ℕ} (hfair : Fair wbar Cmax) (hb0 : b0 ≠ ⊤) (hQ : Qtot + digestAttemptLimit ≤ Cmax) :
+    (hfair : Fair5 wbar) (hb0 : b0 ≠ ⊤) :
     ∀ (M : OracleComp (OracleWorld + SigningSpec) Forgery) (L : QueryLog SigningSpec),
       NoRepeat M (L.map Sigma.fst) → GoodO parameter data wbar b0 Fail Qtot tg initial model L (advProg parameter data M L) := by
   intro M
@@ -64,21 +64,21 @@ theorem goodO_advProg (hparse : ∀ p call, model.parse (pblk parameter data p c
   | pure forgery =>
       intro L _
       rw [advProg_pure]
-      exact goodO_finish parameter data wbar b0 Fail Qtot tg initial model hparse hkind hdigest hfair.le_one hb0 L forgery
+      exact goodO_finish parameter data wbar b0 Fail Qtot tg initial model hparse hkind hdigest hfair hb0 L forgery
   | query_bind input next ih =>
       intro L hnr
       rcases input with (draw | bytes) | message
       · rw [advProg_draw]
         exact goodO_draw parameter data wbar b0 Fail Qtot tg initial model L draw _ fun v => ih v L (hnr v)
       · rw [advProg_hash]
-        exact goodO_ordinary parameter data wbar b0 Fail Qtot tg initial model hparse hkind hdigest hfair.le_one hb0 L
+        exact goodO_ordinary parameter data wbar b0 Fail Qtot tg initial model hparse hkind hdigest hfair hb0 L
           bytes _ fun v => ih v L (hnr v)
       · rw [advProg_sign]
         obtain ⟨hnot, hrest⟩ := (noRepeat_sign message next _).1 hnr
         have hm : ∀ entry ∈ L, entry.1 ≠ message := by
           intro entry he heq
           exact hnot (heq ▸ List.mem_map_of_mem he)
-        refine goodO_sign tg initial model parameter data wbar b0 Fail Qtot message hparse hfail hfair hb0 hQ L hm _
+        refine goodO_sign tg initial model parameter data wbar b0 Fail Qtot message hparse hfail hfair hb0 L hm _
           fun r => ih r _ ?_
         rw [List.map_append]
         exact hrest r

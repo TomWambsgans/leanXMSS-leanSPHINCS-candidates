@@ -8,7 +8,7 @@ randomizer-derivation input).
 
 The eager table is split at the seed's randomizer-derivation inputs into an independent uniform
 randomizer table; the two runs agree until such an input is queried. Memoizing and then averaging
-the randomizer table (each row is read at most once) gives the fresh-randomizer cost game. -/
+the base-randomizer table (one row per message, read at most once) gives the fresh-randomizer cost game. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -25,25 +25,23 @@ attribute [local instance] Classical.propDecidable
 
 /-- This input derives a randomizer from the given master seed. -/
 def RandHit (input : HashInput) (seed : MasterSeed) : Prop :=
-  ∃ parameter message trial, randomizerHashInput parameter seed message trial = input
+  ∃ parameter message, randomizerHashInput parameter seed message = input
 
 theorem randomizerHashInput_injective {parameter parameter' : PublicParameter}
-    {seed seed' : MasterSeed} {message message' : Message} {trial trial' : BitVec 32}
-    (h : randomizerHashInput parameter seed message trial =
-      randomizerHashInput parameter' seed' message' trial') :
-    parameter = parameter' ∧ seed = seed' ∧ message = message' ∧ trial = trial' := by
+    {seed seed' : MasterSeed} {message message' : Message}
+    (h : randomizerHashInput parameter seed message =
+      randomizerHashInput parameter' seed' message') :
+    parameter = parameter' ∧ seed = seed' ∧ message = message' := by
   unfold randomizerHashInput at h
   obtain ⟨h, hm⟩ := List.append_inj' h (by simp [bytesLE_length])
   obtain ⟨h, hs⟩ := List.append_inj' h (by simp [bytesLE_length])
-  obtain ⟨h, hp⟩ := List.append_inj' h (by simp [bytesLE_length])
-  have hf := LeanSphincs.fieldBytes_injective h
-  simp only [TweakFields.mk.injEq, true_and, and_true] at hf
-  exact ⟨bytesLE_injective hp, bytesLE_injective hs, bytesLE_injective hm, hf⟩
+  obtain ⟨hp, -⟩ := List.append_inj h (by simp [bytesLE_length])
+  exact ⟨bytesLE_injective hp, bytesLE_injective hs, bytesLE_injective hm⟩
 
 theorem randHit_unique {input : HashInput} {seed seed' : MasterSeed}
     (h : RandHit input seed) (h' : RandHit input seed') : seed = seed' := by
-  obtain ⟨parameter, message, trial, heq⟩ := h
-  obtain ⟨parameter', message', trial', heq'⟩ := h'
+  obtain ⟨parameter, message, heq⟩ := h
+  obtain ⟨parameter', message', heq'⟩ := h'
   exact (randomizerHashInput_injective (heq.trans heq'.symm)).2.1
 
 theorem randHit_probability_le (input : HashInput) :
@@ -155,55 +153,51 @@ theorem marked_hit_le {Ω : Type} (program : ProbComp Ω) (entries : Ω → List
 
 /-! ### Splitting the eager table at the seed's randomizer-derivation inputs -/
 
-/-- The short input deriving the randomizer of `message` at `trial`. -/
-def randIn (parameter : PublicParameter) (seed : MasterSeed) (message : Message) (trial : BitVec 32) :
-    ShortIn :=
-  ⟨randomizerHashInput parameter seed message trial, randomizerHashInput_short parameter seed message trial⟩
+/-- The short input deriving the base randomizer of `message`. -/
+def randIn (parameter : PublicParameter) (seed : MasterSeed) (message : Message) : ShortIn :=
+  ⟨randomizerHashInput parameter seed message, randomizerHashInput_short parameter seed message⟩
 
 theorem randIn_injective {parameter : PublicParameter} {seed : MasterSeed} {message message' : Message}
-    {trial trial' : BitVec 32} (h : randIn parameter seed message trial = randIn parameter seed message' trial') :
-    message = message' ∧ trial = trial' := by
-  have := randomizerHashInput_injective (congrArg Subtype.val h)
-  exact ⟨this.2.2.1, this.2.2.2⟩
+    (h : randIn parameter seed message = randIn parameter seed message') : message = message' :=
+  (randomizerHashInput_injective (congrArg Subtype.val h)).2.2
 
 /-- The table with its randomizer-derivation entries for `(parameter, seed)` taken from `rnd`. -/
 noncomputable def plant (parameter : PublicParameter) (seed : MasterSeed) (table : Eager.Table)
     (rnd : RTable) : Eager.Table := fun input =>
-  if h : ∃ mt : Message × BitVec 32, input = randIn parameter seed mt.1 mt.2 then
-    rnd (Classical.choose h).1 (Classical.choose h).2
+  if h : ∃ message : Message, input = randIn parameter seed message then
+    rnd (Classical.choose h)
   else table input
 
 theorem plant_randIn (parameter : PublicParameter) (seed : MasterSeed) (table : Eager.Table)
-    (rnd : RTable) (message : Message) (trial : BitVec 32) :
-    plant parameter seed table rnd (randIn parameter seed message trial) = rnd message trial := by
-  have h : ∃ mt : Message × BitVec 32,
-      randIn parameter seed message trial = randIn parameter seed mt.1 mt.2 := ⟨(message, trial), rfl⟩
+    (rnd : RTable) (message : Message) :
+    plant parameter seed table rnd (randIn parameter seed message) = rnd message := by
+  have h : ∃ message' : Message,
+      randIn parameter seed message = randIn parameter seed message' := ⟨message, rfl⟩
   rw [plant, dif_pos h]
-  obtain ⟨h1, h2⟩ := randIn_injective (Classical.choose_spec h).symm
-  rw [h1, h2]
+  rw [randIn_injective (Classical.choose_spec h).symm]
 
 theorem plant_other (parameter : PublicParameter) (seed : MasterSeed) (table : Eager.Table)
-    (rnd : RTable) (input : ShortIn) (hinput : ∀ message trial, input ≠ randIn parameter seed message trial) :
+    (rnd : RTable) (input : ShortIn) (hinput : ∀ message, input ≠ randIn parameter seed message) :
     plant parameter seed table rnd input = table input := by
   rw [plant, dif_neg]
-  rintro ⟨mt, hmt⟩
-  exact hinput mt.1 mt.2 hmt
+  rintro ⟨message, hmessage⟩
+  exact hinput message hmessage
 
 /-- Swap the randomizer entries of a table with an independent randomizer table. -/
 noncomputable def swapPair (parameter : PublicParameter) (seed : MasterSeed)
     (pair : Eager.Table × RTable) : Eager.Table × RTable :=
-  (plant parameter seed pair.1 pair.2, fun message trial => pair.1 (randIn parameter seed message trial))
+  (plant parameter seed pair.1 pair.2, fun message => pair.1 (randIn parameter seed message))
 
 theorem swapPair_involutive (parameter : PublicParameter) (seed : MasterSeed) :
     Function.Involutive (swapPair parameter seed) := by
   rintro ⟨table, rnd⟩
   simp only [swapPair, plant_randIn, Prod.mk.injEq, and_true]
   funext input
-  by_cases h : ∃ mt : Message × BitVec 32, input = randIn parameter seed mt.1 mt.2
-  · obtain ⟨⟨message, trial⟩, rfl⟩ := h
+  by_cases h : ∃ message : Message, input = randIn parameter seed message
+  · obtain ⟨message, rfl⟩ := h
     rw [plant_randIn]
-  · have hother : ∀ message trial, input ≠ randIn parameter seed message trial :=
-      fun message trial heq => h ⟨(message, trial), heq⟩
+  · have hother : ∀ message, input ≠ randIn parameter seed message :=
+      fun message heq => h ⟨message, heq⟩
     rw [plant_other _ _ _ _ _ hother, plant_other _ _ _ _ _ hother]
 
 noncomputable local instance pairSampleable : SampleableType (Eager.Table × RTable) :=
@@ -246,7 +240,7 @@ theorem evalDist_table_split {β : Type} (parameter : PublicParameter) (seed : M
 /-! ### One sample -/
 
 theorem hashDomain_tag_ne_seven (domain : HashDomain) :
-    (⟨7#8, 0#8, 0#32, (0 : BitVec 32), 0#32⟩ : TweakFields).tag ≠ (hashDomainFields domain).tag := by
+    (⟨7#5, 0#3, 0#24, 0#32⟩ : TweakFields).tag ≠ (hashDomainFields domain).tag := by
   cases domain <;> simp [hashDomainFields, tweakFields]
 
 variable [Params]
@@ -255,8 +249,8 @@ noncomputable local instance detLabelsSampleable' : SampleableType CanonicalGrap
   graphLabelsSampleable
 
 theorem preparedCache_randomizer (material : Material) (seed : MasterSeed) (answers : CanonicalGraphLabels)
-    (parameter : PublicParameter) (seed' : MasterSeed) (message : Message) (trial : BitVec 32) :
-    preparedCache material seed answers (randomizerHashInput parameter seed' message trial) = none := by
+    (parameter : PublicParameter) (seed' : MasterSeed) (message : Message) :
+    preparedCache material seed answers (randomizerHashInput parameter seed' message) = none := by
   rw [preparedCache_other material seed answers _ (fun position h => ?_)]
   · rw [programCache_other ∅ seed material _ (fun h => ?_) (fun position h => ?_)]
     · rfl
@@ -265,18 +259,18 @@ theorem preparedCache_randomizer (material : Material) (seed : MasterSeed) (answ
     · have := congrArg List.length h
       simp [randomizerHashInput_length, secretInput, keygenHashInput_length] at this
   · simp only [canonicalGraphInput, tweakableHashInput, tweakBytes, randomizerHashInput] at h
-    rw [List.append_assoc (fieldBytes _ ++ bytesLE 16 parameter)] at h
+    rw [List.append_assoc (bytesLE 16 parameter ++ fieldBytes _)] at h
     refine Completeness.fieldInput_ne_of_tag_ne_across parameter (SeedModel.parameter material)
-      (fields1 := ⟨7#8, 0#8, 0#32, trial, 0#32⟩) (fields2 := hashDomainFields position.domain) ?_ _ _ h
+      (fields1 := ⟨7#5, 0#3, 0#24, 0#32⟩) (fields2 := hashDomainFields position.domain) ?_ _ _ h
     exact hashDomain_tag_ne_seven position.domain
 
 theorem sampleFn_randomizer (material : Material) (seed : MasterSeed) (answers : CanonicalGraphLabels)
-    (table : Eager.Table) (rnd : RTable) (message : Message) (trial : BitVec 32) :
+    (table : Eager.Table) (rnd : RTable) (message : Message) :
     sampleFn material seed answers (plant (SeedModel.parameter material) seed table rnd)
-      (randomizerHashInput (SeedModel.parameter material) seed message trial) = rnd message trial := by
+      (randomizerHashInput (SeedModel.parameter material) seed message) = rnd message := by
   unfold sampleFn extend
-  rw [preparedCache_randomizer, Option.getD_none, dif_pos (randomizerHashInput_short _ _ _ _)]
-  exact plant_randIn _ seed table rnd message trial
+  rw [preparedCache_randomizer, Option.getD_none, dif_pos (randomizerHashInput_short _ _ _)]
+  exact plant_randIn _ seed table rnd message
 
 theorem sampleFn_plant_agree (material : Material) (seed : MasterSeed) (answers : CanonicalGraphLabels)
     (table : Eager.Table) (rnd : RTable) (input : HashInput) (hnot : ¬Marked seed input) :
@@ -286,8 +280,8 @@ theorem sampleFn_plant_agree (material : Material) (seed : MasterSeed) (answers 
   unfold graphFn extend
   by_cases hshort : IsShort input
   · rw [dif_pos hshort, dif_pos hshort, plant_other (SeedModel.parameter material) seed table rnd
-      ⟨input, hshort⟩ fun message trial heq => hnot (Or.inr
-        ⟨SeedModel.parameter material, message, trial, (congrArg Subtype.val heq).symm⟩)]
+      ⟨input, hshort⟩ fun message heq => hnot (Or.inr
+        ⟨SeedModel.parameter material, message, (congrArg Subtype.val heq).symm⟩)]
   · rw [dif_neg hshort, dif_neg hshort]
 
 /-- Every sample of the internalized deterministic game equals its graph-view cost game. -/
@@ -311,7 +305,7 @@ theorem sample_costGameDet (adversary : Adversary) (material : Material) (seed :
         (sample_boundary material seed answers table'))
       (GraphView.coordinates_correct _ _ _ _ (sample_consistent material seed answers table'))
       (sample_parameter material seed answers table') rnd
-      (fun message trial => sampleFn_randomizer material seed answers table rnd message trial)]
+      (fun message => sampleFn_randomizer material seed answers table rnd message)]
 
 /-- The seed-free capped deterministic run of one sample. -/
 noncomputable def detRun (adversary : Adversary) (q : Nat) (material : Material)

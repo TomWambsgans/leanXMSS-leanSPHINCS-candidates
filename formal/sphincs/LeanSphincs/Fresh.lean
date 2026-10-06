@@ -83,17 +83,17 @@ end PreservesFresh
 theorem fieldInput_ne_of_tag_ne_across (parameter parameter' : PublicParameter)
     {fields1 fields2 : TweakFields} (htag : fields1.tag ≠ fields2.tag)
     (payload1 payload2 : HashInput) :
-    fieldBytes fields1 ++ bytesLE 16 parameter ++ payload1 ≠
-      fieldBytes fields2 ++ bytesLE 16 parameter' ++ payload2 := by
+    bytesLE 16 parameter ++ fieldBytes fields1 ++ payload1 ≠
+      bytesLE 16 parameter' ++ fieldBytes fields2 ++ payload2 := by
   intro h
   apply htag
   obtain ⟨hprefix, _⟩ := List.append_inj h (by simp [fieldBytes, bytesLE_length])
-  obtain ⟨hfields, _⟩ := List.append_inj' hprefix (by simp [bytesLE_length])
+  obtain ⟨_, hfields⟩ := List.append_inj hprefix (by simp [bytesLE_length])
   rw [LeanSphincs.fieldBytes_injective hfields]
 
 /-- Every derivation domain is separate from both encoding (4) and message (12). -/
 theorem keygenDomain_tag_ne (domain : KeygenDomain) (tag : Nat) (htag : tag = 4 ∨ tag = 12) :
-    (keygenDomainFields domain).tag ≠ BitVec.ofNat 8 tag := by
+    (keygenDomainFields domain).tag ≠ BitVec.ofNat 5 tag := by
   rcases htag with rfl | rfl <;> cases domain <;> simp [keygenDomainFields, tweakFields]
 
 /-- Exclusion facts needed by structural tree computations. Surrogate derivations are included. -/
@@ -115,8 +115,8 @@ structure StructuralFresh (target : HashInput) : Prop where
 /-- Structural computations cannot query either a message input or an encoding input. -/
 theorem structuralFresh_of_tag (parameter : PublicParameter) (fields : TweakFields)
     (payload : HashInput) (tag : Nat) (htag : tag = 4 ∨ tag = 12)
-    (hfields : fields.tag = BitVec.ofNat 8 tag) :
-    StructuralFresh (fieldBytes fields ++ bytesLE 16 parameter ++ payload) := by
+    (hfields : fields.tag = BitVec.ofNat 5 tag) :
+    StructuralFresh (bytesLE 16 parameter ++ fieldBytes fields ++ payload) := by
   constructor
   · intro p domain seed
     exact fieldInput_ne_of_tag_ne_across p parameter

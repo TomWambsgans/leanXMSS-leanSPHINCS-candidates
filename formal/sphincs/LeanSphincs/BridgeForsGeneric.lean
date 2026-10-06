@@ -16,6 +16,7 @@ open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice F
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
+attribute [local irreducible] digestAttemptLimit
 
 variable [Params]
 
@@ -52,17 +53,15 @@ section DefsG
 variable (parameter : PublicParameter) (data : PublicData) (W : View → Multiset View → ℝ≥0∞)
   (wbar b0 : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight))) (gate : State → Prop)
 
-/-- The forecast of a candidate. -/
-noncomputable def candValueG (s : State) (P : List Pair) (L : QueryLog SigningSpec) (d : Multiset View)
+/-- The forecast of a candidate: its own item is excluded from the group of its message. -/
+noncomputable def candValueG (s : State) (_P : List Pair) (L : QueryLog SigningSpec) (d : Multiset View)
     (n k : ℕ) (p : Pair) : ℝ≥0∞ :=
-  creations Finset.univ landing (fun I => virtualOnce Finset.univ wbar (W (pview parameter data s p)) n I d)
-    k (coinItems parameter data s L (P.erase p))
+  fut parameter data wbar s L (· = p) (W (pview parameter data s p)) n k d
 
 /-- The excess forecast of a new pair. -/
-noncomputable def hValueG (s : State) (P : List Pair) (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ) :
+noncomputable def hValueG (s : State) (_P : List Pair) (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ) :
     ℝ≥0∞ :=
-  creations Finset.univ landing (fun I => virtualOnce Finset.univ wbar (excessW W b0) n I d) k
-    (coinItems parameter data s L P)
+  fut parameter data wbar s L (fun _ => False) (excessW W b0) n k d
 
 /-- The value of a candidate: one at a failing index, its forecast otherwise; zero once signed. -/
 noncomputable def candG (s : State) (P : List Pair) (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ)
@@ -92,92 +91,66 @@ section NewPairG
 variable (parameter : PublicParameter) (data : PublicData) (W : View → Multiset View → ℝ≥0∞)
   (wbar b0 : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight)))
 
-/-- A new candidate's forecast is at most the baseline plus one excess. -/
-theorem fresh_forecastG (hw : wbar ≤ 1) (I : List View) (d : Multiset View) (n k : ℕ) :
-    landing * freshAvg Finset.univ (fun v => creations Finset.univ landing
-      (fun J => virtualOnce Finset.univ wbar (W v) n J d) k I) ≤
-    b0 + creations Finset.univ landing (fun J => virtualOnce Finset.univ wbar (excessW W b0) n J d) k I := by
-  have hU : (Finset.univ : Finset View).Nonempty := Finset.univ_nonempty
-  rw [← creations_freshAvg, ← creations_const_mul]
-  have hpt : ∀ J, landing * freshAvg Finset.univ (fun v => virtualOnce Finset.univ wbar (W v) n J d) ≤
-      b0 + virtualOnce Finset.univ wbar (excessW W b0) n J d := by
-    intro J
-    rw [← virtualOnce_freshAvg hU, ← virtualOnce_const_mul]
-    calc virtualOnce Finset.univ wbar (fun D => landing * freshAvg Finset.univ fun v => W v D) n J d
-        ≤ virtualOnce Finset.univ wbar (fun D => b0 + excessW W b0 D) n J d :=
-          virtualOnce_mono_base (fun D => show priceW W D ≤ b0 + (priceW W D - b0) from le_add_tsub) n J d
-      _ = b0 + virtualOnce Finset.univ wbar (excessW W b0) n J d := by
-          rw [virtualOnce_add hU (fun _ => b0) (excessW W b0), virtualOnce_const hU hw]
-  calc creations Finset.univ landing (fun J => landing * freshAvg Finset.univ fun v =>
-        virtualOnce Finset.univ wbar (W v) n J d) k I
-      ≤ creations Finset.univ landing (fun J => b0 + virtualOnce Finset.univ wbar (excessW W b0) n J d) k I :=
-        creations_mono hpt k I
-    _ = _ := by rw [creations_add (fun _ => b0), creations_const Finset.univ_nonempty landing_le_one]
-
 variable {parameter data}
 
-/-- Old candidates after a new pair. -/
+/-- A new candidate's forecast is at most the baseline plus one excess. -/
+theorem fresh_forecastG (hw : wbar ≤ 1) (s : State) (L : QueryLog SigningSpec) (excl : Pair → Prop)
+    (d : Multiset View) (n k : ℕ) :
+    landing * freshAvg Finset.univ (fun v => fut parameter data wbar s L excl (W v) n k d) ≤
+      b0 + fut parameter data wbar s L excl (excessW W b0) n k d := by
+  rw [← fut_freshAvg hw, ← fut_const_mul hw]
+  calc fut parameter data wbar s L excl (fun D => landing * freshAvg Finset.univ fun v => W v D) n k d
+      ≤ fut parameter data wbar s L excl (fun D => (fun _ => b0) D + excessW W b0 D) n k d :=
+        fut_mono_base hw s L excl (fun D => show priceW W D ≤ b0 + (priceW W D - b0) from le_add_tsub) n k d
+    _ = _ := by rw [fut_add hw, fut_const hw]
+
+/-- Old candidates after a new pair: the same views, the groups of the new state. -/
 theorem candG_withPair {s : State} {P : List Pair} (hP : PInv parameter data s P) {p : Pair}
     (hp0 : s.cache (pblk parameter data p 0) = none) (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ)
-    (q : Pair) (hq : q ∈ P) (u0 u1 : HashOutput) :
-    candG parameter data W wbar Fail (withPair parameter data s p u0 u1) (addPair parameter P p u0) L d n k q =
-      if Landed parameter (blockIndex u0) then
-        (if Unsigned L q then (if (pview parameter data s q).1 ∈ Fail then 1 else
-          creations Finset.univ landing (fun J => virtualOnce Finset.univ wbar (W (pview parameter data s q))
-            n J d) k (newCoin L p u0 u1 (coinItems parameter data s L (P.erase q)))) else 0)
-      else candG parameter data W wbar Fail s P L d n k q := by
+    (q : Pair) (hq : q ∈ P) (u0 u1 : HashOutput) (P' : List Pair) :
+    candG parameter data W wbar Fail (withPair parameter data s p u0 u1) P' L d n k q =
+      if Unsigned L q then (if (pview parameter data s q).1 ∈ Fail then 1 else
+        fut parameter data wbar (withPair parameter data s p u0 u1) L (· = q)
+          (W (pview parameter data s q)) n k d) else 0 := by
   have hpP := not_mem_of_fresh hP hp0
   have hqp : q ≠ p := fun h => hpP (h ▸ hq)
-  have hv := pview_withPair_other (parameter := parameter) (data := data) s p q hqp u0 u1
-  have hsub : ∀ r ∈ P.erase q, r ∈ P := fun r hr => List.mem_of_mem_erase hr
-  by_cases hl : Landed parameter (blockIndex u0)
-  · rw [if_pos hl]
-    unfold candG candValueG addPair
-    rw [if_pos hl, hv]
-    have herase : (p :: P).erase q = p :: P.erase q := List.erase_cons_tail (by simpa using hqp.symm)
-    rw [herase, coinItems_cons_withPair hP hp0 L u0 u1 _ hsub]
-  · rw [if_neg hl]
-    unfold candG candValueG addPair
-    rw [if_neg hl, hv, coinItems_withPair hP hp0 L u0 u1 _ hsub]
-
-/-- The new candidate itself. -/
-theorem candG_withPair_self {s : State} {P : List Pair} (hP : PInv parameter data s P) {p : Pair}
-    (hp0 : s.cache (pblk parameter data p 0) = none) (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ)
-    (u0 u1 : HashOutput) :
-    candG parameter data W wbar Fail (withPair parameter data s p u0 u1) (p :: P) L d n k p ≤
-      (if (viewOf u0 u1).1 ∈ Fail then 1 else 0) +
-        creations Finset.univ landing (fun J => virtualOnce Finset.univ wbar (W (viewOf u0 u1)) n J d) k
-          (coinItems parameter data s L P) := by
   unfold candG candValueG
-  rw [pview_withPair_self, List.erase_cons_head, coinItems_withPair hP hp0 L u0 u1 _ fun r hr => hr]
-  split_ifs <;> simp
-
-theorem hValueG_withPair {s : State} {P : List Pair} (hP : PInv parameter data s P) {p : Pair}
-    (hp0 : s.cache (pblk parameter data p 0) = none) (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ)
-    (u0 u1 : HashOutput) :
-    hValueG parameter data W wbar b0 (withPair parameter data s p u0 u1) (addPair parameter P p u0) L d n k =
-      if Landed parameter (blockIndex u0) then
-        creations Finset.univ landing (fun J => virtualOnce Finset.univ wbar (excessW W b0) n J d) k
-          (newCoin L p u0 u1 (coinItems parameter data s L P))
-      else hValueG parameter data W wbar b0 s P L d n k := by
-  unfold hValueG addPair
-  split_ifs
-  · rw [coinItems_cons_withPair hP hp0 L u0 u1 _ fun r hr => hr]
-  · rw [coinItems_withPair hP hp0 L u0 u1 _ fun r hr => hr]
+  rw [pview_withPair_other (parameter := parameter) (data := data) s p q hqp u0 u1]
 
 variable {W}
+
+/-- The new candidate itself. -/
+theorem candG_withPair_self (hW : WitnessProps W) (hw : wbar ≤ 1) {s : State} {p : Pair}
+    (hp0 : s.cache (pblk parameter data p 0) = none) (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ)
+    (u0 u1 : HashOutput) (hl : Landed parameter (blockIndex u0)) (P' : List Pair) :
+    candG parameter data W wbar Fail (withPair parameter data s p u0 u1) P' L d n k p ≤
+      (if (viewOf u0 u1).1 ∈ Fail then 1 else 0) +
+        fut parameter data wbar s L (fun _ => False) (W (viewOf u0 u1)) n k d := by
+  unfold candG candValueG
+  rw [pview_withPair_self]
+  split_ifs
+  · exact le_self_add
+  · rw [zero_add]
+    exact fut_newPair_self hw (hW _) s L p hp0 u0 u1 hl n k d
+  · exact bot_le
+  · exact bot_le
+
+variable (W) in
+/-- The excess forecast after a new pair is the forecast of the new state. -/
+theorem hValueG_withPair (s : State) (p : Pair) (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ)
+    (u0 u1 : HashOutput) (P' : List Pair) :
+    hValueG parameter data W wbar b0 (withPair parameter data s p u0 u1) P' L d n k =
+      fut parameter data wbar (withPair parameter data s p u0 u1) L (fun _ => False) (excessW W b0) n k d := rfl
 
 theorem candValueG_mono (hW : WitnessProps W) (hw : wbar ≤ 1) (s : State) (P : List Pair)
     (L : QueryLog SigningSpec) (d : Multiset View) (n : ℕ) {k k' : ℕ} (hk : k ≤ k') (p : Pair) :
     candValueG parameter data W wbar s P L d n k p ≤ candValueG parameter data W wbar s P L d n k' p :=
-  creations_mono_count Finset.univ_nonempty landing_le_one
-    (virtualOnce_cons_le' wbar hw (hW _) n d) (virtualOnce_perm' wbar n d) hk _
+  fut_mono_count hw (hW _) s L _ n hk d
 
 theorem hValueG_mono (hW : WitnessProps W) (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) (s : State) (P : List Pair)
     (L : QueryLog SigningSpec) (d : Multiset View) (n : ℕ) {k k' : ℕ} (hk : k ≤ k') :
     hValueG parameter data W wbar b0 s P L d n k ≤ hValueG parameter data W wbar b0 s P L d n k' :=
-  creations_mono_count Finset.univ_nonempty landing_le_one
-    (virtualOnce_cons_le' wbar hw (excessW_props hW hb0) n d) (virtualOnce_perm' wbar n d) hk _
+  fut_mono_count hw (excessW_props hW hb0) s L _ n hk d
 
 theorem candG_mono (hW : WitnessProps W) (hw : wbar ≤ 1) (s : State) (P : List Pair) (L : QueryLog SigningSpec)
     (d : Multiset View) (n : ℕ) {k k' : ℕ} (hk : k ≤ k') (q : Pair) :
@@ -196,99 +169,77 @@ theorem coreG_mono (hW : WitnessProps W) (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) (s
   exact mul_le_mul' (by exact_mod_cast hk) (add_le_add (hValueG_mono wbar b0 hW hw hb0 s P L d n hk) le_rfl)
 
 /-- **A new pair.** Touching a new pair costs one future pair and at most the baseline. -/
-theorem coreG_newPair (hW : WitnessProps W) (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) {s : State} {P : List Pair}
+theorem coreG_newPair (hW : WitnessProps W) (hfair : Fair5 wbar) (hb0 : b0 ≠ ⊤) {s : State} {P : List Pair}
     (hP : PInv parameter data s P) {p : Pair} (hp0 : s.cache (pblk parameter data p 0) = none)
     (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ) :
     pairE (fun u0 u1 => coreG parameter data W wbar b0 Fail (withPair parameter data s p u0 u1)
       (addPair parameter P p u0) L d n k) ≤ coreG parameter data W wbar b0 Fail s P L d n (k + 1) + b0 := by
-  set I := coinItems parameter data s L P with hI
-  set Wv : View → ℝ≥0∞ := fun v =>
-    creations Finset.univ landing (fun J => virtualOnce Finset.univ wbar (W v) n J d) k I with hWv
-  set GH : List View → ℝ≥0∞ := fun J => virtualOnce Finset.univ wbar (excessW W b0) n J d with hGH
+  have hw := hfair.le_one
+  have hpP := not_mem_of_fresh hP hp0
+  set Wv : View → ℝ≥0∞ := fun v => fut parameter data wbar s L (fun _ => False) (W v) n k d with hWv
   set φ := failMass Fail with hφ
   set A : Pair → HashOutput → HashOutput → ℝ≥0∞ := fun q u0 u1 => if Unsigned L q then
     (if (pview parameter data s q).1 ∈ Fail then 1 else
-      creations Finset.univ landing (fun J => virtualOnce Finset.univ wbar (W (pview parameter data s q)) n J d)
-        k (newCoin L p u0 u1 (coinItems parameter data s L (P.erase q)))) else 0 with hA
+      fut parameter data wbar (withPair parameter data s p u0 u1) L (· = q)
+        (W (pview parameter data s q)) n k d) else 0 with hA
+  set Hs : HashOutput → HashOutput → ℝ≥0∞ := fun u0 u1 =>
+    fut parameter data wbar (withPair parameter data s p u0 u1) L (fun _ => False) (excessW W b0) n k d with hHs
   have hpoint : ∀ u0 u1, coreG parameter data W wbar b0 Fail (withPair parameter data s p u0 u1)
       (addPair parameter P p u0) L d n k ≤
       ((if Landed parameter (blockIndex u0) then
           (if (viewOf u0 u1).1 ∈ Fail then 1 else 0) + Wv (viewOf u0 u1) else 0) +
-        (P.map fun q => if Landed parameter (blockIndex u0) then A q u0 u1
-          else candG parameter data W wbar Fail s P L d n k q).sum) +
-      k * ((if Landed parameter (blockIndex u0) then creations Finset.univ landing GH k (newCoin L p u0 u1 I)
-          else hValueG parameter data W wbar b0 s P L d n k) + φ) + n * φ := by
+        (P.map fun q => A q u0 u1).sum) + k * (Hs u0 u1 + φ) + n * φ := by
     intro u0 u1
     unfold coreG
-    rw [hValueG_withPair W wbar b0 hP hp0 L d n k u0 u1]
-    have hlist : ((addPair parameter P p u0).map (candG parameter data W wbar Fail
-        (withPair parameter data s p u0 u1) (addPair parameter P p u0) L d n k)).sum =
+    have hH : hValueG parameter data W wbar b0 (withPair parameter data s p u0 u1) (addPair parameter P p u0) L d n k =
+        Hs u0 u1 := rfl
+    rw [hH]
+    have hmap : ∀ P' : List Pair, P.map (candG parameter data W wbar Fail (withPair parameter data s p u0 u1) P' L d n k) =
+        P.map fun q => A q u0 u1 := fun P' => List.map_congr_left fun q hq =>
+      candG_withPair W wbar Fail hP hp0 L d n k q hq u0 u1 P'
+    have hlist : ((addPair parameter P p u0).map (candG parameter data W wbar Fail (withPair parameter data s p u0 u1)
+        (addPair parameter P p u0) L d n k)).sum ≤
         (if Landed parameter (blockIndex u0) then
-          candG parameter data W wbar Fail (withPair parameter data s p u0 u1) (p :: P) L d n k p else 0) +
-        (P.map fun q => if Landed parameter (blockIndex u0) then A q u0 u1
-          else candG parameter data W wbar Fail s P L d n k q).sum := by
+          (if (viewOf u0 u1).1 ∈ Fail then 1 else 0) + Wv (viewOf u0 u1) else 0) +
+        (P.map fun q => A q u0 u1).sum := by
       by_cases hl : Landed parameter (blockIndex u0)
-      · have hmap : P.map (candG parameter data W wbar Fail (withPair parameter data s p u0 u1) (p :: P) L d n k) =
-            P.map fun q => A q u0 u1 := List.map_congr_left fun q hq => by
-          have h := candG_withPair W wbar Fail hP hp0 L d n k q hq u0 u1
-          unfold addPair at h
-          simp only [if_pos hl] at h
-          exact h
-        unfold addPair
-        simp only [if_pos hl, List.map_cons, List.sum_cons, hmap]
-      · have hmap : P.map (candG parameter data W wbar Fail (withPair parameter data s p u0 u1) P L d n k) =
-            P.map fun q => candG parameter data W wbar Fail s P L d n k q := List.map_congr_left fun q hq => by
-          have h := candG_withPair W wbar Fail hP hp0 L d n k q hq u0 u1
-          unfold addPair at h
-          simp only [if_neg hl] at h
-          exact h
-        unfold addPair
-        simp only [if_neg hl, zero_add, hmap]
-    rw [hlist]
+      · unfold addPair
+        simp only [if_pos hl, List.map_cons, List.sum_cons]
+        rw [hmap]
+        exact add_le_add (candG_withPair_self wbar Fail hW hw hp0 L d n k u0 u1 hl _) le_rfl
+      · unfold addPair
+        simp only [if_neg hl, zero_add]
+        rw [hmap]
     gcongr
-    by_cases hl : Landed parameter (blockIndex u0)
-    · simp only [if_pos hl]
-      exact candG_withPair_self W wbar Fail hP hp0 L d n k u0 u1
-    · simp only [if_neg hl, le_refl]
   refine le_trans (pairE_mono hpoint) ?_
   simp only [pairE_add, pairE_const_mul, pairE_const, pairE_list_sum]
   have h1 : pairE (fun u0 u1 => if Landed parameter (blockIndex u0) then
-      (if (viewOf u0 u1).1 ∈ Fail then 1 else 0) + Wv (viewOf u0 u1) else 0) =
-      landing * (φ + freshAvg Finset.univ Wv) := by
+      (if (viewOf u0 u1).1 ∈ Fail then 1 else 0) + Wv (viewOf u0 u1) else 0) = landing * (φ + freshAvg Finset.univ Wv) := by
     rw [pairE_landed parameter (fun v => (if v.1 ∈ Fail then 1 else 0) + Wv v) 0, mul_zero, add_zero, freshAvg_add]
     rfl
-  have h2 : ∀ q, pairE (fun u0 u1 => if Landed parameter (blockIndex u0) then A q u0 u1
-      else candG parameter data W wbar Fail s P L d n k q) ≤ candG parameter data W wbar Fail s P L d n (k + 1) q := by
-    intro q
+  have h2 : ∀ q ∈ P, pairE (fun u0 u1 => A q u0 u1) ≤ candG parameter data W wbar Fail s P L d n (k + 1) q := by
+    intro q hq
+    have hqp : ¬p = q := fun h => hpP (h ▸ hq)
     simp only [hA]
     unfold candG candValueG
     split_ifs
-    · simp only [ite_self, pairE_const, le_refl]
-    · exact creations_newCoin_le wbar hw (hW _) n d k _ L p
-    · simp only [ite_self, pairE_const, le_refl]
-  have h3 : pairE (fun u0 u1 => if Landed parameter (blockIndex u0) then
-      creations Finset.univ landing GH k (newCoin L p u0 u1 I) else hValueG parameter data W wbar b0 s P L d n k) ≤
-      hValueG parameter data W wbar b0 s P L d n (k + 1) :=
-    creations_newCoin_le wbar hw (excessW_props hW hb0) n d k I L p
+    · simp only [pairE_const, le_refl]
+    · exact fut_newPair hfair (hW _) s L (· = q) p hp0 hqp n k d
+    · simp only [pairE_const, le_refl]
+  have h3 : pairE (fun u0 u1 => Hs u0 u1) ≤ hValueG parameter data W wbar b0 s P L d n (k + 1) :=
+    fut_newPair hfair (excessW_props hW hb0) s L (fun _ => False) p hp0 (fun h => h) n k d
   have hfresh : landing * freshAvg Finset.univ Wv ≤ b0 + hValueG parameter data W wbar b0 s P L d n (k + 1) := by
-    refine le_trans (fresh_forecastG W wbar b0 hw I d n k) (add_le_add le_rfl ?_)
-    unfold hValueG
-    exact creations_le_succ Finset.univ_nonempty landing_le_one
-      (virtualOnce_cons_le' wbar hw (excessW_props hW hb0) n d) (virtualOnce_perm' wbar n d) k I
+    refine le_trans (fresh_forecastG W wbar b0 hw s L (fun _ => False) d n k) (add_le_add le_rfl ?_)
+    exact hValueG_mono wbar b0 hW hw hb0 s P L d n (Nat.le_succ k)
   have hφ1 : landing * φ ≤ φ := mul_le_of_le_one_left' landing_le_one
   rw [h1]
   unfold coreG
   set S := (P.map (candG parameter data W wbar Fail s P L d n (k + 1))).sum
   set H := hValueG parameter data W wbar b0 s P L d n (k + 1)
-  have hS : (P.map fun q => pairE fun u0 u1 => if Landed parameter (blockIndex u0) then A q u0 u1
-      else candG parameter data W wbar Fail s P L d n k q).sum ≤ S :=
-    List.sum_le_sum fun q _ => h2 q
-  calc landing * (φ + freshAvg Finset.univ Wv) +
-        (P.map fun q => pairE fun u0 u1 => if Landed parameter (blockIndex u0) then A q u0 u1
-          else candG parameter data W wbar Fail s P L d n k q).sum +
-        k * (pairE (fun u0 u1 => if Landed parameter (blockIndex u0) then
-          creations Finset.univ landing GH k (newCoin L p u0 u1 I) else
-            hValueG parameter data W wbar b0 s P L d n k) + φ) + n * φ
+  have hS : (P.map fun q => pairE fun u0 u1 => A q u0 u1).sum ≤ S :=
+    List.sum_le_sum fun q hq => h2 q hq
+  calc landing * (φ + freshAvg Finset.univ Wv) + (P.map fun q => pairE fun u0 u1 => A q u0 u1).sum +
+        k * (pairE (fun u0 u1 => Hs u0 u1) + φ) + n * φ
       ≤ φ + (b0 + H) + S + k * (H + φ) + n * φ := by
         rw [mul_add]
         gcongr
@@ -306,18 +257,19 @@ variable (parameter : PublicParameter) (data : PublicData) {W : View → Multise
 
 variable {parameter data}
 
-/-- The potential sees the state only through the views of its items. -/
+/-- The potential sees the state only through the views of its items and the statuses. -/
 theorem coreG_congr {s s' : State} {P : List Pair}
     (h : ∀ q ∈ P, pview parameter data s' q = pview parameter data s q)
+    (hstat : ∀ m, stat parameter data m s' = stat parameter data m s)
     (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ) :
     coreG parameter data W wbar b0 Fail s' P L d n k = coreG parameter data W wbar b0 Fail s P L d n k := by
   have hcand : ∀ q ∈ P, candG parameter data W wbar Fail s' P L d n k q =
       candG parameter data W wbar Fail s P L d n k q := by
     intro q hq
     unfold candG candValueG
-    rw [h q hq, coinItems_congr (fun r hr => h r (List.mem_of_mem_erase hr)) L]
+    rw [h q hq, fut_congr L _ _ (fun m _ => hstat m)]
   unfold coreG hValueG
-  rw [List.map_congr_left hcand, coinItems_congr h L]
+  rw [List.map_congr_left hcand, fut_congr L _ _ (fun m _ => hstat m)]
 
 theorem potG_mono (hW : WitnessProps W) (gate : State → Prop) (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) (s : State)
     (P : List Pair) (L : QueryLog SigningSpec) (d : Multiset View) {k k' : ℕ} (hk : k ≤ k') :
@@ -327,18 +279,19 @@ theorem potG_mono (hW : WitnessProps W) (gate : State → Prop) (hw : wbar ≤ 1
   · exact le_rfl
   · exact coreG_mono wbar b0 Fail hW hw hb0 s P L d _ hk
 
-/-- A grown state with the same item views has no larger potential. -/
+/-- A grown state with the same item views and statuses has no larger potential. -/
 theorem potG_grow (hW : WitnessProps W) {gate : State → Prop}
     (hgate : ∀ s s' : State, Extends s s' → gate s → gate s') (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤)
     {s s' : State} (hext : Extends s s') {P : List Pair}
-    (hview : ∀ q ∈ P, pview parameter data s' q = pview parameter data s q) (L : QueryLog SigningSpec)
+    (hview : ∀ q ∈ P, pview parameter data s' q = pview parameter data s q)
+    (hstat : ∀ m, stat parameter data m s' = stat parameter data m s) (L : QueryLog SigningSpec)
     (d : Multiset View) {k k' : ℕ} (hk : k ≤ k') :
     potG parameter data W wbar b0 Fail gate s' P L d k ≤ potG parameter data W wbar b0 Fail gate s P L d k' := by
   unfold potG
   by_cases hr : gate s' ∨ signatureLimit < L.length
   · rw [if_pos hr]; exact bot_le
   · have hr' : ¬(gate s ∨ signatureLimit < L.length) := fun h => hr (h.imp (hgate s s' hext) id)
-    rw [if_neg hr, if_neg hr', coreG_congr wbar b0 Fail hview]
+    rw [if_neg hr, if_neg hr', coreG_congr wbar b0 Fail hview hstat]
     exact coreG_mono wbar b0 Fail hW hw hb0 s P L d _ hk
 
 end OrderG
@@ -355,10 +308,12 @@ variable (parameter : PublicParameter) (data : PublicData) (W : View → Multise
 noncomputable def canonG (n k : ℕ) (out : Run HashInput Coordinate (Option Signature) × State) : ℝ≥0∞ :=
   freshNewWeight parameter data m s (fun v => if v.1 ∈ Fail then 1 else 0) out +
   (P.map fun q => if Unsigned L q then (if (pview parameter data s q).1 ∈ Fail then 1 else
-      creations Finset.univ landing (fun J => upperO parameter data wbar m s n d (W (pview parameter data s q))
-        (· = q) out J) k (restItems parameter data m s L (P.erase q))) else 0).sum +
-  k * (creations Finset.univ landing (fun J => upperO parameter data wbar m s n d (excessW W b0) (fun _ => False)
-      out J) k (restItems parameter data m s L P) + failMass Fail) +
+      creations Finset.univ landing (fun J => upperO parameter data wbar m s n d
+        (stateFn parameter data s (L ++ [⟨m, none⟩]) (· = q) (W (pview parameter data s q)))
+        (· = q) out J) k []) else 0).sum +
+  k * (creations Finset.univ landing (fun J => upperO parameter data wbar m s n d
+      (stateFn parameter data s (L ++ [⟨m, none⟩]) (fun _ => False) (excessW W b0)) (fun _ => False) out J) k [] +
+    failMass Fail) +
   n * failMass Fail
 
 end SignPointG

@@ -16,6 +16,7 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
+attribute [local irreducible] digestAttemptLimit
 
 variable [Params]
 
@@ -58,6 +59,7 @@ theorem sign_pointG_level (hW : WitnessProps W) {gate : State → Prop}
   obtain ⟨_, hP', _, _, hview⟩ := sign_params tg initial model Fail Qtot hparse hfail attempts budget
     s P d R hprep hP hD hC out hout r hr
   have hext := interp_extends tg initial model _ budget s out hout
+  have hother := other_message_kept tg initial model attempts budget s out hout
   have hpost := loop_post tg initial model parameter data m (fun ρ call => hparse (m, ρ) call) Fail hfail
     attempts budget s hprep out hout r hr
   have hshape := sign_shape parameter data Fail m hpost out rfl hr
@@ -110,30 +112,30 @@ theorem sign_pointG_level (hW : WitnessProps W) {gate : State → Prop}
       rw [if_pos hU', if_pos hU, hview q hq]
       split_ifs with hF
       · exact le_rfl
-      · unfold candValueG
-        rw [hview q hq, List.erase_append_right _ (hnotnew q hq),
-          coinItems_after (P.erase q) fun q' hq' => hview q' (List.mem_of_mem_erase hq')]
-        refine post_term_leO hw (hW _) _ n _ hk _ fun J => ?_
-        refine upper_pointO hw (hW _) hP (· = q) out r hr Fail hshape (fun sig hsig _ heq => ?_) J
+      · unfold candValueG fut
+        rw [hview q hq, stateFn_after L m r _ _ hother]
+        refine post_term_leO hw (stateFn_props s _ _ (hW _)) _ n _ hk _ fun J => ?_
+        refine upper_pointO hw (stateFn_props s _ _ (hW _)) hP (· = q) out r hr Fail hshape
+          (fun sig hsig _ heq => ?_) J
         subst hsig
         exact not_unsigned_signed (m := m) (L := L) (by rw [heq]; exact hU')
     · rw [if_neg hU']
       exact bot_le
   · refine mul_le_mul' (by exact_mod_cast hk) (add_le_add ?_ le_rfl)
-    unfold hValueG
-    rw [coinItems_after P hview]
-    refine post_term_leO hw (excessW_props hW hb0) _ n _ hk _ fun J => ?_
-    exact upper_pointO hw (excessW_props hW hb0) hP (fun _ => False) out r hr Fail hshape (fun _ _ _ h => h) J
+    unfold hValueG fut
+    rw [stateFn_after L m r _ _ hother]
+    refine post_term_leO hw (stateFn_props s _ _ (excessW_props hW hb0)) _ n _ hk _ fun J => ?_
+    exact upper_pointO hw (stateFn_props s _ _ (excessW_props hW hb0)) hP (fun _ => False) out r hr Fail hshape
+      (fun _ _ _ h => h) J
 
 /-- **The signing step in expectation, at any level.** For a forecast level `K` free of the run's
 budget: averaged over a signing call run with any budget, the bound at level `K` is at most the
 potential at level `K` before the call. -/
 theorem sign_expectG_level (hW : WitnessProps W) (gate : State → Prop)
     (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
-    {Cmax : ℕ} (hfair : Fair wbar Cmax) (hb0 : b0 ≠ ⊤) (attempts budget K : ℕ) (s : State) (P : List Pair)
-    (L : QueryLog SigningSpec) (hm : ∀ entry ∈ L, entry.1 ≠ m) (d : Multiset View) (hP : PInv parameter data s P)
-    (hcount : cachedCount parameter data m s + attempts ≤ Cmax) :
-    ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] *
+    (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) (budget K : ℕ) (s : State) (P : List Pair)
+    (L : QueryLog SigningSpec) (hm : ∀ entry ∈ L, entry.1 ≠ m) (d : Multiset View) (hP : PInv parameter data s P) :
+    ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m digestAttemptLimit) budget s] *
         canonL parameter data W wbar b0 Fail gate m s P L d K out ≤
       potG parameter data W wbar b0 Fail gate s P L d K := by
   unfold canonL
@@ -153,33 +155,28 @@ theorem sign_expectG_level (hW : WitnessProps W) (gate : State → Prop)
     fun ρ h => hP.first (m, ρ) h
   have hlandb1 : ∀ ρ u0, s.cache (blk parameter data m ρ 0) = some u0 → Landed parameter (blockIndex u0) →
       s.cache (blk parameter data m ρ 1) ≠ none := fun ρ u0 h0 hl => hP.second (m, ρ) ⟨u0, h0, hl⟩
-  have hmass : ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] ≤ 1 :=
+  have hmass : ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m digestAttemptLimit) budget s] ≤ 1 :=
     tsum_probOutput_le_one
   have hFN := loop_bound_fresh tg initial model parameter data m hparse' s hnob1 hlandb1
-    (fun v => if v.1 ∈ Fail then 1 else 0) attempts budget s (related_self parameter data m s)
-  have hT : ∀ q ∈ P, ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m attempts) budget s] *
+    (fun v => if v.1 ∈ Fail then 1 else 0) digestAttemptLimit budget s (related_self parameter data m s)
+  have hT : ∀ q ∈ P, ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m digestAttemptLimit) budget s] *
       (if Unsigned L q then (if (pview parameter data s q).1 ∈ Fail then 1 else
-        creations Finset.univ landing (fun J => upperO parameter data wbar m s n d (W (pview parameter data s q))
-          (· = q) out J) K (restItems parameter data m s L (P.erase q))) else 0) ≤
+        creations Finset.univ landing (fun J => upperO parameter data wbar m s n d
+          (stateFn parameter data s (L ++ [⟨m, none⟩]) (· = q) (W (pview parameter data s q)))
+          (· = q) out J) K []) else 0) ≤
       candG parameter data W wbar Fail s P L d (n + 1) K q := by
     intro q _
     unfold candG
     split_ifs
     · rw [ENNReal.tsum_mul_right, mul_one]; exact hmass
     · unfold candValueG
-      rw [creations_perm (virtualOnce_perm' wbar (n + 1) d) K _ _ (coinItems_perm parameter data m s L hm _)]
-      have h := term_expectO tg initial model hparse' hfair (hW (pview parameter data s q)) hP (· = q)
-        attempts budget K hcount (restItems parameter data m s L (P.erase q)) (n := n) (d := d)
-      rwa [← erase_eq_filter' hP.nodup q] at h
+      exact term_expectO tg initial model hparse' hw (hW (pview parameter data s q)) hP (· = q) L hm
+        budget K (n := n) (d := d)
     · simp
-  have hH := term_expectO tg initial model (n := n) (d := d) hparse' hfair (excessW_props hW hb0) hP
-    (fun _ => False) attempts budget K hcount (restItems parameter data m s L P)
-  rw [filter_false'] at hH
+  have hH := term_expectO tg initial model (n := n) (d := d) hparse' hw (excessW_props hW hb0) hP (fun _ => False)
+    L hm budget K
   have hHv : hValueG parameter data W wbar b0 s P L d (n + 1) K =
-      creations Finset.univ landing (fun J => virtualOnce Finset.univ wbar (excessW W b0) (n + 1) J d) K
-        (msgItems parameter data m s P ++ restItems parameter data m s L P) := by
-    unfold hValueG
-    exact creations_perm (virtualOnce_perm' wbar (n + 1) d) K _ _ (coinItems_perm parameter data m s L hm _)
+      fut parameter data wbar s L (fun _ => False) (excessW W b0) (n + 1) K d := rfl
   unfold canonG coreG
   simp only [mul_add, ENNReal.tsum_add]
   rw [tsum_list_sum]
@@ -228,7 +225,7 @@ variable (parameter : PublicParameter) (data : PublicData) (K : HiddenReveal.Kno
   (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
 /-- A new pair moves the near potential down by one level. -/
-theorem potN_newPair (hw : wbar ≤ 1) {s : State} {P : List Pair} (hP : PInv parameter data s P) {p : Pair}
+theorem potN_newPair (hfair : Fair5 wbar) {s : State} {P : List Pair} (hP : PInv parameter data s P) {p : Pair}
     (hp0 : s.cache (pblk parameter data p 0) = none) (L : QueryLog SigningSpec) (d : Multiset View) (j : ℕ) :
     pairE (fun u0 u1 => potN parameter data wbar Fail (withPair parameter data s p u0 u1) (addPair parameter P p u0)
       L d j) ≤ potN parameter data wbar Fail s P L d (j + 1) := by
@@ -236,7 +233,7 @@ theorem potN_newPair (hw : wbar ≤ 1) {s : State} {P : List Pair} (hP : PInv pa
   by_cases hL : False ∨ signatureLimit < L.length
   · simp only [if_pos hL, pairE_const, le_refl]
   · simp only [if_neg hL]
-    have h := coreG_newPair wbar 0 Fail witnessNear_props hw ENNReal.zero_ne_top hP hp0 L d
+    have h := coreG_newPair wbar 0 Fail witnessNear_props hfair ENNReal.zero_ne_top hP hp0 L d
       (signatureLimit - L.length) j
     rwa [add_zero] at h
 

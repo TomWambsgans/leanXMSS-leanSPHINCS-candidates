@@ -339,25 +339,33 @@ theorem compile_signAttempt (seed : MasterSeed) (material : Material)
   intro first
   split <;> simp only [simulateQ_pure, liftM_pure]
 
-/-- Every genuinely private randomizer draw is retained while compiling the grinding loop. -/
+/-- The grinding walk makes no derivation call: it compiles to itself, for any seed. -/
+theorem compile_signDigestWalk (seed : MasterSeed) (material : Material)
+    (p : PublicParameter) (root : Digest) (message : Message) :
+    ∀ (attempts : Nat) (randomness : Randomness),
+      simulateQ (compileHash seed material)
+        (Seeded.signDigestLoop ⟨seed, p, root⟩ message attempts randomness :
+          OracleComp HashSpec (Option (Randomness × Index))) =
+        liftM (Seeded.signDigestLoop ⟨0, p, root⟩ message attempts randomness :
+          OracleComp HashSpec (Option (Randomness × Index)))
+  | 0, _ => by simp only [Seeded.signDigestLoop, simulateQ_pure, liftM_pure]
+  | attempts + 1, randomness => by
+      simp only [Seeded.signDigestLoop, simulateQ_bind, compile_signAttempt, liftM_bind]
+      apply bind_congr
+      intro result
+      cases result with
+      | none => exact compile_signDigestWalk seed material p root message attempts (randomness + 1)
+      | some index => simp only [simulateQ_pure, liftM_pure]
+
+/-- The private base-randomizer draw is retained while compiling the grinding loop. -/
 theorem compiled_signDigestLoop_eq (left right : MasterSeed) (material : Material) (root : Digest)
     (message : Message) (attempts : Nat) :
     simulateQ (compileWorld left material)
       (Randomized.signDigestLoop ⟨left, parameter material, root⟩ message attempts) =
     simulateQ (compileWorld right material)
       (Randomized.signDigestLoop ⟨right, parameter material, root⟩ message attempts) := by
-  induction attempts with
-  | zero => simp only [Randomized.signDigestLoop, simulateQ_pure]
-  | succ attempts ih =>
-      simp only [Randomized.signDigestLoop, simulateQ_bind, compileWorld_lift_prob,
-        compileWorld_lift_hash, compile_signAttempt]
-      apply bind_congr
-      intro randomness
-      apply bind_congr
-      intro result
-      cases result with
-      | none => exact ih
-      | some index => rw [simulateQ_pure, simulateQ_pure]
+  simp only [Randomized.signDigestLoop, simulateQ_bind, compileWorld_lift_prob,
+    compileWorld_lift_hash, compile_signDigestWalk, simulateQ_pure]
 
 theorem compiled_sign_eq (left right : MasterSeed) (material : Material) (root : Digest)
     (message : Message) :

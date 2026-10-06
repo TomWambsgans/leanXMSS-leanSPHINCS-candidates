@@ -6,14 +6,14 @@ derivation and verification addresses distinct in later random-oracle reductions
 
 namespace LeanSphincs.Security
 
-/-- The fixed-width prefix determines its fields and parameter, with no restriction on payload. -/
+/-- The fixed-width prefix determines its parameter and fields, with no restriction on payload. -/
 theorem fieldInput_injective {fields fields' : TweakFields}
     {parameter parameter' : PublicParameter} {payload payload' : HashInput}
-    (h : fieldBytes fields ++ bytesLE 16 parameter ++ payload =
-      fieldBytes fields' ++ bytesLE 16 parameter' ++ payload') :
+    (h : bytesLE 16 parameter ++ fieldBytes fields ++ payload =
+      bytesLE 16 parameter' ++ fieldBytes fields' ++ payload') :
     fields = fields' ∧ parameter = parameter' ∧ payload = payload' := by
   obtain ⟨hprefix, hpayload⟩ := List.append_inj h (by simp [fieldBytes, bytesLE_length])
-  obtain ⟨hfields, hparameter⟩ := List.append_inj' hprefix (by simp [bytesLE_length])
+  obtain ⟨hparameter, hfields⟩ := List.append_inj hprefix (by simp [bytesLE_length])
   exact ⟨fieldBytes_injective hfields, bytesLE_injective hparameter, hpayload⟩
 
 theorem tweakableInput_injective {parameter parameter' : PublicParameter}
@@ -31,15 +31,9 @@ theorem deriveFields_injective : Function.Injective keygenDomainFields := by
   all_goals try { simp at h; done }
   · rfl
   · rename_i lay tree leaf chain lay' tree' leaf' chain'
-    obtain ⟨_, hlay, htree, hchain, hleaf⟩ := h
-    have hl : lay = lay' := by
-      apply Fin.ext
-      exact ofNat_inj_of_lt (lay.isLt.trans_le (by decide))
-        (lay'.isLt.trans_le (by decide)) hlay
-    have ht : tree = tree' := by
-      apply Fin.ext
-      exact ofNat_inj_of_lt (tree.isLt.trans_le (by decide))
-        (tree'.isLt.trans_le (by decide)) htree
+    obtain ⟨_, _, hchain, hleaf⟩ := h
+    have hl : lay = lay' := layer_eq _ _
+    have ht : tree = tree' := treeIndex_eq _ _
     have hc : chain = chain' := by
       apply Fin.ext
       exact ofNat_inj_of_lt (chain.isLt.trans_le (by decide))
@@ -50,22 +44,23 @@ theorem deriveFields_injective : Function.Injective keygenDomainFields := by
         (leaf'.isLt.trans_le (by decide)) hleaf
     cases hl; cases ht; cases he; cases hc; rfl
   · rename_i index tree leaf index' tree' leaf'
-    obtain ⟨_, htree, hindex, _, hleaf⟩ := h
+    obtain ⟨_, _, hpacked, hindex⟩ := h
     have hi : index = index' := by
       apply Fin.ext
       exact ofNat_inj_of_lt (index.isLt.trans_le (by decide))
         (index'.isLt.trans_le (by decide)) hindex
-    have ht : tree = tree' := by
-      apply Fin.ext
-      exact ofNat_inj_of_lt (tree.isLt.trans_le (by decide))
-        (tree'.isLt.trans_le (by decide)) htree
-    have hl : leaf = leaf' := by
-      apply Fin.ext
-      exact ofNat_inj_of_lt (leaf.isLt.trans_le (by decide))
-        (leaf'.isLt.trans_le (by decide)) hleaf
-    cases hi; cases ht; cases hl; rfl
+    have ht := tree.isLt
+    have ht' := tree'.isLt
+    have hl := leaf.isLt
+    have hl' := leaf'.isLt
+    simp only [ftsTrees, ftsTreeHeight] at ht ht' hl hl'
+    have hnat := ofNat_inj_of_lt (a := tree.val + 512 * leaf.val) (b := tree'.val + 512 * leaf'.val)
+      (by omega) (by omega) hpacked
+    have htree : tree = tree' := Fin.ext (by omega)
+    have hleaf : leaf = leaf' := Fin.ext (by omega)
+    cases hi; cases htree; cases hleaf; rfl
   · rename_i level level'
-    obtain ⟨_, _, _, hlevel, _⟩ := h
+    obtain ⟨_, _, hlevel, _⟩ := h
     have hl : level = level' := by
       apply Fin.ext
       exact ofNat_inj_of_lt (level.isLt.trans_le (by decide))

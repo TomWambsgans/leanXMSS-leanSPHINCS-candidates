@@ -93,8 +93,8 @@ theorem digestInput_injective (parameter : PublicParameter) (root : Digest)
     Function.Injective (digestInput parameter root message randomness) := by
   intro left right h
   have hfields := fieldBytes_injective
-    (List.append_cancel_right (List.append_cancel_right h))
-  have hposition := congrArg TweakFields.position hfields
+    (List.append_cancel_left (List.append_cancel_right h))
+  have hposition := congrArg TweakFields.hi hfields
   apply Fin.ext
   exact ofNat_inj_of_lt (by have := left.isLt; omega) (by have := right.isLt; omega) hposition
 

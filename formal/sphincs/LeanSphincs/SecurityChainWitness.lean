@@ -274,18 +274,18 @@ theorem chain_input_address_injective (parameter : PublicParameter) (lay : Layer
     chain = chain' ∧ step = step' := by
   obtain ⟨hprefix, _⟩ := List.append_inj heq (by
     simp [tweakBytes, fieldBytes, bytesLE_length])
-  obtain ⟨htweak, _⟩ := List.append_inj' hprefix (by simp [bytesLE_length])
+  obtain ⟨_, htweak⟩ := List.append_inj hprefix (by simp [bytesLE_length])
   have hfields := fieldBytes_injective htweak
-  have hposition := congrArg TweakFields.position hfields
-  change BitVec.ofNat 32 (4 * chain.val + step.val) =
-    BitVec.ofNat 32 (4 * chain'.val + step'.val) at hposition
+  have hchain : BitVec.ofNat 24 chain.val = BitVec.ofNat 24 chain'.val :=
+    congrArg TweakFields.hi hfields
+  have hstep : BitVec.ofNat 3 step.val = BitVec.ofNat 3 step'.val :=
+    congrArg TweakFields.step hfields
   have hc : chain.val < 64 := chain.isLt
   have hc' : chain'.val < 64 := chain'.isLt
   have hs : step.val < 3 := step.isLt
   have hs' : step'.val < 3 := step'.isLt
-  have hnat := ofNat_inj_of_lt (by omega : 4 * chain.val + step.val < 2 ^ 32)
-    (by omega : 4 * chain'.val + step'.val < 2 ^ 32) hposition
-  exact ⟨Fin.ext (by omega), Fin.ext (by omega)⟩
+  exact ⟨Fin.ext (ofNat_inj_of_lt (by omega) (by omega) hchain),
+    Fin.ext (ofNat_inj_of_lt (by omega) (by omega) hstep)⟩
 
 end Chain
 end LeanSphincs.Security

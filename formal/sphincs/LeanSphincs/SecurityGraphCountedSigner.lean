@@ -151,16 +151,22 @@ theorem finishCostSource_correct (f : QueryImpl HashSpec Id) (parameter : Public
     eval_finishSign_assembled f parameter seed data table hdata htable message randomness hland,
     hashCalls_finishSign_exact f parameter seed data hdata]
 
-noncomputable def signCostSourceLoop (parameter : PublicParameter) (data : PublicData)
-    (message : Message) : Nat → OracleComp CostSpec (Option Signature)
-  | 0 => pure none
-  | attempts + 1 => do
-      let randomness ← liftM ($ᵗ Randomness : ProbComp Randomness)
+/-- The grinding walk in the graph view: try `rho`, `rho + 1`, ... -/
+noncomputable def signCostSourceWalk (parameter : PublicParameter) (data : PublicData)
+    (message : Message) : Nat → Randomness → OracleComp CostSpec (Option Signature)
+  | 0, _ => pure none
+  | attempts + 1, randomness => do
       let first ← liftM (messageDigestCall parameter data.root message randomness 0 :
         OracleComp HashSpec HashOutput)
       if Landed parameter (blockIndex first) then
         finishCostSource parameter data message randomness
-      else signCostSourceLoop parameter data message attempts
+      else signCostSourceWalk parameter data message attempts (randomness + 1)
+
+/-- The signer of the seed-free game: a uniform base randomizer, then the walk. -/
+noncomputable def signCostSourceLoop (parameter : PublicParameter) (data : PublicData)
+    (message : Message) (attempts : Nat) : OracleComp CostSpec (Option Signature) := do
+  let base ← liftM ($ᵗ Randomness : ProbComp Randomness)
+  signCostSourceWalk parameter data message attempts base
 
 noncomputable def signCostSource (parameter : PublicParameter) (data : PublicData)
     (message : Message) : OracleComp CostSpec (Option Signature) :=

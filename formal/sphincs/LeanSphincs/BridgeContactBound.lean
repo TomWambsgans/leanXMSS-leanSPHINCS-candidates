@@ -1,7 +1,9 @@
 import LeanSphincs.BridgeContactSample
 
-/-! The fair share `wbarOf y` of the budget `y = q - keygenCost`, as used by the A4 bounds: its
-near forecast is the near H-term, it is fair for the signer's attempts, and its product with
+/-! The coin `wbar5` of the signer that tries `R0, R0 + 1, ...`, as used by the A4 bounds: its near
+forecast is the near H-term and it pays the rate of the walk (`Fair5`); its product with `landing`
+is `rate5` (`H0.wbar5_mul_landing`, `H0.rate5_eq`). The fair share `wbarOf y` of the per-attempt
+signer is kept for the frozen modules: it is fair for the signer's attempts, and its product with
 `landing`. -/
 
 open OracleComp OracleSpec ENNReal
@@ -16,8 +18,11 @@ attribute [local instance] Classical.propDecidable
 
 variable [Params]
 
-/-- The near forecast at the fair share is the near H-term. -/
-theorem startNear_wbarOf (q : ℕ) : startNear (H0.wbarOf q) q = H0.hNearOf q := rfl
+/-- The near forecast at the coin of the walk is the near H-term. -/
+theorem startNear_wbar5 (q : ℕ) : startNear H0.wbar5 q = H0.hNearOf q := rfl
+
+/-- The coin of the walk pays its rate. -/
+theorem fair_wbar5 : Fair5 H0.wbar5 := H0.fair5
 
 /-- The fair share is fair for the signer's attempts. -/
 theorem fair_wbarOf (y : ℕ) (hy : 2 * y ≤ 2 ^ 128) : Fair (H0.wbarOf y) (y + digestAttemptLimit) :=

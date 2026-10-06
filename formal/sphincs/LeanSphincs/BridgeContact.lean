@@ -528,16 +528,16 @@ theorem avoids_finishRestF (parameter : PublicParameter) (data : PublicData) (me
     refine avoids_bind _ (avoids_sequenceFin _ _ fun _ => avoids_reveal _ _) fun _ => ?_
     exact avoids_bind _ (avoids_tick _ _) fun _ => avoids_pure _ _
 
-/-- **The signing loop queries no FORS leaf input.** -/
-theorem avoids_loopF (parameter : PublicParameter) (data : PublicData) (message : Message) :
-    ∀ attempts, Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate) IsFLInput
-      (signCostSourceLoop parameter data message attempts) := by
+/-- The signing walk queries no FORS leaf input. -/
+theorem avoids_walkF (parameter : PublicParameter) (data : PublicData) (message : Message) :
+    ∀ attempts ρ, Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate) IsFLInput
+      (signCostSourceWalk parameter data message attempts ρ) := by
   intro attempts
   induction attempts with
-  | zero => exact avoids_pure _ _
+  | zero => intro ρ; exact avoids_pure _ _
   | succ attempts ih =>
-      rw [signCostSourceLoop_succ]
-      refine avoids_bind _ (avoids_liftProb _ _) fun ρ => ?_
+      intro ρ
+      rw [signCostSourceWalk_succ]
       refine (avoids_query_bind _ _ _).2 ⟨fun bytes hb hx => ?_, fun first => ?_⟩
       · cases hb
         exact not_fl_tweakable parameter (.message 0) _ (by simp [hashDomainFields, tweakFields]) hx
@@ -550,7 +550,14 @@ theorem avoids_loopF (parameter : PublicParameter) (data : PublicData) (message 
           · cases hb
             exact not_fl_tweakable parameter (.message 1) _ (by simp [hashDomainFields, tweakFields]) hx
           exact avoids_finishRestF parameter data message ρ _
-        · exact ih
+        · exact ih _
+
+/-- **The signing loop queries no FORS leaf input.** -/
+theorem avoids_loopF (parameter : PublicParameter) (data : PublicData) (message : Message) (attempts : ℕ) :
+    Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate) IsFLInput
+      (signCostSourceLoop parameter data message attempts) := by
+  unfold signCostSourceLoop
+  exact avoids_bind _ (avoids_liftProb _ _) fun ρ => avoids_walkF parameter data message attempts ρ
 
 end Signer
 

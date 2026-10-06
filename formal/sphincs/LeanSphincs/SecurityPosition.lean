@@ -6,10 +6,11 @@ pruning selects the positions that are actually prepared. -/
 
 namespace LeanSphincs
 
-/-- The two natural-number fields must fit their serialized 32-bit slots. -/
+/-- The natural-number fields must fit their serialized slots: a tree level in the 24-bit `hi` and
+a node index in the 32-bit `lo`; a FORS level in 4 bits and a FORS node index in 15 bits of `hi`. -/
 def HashDomain.InRange : HashDomain → Prop
-  | .node _ _ level nodeIdx => level < 2 ^ 32 ∧ nodeIdx < 2 ^ 32
-  | .ftsNode _ _ level nodeIdx => level < 2 ^ 32 ∧ nodeIdx < 2 ^ 32
+  | .node _ _ level nodeIdx => level < 2 ^ 24 ∧ nodeIdx < 2 ^ 32
+  | .ftsNode _ _ level nodeIdx => level < 16 ∧ nodeIdx < 2 ^ 15
   | _ => True
 
 namespace Security
@@ -25,54 +26,63 @@ theorem hashFields_injective {left right : HashDomain} (hl : left.InRange)
     simp only [hashDomainFields, tweakFields, TweakFields.mk.injEq] at heq
   all_goals try { simp at heq; done }
   · rename_i lay tree leaf chain step lay' tree' leaf' chain' step'
-    obtain ⟨_, hlay, htree, hposition, hleaf⟩ := heq
-    have hc := chain.isLt
-    have hc' := chain'.isLt
-    have hs := step.isLt
-    have hs' := step'.isLt
-    simp only [numChains, chainLength, winternitzBits] at hc hc' hs hs'
-    have hp := ofNat_inj_of_lt (a := chainLength * chain.val + step.val)
-      (b := chainLength * chain'.val + step'.val)
-      (by simp only [chainLength, winternitzBits]; omega)
-      (by simp only [chainLength, winternitzBits]; omega) hposition
-    simp only [chainLength, winternitzBits] at hp
-    have he1 := fin_of_ofNat_eq (by decide) hlay
-    have he2 := fin_of_ofNat_eq (by decide) htree
+    obtain ⟨_, hstep, hchain, hleaf⟩ := heq
+    have he1 : lay = lay' := layer_eq _ _
+    have he2 : tree = tree' := treeIndex_eq _ _
     have he3 := fin_of_ofNat_eq (by decide) hleaf
-    have he4 : chain = chain' := Fin.ext (by omega)
-    have he5 : step = step' := Fin.ext (by omega)
+    have he4 := fin_of_ofNat_eq (by decide) hchain
+    have he5 := fin_of_ofNat_eq (by decide) hstep
     cases he1; cases he2; cases he3; cases he4; cases he5; rfl
-  · obtain ⟨_, hlay, htree, _, hleaf⟩ := heq
-    have he1 := fin_of_ofNat_eq (by decide) hlay
-    have he2 := fin_of_ofNat_eq (by decide) htree
+  · rename_i lay tree leaf lay' tree' leaf'
+    obtain ⟨_, _, _, hleaf⟩ := heq
+    have he1 : lay = lay' := layer_eq _ _
+    have he2 : tree = tree' := treeIndex_eq _ _
     have he3 := fin_of_ofNat_eq (by decide) hleaf
     cases he1; cases he2; cases he3; rfl
-  · obtain ⟨_, hlay, htree, hlevel, hindex⟩ := heq
-    have he1 := fin_of_ofNat_eq (by decide) hlay
-    have he2 := fin_of_ofNat_eq (by decide) htree
+  · rename_i lay tree level nodeIdx lay' tree' level' nodeIdx'
+    obtain ⟨_, _, hlevel, hindex⟩ := heq
+    have he1 : lay = lay' := layer_eq _ _
+    have he2 : tree = tree' := treeIndex_eq _ _
     have he3 := ofNat_inj_of_lt hl.1 hr.1 hlevel
     have he4 := ofNat_inj_of_lt hl.2 hr.2 hindex
     cases he1; cases he2; cases he3; cases he4; rfl
-  · obtain ⟨_, hlay, htree, _, hleaf⟩ := heq
-    have he1 := fin_of_ofNat_eq (by decide) hlay
-    have he2 := fin_of_ofNat_eq (by decide) htree
+  · rename_i lay tree leaf lay' tree' leaf'
+    obtain ⟨_, _, _, hleaf⟩ := heq
+    have he1 : lay = lay' := layer_eq _ _
+    have he2 : tree = tree' := treeIndex_eq _ _
     have he3 := fin_of_ofNat_eq (by decide) hleaf
     cases he1; cases he2; cases he3; rfl
-  · obtain ⟨_, htree, hindex, _, hleaf⟩ := heq
-    have he1 := fin_of_ofNat_eq (by decide) htree
-    have he2 := fin_of_ofNat_eq (by decide) hindex
-    have he3 := fin_of_ofNat_eq (by decide) hleaf
+  · rename_i index tree leaf index' tree' leaf'
+    obtain ⟨_, _, hpacked, hindex⟩ := heq
+    have he1 := fin_of_ofNat_eq (by decide) hindex
+    have ht := tree.isLt
+    have ht' := tree'.isLt
+    have hf := leaf.isLt
+    have hf' := leaf'.isLt
+    simp only [ftsTrees, ftsTreeHeight] at ht ht' hf hf'
+    have hnat := ofNat_inj_of_lt (a := tree.val + 512 * leaf.val) (b := tree'.val + 512 * leaf'.val)
+      (by omega) (by omega) hpacked
+    have he2 : tree = tree' := Fin.ext (by omega)
+    have he3 : leaf = leaf' := Fin.ext (by omega)
     cases he1; cases he2; cases he3; rfl
-  · obtain ⟨_, htree, hindex, hlevel, hnode⟩ := heq
-    have he1 := fin_of_ofNat_eq (by decide) htree
-    have he2 := fin_of_ofNat_eq (by decide) hindex
-    have he3 := ofNat_inj_of_lt hl.1 hr.1 hlevel
-    have he4 := ofNat_inj_of_lt hl.2 hr.2 hnode
+  · rename_i index tree level nodeIdx index' tree' level' nodeIdx'
+    obtain ⟨_, _, hpacked, hindex⟩ := heq
+    have he1 := fin_of_ofNat_eq (by decide) hindex
+    have ht := tree.isLt
+    have ht' := tree'.isLt
+    simp only [ftsTrees] at ht ht'
+    obtain ⟨hlevel, hnode⟩ := hl
+    obtain ⟨hlevel', hnode'⟩ := hr
+    have hnat := ofNat_inj_of_lt (a := tree.val + 32 * level + 512 * nodeIdx)
+      (b := tree'.val + 32 * level' + 512 * nodeIdx') (by omega) (by omega) hpacked
+    have he2 : tree = tree' := Fin.ext (by omega)
+    have he3 : level = level' := by omega
+    have he4 : nodeIdx = nodeIdx' := by omega
     cases he1; cases he2; cases he3; cases he4; rfl
-  · obtain ⟨_, _, hindex, _, _⟩ := heq
+  · obtain ⟨_, _, _, hindex⟩ := heq
     have he := fin_of_ofNat_eq (by decide) hindex
     cases he; rfl
-  · obtain ⟨_, _, _, hcall, _⟩ := heq
+  · obtain ⟨_, _, hcall, _⟩ := heq
     have he := fin_of_ofNat_eq (by decide) hcall
     cases he; rfl
 
@@ -105,13 +115,13 @@ theorem domain_inRange (p : Position) : p.domain.InRange := by
       have hlevel := level.isLt
       have hnode := nodeIdx.isLt
       simp only [maxLayerHeight] at hlevel hnode
-      show level.val + 1 < 2 ^ 32 ∧ nodeIdx.val < 2 ^ 32
+      show level.val + 1 < 2 ^ 24 ∧ nodeIdx.val < 2 ^ 32
       exact ⟨by omega, by omega⟩
   | ftsNode index tree level nodeIdx =>
       have hlevel := level.isLt
       have hnode := nodeIdx.isLt
       simp only [ftsTreeHeight] at hlevel hnode
-      show level.val + 1 < 2 ^ 32 ∧ nodeIdx.val < 2 ^ 32
+      show level.val + 1 < 16 ∧ nodeIdx.val < 2 ^ 15
       exact ⟨by omega, by omega⟩
   | chain => exact (trivial : True)
   | leaf => exact (trivial : True)

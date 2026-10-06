@@ -3,6 +3,7 @@ import LeanSphincs.BridgeRoutes
 import LeanSphincs.BridgeForsAssemblyOnce
 import LeanSphincs.BridgeDet
 import LeanSphincs.H0BoundOnce
+import LeanSphincs.H0Bound5
 import LeanSphincs.BridgeTargeting
 
 /-! The large-budget route with the weighted baseline. The saturation pays each digest query the
@@ -101,7 +102,7 @@ theorem rest_boundW (hcompat : Compatible tg model) (htrunc : UniformTruncation 
       ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
     (total : ℕ) (htotal : 2 * (total : ℝ) + 2 ≤ spaceReal)
-    (hfair : Fair wbar (total + digestAttemptLimit))
+    (hfair : Fair5 wbar)
     (M : OracleComp (OracleWorld + SigningSpec) Forgery) (hnr : NoRepeat M []) (known : Knowledge Coordinate) :
     Pr[fun r => Hit tg initial r.1 r.2.2 ∨ CoverOf parameter data r.2 |
         interp tg initial model (advProg parameter data M []) total (DebtState.start initial known) >>= fun result =>
@@ -119,7 +120,7 @@ theorem rest_boundW (hcompat : Compatible tg model) (htrunc : UniformTruncation 
     linarith
   -- the weighted FORS potential
   have hgood := goodW_advProg parameter data wbar b0 Fail total tg initial model hparse hkind hdigest hfail hfair hb0
-    le_rfl M [] hnr total start [] 0 [] (start_prepared initial known) (start_pinv parameter data initial hclean known)
+    M [] hnr total start [] 0 [] (start_prepared initial known) (start_pinv parameter data initial hclean known)
     (fun i t l h => by cases h) (start_count parameter data initial hclean known total)
   have hw1 : weight tg initial start = 1 := weight_start tg initial known
   rw [hw1, one_mul] at hgood
@@ -211,7 +212,7 @@ theorem sample_boundW (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
         (finishRest (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining) m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
     (wbar : ℝ≥0∞) (htotal : 2 * ((q - keygenCost : ℕ) : ℝ) + 2 ≤ spaceReal)
-    (hfair : Fair wbar (q - keygenCost + digestAttemptLimit)) :
+    (hfair : Fair5 wbar) :
     Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
         (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
           (sampleData parameterOutput fixed highs remaining))))
@@ -288,7 +289,7 @@ theorem large_seedFree_boundW (hb : 0 < subtreeHeight) (adversary : Adversary) (
             Hit tg prepared.2 table s)
     (hclean : ∀ parameterOutput fixed highs remaining prepared,
       prepared ∈ support (preparation parameterOutput fixed highs remaining) → ∀ x, IsMsgInput x → prepared.2 x = none)
-    (wbar : ℝ≥0∞) (hfair : Fair wbar (q - keygenCost + digestAttemptLimit))
+    (wbar : ℝ≥0∞) (hfair : Fair5 wbar)
     (htotal : 2 * ((q - keygenCost : ℕ) : ℝ) + 2 ≤ spaceReal) :
     Pr[Win | seedFreeExperiment (internalize adversary) q] ≤
       ((1 - budget 0 (q - keygenCost)) + (q - keygenCost : ℕ) * startExcessO wbar (baselineW (q - keygenCost))
@@ -311,7 +312,9 @@ theorem large_seedFree_boundW (hb : 0 < subtreeHeight) (adversary : Adversary) (
       hcompat htrunc hmsg (hclean _ _ _ _ _ hprepared) (failSet prepared.1)
       (fun m ρ digest budget s1 hprep out hout hnone => finishRest_fail parameterOutput fixed highs remaining prepared
         hprepared tg m ρ digest budget s1 hprep out hout hnone) wbar htotal hfair) (le_of_eq ?_)
-    rw [hValueO_start, hA, hC]
+    rw [hValueO_start _ _ _ _ _ (fun m ρ => hclean _ _ _ _ _ hprepared _
+      (msgInput_digestInput (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).root
+        m ρ 0)), hA, hC]
     push_cast
     ring
   -- average
@@ -334,20 +337,19 @@ signer's advantage is at most `q / 2^127`. -/
 theorem det_largeW (hb : 0 < subtreeHeight) (hN : signatureLimit ≤ 2 ^ 70) (adversary : Adversary) (q : ℕ)
     (hbound : Det.HasHashQueryBoundDet adversary q) (hq : q < 2 ^ 127) (hK : keygenCost ≤ q)
     (hH0 : (1 - budget 0 (q - keygenCost)) + ((q - keygenCost : ℕ) : ℝ≥0∞) *
-        startExcessO (H0.wbarOf (q - keygenCost)) (baselineW (q - keygenCost)) (q - keygenCost) +
+        startExcessO H0.wbar5 (baselineW (q - keygenCost)) (q - keygenCost) +
         ((q - keygenCost + keygenCost + signatureLimit : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
       ((q - keygenCost + keygenCost : ℕ) : ℝ≥0∞) / 2 ^ 127) :
     Det.forgeAdvantageDet adversary ≤ q / 2 ^ 127 := by
   set q' := q - keygenCost with hq'
   have hsum : q' + keygenCost = q := by omega
-  have hq'le : 2 * q' ≤ 2 ^ 128 := by omega
   have htotal : 2 * ((q' : ℕ) : ℝ) + 2 ≤ spaceReal := by
     unfold spaceReal
     have : (2 * q' + 2 : ℕ) ≤ 2 ^ 128 := by omega
     exact_mod_cast this
   have hmain := large_seedFree_boundW hb (Memo.memoAdv adversary) (Memo.memoAdv_noRepeat adversary) q
     (by omega) (fun _ _ _ _ _ hprep => targetingAll hb _ _ _ _ _ hprep)
-    (fun _ _ _ _ _ hprep => prepared_clean _ _ _ _ _ hprep) (H0.wbarOf q') (H0.fair_of q' hq'le) htotal
+    (fun _ _ _ _ _ hprep => prepared_clean _ _ _ _ _ hprep) H0.wbar5 H0.fair5 htotal
   refine le_trans (Det.forgeAdvantageDet_le_seedFree adversary q hbound) ?_
   have hE := expectedFail_le
   -- the negligible terms fit in the slack
@@ -377,12 +379,12 @@ theorem det_largeW (hb : 0 < subtreeHeight) (hN : signatureLimit ≤ 2 ^ 70) (ad
       _ ≤ (2 * ((q' + keygenCost + signatureLimit : ℕ) : ℝ≥0∞)) * (2 : ℝ≥0∞)⁻¹ ^ 201 :=
           mul_le_mul' hnat le_rfl
       _ = _ := by rw [mul_comm (2 : ℝ≥0∞), mul_assoc, two_mul_inv_pow_succ]
-  calc _ ≤ (((1 - budget 0 q') + (q' : ℝ≥0∞) * startExcessO (H0.wbarOf q') (baselineW q') q') +
+  calc _ ≤ (((1 - budget 0 q') + (q' : ℝ≥0∞) * startExcessO H0.wbar5 (baselineW q') q') +
           ((q' : ℕ) + signatureLimit) * expectedFail) + 2 * ((q : ℝ≥0∞) / 2 ^ 256) := add_le_add hmain le_rfl
-    _ = ((1 - budget 0 q') + (q' : ℝ≥0∞) * startExcessO (H0.wbarOf q') (baselineW q') q') +
+    _ = ((1 - budget 0 q') + (q' : ℝ≥0∞) * startExcessO H0.wbar5 (baselineW q') q') +
           (((q' : ℝ≥0∞) + signatureLimit) * expectedFail + 2 * ((q : ℝ≥0∞) / 2 ^ 256)) := by
         ring
-    _ ≤ ((1 - budget 0 q') + (q' : ℝ≥0∞) * startExcessO (H0.wbarOf q') (baselineW q') q') +
+    _ ≤ ((1 - budget 0 q') + (q' : ℝ≥0∞) * startExcessO H0.wbar5 (baselineW q') q') +
           ((q' + keygenCost + signatureLimit : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200 := add_le_add le_rfl hslack
     _ ≤ ((q' + keygenCost : ℕ) : ℝ≥0∞) / 2 ^ 127 := hH0
     _ = (q : ℝ≥0∞) / 2 ^ 127 := by rw [hsum]

@@ -220,28 +220,27 @@ theorem blk_ne_blk {ρ ρ' : Randomness} {call call' : Fin 2} (h : ρ ≠ ρ' �
     blk parameter data message ρ call ≠ blk parameter data message ρ' call' :=
   blk_ne_of_ne parameter data message ρ ρ' call call' h
 
-/-- **Signing loop, support.** -/
-theorem loop_post (hparse : ∀ ρ call, model.parse (blk parameter data message ρ call) = none)
+/-- **Signing walk, support.** -/
+theorem walk_post (hparse : ∀ ρ call, model.parse (blk parameter data message ρ call) = none)
     (Fail : Finset (Fin (2 ^ subtreeHeight)))
     (hfail : ∀ ρ digest budget (s1 : DebtState HashInput HashOutput Coordinate), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data message ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail) :
-    ∀ attempts budget (s : DebtState HashInput HashOutput Coordinate), Prepared initial s →
-      ∀ out ∈ support (interp tg initial model (signCostSourceLoop parameter data message attempts) budget s),
+    ∀ attempts ρ budget (s : DebtState HashInput HashOutput Coordinate), Prepared initial s →
+      ∀ out ∈ support (interp tg initial model (signCostSourceWalk parameter data message attempts ρ) budget s),
         ∀ r, out.1.1 = some r → SignPost parameter data message Fail s out.2 out.1.2.1 r := by
   intro attempts
   induction attempts with
   | zero =>
-      intro budget s _ out hout r hr
+      intro ρ budget s _ out hout r hr
       change out ∈ support (interp tg initial model (pure none) budget s) at hout
       rw [interp_pure, support_pure, Set.mem_singleton_iff] at hout
       subst hout
       cases hr
       exact Or.inl ⟨rfl, rfl, fun ρ => RelatedAt.refl parameter data message s ρ⟩
   | succ attempts ih =>
-      intro budget s hprep out hout r hr
-      rw [signCostSourceLoop_succ, interp_liftProb_bind, support_bind] at hout
-      obtain ⟨ρ, _, hout⟩ := Set.mem_iUnion₂.1 hout
+      intro ρ budget s hprep out hout r hr
+      rw [signCostSourceWalk_succ] at hout
       rw [interp_ordinary] at hout
       split_ifs at hout with h1
       · rw [ordinaryStep, hparse ρ 0] at hout
@@ -297,7 +296,7 @@ theorem loop_post (hparse : ∀ ρ call, model.parse (blk parameter data message
               · exact Or.inr ⟨hn, res.1, hb0, hl⟩
               · exact Or.inl (hb0.trans hs.symm)
             · exact Or.inl (hrest _ (blk_ne_blk parameter data message (Or.inl hρ)))
-          rcases ih _ res.2 hprep1 o ho r hr with ⟨hrn, hrv, hrel⟩ | ⟨ρs, u0, u1, hsel, hrev, hsig, hfl⟩
+          rcases ih _ _ res.2 hprep1 o ho r hr with ⟨hrn, hrv, hrel⟩ | ⟨ρs, u0, u1, hsel, hrev, hsig, hfl⟩
           · exact Or.inl ⟨hrn, hrv, fun ρ' => (hrel1 ρ').trans parameter data message (hrel ρ')⟩
           · obtain ⟨hs0, hland, hs1, hs0r, hs1r, hothers⟩ := hsel
             have hr1 := hrel1 ρs
@@ -320,17 +319,32 @@ theorem loop_post (hparse : ∀ ρ call, model.parse (blk parameter data message
         rw [hout] at hr
         cases hr
 
-/-- The signing loop only queries message inputs of the signed message. -/
-theorem avoids_loop :
-    ∀ attempts, Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate)
+/-- **Signing loop, support.** -/
+theorem loop_post (hparse : ∀ ρ call, model.parse (blk parameter data message ρ call) = none)
+    (Fail : Finset (Fin (2 ^ subtreeHeight)))
+    (hfail : ∀ ρ digest budget (s1 : DebtState HashInput HashOutput Coordinate), Prepared initial s1 →
+      ∀ out ∈ support (interp tg initial model (finishRest parameter data message ρ digest) budget s1),
+        out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail) :
+    ∀ attempts budget (s : DebtState HashInput HashOutput Coordinate), Prepared initial s →
+      ∀ out ∈ support (interp tg initial model (signCostSourceLoop parameter data message attempts) budget s),
+        ∀ r, out.1.1 = some r → SignPost parameter data message Fail s out.2 out.1.2.1 r := by
+  intro attempts budget s hprep out hout r hr
+  unfold signCostSourceLoop at hout
+  rw [interp_liftProb_bind, support_bind] at hout
+  obtain ⟨ρ, _, hout⟩ := Set.mem_iUnion₂.1 hout
+  exact walk_post tg initial model parameter data message hparse Fail hfail attempts ρ budget s hprep out hout r hr
+
+/-- The signing walk only queries message inputs of the signed message. -/
+theorem avoids_walk :
+    ∀ attempts ρ, Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate)
       (fun x => IsMsgInput x ∧ ∀ ρ call, x ≠ blk parameter data message ρ call)
-      (signCostSourceLoop parameter data message attempts) := by
+      (signCostSourceWalk parameter data message attempts ρ) := by
   intro attempts
   induction attempts with
-  | zero => exact avoids_pure _ _
+  | zero => intro ρ; exact avoids_pure _ _
   | succ attempts ih =>
-      rw [signCostSourceLoop_succ]
-      refine avoids_bind _ (avoids_liftProb _ _) fun ρ => ?_
+      intro ρ
+      rw [signCostSourceWalk_succ]
       refine (avoids_query_bind _ _ _).2 ⟨fun bytes hb hx => ?_, fun first => ?_⟩
       · cases hb
         exact hx.2 ρ 0 rfl
@@ -343,7 +357,15 @@ theorem avoids_loop :
           · cases hb
             exact hx.2 ρ 1 rfl
           exact avoids_mono (fun x hx => hx.1) (avoids_finishRest parameter data message ρ _)
-        · exact ih
+        · exact ih (ρ + 1)
+
+/-- The signing loop only queries message inputs of the signed message. -/
+theorem avoids_loop (attempts : ℕ) :
+    Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate)
+      (fun x => IsMsgInput x ∧ ∀ ρ call, x ≠ blk parameter data message ρ call)
+      (signCostSourceLoop parameter data message attempts) := by
+  unfold signCostSourceLoop
+  exact avoids_bind _ (avoids_liftProb _ _) fun ρ => avoids_walk parameter data message attempts ρ
 
 end Loop
 

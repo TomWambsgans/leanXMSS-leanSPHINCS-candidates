@@ -1,4 +1,5 @@
 import LeanSphincs.H0SplitCert
+import LeanSphincs.H0SplitCert5
 import LeanSphincs.BridgeSatWRoutes
 import LeanSphincs.BridgeFleafSmall
 
@@ -17,7 +18,7 @@ variable [Params]
 
 /-- The one-coin excess forecast at the weighted baseline. -/
 noncomputable def hOfOW (q : ℕ) : ℝ≥0∞ :=
-  creations Finset.univ landing (fun I => virtualOnce Finset.univ (wbarOf q)
+  creations Finset.univ landing (fun I => virtualOnce Finset.univ wbar5
     (ForsPotential.excess (HiddenDebt.baselineW q)) signatureLimit I 0) q []
 
 /-- The check of one entry. -/
@@ -86,7 +87,7 @@ theorem bound_of_entrySW (b N : ℕ) (t : PoisTable) (opts : List OptS) (ht : ch
   have hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ HiddenDebt.baselineW q :=
     le_trans (ENNReal.ofReal_le_ofReal (by exact_mod_cast hcthr)) (ForsPotential.baselineW_ge q qb hqb)
   have hH : hOfOW q ≤ ENNReal.ofReal (o.B : ℝ) := by
-    have h := hTermO_fors_le_opt b N t o ht hoc hb hN q hq2 (HiddenDebt.baselineW q) (HiddenDebt.baselineW_ne_top q)
+    have h := hTermO_fors_le_opt5 b N t o ht hoc hb hN q hq2 (HiddenDebt.baselineW q) (HiddenDebt.baselineW_ne_top q)
       hβc
     unfold hOfOW
     rw [excess_eq]

@@ -68,28 +68,27 @@ variable [Params]
 attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Seeded.treeRoot
   Seeded.treeNode Seeded.ftsNode Seeded.spineNode Randomized.finishSign
 
-/-- A successful randomized grinding loop leaves a cached answer certifying that it landed. -/
-theorem randomizedDigest_support (sk : Seeded.SecretKey) (message : Message) :
-    ∀ (n : Nat) (cache : QueryCache HashSpec) (result : Option Randomness)
-      (cache' : QueryCache HashSpec),
-      (result, cache') ∈ support ((simulateQ romImpl
-        (Randomized.signDigestLoop sk message n)).run cache) →
-      cache ≤ cache' ∧ ∀ ρ, result = some ρ → ∃ answer,
+/-- A successful grinding walk leaves a cached answer certifying that it landed. -/
+theorem walk_support (sk : Seeded.SecretKey) (message : Message) :
+    ∀ (n : Nat) (base : Randomness) (cache : QueryCache HashSpec)
+      (result : Option (Randomness × Index)) (cache' : QueryCache HashSpec),
+      (result, cache') ∈ support ((simulateQ randomOracle
+        (Seeded.signDigestLoop sk message n base :
+          OracleComp HashSpec (Option (Randomness × Index)))).run cache) →
+      cache ≤ cache' ∧ ∀ ρ index, result = some (ρ, index) → ∃ answer,
         cache' (msgInput sk message ρ) = some answer ∧
           Landed sk.parameter (blockIndex answer) := by
   intro n
   induction n with
   | zero =>
-      intro cache result cache' hmem
-      simp only [Randomized.signDigestLoop, simulateQ_pure, StateT.run_pure,
+      intro base cache result cache' hmem
+      simp only [Seeded.signDigestLoop, simulateQ_pure, StateT.run_pure,
         support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hmem
       obtain ⟨rfl, rfl⟩ := hmem
       exact ⟨le_rfl, by simp⟩
   | succ n ih =>
-      intro cache result cache' hmem
-      rw [run_randomizedDigest_succ, mem_support_bind_iff] at hmem
-      obtain ⟨ρ, _, hmem⟩ := hmem
-      rw [mem_support_bind_iff] at hmem
+      intro base cache result cache' hmem
+      rw [run_walk_succ, mem_support_bind_iff] at hmem
       obtain ⟨⟨answer, cacheMid⟩, hquery, hrest⟩ := hmem
       obtain ⟨hqueryLe, hcached⟩ := query_support_cached _ _ _ _ hquery
       split at hrest
@@ -97,12 +96,37 @@ theorem randomizedDigest_support (sk : Seeded.SecretKey) (message : Message) :
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hrest
         obtain ⟨rfl, rfl⟩ := hrest
         refine ⟨hqueryLe, ?_⟩
-        intro ρ' heq
+        intro ρ' index heq
         cases Option.some.inj heq
         exact ⟨answer, hcached, hland⟩
       next =>
-        obtain ⟨hrestLe, hresult⟩ := ih cacheMid result cache' hrest
+        obtain ⟨hrestLe, hresult⟩ := ih (base + 1) cacheMid result cache' hrest
         exact ⟨hqueryLe.trans hrestLe, hresult⟩
+
+/-- A successful randomized grinding loop leaves a cached answer certifying that it landed. -/
+theorem randomizedDigest_support (sk : Seeded.SecretKey) (message : Message)
+    (n : Nat) (cache : QueryCache HashSpec) (result : Option Randomness)
+    (cache' : QueryCache HashSpec)
+    (hmem : (result, cache') ∈ support ((simulateQ romImpl
+      (Randomized.signDigestLoop sk message n)).run cache)) :
+    cache ≤ cache' ∧ ∀ ρ, result = some ρ → ∃ answer,
+      cache' (msgInput sk message ρ) = some answer ∧
+        Landed sk.parameter (blockIndex answer) := by
+  rw [run_randomizedDigest, mem_support_bind_iff] at hmem
+  obtain ⟨base, _, hmem⟩ := hmem
+  rw [mem_support_bind_iff] at hmem
+  obtain ⟨⟨walked, cacheW⟩, hwalk, hpure⟩ := hmem
+  simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hpure
+  obtain ⟨rfl, rfl⟩ := hpure
+  obtain ⟨hle, hres⟩ := walk_support sk message n base cache walked _ hwalk
+  refine ⟨hle, fun ρ hρ => ?_⟩
+  cases walked with
+  | none => simp at hρ
+  | some pair =>
+      obtain ⟨ρ', index⟩ := pair
+      simp only [Option.map_some, Option.some.injEq] at hρ
+      subst hρ
+      exact hres ρ' index rfl
 
 /-- A successful randomized sign run replays as assembly with a landed randomizer. -/
 theorem randomized_sign_replay (sk : Seeded.SecretKey) (message : Message)

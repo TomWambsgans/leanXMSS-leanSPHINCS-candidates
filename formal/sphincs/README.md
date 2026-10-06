@@ -7,9 +7,12 @@ and `Quot.sound`; [Axioms.lean](LeanSphincs/Axioms.lean) pins every public theor
 
 `LeanSphincs/` models the candidate: one height-26 tree, 24 height-10 FORS trees, 64 WOTS+C
 chains with four positions and sum 120, two message-digest calls, and pruning with surrogate
-siblings. [Scheme.lean](LeanSphincs/Scheme.lean) is the functional model; `Seeded.sign` derives each
-randomizer from the seed and the message, as the Rust signer does, so a repeated request returns the
-same signature. The SUF-CMA game is [StatementDet.lean](LeanSphincs/StatementDet.lean): every
+siblings. Every hash input is the 16-byte public parameter P, an 8-byte address (4 bytes `lo`,
+3 bytes `hi`, one byte type + 32·step) and the payload; the message digest hashes m ‖ 0^8 ‖ ρ (the
+root is not hashed). [Scheme.lean](LeanSphincs/Scheme.lean) is the functional model; `Seeded.sign`
+derives one base randomizer R0 = Th(P, A(7, 0, 0), seed ‖ m) per message and tries R0, R0 + 1, …
+(128-bit little-endian addition) until the digest index lands in the kept subtree, as the Rust
+signer does, so a repeated request returns the same signature. The SUF-CMA game is [StatementDet.lean](LeanSphincs/StatementDet.lean): every
 adversary, every number q ≥ 1 of hash queries (keygen, signing and verification included), forges
 with probability at most q / 2^127.
 
@@ -44,6 +47,8 @@ remaining gap comes from.
 | **127-bit SUF-CMA security at the limits above** | `Lifetimes.requestedSecurity`, [Lifetimes](LeanSphincs/Lifetimes.lean) |
 | The bound follows from rational checks on two budget routes | `ForsPotential.det_bits`, [BridgeDetClose](LeanSphincs/BridgeDetClose.lean); certificates in [LifetimeCertificates](LeanSphincs/LifetimeCertificates.lean) |
 | The deterministic signer reduces to a seed-free game of an adversary that never repeats a message | `Det.forgeAdvantageDet_le_seedFree`, [BridgeDet](LeanSphincs/BridgeDet.lean) |
+| The signer that walks R0, R0 + 1, … selects a cached digest with exactly the walk probability | `GraphView.loop_bound`, [BridgeSignerFors](LeanSphincs/BridgeSignerFors.lean) |
+| One digest query adds at most (2 − 2^-(26−b)) / 2^128 selection mass to a message | `Walk.grp_step`, [BridgeGroup](LeanSphincs/BridgeGroup.lean) |
 | A successful seeded signature verifies | `Completeness.correct`, [Correctness](LeanSphincs/Correctness.lean) |
 | A signature assembled from any landed randomizer verifies | `Completeness.verify_of_finishSign`, [RandomizedCorrectness](LeanSphincs/RandomizedCorrectness.lean) |
 | Every successful randomized signature verifies in the shared ROM | `Completeness.verify_of_keygen_sign_support`, [RandomizedSupport](LeanSphincs/RandomizedSupport.lean) |

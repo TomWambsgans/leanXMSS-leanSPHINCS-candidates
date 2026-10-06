@@ -1,5 +1,6 @@
 import LeanSphincs.BridgeForsGeneric
 import LeanSphincs.H0BoundOnce
+import LeanSphincs.H0Bound5
 
 /-! The near witness: the number of ways a target view is covered by the disclosed views at every
 tree but one, summed over the free tree. It is monotone and supermodular, positive on a near
@@ -259,13 +260,14 @@ theorem hTermO_near_le (N q : ℕ) (hN : 1 ≤ N) (α w γ : ℝ≥0∞) (hw : w
         push_cast
         ring
 
-/-- The near H-term at budget `q`: the start value of the near potential's new-pair forecast. -/
+/-- The near H-term at budget `q`: the start value of the near potential's new-pair forecast, with
+the coin `wbar5` of the signer that tries `R0, R0 + 1, ...`. -/
 noncomputable def hNearOf (q : ℕ) : ℝ≥0∞ :=
-  creations Finset.univ landing (fun I => virtualOnce Finset.univ (wbarOf q)
+  creations Finset.univ landing (fun I => virtualOnce Finset.univ wbar5
     (excessW witnessNear 0) signatureLimit I 0) q []
 
 theorem hNearOf_eq (q : ℕ) :
-    hNearOf q = hTermO (Finset.univ : Finset View) (wbarOf q) landing signatureLimit q (priceW witnessNear) := by
+    hNearOf q = hTermO (Finset.univ : Finset View) wbar5 landing signatureLimit q (priceW witnessNear) := by
   unfold hNearOf hTermO excessW
   simp only [tsub_zero]
 
@@ -274,10 +276,10 @@ theorem hNearOf_eq (q : ℕ) :
 /-- The near H-term bound at a rate bound `μ`: `24 2^b T_23(μ) / 2^256`. -/
 def nearHQ (b : ℕ) (μ : ℚ) : ℚ := 24 * 2 ^ b * touchQ 23 μ / 2 ^ 256
 
-/-- The check: the rate bound `m / 2^64` covers the one-coin rate at the right end `qb`, and the
+/-- The check: the rate bound `m / 2^64` covers the one-coin rate (coin `wbar5`) at the right end `qb`, and the
 near H-term bound is at most `c`. -/
 def checkNear (b N qb m : ℕ) (c : ℚ) : Bool :=
-  decide (1 ≤ N) && decide (2 * qb ≤ 2 ^ 128) && decide (muOnceQ b N qb 1 ≤ (m : ℚ) / 2 ^ 64) &&
+  decide (1 ≤ N) && decide (2 * qb ≤ 2 ^ 128) && decide (muOnceQ5 b N qb 1 ≤ (m : ℚ) / 2 ^ 64) &&
     decide (nearHQ b ((m : ℚ) / 2 ^ 64) ≤ c)
 
 /-- **The near H-term for every budget of a checked range.** -/
@@ -285,16 +287,13 @@ theorem hNearOf_le_of_check (b N qb m : ℕ) (c : ℚ) (hb : subtreeHeight = b) 
     (hc : checkNear b N qb m c = true) (q : ℕ) (hq : q ≤ qb) : hNearOf q ≤ ENNReal.ofReal (c : ℝ) := by
   simp only [checkNear, Bool.and_eq_true, decide_eq_true_eq] at hc
   obtain ⟨⟨⟨hN1, hqb2⟩, hmu⟩, hH⟩ := hc
-  have hq127 : q ≤ 2 ^ 127 := by
-    have : (2 : ℕ) ^ 128 = 2 * 2 ^ 127 := by norm_num
-    omega
   set L : ℝ≥0∞ := ((Fintype.card (Fin (2 ^ subtreeHeight)) : ℕ) : ℝ≥0∞) with hLdef
-  set w := wbarOf q with hwdef
+  set w := wbar5 with hwdef
   set α : ℝ≥0∞ := L⁻¹ with hαdef
   set γ : ℝ≥0∞ := landing * w * (1 + w * L) ^ (24 * 1) / L with hγdef
   have hL0 : L ≠ 0 := by rw [hLdef]; exact_mod_cast Fintype.card_ne_zero
   have hLT : L ≠ ⊤ := ENNReal.natCast_ne_top _
-  have hw1 : w ≤ 1 := (fair_of q (by omega)).le_one
+  have hw1 : w ≤ 1 := wbar5_le_one
   have hLα : 1 ≤ L * α := by rw [hαdef, ENNReal.mul_inv_cancel hL0 hLT]
   have hγ : landing * w * (1 + w * L) ^ 22 ≤ L * γ := by
     rw [hγdef, ENNReal.mul_div_cancel hL0 hLT]
@@ -305,12 +304,12 @@ theorem hNearOf_le_of_check (b N qb m : ℕ) (c : ℚ) (hb : subtreeHeight = b) 
   have hmain := hTermO_near_le signatureLimit q hNs1 α w γ hw1 hLα hγ
   set μr : ℝ := (m : ℝ) / 2 ^ 64 with hμr
   have hμr0 : 0 ≤ μr := by positivity
-  have hmuR : (muOnceQ b N qb 1 : ℝ) ≤ μr := by
+  have hmuR : (muOnceQ5 b N qb 1 : ℝ) ≤ μr := by
     have := (Rat.cast_le (K := ℝ)).mpr hmu
     push_cast at this
     exact this
   have hμ : (signatureLimit : ℝ≥0∞) * α + q * γ ≤ ENNReal.ofReal μr := by
-    have h := mu_leO b N 1 q qb hb hq hqb2 μr hmuR
+    have h := mu_leO5 b N 1 q qb hb hq μr hmuR
     rw [hαdef, hγdef, hNs]
     exact h
   have hT : touchard 23 ((signatureLimit : ℝ≥0∞) * α + q * γ) ≤

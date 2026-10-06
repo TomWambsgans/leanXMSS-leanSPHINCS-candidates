@@ -30,8 +30,7 @@ theorem msgInput_inj (secretKey : Seeded.SecretKey) (message : Message)
     randomness = randomness' := by
   simp only [msgInput, tweakableHashInput, messageDigestPayload] at h
   have hpayload := List.append_cancel_left h
-  exact LeanSphincs.bytesLE_injective
-    (List.append_cancel_right (List.append_cancel_right hpayload))
+  exact LeanSphincs.bytesLE_injective (List.append_cancel_left hpayload)
 
 omit [Params] in
 theorem cached_run (input : HashInput) (cache : QueryCache HashSpec) (answer : HashOutput)

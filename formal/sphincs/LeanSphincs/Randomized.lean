@@ -14,17 +14,14 @@ open Concrete
 
 variable [Params]
 
-/-- Each trial samples a new independent randomizer, with replacement. Its digest query may repeat. -/
-noncomputable def signDigestLoop (sk : Seeded.SecretKey) (message : Message) :
-    Nat → OracleComp OracleWorld (Option Randomness)
-  | 0 => pure none
-  | attempts + 1 => do
-      let randomness ← liftM ($ᵗ Randomness : ProbComp Randomness)
-      let result ← liftM (Seeded.signAttempt sk message randomness
-        : OracleComp HashSpec (Option Index))
-      match result with
-      | some _ => pure (some randomness)
-      | none => signDigestLoop sk message attempts
+/-- The grinding of `Seeded.sign` from a truly uniform base randomizer `R0`: the trials are `R0`,
+`R0 + 1`, ... -/
+noncomputable def signDigestLoop (sk : Seeded.SecretKey) (message : Message) (attempts : Nat) :
+    OracleComp OracleWorld (Option Randomness) := do
+  let base ← liftM ($ᵗ Randomness : ProbComp Randomness)
+  let result ← liftM (Seeded.signDigestLoop sk message attempts base
+    : OracleComp HashSpec (Option (Randomness × Index)))
+  return result.map Prod.fst
 
 /-- Assemble the signature after a randomizer lands, using the reference hash layouts. -/
 def finishSign (sk : Seeded.SecretKey) (message : Message) (randomness : Randomness) :

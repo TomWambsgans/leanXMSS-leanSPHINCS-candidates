@@ -1,12 +1,13 @@
 import LeanSphincs.BridgeArmA4b
 import LeanSphincs.BridgeFleafSmall
+import LeanSphincs.H0SplitCert5
 
 /-! The small-budget route with A4b armed. Every FORS leaf query leaves `(ρ - 1 - x) 2^-128` of the
 linear potential unused; A4a takes `N 2^-b 2^-10 2^-128` of it and A4b the rest,
 `(1 - κ) 2^-128` with `κ ≥ 2 - ρ + x + N 2^-b 2^-10`. In exchange the near term of A4b is
 multiplied by `κ`. The main inequality of the rational check becomes
 
-  `ρ + 2^128 B + qh / (2^128 - qh - 2^32) + (2 - ρ + qh / 2^128 + N / (2^b 2^10)) qh c + 2^-60 ≤ 2`
+  `ρ + 2^128 B + qh (2 - 2^-(26 - b)) / 2^129 + (2 - ρ + qh / 2^128 + N / (2^b 2^10)) qh c + 2^-60 ≤ 2`
 
 with `c` half the certified near H-term, and no further term. -/
 
@@ -21,6 +22,7 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
+attribute [local irreducible] digestAttemptLimit
 
 variable [Params]
 
@@ -62,7 +64,7 @@ open Completeness SeedModel Graph Assembly Reduce Internalize
 set_option maxRecDepth 100000 in
 /-- **One sample of the small-budget route, A4b armed.** The stopped experiment with the
 above-word values exposed is at most the linear potential `ρ q / 2^128`, the one-coin FORS
-potential of covers, the coin part of A4a, and `κ` times the near term of A4b, once
+potential of covers, the coin part `2^-128 C(y, 2) rate5` of A4a, and `κ` times the near term of A4b, once
 `2 - ρ + y / 2^128 + N 2^-b 2^-10 ≤ κ ≤ 1`, `y = q - keygenCost`. -/
 theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (hq : q < 2 ^ 256) (hq2 : 2 * (q - keygenCost) ≤ 2 ^ 128)
@@ -84,8 +86,7 @@ theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : a
       ENNReal.ofReal (ρ * (q - keygenCost : ℕ) / 2 ^ 128) +
         (((q - keygenCost : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + failMass (failSet prepared.1)) +
           signatureLimit * failMass (failSet prepared.1)) +
-        (((q - keygenCost : ℕ) : ℝ≥0∞) * contactRate) *
-          ((q - keygenCost : ℕ) * (((2 ^ 128 - ((q - keygenCost) + 2 ^ 32) : ℕ) : ℝ≥0∞))⁻¹) +
+        contactRate * (((q - keygenCost).choose 2 : ℕ) * rate5) +
         (ENNReal.ofReal κ * ((((q - keygenCost : ℕ) : ℝ≥0∞) * contactRate) *
             ((q - keygenCost : ℕ) * ENNReal.ofReal ((c / 2 : ℚ) : ℝ))) +
           (((q - keygenCost : ℕ) : ℝ≥0∞) * contactRate) *
@@ -107,7 +108,7 @@ theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : a
   have hmsg : ∀ x, IsMsgInput x → tgA.kind x = .none := fun x h =>
     targetingA_msg parameterOutput fixed highs remaining prepared.1 x h
   -- the contact bounds
-  have hA4a := a4a_bound_fairF adversary hnr q hq2 parameterOutput fixed highs remaining prepared hprepared tgA hmsg
+  have hA4a := a4a_bound_gameF adversary hnr q parameterOutput fixed highs remaining prepared hprepared tgA hmsg
     known known
   have hA4b := a4b_bound_checkArm adversary hnr q b N qb m c hbb hNN hnear hqb parameterOutput fixed highs remaining
     prepared hprepared tgA hmsg known (arm_split κ) known
@@ -163,20 +164,20 @@ theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : a
             out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ failSet prepared.1 :=
         fun m ρ digest budget s1 hprep out hout hnone => finishRest_fail parameterOutput fixed highs remaining
           prepared hprepared tgA m ρ digest budget s1 hprep out hout hnone
-      have hfair : Fair (H0.wbarOf q') (q' + digestAttemptLimit) := H0.fair_of q' hq2
-      have hgood := goodO_advProg param data (H0.wbarOf q') b0 (failSet prepared.1) q' tgA prepared.2 model
-        hparse hkind hdigest hfail hfair ENNReal.ofReal_ne_top le_rfl
+      have hfair : Fair5 H0.wbar5 := H0.fair5
+      have hgood := goodO_advProg param data H0.wbar5 b0 (failSet prepared.1) q' tgA prepared.2 model
+        hparse hkind hdigest hfail hfair ENNReal.ofReal_ne_top
         ((internalize adversary).main ⟨data.root, param⟩) []
         (noRepeat_internalize_adversary adversary hnr ⟨data.root, param⟩) q' start [] 0 []
         (start_prepared prepared.2 known) (start_pinv param data prepared.2 hclean known)
         (fun i t l h => by cases h) (start_count param data prepared.2 hclean known q')
-      have hval : hValueO param data (H0.wbarOf q') b0 start [] [] 0 signatureLimit q' ≤ ENNReal.ofReal (o.B : ℝ) := by
-        rw [hValueO_start]
-        change H0.hTermO (Finset.univ : Finset View) (H0.wbarOf q') landing signatureLimit q' (excess b0) ≤ _
+      have hval : hValueO param data H0.wbar5 b0 start [] [] 0 signatureLimit q' ≤ ENNReal.ofReal (o.B : ℝ) := by
+        rw [hValueO_start param data H0.wbar5 b0 start (fun m ρ => hclean (m, ρ) 0)]
+        change H0.hTermO (Finset.univ : Finset View) H0.wbar5 landing signatureLimit q' (excess b0) ≤ _
         rw [H0.excess_eq]
-        exact H0.hTermO_fors_le_of_check b N t o hthr hbb hNN q' hq2 b0 ENNReal.ofReal_ne_top
+        exact H0.hTermO_fors_le_of_check5 b N t o hthr hbb hNN q' hq2 b0 ENNReal.ofReal_ne_top
           (ENNReal.ofReal_le_ofReal hcthr)
-      have hpot : potO param data (H0.wbarOf q') b0 (failSet prepared.1) tgA prepared.2 start [] [] 0 q' ≤
+      have hpot : potO param data H0.wbar5 b0 (failSet prepared.1) tgA prepared.2 start [] [] 0 q' ≤
           ((q' : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + φ) + signatureLimit * φ := by
         refine le_trans (potO_le_coreO ..) ?_
         unfold coreO
@@ -188,7 +189,7 @@ theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : a
           = ∑' out, Pr[= out | interp tgA prepared.2 model
               (advProg param data ((internalize adversary).main ⟨data.root, param⟩) []) q' start] *
             finalValue param data tgA prepared.2 [] out := rfl
-        _ ≤ potO param data (H0.wbarOf q') b0 (failSet prepared.1) tgA prepared.2 start [] [] 0 q' +
+        _ ≤ potO param data H0.wbar5 b0 (failSet prepared.1) tgA prepared.2 start [] [] 0 q' +
             b0 * expectedFlagged tgA prepared.2 model
               (advProg param data ((internalize adversary).main ⟨data.root, param⟩) []) q' start := hgood
         _ ≤ _ := by
@@ -280,8 +281,7 @@ theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : a
   have hpc : contactRate * ((signatureLimit : ℝ≥0∞) * matchRate) + payB ≤ c0 := arm_pays ρ _ κ hκ1 hκ
   have hκ1' : κE ≤ 1 := ENNReal.ofReal_le_one.2 hκ1
   set cov : ℝ≥0∞ := ((q' : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + φ) + signatureLimit * φ with hcov
-  set coin : ℝ≥0∞ := (((q' : ℕ) : ℝ≥0∞) * contactRate) *
-    ((q' : ℕ) * (((2 ^ 128 - ((q') + 2 ^ 32) : ℕ) : ℝ≥0∞))⁻¹) with hcoin
+  set coin : ℝ≥0∞ := contactRate * (((q' : ℕ).choose 2 : ℕ) * rate5) with hcoin
   set nearM : ℝ≥0∞ := (((q' : ℕ) : ℝ≥0∞) * contactRate) * ((q' : ℕ) * ENNReal.ofReal ((c / 2 : ℚ) : ℝ)) with hnearM
   set nearF : ℝ≥0∞ := (((q' : ℕ) : ℝ≥0∞) * contactRate) * ((q' : ℕ) * φ + signatureLimit * φ) with hnearF
   set payA : ℝ≥0∞ := contactRate * ((signatureLimit : ℝ≥0∞) * matchRate) with hpayA
@@ -381,14 +381,15 @@ end Close
 /-! ### The rational check -/
 
 /-- The rational small-route check at the right end `qh` of the small budgets, with A4b armed: the
-near term is multiplied by `2 - ρ + qh / 2^128 + N / (2^b 2^10)`. -/
+near term is multiplied by `2 - ρ + qh / 2^128 + N / (2^b 2^10)`. The coin part of A4a enters as
+`qh (2 - 2^-(26 - b)) / 2^129`. -/
 def checkSmallA (b N qh : ℕ) (ρ cthr B c : ℚ) : Bool :=
   decide (3 / 2 ≤ ρ) && decide (ρ ≤ 2) &&
     decide (1 + 4032 * (2 - ρ) * ((qh : ℚ) / 2 ^ 128) ≤ ρ) && decide (1 + 66 * ((qh : ℚ) / 2 ^ 128) ≤ ρ) &&
     decide (64 * ((qh : ℚ) / 2 ^ 128) ≤ 1) && decide (qh ≤ 2 ^ 127) && decide (N ≤ 2 ^ 70) &&
     decide (cthr ≤ ρ / 2 ^ 128) && decide (0 ≤ B) && decide (0 ≤ c) &&
     decide ((N : ℚ) / (2 ^ b * 2 ^ 10) ≤ ρ - 1 - (qh : ℚ) / 2 ^ 128) &&
-    decide (ρ + 2 ^ 128 * B + (qh : ℚ) / ((2 ^ 128 - (qh + 2 ^ 32) : ℕ) : ℚ) +
+    decide (ρ + 2 ^ 128 * B + (qh : ℚ) * (2 - 1 / 2 ^ (26 - b)) / 2 ^ 129 +
       (2 - ρ + (qh : ℚ) / 2 ^ 128 + (N : ℚ) / (2 ^ b * 2 ^ 10)) * qh * c + 1 / 2 ^ 60 ≤ 2)
 
 omit [Params] in
@@ -396,7 +397,7 @@ theorem checkSmallA_sound {b N qh : ℕ} {ρ cthr B c : ℚ} (h : checkSmallA b 
     Numeric (ρ : ℝ) ((qh : ℝ) / 2 ^ 128) ∧ qh ≤ 2 ^ 127 ∧ N ≤ 2 ^ 70 ∧ (cthr : ℝ) ≤ (ρ : ℝ) / 2 ^ 128 ∧
       0 ≤ B ∧ 0 ≤ c ∧
       (N : ℝ) / (2 ^ b * 2 ^ 10) ≤ (ρ : ℝ) - 1 - (qh : ℝ) / 2 ^ 128 ∧
-      (ρ : ℝ) + 2 ^ 128 * (B : ℝ) + (qh : ℝ) / ((2 ^ 128 - (qh + 2 ^ 32) : ℕ) : ℝ) +
+      (ρ : ℝ) + 2 ^ 128 * (B : ℝ) + (qh : ℝ) * (2 - 1 / 2 ^ (26 - b)) / 2 ^ 129 +
         (2 - (ρ : ℝ) + (qh : ℝ) / 2 ^ 128 + (N : ℝ) / (2 ^ b * 2 ^ 10)) * qh * (c : ℝ) + 1 / 2 ^ 60 ≤ 2 := by
   simp only [checkSmallA, Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩ := h

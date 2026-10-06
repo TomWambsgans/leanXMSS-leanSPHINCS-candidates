@@ -1,7 +1,7 @@
 import LeanSphincs.BridgeDetInternalize
 
 /-! The graph-view cost program of the deterministic-randomizer game. Randomizers are read from
-a table `rnd` of full hash outputs indexed by message and trial; each derivation hash call is
+a table `rnd` of full hash outputs indexed by message (the base randomizer); each derivation hash call is
 charged as a one-unit tick, so the cost program preserves the joint law of output and original
 hash cost whenever `rnd` holds the answers at the seed's randomizer-derivation inputs. -/
 
@@ -14,28 +14,17 @@ open Concrete Completeness Prefix HiddenGraph SeedCoupling GraphView
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 
-/-- Randomizer-derivation outputs, by message and trial. -/
-abbrev RTable := Message → BitVec 32 → HashOutput
+/-- Base-randomizer derivation outputs, by message. -/
+abbrev RTable := Message → HashOutput
 
 variable [Params]
 
-/-- The deterministic search in the graph view: read the derived randomizer, charge its
-derivation call, test it. -/
-noncomputable def signCostDetLoop (parameter : PublicParameter) (data : PublicData)
-    (row : BitVec 32 → HashOutput) (message : Message) : Nat → Nat → OracleComp CostSpec (Option Signature)
-  | 0, _ => pure none
-  | attempts + 1, trial => do
-      HiddenCost.tick 1
-      let randomness := truncateHash (row (BitVec.ofNat 32 trial))
-      let first ← liftM (messageDigestCall parameter data.root message randomness 0 :
-        OracleComp HashSpec HashOutput)
-      if Landed parameter (blockIndex first) then
-        finishCostSource parameter data message randomness
-      else signCostDetLoop parameter data row message attempts (trial + 1)
-
+/-- The deterministic signer in the graph view: read the derived base randomizer, charge its
+derivation call, and walk from it. -/
 noncomputable def signCostDet (parameter : PublicParameter) (data : PublicData) (rnd : RTable)
-    (message : Message) : OracleComp CostSpec (Option Signature) :=
-  signCostDetLoop parameter data (rnd message) message digestAttemptLimit 0
+    (message : Message) : OracleComp CostSpec (Option Signature) := do
+  HiddenCost.tick 1
+  signCostSourceWalk parameter data message digestAttemptLimit (truncateHash (rnd message))
 
 noncomputable def costInteractionDet (parameter : PublicParameter) (data : PublicData) (rnd : RTable) :
     QueryImpl (OracleWorld + SigningSpec) (WriterT (QueryLog SigningSpec) (OracleComp CostSpec)) :=
@@ -55,24 +44,24 @@ noncomputable def costGameDet (parameter : PublicParameter) (data : PublicData) 
   HiddenCost.tick (258 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight))
   costRestDet parameter data rnd adversary
 
-/-- The deterministic signer from a search of `attempts` trials starting at `trial`. -/
-def seededFrom (sk : Seeded.SecretKey) (message : Message) (attempts trial : Nat) :
+/-- The walk of `attempts` trials from a randomizer, followed by the common assembly. -/
+def seededFrom (sk : Seeded.SecretKey) (message : Message) (attempts : Nat) (randomness : Randomness) :
     OracleComp HashSpec (Option Signature) := do
-  let some (randomness, _) ← Seeded.signDigestLoop sk message attempts trial | return none
+  let some (randomness, _) ← Seeded.signDigestLoop sk message attempts randomness | return none
   Randomized.finishSign sk message randomness
 
 omit [Params] in
 theorem eval_deriveRandomizer (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (seed : MasterSeed) (message : Message) (trial : BitVec 32) :
-    evalWithAnswerFn f (deriveRandomizer parameter seed message trial : OracleComp HashSpec Randomness) =
-      truncateHash (f (randomizerHashInput parameter seed message trial)) := by
+    (seed : MasterSeed) (message : Message) :
+    evalWithAnswerFn f (deriveRandomizer parameter seed message : OracleComp HashSpec Randomness) =
+      truncateHash (f (randomizerHashInput parameter seed message)) := by
   simp only [deriveRandomizer, evalWithAnswerFn_bind, evalWithAnswerFn_pure]
   rfl
 
 omit [Params] in
 theorem hashCalls_deriveRandomizer (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (seed : MasterSeed) (message : Message) (trial : BitVec 32) :
-    hashCalls f (deriveRandomizer parameter seed message trial : OracleComp HashSpec Randomness) = 1 := by
+    (seed : MasterSeed) (message : Message) :
+    hashCalls f (deriveRandomizer parameter seed message : OracleComp HashSpec Randomness) = 1 := by
   simp only [deriveRandomizer, hashCalls_bind, hashCalls_oracleHash, hashCalls_pure]
 
 theorem eval_signAttempt (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (message : Message)
@@ -86,36 +75,33 @@ theorem eval_signAttempt (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (me
   simp only [Seeded.signAttempt, evalWithAnswerFn_bind]
   split <;> rfl
 
-theorem fixed_signCostDetLoop (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+/-- The walk and its graph view have the same joint output and cost law. -/
+theorem fixed_signCostWalk (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (data : PublicData) (table : HiddenGraph.Table)
     (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
-    (message : Message) (row : BitVec 32 → HashOutput)
-    (hrow : ∀ trial, f (randomizerHashInput parameter seed message trial) = row trial)
-    (attempts trial : Nat) :
-    simulateQ (fixedCostSource f table) (signCostDetLoop parameter data row message attempts trial) =
-      simulateQ (fixedWorldCost f) (liftM (seededFrom ⟨seed, parameter, data.root⟩ message attempts trial) :
+    (message : Message) (attempts : Nat) (randomness : Randomness) :
+    simulateQ (fixedCostSource f table) (signCostSourceWalk parameter data message attempts randomness) =
+      simulateQ (fixedWorldCost f) (liftM (seededFrom ⟨seed, parameter, data.root⟩ message attempts randomness) :
         OracleComp OracleWorld (Option Signature)) := by
-  induction attempts generalizing trial with
+  induction attempts generalizing randomness with
   | zero =>
-      simp only [signCostDetLoop, seededFrom, Seeded.signDigestLoop, pure_bind, simulateQ_pure,
+      simp only [signCostSourceWalk, seededFrom, Seeded.signDigestLoop, pure_bind, simulateQ_pure,
         liftM_pure]
   | succ attempts ih =>
-      have hX : seededFrom ⟨seed, parameter, data.root⟩ message (attempts + 1) trial =
-          (deriveRandomizer parameter seed message (BitVec.ofNat 32 trial) : OracleComp HashSpec Randomness) >>=
-            fun randomness => (Seeded.signAttempt ⟨seed, parameter, data.root⟩ message randomness :
+      have hX : seededFrom ⟨seed, parameter, data.root⟩ message (attempts + 1) randomness =
+          (Seeded.signAttempt ⟨seed, parameter, data.root⟩ message randomness :
               OracleComp HashSpec (Option Index)) >>= fun result =>
                 match result with
                 | some _ => Randomized.finishSign ⟨seed, parameter, data.root⟩ message randomness
-                | none => seededFrom ⟨seed, parameter, data.root⟩ message attempts (trial + 1) := by
+                | none => seededFrom ⟨seed, parameter, data.root⟩ message attempts (randomness + 1) := by
         simp only [seededFrom, Seeded.signDigestLoop, bind_assoc]
-        refine bind_congr fun randomness => bind_congr fun result => ?_
+        refine bind_congr fun result => ?_
         cases result <;> simp
       rw [fixedWorldCost_lift_hash, hX]
-      simp only [signCostDetLoop, simulateQ_bind, fixedCostSource_tick, fixedCostSource_lift_hash,
+      simp only [signCostSourceWalk, simulateQ_bind, fixedCostSource_lift_hash,
         fixedWorldCost_lift_hash]
-      simp only [evalWithAnswerFn_bind, hashCalls_bind, eval_deriveRandomizer, hashCalls_deriveRandomizer,
-        hrow, hashCalls_signAttempt, eval_signAttempt, hashCalls_messageDigestCall]
-      set randomness := truncateHash (row (BitVec.ofNat 32 trial))
+      simp only [evalWithAnswerFn_bind, hashCalls_bind, hashCalls_signAttempt, eval_signAttempt,
+        hashCalls_messageDigestCall]
       by_cases hland : Landed parameter (blockIndex (evalWithAnswerFn f
         (messageDigestCall parameter data.root message randomness 0 : OracleComp HashSpec HashOutput)))
       · have hland' : Landed parameter (digestIndex (evalWithAnswerFn f
@@ -138,19 +124,28 @@ theorem fixed_signCostDetLoop (f : QueryImpl HashSpec Id) (parameter : PublicPar
 theorem signCostDet_correct (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (data : PublicData) (table : HiddenGraph.Table)
     (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
-    (rnd : RTable) (hrnd : ∀ message trial, f (randomizerHashInput parameter seed message trial) = rnd message trial)
+    (rnd : RTable) (hrnd : ∀ message, f (randomizerHashInput parameter seed message) = rnd message)
     (message : Message) :
     simulateQ (fixedCostSource f table) (signCostDet parameter data rnd message) =
       simulateQ (fixedWorldCost f) (liftM (Seeded.sign ⟨seed, parameter, data.root⟩ message :
         OracleComp HashSpec (Option Signature)) : OracleComp OracleWorld (Option Signature)) := by
-  rw [signCostDet, fixed_signCostDetLoop f parameter seed data table hdata htable message (rnd message)
-    (hrnd message), seededSign_eq]
-  rfl
+  have hsign : (Seeded.sign ⟨seed, parameter, data.root⟩ message : OracleComp HashSpec (Option Signature)) =
+      (deriveRandomizer parameter seed message : OracleComp HashSpec Randomness) >>= fun base =>
+        seededFrom ⟨seed, parameter, data.root⟩ message digestAttemptLimit base := by
+    rw [seededSign_eq]
+    rfl
+  rw [signCostDet, simulateQ_bind, fixedCostSource_tick,
+    fixed_signCostWalk f parameter seed data table hdata htable message, hsign,
+    fixedWorldCost_lift_hash, fixedWorldCost_lift_hash]
+  apply WriterT.ext
+  simp only [WriterT.run_bind, WriterT.run_mk, AddWriterT.run_addTell, ← PMF.monad_pure_eq_pure,
+    pure_bind, evalWithAnswerFn_bind, hashCalls_bind, eval_deriveRandomizer,
+    hashCalls_deriveRandomizer, hrnd, map_pure, ← ofAdd_add]
 
 theorem fixedCostSource_interactionDet (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (data : PublicData) (table : HiddenGraph.Table)
     (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
-    (rnd : RTable) (hrnd : ∀ message trial, f (randomizerHashInput parameter seed message trial) = rnd message trial) :
+    (rnd : RTable) (hrnd : ∀ message, f (randomizerHashInput parameter seed message) = rnd message) :
     (fixedCostSource f table).writerTMapBase (costInteractionDet parameter data rnd) =
       (fixedWorldCost f).writerTMapBase
         (QueryImpl.ofLift OracleWorld
@@ -186,7 +181,7 @@ theorem fixedCostSource_interactionDet (f : QueryImpl HashSpec Id) (parameter : 
 theorem fixedCostSource_restDet (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (data : PublicData) (table : HiddenGraph.Table)
     (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
-    (rnd : RTable) (hrnd : ∀ message trial, f (randomizerHashInput parameter seed message trial) = rnd message trial)
+    (rnd : RTable) (hrnd : ∀ message, f (randomizerHashInput parameter seed message) = rnd message)
     (adversary : Adversary) :
     simulateQ (fixedCostSource f table) (costRestDet parameter data rnd adversary) =
       simulateQ (fixedWorldCost f) (do
@@ -204,7 +199,7 @@ theorem costGameDet_correct (f : QueryImpl HashSpec Id) (parameter : PublicParam
     (seed : MasterSeed) (data : PublicData) (table : HiddenGraph.Table)
     (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
     (hparameter : evalWithAnswerFn f (deriveKey 0 .parameter seed : OracleComp HashSpec Digest) = parameter)
-    (rnd : RTable) (hrnd : ∀ message trial, f (randomizerHashInput parameter seed message trial) = rnd message trial)
+    (rnd : RTable) (hrnd : ∀ message, f (randomizerHashInput parameter seed message) = rnd message)
     (adversary : Adversary) :
     simulateQ (fixedCostSource f table) (costGameDet parameter data rnd adversary) =
       simulateQ (fixedWorldCost f) (gameAfterSeedDet adversary seed) := by

@@ -46,9 +46,9 @@ theorem det_bits (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b) 
       linarith
     exact_mod_cast hR
   have hc2 : (0 : ℚ) ≤ κ * (c / 2) := mul_nonneg hκ0 hc
-  have hcheck' : (ρ : ℝ) + 2 ^ 128 * (o.B : ℝ) + (qh : ℝ) / ((2 ^ 128 - (qh + 2 ^ 32) : ℕ) : ℝ) +
+  have hcheck' : (ρ : ℝ) + 2 ^ 128 * (o.B : ℝ) + (qh : ℝ) * (2 - 1 / 2 ^ (26 - subtreeHeight)) / 2 ^ 129 +
       qh * ((κ * (c / 2) : ℚ) : ℝ) + 1 / 2 ^ 60 ≤ 2 := by
-    rw [Rat.cast_mul, hκR]
+    rw [Rat.cast_mul, hκR, hb]
     refine le_of_eq_of_le ?_ hcheck
     ring
   intro q hq1 adversary hbound

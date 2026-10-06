@@ -3,7 +3,7 @@ import LeanSphincs.SecuritySeedCoupling
 import LeanSphincs.SecurityPreparedScheme
 
 /-! Long adversarial hash inputs are simulated privately by the adversary. No honest party or
-verifier queries an input longer than 1056 bytes, so the adversary can answer its long inputs from
+verifier queries an input longer than 1048 bytes, so the adversary can answer its long inputs from
 a private cache. This file defines the internalized adversary, the run relation (`Block`) between
 the original and the internalized executions with their short and total query counts, and shows
 that the internalized game only queries short inputs. `BridgeDetInternalize` applies it to the
@@ -405,16 +405,11 @@ theorem Block.forward (sk : LeanSphincs.Seeded.SecretKey) (input : AdvSpec.Domai
 attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Randomized.finishSign
   LeanSphincs.Seeded.signAttempt
 
-theorem OnlyW.signDigestLoop (sk : LeanSphincs.Seeded.SecretKey) (message : Message) :
-    ∀ attempts, OnlyW (Randomized.signDigestLoop sk message attempts)
-  | 0 => OnlyW.pure' _
-  | attempts + 1 => by
-      rw [Randomized.signDigestLoop]
-      refine OnlyW.bind (OnlyW.liftProb _) (fun _ => ?_)
-      refine OnlyW.bind (OnlyW.liftHash (Short.Seeded.Only.signAttempt _ _ _)) (fun result => ?_)
-      cases result with
-      | none => exact OnlyW.signDigestLoop sk message attempts
-      | some _ => exact OnlyW.pure' _
+theorem OnlyW.signDigestLoop (sk : LeanSphincs.Seeded.SecretKey) (message : Message) (attempts : Nat) :
+    OnlyW (Randomized.signDigestLoop sk message attempts) := by
+  rw [Randomized.signDigestLoop]
+  refine OnlyW.bind (OnlyW.liftProb _) (fun _ => ?_)
+  exact OnlyW.bind (OnlyW.liftHash (Short.Seeded.Only.signDigestLoop _ _ _ _)) (fun _ => OnlyW.pure' _)
 
 theorem OnlyW.sign (sk : LeanSphincs.Seeded.SecretKey) (message : Message) :
     OnlyW (Randomized.sign sk message) := by

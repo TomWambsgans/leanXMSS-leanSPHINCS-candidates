@@ -31,6 +31,7 @@ set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
+attribute [local irreducible] digestAttemptLimit
 
 variable [Params]
 
@@ -87,7 +88,7 @@ variable (parameter : PublicParameter) (data : PublicData) (K : HiddenReveal.Kno
   (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
 /-- **A new pair.** -/
-theorem psiArm_newPair (hw : wbar ≤ 1) (hparse : ∀ p call, model.parse (pblk parameter data p call) = none) :
+theorem psiArm_newPair (hfair : Fair5 wbar) (hparse : ∀ p call, model.parse (pblk parameter data p call) = none) :
     NewPairPays parameter data Qtot initial model (psiArm parameter data K wbar Fail κ) := by
   intro budget s P L d R hb hB p hp0
   have hp1 := hB.pinv.first p hp0
@@ -101,9 +102,9 @@ theorem psiArm_newPair (hw : wbar ≤ 1) (hparse : ∀ p call, model.parse (pblk
   simp only [Nat.add_sub_cancel]
   refine add_le_add (mul_le_mul_right ?_ _) (mul_le_mul_right ?_ _)
   · exact le_trans (pairE_min_le _)
-      (min_le_min le_rfl (potN_newPair parameter data wbar Fail hw hB.pinv hp0 L d y))
+      (min_le_min le_rfl (potN_newPair parameter data wbar Fail hfair hB.pinv hp0 L d y))
   · rw [Finset.sum_range_succ']
-    exact le_trans (Finset.sum_le_sum fun j _ => potN_newPair parameter data wbar Fail hw hB.pinv hp0 L d j)
+    exact le_trans (Finset.sum_le_sum fun j _ => potN_newPair parameter data wbar Fail hfair hB.pinv hp0 L d j)
       le_self_add
 
 /-- **Any other ordinary query**, paying `pay` at a FORS leaf input. -/
@@ -129,7 +130,8 @@ theorem psiArm_ordinary (hw : wbar ≤ 1) (hrows : FtsRows parameter model) {pay
     have hext := ordinaryStep_extends model x s r hr
     obtain ⟨_, hview⟩ := same_items parameter data hext (ordinaryStep_cache_ne model x s r hr) hnew hB.pinv
     have hgrow : ∀ j, potN parameter data wbar Fail r.2 P L d j ≤ potN parameter data wbar Fail s P L d j :=
-      fun j => potG_grow wbar 0 Fail witnessNear_props gate_false_mono hw ENNReal.zero_ne_top hext hview L d le_rfl
+      fun j => potG_grow wbar 0 Fail witnessNear_props gate_false_mono hw ENNReal.zero_ne_top hext hview
+        (stat_same hext (ordinaryStep_cache_ne model x s r hr) hnew hB.pinv) L d le_rfl
     refine add_le_add (mul_le_mul' ?_ (min_le_min le_rfl (hgrow y)))
       (mul_le_mul_right (Finset.sum_le_sum fun j _ => hgrow j) _)
     simp only [hcdef, hNw]
@@ -172,18 +174,16 @@ theorem psiArm_sign (hparse : ∀ p call, model.parse (pblk parameter data p cal
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
-    {Cmax : ℕ} (hfair : Fair wbar Cmax) (hQ : Qtot + digestAttemptLimit ≤ Cmax) :
+    (hw : wbar ≤ 1) :
     SignPays parameter data Qtot tg initial model (psiArm parameter data K wbar Fail κ) := by
   intro budget s P L d R hB m hm
-  have hcount : cachedCount parameter data m s + digestAttemptLimit ≤ Cmax := by
-    have := hB.count m; omega
   set c : ℝ≥0∞ := ((contacts parameter K s).card : ℝ≥0∞) with hcdef
   set canon : ℕ → Run HashInput Coordinate (Option Signature) × State → ℝ≥0∞ := fun k o1 =>
     canonL parameter data witnessNear wbar 0 Fail (fun _ => False) m s P L d k o1 with hcanon
   set run := interp tg initial model (signCostSourceLoop parameter data m digestAttemptLimit) budget s with hrun
   have hse : ∀ k, ∑' o1, Pr[= o1 | run] * canon k o1 ≤ potN parameter data wbar Fail s P L d k := fun k =>
-    sign_expectG_level tg initial model parameter data wbar 0 Fail m witnessNear_props (fun _ => False) hparse hfair
-      ENNReal.zero_ne_top digestAttemptLimit budget k s P L hm d hB.pinv hcount
+    sign_expectG_level tg initial model parameter data wbar 0 Fail m witnessNear_props (fun _ => False) hparse hw
+      ENNReal.zero_ne_top budget k s P L hm d hB.pinv
   have hpt : ∀ o1 ∈ support run,
       o1.1.1.elim 0 (fun r => psiArm parameter data K wbar Fail κ o1.2 (newPairs parameter data m s o1.2 ++ P)
         (L ++ [⟨m, r⟩]) (discAfter parameter data m s d o1) (R ++ o1.1.2.1) (budget - traceCost o1.1.2.2.1)) ≤
@@ -199,7 +199,7 @@ theorem psiArm_sign (hparse : ∀ p call, model.parse (pblk parameter data p cal
         have hpoint : ∀ k' K', k' ≤ K' → potN parameter data wbar Fail o1.2 (newPairs parameter data m s o1.2 ++ P)
             (L ++ [⟨m, r⟩]) (discAfter parameter data m s d o1) k' ≤ canon K' o1 := fun k' K' hk =>
           sign_pointG_level tg initial model parameter data wbar 0 Fail Qtot m witnessNear_props gate_false_mono
-            hparse (hfail m) hfair.le_one ENNReal.zero_ne_top digestAttemptLimit budget s P L d R hB.prep hB.pinv
+            hparse (hfail m) hw ENNReal.zero_ne_top digestAttemptLimit budget s P L d R hB.prep hB.pinv
             hB.dinv hB.count o1 ho1 r hres hk
         refine add_le_add (mul_le_mul_right (min_le_min le_rfl (hpoint _ _ (Nat.sub_le _ _))) _)
           (mul_le_mul_right ?_ _)
@@ -281,13 +281,7 @@ theorem psiArm_final (hw : wbar ≤ 1) :
                     rw [hv]
                     exact_mod_cast nearCount_pos hB.dinv _ t (fun other hother => by
                       rw [hidx]; exact hnear other hother)
-                _ ≤ virtualOnce Finset.univ wbar (witnessNear (pview parameter data s q))
-                      (signatureLimit - L.length) (coinItems parameter data s L (P.erase q)) d :=
-                    base_le_virtualOnce Finset.univ_nonempty hw (witnessNear_props _).1 (witnessNear_props _).2.1
-                      (witnessNear_props _).2.2 _ _ d
-                _ ≤ _ := creations_mono_count (k := 0) Finset.univ_nonempty landing_le_one
-                      (virtualOnce_cons_le' wbar hw (witnessNear_props _) _ d) (virtualOnce_perm' wbar _ d)
-                      (Nat.zero_le _) _
+                _ ≤ _ := le_fut hw (witnessNear_props _) s L _ _ _ d
   calc (1 : ℝ≥0∞) = 1 * min 1 (potN parameter data wbar Fail s P L d budget) := by
         rw [one_mul, min_eq_left hpot]
     _ ≤ ((contacts parameter K s).card : ℝ≥0∞) * min 1 (potN parameter data wbar Fail s P L d budget) :=
@@ -306,11 +300,12 @@ variable (parameter : PublicParameter) (data : PublicData) (K : HiddenReveal.Kno
   (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
 /-- The start of the armed potential: no contacts, and `κ` times the refined sum. -/
-theorem psiArm_start (κ : ℝ≥0∞) (known : Knowledge Coordinate) (total : ℕ) :
+theorem psiArm_start (hclean : ∀ p call, initial (pblk parameter data p call) = none) (κ : ℝ≥0∞)
+    (known : Knowledge Coordinate) (total : ℕ) :
     psiArm parameter data K wbar Fail κ (DebtState.start initial known) [] [] 0 [] total =
       κ * contactRate * ∑ j ∈ Finset.range total,
         ((j : ℝ≥0∞) * (startNear wbar j + failMass Fail) + signatureLimit * failMass Fail) := by
-  simp only [psiArm, potN_start]
+  simp only [psiArm, potN_start parameter data wbar Fail initial hclean]
   have : contacts parameter K (DebtState.start initial known) = ∅ := by
     unfold contacts
     rfl
@@ -328,7 +323,7 @@ theorem a4b_boundArm (hparse : ∀ p call, model.parse (pblk parameter data p ca
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
-    (total : ℕ) (hfair : Fair wbar (total + digestAttemptLimit)) {pay κ : ℝ≥0∞}
+    (total : ℕ) (hfair : Fair5 wbar) {pay κ : ℝ≥0∞}
     (hκ : contactRate ≤ pay + κ * contactRate)
     (M : OracleComp (OracleWorld + SigningSpec) Forgery) (hnr : NoRepeat M []) (known : Knowledge Coordinate) :
     Pr[A4bRun parameter data K | interp tg initial model (advProg parameter data M []) total
@@ -343,11 +338,11 @@ theorem a4b_boundArm (hparse : ∀ p call, model.parse (pblk parameter data p ca
   have h := final_le_startP parameter data tg initial model (IsFleafIn parameter) pay hparse hkind hrows hFp
     hclean hcleanF Fail hfail total
     (G := finalB parameter data K) (fun _ _ => rfl) (fun o R s x u hx => finalB_store o R s x u hx)
-    (psiArm_newPair parameter data K wbar Fail κ total initial model hfair.le_one hparse)
+    (psiArm_newPair parameter data K wbar Fail κ total initial model hfair hparse)
     (psiArm_ordinary parameter data K wbar Fail κ total initial model hfair.le_one hrows hκ)
-    (psiArm_sign parameter data K wbar Fail κ total tg initial model hparse hrows hfail hfair le_rfl)
+    (psiArm_sign parameter data K wbar Fail κ total tg initial model hparse hrows hfail hfair.le_one)
     (psiArm_final parameter data K wbar Fail κ total initial model hfair.le_one) M hnr known
-  rw [psiArm_start] at h
+  rw [psiArm_start parameter data K wbar Fail initial hclean] at h
   rw [probEvent_eq_tsum_ite]
   refine le_trans (ENNReal.tsum_le_tsum fun out => ?_) h
   split_ifs with hE
@@ -374,7 +369,7 @@ theorem a4b_bound_gameArm (adversary : Adversary) (hnr : adversary.NoRepeat) (q 
     (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate) (hmsg : ∀ x, IsMsgInput x → tg.kind x = .none)
-    (K : HiddenReveal.Knowledge Coordinate) (wbar : ℝ≥0∞) (hfair : Fair wbar (q - keygenCost + digestAttemptLimit))
+    (K : HiddenReveal.Knowledge Coordinate) (wbar : ℝ≥0∞) (hfair : Fair5 wbar)
     {pay κ : ℝ≥0∞} (hκ : contactRate ≤ pay + κ * contactRate) (known : Knowledge Coordinate) :
     Pr[A4bRun (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining) K |
         interp tg prepared.2 (sampleModel parameterOutput highs)
@@ -443,16 +438,13 @@ theorem a4b_bound_checkArm (adversary : Adversary) (hnr : adversary.NoRepeat) (q
               (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
                 (internalize adversary)) q (DebtState.start prepared.2 known)] *
             (fleafCount (IsFleafIn (truncateHash parameterOutput)) out.1.2.2.1 : ℝ≥0∞) := by
-  have hqb : 2 * qb ≤ 2 ^ 128 := by
-    simp only [H0.checkNear, Bool.and_eq_true, decide_eq_true_eq] at hc
-    exact hc.1.1.2
-  have hfair := fair_wbarOf (q - keygenCost) (by omega)
+  have hfair := fair_wbar5
   have h := a4b_bound_gameArm adversary hnr q parameterOutput fixed highs remaining prepared hprepared tg hmsg K
-    (H0.wbarOf (q - keygenCost)) hfair hκ known
+    H0.wbar5 hfair hκ known
   refine le_trans h (add_le_add ?_ le_rfl)
   rw [mul_assoc κ, mul_comm ((q - keygenCost : ℕ) : ℝ≥0∞) contactRate, mul_assoc contactRate]
   refine mul_le_mul_right (mul_le_mul_right (start_sum_le hfair.le_one _ _ _ ?_) _) _
-  rw [startNear_wbarOf, ← ofReal_half]
+  rw [startNear_wbar5, ← ofReal_half]
   exact H0.hNearOf_le_of_check b N qb m c hb hN hc _ hq
 
 end GameArm
