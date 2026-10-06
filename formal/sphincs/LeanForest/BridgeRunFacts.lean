@@ -1,5 +1,6 @@
 import LeanForest.BridgeExposeMean
 import LeanForest.BridgeFleafA3
+import LeanForest.BridgeScan
 
 /-! Facts about interpreted runs used by the forest contact potential: recorded guesses come from
 cached parsed queries; a run that never queries a row writing a coordinate exposes it only by a
@@ -454,20 +455,19 @@ theorem closedRuns_ordinary_bind (x : HashInput) {β : Type} (next : HashOutput 
 
 /-- **A completed signing call reveals upward-closed chains.** -/
 theorem closedRuns_loop (parameter : PublicParameter) (data : PublicData) (message : Message) :
-    ∀ attempts, ClosedRuns tg initial model (signCostSourceLoop parameter data message attempts) := by
+    ∀ attempts ρ, ClosedRuns tg initial model (signCostSourceLoop parameter data message attempts ρ) := by
   intro attempts
   induction attempts with
-  | zero => exact closedRuns_pure tg initial model _
+  | zero => intro ρ; exact closedRuns_pure tg initial model _
   | succ attempts ih =>
+      intro ρ
       rw [signCostSourceLoop_succ]
-      refine closedRuns_bind tg initial model (closedRuns_of_revealsIn tg initial model (revealsIn_liftProb _ _))
-        fun ρ => ?_
       refine closedRuns_ordinary_bind tg initial model _ _ fun first => ?_
       split_ifs
       · rw [finishCostSource_eq]
         exact closedRuns_ordinary_bind tg initial model _ _ fun a =>
           closedRuns_finishRest tg initial model parameter data message ρ _
-      · exact ih
+      · exact ih _
 
 end Closed
 
@@ -493,14 +493,14 @@ theorem avoids_finishRest_fchain (p : PublicParameter) (parameter : PublicParame
 
 /-- **The signing loop queries no forest step input.** -/
 theorem avoids_loop_fchain (p : PublicParameter) (parameter : PublicParameter) (data : PublicData)
-    (message : Message) : ∀ attempts, Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate) (IsFchainIn p)
-      (signCostSourceLoop parameter data message attempts) := by
+    (message : Message) : ∀ attempts ρ, Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate) (IsFchainIn p)
+      (signCostSourceLoop parameter data message attempts ρ) := by
   intro attempts
   induction attempts with
-  | zero => exact avoids_pure _ _
+  | zero => intro ρ; exact avoids_pure _ _
   | succ attempts ih =>
+      intro ρ
       rw [signCostSourceLoop_succ]
-      refine avoids_bind _ (avoids_liftProb _ _) fun ρ => ?_
       refine (avoids_query_bind _ _ _).2 ⟨fun bytes hb hx => ?_, fun first => ?_⟩
       · cases hb
         obtain ⟨f, hf⟩ := hx
@@ -512,7 +512,7 @@ theorem avoids_loop_fchain (p : PublicParameter) (parameter : PublicParameter) (
             obtain ⟨f, hf⟩ := hx
             exact PotentialA.msg_ne_fchain (msgInput_digestInput parameter data.root message ρ) hf
           exact avoids_finishRest_fchain p parameter data message ρ _
-        · exact ih
+        · exact ih _
 
 end Avoid
 

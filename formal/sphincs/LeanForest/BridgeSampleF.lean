@@ -219,8 +219,8 @@ theorem startNearF_mono {wbar : ℝ≥0∞} (hw : wbar ≤ 1) {j k : ℕ} (hjk :
     startNearF wbar j ≤ startNearF wbar k := by
   unfold startNearF
   exact creations_mono_count Finset.univ_nonempty landing_le_one
-    (virtualOnce_cons_le' wbar hw (excessW_props witnessNear_props ENNReal.zero_ne_top) signatureLimit 0)
-    (virtualOnce_perm' wbar signatureLimit 0) hjk []
+    (fun v I => virtualOnce_le_consM hw (excessW_props witnessNear_props ENNReal.zero_ne_top).1 signatureLimit I v 0)
+    (fun _ _ h => virtualOnce_perm signatureLimit h 0) hjk []
 
 /-- **The start sum.** With `startNear y ≤ 2h`, the near potentials at the levels below `y` sum
 to at most `y (y (h + φ) + N φ)`. -/
@@ -247,14 +247,24 @@ theorem start_sum_leF {wbar : ℝ≥0∞} (hw : wbar ≤ 1) (y : ℕ) (φ h : �
         exact le_trans (le_mul_of_one_le_right' one_le_two) hT
     _ = _ := by ring
 
-theorem wbarOf_mul_landingF (y : ℕ) (hy : y + 2 ^ 32 < 2 ^ 128) :
-    H0.wbarOf y * landing = (((2 ^ 128 - (y + 2 ^ 32) : ℕ) : ℝ≥0∞))⁻¹ := by
-  unfold H0.wbarOf
-  have hl0 : landing ≠ 0 := by
-    rw [H0.landing_eq]
-    exact ne_of_gt (ENNReal.ofReal_pos.2 (by positivity))
-  have hlt : landing ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top landing_le_one
-  rw [ENNReal.mul_inv (Or.inr hlt) (Or.inr hl0), mul_assoc, ENNReal.inv_mul_cancel hl0 hlt, mul_one]
+/-- The creation rate of the scan signer in real form: `(2 − 1/M) / 2^128`, `M = scanM`. -/
+theorem rateS_eqF : rateS = ENNReal.ofReal ((2 - 1 / (H0.scanM : ℝ)) / 2 ^ 128) := by
+  have hM : (1 : ℝ) ≤ (H0.scanM : ℝ) := by exact_mod_cast H0.scanM_pos
+  have h1M : (0 : ℝ) ≤ 1 - 1 / (H0.scanM : ℝ) := by
+    rw [sub_nonneg, div_le_one (by linarith)]; exact hM
+  have hc : (Fintype.card Randomness : ℝ≥0∞)⁻¹ = ENNReal.ofReal (1 / 2 ^ 128) := by
+    rw [GraphView.card_randomness, one_div, ENNReal.ofReal_inv_of_pos (by positivity)]
+    congr 1
+    rw [← ENNReal.ofReal_natCast]
+    congr 1
+    norm_num
+  have hl1 : (1 : ℝ≥0∞) - landing = ENNReal.ofReal (1 - 1 / (H0.scanM : ℝ)) := by
+    rw [H0.landing_eq_M, ENNReal.ofReal_sub _ (by positivity), ENNReal.ofReal_one]
+  unfold rateS
+  rw [hc, hl1, ← ENNReal.ofReal_one, ← ENNReal.ofReal_add h1M (by norm_num),
+    ← ENNReal.ofReal_mul (by positivity)]
+  congr 1
+  ring
 
 end Helpers
 

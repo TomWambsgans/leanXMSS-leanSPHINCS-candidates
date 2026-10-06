@@ -68,28 +68,26 @@ variable [Params]
 attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Seeded.treeRoot
   Seeded.treeNode Seeded.subNode Seeded.topNode Seeded.spineNode Randomized.finishSign
 
-/-- A successful randomized grinding loop leaves a cached answer certifying that it landed. -/
-theorem randomizedDigest_support (sk : Seeded.SecretKey) (message : Message) :
-    ∀ (n : Nat) (cache : QueryCache HashSpec) (result : Option Randomness)
+/-- A successful scan leaves a cached answer certifying that it landed. -/
+theorem scanLoop_support (sk : Seeded.SecretKey) (message : Message) :
+    ∀ (n : Nat) (start : Randomness) (cache : QueryCache HashSpec) (result : Option Randomness)
       (cache' : QueryCache HashSpec),
-      (result, cache') ∈ support ((simulateQ romImpl
-        (Randomized.signDigestLoop sk message n)).run cache) →
+      (result, cache') ∈ support ((simulateQ randomOracle
+        (Randomized.scanLoop sk message n start)).run cache) →
       cache ≤ cache' ∧ ∀ ρ, result = some ρ → ∃ answer,
         cache' (msgInput sk message ρ) = some answer ∧
           Landed sk.parameter (blockIndex answer) := by
   intro n
   induction n with
   | zero =>
-      intro cache result cache' hmem
-      simp only [Randomized.signDigestLoop, simulateQ_pure, StateT.run_pure,
+      intro start cache result cache' hmem
+      simp only [Randomized.scanLoop, simulateQ_pure, StateT.run_pure,
         support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hmem
       obtain ⟨rfl, rfl⟩ := hmem
       exact ⟨le_rfl, by simp⟩
   | succ n ih =>
-      intro cache result cache' hmem
+      intro start cache result cache' hmem
       rw [run_randomizedDigest_succ, mem_support_bind_iff] at hmem
-      obtain ⟨ρ, _, hmem⟩ := hmem
-      rw [mem_support_bind_iff] at hmem
       obtain ⟨⟨answer, cacheMid⟩, hquery, hrest⟩ := hmem
       obtain ⟨hqueryLe, hcached⟩ := query_support_cached _ _ _ _ hquery
       split at hrest
@@ -101,8 +99,21 @@ theorem randomizedDigest_support (sk : Seeded.SecretKey) (message : Message) :
         cases Option.some.inj heq
         exact ⟨answer, hcached, hland⟩
       next =>
-        obtain ⟨hrestLe, hresult⟩ := ih cacheMid result cache' hrest
+        obtain ⟨hrestLe, hresult⟩ := ih (start + 1) cacheMid result cache' hrest
         exact ⟨hqueryLe.trans hrestLe, hresult⟩
+
+/-- A successful randomized grinding loop leaves a cached answer certifying that it landed. -/
+theorem randomizedDigest_support (sk : Seeded.SecretKey) (message : Message)
+    (n : Nat) (cache : QueryCache HashSpec) (result : Option Randomness)
+    (cache' : QueryCache HashSpec)
+    (hmem : (result, cache') ∈ support ((simulateQ romImpl
+      (Randomized.signDigestLoop sk message n)).run cache)) :
+    cache ≤ cache' ∧ ∀ ρ, result = some ρ → ∃ answer,
+      cache' (msgInput sk message ρ) = some answer ∧
+        Landed sk.parameter (blockIndex answer) := by
+  rw [run_randomizedDigest_start, mem_support_bind_iff] at hmem
+  obtain ⟨start, _, hmem⟩ := hmem
+  exact scanLoop_support sk message n start cache result cache' hmem
 
 /-- A successful randomized sign run replays as assembly with a landed randomizer. -/
 theorem randomized_sign_replay (sk : Seeded.SecretKey) (message : Message)

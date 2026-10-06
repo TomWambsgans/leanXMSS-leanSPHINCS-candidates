@@ -85,8 +85,20 @@ class PoisT:
         self.r = self.mu / (self.n1 + 2)
     def pb(self, n): return Fr(self.pm[n] if 0 <= n < len(self.pm) else 0, 2 ** self.P)
 
-def make_poisT(b, N, n1=150, P=220):
-    num = (Fr(N, 2 ** b) + Fr(2 ** 127) / ((2 ** 127 - 2 ** 32) * 2 ** b)) * 2 ** 64
+def scanMb(b): return 2 ** (26 - b)
+def lmaxB(b, q): return 65 * ((q + 64 * scanMb(b) - 1) // (64 * scanMb(b))) + 2 ** 15
+def denB(b, q): return 2 ** 128 - (q + 2 ** 32 + (scanMb(b) - 1) * lmaxB(b, q))
+def fair_ok(b, q): return q + 2 ** 32 + (scanMb(b) - 1) * lmaxB(b, q) + (2 * scanMb(b) - 1) <= 2 ** 128
+def rate_of(b, N, qtop): return Fr(N, 2 ** b) + Fr((2 * scanMb(b) - 1) * qtop, scanMb(b) * denB(b, qtop) * 2 ** b)
+
+def denHB(b, q): return 2 ** 128 - (q // 2 + (scanMb(b) - 1) * lmaxB(b, q))
+def fairH_ok(b, q): return q // 2 + (scanMb(b) - 1) * lmaxB(b, q) + (2 * scanMb(b) - 1) <= 2 ** 128
+def rateH_of(b, N, qtop): return Fr(N + 1, 2 ** b) + Fr((2 * scanMb(b) - 1) * qtop, scanMb(b) * denHB(b, qtop) * 2 ** b)
+def checkRateH(b, N, qtop, t): return fairH_ok(b, qtop) and rateH_of(b, N, qtop) <= t.mu
+
+def make_poisT(b, N, qtop, n1=150, P=220, heavy=False):
+    assert fairH_ok(b, qtop) if heavy else fair_ok(b, qtop)
+    num = (rateH_of(b, N, qtop) if heavy else rate_of(b, N, qtop)) * 2 ** 64
     m = -((-num.numerator) // num.denominator)
     mu = Fr(m, 2 ** 64)
     J = int(float(mu) + 14 * math.sqrt(float(mu)) + 60)
@@ -105,8 +117,8 @@ def checkPT(t):
         if not t.pm[n] * t.m <= t.pm[n + 1] * ((n + 1) * 2 ** 64): return False
     return t.r < 1
 
-def checkRate(b, N, t):
-    return Fr(N, 2 ** b) + Fr(2 ** 127) / ((2 ** 127 - 2 ** 32) * 2 ** b) <= t.mu
+def checkRate(b, N, qtop, t):
+    return fair_ok(b, qtop) and rate_of(b, N, qtop) <= t.mu
 
 def checkLeaf(tab, J):
     if not len(tab) >= 2: return False
@@ -251,13 +263,13 @@ def checkSmallF(b, N, qh, rho, cthr, B, c):
     conds = [Fr(3, 2) <= rho, rho <= 2, 1 + 4032 * (2 - rho) * x <= rho, 1 + 66 * x <= rho, 64 * x <= 1,
              qh <= 2 ** 127, N <= 2 ** 70, cthr <= rho / 2 ** 128, 0 <= B, 0 <= c, rate <= rho - 1 - x]
     if not all(conds): return False
-    lhs = rho + 2 ** 128 * B + Fr(qh, 2 ** 128 - (qh + 2 ** 32)) + (2 - rho + x + rate) * qh * c + Fr(1, 2 ** 60)
+    lhs = rho + 2 ** 128 * B + Fr((2 * scanMb(b) - 1) * qh, scanMb(b) * 2 ** 129) + (2 - rho + x + rate) * qh * c + Fr(1, 2 ** 60)
     return lhs <= 2
 
 def small_lhs(b, N, qh, rho, B, c):
     x = Fr(qh, 2 ** 128)
     rate = Fr(N * 134, 2 ** b * 2 ** 15)
-    return rho + 2 ** 128 * B + Fr(qh, 2 ** 128 - (qh + 2 ** 32)) + (2 - rho + x + rate) * qh * c + Fr(1, 2 ** 60)
+    return rho + 2 ** 128 * B + Fr((2 * scanMb(b) - 1) * qh, scanMb(b) * 2 ** 129) + (2 - rho + x + rate) * qh * c + Fr(1, 2 ** 60)
 
 def choose_rho(qh):
     x = Fr(qh, 2 ** 128)
@@ -297,8 +309,7 @@ class Builder:
         if 2 * qb > 2 ** 128: return None
         k = self.key_of(qb)
         return k if entry_ok(self.b, self.N, self.opt_for(k), qa, qb) else None
-    def build(self, qstart, maxint=400):
-        TOP = 2 ** 127
+    def build(self, qstart, TOP=2 ** 127, maxint=400):
         qa = qstart
         out = []
         while True:
@@ -331,20 +342,28 @@ class Builder:
             out.append((qa, qb, k))
             qa = qb + 1
 
-def chainF(b, N, opts, last, entries):
+def chainF(b, N, qtop, opts, last, entries):
     for (qa, qb, j) in entries:
         if not (qa <= last): return False
         if not (j < len(opts) and entry_ok(b, N, opts[j], qa, qb)): return False
         last = qb + 1
-    return 2 ** 127 < last
+    return qtop < last
+
+def segments(b, qh):
+    """budget ranges of the covers: each has its own table (rate fixed by its top)"""
+    top = 2 ** 127 - 1 - kcredit(b)
+    if b == 26:
+        return [2 ** 127]
+    qlight = (64 * 2 ** 128 - 2 ** 60) // 257
+    return [q for q in (2 ** 124, qlight) if q > qh]
 
 # ---------------- one parameter set ----------------
 
 def certify(b, N, lx, verbose=True):
-    t = make_poisT(b, N)
-    assert checkPT(t) and checkRate(b, N, t)
-    fm = FModel(t)
     qh = int(2 ** (128 + lx))
+    t = make_poisT(b, N, qh)
+    assert checkPT(t) and checkRate(b, N, qh, t)
+    fm = FModel(t)
     rho = choose_rho(qh)
     cthr = rho / 2 ** 128
     o, _ = make_opt(b, t, fm, cthr)
@@ -359,19 +378,31 @@ def certify(b, N, lx, verbose=True):
               float(lhs), 'OK' if ok_small else 'FAIL'), flush=True)
     if not ok_small:
         return None
-    B = Builder(b, N, t, fm)
-    raw = B.build(qh + 1)
-    if raw is None:
-        if verbose: print('  large route FAIL', flush=True)
-        return None
-    keys = sorted(set(k for (_, _, k) in raw))
-    idx = {k: i for i, k in enumerate(keys)}
-    opts = [B.opts[k] for k in keys]
-    entries = [(qa, qb, idx[k]) for (qa, qb, k) in raw]
-    assert all(checkOptF(b, t, oo) for oo in opts)
-    assert chainF(b, N, opts, qh + 1, entries)
-    if verbose: print('  large route OK: %d entries, %d options' % (len(entries), len(opts)), flush=True)
-    return dict(b=b, N=N, lx=lx, qh=qh, rho=rho, t=t, o=o, on=on, opts=opts, entries=entries)
+    covers = []
+    heavy = []
+    qstart = qh + 1
+    segs = [(qtop, False) for qtop in segments(b, qh)] + ([] if b == 26 else [(2 ** 127, True)])
+    for qtop, hv in segs:
+        tc = make_poisT(b, N, qtop, heavy=hv)
+        assert checkPT(tc) and (checkRateH(b, N, qtop, tc) if hv else checkRate(b, N, qtop, tc))
+        B = Builder(b, N, tc, FModel(tc))
+        raw = B.build(qstart, TOP=qtop)
+        if raw is None:
+            if verbose: print('  large route FAIL in [2^%.3f, 2^%.3f]' % (math.log2(qstart), math.log2(qtop)), flush=True)
+            return None
+        keys = sorted(set(k for (_, _, k) in raw))
+        idx = {k: i for i, k in enumerate(keys)}
+        opts = [B.opts[k] for k in keys]
+        entries = [(qa, qb, idx[k]) for (qa, qb, k) in raw]
+        assert all(checkOptF(b, tc, oo) for oo in opts)
+        assert chainF(b, N, qtop, opts, qstart, entries)
+        if verbose: print('  cover up to 2^%.4f OK: %d entries, %d options' % (math.log2(qtop), len(entries), len(opts)), flush=True)
+        (heavy if hv else covers).append(dict(qtop=qtop, qstart=qstart, t=tc, opts=opts, entries=entries))
+        qstart = qtop + 1
+    complete = 2 ** 127 <= qstart + kcredit(b)
+    if verbose and not complete:
+        print('  covers stop at 2^%.4f: the heavy range is not certified' % math.log2(qstart - 1), flush=True)
+    return dict(b=b, N=N, lx=lx, qh=qh, rho=rho, t=t, o=o, on=on, covers=covers, heavy=heavy, complete=complete)
 
 # ---------------- Lean output ----------------
 
@@ -397,7 +428,7 @@ def lean_tab(t):
 
 def emit(certs, path):
     out = []
-    out.append('''import LeanForest.BridgeDetCloseF
+    out.append('''import LeanForest.BridgeHeavyCert
 
 /-! Certificates for the proved forest lifetimes (generated by `scripts/forest_certificates.py`,
 checked by the kernel with `decide +kernel`, exact rational arithmetic, no `native_decide`). For each
@@ -413,10 +444,10 @@ set_option maxHeartbeats 0
     for c in certs:
         b, N = c['b'], c['N']
         tag = 'b%d' % b
-        out.append('/-- Poisson table, subtree height %d, %d signatures. -/' % (b, N))
+        out.append('/-- Poisson table of the small route, subtree height %d, %d signatures. -/' % (b, N))
         out.append('def tab_%s : PoisT := %s\n' % (tag, lean_tab(c['t'])))
         out.append('theorem tab_%s_ok : checkPT tab_%s = true := by decide +kernel\n' % (tag, tag))
-        out.append('theorem rate_%s_ok : checkRate %d %d tab_%s = true := by decide +kernel\n' % (tag, b, N, tag))
+        out.append('theorem rate_%s_ok : checkRate %d %d %d tab_%s = true := by decide +kernel\n' % (tag, b, N, c['qh'], tag))
         out.append('/-- The small-route option at baseline `ρ / 2^128`. -/')
         out.append('def small_%s : OptF := %s\n' % (tag, lean_opt(c['o'])))
         out.append('theorem small_%s_ok : checkOptF %d tab_%s small_%s = true := by decide +kernel\n' % (tag, b, tag, tag))
@@ -428,16 +459,29 @@ set_option maxHeartbeats 0
         out.append('def rho_%s : ℚ := %s\n' % (tag, q(c['rho'])))
         out.append('theorem check_%s_ok : ForsPotential.checkSmallF %d %d %d rho_%s small_%s.cthr small_%s.B\n'
                    '    ((2 ^ %d * near_%s.En : ℚ) / 2) = true := by decide +kernel\n' % (tag, b, N, c['qh'], tag, tag, tag, b, tag))
-        for k, o in enumerate(c['opts']):
-            out.append('/-- Large-route option %d. -/' % k)
-            out.append('def large_%s_%d : OptF := %s\n' % (tag, k, lean_opt(o)))
-        out.append('/-- The large-route cover of every budget from `qh + 1` to `2^127`. -/')
-        opts = ', '.join('large_%s_%d' % (tag, k) for k in range(len(c['opts'])))
-        ents = ',\n    '.join('(%d, %d, %d)' % e for e in c['entries'])
-        out.append('def cover_%s : CoverW where\n  tab := tab_%s\n  opts := [%s]\n  entries := [\n    %s]\n' %
-                   (tag, tag, opts, ents))
-        out.append('theorem cover_%s_ok : checkCoverW %d %d %d cover_%s = true := by decide +kernel\n' %
-                   (tag, b, N, c['qh'] + 1, tag))
+        for kind, lst, chk in (('', c['covers'], 'checkCoverW'), ('h', c['heavy'], 'checkCoverH')):
+            for ci, cv in enumerate(lst):
+                out.append('/-- Poisson table of %scover %d (budgets up to %d). -/' % ('heavy ' if kind else '', ci, cv['qtop']))
+                out.append('def tabc%s_%s_%d : PoisT := %s\n' % (kind, tag, ci, lean_tab(cv['t'])))
+                for k, o in enumerate(cv['opts']):
+                    out.append('/-- Option %d of %scover %d. -/' % (k, 'heavy ' if kind else '', ci))
+                    out.append('def large%s_%s_%d_%d : OptF := %s\n' % (kind, tag, ci, k, lean_opt(o)))
+                opts = ', '.join('large%s_%s_%d_%d' % (kind, tag, ci, k) for k in range(len(cv['opts'])))
+                ents = ',\n    '.join('(%d, %d, %d)' % e for e in cv['entries'])
+                out.append('/-- %s %d: every budget from %d to %d. -/' % ('Heavy cover (one heavy message, one spare slot)' if kind else 'Cover', ci, cv['qstart'], cv['qtop']))
+                out.append('def cover%s_%s_%d : CoverW where\n  qtop := %d\n  tab := tabc%s_%s_%d\n  opts := [%s]\n  entries := [\n    %s]\n' %
+                           (kind, tag, ci, cv['qtop'], kind, tag, ci, opts, ents))
+                out.append('theorem cover%s_%s_%d_ok : %s %d %d %d cover%s_%s_%d = true := by decide +kernel\n' %
+                           (kind, tag, ci, chk, b, N, cv['qstart'], kind, tag, ci))
+        if c['complete']:
+            names = ', '.join('cover_%s_%d' % (tag, ci) for ci in range(len(c['covers'])))
+            hnames = ', '.join('coverh_%s_%d' % (tag, ci) for ci in range(len(c['heavy'])))
+            out.append('/-- The covers reach every budget below `2^127`. -/')
+            out.append('theorem covers_%s_ok : ForsPotential.checkCoversH %d %d %d [%s] [%s] = true := by' % (tag, b, N, c['qh'] + 1, names, hnames))
+            lems = ', '.join(['cover_%s_%d_ok' % (tag, ci) for ci in range(len(c['covers']))] +
+                             ['coverh_%s_%d_ok' % (tag, ci) for ci in range(len(c['heavy']))])
+            out.append('  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, %s, Bool.true_and]' % lems)
+            out.append('  decide +kernel\n')
     out.append('end LeanForest.Security.H0\n')
     open(path, 'w').write('\n'.join(out))
 
@@ -471,12 +515,17 @@ open Security ForsPotential
                    % (b, N, 100.0 * N / ATTACK[b], ATTACK[b], FORS[b]))
         out.append('abbrev %s : Params := ⟨%d, %d, by decide⟩\n' % (name, b, N))
         out.append('/-- **127 bits for the deterministic signer** at subtree height %d and %d signatures. -/' % (b, N))
+        if not c['complete']:
+            out.append('-- The covers of this height stop below 2^127: no theorem yet.\n')
+            continue
+        names = ', '.join('H0.cover_%s_%d' % (tag, ci) for ci in range(len(c['covers'])))
+        hnames = ', '.join('H0.coverh_%s_%d' % (tag, ci) for ci in range(len(c['heavy'])))
         out.append('theorem %s_bits : @Det.HasClassicalSecurityBitsDet %s 127 :=' % (name, name))
-        out.append('  @det_bitsF %s (by decide) %d %d rfl rfl %d H0.rho_%s H0.tab_%s H0.small_%s H0.near_%s H0.tab_%s_ok\n'
-                   '    H0.rate_%s_ok H0.small_%s_ok H0.near_%s_ok H0.check_%s_ok H0.cover_%s H0.cover_%s_ok\n'
-                   % (name, b, N, c['qh'], tag, tag, tag, tag, tag, tag, tag, tag, tag, tag, tag))
+        out.append('  @det_bitsFH %s (by decide) %d %d rfl rfl %d H0.rho_%s H0.tab_%s H0.small_%s H0.near_%s H0.tab_%s_ok\n'
+                   '    H0.rate_%s_ok H0.small_%s_ok H0.near_%s_ok H0.check_%s_ok [%s] [%s] H0.covers_%s_ok\n'
+                   % (name, b, N, c['qh'], tag, tag, tag, tag, tag, tag, tag, tag, tag, names, hnames, tag))
     order = [26, 20, 14, 13, 12, 10, 8]
-    have = {c['b'] for c in certs}
+    have = {c['b'] for c in certs if c['complete']}
     if all(b in have for b in order):
         out.append('/-- **The forest lifetimes**: 127 bits at every subtree height. -/')
         out.append('theorem requestedSecurity :\n    ' + ' ∧\n    '.join(
@@ -540,7 +589,7 @@ if __name__ == '__main__':
             rate = Fr(N * 134, 2 ** b * 2 ** 15)
             near = (2 - rho + x + rate) * qh * c
             print('lx %s: rho %.6f 2^128B %.5f coin %.5f near %.5f lhs %.6f rate ok %s' % (
-                lx, float(rho), float(2 ** 128 * o.B), float(Fr(qh, 2 ** 128 - (qh + 2 ** 32))), float(near),
+                lx, float(rho), float(2 ** 128 * o.B), float(Fr((2 * scanMb(b) - 1) * qh, scanMb(b) * 2 ** 129)), float(near),
                 float(small_lhs(b, N, qh, rho, o.B, c)), rate <= rho - 1 - x), flush=True)
     elif cmd == 'emit':
         certs = []

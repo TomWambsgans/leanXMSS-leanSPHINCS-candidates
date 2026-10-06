@@ -21,9 +21,13 @@ outputs) with the few-time signature under each tree leaf replaced by a **two-le
 * an opening reveals, per coordinate and sub-tree, `x_{i, 4 - d_i}` for the 6 chains and the 3 auth
   nodes of the sub-tree, then the 4 auth nodes of the top tree.
 
-Everything that is not the forest (parameters, tweak layout, WOTS+C, the tree, pruning, grinding, key
-generation) is `LeanSphincs.Scheme` verbatim. Forest hashes use tags 14 (secret derivation) and 15 to
-20 in the same 16-byte tweak layout, with the instance `idx` in the 32-bit index field.
+Everything that is not the forest (parameters, WOTS+C, the tree, pruning, grinding, key generation)
+is `LeanSphincs.Scheme` verbatim. Every hash input is `P || A || payload`: the 16-byte public
+parameter, then the 8-byte address of the call (a 32-bit field `lo`, a 24-bit field `hi`, and one
+byte holding the type and a chain step). Forest hashes use types 14 (secret derivation) and 15 to
+20, with the instance `idx` in `lo` and the position inside the instance in `hi`. The message digest
+hashes `m || 0^8 || rho` (the root is not hashed: `P` binds the key) and the randomizer derivation
+`S || m || ctr`: what changes between two grinding attempts comes last.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -70,8 +74,8 @@ abbrev Counter := BitVec counterBits
 abbrev Layer := Fin numLayers
 /-- `idx`, the leaf and the forest instance a digest selects. -/
 abbrev Index := Fin (2 ^ totalHeight)
-/-- `tau`, always `0`: the scheme has one tree. -/
-abbrev TreeIndex := Fin (2 ^ totalHeight)
+/-- `tau`, always `0`: the scheme has one tree, and a hash address has no tree field. -/
+abbrev TreeIndex := Fin 1
 /-- `e`, a leaf of the tree. -/
 abbrev LeafIndex := Fin (2 ^ maxLayerHeight)
 abbrev ChainIndex := Fin numChains
@@ -211,41 +215,36 @@ def bytesLE (byteCount : Nat) (value : BitVec (8 * byteCount)) : List UInt8 :=
   List.ofFn fun index : Fin byteCount =>
     UInt8.ofBitVec (value.extractLsb' (8 * index.val) 8)
 
-/-- The five fields of `tweak(t, lay, tau, p, j)` in `crates/sphincs`. -/
+/-- The address of a hash call (`Tweak` in `crates/sphincs`): its type `tag < 32`, a chain step
+`step < 8`, and two fields `hi < 2^24` and `lo < 2^32`. -/
 structure TweakFields where
-  tag : BitVec 8
-  layer : BitVec 8
-  tree : BitVec 32
-  position : BitVec 32
-  index : BitVec 32
+  tag : BitVec 5
+  step : BitVec 3
+  hi : BitVec 24
+  lo : BitVec 32
 deriving DecidableEq
 
-/-- The protocol domain separator. -/
-def protocolDomainSep : UInt8 := 1
-
-/-- The 16 tweak bytes `protocol_domain_sep || t || lay || 0 || p || tau || j`, each field least
-significant byte first. -/
+/-- The 8 address bytes `lo || hi || (tag + 32 * step)`: `lo` on 4 bytes, `hi` on 3 bytes, each
+least significant byte first, then the type byte. -/
 def fieldBytes (fields : TweakFields) : HashInput :=
-  [protocolDomainSep] ++ bytesLE 1 fields.tag ++ bytesLE 1 fields.layer ++ [0] ++
-    bytesLE 4 fields.position ++ bytesLE 4 fields.tree ++ bytesLE 4 fields.index
+  bytesLE 4 fields.lo ++ bytesLE 3 fields.hi ++ bytesLE 1 (fields.step ++ fields.tag)
 
-/-- Convert the five integer fields to their fixed widths. -/
-def tweakFields (tag layer tree position index : Nat) : TweakFields :=
-  ⟨BitVec.ofNat 8 tag, BitVec.ofNat 8 layer, BitVec.ofNat 32 tree,
-    BitVec.ofNat 32 position, BitVec.ofNat 32 index⟩
+/-- Convert the four integer fields to their fixed widths. -/
+def tweakFields (tag step hi lo : Nat) : TweakFields :=
+  ⟨BitVec.ofNat 5 tag, BitVec.ofNat 3 step, BitVec.ofNat 24 hi, BitVec.ofNat 32 lo⟩
 
 /-! ### Forest addresses -/
 
-/-- `((c · 16 + s) · 2 + j)`, a sub-tree of the instance. -/
-def subSlot (c : Coord) (s : SuperIdx) (j : SubIdx) : Nat := (c.val * 2 ^ topHeight + s.val) * 2 + j.val
+/-- `c + 8 s + 128 j`, a sub-tree of the instance (3 + 4 + 1 bits). -/
+def subSlot (c : Coord) (s : SuperIdx) (j : SubIdx) : Nat := c.val + 8 * s.val + 128 * j.val
 
-/-- A child of the instance. -/
+/-- `c + 8 s + 128 j + 256 a`, a child of the instance (11 bits). -/
 def childSlot (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) : Nat :=
-  subSlot c s j * 2 ^ subHeight + a.val
+  subSlot c s j + 256 * a.val
 
-/-- A chain of the instance. -/
+/-- `c + 8 s + 128 j + 256 a + 2048 i`, a chain of the instance. -/
 def chainSlot (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) : Nat :=
-  childSlot c s j a * childChains + i.val
+  childSlot c s j a + 2048 * i.val
 
 /-- The verification hash domains. Seed derivation uses `KeygenDomain`. Forest levels count from the
 leaves: a `subNode` at `level` is the node of sub-tree level `level + 1`, a `topNode` at `level` the
@@ -264,38 +263,39 @@ inductive HashDomain where
   | message
 deriving DecidableEq
 
-/-- The tweak fields of a hash domain (`TWEAK_CHAIN = 1`, ..., `TWEAK_MSG = 12`; forest tags 15 to
-20). In the tree the layer and tree fields are `0`; in a forest instance the index field is `idx`,
-the layer field a tree level and the position field the flattened forest address. -/
+/-- The address of a hash domain: types `TWEAK_CHAIN = 1`, ..., `TWEAK_MSG = 12`, forest types 15 to
+20. In the tree `lo` is the leaf (or the node index) and `hi` the chain (or the node level); a chain
+step carries its step. In a forest instance `lo` is `idx` and `hi` the packed position; a forest chain
+step from position `t` carries step `t`. The layer and the tree, always `0`, are not addressed. -/
 def hashDomainFields : HashDomain → TweakFields
-  | .chain lay tree leaf chainIdx step => tweakFields 1 lay tree (chainLength * chainIdx + step) leaf
-  | .leaf lay tree leaf => tweakFields 2 lay tree 0 leaf
-  | .node lay tree level nodeIdx => tweakFields 3 lay tree level nodeIdx
-  | .encoding lay tree leaf => tweakFields 4 lay tree 0 leaf
-  | .fchain index c s j a i t => tweakFields 15 0 0 (chainSlot c s j a i * chainTop + t.val) index
-  | .childLeaf index c s j a => tweakFields 16 0 0 (childSlot c s j a) index
+  | .chain _ _ leaf chainIdx step => tweakFields 1 step chainIdx leaf
+  | .leaf _ _ leaf => tweakFields 2 0 0 leaf
+  | .node _ _ level nodeIdx => tweakFields 3 0 level nodeIdx
+  | .encoding _ _ leaf => tweakFields 4 0 0 leaf
+  | .fchain index c s j a i t => tweakFields 15 t (chainSlot c s j a i) index
+  | .childLeaf index c s j a => tweakFields 16 0 (childSlot c s j a) index
   | .subNode index c s j level node =>
-      tweakFields 17 (level.val + 1) 0 (subSlot c s j * 2 ^ subHeight + node.val) index
-  | .superChild index c s => tweakFields 18 0 0 (c.val * 2 ^ topHeight + s.val) index
-  | .topNode index c level node => tweakFields 19 (level.val + 1) 0 (c.val * 2 ^ topHeight + node.val) index
-  | .roots index => tweakFields 20 0 0 0 index
-  | .message => tweakFields 12 0 0 0 0
+      tweakFields 17 0 (subSlot c s j + 256 * (level.val + 1) + 1024 * node.val) index
+  | .superChild index c s => tweakFields 18 0 (c.val + 8 * s.val) index
+  | .topNode index c level node => tweakFields 19 0 (c.val + 8 * (level.val + 1) + 64 * node.val) index
+  | .roots index => tweakFields 20 0 0 index
+  | .message => tweakFields 12 0 0 0
 
-/-- The exact 16 bytes of a hash domain's tweak. -/
+/-- The exact 8 address bytes of a hash domain. -/
 def tweakBytes (domain : HashDomain) : HashInput :=
   fieldBytes (hashDomainFields domain)
 
-/-- The random-oracle input `tweak || parameter || message` of every tweakable hash call and of the
-message digest. -/
+/-- The random-oracle input `P || A || payload` of every tweakable hash call and of the message
+digest. -/
 def tweakableHashInput (parameter : PublicParameter) (domain : HashDomain)
     (message : HashInput) : HashInput :=
-  tweakBytes domain ++ bytesLE 16 parameter ++ message
+  bytesLE 16 parameter ++ tweakBytes domain ++ message
 
-/-- `tweak(7, 0, 0, ctr, 0) || P || S || m` (`TWEAK_RANDOMIZER = 7`). -/
+/-- `P || A(7, 0, 0) || S || m` (`TWEAK_RANDOMIZER = 7`): the randomizer base of a message. -/
 def randomizerHashInput (parameter : PublicParameter) (seed : MasterSeed)
-    (message : Message) (trial : BitVec 32) : HashInput :=
-  fieldBytes ⟨7#8, 0#8, 0#32, trial, 0#32⟩ ++
-    bytesLE 16 parameter ++ bytesLE 32 seed ++ bytesLE 32 message
+    (message : Message) : HashInput :=
+  bytesLE 16 parameter ++ fieldBytes ⟨7#5, 0#3, 0#24, 0#32⟩ ++
+    bytesLE 32 seed ++ bytesLE 32 message
 
 /-- The values derived from the seed. `forest` is the secret `x_{i,0}` of chain `i` of child
 `(idx, c, s, j, a)`. -/
@@ -306,17 +306,18 @@ inductive KeygenDomain where
   | surrogate (level : Fin totalHeight)
 deriving DecidableEq
 
-/-- `TWEAK_PARAMETER = 5`, `TWEAK_PRF = 0`, `TWEAK_FOREST_PRF = 14`, `TWEAK_SURROGATE = 13`. -/
+/-- `TWEAK_PARAMETER = 5`, `TWEAK_PRF = 0` (`hi` the chain, `lo` the leaf), `TWEAK_FOREST_PRF = 14`
+(`hi` the packed chain, `lo = idx`), `TWEAK_SURROGATE = 13` (`hi` the level). -/
 def keygenDomainFields : KeygenDomain → TweakFields
-  | .parameter => tweakFields 5 0 0 0 0
-  | .ots lay tree leaf chain => tweakFields 0 lay tree chain leaf
-  | .forest index c s j a i => tweakFields 14 0 0 (chainSlot c s j a i) index
-  | .surrogate level => tweakFields 13 0 0 level 0
+  | .parameter => tweakFields 5 0 0 0
+  | .ots _ _ leaf chain => tweakFields 0 0 chain leaf
+  | .forest index c s j a i => tweakFields 14 0 (chainSlot c s j a i) index
+  | .surrogate level => tweakFields 13 0 level 0
 
-/-- `tweak || P || S`; parameter derivation uses `P = 0`. -/
+/-- `P || A || S`; parameter derivation uses `P = 0`. -/
 def keygenHashInput (parameter : PublicParameter) (domain : KeygenDomain)
     (seed : MasterSeed) : HashInput :=
-  fieldBytes (keygenDomainFields domain) ++ bytesLE 16 parameter ++ bytesLE 32 seed
+  bytesLE 16 parameter ++ fieldBytes (keygenDomainFields domain) ++ bytesLE 32 seed
 
 /-! ### The target-sum code
 
@@ -376,7 +377,7 @@ variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 def oracleHash (input : HashInput) : m HashOutput :=
   HasQuery.query (spec := HashSpec) (m := m) input
 
-/-- `Th(P, tw, M) = Truncate_n(H(tw || P || M))`. -/
+/-- `Th(P, tw, M) = Truncate_n(H(P || tw || M))`. -/
 def tweakableHash (parameter : PublicParameter) (domain : HashDomain) (payload : HashInput) :
     m Digest := do
   let output ← oracleHash (tweakableHashInput parameter domain payload)
@@ -385,9 +386,7 @@ def tweakableHash (parameter : PublicParameter) (domain : HashDomain) (payload :
 /-! ### The index -/
 
 /-- `tau`, the tree: `0`. -/
-def treeIndexAt (index : Index) (lay : Layer) : TreeIndex :=
-  ⟨index.val / 2 ^ (totalHeight - heightAbove lay),
-    Nat.lt_of_le_of_lt (Nat.div_le_self _ _) index.isLt⟩
+def treeIndexAt (_index : Index) (_lay : Layer) : TreeIndex := 0
 
 /-- `e = idx`, the leaf. -/
 def leafIndexAt (index : Index) (lay : Layer) : LeafIndex :=
@@ -401,7 +400,7 @@ def leafOfNat (value : Nat) : LeafIndex :=
   ⟨value % 2 ^ maxLayerHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩
 
 /-- `steps` chain steps from position `start`: the step onto position `start + steps + 1` carries
-tweak position `4 * i + start + steps` (`chain_tweak` with `to = start + steps + 1`). -/
+step `start + steps` (`chain_tweak` with `to = start + steps + 1`). -/
 def chainWalk (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
     (chainIdx : ChainIndex) : Nat → Nat → Digest → m Digest
   | _, 0, value => pure value
@@ -557,9 +556,11 @@ def forestRecover (parameter : PublicParameter) (index : Index) (marks : Coord �
 
 /-! ### The message digest -/
 
-/-- `rho || root || m`, what the message digest hashes after the tweak and the parameter. -/
-def messageDigestPayload (root : Digest) (message : Message) (randomness : Randomness) : HashInput :=
-  bytesLE 16 randomness ++ bytesLE 16 root ++ bytesLE 32 message
+/-- `m || 0^8 || rho`, what the message digest hashes after the parameter and the address. The eight
+zero bytes fill the first block, `P || A || m || 0^8`; the second block is the randomizer alone. The
+root is not hashed (`P` binds the key); the argument is kept for the callers. -/
+def messageDigestPayload (_root : Digest) (message : Message) (randomness : Randomness) : HashInput :=
+  bytesLE 32 message ++ bytesLE 8 0 ++ bytesLE 16 randomness
 
 /-- The single untruncated digest call (`digest_block`). -/
 def messageDigestCall (parameter : PublicParameter) (root : Digest) (message : Message)
@@ -574,7 +575,8 @@ def digestIndex (digest : MessageDigest) : Index :=
 def blockIndex (first : HashOutput) : Index :=
   (first.extractLsb' 0 totalHeight).toFin
 
-/-- `Digest(P, root, m, rho)` (`message_digest`): the single call, truncated to 234 bits. -/
+/-- `Digest(P, m, rho)` (`message_digest`): the single call, truncated to 234 bits. The root is not
+an input of the hash. -/
 def messageDigest (parameter : PublicParameter) (root : Digest) (message : Message)
     (randomness : Randomness) : m MessageDigest := do
   let first ← messageDigestCall parameter root message randomness
@@ -631,7 +633,7 @@ def verify (publicKey : PublicKey) (message : Message) (signature : Signature) :
 /-! ### Signing -/
 
 /-- The scheme has one tree, at index `0`. -/
-def rootTree : TreeIndex := ⟨0, Nat.two_pow_pos _⟩
+def rootTree : TreeIndex := 0
 
 /-- Run the layer, stopping on failure. -/
 def sequenceLayers {α : Layer → Type}
@@ -649,7 +651,8 @@ section Pruning
 
 variable [Params]
 
-/-- `s`, the kept subtree: the low `h - b` bits of `P` (`0` for a full key). -/
+/-- `s`, the kept subtree: the low `h - b` bits of `P`, read as a little-endian number (`0` for a
+full key). -/
 def subtreePosition (parameter : PublicParameter) : Nat :=
   parameter.toNat % 2 ^ (totalHeight - subtreeHeight)
 
@@ -668,8 +671,8 @@ def deriveKey {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
 def deriveRandomizer {m : Type → Type} [Monad m] [HasQuery HashSpec m]
     (parameter : PublicParameter) (seed : MasterSeed)
-    (message : Message) (trial : BitVec 32) : m Randomness := do
-  return truncateHash (← Concrete.oracleHash (randomizerHashInput parameter seed message trial))
+    (message : Message) : m Randomness := do
+  return truncateHash (← Concrete.oracleHash (randomizerHashInput parameter seed message))
 
 noncomputable def sampleMasterSeed : ProbComp MasterSeed :=
   letI := SampleableType.ofFintype MasterSeed
@@ -865,20 +868,20 @@ def signLayer (secretKey : SecretKey) (index : Index) (lay : Layer) : m (Option 
   let path ← treePath secretKey.parameter lay tree secretKey.seed leaf
   return some ⟨counter, values, path⟩
 
-/-- Grind randomizers in increasing order, stopping at the first that lands in the kept subtree. -/
-def signDigestLoop (secretKey : SecretKey) (message : Message) : Nat → Nat →
+/-- Try `randomness, randomness + 1, ...`, stopping at the first that lands in the kept subtree. -/
+def signDigestLoop (secretKey : SecretKey) (message : Message) : Nat → Randomness →
     m (Option (Randomness × Index))
   | 0, _ => pure none
-  | attempts + 1, trial => do
-      let randomness ← deriveRandomizer secretKey.parameter secretKey.seed message (BitVec.ofNat 32 trial)
+  | attempts + 1, randomness => do
       match ← signAttempt secretKey message randomness with
       | some index => return some (randomness, index)
-      | none => signDigestLoop secretKey message attempts (trial + 1)
+      | none => signDigestLoop secretKey message attempts (randomness + 1)
 
-/-- `Sign`: grind the randomizer into the kept subtree, compute the digest, open the forest, sign its
-key with WOTS+C and attach the path. -/
+/-- `Sign`: derive the randomizer base `R0` of the message (one hash), scan `R0, R0 + 1, ...` into
+the kept subtree, compute the digest, open the forest, sign its key with WOTS+C and attach the path. -/
 def sign (secretKey : SecretKey) (message : Message) : m (Option Signature) := do
-  let some (randomness, _) ← signDigestLoop secretKey message digestAttemptLimit 0
+  let base ← deriveRandomizer secretKey.parameter secretKey.seed message
+  let some (randomness, _) ← signDigestLoop secretKey message digestAttemptLimit base
     | return none
   let digest ← messageDigest secretKey.parameter secretKey.root message randomness
   let index := digestIndex digest

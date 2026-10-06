@@ -38,6 +38,14 @@ noncomputable def finalA4 (K : Ctx) (root : Digest) : FinalF := fun o R s =>
   o.elim 0 fun outcome =>
     Pr[fun T => SigningTranscript.Valid outcome.2.1 ∧ A4ev K root T s outcome R | completion s.known]
 
+/-- The final value of A4 is at most one. -/
+theorem finalA4_le_one (K : Ctx) (root : Digest) (o : Option HiddenBridge.Outcome) (R : List Coordinate)
+    (s : State) : finalA4 K root o R s ≤ 1 := by
+  unfold finalA4
+  cases o with
+  | none => exact zero_le_one
+  | some outcome => exact probEvent_le_one
+
 /-! ### The end of the game -/
 
 section Final
@@ -46,11 +54,12 @@ variable (K : Ctx) (data : PublicData) (wbar κ : ℝ≥0∞) (Fail : Finset (Fi
   (model : HiddenRows.Model HashInput HashOutput Address Coordinate)
 
 /-- A near cover of a valid finished game makes the near potential at least one. -/
-theorem potNF_ge_of_near (hw : wbar ≤ 1) {budget : ℕ} {s : State} {P : List Pair} {d : Multiset View}
-    {R : List Coordinate} (hB : BInvF K data Qtot model s P d R budget) {T : Coordinate → Digest}
+theorem potNF_ge_of_near (hw : wbar ≤ 1) {budget : ℕ} {s : State} {P : List Pair} {Ms : List Message}
+    {d : Multiset View}
+    {R : List Coordinate} (hB : BInvF K data Qtot model s P Ms d R budget) {T : Coordinate → Digest}
     {forgery : Forgery} {L : QueryLog SigningSpec} {verified : Bool}
     (h : ForestNearRecorded s T K data.root (forgery, L, verified) R) :
-    1 ≤ potNF K data wbar Fail s P L d budget := by
+    1 ≤ potNF K data wbar Fail s P Ms L d budget := by
   obtain ⟨hvalid, digest, hdig, hland, hunsigned, c, j, i, t, -, hcov⟩ := h
   set q : Pair := (forgery.message, forgery.signature.randomness) with hq
   unfold HiddenBridge.cachedDigest at hdig
@@ -81,29 +90,23 @@ theorem potNF_ge_of_near (hw : wbar ≤ 1) {budget : ℕ} {s : State} {P : List 
       rw [if_pos (show Unsigned L q from hunsigned)]
       split_ifs
       · exact le_rfl
-      · unfold candValueG
-        calc (1 : ℝ≥0∞) ≤ witnessNear (pview K.p data s q) d := by
+      · calc (1 : ℝ≥0∞) ≤ witnessNear (pview K.p data s q) d := by
               rw [hv]
               exact nearWitness_pos hB.dinv _ c j i hcov
-          _ ≤ virtualOnce Finset.univ wbar (witnessNear (pview K.p data s q))
-                (signatureLimit - L.length) (coinItems K.p data s L (P.erase q)) d :=
-              base_le_virtualOnceM Finset.univ_nonempty hw (witnessNear_props _).1 _ _ d
-          _ ≤ _ := creations_mono_count (k := 0) Finset.univ_nonempty landing_le_one
-                (virtualOnce_cons_le' wbar hw (witnessNear_props _) _ d) (virtualOnce_perm' wbar _ d)
-                (Nat.zero_le _) _
+          _ ≤ _ := base_le_candValueG wbar witnessNear_props hw s Ms L d _ _ q
 
 /-- **The end of the game.** -/
-theorem psiF_final (hw : wbar ≤ 1) :
-    FinalPaysF K data Qtot model (psiF K data wbar κ Fail) (finalA4 K data.root) := by
-  intro budget s P L d R hB forgery verified
+theorem psiF_final (hw : wbar ≤ 1) (Lmax : ℕ) :
+    FinalPaysF K data Qtot model (psiF K data wbar κ Fail Lmax) (finalA4 K data.root) := by
+  intro budget s P Ms L d R hB forgery verified
   simp only [finalA4, Option.elim]
   by_cases hL : signatureLimit < L.length
   · refine le_of_eq_of_le (probEvent_eq_zero fun T _ h => ?_) zero_le
     exact absurd h.1 (by simp [SigningTranscript.Valid]; omega)
-  unfold psiF
+  unfold psiF psiCoreF
   rw [if_neg hL]
-  refine le_trans ?_ (le_trans le_self_add le_self_add)
-  set near : Prop := 1 ≤ potNF K data wbar Fail s P L d budget with hnear
+  refine le_trans ?_ (le_trans le_self_add (le_trans le_self_add le_self_add))
+  set near : Prop := 1 ≤ potNF K data wbar Fail s P Ms L d budget with hnear
   have hsub : ∀ T, SigningTranscript.Valid L ∧ A4ev K data.root T s (forgery, L, verified) R →
       ∃ f ∈ (Finset.univ : Finset FIn), K.FCT T s f ∧ Ctx.Recd s f ∧ (Settled R f ∨ near) := by
     rintro T ⟨-, h | h⟩
@@ -118,7 +121,7 @@ theorem psiF_final (hw : wbar ≤ 1) :
     _ ≤ ∑ f ∈ (Finset.univ : Finset FIn),
           Pr[fun T => K.FCT T s f ∧ Ctx.Recd s f ∧ (Settled R f ∨ near) | completion s.known] :=
         probEvent_exists_finset_le_sum _ _ _
-    _ ≤ K.wsum (gA R (coefU K data wbar Fail s P L d budget)) s := by
+    _ ≤ K.wsum (gA R (coefU K data wbar Fail s P Ms L d budget)) s := by
         unfold Ctx.wsum
         refine Finset.sum_le_sum fun f _ => ?_
         by_cases hc : Ctx.Recd s f ∧ (Settled R f ∨ near)
@@ -126,7 +129,7 @@ theorem psiF_final (hw : wbar ≤ 1) :
           calc Pr[fun T => K.FCT T s f ∧ Ctx.Recd s f ∧ (Settled R f ∨ near) | completion s.known]
               ≤ Pr[fun T => K.FCT T s f | completion s.known] := probEvent_mono fun T _ h => h.1
             _ = K.cw s f := K.prob_fct s f
-            _ ≤ gA R (coefU K data wbar Fail s P L d budget) f * K.cw s f := by
+            _ ≤ gA R (coefU K data wbar Fail s P Ms L d budget) f * K.cw s f := by
                 refine le_mul_of_one_le_left zero_le ?_
                 unfold gA
                 split_ifs with hS
@@ -153,27 +156,32 @@ variable (K : Ctx) (data : PublicData) (wbar κ : ℝ≥0∞) (Fail : Finset (Fi
 include hMp hMi hMo in
 /-- **The contact bound.** In the lazy run of the rest of the game of an adversary that never
 repeats a message, a valid finished game with the event A4 has chance at most the start potential
-plus `2^-128 N rate + payB` per expected forest step query, once `2^-128 ≤ payB + κ 2^-128`. -/
+(the coin risk `total (2 − landing)/2^128` per contact, the near forecasts and the cap term
+`lam Lmax 0 total`) plus `2^-128 N rate + payB` per expected forest step query, once
+`2^-128 ≤ payB + κ 2^-128`. -/
 theorem a4F_bound (hparse : ∀ p, model.parse (pblk K.p data p) = none)
     (hclean : ∀ p, K.initial (pblk K.p data p) = none)
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared K.initial s1 →
       ∀ out ∈ support (interp K.tg K.initial model (finishRest K.p data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
-    (total : ℕ) {Cmax : ℕ} (hfair : Fair wbar Cmax) (hQ : total + digestAttemptLimit ≤ Cmax)
+    (total : ℕ) {Cmax Lmax : ℕ} (hfair : FairS wbar Cmax Lmax) (hQ : total ≤ Cmax)
     {payB : ℝ≥0∞} (hκ : ν ≤ payB + κ * ν)
     (M : OracleComp (OracleWorld + SigningSpec) Forgery) (hnr : NoRepeat M [])
     (known : HiddenReveal.Knowledge Coordinate) (hinv : K.Inv (DebtState.start K.initial known)) :
     ∑' out, Pr[= out | interp K.tg K.initial model (advProg K.p data M []) total (DebtState.start K.initial known)] *
         finalA4 K data.root out.1.1 out.1.2.1 out.2 ≤
-      psiF K data wbar κ Fail (DebtState.start K.initial known) [] [] 0 [] total +
+      (ν * (((Nat.choose total 2 : ℕ) : ℝ≥0∞) * rateS) +
+        κ * ν * ∑ j ∈ Finset.range total, ((j : ℝ≥0∞) * (startNearF wbar j + failMass Fail) +
+          signatureLimit * failMass Fail) + lam Lmax 0 total) +
         (ν * ((signatureLimit : ℝ≥0∞) * revRate) + payB) *
-          expCount K model (IsFchainIn K.p) (advProg K.p data M []) total (DebtState.start K.initial known) :=
-  final_le_startF K data model (IsFchainIn K.p) _ hMp hMi hparse
+          expCount K model (IsFchainIn K.p) (advProg K.p data M []) total (DebtState.start K.initial known) := by
+  rw [← psiF_start K data wbar κ Fail Lmax known total]
+  exact final_le_startF K data model (IsFchainIn K.p) _ hMp hMi hparse
     (fun p => by rintro ⟨f, hf⟩; exact msg_ne_fchain (msgInput_digestInput K.p data.root p.1 p.2) hf) hclean total
-    (fun _ _ => rfl) (psiF_newPair K data wbar κ Fail total model hfair.le_one)
-    (psiF_ordinary K data wbar κ Fail total model hMp hMi hfair.le_one hκ)
-    (psiF_sign K data wbar κ Fail total model hMp hMi hMo hparse hfail hfair hQ)
-    (psiF_final K data wbar κ Fail total model hfair.le_one) M hnr known hinv
+    (fun _ _ => rfl) (finalA4_le_one K data.root) (psiF_newPair K data wbar κ Fail total model hfair hQ)
+    (psiF_ordinary K data wbar κ Fail total model hMp hMi hfair.le_one hκ Lmax)
+    (psiF_sign K data wbar κ Fail total model hMp hMi hMo hparse hfail hfair.le_one Lmax)
+    (psiF_final K data wbar κ Fail total model hfair.le_one Lmax) M hnr known hinv
 
 end Bound
 

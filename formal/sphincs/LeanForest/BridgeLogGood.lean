@@ -73,9 +73,9 @@ attribute [local irreducible] ReferenceChoice.search encodingAttemptLimit Concre
 
 /-- A signing loop that returns a signature revealed exactly that signature's coordinates. -/
 theorem signLoop_revealed (parameter : PublicParameter) (data : PublicData) (message : Message)
-    (attempts : Nat) (result : RunResult (Option Signature))
+    (attempts : Nat) (randomness : Randomness) (result : RunResult (Option Signature))
     (hresult : result ∈ support (costRun f table (withReveals
-      (signCostSourceLoop parameter data message attempts)))) :
+      (signCostSourceLoop parameter data message attempts randomness)))) :
     ∀ signature, result.1.1 = some signature →
       (∃ pair, firstEncoding f parameter topLayer rootTree
         (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message signature.randomness :
@@ -83,7 +83,7 @@ theorem signLoop_revealed (parameter : PublicParameter) (data : PublicData) (mes
         (data.forestKey (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message
           signature.randomness : OracleComp HashSpec MessageDigest)))) encodingAttemptLimit 0 = some pair) ∧
       result.1.2 = revealsOf f parameter data message signature.randomness := by
-  induction attempts generalizing result with
+  induction attempts generalizing result randomness with
   | zero =>
       rw [signCostSourceLoop, costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at hresult
       subst result
@@ -91,20 +91,18 @@ theorem signLoop_revealed (parameter : PublicParameter) (data : PublicData) (mes
       cases h
   | succ attempts ih =>
       rw [signCostSourceLoop] at hresult
-      obtain ⟨r1, h1, r2, h2, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
-      obtain ⟨hr1, -⟩ := costRun_withReveals_liftProb f table _ r1 h1
-      obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ r2 h2
+      obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
       obtain rfl := costRun_withReveals_liftHash f table _ r3 h3
       dsimp only at h4 ⊢
-      rw [hr1, List.nil_append, List.nil_append]
+      rw [List.nil_append]
       split at h4
-      · obtain ⟨hvalue, hreveals⟩ := finish_support f table parameter data message r1.1.1 r4 h4
+      · obtain ⟨hvalue, hreveals⟩ := finish_support f table parameter data message randomness r4 h4
         intro signature hsome
-        obtain ⟨hrandomness, hpair⟩ := assembled_some f table parameter data message r1.1.1 signature
+        obtain ⟨hrandomness, hpair⟩ := assembled_some f table parameter data message randomness signature
           (hvalue ▸ hsome)
         rw [hrandomness]
         exact ⟨hpair, hreveals⟩
-      · exact ih r4 h4
+      · exact ih (randomness + 1) r4 h4
 
 /-- A signature returned by the signer revealed exactly that signature's coordinates. -/
 theorem sign_revealed (parameter : PublicParameter) (data : PublicData) (message : Message)
@@ -116,8 +114,13 @@ theorem sign_revealed (parameter : PublicParameter) (data : PublicData) (message
           OracleComp HashSpec MessageDigest)))
         (data.forestKey (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message
           signature.randomness : OracleComp HashSpec MessageDigest)))) encodingAttemptLimit 0 = some pair) ∧
-      result.1.2 = revealsOf f parameter data message signature.randomness :=
-  signLoop_revealed f table parameter data message _ result hresult
+      result.1.2 = revealsOf f parameter data message signature.randomness := by
+  rw [signCostSource] at hresult
+  obtain ⟨r1, h1, r2, h2, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
+  obtain ⟨hr1, -⟩ := costRun_withReveals_liftProb f table _ r1 h1
+  dsimp only
+  rw [hr1, List.nil_append]
+  exact signLoop_revealed f table parameter data message _ _ r2 h2
 
 /-- **Signed entries reveal their coordinates, along the interaction.** -/
 theorem interaction_revealed (parameter : PublicParameter) (data : PublicData)

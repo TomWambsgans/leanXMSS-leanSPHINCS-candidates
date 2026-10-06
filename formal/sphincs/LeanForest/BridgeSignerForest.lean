@@ -228,17 +228,6 @@ theorem finish_bound₁ (parameter : PublicParameter) (data : PublicData) (messa
 
 end FinishOne
 
-theorem signCostSourceLoop_succ (parameter : PublicParameter) (data : PublicData) (message : Message)
-    (attempts : ℕ) :
-    signCostSourceLoop parameter data message (attempts + 1) =
-      (liftM ($ᵗ Randomness : ProbComp Randomness) : OracleComp CostSpec Randomness) >>= fun randomness =>
-        liftM (CostSpec.query (.inl (.inr (.inl
-          (Security.digestInput parameter data.root message randomness))))) >>= fun first =>
-            if Landed parameter (blockIndex first) then finishCostSource parameter data message randomness
-            else signCostSourceLoop parameter data message attempts := by
-  rw [signCostSourceLoop]
-  rfl
-
 /-- The view of a digest block. -/
 def viewOf (u0 : HashOutput) : Lifetime.KeptDigestView :=
   Lifetime.localDigestView (truncateMessageDigest u0)
@@ -296,41 +285,6 @@ theorem fresh_view_mean (parameter : PublicParameter) (gf : Lifetime.KeptDigestV
   rw [← Finset.sum_mul, Domination.freshAvg, Finset.card_univ]
   ring
 
-
-omit [Params] in
-theorem loop_arith_real (a e u n N F l d : ℝ) (ha : 0 ≤ a) (he : 0 ≤ e) (hd : 0 ≤ d)
-    (hnNF : n * u + N + F ≤ 1) (hu : u ≤ e * (n * u + F * l)) :
-    u * (n * a + d) + N * (a + e * d) + F * (l * a + (1 - l) * (a + e * d)) ≤ a + e * d := by
-  nlinarith [mul_nonneg ha (by linarith : (0:ℝ) ≤ 1 - n * u - N - F),
-    mul_nonneg hd (by linarith : (0:ℝ) ≤ e * (n * u + F * l) - u),
-    mul_nonneg hd (mul_nonneg he (by linarith : (0:ℝ) ≤ 1 - n * u - N - F))]
-
-omit [Params] in
-/-- The fixed point of one grinding trial with a fair share: landed pool pairs (`n` of them, each
-picked with probability `u`), cached rejections (`N`), and fresh trials (`F`, landing with
-probability `l`). The pool's share is at most `e` per pair of its excess over the fresh value. -/
-theorem loop_arith (a S e u n N F l : ℝ≥0∞) (ha : a ≠ ⊤) (hS : S ≠ ⊤) (he : e ≠ ⊤) (hn : n ≠ ⊤)
-    (hut : u ≠ ⊤) (hnNF : n * u + N + F ≤ 1) (hl : l ≤ 1) (hu : u ≤ e * (n * u + F * l)) :
-    u * S + N * (a + e * (S - n * a)) + F * (l * a + (1 - l) * (a + e * (S - n * a))) ≤
-      a + e * (S - n * a) := by
-  set D := S - n * a with hD
-  have hDt : D ≠ ⊤ := ne_top_of_le_ne_top hS tsub_le_self
-  have hNt : N ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top (le_trans (le_trans le_add_self le_self_add) hnNF)
-  have hFt : F ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top (le_trans le_add_self hnNF)
-  have hlt : l ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top hl
-  have hSle : S ≤ n * a + D := le_add_tsub
-  calc _ ≤ u * (n * a + D) + N * (a + e * D) + F * (l * a + (1 - l) * (a + e * D)) := by gcongr
-    _ ≤ _ := ?_
-  have hl1 : (1 - l).toReal = 1 - l.toReal := by
-    rw [ENNReal.toReal_sub_of_le hl ENNReal.one_ne_top, ENNReal.toReal_one]
-  have hl1t : (1 - l) ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top tsub_le_self
-  rw [← ENNReal.toReal_le_toReal (by finiteness) (by finiteness)]
-  rw [← ENNReal.toReal_le_toReal (by finiteness) ENNReal.one_ne_top] at hnNF
-  rw [← ENNReal.toReal_le_toReal hut (by finiteness)] at hu
-  simp (disch := finiteness) only [ENNReal.toReal_add, ENNReal.toReal_mul, hl1,
-    ENNReal.toReal_one] at hnNF hu ⊢
-  exact loop_arith_real _ _ _ _ _ _ _ _ ENNReal.toReal_nonneg ENNReal.toReal_nonneg ENNReal.toReal_nonneg
-    hnNF hu
 
 section Loop
 
@@ -391,8 +345,7 @@ omit [Params] in
 theorem payload_randomness_injective (root : Digest) (message : Message) {ρ ρ' : Randomness}
     (h : messageDigestPayload root message ρ = messageDigestPayload root message ρ') : ρ = ρ' := by
   have hparts := List.append_inj h (by simp [bytesLE_length])
-  have hfirst := List.append_inj hparts.1 (by simp [bytesLE_length])
-  exact bytesLE_injective hfirst.1
+  exact bytesLE_injective hparts.2
 
 omit [Params] in
 theorem blk_ne_of_ne {ρ ρ' : Randomness} (h : ρ ≠ ρ') :
@@ -453,90 +406,6 @@ theorem outWeight_finish_le (reference : DebtState HashInput HashOutput Coordina
     subst hrand
     exact le_rfl
 
-/-- **One grinding trial.** -/
-theorem trial_boundW
-    (hparse : ∀ ρ, model.parse (blk parameter data message ρ) = none)
-    (reference : DebtState HashInput HashOutput Coordinate) (ρ : Randomness)
-    (gf : Lifetime.KeptDigestView → ℝ≥0∞) (gp : Randomness → Lifetime.KeptDigestView → ℝ≥0∞)
-    (W : Option (Option Signature) → DebtState HashInput HashOutput Coordinate → ℝ≥0∞)
-    (hWabort : ∀ s', W none s' = 0)
-    (hWfin : ∀ (s' : DebtState HashInput HashOutput Coordinate) (u0 : HashOutput) (b : ℕ),
-      RelatedOff parameter data message reference s' ρ → s'.cache (blk parameter data message ρ) = some u0 →
-      ∀ out ∈ support (interp tg initial model (finishCostSource parameter data message ρ) b s'),
-        W out.1.1 out.2 ≤ (if out.1.1.isSome then (out.2.cache (blk parameter data message ρ)).elim 0
-          (pairWeight parameter data message reference gf gp ρ) else 0))
-    (bound : ℝ≥0∞) (state : DebtState HashInput HashOutput Coordinate)
-    (hrel : Related parameter data message reference state) (attempts : ℕ)
-    (hih : ∀ s', Related parameter data message reference s' →
-      cachedCount parameter data message s' ≤ cachedCount parameter data message state + 1 → ∀ b,
-        ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message attempts) b s'] *
-          W out.1.1 out.2 ≤ bound)
-    (budget : ℕ) :
-    ∑' out, Pr[= out | interp tg initial model
-        (liftM (CostSpec.query (.inl (.inr (.inl (blk parameter data message ρ))))) >>= fun first =>
-          if Landed parameter (blockIndex first) then finishCostSource parameter data message ρ
-          else signCostSourceLoop parameter data message attempts) budget state] *
-        W out.1.1 out.2 ≤
-      (state.cache (blk parameter data message ρ)).elim
-        (∑' u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] *
-          (if Landed parameter (blockIndex u0) then gf (viewOf u0) else bound))
-        (fun u0 => if Landed parameter (blockIndex u0) then poolValue parameter data message reference gp ρ
-          else bound) := by
-  have hfinish : ∀ (s' : DebtState HashInput HashOutput Coordinate) (u0 : HashOutput) (b : ℕ),
-      RelatedOff parameter data message reference s' ρ → s'.cache (blk parameter data message ρ) = some u0 →
-      ∑' out, Pr[= out | interp tg initial model (finishCostSource parameter data message ρ) b s'] *
-          W out.1.1 out.2 ≤
-        pairWeight parameter data message reference gf gp ρ u0 := by
-    intro s' u0 b hrel' hs'
-    refine le_trans (ENNReal.tsum_le_tsum fun out => ?_) (finish_bound₁ tg initial model parameter data message ρ
-      (hparse ρ) s' u0 hs' _ b)
-    by_cases hout : out ∈ support (interp tg initial model (finishCostSource parameter data message ρ) b s')
-    · exact mul_le_mul_right (hWfin s' u0 b hrel' hs' out hout) _
-    · rw [probOutput_eq_zero_of_not_mem_support hout, zero_mul, zero_mul]
-  rw [interp_ordinary]
-  split_ifs with h1
-  · rw [ordinaryStep, hparse ρ]
-    simp only
-    rw [tsum_probOutput_bind_mul]
-    simp only [tsum_probOutput_map_mul]
-    cases hc : state.cache (blk parameter data message ρ) with
-    | some u0 =>
-        rw [readOutside_cached _ state u0 hc, tsum_probOutput_pure_mul]
-        simp only [Option.elim]
-        by_cases hl : Landed parameter (blockIndex u0)
-        · rw [if_pos hl, if_pos hl]
-          have href : reference.cache (blk parameter data message ρ) = some u0 := by
-            rcases hrel ρ with h | ⟨_, u, hu, hnl⟩
-            · rw [← h]; exact hc
-            · rw [hc] at hu; cases hu; exact absurd hl hnl
-          refine le_trans (hfinish state u0 _ (fun ρ' _ => hrel ρ') hc) (le_of_eq ?_)
-          simp [pairWeight, poolValue, href, hl]
-        · rw [if_neg hl, if_neg hl]
-          exact hih state hrel (Nat.le_succ _) _
-    | none =>
-        rw [readOutside_fresh _ state hc, tsum_probOutput_map_mul]
-        simp only [Option.elim]
-        have href : reference.cache (blk parameter data message ρ) = none := by
-          rcases hrel ρ with h | ⟨h, _⟩
-          · rw [← h]; exact hc
-          · exact h
-        refine ENNReal.tsum_le_tsum fun u0 => mul_le_mul_right ?_ _
-        by_cases hl : Landed parameter (blockIndex u0)
-        · rw [if_pos hl, if_pos hl]
-          refine le_trans (hfinish _ u0 _ (fun ρ' hρ' => by
-              rw [show (state.store (blk parameter data message ρ) u0).cache (blk parameter data message ρ') =
-                state.cache (blk parameter data message ρ') from
-                store_cache_ne state _ _ (blk_ne_of_ne parameter data message hρ') u0]
-              exact hrel ρ')
-            (by simp [DebtState.store])) (le_of_eq ?_)
-          simp only [pairWeight, href, if_true, if_pos hl]
-        · rw [if_neg hl, if_neg hl]
-          exact hih _ (related_store parameter data message reference state hrel ρ hc u0 hl)
-            (cachedCount_store parameter data message state ρ u0) _
-  · rw [tsum_probOutput_pure_mul]
-    rw [hWabort]
-    exact zero_le
-
 omit [Params] in
 theorem card_randomness : Fintype.card Randomness = 2 ^ 128 := HiddenDebt.card_digest
 
@@ -561,187 +430,6 @@ theorem unlanded_mass (parameter : PublicParameter) :
       _ = 1 := tsum_probOutput_eq_one' probFailure_eq_zero
   rw [landed_mass parameter] at htot
   exact ENNReal.eq_sub_of_add_eq' ENNReal.one_ne_top (by rw [add_comm]; exact htot)
-
-/-- **Fair share of the grinding signer.** With `n` cached landed pairs of the message in the
-reference state, the signed pair's weight is at most the fresh average `a` plus `e` times the pool's
-excess `S - n a`, whenever `2^-128 ≤ e (n 2^-128 + (2^128 - Cmax) 2^-128 landing)`. -/
-theorem loop_boundW
-    (hparse : ∀ ρ, model.parse (blk parameter data message ρ) = none)
-    (reference : DebtState HashInput HashOutput Coordinate)
-    (gf : Lifetime.KeptDigestView → ℝ≥0∞) (gp : Randomness → Lifetime.KeptDigestView → ℝ≥0∞)
-    (W : Option (Option Signature) → DebtState HashInput HashOutput Coordinate → ℝ≥0∞)
-    (hWabort : ∀ s', W none s' = 0)
-    (hWnone : ∀ s' : DebtState HashInput HashOutput Coordinate, Related parameter data message reference s' →
-      W (some none) s' = 0)
-    (hWfin : ∀ (ρ : Randomness) (s' : DebtState HashInput HashOutput Coordinate) (u0 : HashOutput) (b : ℕ),
-      RelatedOff parameter data message reference s' ρ → s'.cache (blk parameter data message ρ) = some u0 →
-      ∀ out ∈ support (interp tg initial model (finishCostSource parameter data message ρ) b s'),
-        W out.1.1 out.2 ≤ (if out.1.1.isSome then (out.2.cache (blk parameter data message ρ)).elim 0
-          (pairWeight parameter data message reference gf gp ρ) else 0))
-    (B : ℝ≥0∞) (hB : B ≠ ⊤) (hgf : ∀ v, gf v ≤ B) (hgp : ∀ ρ v, gp ρ v ≤ B)
-    (e : ℝ≥0∞) (he : e ≠ ⊤) (Cmax : ℕ) (hC : Cmax ≤ 2 ^ 128)
-    (hu : ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ ≤
-      e * ((landedCount parameter data message reference : ℝ≥0∞) * ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ +
-        (((2 ^ 128 - Cmax : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞)) * ForestPrice.landing)) :
-    ∀ attempts budget state, Related parameter data message reference state →
-      cachedCount parameter data message state + attempts ≤ Cmax →
-      ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message attempts) budget state] *
-          W out.1.1 out.2 ≤
-        Domination.freshAvg Finset.univ gf + e * (∑ ρ, poolValue parameter data message reference gp ρ -
-          (landedCount parameter data message reference : ℝ≥0∞) * Domination.freshAvg Finset.univ gf) := by
-  set S := ∑ ρ, poolValue parameter data message reference gp ρ with hS
-  set a := Domination.freshAvg Finset.univ gf with ha
-  set n : ℝ≥0∞ := (landedCount parameter data message reference : ℝ≥0∞) with hn
-  set Bnd := a + e * (S - n * a) with hBnd
-  intro attempts
-  induction attempts with
-  | zero =>
-      intro budget state hrel _
-      change ∑' out, Pr[= out | interp tg initial model (pure none) budget state] *
-        W out.1.1 out.2 ≤ _
-      rw [interp_pure, tsum_probOutput_pure_mul]
-      change W (some none) state ≤ _
-      rw [hWnone state hrel]
-      exact bot_le
-  | succ attempts ih =>
-      intro budget state hrel hcount
-      rw [signCostSourceLoop_succ, interp_liftProb_bind, tsum_probOutput_bind_mul]
-      have htrial := fun ρ => trial_boundW tg initial model parameter data message hparse reference ρ gf gp W
-        hWabort (hWfin ρ) Bnd state hrel attempts (fun s' hs' hcs b => ih b s' hs' (by omega)) budget
-      refine le_trans (ENNReal.tsum_le_tsum fun ρ => mul_le_mul_right (htrial ρ) _) ?_
-      set u : ℝ≥0∞ := ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ with hudef
-      have hpr : ∀ ρ, Pr[= ρ | ($ᵗ Randomness : ProbComp Randomness)] = u := by
-        intro ρ
-        rw [probOutput_uniformSample, card_randomness]
-      simp only [hpr, ENNReal.tsum_mul_left]
-      rw [tsum_fintype]
-      set Fr := Finset.univ.filter fun ρ : Randomness => state.cache (blk parameter data message ρ) = none
-      set NL := Finset.univ.filter fun ρ : Randomness => ∃ u0,
-        state.cache (blk parameter data message ρ) = some u0 ∧ ¬Landed parameter (blockIndex u0)
-      set LP := Finset.univ.filter fun ρ : Randomness => ∃ u0,
-        reference.cache (blk parameter data message ρ) = some u0 ∧ Landed parameter (blockIndex u0)
-      set fresh := ∑' u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] *
-        (if Landed parameter (blockIndex u0) then gf (viewOf u0) else Bnd)
-      have hpoint : ∀ ρ, (state.cache (blk parameter data message ρ)).elim fresh
-          (fun u0 => if Landed parameter (blockIndex u0) then poolValue parameter data message reference gp ρ
-            else Bnd) ≤
-          poolValue parameter data message reference gp ρ + (if ρ ∈ NL then Bnd else 0) +
-            (if ρ ∈ Fr then fresh else 0) := by
-        intro ρ
-        cases hc : state.cache (blk parameter data message ρ) with
-        | none =>
-            have hFr : ρ ∈ Fr := by simp [Fr, hc]
-            simp only [Option.elim, if_pos hFr]
-            exact le_add_self
-        | some u0 =>
-            have hFr : ρ ∉ Fr := by simp [Fr, hc]
-            simp only [Option.elim, if_neg hFr, add_zero]
-            split_ifs with hl hNL
-            · exact le_self_add
-            · exact le_self_add
-            · exact le_add_self
-            · rename_i hnot
-              exact absurd (Finset.mem_filter.2 ⟨Finset.mem_univ _, u0, hc, hl⟩) hnot
-      have hsum : ∑ ρ, (state.cache (blk parameter data message ρ)).elim fresh
-          (fun u0 => if Landed parameter (blockIndex u0) then poolValue parameter data message reference gp ρ
-            else Bnd) ≤ S + (NL.card : ℝ≥0∞) * Bnd + (Fr.card : ℝ≥0∞) * fresh := by
-        refine le_trans (Finset.sum_le_sum fun ρ _ => hpoint ρ) (le_of_eq ?_)
-        rw [Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_ite_mem, Finset.sum_ite_mem,
-          Finset.univ_inter, Finset.univ_inter, Finset.sum_const, Finset.sum_const, nsmul_eq_mul, nsmul_eq_mul]
-      have hfreshEq : fresh = ForestPrice.landing * a + (1 - ForestPrice.landing) * Bnd := by
-        have hsplit : fresh = (∑' u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] *
-              (if Landed parameter (blockIndex u0) then gf (viewOf u0) else 0)) +
-            Bnd * ∑' u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] *
-              (if Landed parameter (blockIndex u0) then 0 else 1) := by
-          rw [← ENNReal.tsum_mul_left, ← ENNReal.tsum_add]
-          refine tsum_congr fun u0 => ?_
-          split_ifs
-          · simp
-          · simp [mul_comm]
-        rw [hsplit, unlanded_mass parameter, fresh_view_mean parameter gf]
-        ring
-      have hpool : ∀ ρ, poolValue parameter data message reference gp ρ ≤ B := by
-        intro ρ
-        unfold poolValue
-        cases reference.cache (blk parameter data message ρ) with
-        | none => exact bot_le
-        | some u0 =>
-            simp only [Option.elim]
-            split_ifs
-            · exact hgp _ _
-            · exact bot_le
-      have hSfin : S ≠ ⊤ := ENNReal.sum_ne_top.2 fun ρ _ => ne_top_of_le_ne_top hB (hpool ρ)
-      have hafin : a ≠ ⊤ := Domination.freshAvg_ne_top Finset.univ_nonempty fun v => ne_top_of_le_ne_top hB (hgf v)
-      have hcard : Fr.card + cachedCount parameter data message state = 2 ^ 128 := by
-        rw [← card_randomness]
-        exact Finset.card_filter_add_card_filter_not _
-      have hdisj : LP.card + NL.card + Fr.card ≤ 2 ^ 128 := by
-        rw [← card_randomness, ← Finset.card_univ]
-        have h1 : Disjoint LP NL := by
-          refine Finset.disjoint_left.2 fun ρ h1 h2 => ?_
-          obtain ⟨_, u0, hr, hl⟩ := Finset.mem_filter.1 h1
-          obtain ⟨_, u1, hs, hnl⟩ := Finset.mem_filter.1 h2
-          rcases hrel ρ with h | ⟨h, _⟩
-          · rw [h, hr] at hs; cases hs; exact hnl hl
-          · rw [h] at hr; cases hr
-        have h2 : Disjoint (LP ∪ NL) Fr := by
-          refine Finset.disjoint_left.2 fun ρ h1 h2 => ?_
-          have hnone := (Finset.mem_filter.1 h2).2
-          rcases Finset.mem_union.1 h1 with h1 | h1
-          · obtain ⟨_, u0, hr, _⟩ := Finset.mem_filter.1 h1
-            rcases hrel ρ with h | ⟨h, _⟩
-            · rw [h, hr] at hnone; cases hnone
-            · rw [h] at hr; cases hr
-          · obtain ⟨_, u1, hs, _⟩ := Finset.mem_filter.1 h1
-            rw [hs] at hnone; cases hnone
-        rw [← Finset.card_union_of_disjoint h1, ← Finset.card_union_of_disjoint h2]
-        exact Finset.card_le_univ _
-      have hland1 : ForestPrice.landing ≤ 1 := ForestPrice.landing_le_one
-      have hu2 : u * ((2 ^ 128 : ℕ) : ℝ≥0∞) = 1 := ENNReal.inv_mul_cancel (by simp) (by simp)
-      have hnLP : n = (LP.card : ℝ≥0∞) := rfl
-      have hnNF : n * u + u * (NL.card : ℝ≥0∞) + u * (Fr.card : ℝ≥0∞) ≤ 1 := by
-        rw [hnLP, mul_comm _ u, ← mul_add, ← mul_add, ← hu2]
-        gcongr
-        exact_mod_cast hdisj
-      have hu' : u ≤ e * (n * u + u * (Fr.card : ℝ≥0∞) * ForestPrice.landing) := by
-        refine le_trans hu ?_
-        gcongr
-        rw [ENNReal.div_eq_inv_mul]
-        gcongr
-        exact_mod_cast (by omega : 2 ^ 128 - Cmax ≤ Fr.card)
-      have hnt : n ≠ ⊤ := ENNReal.natCast_ne_top _
-      have hut : u ≠ ⊤ := by simp [hudef]
-      calc u * ∑ ρ, (state.cache (blk parameter data message ρ)).elim fresh
-            (fun u0 => if Landed parameter (blockIndex u0) then poolValue parameter data message reference gp ρ
-              else Bnd)
-          ≤ u * (S + (NL.card : ℝ≥0∞) * Bnd + (Fr.card : ℝ≥0∞) * fresh) := mul_le_mul_right hsum u
-        _ = u * S + (u * (NL.card : ℝ≥0∞)) * Bnd + (u * (Fr.card : ℝ≥0∞)) *
-              (ForestPrice.landing * a + (1 - ForestPrice.landing) * Bnd) := by
-            rw [hfreshEq]
-            ring
-        _ ≤ Bnd := loop_arith a S e u n _ _ ForestPrice.landing hafin hSfin he hnt hut hnNF hland1 hu'
-
-/-- **Fair share of the grinding signer, signed pair only.** -/
-theorem loop_bound
-    (hparse : ∀ ρ, model.parse (blk parameter data message ρ) = none)
-    (reference : DebtState HashInput HashOutput Coordinate)
-    (gf : Lifetime.KeptDigestView → ℝ≥0∞) (gp : Randomness → Lifetime.KeptDigestView → ℝ≥0∞)
-    (B : ℝ≥0∞) (hB : B ≠ ⊤) (hgf : ∀ v, gf v ≤ B) (hgp : ∀ ρ v, gp ρ v ≤ B)
-    (e : ℝ≥0∞) (he : e ≠ ⊤) (Cmax : ℕ) (hC : Cmax ≤ 2 ^ 128)
-    (hu : ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ ≤
-      e * ((landedCount parameter data message reference : ℝ≥0∞) * ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ +
-        (((2 ^ 128 - Cmax : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞)) * ForestPrice.landing)) :
-    ∀ attempts budget state, Related parameter data message reference state →
-      cachedCount parameter data message state + attempts ≤ Cmax →
-      ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message attempts) budget state] *
-          outWeight parameter data message reference gf gp out ≤
-        Domination.freshAvg Finset.univ gf + e * (∑ ρ, poolValue parameter data message reference gp ρ -
-          (landedCount parameter data message reference : ℝ≥0∞) * Domination.freshAvg Finset.univ gf) :=
-  loop_boundW tg initial model parameter data message hparse reference gf gp
-    (fun r s' => outWeight parameter data message reference gf gp ((r, [], [], []), s')) (fun _ => rfl) (fun _ _ => rfl)
-    (fun ρ s' u0 b _ _ out hout => outWeight_finish_le tg initial model parameter data message reference gf gp ρ b s'
-      out hout) B hB hgf hgp e he Cmax hC hu
-
 
 /-! ### Fresh pairs completed by a signing call -/
 
@@ -774,74 +462,6 @@ theorem finish_keeps_msg (hparse : ∀ ρ, model.parse (blk parameter data messa
   · rw [support_pure, Set.mem_singleton_iff] at hout
     rw [hout]
     exact fun _ _ => rfl
-
-/-- **Fair share of the grinding signer, with the fresh pairs it completes.** -/
-theorem loop_bound_comb
-    (hparse : ∀ ρ, model.parse (blk parameter data message ρ) = none)
-    (reference : DebtState HashInput HashOutput Coordinate)
-    (gf : Lifetime.KeptDigestView → ℝ≥0∞) (gp : Randomness → Lifetime.KeptDigestView → ℝ≥0∞)
-    (B : ℝ≥0∞) (hB : B ≠ ⊤) (hgf : ∀ v, gf v ≤ B) (hgp : ∀ ρ v, gp ρ v ≤ B)
-    (e : ℝ≥0∞) (he : e ≠ ⊤) (Cmax : ℕ) (hC : Cmax ≤ 2 ^ 128)
-    (hu : ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ ≤
-      e * ((landedCount parameter data message reference : ℝ≥0∞) * ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ +
-        (((2 ^ 128 - Cmax : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞)) * ForestPrice.landing)) :
-    ∀ attempts budget state, Related parameter data message reference state →
-      cachedCount parameter data message state + attempts ≤ Cmax →
-      ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message attempts) budget state] *
-          (freshNewWeight parameter data message reference gf out + outWeight parameter data message reference 0 gp out) ≤
-        Domination.freshAvg Finset.univ gf + e * (∑ ρ, poolValue parameter data message reference gp ρ -
-          (landedCount parameter data message reference : ℝ≥0∞) * Domination.freshAvg Finset.univ gf) := by
-  refine loop_boundW tg initial model parameter data message hparse reference gf gp
-    (fun r s' => freshNewWeight parameter data message reference gf ((r, [], [], []), s') +
-      outWeight parameter data message reference 0 gp ((r, [], [], []), s'))
-    (fun _ => by simp [freshNewWeight, outWeight]) ?_ ?_ B hB hgf hgp e he Cmax hC hu
-  · intro s' hrel
-    simp only [freshNewWeight, outWeight, Option.isSome_some, if_true, add_zero]
-    refine Finset.sum_eq_zero fun ρ _ => ?_
-    split_ifs with hn
-    · rcases hrel ρ with h | ⟨_, u, hu', hnl⟩
-      · rw [h, hn]; rfl
-      · simp only [hu', Option.elim, if_neg hnl]
-    · rfl
-  · intro ρ s' u0 b hoff hs0 out hout
-    have hkeep := finish_keeps_msg tg initial model parameter data message hparse ρ b s' u0 hs0 out hout
-    have hk : ∀ ρ', out.2.cache (blk parameter data message ρ') = s'.cache (blk parameter data message ρ') :=
-      fun ρ' => hkeep _ (msgInput_digestInput parameter data.root message ρ')
-    show freshNewWeight parameter data message reference gf ((out.1.1, [], [], []), out.2) +
-      outWeight parameter data message reference 0 gp ((out.1.1, [], [], []), out.2) ≤ _
-    by_cases hsome : out.1.1.isSome
-    · rw [if_pos hsome, hk ρ, hs0]
-      simp only [Option.elim]
-      have hfresh : freshNewWeight parameter data message reference gf ((out.1.1, [], [], []), out.2) =
-          if reference.cache (blk parameter data message ρ) = none then
-            (if Landed parameter (blockIndex u0) then gf (viewOf u0) else 0) else 0 := by
-        simp only [freshNewWeight, if_pos hsome]
-        rw [Finset.sum_eq_single ρ]
-        · simp only [hk ρ, hs0, Option.elim]
-        · intro ρ' _ hne
-          split_ifs with hn
-          · rcases hoff ρ' hne with h | ⟨_, u, hu', hnl⟩
-            · rw [hk ρ', h, hn]; rfl
-            · simp only [hk ρ', hu', Option.elim, if_neg hnl]
-          · rfl
-        · intro h; exact absurd (Finset.mem_univ ρ) h
-      rw [hfresh]
-      have hout' : outWeight parameter data message reference 0 gp ((out.1.1, [], [], []), out.2) ≤
-          if reference.cache (blk parameter data message ρ) = none then 0 else gp ρ (viewOf u0) := by
-        have := outWeight_finish_le tg initial model parameter data message reference 0 gp ρ b s' out hout
-        simp only [if_pos hsome, hk ρ, hs0, Option.elim, pairWeight] at this
-        refine le_trans (le_of_eq ?_) (le_trans this (le_of_eq ?_))
-        · rfl
-        · split_ifs <;> rfl
-      refine le_trans (add_le_add_right hout' _) (le_of_eq ?_)
-      simp only [pairWeight]
-      split_ifs <;> simp
-    · rw [if_neg hsome]
-      simp only [freshNewWeight, if_neg hsome, zero_add]
-      unfold outWeight
-      cases hr : out.1.1 with
-      | none => rfl
-      | some r => simp [hr] at hsome
 
 end Loop
 

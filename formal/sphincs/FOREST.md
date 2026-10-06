@@ -38,6 +38,56 @@ and `LeanForest/Lifetimes.lean`); `python3 scripts/forest_certificates.py check 
 in Python with the same exact arithmetic. Axiom guards: `lake env lean scripts/ForestTheorems.lean`
 then `python3 scripts/forest_axioms.py`.
 
+## Hash inputs
+
+Every hash input is `P ‖ A ‖ payload` (`Scheme.lean`: `tweakableHashInput`, `keygenHashInput`,
+`randomizerHashInput`): the 16-byte public parameter, then the 8-byte address
+`A = lo (4 bytes) ‖ hi (3 bytes) ‖ (type + 32·step)` with `lo` and `hi` little endian (`fieldBytes`),
+then the payload. `Th` keeps the first 16 bytes of the hash. The public key is `root ‖ P`, 32 bytes.
+Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`, chain `i < 6`,
+`idx` the 26-bit instance.
+
+| call | type | step | hi | lo | payload |
+| --- | ---: | --- | --- | --- | --- |
+| WOTS+C chain secret | 0 | 0 | chain | leaf | seed |
+| WOTS+C chain step onto position `to` | 1 | `to − 1` | chain | leaf | value |
+| WOTS+C leaf | 2 | 0 | 0 | leaf | 64 chain ends |
+| tree node | 3 | 0 | level | node | left ‖ right |
+| WOTS+C encoding | 4 | 0 | 0 | leaf | message ‖ counter (4 bytes) |
+| parameter derivation, under `P = 0` | 5 | 0 | 0 | 0 | seed |
+| randomizer base `R0` | 7 | 0 | 0 | 0 | seed ‖ message |
+| message digest | 12 | 0 | 0 | 0 | message ‖ eight zero bytes ‖ randomizer |
+| surrogate sibling | 13 | 0 | level | 0 | seed |
+| forest chain secret | 14 | 0 | `c + 8s + 128j + 256a + 2048i` | `idx` | seed |
+| forest chain step from position `t` | 15 | `t` | `c + 8s + 128j + 256a + 2048i` | `idx` | value |
+| forest WOTS-key leaf | 16 | 0 | `c + 8s + 128j + 256a` | `idx` | 6 chain tops |
+| subtree node, level 1 to 3 | 17 | 0 | `c + 8s + 128j + 256·level + 1024·node` | `idx` | left ‖ right |
+| tree leaf `H(R0, R1)` | 18 | 0 | `c + 8s` | `idx` | `R0 ‖ R1` |
+| forest tree node, level 1 to 4 | 19 | 0 | `c + 8·level + 64·node` | `idx` | left ‖ right |
+| few-time public key | 20 | 0 | 0 | `idx` | 8 tree roots |
+
+The signer derives one randomizer base per message, `R0 = Th(P, A(7, 0, 0), seed ‖ message)` (one
+hash query), and attempt `i` uses the randomizer `R0 + i` (addition modulo `2^128`,
+`Seeded.signDigestLoop`); it keeps the first attempt whose digest index lands in the kept subtree.
+The randomizer comes last in the digest payload: a grinding attempt changes only the last block of
+the digest hash. The digest input is 80 bytes: the first block is
+`P ‖ A ‖ message ‖ 0^8` and the second the randomizer alone. The root is not hashed (`P` binds the
+key); `messageDigestPayload` keeps its root argument for its callers and ignores it.
+
+Separation is unconditional. An input determines its parameter, its address and its payload
+(`fieldBytes_injective` in `Bytes.lean`, `fieldInput_injective` in `SecurityDomains.lean`), two
+inputs of different types differ whatever their parameters (`fieldInput_ne_of_tag_ne_across` in
+`Fresh.lean`, `keygenInput_ne_hashInput`), and an address determines the call:
+`hashFields_injective` and `Position.input_separated` (`SecurityPosition.lean`) for verification,
+`deriveFields_injective` and `keygenInput_injective` for the seed derivations,
+`randomizerHashInput_injective` (`BridgeDet.lean`) for the randomizer base. The address has no layer and
+no tree field; the scheme has one of each (`Layer` and `TreeIndex` are `Fin 1`).
+
+`Layout.signature_size`: a signature serializes to 4,276 bytes. `Cost.verification_compressions`:
+an accepted signature costs exactly 321 BLAKE2s compressions (2 for the 80-byte digest input, 203
+for the forest, 116 for WOTS+C and the path), and no signature costs more
+(`verification_compressions_le`).
+
 ## The proof
 
 The reduction is the one of the FORS variant (`PROOF.md`), forked module by module with the forest
@@ -47,6 +97,35 @@ second-order event, or one of the forest events of the refined classification
 (`BridgeImplicationA`): a contact without guess record, two contacts at different chains of one
 index, a recorded contact at a chain opened at or below its step, a near cover with a recorded
 contact, or a cover. Budgets are split at `qh ≈ 2^(128 + lx)`.
+
+### The scan signer `R = R0 + i`
+
+After the seed is eliminated the start `R0` of a message is uniform and hidden, and the signature of
+a message uses the first landing randomizer at or after it. For one unsigned message a randomizer is
+fresh, cached and rejected, or cached and landing; the law of the signed pair is the walk value of
+`LoopWalk.lean` over these statuses (`BridgeScan.scan_boundW`). A cached landed pair is selected
+with a probability that depends on the cache (the run of rejected values before it), not `1/(n + R)`,
+and one digest query raises the selection mass of the adversary's pairs by at most `(2 − p)/2^128`
+(`LoopWalk.creation_le`, `p = 2^-(26−b)`; attained by scanning forward from random starts), against
+`1/2^128` for independent attempts. The potentials therefore keep the cached pairs of each unsigned
+message as one exclusive group (`GroupFuture.grp`, `BridgeGroups.grpAll`) applied to the one-coin
+future of the pairs still to come:
+
+- a new pair is paid by one future coin (`GroupFuture.probe_step`, `termO_newPair`) as long as the
+  group of its message keeps mass `1 − τ` on the identity; the witness is only monotone, so the
+  coin is `(2 − p)/(2^128 p (1 − τ))` (`H0Fair.wbarOf`, `FairS`), with `τ` from the numbers of cached
+  digests and of cached landed pairs (`LoopWalk.mass_le`);
+- the number of cached landed pairs of unsigned messages is capped by an exact martingale
+  (`lam` in `BridgeForsPotentialOnce`): above the cap the bound is trivial, and the cap term is
+  at most `(64/65)^(2^15)` at the start (`H0Fair.lam_start`);
+- a signing call is paid by one fresh slot and the group of its message (`sign_term`): no coupling
+  and no fair share;
+- for the largest budgets one message can hold almost all the mass (its signature is then a known
+  pair with certainty). A message with more than half of the budget is *heavy* (`BridgeHeavy`): it
+  acts by the law of its signed view (`GroupHeavy.sgn`, exact under its own digest queries) and uses
+  one spare fresh slot; the other messages have at most half of the budget
+  (`BridgeHeavyW`, `BridgeHeavyRoutes.det_largeH`, certificates with `N + 1` signatures in
+  `BridgeHeavyCert`).
 
 ### Small budgets (`q - keygenCost ≤ qh`)
 
@@ -72,7 +151,11 @@ contact, or a cover. Budgets are split at `qh ≈ 2^(128 + lx)`.
   (`BridgeRunFacts`); a completed call reveals upward-closed chains (`closedRuns_loop`); a call opens
   a given chain at or below `min(t + 1, 3)` with chance at most `134 · 2^-b · 2^-15` plus `wbar` per
   cached pair of the message, over every run (`reveal_le_all`, `BridgeRevealAll`, `BridgeRevealRate`:
-  at most 134 of the 256 codewords have a given digit at least one); a latent contact exposed by the
+  at most 134 of the 256 codewords have a given digit at least one; with the scan signer the second
+  part is `hitMass`, the probability that the signature uses a cached landed pair, and the coin
+  part of the potential is `ν (budget · offSum + C(budget, 2) · rateS)` with
+  `rateS = (2 − p)/2^128`: a unit of budget is a contact attempt or a digest query, not both);
+  a latent contact exposed by the
   call is decided with chance `2^-128` whatever the call does (`BridgeExposeMean.interp_value_le`).
   The near potential uses the subtree-free near witness (`BridgeForestNear`, certificate `H0NearOpt`).
   A forest step query costs `2^-128 (N rate + 1 - κ)`, paid by the slack of the linear potential once
@@ -87,5 +170,9 @@ The one-coin bound at the survival-weighted baseline (`BridgeSatW*`, `det_largeW
 
 ### Both routes
 
-`BridgeDetCloseF.det_bitsF`: 127 bits from a Poisson table, the small-route option, the near
-certificate, `checkSmallF` at `qh` and a cover of `[qh + 1, 2^127]`.
+`BridgeHeavyCert.det_bitsFH`: 127 bits from the small-route table (rate at `qh`), the small-route
+option, the near certificate, `checkSmallF` at `qh` (coin summand `(2 − p) qh / 2^129`), and a chain
+of covers of `[qh + 1, 2^127)`, each with its own Poisson table: light covers (`checkCoverW`, coin
+`wbarOf`) up to about `0.249 · 2^128`, then one heavy cover (`checkCoverH`, `N + 1` signatures, coin
+`wbarH`). For `b = 26` there is no grinding and one light cover reaches `2^127`. The splits `lx` and
+the limits are those of the signer with one hash per attempt.

@@ -41,7 +41,7 @@ set_option maxRecDepth 100000 in
 set_option maxHeartbeats 1000000 in
 /-- **One sample of the small-budget route of the forest.** -/
 theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
-    (hq : q < 2 ^ 256) (hq2 : 2 * (q - keygenCost) ≤ 2 ^ 128)
+    (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
     (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
@@ -52,7 +52,8 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
     (κ : ℝ) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
       (signatureLimit : ℝ) * (134 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ κ) (hκ1 : κ ≤ 1)
     (b N : ℕ) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
-    (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (hrt : H0.checkRate b N t = true)
+    (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
+    (hrt : H0.checkRate b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
     (ho : H0.checkOptF b t o = true) (hon : H0.checkOptN t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
     Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
         (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
@@ -60,12 +61,12 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
       ENNReal.ofReal (ρ * (q - keygenCost : ℕ) / 2 ^ 128) +
         (((q - keygenCost : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + failMass (failSet prepared.1)) +
           signatureLimit * failMass (failSet prepared.1)) +
-        (((q - keygenCost : ℕ) : ℝ≥0∞) * ν) *
-          ((q - keygenCost : ℕ) * (((2 ^ 128 - ((q - keygenCost) + 2 ^ 32) : ℕ) : ℝ≥0∞))⁻¹) +
+        ν * (((Nat.choose (q - keygenCost) 2 : ℕ) : ℝ≥0∞) * rateS) +
         (ENNReal.ofReal κ * ((((q - keygenCost : ℕ) : ℝ≥0∞) * ν) *
             ((q - keygenCost : ℕ) * ENNReal.ofReal (((2 ^ b * on.En : ℚ) / 2 : ℚ) : ℝ))) +
           (((q - keygenCost : ℕ) : ℝ≥0∞) * ν) *
-            ((q - keygenCost : ℕ) * failMass (failSet prepared.1) + signatureLimit * failMass (failSet prepared.1))) := by
+            ((q - keygenCost : ℕ) * failMass (failSet prepared.1) + signatureLimit * failMass (failSet prepared.1))) +
+        2 * lam (H0.LmaxOf (q - keygenCost)) 0 (q - keygenCost) := by
   set param := truncateHash parameterOutput with hparam
   set data := sampleData parameterOutput fixed highs remaining with hdata
   set model := sampleModel parameterOutput highs with hmodel
@@ -84,7 +85,9 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
   set wbar := H0.wbarOf q' with hwbar
   set c := (2 ^ b * on.En : ℚ) with hc
   set Fset := failSet prepared.1 with hFset
-  have hfair : Fair wbar (q' + digestAttemptLimit) := H0.fair_of q' hq2
+  set Lmax := H0.LmaxOf q' with hLmax
+  have hfair : FairS wbar (q' + 2 ^ 32) Lmax := H0.fair_of q' (H0.fair_of_rate b N qtop t hrt hbb q' hqtop)
+  have hQ : q' ≤ q' + 2 ^ 32 := Nat.le_add_right _ _
   have hmsg : ∀ x, IsMsgInput x → tgA.kind x = .none := fun x h =>
     targetingA_msgF parameterOutput fixed highs remaining prepared.1 x h
   have hparse : ∀ p, model.parse (pblk param data p) = none := fun p => by
@@ -141,27 +144,19 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
   -- the cover potential
   have hcover : ∑' out, Pr[= out | run] * finalValue param data tgA prepared.2 [] out ≤
       (((q' : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + φ) + signatureLimit * φ) +
-        b0 * ∑' out, Pr[= out | run] * (digestCount tgA out.1.2.2.1 : ℝ≥0∞) := by
+        lam Lmax 0 q' + b0 * ∑' out, Pr[= out | run] * (digestCount tgA out.1.2.2.1 : ℝ≥0∞) := by
     by_cases hK : keygenCost ≤ q
     · rw [hrunK hK, tsum_probOutput_map_mul, tsum_probOutput_map_mul]
-      have hgood := goodO_advProg param data wbar b0 Fset q' tgA prepared.2 model
-        hparse hdigest hfail hfair le_rfl ((internalize adversary).main ⟨data.root, param⟩) [] hnr' q' start [] 0 []
+      have hgood := goodO_advProg param data wbar b0 Fset q' Lmax tgA prepared.2 model
+        hparse hdigest hfail hfair hQ ((internalize adversary).main ⟨data.root, param⟩) [] hnr' q' start [] [] 0 []
         (start_prepared prepared.2 known) (start_pinv param data prepared.2 hclean known)
+        (start_minv param data prepared.2 hclean known)
         (fun _ _ _ _ _ _ _ h => by cases h) (start_count param data prepared.2 hclean known q')
-      have hval : hValueO param data wbar b0 start [] [] 0 signatureLimit q' ≤ ENNReal.ofReal (o.B : ℝ) := by
-        rw [hValueO_start]
-        change LeanSphincs.Security.H0.hTermO (Finset.univ : Finset View) wbar landing signatureLimit q' (excess b0) ≤ _
-        have hq127 : q' ≤ 2 ^ 127 := by omega
-        exact H0.hTermO_le_optF hbb t o hpt ho wbar landing hfair.le_one landing_le_one signatureLimit q'
-          (by
-            have := H0.rate_le_tableF b N t hrt hNN q' hq127
-            exact this)
-          b0 (ENNReal.ofReal_le_ofReal hcthr)
-      have hpot : potO param data wbar b0 Fset tgA prepared.2 start [] [] 0 q' ≤
-          ((q' : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + φ) + signatureLimit * φ := by
-        refine le_trans (potO_le_coreO ..) ?_
-        unfold coreO
-        simp only [List.map_nil, List.sum_nil, zero_add, List.length_nil, Nat.sub_zero]
+      have hval : startExcessO wbar b0 q' ≤ ENNReal.ofReal (o.B : ℝ) :=
+        H0.startExcessO_le_opt b N qtop t o hrt hpt ho hbb hNN q' hqtop b0 (ENNReal.ofReal_le_ofReal hcthr)
+      have hpot : potO param data wbar b0 Fset tgA prepared.2 Lmax start [] [] [] 0 q' ≤
+          (((q' : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + φ) + signatureLimit * φ) + lam Lmax 0 q' := by
+        refine le_trans (potO_start_le param data wbar b0 Fset tgA prepared.2 Lmax start q') ?_
         gcongr
       calc ∑' out, Pr[= out | interp tgA prepared.2 model
               (advProg param data ((internalize adversary).main ⟨data.root, param⟩) []) q' start] *
@@ -169,7 +164,7 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
           = ∑' out, Pr[= out | interp tgA prepared.2 model
               (advProg param data ((internalize adversary).main ⟨data.root, param⟩) []) q' start] *
             finalValue param data tgA prepared.2 [] out := rfl
-        _ ≤ potO param data wbar b0 Fset tgA prepared.2 start [] [] 0 q' +
+        _ ≤ potO param data wbar b0 Fset tgA prepared.2 Lmax start [] [] [] 0 q' +
             b0 * expectedFlagged tgA prepared.2 model
               (advProg param data ((internalize adversary).main ⟨data.root, param⟩) []) q' start := hgood
         _ ≤ _ := by
@@ -183,27 +178,24 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
   -- the contact bound A4
   have hκspl : ν ≤ payB + κE * ν := arm_splitF κ
   have hA4 : ∑' out, Pr[= out | run] * finalA4 K data.root out.1.1 out.1.2.1 out.2 ≤
-      (((q' : ℕ) : ℝ≥0∞) * ν) * ((q' : ℕ) * (((2 ^ 128 - (q' + 2 ^ 32) : ℕ) : ℝ≥0∞))⁻¹) +
+      ν * (((Nat.choose q' 2 : ℕ) : ℝ≥0∞) * rateS) +
         κE * ν * ((q' : ℕ) * ((q' : ℕ) * (ENNReal.ofReal ((c / 2 : ℚ) : ℝ) + φ) + signatureLimit * φ)) +
+        lam Lmax 0 q' +
         (ν * ((signatureLimit : ℝ≥0∞) * revRate) + payB) *
           ∑' out, Pr[= out | run] * (fleafCount IsF out.1.2.2.1 : ℝ≥0∞) := by
     by_cases hK : keygenCost ≤ q
     · rw [hrunK hK, tsum_probOutput_map_mul, tsum_probOutput_map_mul]
       have hinv := inv_start parameterOutput fixed highs remaining prepared known ρ hk
-      have hb := a4F_bound K data wbar κE Fset model hMp hMi hMo hparse hclean hfail q' hfair le_rfl hκspl
+      have hb := a4F_bound K data wbar κE Fset model hMp hMi hMo hparse hclean hfail q' hfair hQ hκspl
         ((internalize adversary).main ⟨data.root, param⟩) hnr' known hinv
       unfold expCount at hb
       refine le_trans (le_trans (le_of_eq (tsum_congr fun out => rfl)) hb) ?_
       simp only [fleafCount_cons_inr]
       refine add_le_add ?_ le_rfl
-      rw [psiF_start]
-      have hD : q' + 2 ^ 32 < 2 ^ 128 := by omega
-      have hwl : wbar * landing = (((2 ^ 128 - (q' + 2 ^ 32) : ℕ) : ℝ≥0∞))⁻¹ := wbarOf_mul_landingF q' hD
       have hnear : startNearF wbar q' ≤ 2 * ENNReal.ofReal ((c / 2 : ℚ) : ℝ) :=
-        le_trans (H0.hNearOf_le b N hbb hNN t on hrt hpt hon q' hq2) (ofReal_le_two_halfF c)
+        le_trans (H0.hNearOf_le b N qtop hbb hNN t on hrt hpt hon q' hqtop) (ofReal_le_two_halfF c)
       have hsum := start_sum_leF hfair.le_one q' φ _ hnear
-      rw [hwl]
-      refine add_le_add (le_of_eq (by ring)) ?_
+      refine add_le_add (add_le_add le_rfl ?_) le_rfl
       exact mul_le_mul_left' hsum _
     · rw [hrunA hK, tsum_probOutput_pure_mul]
       refine le_trans (le_of_eq ?_) bot_le
@@ -289,8 +281,8 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
     ring
   have hpc : ν * ((signatureLimit : ℝ≥0∞) * revRate) + payB ≤ c0 := arm_paysF ρ _ κ hκ1 hκ
   set cov : ℝ≥0∞ := ((q' : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + φ) + signatureLimit * φ with hcov
-  set coin : ℝ≥0∞ := (((q' : ℕ) : ℝ≥0∞) * ν) *
-    ((q' : ℕ) * (((2 ^ 128 - ((q') + 2 ^ 32) : ℕ) : ℝ≥0∞))⁻¹) with hcoin
+  set coin : ℝ≥0∞ := ν * (((Nat.choose q' 2 : ℕ) : ℝ≥0∞) * rateS) with hcoin
+  set lm : ℝ≥0∞ := lam Lmax 0 q' with hlm
   set nearM : ℝ≥0∞ := (((q' : ℕ) : ℝ≥0∞) * ν) * ((q' : ℕ) * ENNReal.ofReal ((c / 2 : ℚ) : ℝ)) with hnearM
   set nearF : ℝ≥0∞ := (((q' : ℕ) : ℝ≥0∞) * ν) * ((q' : ℕ) * φ + signatureLimit * φ) with hnearF
   have hκ1' : κE ≤ 1 := ENNReal.ofReal_le_one.2 hκ1
@@ -301,16 +293,16 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
       _ ≤ κE * nearM + 1 * nearF := by gcongr
       _ = κE * nearM + nearF := by rw [one_mul]
   calc (Ev + Efin) + ∑' out, Pr[= out | run] * finalA4 K data.root out.1.1 out.1.2.1 out.2
-      ≤ (Ev + (cov + b0 * Ed)) + (coin + κE * ν * ((q' : ℕ) * ((q' : ℕ) *
-          (ENNReal.ofReal ((c / 2 : ℚ) : ℝ) + φ) + signatureLimit * φ)) +
+      ≤ (Ev + (cov + lm + b0 * Ed)) + (coin + κE * ν * ((q' : ℕ) * ((q' : ℕ) *
+          (ENNReal.ofReal ((c / 2 : ℚ) : ℝ) + φ) + signatureLimit * φ)) + lm +
           (ν * ((signatureLimit : ℝ≥0∞) * revRate) + payB) * Ef) :=
         add_le_add (add_le_add le_rfl hcover) hA4
-    _ ≤ (Ev + (cov + b0 * Ed)) + (coin + (κE * nearM + nearF) +
+    _ ≤ (Ev + (cov + lm + b0 * Ed)) + (coin + (κE * nearM + nearF) + lm +
           (ν * ((signatureLimit : ℝ≥0∞) * revRate) + payB) * Ef) := by gcongr
     _ = (Ev + b0 * Ed + (ν * ((signatureLimit : ℝ≥0∞) * revRate) + payB) * Ef) + cov + coin +
-          (κE * nearM + nearF) := by ring
-    _ ≤ (Ev + b0 * Ed + c0 * Ef) + cov + coin + (κE * nearM + nearF) := by gcongr
-    _ ≤ ENNReal.ofReal (ρ * (q' : ℕ) / 2 ^ 128) + cov + coin + (κE * nearM + nearF) := by gcongr
+          (κE * nearM + nearF) + 2 * lm := by ring
+    _ ≤ (Ev + b0 * Ed + c0 * Ef) + cov + coin + (κE * nearM + nearF) + 2 * lm := by gcongr
+    _ ≤ ENNReal.ofReal (ρ * (q' : ℕ) / 2 ^ 128) + cov + coin + (κE * nearM + nearF) + 2 * lm := by gcongr
 
 end SampleF
 

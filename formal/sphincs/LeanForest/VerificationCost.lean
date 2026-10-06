@@ -21,7 +21,7 @@ def blocks (bytes : Nat) : Nat := max 1 ((bytes + 63) / 64)
 def hashTrace {α : Type} (f : QueryImpl HashSpec Id) (oa : OracleComp HashSpec α) :
     List HashInput := ((simulateQ f.withLogging oa).run).2.map Sigma.fst
 
-/-- Compression count of the actual execution, with input lengths including tweak and parameter. -/
+/-- Compression count of the actual execution, with input lengths including parameter and address. -/
 def compressions {α : Type} (f : QueryImpl HashSpec Id) (oa : OracleComp HashSpec α) : Nat :=
   ((hashTrace f oa).map (fun input => blocks input.length)).sum
 
@@ -59,13 +59,13 @@ theorem compressions_bind {α β : Type} (f : QueryImpl HashSpec Id)
 
 theorem tweakableHashInput_length (parameter : PublicParameter) (domain : HashDomain)
     (payload : HashInput) :
-    (tweakableHashInput parameter domain payload).length = 32 + payload.length := by
+    (tweakableHashInput parameter domain payload).length = 24 + payload.length := by
   simp [tweakableHashInput, tweakBytes, fieldBytes, bytesLE_length]
   omega
 
 @[simp] theorem compressions_tweakableHash (f : QueryImpl HashSpec Id)
     (parameter : PublicParameter) (domain : HashDomain) (payload : HashInput) :
-    compressions f (Concrete.tweakableHash parameter domain payload) = blocks (32 + payload.length) := by
+    compressions f (Concrete.tweakableHash parameter domain payload) = blocks (24 + payload.length) := by
   rw [Concrete.tweakableHash, compressions_bind, compressions_oracleHash,
     compressions_pure, Nat.add_zero, tweakableHashInput_length]
 

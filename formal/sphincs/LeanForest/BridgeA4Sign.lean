@@ -3,7 +3,7 @@ import LeanForest.BridgeA4F
 /-! **The contact potential through a signing call.** The signer queries no forest step input, so
 it records no forest step, keeps every forest step answer, and exposes the coordinate a step writes
 only by revealing its chain. A contact whose chain the call opens at or below `min(t + 1, 3)` (an
-event of chance at most the reveal rate plus `wbar` per cached pair of the message, over every run)
+event of chance at most the reveal rate plus the mass off the identity of the message, over every run)
 is paid by the drop of the reveal rate; otherwise its weight does not move. A latent contact
 exposed by the call is decided with chance `2^-128`, whatever the call does. -/
 
@@ -98,6 +98,12 @@ theorem writes_fchain {c : Coordinate} (hc : IsFc c) {x : HashInput} (h : Writes
 
 end Avoid
 
+/-- The signing call (uniform start, then the scan) queries no forest step input. -/
+theorem avoids_source_fchain (p : PublicParameter) (parameter : PublicParameter) (data : PublicData)
+    (message : Message) : Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate) (IsFchainIn p)
+      (signCostSource parameter data message) :=
+  avoids_bind _ (avoids_liftProb _ _) fun ρ => avoids_loop_fchain p parameter data message _ ρ
+
 /-! ### One contact through a signing call -/
 
 section Contact
@@ -122,16 +128,16 @@ variable {K data Qtot model}
 
 include hMp hMi hMo in
 /-- **Facts about one step through a signing call.** -/
-theorem sign_step_facts {m : Message} {attempts budget : ℕ} {s : State} {P : List Pair} {d : Multiset View}
-    {R : List Coordinate} (hB : BInvF K data Qtot model s P d R budget)
+theorem sign_step_facts {m : Message} {budget : ℕ} {s : State} {P : List Pair} {Ms : List Message}
+    {d : Multiset View} {R : List Coordinate} (hB : BInvF K data Qtot model s P Ms d R budget)
     (o1 : Run HashInput Coordinate (Option Signature) × State)
-    (ho1 : o1 ∈ support (interp K.tg K.initial model (signCostSourceLoop K.p data m attempts) budget s))
+    (ho1 : o1 ∈ support (interp K.tg K.initial model (signCostSource K.p data m) budget s))
     (f : FIn) :
     (∀ u, K.Fr o1.2 (f.input K.p) u ↔ K.Fr s (f.input K.p) u) ∧
     (o1.2.known f.outC ≠ none → s.known f.outC = none → OpensF f o1.1.2.1) ∧
     (¬OpensF f o1.1.2.1 → K.cw o1.2 f = K.cw s f) ∧
     (Settled (R ++ o1.1.2.1) f → ¬Settled R f → OpensF f o1.1.2.1) := by
-  have havoid := avoids_loop_fchain K.p K.p data m attempts
+  have havoid := avoids_source_fchain K.p K.p data m
   have hcache := interp_avoids_cache K.tg K.initial model _ _ havoid budget s o1 ho1 (f.input K.p) ⟨f, rfl⟩
   have hext := interp_extends K.tg K.initial model _ budget s o1 ho1
   have hfr : ∀ u, K.Fr o1.2 (f.input K.p) u ↔ K.Fr s (f.input K.p) u := fun u => by
@@ -139,7 +145,7 @@ theorem sign_step_facts {m : Message} {attempts budget : ℕ} {s : State} {P : L
     rw [hcache]
   have hexp : o1.2.known f.outC ≠ none → s.known f.outC = none → OpensF f o1.1.2.1 := by
     intro hk hs
-    have hw : Avoids (Writes model f.outC) (signCostSourceLoop K.p data m attempts) :=
+    have hw : Avoids (Writes model f.outC) (signCostSource K.p data m) :=
       avoids_mono (fun x hx => writes_fchain K model hMp hMo ⟨_, _, _, _, _, _, _, rfl⟩ hx) havoid
     rcases interp_known_new K.tg K.initial model _ f.outC hw budget s o1 ho1 hk with h | h
     · exact absurd hs h
@@ -171,15 +177,15 @@ theorem sign_step_facts {m : Message} {attempts budget : ℕ} {s : State} {P : L
 
 include hMp hMi hMo in
 /-- **The weight of a contact through a signing call**, and its part on runs opening its chain. -/
-theorem sign_cw_mean {m : Message} {attempts budget : ℕ} {s : State} {P : List Pair} {d : Multiset View}
-    {R : List Coordinate} (hB : BInvF K data Qtot model s P d R budget) (f : FIn) :
-    ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSourceLoop K.p data m attempts) budget s] *
+theorem sign_cw_mean {m : Message} {budget : ℕ} {s : State} {P : List Pair} {Ms : List Message}
+    {d : Multiset View} {R : List Coordinate} (hB : BInvF K data Qtot model s P Ms d R budget) (f : FIn) :
+    ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSource K.p data m) budget s] *
         K.cw o1.2 f ≤ K.cw s f ∧
-    ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSourceLoop K.p data m attempts) budget s] *
+    ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSource K.p data m) budget s] *
         ((if OpensF f o1.1.2.1 then 1 else 0) * K.cw o1.2 f) ≤
-      K.cw s f * ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSourceLoop K.p data m attempts) budget s] *
+      K.cw s f * ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSource K.p data m) budget s] *
         (if OpensF f o1.1.2.1 then 1 else 0) := by
-  set run := interp K.tg K.initial model (signCostSourceLoop K.p data m attempts) budget s with hrun
+  set run := interp K.tg K.initial model (signCostSource K.p data m) budget s with hrun
   have hfacts := fun o1 (ho1 : o1 ∈ support run) => sign_step_facts hMp hMi hMo hB o1 ho1 f
   have hmass : ∑' o1, Pr[= o1 | run] = 1 := HiddenDebt.interp_mass _ _ _ _ _ _
   by_cases hlat : K.Lat s f
@@ -213,7 +219,7 @@ theorem sign_cw_mean {m : Message} {attempts budget : ℕ} {s : State} {P : List
           exact le_add_self
         · rw [if_neg h3]
           exact zero_le
-    have hvalue := HiddenDebt.interp_value_le K.tg K.initial model (signCostSourceLoop K.p data m attempts)
+    have hvalue := HiddenDebt.interp_value_le K.tg K.initial model (signCostSource K.p data m)
       f.outC (truncateHash u0) budget s hk
     have hsplit : ∀ o1 ∈ support run, (if o1.2.known f.outC ≠ none then (1 : ℝ≥0∞) else 0) ≤
         (if OpensF f o1.1.2.1 then 1 else 0) * (if o1.2.known f.outC ≠ none then 1 else 0) := by
@@ -310,22 +316,20 @@ theorem settled_append {R : List Coordinate} {f : FIn} (h : Settled R f) (L : Li
 include hMp hMi hMo in
 /-- **One contact through a signing call.** Its weight times its coefficient after the call is at
 most its weight times the coefficient before: an opening of its chain has chance at most the
-reveal rate plus `wbar` per cached pair of the message, and costs at most `1 + Cd`. -/
-theorem sign_contact {m : Message} {budget : ℕ} {s : State} {P : List Pair} {d : Multiset View}
-    {R : List Coordinate} (hB : BInvF K data Qtot model s P d R budget)
+reveal rate plus the mass off the identity of the message, and costs at most `1 + Cd`. -/
+theorem sign_contact {m : Message} {budget : ℕ} {s : State} {P : List Pair} {Ms : List Message}
+    {d : Multiset View} {R : List Coordinate} (hB : BInvF K data Qtot model s P Ms d R budget)
     (hparse : ∀ p, model.parse (pblk K.p data p) = none)
-    {wbar : ℝ≥0∞} {Cmax : ℕ} (hfair : Fair wbar Cmax)
-    (hcount : cachedCount K.p data m s + digestAttemptLimit ≤ Cmax)
     (f : FIn) (Cd : ℝ≥0∞) (Z : Run HashInput Coordinate (Option Signature) × State → ℝ≥0∞) (hZ : ∀ o, Z o ≤ 1) :
-    ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSourceLoop K.p data m digestAttemptLimit) budget s] *
+    ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSource K.p data m) budget s] *
         (if o1.1.1.isSome then K.cw o1.2 f * gA (R ++ o1.1.2.1) (Cd + Z o1) f else 0) ≤
-      K.cw s f * gA R (revRate + wbar * ((P.filter fun q => decide (q.1 = m)).length : ℝ≥0∞) + Cd +
-        ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSourceLoop K.p data m digestAttemptLimit) budget s] *
+      K.cw s f * gA R (revRate + offMass K.p data s m + Cd +
+        ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSource K.p data m) budget s] *
           Z o1) f := by
-  set run := interp K.tg K.initial model (signCostSourceLoop K.p data m digestAttemptLimit) budget s with hrun
-  set nm : ℝ≥0∞ := ((P.filter fun q => decide (q.1 = m)).length : ℝ≥0∞) with hnm
+  set run := interp K.tg K.initial model (signCostSource K.p data m) budget s with hrun
+  set nm : ℝ≥0∞ := offMass K.p data s m with hnm
   have hfacts := fun o1 (ho1 : o1 ∈ support run) => sign_step_facts hMp hMi hMo hB o1 ho1 f
-  obtain ⟨hmean, hopen⟩ := sign_cw_mean (m := m) (attempts := digestAttemptLimit) hMp hMi hMo hB f
+  obtain ⟨hmean, hopen⟩ := sign_cw_mean (m := m) hMp hMi hMo hB f
   have hmass : ∑' o1, Pr[= o1 | run] = 1 := HiddenDebt.interp_mass _ _ _ _ _ _
   by_cases hS : Settled R f
   · unfold gA
@@ -336,9 +340,10 @@ theorem sign_contact {m : Message} {budget : ℕ} {s : State} {P : List Pair} {d
     · exact absurd (settled_append hS _) h2
     · exact zero_le
   -- an unsettled contact
-  have hPO : ∑' o1, Pr[= o1 | run] * (if OpensF f o1.1.2.1 then 1 else 0) ≤ revRate + wbar * nm := by
-    refine le_trans (le_of_eq (tsum_congr fun o1 => ?_)) (reveal_le_all K.tg K.initial model K.p data m hparse
-      hB.pinv hfair digestAttemptLimit budget hcount f.index f.c f.s f.j f.a f.i (kTop f) (kTop_lt f))
+  have hPO : ∑' o1, Pr[= o1 | run] * (if OpensF f o1.1.2.1 then 1 else 0) ≤ revRate + nm := by
+    refine le_trans (le_of_eq (tsum_congr fun o1 => ?_)) (le_trans (reveal_le_all K.tg K.initial model K.p data m
+      hparse budget f.index f.c f.s f.j f.a f.i (kTop f) (kTop_lt f))
+      (add_le_add le_rfl (hitMass_le_offMass s m)))
     unfold OpensF
     congr 1
     split_ifs <;> rfl
@@ -394,7 +399,7 @@ theorem sign_contact {m : Message} {budget : ℕ} {s : State} {P : List Pair} {d
   calc (1 + Cd) * (K.cw s f * PO) + K.cw s f * (PN * Cd + EZ)
       = K.cw s f * (PO + (PO + PN) * Cd + EZ) := by ring
     _ = K.cw s f * (PO + Cd + EZ) := by rw [hsum1, one_mul]
-    _ ≤ K.cw s f * (revRate + wbar * nm + Cd + EZ) := by gcongr
+    _ ≤ K.cw s f * (revRate + nm + Cd + EZ) := by gcongr
 
 end Contact
 
@@ -402,49 +407,32 @@ end Contact
 
 section Coins
 
-variable (parameter : PublicParameter) (data : PublicData)
+variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
+  (model : HiddenRows.Model HashInput HashOutput A Coordinate) {parameter : PublicParameter} {data : PublicData}
 
-omit [Params] in
-theorem coinCountF_split (P : List Pair) (L : QueryLog SigningSpec) (m : Message) (hm : ∀ entry ∈ L, entry.1 ≠ m) :
-    coinCountF P L = (P.filter fun q => decide (MsgFresh L q ∧ q.1 ≠ m)).length +
-      (P.filter fun q => decide (q.1 = m)).length := by
-  unfold coinCountF
-  have h1 : (P.filter fun q => decide (MsgFresh L q)).filter (fun q => !decide (q.1 = m)) =
-      P.filter fun q => decide (MsgFresh L q ∧ q.1 ≠ m) := by
-    rw [List.filter_filter]
-    congr 1
-    funext q
-    by_cases hq : q.1 = m <;> by_cases hf : MsgFresh L q <;> simp [hq, hf]
-  have h2 : (P.filter fun q => decide (MsgFresh L q)).filter (fun q => decide (q.1 = m)) =
-      P.filter fun q => decide (q.1 = m) := by
-    rw [List.filter_filter]
-    congr 1
-    funext q
-    by_cases hq : q.1 = m
-    · have hf : MsgFresh L q := fun entry he => by rw [hq]; exact hm entry he
-      simp [hq, hf]
-    · simp [hq]
-  have h := List.length_eq_length_filter_add (l := P.filter fun q => decide (MsgFresh L q))
-    (fun q => decide (q.1 = m))
-  rw [h2, h1] at h
-  omega
+/-- **The masses off the identity before a signing call**: the signed message and the other live
+messages. -/
+theorem offSum_split {s : State} {Ms : List Message} (hM : MInv parameter data s Ms) {L : QueryLog SigningSpec}
+    {m : Message} (hm : MsgLive L m) :
+    ((live L Ms).map fun m' => offMass parameter data s m').sum =
+      offMass parameter data s m + ((restMsgs m L Ms).map fun m' => offMass parameter data s m').sum := by
+  rw [← offSum_addMsg hM L m, ((live_perm hm hM.nodup).map _).sum_eq, List.map_cons, List.sum_cons]
 
-theorem coinCountF_after (P : List Pair) (L : QueryLog SigningSpec) (m : Message) (s s' : State)
+/-- **The masses off the identity after a signing call**: the signed message is no longer live and
+the other messages keep their statuses. -/
+theorem offSum_after (m : Message) (budget : ℕ) (s : State) (Ms : List Message) (L : QueryLog SigningSpec)
+    (out : Run HashInput Coordinate (Option Signature) × State)
+    (hout : out ∈ support (interp tg initial model (signCostSource parameter data m) budget s))
     (r : Option Signature) :
-    coinCountF (newPairs parameter data m s s' ++ P) (L ++ [⟨m, r⟩]) =
-      (P.filter fun q => decide (MsgFresh L q ∧ q.1 ≠ m)).length := by
-  unfold coinCountF
-  rw [List.filter_append]
-  have hnew : (newPairs parameter data m s s').filter (fun q => decide (MsgFresh (L ++ [⟨m, r⟩]) q)) = [] := by
-    refine List.filter_eq_nil_iff.2 fun q hq => ?_
-    obtain ⟨hm, _, _⟩ := (mem_newPairs parameter data m s).1 hq
-    simp only [decide_eq_true_eq, msgFresh_append, not_and, not_not]
-    exact fun _ => hm
-  rw [hnew, List.nil_append]
-  congr 1
-  congr 1
-  funext q
-  simp only [msgFresh_append]
+    ((live (L ++ [⟨m, r⟩]) (addMsg Ms m)).map fun m' => offMass parameter data out.2 m').sum =
+      ((restMsgs m L Ms).map fun m' => offMass parameter data s m').sum := by
+  have hkept : ∀ m' ∈ restMsgs m L Ms, offMass parameter data out.2 m' = offMass parameter data s m' := by
+    intro m' hm'
+    have hne : m' ≠ m := by
+      unfold restMsgs at hm'
+      simpa using (List.mem_filter.1 hm').2
+    exact offMass_congr fun ρ => other_message_keptS tg initial model budget s out hout (m', ρ) hne
+  rw [live_after, List.map_congr_left hkept]
 
 end Coins
 
@@ -463,65 +451,110 @@ theorem psiF_sign (hparse : ∀ p, model.parse (pblk K.p data p) = none)
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared K.initial s1 →
       ∀ out ∈ support (interp K.tg K.initial model (finishRest K.p data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
-    {Cmax : ℕ} (hfair : Fair wbar Cmax) (hQ : Qtot + digestAttemptLimit ≤ Cmax) :
-    SignPaysF K data Qtot model (psiF K data wbar κ Fail) := by
-  intro budget s P L d R hB m hm
-  have hcount : cachedCount K.p data m s + digestAttemptLimit ≤ Cmax := by
-    have := hB.count m; omega
-  set run := interp K.tg K.initial model (signCostSourceLoop K.p data m digestAttemptLimit) budget s with hrun
+    (hw : wbar ≤ 1) (Lmax : ℕ) :
+    SignPaysF K data Qtot model (psiF K data wbar κ Fail Lmax) := by
+  intro budget s P Ms L d R hB m hm
+  have hM := hB.minv
+  set run := interp K.tg K.initial model (signCostSource K.p data m) budget s with hrun
+  set ℓ := (livePairs L P).length with hℓ
+  have hmass : ∑' o1, Pr[= o1 | run] = 1 := HiddenDebt.interp_mass _ _ _ _ _ _
+  -- the cap term does not grow
+  have hlam : ∀ (o1 : Run HashInput Coordinate (Option Signature) × State) (r : Option Signature),
+      lam Lmax (livePairs (L ++ [⟨m, r⟩]) (newPairs K.p data m s o1.2 ++ P)).length
+        (budget - traceCost o1.1.2.2.1) ≤ lam Lmax ℓ budget := by
+    intro o1 r
+    refine lam_mono ?_ (Nat.sub_le _ _)
+    unfold livePairs
+    rw [List.filter_append]
+    have hnew : (newPairs K.p data m s o1.2).filter
+        (fun q => decide (MsgLive (L ++ [⟨m, r⟩]) q.1)) = [] := by
+      refine List.filter_eq_nil_iff.2 fun q hq => ?_
+      obtain ⟨hqm, _, _⟩ := (mem_newPairs K.p data m s).1 hq
+      simp only [decide_eq_true_eq, msgLive_append, not_and, not_not]
+      exact fun _ => hqm
+    rw [hnew, List.nil_append]
+    refine (List.Sublist.length_le ?_)
+    refine List.monotone_filter_right _ fun q hq => ?_
+    simp only [decide_eq_true_eq, msgLive_append] at hq ⊢
+    exact hq.1
+  set X : Run HashInput Coordinate (Option Signature) × State → ℝ≥0∞ := fun o1 =>
+    o1.1.1.elim 0 (fun r => psiCoreF K data wbar κ Fail o1.2 (newPairs K.p data m s o1.2 ++ P) (addMsg Ms m)
+      (L ++ [⟨m, r⟩]) (discAfter K.p data m s d o1) (R ++ o1.1.2.1) (budget - traceCost o1.1.2.2.1)) with hX
+  have hsplitX : ∀ o1, o1.1.1.elim 0 (fun r => psiF K data wbar κ Fail Lmax o1.2 (newPairs K.p data m s o1.2 ++ P)
+      (addMsg Ms m) (L ++ [⟨m, r⟩]) (discAfter K.p data m s d o1) (R ++ o1.1.2.1)
+      (budget - traceCost o1.1.2.2.1)) ≤ X o1 + lam Lmax ℓ budget := by
+    intro o1
+    cases hres : o1.1.1 with
+    | none => simp only [Option.elim]; exact zero_le
+    | some r =>
+        simp only [hX, hres, Option.elim]
+        unfold psiF
+        exact add_le_add le_rfl (hlam o1 r)
+  suffices hmain : ∑' o1, Pr[= o1 | run] * X o1 ≤ psiCoreF K data wbar κ Fail s P Ms L d R budget by
+    calc _ ≤ ∑' o1, Pr[= o1 | run] * (X o1 + lam Lmax ℓ budget) :=
+          ENNReal.tsum_le_tsum fun o1 => mul_le_mul_right (hsplitX o1) _
+      _ = ∑' o1, Pr[= o1 | run] * X o1 + lam Lmax ℓ budget := by
+          simp only [mul_add, ENNReal.tsum_add, ENNReal.tsum_mul_right, hmass, one_mul]
+      _ ≤ _ := by
+          unfold psiF
+          exact add_le_add hmain le_rfl
   by_cases hL : signatureLimit ≤ L.length
   · refine le_of_eq_of_le (ENNReal.tsum_eq_zero.2 fun o1 => ?_) zero_le
     cases hres : o1.1.1 with
-    | none => simp only [Option.elim, mul_zero]
+    | none => simp only [hX, hres, Option.elim, mul_zero]
     | some r =>
-        simp only [Option.elim]
-        unfold psiF
+        simp only [hX, hres, Option.elim]
+        unfold psiCoreF
         rw [if_pos (by simp only [List.length_append, List.length_singleton]; omega), mul_zero]
   push Not at hL
-  set nm : ℝ≥0∞ := ((P.filter fun q => decide (q.1 = m)).length : ℝ≥0∞) with hnm
-  set c1 : ℕ := (P.filter fun q => decide (MsgFresh L q ∧ q.1 ≠ m)).length with hc1
-  set coinD : ℝ≥0∞ := wbar * c1 + budget * (wbar * landing) with hcoinD
+  set nm : ℝ≥0∞ := offMass K.p data s m with hnm
+  set coinD : ℝ≥0∞ := ((restMsgs m L Ms).map fun m' => offMass K.p data s m').sum + budget * rateS with hcoinD
+  have hcoinsplit : coinRiskF K data s Ms L budget = nm + coinD := by
+    unfold coinRiskF
+    rw [offSum_split hM hm, hcoinD, add_assoc]
+  set restSum : ℝ≥0∞ := ((restMsgs m L Ms).map fun m' => offMass K.p data s m').sum with hrestSum
+  set coinPD : ℝ≥0∞ := ν * ((budget : ℝ≥0∞) * restSum + ((Nat.choose budget 2 : ℕ) : ℝ≥0∞) * rateS) with hcoinPD
   set Cd : ℝ≥0∞ := ((signatureLimit - (L.length + 1) : ℕ) : ℝ≥0∞) * revRate + coinD with hCd
   set canon : ℕ → Run HashInput Coordinate (Option Signature) × State → ℝ≥0∞ := fun k o1 =>
-    canonL K.p data witnessNear wbar 0 Fail m s P L d (fun _ => False) k o1 with hcanon
+    canonL K.p data witnessNear wbar 0 Fail m s P Ms L d (fun _ => False) k o1 with hcanon
   set Z : Run HashInput Coordinate (Option Signature) × State → ℝ≥0∞ := fun o1 => min 1 (canon budget o1) with hZ
   have hZ1 : ∀ o, Z o ≤ 1 := fun o => min_le_left _ _
-  have hse : ∀ k, ∑' o1, Pr[= o1 | run] * canon k o1 ≤ potNF K data wbar Fail s P L d k := fun k =>
-    sign_expectG_level K.tg K.initial model K.p data wbar 0 Fail m witnessNear_props (fun _ => False) hparse hfair
-      ENNReal.zero_ne_top digestAttemptLimit budget k s P L hm d hB.pinv hcount
+  have hse : ∀ k, ∑' o1, Pr[= o1 | run] * canon k o1 ≤ potNF K data wbar Fail s P Ms L d k := fun k =>
+    sign_expectG_level K.tg K.initial model K.p data wbar 0 Fail m witnessNear_props (fun _ => False) hparse
+      ENNReal.zero_ne_top budget k s P Ms L hm d hM
   have hpoint : ∀ o1 ∈ support run, ∀ r, o1.1.1 = some r → ∀ k' K', k' ≤ K' →
-      potNF K data wbar Fail o1.2 (newPairs K.p data m s o1.2 ++ P) (L ++ [⟨m, r⟩]) (discAfter K.p data m s d o1) k' ≤
+      potNF K data wbar Fail o1.2 (newPairs K.p data m s o1.2 ++ P) (addMsg Ms m) (L ++ [⟨m, r⟩])
+          (discAfter K.p data m s d o1) k' ≤
         canon K' o1 := fun o1 ho1 r hr k' K' hk =>
     sign_pointG_level K.tg K.initial model K.p data wbar 0 Fail Qtot m witnessNear_props (fun _ _ _ h => h)
-      hparse (hfail m) hfair.le_one ENNReal.zero_ne_top digestAttemptLimit budget s P L d R hB.inv.prepared hB.pinv
+      hparse (hfail m) hw ENNReal.zero_ne_top budget s P Ms L d R hB.inv.prepared hB.pinv hM
       hB.dinv hB.count o1 ho1 r hr hk
   -- the pointwise bound
   have hpt : ∀ o1 ∈ support run,
-      o1.1.1.elim 0 (fun r => psiF K data wbar κ Fail o1.2 (newPairs K.p data m s o1.2 ++ P) (L ++ [⟨m, r⟩])
-          (discAfter K.p data m s d o1) (R ++ o1.1.2.1) (budget - traceCost o1.1.2.2.1)) ≤
+      X o1 ≤
         (∑ f, if Ctx.Recd s f then (if o1.1.1.isSome then K.cw o1.2 f * gA (R ++ o1.1.2.1) (Cd + Z o1) f else 0)
-          else 0) + (budget : ℝ≥0∞) * ν * coinD + κ * ν * ∑ j ∈ Finset.range budget, canon j o1 := by
+          else 0) + coinPD + κ * ν * ∑ j ∈ Finset.range budget, canon j o1 := by
     intro o1 ho1
     cases hres : o1.1.1 with
     | none =>
-        simp only [Option.elim]
+        simp only [hX, hres, Option.elim]
         exact zero_le
     | some r =>
-        simp only [Option.elim]
-        unfold psiF
+        simp only [hX, hres, Option.elim]
+        unfold psiCoreF
         rw [if_neg (by simp only [List.length_append, List.length_singleton]; omega)]
         set y' := budget - traceCost o1.1.2.2.1 with hy'
         have hy'le : y' ≤ budget := Nat.sub_le _ _
         have hrecd : ∀ f, Ctx.Recd o1.2 f ↔ Ctx.Recd s f := fun f =>
-          ⟨interp_recd_avoid K model hMp hMi _ (avoids_loop_fchain K.p K.p data m digestAttemptLimit) budget s o1
+          ⟨interp_recd_avoid K model hMp hMi _ (avoids_source_fchain K.p K.p data m) budget s o1
             ho1 f, fun h => (interp_extends K.tg K.initial model _ budget s o1 ho1).2.2 _ h⟩
         have hlen : signatureLimit - (L ++ [(⟨m, r⟩ : (_ : Message) × Option Signature)]).length =
             signatureLimit - (L.length + 1) := by simp
-        have hcoin : coinRiskF wbar (newPairs K.p data m s o1.2 ++ P) (L ++ [⟨m, r⟩]) y' ≤ coinD := by
+        have hcoin : coinRiskF K data o1.2 (addMsg Ms m) (L ++ [⟨m, r⟩]) y' ≤ coinD := by
           unfold coinRiskF
-          rw [coinCountF_after K.p data P L m s o1.2 r, hcoinD]
+          rw [offSum_after K.tg K.initial model m budget s Ms L o1 ho1 r, hcoinD]
           gcongr
-        have hcoef : coefU K data wbar Fail o1.2 (newPairs K.p data m s o1.2 ++ P) (L ++ [⟨m, r⟩])
+        have hcoef : coefU K data wbar Fail o1.2 (newPairs K.p data m s o1.2 ++ P) (addMsg Ms m) (L ++ [⟨m, r⟩])
             (discAfter K.p data m s d o1) y' ≤ Cd + Z o1 := by
           unfold coefU sigRiskF
           rw [hlen, hCd]
@@ -534,9 +567,13 @@ theorem psiF_sign (hparse : ∀ p, model.parse (pblk K.p data p) = none)
           by_cases hr : Ctx.Recd s f
           · rw [if_pos ((hrecd f).2 hr), if_pos hr, mul_comm]
           · rw [if_neg (fun h => hr ((hrecd f).1 h)), if_neg hr]
-        · gcongr
+        · unfold coinPotF
+          rw [offSum_after K.tg K.initial model m budget s Ms L o1 ho1 r, hcoinPD]
+          have hc : ((Nat.choose y' 2 : ℕ) : ℝ≥0∞) ≤ ((Nat.choose budget 2 : ℕ) : ℝ≥0∞) := by
+            exact_mod_cast Nat.choose_le_choose 2 hy'le
+          gcongr
         · refine mul_le_mul_right ?_ _
-          calc ∑ j ∈ Finset.range y', potNF K data wbar Fail o1.2 (newPairs K.p data m s o1.2 ++ P)
+          calc ∑ j ∈ Finset.range y', potNF K data wbar Fail o1.2 (newPairs K.p data m s o1.2 ++ P) (addMsg Ms m)
                 (L ++ [⟨m, r⟩]) (discAfter K.p data m s d o1) j
               ≤ ∑ j ∈ Finset.range y', canon j o1 :=
                 Finset.sum_le_sum fun j _ => hpoint o1 ho1 r hres j j le_rfl
@@ -544,27 +581,26 @@ theorem psiF_sign (hparse : ∀ p, model.parse (pblk K.p data p) = none)
                 Finset.sum_le_sum_of_subset (Finset.range_subset_range.2 hy'le)
   -- the expectation
   set EZ := ∑' o1, Pr[= o1 | run] * Z o1 with hEZ
-  have hEZle : EZ ≤ min 1 (potNF K data wbar Fail s P L d budget) :=
+  have hEZle : EZ ≤ min 1 (potNF K data wbar Fail s P Ms L d budget) :=
     le_trans (tsum_min_leF _ _) (min_le_min le_rfl (hse budget))
-  have hmass : ∑' o1, Pr[= o1 | run] = 1 := HiddenDebt.interp_mass _ _ _ _ _ _
   have hcontact : ∀ f, ∑' o1, Pr[= o1 | run] *
       (if Ctx.Recd s f then (if o1.1.1.isSome then K.cw o1.2 f * gA (R ++ o1.1.2.1) (Cd + Z o1) f else 0) else 0) ≤
-      if Ctx.Recd s f then K.cw s f * gA R (revRate + wbar * nm + Cd + EZ) f else 0 := by
+      if Ctx.Recd s f then K.cw s f * gA R (revRate + nm + Cd + EZ) f else 0 := by
     intro f
     by_cases hr : Ctx.Recd s f
     · simp only [if_pos hr]
-      exact sign_contact hMp hMi hMo hB hparse hfair hcount f Cd Z hZ1
+      exact sign_contact hMp hMi hMo hB hparse f Cd Z hZ1
     · simp only [if_neg hr, mul_zero, tsum_zero, le_refl]
   calc _ ≤ ∑' o1, Pr[= o1 | run] *
         ((∑ f, if Ctx.Recd s f then (if o1.1.1.isSome then K.cw o1.2 f * gA (R ++ o1.1.2.1) (Cd + Z o1) f else 0)
-          else 0) + (budget : ℝ≥0∞) * ν * coinD + κ * ν * ∑ j ∈ Finset.range budget, canon j o1) := by
+          else 0) + coinPD + κ * ν * ∑ j ∈ Finset.range budget, canon j o1) := by
         refine ENNReal.tsum_le_tsum fun o1 => ?_
         by_cases ho1 : o1 ∈ support run
         · exact mul_le_mul_right (hpt o1 ho1) _
         · rw [probOutput_eq_zero_of_not_mem_support ho1, zero_mul, zero_mul]
     _ = (∑ f, ∑' o1, Pr[= o1 | run] *
           (if Ctx.Recd s f then (if o1.1.1.isSome then K.cw o1.2 f * gA (R ++ o1.1.2.1) (Cd + Z o1) f else 0)
-            else 0)) + (budget : ℝ≥0∞) * ν * coinD +
+            else 0)) + coinPD +
           κ * ν * ∑ j ∈ Finset.range budget, ∑' o1, Pr[= o1 | run] * canon j o1 := by
         simp only [mul_add, ENNReal.tsum_add, Finset.mul_sum]
         rw [Summable.tsum_finsetSum (fun _ _ => ENNReal.summable),
@@ -573,41 +609,35 @@ theorem psiF_sign (hparse : ∀ p, model.parse (pblk K.p data p) = none)
         refine Finset.sum_congr rfl fun j _ => ?_
         rw [← ENNReal.tsum_mul_left]
         exact tsum_congr fun o1 => by ring
-    _ ≤ (∑ f, if Ctx.Recd s f then K.cw s f * gA R (revRate + wbar * nm + Cd + EZ) f else 0) +
-          (budget : ℝ≥0∞) * ν * coinD + κ * ν * ∑ j ∈ Finset.range budget, potNF K data wbar Fail s P L d j :=
+    _ ≤ (∑ f, if Ctx.Recd s f then K.cw s f * gA R (revRate + nm + Cd + EZ) f else 0) +
+          coinPD + κ * ν * ∑ j ∈ Finset.range budget, potNF K data wbar Fail s P Ms L d j :=
         add_le_add (add_le_add (Finset.sum_le_sum fun f _ => hcontact f) le_rfl)
           (mul_le_mul_right (Finset.sum_le_sum fun j _ => hse j) _)
-    _ ≤ psiF K data wbar κ Fail s P L d R budget := by
-        unfold psiF
+    _ ≤ psiCoreF K data wbar κ Fail s P Ms L d R budget := by
+        unfold psiCoreF
         rw [if_neg (by omega)]
-        have hsplit := coinCountF_split P L m hm
-        have hX : revRate + wbar * nm + Cd + EZ ≤ coefU K data wbar Fail s P L d budget := by
-          unfold coefU sigRiskF coinRiskF
-          rw [hsplit, hCd, hcoinD]
+        have hXc : revRate + nm + Cd + EZ ≤ coefU K data wbar Fail s P Ms L d budget := by
+          unfold coefU sigRiskF
+          rw [hcoinsplit, hCd]
           have hn : ((signatureLimit - L.length : ℕ) : ℝ≥0∞) =
               ((signatureLimit - (L.length + 1) : ℕ) : ℝ≥0∞) + 1 := by
             rw [show signatureLimit - L.length = (signatureLimit - (L.length + 1)) + 1 by omega, Nat.cast_add,
               Nat.cast_one]
-          have hc : (((P.filter fun q => decide (MsgFresh L q ∧ q.1 ≠ m)).length +
-              (P.filter fun q => decide (q.1 = m)).length : ℕ) : ℝ≥0∞) = (c1 : ℝ≥0∞) + nm := by
-            rw [Nat.cast_add]
-          rw [hn, hc]
-          calc revRate + wbar * nm + (((signatureLimit - (L.length + 1) : ℕ) : ℝ≥0∞) * revRate +
-                (wbar * (c1 : ℝ≥0∞) + (budget : ℝ≥0∞) * (wbar * landing))) + EZ
-              = (((signatureLimit - (L.length + 1) : ℕ) : ℝ≥0∞) + 1) * revRate +
-                  (wbar * ((c1 : ℝ≥0∞) + nm) + (budget : ℝ≥0∞) * (wbar * landing)) + EZ := by ring
+          rw [hn]
+          calc revRate + nm + (((signatureLimit - (L.length + 1) : ℕ) : ℝ≥0∞) * revRate + coinD) + EZ
+              = (((signatureLimit - (L.length + 1) : ℕ) : ℝ≥0∞) + 1) * revRate + (nm + coinD) + EZ := by ring
             _ ≤ _ := by gcongr
-        have hcoinle : coinD ≤ coinRiskF wbar P L budget := by
-          unfold coinRiskF
-          rw [hsplit, hcoinD, Nat.cast_add]
+        have hcoinle : coinPD ≤ coinPotF K data s Ms L budget := by
+          unfold coinPotF
+          rw [offSum_split hM hm, hcoinPD]
           gcongr
-          exact le_self_add
+          exact le_add_self
         gcongr
         · unfold Ctx.wsum
           refine Finset.sum_le_sum fun f _ => ?_
           split_ifs
           · rw [mul_comm]
-            exact mul_le_mul_left (gA_mono R hX f) _
+            exact mul_le_mul_left (gA_mono R hXc f) _
           · exact le_rfl
 
 end SignPays

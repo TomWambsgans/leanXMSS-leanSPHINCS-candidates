@@ -1,6 +1,7 @@
 import LeanForest.BridgeDetCost
 import LeanForest.BridgeDetMemo
 import LeanForest.BridgeStop
+import LeanForest.BridgeReduce
 
 /-! The budgeted win value of a graph-view cost program on a fixed answer function, and the
 comparisons it supports: monotonicity in the budget, averaging a family of continuations, and
@@ -187,91 +188,29 @@ theorem tsum_prob_mul_le {ρ : Type} (p : ProbComp ρ) (C : ℝ≥0∞) :
   rw [ENNReal.tsum_mul_right]
   exact mul_le_of_le_one_left bot_le tsum_probOutput_le_one
 
-/-! ### One message: derived randomizers read once are fresh draws -/
-
-abbrev Row := BitVec 32 → HashOutput
-
-noncomputable instance rowSampleable : SampleableType Row := SampleableType.ofFintype Row
+/-! ### One message: a derived randomizer base read once is a fresh uniform start -/
 
 variable [Params]
 
-theorem signCostDetLoop_update (parameter : PublicParameter) (data : PublicData) (row : Row)
-    (message : Message) (i : BitVec 32) (a : HashOutput) :
-    ∀ n t, (∀ j, t ≤ j → j < t + n → BitVec.ofNat 32 j ≠ i) →
-      Det.signCostDetLoop parameter data (Function.update row i a) message n t =
-        Det.signCostDetLoop parameter data row message n t := by
-  intro n
-  induction n with
-  | zero => intro t _; rfl
-  | succ n ih =>
-      intro t h
-      simp only [Det.signCostDetLoop]
-      rw [Function.update_of_ne (h t le_rfl (by omega)), ih (t + 1) (fun j hj hj' => h j (by omega) (by omega))]
-
+/-- Averaging the planted base `R0` of one message: the deterministic signer (one tick, then the
+scan from the truncated base) wins at most as often as the scan from a uniform start. -/
 theorem row_le {α : Type} (E : α → Prop) (parameter : PublicParameter) (data : PublicData)
-    (message : Message) (k : Option Signature → OracleComp CostSpec α) :
-    ∀ n t, t + n ≤ 2 ^ 32 → ∀ b,
-      ∑' row, Pr[= row | ($ᵗ Row : ProbComp Row)] *
-          val g c E (Det.signCostDetLoop parameter data row message n t >>= k) b ≤
-        val g c E (signCostSourceLoop parameter data message n >>= k) b := by
-  intro n
-  induction n with
-  | zero =>
-      intro t _ b
-      simp only [Det.signCostDetLoop, signCostSourceLoop]
-      exact tsum_prob_mul_le _ _
-  | succ n ih =>
-      intro t ht b
-      rw [tsum_uniform_update (BitVec.ofNat 32 t)]
-      have hloc : ∀ (row : Row) (a : HashOutput),
-          Det.signCostDetLoop parameter data (Function.update row (BitVec.ofNat 32 t) a) message n (t + 1) =
-            Det.signCostDetLoop parameter data row message n (t + 1) := by
-        intro row a
-        refine signCostDetLoop_update parameter data row message _ a n (t + 1) fun j hj hj' heq => ?_
-        have := LeanForest.ofNat_inj_of_lt (w := 32) (by omega) (by omega) heq
-        omega
-      let body : Randomness → (Option Signature → OracleComp CostSpec (Option Signature)) →
-          OracleComp CostSpec α := fun randomness rest =>
-        (liftM (Concrete.messageDigestCall parameter data.root message randomness :
-          OracleComp HashSpec HashOutput) >>= fun first =>
-            if Landed parameter (Concrete.blockIndex first) then
-              finishCostSource parameter data message randomness
-            else rest none) >>= k
-      have hdet : ∀ (row : Row) (a : HashOutput),
-          Det.signCostDetLoop parameter data (Function.update row (BitVec.ofNat 32 t) a) message (n + 1) t >>= k =
-            HiddenCost.tick 1 >>= fun _ => body (truncateHash a)
-              (fun _ => Det.signCostDetLoop parameter data row message n (t + 1)) := by
-        intro row a
-        simp only [Det.signCostDetLoop, Function.update_self, hloc, body, bind_assoc]
-      have hrand : signCostSourceLoop parameter data message (n + 1) >>= k =
-          (liftM ($ᵗ Randomness : ProbComp Randomness) : OracleComp CostSpec Randomness) >>= fun randomness =>
-            body randomness (fun _ => signCostSourceLoop parameter data message n) := by
-        simp only [signCostSourceLoop, body, bind_assoc]
-      calc
-        _ = ∑' a, Pr[= a | ($ᵗ HashOutput : ProbComp HashOutput)] * ∑' row, Pr[= row | ($ᵗ Row : ProbComp Row)] *
-              val g c E (HiddenCost.tick 1 >>= fun _ => body (truncateHash a)
-                (fun _ => Det.signCostDetLoop parameter data row message n (t + 1))) b := by
-          simp_rw [hdet]
-        _ ≤ ∑' a, Pr[= a | ($ᵗ HashOutput : ProbComp HashOutput)] * ∑' row, Pr[= row | ($ᵗ Row : ProbComp Row)] *
-              val g c E (body (truncateHash a)
-                (fun _ => Det.signCostDetLoop parameter data row message n (t + 1))) b := by
-          refine ENNReal.tsum_le_tsum fun a => mul_le_mul' le_rfl
-            (ENNReal.tsum_le_tsum fun row => mul_le_mul' le_rfl (val_tick_le g c E 1 _ b))
-        _ ≤ ∑' a, Pr[= a | ($ᵗ HashOutput : ProbComp HashOutput)] *
-              val g c E (body (truncateHash a) (fun _ => signCostSourceLoop parameter data message n)) b := by
-          refine ENNReal.tsum_le_tsum fun a => mul_le_mul' le_rfl ?_
-          simp only [body, bind_assoc]
-          refine val_bind_le_avg g c E (fun row => Pr[= row | ($ᵗ Row : ProbComp Row)]) _ _ _
-            (fun first _ b' => ?_) b
-          by_cases hl : Landed parameter (Concrete.blockIndex first)
-          · simp only [hl, ↓reduceIte]
-            exact tsum_prob_mul_le _ _
-          · simp only [hl, ↓reduceIte]
-            exact ih (t + 1) (by omega) b'
-        _ = ∑' r, Pr[= r | ($ᵗ Randomness : ProbComp Randomness)] *
-              val g c E (body r (fun _ => signCostSourceLoop parameter data message n)) b :=
-          tsum_uniform_truncate (fun r => val g c E (body r (fun _ => signCostSourceLoop parameter data message n)) b)
-        _ = _ := by rw [hrand, val_liftProb_bind]
+    (message : Message) (k : Option Signature → OracleComp CostSpec α) (n b : ℕ) :
+    ∑' a, Pr[= a | ($ᵗ HashOutput : ProbComp HashOutput)] *
+        val g c E ((HiddenCost.tick 1 >>= fun _ =>
+          signCostSourceLoop parameter data message n (truncateHash a)) >>= k) b ≤
+      val g c E (((liftM ($ᵗ Randomness : ProbComp Randomness) : OracleComp CostSpec Randomness) >>=
+        fun start => signCostSourceLoop parameter data message n start) >>= k) b := by
+  calc
+    _ ≤ ∑' a, Pr[= a | ($ᵗ HashOutput : ProbComp HashOutput)] *
+          val g c E (signCostSourceLoop parameter data message n (truncateHash a) >>= k) b := by
+      refine ENNReal.tsum_le_tsum fun a => mul_le_mul' le_rfl ?_
+      rw [bind_assoc]
+      exact val_tick_le g c E 1 _ b
+    _ = ∑' r, Pr[= r | ($ᵗ Randomness : ProbComp Randomness)] *
+          val g c E (signCostSourceLoop parameter data message n r >>= k) b :=
+      tsum_uniform_truncate (fun r => val g c E (signCostSourceLoop parameter data message n r >>= k) b)
+    _ = _ := by rw [bind_assoc, val_liftProb_bind]
 
 /-! ### The adversary's interaction as a cost program -/
 
@@ -381,10 +320,10 @@ theorem advRand_sign (parameter : PublicParameter) (data : PublicData)
   refine bind_congr fun r' => ?_
   simp only [List.append_assoc]
 
-/-- A program that never signs a message of `S` reads no randomizer row of `S`. -/
+/-- A program that never signs a message of `S` reads no randomizer base of `S`. -/
 theorem advDet_update (parameter : PublicParameter) (data : PublicData) :
     ∀ (M : OracleComp AdvSpec Forgery) (S : List Message) (L : QueryLog SigningSpec) (rnd : Det.RTable)
-      (m : Message) (row : Row), NoRepeat M S → m ∈ S →
+      (m : Message) (row : HashOutput), NoRepeat M S → m ∈ S →
       advDet parameter data (Function.update rnd m row) M L = advDet parameter data rnd M L := by
   intro M
   induction M using OracleComp.inductionOn with
@@ -430,10 +369,11 @@ theorem avg_advDet (E : Bool → Prop) (parameter : PublicParameter) (data : Pub
       · obtain ⟨hnot, hrest⟩ := hnr
         simp only [advDet_sign, advRand_sign]
         rw [tsum_uniform_update m]
-        have hloc : ∀ (row : Row) (rnd : Det.RTable),
+        have hloc : ∀ (row : HashOutput) (rnd : Det.RTable),
             (Det.signCostDet parameter data (Function.update rnd m row) m >>= fun r =>
               advDet parameter data (Function.update rnd m row) (next r) (L ++ [⟨m, r⟩])) =
-            (Det.signCostDetLoop parameter data row m digestAttemptLimit 0 >>= fun r =>
+            ((HiddenCost.tick 1 >>= fun _ =>
+                signCostSourceLoop parameter data m digestAttemptLimit (truncateHash row)) >>= fun r =>
               advDet parameter data rnd (next r) (L ++ [⟨m, r⟩])) := by
           intro row rnd
           unfold Det.signCostDet
@@ -442,14 +382,15 @@ theorem avg_advDet (E : Bool → Prop) (parameter : PublicParameter) (data : Pub
             (List.mem_append_right _ (List.mem_singleton_self m))
         simp_rw [hloc]
         calc
-          _ ≤ ∑' row, Pr[= row | ($ᵗ Row : ProbComp Row)] *
-                val g c E (Det.signCostDetLoop parameter data row m digestAttemptLimit 0 >>= fun r =>
+          _ ≤ ∑' row, Pr[= row | ($ᵗ HashOutput : ProbComp HashOutput)] *
+                val g c E ((HiddenCost.tick 1 >>= fun _ =>
+                    signCostSourceLoop parameter data m digestAttemptLimit (truncateHash row)) >>= fun r =>
                   advRand parameter data (next r) (L ++ [⟨m, r⟩])) b := by
             refine ENNReal.tsum_le_tsum fun row => mul_le_mul' le_rfl ?_
             exact val_bind_le_avg g c E _ _ _ _ (fun r _ b' => ih r (S ++ [m]) _ (hrest r) b') b
           _ ≤ _ := by
             rw [signCostSource]
-            exact row_le g c E parameter data m _ digestAttemptLimit 0 (by rw [digestAttemptLimit]; omega) b
+            exact row_le g c E parameter data m _ digestAttemptLimit b
 
 /-! ### The deterministic signer is deterministic on a fixed answer function -/
 
@@ -552,18 +493,25 @@ theorem finishCostSource_det (parameter : PublicParameter) (data : PublicData) (
     exact ⟨_, rfl⟩
   · exact ⟨_, rfl⟩
 
-theorem signCostDetLoop_det (parameter : PublicParameter) (data : PublicData) (row : Row)
-    (message : Message) : ∀ n t,
-    ∃ x, simulateQ (fixedCostP g c) (Det.signCostDetLoop parameter data row message n t) = pure x := by
+theorem signCostDetLoop_det (parameter : PublicParameter) (data : PublicData)
+    (message : Message) : ∀ (n : ℕ) (start : Randomness),
+    ∃ x, simulateQ (fixedCostP g c) (signCostSourceLoop parameter data message n start) = pure x := by
   intro n
   induction n with
-  | zero => intro t; exact ⟨none, rfl⟩
+  | zero => intro start; exact ⟨none, rfl⟩
   | succ n ih =>
-      intro t
-      simp only [Det.signCostDetLoop, simulateQ_bind, fixedCostP_tick, pure_bind, fixedCostP_liftHash]
+      intro start
+      simp only [signCostSourceLoop, simulateQ_bind, pure_bind, fixedCostP_liftHash]
       split
       · exact finishCostSource_det g c parameter data message _
-      · exact ih (t + 1)
+      · exact ih (start + 1)
+
+theorem signCostDet_det (parameter : PublicParameter) (data : PublicData) (rnd : Det.RTable)
+    (message : Message) :
+    ∃ x, simulateQ (fixedCostP g c) (Det.signCostDet parameter data rnd message) = pure x := by
+  obtain ⟨x, hx⟩ := signCostDetLoop_det g c parameter data message digestAttemptLimit
+    (truncateHash (rnd message))
+  exact ⟨x, by rw [Det.signCostDet, simulateQ_bind, fixedCostP_tick, pure_bind, hx]⟩
 
 /-! ### Memoizing at the cost level -/
 
@@ -628,8 +576,7 @@ theorem memo_le (parameter : PublicParameter) (data : PublicData) (rnd : Det.RTa
               exact le_trans hinv.2.2 (Nat.le_add_right _ _)
         | none =>
             rw [memoImpl_sign_none m record hm, bind_map_left, map_bind, advDet_sign, advDet_sign]
-            obtain ⟨x0, hx0⟩ := signCostDetLoop_det g c parameter data (rnd m) m digestAttemptLimit 0
-            have hdet : simulateQ (fixedCostP g c) (Det.signCostDet parameter data rnd m) = pure x0 := hx0
+            obtain ⟨x0, hdet⟩ := signCostDet_det g c parameter data rnd m
             refine val_bind_mono g c _ _ _ _ (fun x hx b' => ?_) b
             rw [hdet, support_pure, Set.mem_singleton_iff] at hx
             subst hx

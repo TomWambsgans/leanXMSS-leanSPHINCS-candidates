@@ -1,4 +1,4 @@
-import LeanForest.BridgeForsGameOnce
+import LeanForest.BridgeNoRepeatDef
 import LeanForest.BridgeInternalize
 
 /-! Adversaries that never request a signature on the same message twice stay so when their long

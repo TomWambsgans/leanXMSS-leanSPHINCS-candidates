@@ -265,7 +265,8 @@ theorem recover_twoEdge (reference digit : Digit) (value frontier : Digest) (tra
       show second + 1 = reference.val - digit.val by dsimp [second]; omega]
     exact hfrontier
 
-/-- The actual byte layout separates all 64 chain addresses and their three step addresses. -/
+/-- The actual byte layout separates all 64 chain addresses (the field `hi`) and their three step
+addresses (the step bits of the type byte). -/
 theorem chain_input_address_injective (parameter : PublicParameter) (lay : Layer)
     (tree : TreeIndex) (leaf : LeafIndex) {chain chain' : ChainIndex}
     {step step' : ChainStep} (payload payload' : Digest)
@@ -274,18 +275,18 @@ theorem chain_input_address_injective (parameter : PublicParameter) (lay : Layer
     chain = chain' ∧ step = step' := by
   obtain ⟨hprefix, _⟩ := List.append_inj heq (by
     simp [tweakBytes, fieldBytes, bytesLE_length])
-  obtain ⟨htweak, _⟩ := List.append_inj' hprefix (by simp [bytesLE_length])
+  obtain ⟨_, htweak⟩ := List.append_inj hprefix (by simp [bytesLE_length])
   have hfields := fieldBytes_injective htweak
-  have hposition := congrArg TweakFields.position hfields
-  change BitVec.ofNat 32 (4 * chain.val + step.val) =
-    BitVec.ofNat 32 (4 * chain'.val + step'.val) at hposition
+  have hhi := congrArg TweakFields.hi hfields
+  have hstep := congrArg TweakFields.step hfields
+  change BitVec.ofNat 24 chain.val = BitVec.ofNat 24 chain'.val at hhi
+  change BitVec.ofNat 3 step.val = BitVec.ofNat 3 step'.val at hstep
   have hc : chain.val < 64 := chain.isLt
   have hc' : chain'.val < 64 := chain'.isLt
   have hs : step.val < 3 := step.isLt
   have hs' : step'.val < 3 := step'.isLt
-  have hnat := ofNat_inj_of_lt (by omega : 4 * chain.val + step.val < 2 ^ 32)
-    (by omega : 4 * chain'.val + step'.val < 2 ^ 32) hposition
-  exact ⟨Fin.ext (by omega), Fin.ext (by omega)⟩
+  exact ⟨Fin.ext (ofNat_inj_of_lt (by omega) (by omega) hhi),
+    Fin.ext (ofNat_inj_of_lt (by omega) (by omega) hstep)⟩
 
 end Chain
 end LeanForest.Security

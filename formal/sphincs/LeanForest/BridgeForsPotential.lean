@@ -32,8 +32,7 @@ omit [Params] in
 theorem payload_pair_injective (root : Digest) {m m' : Message} {ρ ρ' : Randomness}
     (h : messageDigestPayload root m ρ = messageDigestPayload root m' ρ') : m = m' ∧ ρ = ρ' := by
   have hparts := List.append_inj h (by simp [bytesLE_length])
-  have hfirst := List.append_inj hparts.1 (by simp [bytesLE_length])
-  exact ⟨bytesLE_injective hparts.2, bytesLE_injective hfirst.1⟩
+  exact ⟨bytesLE_injective (List.append_cancel_right hparts.1), bytesLE_injective hparts.2⟩
 
 section Defs
 
@@ -661,85 +660,11 @@ theorem sign_shape {reveals : List Coordinate} {r : Option Signature} {s' : Stat
 
 end SignShape
 
-/-! ### The fair-share hypotheses and the state after a signing call -/
+/-! ### Cached pairs -/
 
 section SignParams
 
-variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
-  (model : HiddenRows.Model HashInput HashOutput A Coordinate)
-  (parameter : PublicParameter) (data : PublicData) (Fail : Finset (Fin (2 ^ subtreeHeight))) (Qtot : ℕ)
-  (m : Message)
-
-/-- The fair-share hypotheses of the grinding signer: `wbar = 1/R` for `R ≤ (2^128 - Cmax) landing`. -/
-structure Fair (wbar : ℝ≥0∞) (Cmax : ℕ) : Prop where
-  ne_top : wbar ≠ ⊤
-  le_one : wbar ≤ 1
-  cmax : Cmax ≤ 2 ^ 128
-  share : ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ ≤ wbar * (((2 ^ 128 - Cmax : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞)) * landing
-
-/-- The per-pair share of a message with `n` cached landed pairs: `1/(n + 1/wbar)`. -/
-noncomputable def shareOf (wbar : ℝ≥0∞) (n : ℕ) : ℝ≥0∞ := ((n : ℝ≥0∞) + wbar⁻¹)⁻¹
-
-theorem Fair.wbar_ne_zero {wbar : ℝ≥0∞} {Cmax : ℕ} (h : Fair wbar Cmax) : wbar ≠ 0 := by
-  intro h0
-  have := h.share
-  rw [h0, zero_mul, zero_mul, nonpos_iff_eq_zero, ENNReal.inv_eq_zero] at this
-  exact ENNReal.natCast_ne_top _ this
-
-/-- The share is fair for the grinding signer of a message with `n` cached landed pairs. -/
-theorem Fair.share_le {wbar : ℝ≥0∞} {Cmax : ℕ} (h : Fair wbar Cmax) (n : ℕ) :
-    ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ ≤ shareOf wbar n *
-      ((n : ℝ≥0∞) * ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ + (((2 ^ 128 - Cmax : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞)) * landing) := by
-  set u : ℝ≥0∞ := ((2 ^ 128 : ℕ) : ℝ≥0∞)⁻¹ with hu
-  set F := (((2 ^ 128 - Cmax : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞)) * landing with hF
-  have hw0 := h.wbar_ne_zero
-  have hwt := h.ne_top
-  have hshare : u * wbar⁻¹ ≤ F := by
-    have := mul_le_mul_right' h.share wbar⁻¹
-    calc u * wbar⁻¹ ≤ wbar * (((2 ^ 128 - Cmax : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞)) * landing * wbar⁻¹ := this
-      _ = F := by
-        rw [hF, mul_comm, ← mul_assoc, ← mul_assoc, ENNReal.inv_mul_cancel hw0 hwt, one_mul]
-  have hsum0 : (n : ℝ≥0∞) + wbar⁻¹ ≠ 0 := by
-    intro h'
-    rw [add_eq_zero] at h'
-    exact (ENNReal.inv_ne_zero.2 hwt) h'.2
-  have hsumT : (n : ℝ≥0∞) + wbar⁻¹ ≠ ⊤ :=
-    ENNReal.add_ne_top.2 ⟨ENNReal.natCast_ne_top _, ENNReal.inv_ne_top.2 hw0⟩
-  calc u = shareOf wbar n * (u * ((n : ℝ≥0∞) + wbar⁻¹)) := by
-        unfold shareOf
-        rw [mul_comm u, ← mul_assoc, ENNReal.inv_mul_cancel hsum0 hsumT, one_mul]
-    _ ≤ shareOf wbar n * ((n : ℝ≥0∞) * u + F) := by
-        gcongr
-        rw [mul_add, mul_comm u]
-        exact add_le_add le_rfl hshare
-
-theorem shareOf_ne_top {wbar : ℝ≥0∞} {Cmax : ℕ} (h : Fair wbar Cmax) (n : ℕ) : shareOf wbar n ≠ ⊤ := by
-  unfold shareOf
-  rw [ENNReal.inv_ne_top]
-  intro h'
-  rw [add_eq_zero] at h'
-  exact (ENNReal.inv_ne_zero.2 h.ne_top) h'.2
-
-/-- The coupling constant of a share: `e (1 + w ℓ) ≤ w` for every `ℓ ≤ n`. -/
-theorem shareOf_coef {wbar : ℝ≥0∞} {Cmax : ℕ} (h : Fair wbar Cmax) (n ℓ : ℕ) (hℓ : ℓ ≤ n) :
-    shareOf wbar n * (1 + wbar * (ℓ : ℝ≥0∞)) ≤ wbar := by
-  have hw0 := h.wbar_ne_zero
-  have hwt := h.ne_top
-  have hsum0 : (n : ℝ≥0∞) + wbar⁻¹ ≠ 0 := by
-    intro h'
-    rw [add_eq_zero] at h'
-    exact (ENNReal.inv_ne_zero.2 hwt) h'.2
-  have hsumT : (n : ℝ≥0∞) + wbar⁻¹ ≠ ⊤ :=
-    ENNReal.add_ne_top.2 ⟨ENNReal.natCast_ne_top _, ENNReal.inv_ne_top.2 hw0⟩
-  have hkey : 1 + wbar * (ℓ : ℝ≥0∞) ≤ wbar * ((n : ℝ≥0∞) + wbar⁻¹) := by
-    rw [mul_add, ENNReal.mul_inv_cancel hw0 hwt, add_comm]
-    gcongr
-  calc shareOf wbar n * (1 + wbar * (ℓ : ℝ≥0∞)) ≤ shareOf wbar n * (wbar * ((n : ℝ≥0∞) + wbar⁻¹)) := by gcongr
-    _ = wbar := by
-        unfold shareOf
-        rw [mul_comm wbar, ← mul_assoc, ENNReal.inv_mul_cancel hsum0 hsumT, one_mul]
-
-variable {parameter data m}
+variable {parameter : PublicParameter} {data : PublicData} {m : Message}
 
 theorem related_self (s : State) : Related parameter data m s s := fun _ => Or.inl rfl
 
@@ -747,112 +672,9 @@ theorem pview_of_cached {s' : State} {q : Pair} {u0 : HashOutput} (h0 : s'.cache
     pview parameter data s' q = viewOf u0 := by
   simp only [pview, h0, Option.elim]
 
-theorem other_message_kept (attempts budget : ℕ) (s : State)
-    (out : Run HashInput Coordinate (Option Signature) × State)
-    (hout : out ∈ support (interp tg initial model (signCostSourceLoop parameter data m attempts) budget s))
-    (q : Pair) (hq : q.1 ≠ m) :
-    out.2.cache (pblk parameter data q) = s.cache (pblk parameter data q) := by
-  refine interp_avoids_cache tg initial model _ _ (avoids_loop parameter data m attempts) budget s out hout _ ⟨?_, ?_⟩
-  · exact msgInput_digestInput parameter data.root q.1 q.2
-  · intro ρ h
-    exact hq (congrArg Prod.fst
-      (pblk_injective parameter data (show pblk parameter data q = pblk parameter data (m, ρ) from h)))
-
 theorem landed_of_cached {s : State} {P : List Pair} (hP : PInv parameter data s P) {q : Pair}
     (hq : q ∈ P) : ∃ u0, s.cache (pblk parameter data q) = some u0 ∧ Landed parameter (blockIndex u0) :=
   (hP.mem q).1 hq
-
-/-- **The state after a signing call.** -/
-theorem sign_params (hparse : ∀ p, model.parse (pblk parameter data p) = none)
-    (hfail : ∀ ρ digest budget (s1 : State), Prepared initial s1 →
-      ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
-        out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
-    (attempts budget : ℕ) (s : State) (P : List Pair) (d : Multiset View) (R : List Coordinate)
-    (hprep : Prepared initial s) (hP : PInv parameter data s P) (hD : DInv R d)
-    (hC : CountInv parameter data Qtot s budget)
-    (out : Run HashInput Coordinate (Option Signature) × State)
-    (hout : out ∈ support (interp tg initial model (signCostSourceLoop parameter data m attempts) budget s))
-    (r : Option Signature) (hr : out.1.1 = some r) :
-    Prepared initial out.2 ∧ PInv parameter data out.2 (newPairs parameter data m s out.2 ++ P) ∧
-      DInv (R ++ out.1.2.1) (discAfter parameter data m s d out) ∧
-      CountInv parameter data Qtot out.2 (budget - traceCost out.1.2.2.1) ∧
-      (∀ q ∈ P, pview parameter data out.2 q = pview parameter data s q) := by
-  have hext := interp_extends tg initial model _ budget s out hout
-  have hpost := loop_post tg initial model parameter data m (fun ρ => hparse (m, ρ)) Fail hfail
-    attempts budget s hprep out hout r hr
-  have hother := other_message_kept tg initial model attempts budget s out hout
-  have hgrow : ∀ q u, s.cache (pblk parameter data q) = some u →
-      out.2.cache (pblk parameter data q) = some u := fun q u h => hext.1 _ u h
-  refine ⟨fun x v hx => hext.1 x v (hprep x v hx), ⟨?_, fun q => ?_⟩, ?_, ?_, ?_⟩
-  · refine List.nodup_append.2 ⟨newPairs_nodup parameter data m s out.2, hP.nodup, fun a ha b hb hab => ?_⟩
-    subst hab
-    obtain ⟨_, h0, _⟩ := (mem_newPairs parameter data m s).1 ha
-    obtain ⟨u, hu, _⟩ := (hP.mem a).1 hb
-    rw [h0] at hu; cases hu
-  · rw [List.mem_append, mem_newPairs]
-    constructor
-    · rintro (⟨_, _, hl⟩ | hq)
-      · exact hl
-      · obtain ⟨u0, h0, hl⟩ := (hP.mem q).1 hq
-        exact ⟨u0, hgrow q u0 h0, hl⟩
-    · rintro ⟨u0, h0, hl⟩
-      cases hs0 : s.cache (pblk parameter data q) with
-      | none =>
-          left
-          refine ⟨?_, rfl, ⟨u0, h0, hl⟩⟩
-          by_contra hm
-          rw [hother q hm, hs0] at h0
-          cases h0
-      | some u =>
-          right
-          have := hgrow q u hs0
-          rw [h0] at this
-          cases this
-          exact (hP.mem q).2 ⟨u0, hs0, hl⟩
-  · -- every revealed chain value has a disclosed view
-    intro i c s0 j a ch pos hmem
-    rcases List.mem_append.1 hmem with hR | hrev
-    · obtain ⟨v, hv, h1⟩ := hD i c s0 j a ch pos hR
-      exact ⟨v, Multiset.mem_add.2 (Or.inl (Multiset.mem_add.2 (Or.inl hv))), h1⟩
-    · rcases hpost with ⟨_, hnil, _⟩ | ⟨ρs, u0, hsel, hfts, hsig, hfl⟩
-      · rw [hnil] at hrev; cases hrev
-      · obtain ⟨hi, hs, ha, hpos⟩ := hfts _ hrev i c s0 j a ch pos rfl
-        have hmarks := digestMarks_eq (truncateMessageDigest u0) c
-        refine ⟨viewOf u0, ?_, by rw [hi]; rfl, ?_, ?_, ?_⟩
-        · have hv : pview parameter data out.2 (m, ρs) = viewOf u0 := pview_of_cached hsel.1
-          rcases r with _ | sig
-          · rw [(hfl rfl).1] at hrev; cases hrev
-          · unfold discAfter
-            rcases hsel.2.2.1 with hn | he
-            · have hnew : (m, ρs) ∈ newPairs parameter data m s out.2 :=
-                (mem_newPairs parameter data m s).2 ⟨rfl, hn, ⟨u0, hsel.1, hsel.2.1⟩⟩
-              refine Multiset.mem_add.2 (Or.inl (Multiset.mem_add.2 (Or.inr ?_)))
-              rw [Multiset.mem_coe, ← hv]
-              exact List.mem_map_of_mem hnew
-            · refine Multiset.mem_add.2 (Or.inr ?_)
-              unfold poolDisc
-              rw [hr]
-              simp only [Option.elim]
-              rw [hsig sig rfl, he, if_neg (Option.some_ne_none _), hv]
-              exact Multiset.mem_singleton_self _
-        · change (decodeMark (coordField (truncateMessageDigest u0) c)).super = s0
-          rw [← hmarks, hs]
-        · change (decodeMark (coordField (truncateMessageDigest u0) c)).child j = a
-          rw [← hmarks, ha]
-        · change chainTop - chainNeed (coordField (truncateMessageDigest u0) c) j ch ≤ pos.val
-          unfold chainNeed
-          rw [← hmarks]
-          exact hpos
-  · intro m'
-    have h1 : cachedCount parameter data m' out.2 ≤ cachedCount parameter data m' s + traceCost out.1.2.2.1 := by
-      rw [cachedCount_eq, cachedCount_eq]
-      exact interp_card_le tg initial model _ _ budget s out hout
-    have h2 := interp_traceCost_le tg initial model _ budget s out hout
-    have h3 := hC m'
-    omega
-  · intro q hq
-    obtain ⟨u0, h0, _⟩ := landed_of_cached hP hq
-    rw [pview_of_cached h0, pview_of_cached (hgrow q u0 h0)]
 
 end SignParams
 

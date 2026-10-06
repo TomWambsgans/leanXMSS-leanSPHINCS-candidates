@@ -2,7 +2,7 @@ import LeanForest.StatementDet
 import LeanForest.BridgeAssembly
 
 /-! Internalizing long adversarial hash inputs for the deterministic-randomizer game, and its
-fixed-function form. `Seeded.sign` only makes short queries (its randomizer derivations are 96
+fixed-function form. `Seeded.sign` only makes short queries (its randomizer derivation is 88
 bytes), so the argument of `BridgeInternalize` applies verbatim with `signingOracleDet`. -/
 
 open OracleComp OracleSpec ENNReal
@@ -16,21 +16,21 @@ set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
 theorem randomizerHashInput_length (parameter : PublicParameter) (seed : MasterSeed)
-    (message : Message) (trial : BitVec 32) :
-    (randomizerHashInput parameter seed message trial).length = 96 := by
+    (message : Message) :
+    (randomizerHashInput parameter seed message).length = 88 := by
   simp [randomizerHashInput, fieldBytes_length, bytesLE_length]
 
 theorem randomizerHashInput_short (parameter : PublicParameter) (seed : MasterSeed)
-    (message : Message) (trial : BitVec 32) :
-    IsShort (randomizerHashInput parameter seed message trial) := by
+    (message : Message) :
+    IsShort (randomizerHashInput parameter seed message) := by
   simp only [IsShort, bound, randomizerHashInput_length]
   omega
 
 theorem Only.deriveRandomizer (parameter : PublicParameter) (seed : MasterSeed)
-    (message : Message) (trial : BitVec 32) :
-    Only (LeanForest.deriveRandomizer parameter seed message trial : OracleComp HashSpec Randomness) := by
+    (message : Message) :
+    Only (LeanForest.deriveRandomizer parameter seed message : OracleComp HashSpec Randomness) := by
   unfold LeanForest.deriveRandomizer
-  exact Only.bind (Only.query (randomizerHashInput_short _ _ _ _)) (fun _ => Only.pure' _)
+  exact Only.bind (Only.query (randomizerHashInput_short _ _ _)) (fun _ => Only.pure' _)
 
 variable [Params]
 
@@ -38,21 +38,21 @@ attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Randomized
   LeanForest.Seeded.signAttempt
 
 theorem Only.seededLoop (sk : LeanForest.Seeded.SecretKey) (message : Message) :
-    ∀ attempts trial, Only (LeanForest.Seeded.signDigestLoop sk message attempts trial :
+    ∀ attempts randomness, Only (LeanForest.Seeded.signDigestLoop sk message attempts randomness :
       OracleComp HashSpec (Option (Randomness × Index)))
   | 0, _ => Only.pure' _
-  | attempts + 1, trial => by
+  | attempts + 1, randomness => by
       rw [LeanForest.Seeded.signDigestLoop]
-      refine Only.bind (Only.deriveRandomizer _ _ _ _) (fun _ => ?_)
       refine Only.bind (Short.Seeded.Only.signAttempt _ _ _) (fun result => ?_)
       cases result with
-      | none => exact Only.seededLoop sk message attempts (trial + 1)
+      | none => exact Only.seededLoop sk message attempts (randomness + 1)
       | some _ => exact Only.pure' _
 
-/-- The deterministic signer is the randomizer search followed by the common assembly. -/
+/-- The deterministic signer is the randomizer derivation, the scan, and the common assembly. -/
 theorem seededSign_eq (sk : LeanForest.Seeded.SecretKey) (message : Message) :
     (LeanForest.Seeded.sign sk message : OracleComp HashSpec (Option Signature)) = (do
-      let some (randomness, _) ← LeanForest.Seeded.signDigestLoop sk message digestAttemptLimit 0
+      let base ← LeanForest.deriveRandomizer sk.parameter sk.seed message
+      let some (randomness, _) ← LeanForest.Seeded.signDigestLoop sk message digestAttemptLimit base
         | return none
       Randomized.finishSign sk message randomness) := by
   unfold LeanForest.Seeded.sign Randomized.finishSign
@@ -61,6 +61,7 @@ theorem seededSign_eq (sk : LeanForest.Seeded.SecretKey) (message : Message) :
 theorem Only.seededSign (sk : LeanForest.Seeded.SecretKey) (message : Message) :
     Only (LeanForest.Seeded.sign sk message : OracleComp HashSpec (Option Signature)) := by
   rw [seededSign_eq]
+  refine Only.bind (Only.deriveRandomizer _ _ _) (fun base => ?_)
   refine Only.bind (Only.seededLoop sk message _ _) (fun result => ?_)
   rcases result with _ | ⟨randomness, _⟩
   · exact Only.pure' _

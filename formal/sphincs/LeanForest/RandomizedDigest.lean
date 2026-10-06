@@ -1,7 +1,7 @@
 import LeanForest.World
 import LeanForest.Digest
 
-/-! Grinding with truly independent randomizers, including repeated-randomizer cache hits. -/
+/-! Grinding from a truly uniform start `ρ`, scanning `ρ, ρ + 1, ...`, including cache hits. -/
 
 open OracleComp OracleSpec ENNReal Finset
 
@@ -11,25 +11,33 @@ open Concrete
 
 variable [Params]
 
-/-- Exact operational law of one randomized grinding trial. The randomizer is sampled for free;
-its digest is answered by the same consistent random oracle as all other computations. -/
+/-- Exact operational law of one step of the scan: the digest of the current randomizer is answered
+by the consistent random oracle; on a miss the scan continues from the next randomizer. -/
 theorem run_randomizedDigest_succ (sk : Seeded.SecretKey) (message : Message) (n : Nat)
-    (cache : QueryCache HashSpec) :
-    (simulateQ romImpl (Randomized.signDigestLoop sk message (n + 1))).run cache =
-      ($ᵗ Randomness : ProbComp Randomness) >>= fun ρ =>
-        (randomOracle (spec := HashSpec) (msgInput sk message ρ)).run cache >>= fun r =>
-          if Landed sk.parameter (blockIndex r.1) then pure (some ρ, r.2)
-          else (simulateQ romImpl (Randomized.signDigestLoop sk message n)).run r.2 := by
-  rw [Randomized.signDigestLoop, simulateQ_bind, StateT.run_bind, run_lift_prob]
-  simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
-  apply bind_congr
-  intro ρ
-  rw [simulateQ_bind, StateT.run_bind, simulate_lift_hash]
+    (ρ : Randomness) (cache : QueryCache HashSpec) :
+    (simulateQ randomOracle (Randomized.scanLoop sk message (n + 1) ρ)).run cache =
+      (randomOracle (spec := HashSpec) (msgInput sk message ρ)).run cache >>= fun r =>
+        if Landed sk.parameter (blockIndex r.1) then pure (some ρ, r.2)
+        else (simulateQ randomOracle (Randomized.scanLoop sk message n (ρ + 1))).run r.2 := by
+  rw [Randomized.scanLoop]
   simp only [Seeded.signAttempt, messageDigestCall, oracleHash, HasQuery.query,
     simulateQ_bind, simulateQ_spec_query, StateT.run_bind, bind_assoc]
   apply bind_congr
   intro r
   split <;> simp [simulateQ_pure, StateT.run_pure]
+
+/-- Exact operational law of the randomized grinding loop: the start is sampled for free, then the
+scan runs against the shared random oracle. -/
+theorem run_randomizedDigest_start (sk : Seeded.SecretKey) (message : Message) (n : Nat)
+    (cache : QueryCache HashSpec) :
+    (simulateQ romImpl (Randomized.signDigestLoop sk message n)).run cache =
+      ($ᵗ Randomness : ProbComp Randomness) >>= fun ρ =>
+        (simulateQ randomOracle (Randomized.scanLoop sk message n ρ)).run cache := by
+  rw [Randomized.signDigestLoop, simulateQ_bind, StateT.run_bind, run_lift_prob]
+  simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
+  apply bind_congr
+  intro ρ
+  rw [simulate_lift_hash]
 
 omit [Params] in
 theorem tsum_randomness_ite (P : Randomness → Prop) [DecidablePred P] (x y : ℝ≥0∞) :
@@ -44,87 +52,117 @@ theorem tsum_randomness_ite (P : Randomness → Prop) [DecidablePred P] (x y : �
   by_cases h : P ρ <;> simp [h, mul_comm]
 
 omit [Params] in
-theorem probEvent_randomness_mem_le (R : Finset Randomness) (hR : R.card ≤ 2 ^ 32) :
-    Pr[fun ρ => ρ ∈ R | ($ᵗ Randomness : ProbComp Randomness)] ≤
-      (2 : ℝ≥0∞) ^ 32 / (2 : ℝ≥0∞) ^ 128 := by
-  rw [probEvent_uniformSample, Finset.filter_univ_mem,
-    show Fintype.card Randomness = 2 ^ 128 by simp [digestBits], Nat.cast_pow, Nat.cast_ofNat]
-  have hcast : (R.card : ℝ≥0∞) ≤ (2 : ℝ≥0∞) ^ 32 := by exact_mod_cast hR
-  exact ENNReal.div_le_div_right hcast _
+theorem randomness_add_succ (ρ : Randomness) (i : Nat) :
+    ρ + 1 + BitVec.ofNat digestBits i = ρ + BitVec.ofNat digestBits (i + 1) := by
+  rw [BitVec.ofNat_add, BitVec.add_assoc, BitVec.add_comm 1 _]
+  rfl
 
-/-- Uniform randomizers satisfy the same collision-aware bound as fresh seed-derived ones.
-The only cache hypothesis concerns digest inputs, not any randomizer derivation domain. -/
-theorem probEvent_randomizedDigest (sk : Seeded.SecretKey) (message : Message) :
-    ∀ (n t : Nat) (cache : QueryCache HashSpec) (R : Finset Randomness),
-      t + n ≤ 2 ^ 32 → R.card ≤ t →
-      (∀ ρ, ρ ∉ R → cache (msgInput sk message ρ) = none) →
+omit [Params] in
+theorem randomness_add_ne (ρ : Randomness) {i : Nat} (hpos : 0 < i) (hi : i < 2 ^ 128) :
+    ρ + BitVec.ofNat digestBits i ≠ ρ := by
+  intro h
+  have hzero : BitVec.ofNat digestBits i = 0#digestBits := by
+    have hsub := congrArg (fun x => x - ρ) h
+    simpa [BitVec.add_comm ρ, BitVec.add_sub_cancel] using hsub
+  have hnat := congrArg BitVec.toNat hzero
+  rw [BitVec.toNat_ofNat, show (2 : Nat) ^ digestBits = 2 ^ 128 from rfl,
+    Nat.mod_eq_of_lt hi] at hnat
+  simp at hnat
+  omega
+
+omit [Params] in
+/-- A uniform start puts one of its `n` scanned randomizers in a set `R` with probability at most
+`n |R| / 2^128`. -/
+theorem probEvent_randomness_mem_le (R : Finset Randomness) (n : Nat) :
+    Pr[fun ρ => ∃ i < n, ρ + BitVec.ofNat digestBits i ∈ R |
+        ($ᵗ Randomness : ProbComp Randomness)] ≤
+      ((n * R.card : Nat) : ℝ≥0∞) / (2 : ℝ≥0∞) ^ 128 := by
+  classical
+  rw [probEvent_uniformSample,
+    show Fintype.card Randomness = 2 ^ 128 by simp [digestBits], Nat.cast_pow, Nat.cast_ofNat]
+  refine ENNReal.div_le_div_right (Nat.cast_le.mpr ?_) _
+  calc (Finset.univ.filter fun ρ : Randomness => ∃ i < n, ρ + BitVec.ofNat digestBits i ∈ R).card
+      ≤ ((Finset.range n ×ˢ R).image fun p : Nat × Randomness =>
+          p.2 - BitVec.ofNat digestBits p.1).card := by
+        refine Finset.card_le_card fun ρ hρ => ?_
+        obtain ⟨i, hi, hmem⟩ := (Finset.mem_filter.mp hρ).2
+        exact Finset.mem_image.mpr ⟨(i, ρ + BitVec.ofNat digestBits i),
+          Finset.mem_product.mpr ⟨Finset.mem_range.mpr hi, hmem⟩, BitVec.add_sub_cancel _ _⟩
+    _ ≤ (Finset.range n ×ˢ R).card := Finset.card_image_le
+    _ = n * R.card := by rw [Finset.card_product, Finset.card_range]
+
+/-- The scan from a start whose `n` randomizers have fresh digest inputs exhausts its budget with
+probability at most the rejection share to the `n`. The cache hypothesis concerns digest inputs
+only: `R` holds the randomizers whose digest may already be cached. -/
+theorem probEvent_scanLoop (sk : Seeded.SecretKey) (message : Message) :
+    ∀ (n : Nat) (ρ : Randomness) (cache : QueryCache HashSpec) (R : Finset Randomness),
+      n ≤ 2 ^ 128 →
+      (∀ ρ', ρ' ∉ R → cache (msgInput sk message ρ') = none) →
+      (∀ i < n, ρ + BitVec.ofNat digestBits i ∉ R) →
       Pr[fun r => r.1 = none |
-        (simulateQ romImpl (Randomized.signDigestLoop sk message n)).run cache]
-      ≤ digestFactor sk.parameter ^ n := by
+        (simulateQ randomOracle (Randomized.scanLoop sk message n ρ)).run cache]
+      ≤ digestReject sk.parameter ^ n := by
   intro n
   induction n with
-  | zero => intro t cache R _ _ _; simp [Randomized.signDigestLoop]
+  | zero => intro ρ cache R _ _ _; simp [Randomized.scanLoop]
   | succ n ih =>
-      intro t cache R hbound hcard hmsg
-      rw [run_randomizedDigest_succ, probEvent_bind_eq_tsum]
-      simp only [probOutput_uniformSample]
-      refine (ENNReal.tsum_le_tsum (g := fun ρ => (Fintype.card Randomness : ℝ≥0∞)⁻¹ *
-        (if ρ ∈ R then digestFactor sk.parameter ^ n
-          else digestReject sk.parameter * digestFactor sk.parameter ^ n))
-        fun ρ => mul_le_mul_right ?_ _).trans ?_
-      · cases hc : cache (msgInput sk message ρ) with
-        | some answer =>
-            have hρ : ρ ∈ R := by
-              by_contra hnot
-              have := hmsg ρ hnot
-              simp [hc] at this
-            rw [if_pos hρ, cached_run _ _ _ hc, pure_bind]
-            split
-            · simp
-            · exact ih (t + 1) cache R (by omega) (by omega) hmsg
-        | none =>
-            rw [fresh_run _ _ hc]
-            refine (ENNReal.tsum_le_tsum (g := fun answer => (Fintype.card HashOutput : ℝ≥0∞)⁻¹ *
-              (if Landed sk.parameter (blockIndex answer) then 0
-                else digestFactor sk.parameter ^ n))
-              fun answer => mul_le_mul_right ?_ _).trans ?_
-            · split
-              · simp
-              · refine ih (t + 1) _ (insert ρ R) (by omega)
-                  ((Finset.card_insert_le _ _).trans (by omega)) ?_
-                intro ρ' hρ'
-                rw [Finset.mem_insert, not_or] at hρ'
-                exact (QueryCache.cacheQuery_of_ne cache answer
-                  (fun h => hρ'.1 (msgInput_inj sk message h))).trans (hmsg ρ' hρ'.2)
-            · rw [tsum_uniform_ite]
-              simp only [zero_mul, zero_add]
-              change digestFactor sk.parameter ^ n * digestReject sk.parameter ≤ _
-              by_cases hρ : ρ ∈ R
-              · rw [if_pos hρ]
-                exact mul_le_of_le_one_right' (digestReject_le_one sk.parameter)
-              · rw [if_neg hρ, mul_comm]
-      · rw [tsum_randomness_ite]
-        have hcoll := probEvent_randomness_mem_le R (by omega)
-        calc
-          _ ≤ digestFactor sk.parameter ^ n * ((2 : ℝ≥0∞) ^ 32 / (2 : ℝ≥0∞) ^ 128) +
-            digestReject sk.parameter * digestFactor sk.parameter ^ n * 1 :=
-              add_le_add (mul_le_mul_right hcoll _) (mul_le_mul_right probEvent_le_one _)
-          _ = digestFactor sk.parameter ^ (n + 1) := by
-            have hF : digestFactor sk.parameter = digestReject sk.parameter +
-                (2 : ℝ≥0∞) ^ 32 / (2 : ℝ≥0∞) ^ 128 := rfl
-            generalize (2 : ℝ≥0∞) ^ 32 / (2 : ℝ≥0∞) ^ 128 = C at hF ⊢
-            rw [pow_succ, hF]
-            ring
+      intro ρ cache R hbound hmsg havoid
+      have hρ : ρ ∉ R := by simpa using havoid 0 (Nat.succ_pos n)
+      rw [run_randomizedDigest_succ, fresh_run _ _ (hmsg ρ hρ)]
+      refine (ENNReal.tsum_le_tsum (g := fun answer => (Fintype.card HashOutput : ℝ≥0∞)⁻¹ *
+        (if Landed sk.parameter (blockIndex answer) then 0
+          else digestReject sk.parameter ^ n))
+        fun answer => mul_le_mul_right ?_ _).trans ?_
+      · split
+        · simp
+        · refine ih (ρ + 1) _ (insert ρ R) (by omega) ?_ ?_
+          · intro ρ' hρ'
+            rw [Finset.mem_insert, not_or] at hρ'
+            exact (QueryCache.cacheQuery_of_ne cache answer
+              (fun h => hρ'.1 (msgInput_inj sk message h))).trans (hmsg ρ' hρ'.2)
+          · intro i hi
+            rw [randomness_add_succ, Finset.mem_insert, not_or]
+            exact ⟨randomness_add_ne ρ (Nat.succ_pos i) (by omega), havoid (i + 1) (by omega)⟩
+      · rw [tsum_uniform_ite]
+        simp only [zero_mul, zero_add]
+        change digestReject sk.parameter ^ n * digestReject sk.parameter ≤ _
+        rw [pow_succ]
 
-/-- The requested independently randomized grinding loop exhausts its full budget with
-probability at most `2^(-2^(b+5))` from a cache with no message-digest inputs. -/
+/-- The uniform start: the loop exhausts its budget with probability at most the rejection share
+to the `n`, plus the chance `n |R| / 2^128` that the scan meets a randomizer whose digest input may
+already be cached. -/
+theorem probEvent_randomizedDigest (sk : Seeded.SecretKey) (message : Message)
+    (n : Nat) (cache : QueryCache HashSpec) (R : Finset Randomness) (hn : n ≤ 2 ^ 128)
+    (hmsg : ∀ ρ, ρ ∉ R → cache (msgInput sk message ρ) = none) :
+    Pr[fun r => r.1 = none |
+      (simulateQ romImpl (Randomized.signDigestLoop sk message n)).run cache]
+    ≤ digestReject sk.parameter ^ n + ((n * R.card : Nat) : ℝ≥0∞) / (2 : ℝ≥0∞) ^ 128 := by
+  classical
+  rw [run_randomizedDigest_start, probEvent_bind_eq_tsum]
+  simp only [probOutput_uniformSample]
+  refine (ENNReal.tsum_le_tsum (g := fun ρ => (Fintype.card Randomness : ℝ≥0∞)⁻¹ *
+    (if ∃ i < n, ρ + BitVec.ofNat digestBits i ∈ R then 1
+      else digestReject sk.parameter ^ n))
+    fun ρ => mul_le_mul_right ?_ _).trans ?_
+  · split
+    next => exact probEvent_le_one
+    next hfree =>
+      exact probEvent_scanLoop sk message n ρ cache R hn hmsg
+        (fun i hi hmem => hfree ⟨i, hi, hmem⟩)
+  · rw [tsum_randomness_ite, one_mul, add_comm]
+    exact add_le_add (mul_le_of_le_one_right' probEvent_le_one)
+      (probEvent_randomness_mem_le R n)
+
+/-- The randomized grinding loop exhausts its full budget with probability at most `2^(-2^(b+5))`
+from a cache with no message-digest inputs. -/
 theorem randomized_digest_exhaustion_bound (sk : Seeded.SecretKey) (message : Message)
     (cache : QueryCache HashSpec) (hfresh : ∀ ρ, cache (msgInput sk message ρ) = none) :
     Pr[fun r => r.1 = none |
       (simulateQ romImpl (Randomized.signDigestLoop sk message digestAttemptLimit)).run cache]
       ≤ (2⁻¹ : ℝ≥0∞) ^ (2 ^ (subtreeHeight + 5)) := by
-  exact (probEvent_randomizedDigest sk message digestAttemptLimit 0 cache ∅
-    (by simp [digestAttemptLimit]) (by simp) (fun ρ _ => hfresh ρ)).trans
-    (digestFactor_pow_bound sk.parameter)
+  refine (probEvent_randomizedDigest sk message digestAttemptLimit cache ∅
+    (by simp [digestAttemptLimit]) (fun ρ _ => hfresh ρ)).trans ?_
+  rw [Finset.card_empty, Nat.mul_zero, Nat.cast_zero, ENNReal.zero_div, add_zero]
+  exact (pow_le_pow_left₀ (by positivity) le_self_add _).trans (digestFactor_pow_bound sk.parameter)
 
 end LeanForest.Completeness

@@ -414,25 +414,35 @@ theorem compile_signAttempt (seed : MasterSeed) (material : Material)
   intro first
   split <;> simp only [simulateQ_pure, liftM_pure]
 
-/-- Every genuinely private randomizer draw is retained while compiling the grinding loop. -/
+/-- The scan from a start makes only digest calls, which do not depend on the seed. -/
+theorem compiled_scanLoop_eq (left right : MasterSeed) (material : Material) (root : Digest)
+    (message : Message) :
+    ∀ (attempts : Nat) (randomness : Randomness),
+      simulateQ (compileHash left material)
+        (Randomized.scanLoop ⟨left, parameter material, root⟩ message attempts randomness) =
+      simulateQ (compileHash right material)
+        (Randomized.scanLoop ⟨right, parameter material, root⟩ message attempts randomness) := by
+  intro attempts
+  induction attempts with
+  | zero => intro randomness; simp only [Randomized.scanLoop, simulateQ_pure]
+  | succ attempts ih =>
+      intro randomness
+      simp only [Randomized.scanLoop, simulateQ_bind, compile_signAttempt]
+      apply bind_congr
+      intro result
+      cases result with
+      | none => exact ih (randomness + 1)
+      | some index => rw [simulateQ_pure, simulateQ_pure]
+
+/-- The genuinely private start draw is retained while compiling the grinding loop. -/
 theorem compiled_signDigestLoop_eq (left right : MasterSeed) (material : Material) (root : Digest)
     (message : Message) (attempts : Nat) :
     simulateQ (compileWorld left material)
       (Randomized.signDigestLoop ⟨left, parameter material, root⟩ message attempts) =
     simulateQ (compileWorld right material)
       (Randomized.signDigestLoop ⟨right, parameter material, root⟩ message attempts) := by
-  induction attempts with
-  | zero => simp only [Randomized.signDigestLoop, simulateQ_pure]
-  | succ attempts ih =>
-      simp only [Randomized.signDigestLoop, simulateQ_bind, compileWorld_lift_prob,
-        compileWorld_lift_hash, compile_signAttempt]
-      apply bind_congr
-      intro randomness
-      apply bind_congr
-      intro result
-      cases result with
-      | none => exact ih
-      | some index => rw [simulateQ_pure, simulateQ_pure]
+  simp only [Randomized.signDigestLoop, simulateQ_bind, compileWorld_lift_prob,
+    compileWorld_lift_hash, compiled_scanLoop_eq left right]
 
 theorem compiled_sign_eq (left right : MasterSeed) (material : Material) (root : Digest)
     (message : Message) :

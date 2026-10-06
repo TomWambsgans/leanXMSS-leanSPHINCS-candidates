@@ -51,10 +51,7 @@ theorem only_layer (lay : Layer) : lay = topLayer := by
   omega
 
 omit [Params] in
-theorem treeIndexAt_eq (index : Index) (lay : Layer) : treeIndexAt index lay = rootTree := by
-  rw [only_layer lay]
-  apply Fin.ext
-  simp [treeIndexAt, heightAbove, topLayer, rootTree, Nat.div_eq_of_lt index.isLt]
+theorem treeIndexAt_eq (index : Index) (lay : Layer) : treeIndexAt index lay = rootTree := rfl
 
 omit [Params] in
 theorem leafIndexAt_eq (index : Index) (lay : Layer) : leafIndexAt index lay = index := by
@@ -90,15 +87,15 @@ theorem digestValue_index (secretKey : Seeded.SecretKey) (message : Message)
     digestIndex_truncate]
 
 theorem signDigestLoop_spec (secretKey : Seeded.SecretKey) (message : Message) :
-    ∀ (attempts trial : Nat) {randomness : Randomness} {index : Index},
-      evalWithAnswerFn f (Seeded.signDigestLoop secretKey message attempts trial
+    ∀ (attempts : Nat) (start : Randomness) {randomness : Randomness} {index : Index},
+      evalWithAnswerFn f (Seeded.signDigestLoop secretKey message attempts start
         : OracleComp HashSpec (Option (Randomness × Index))) = some (randomness, index) →
       Landed secretKey.parameter (digestIndex (digestValue f secretKey message randomness)) := by
   intro attempts
   induction attempts with
-  | zero => intro trial randomness index h; simp [Seeded.signDigestLoop] at h
+  | zero => intro start randomness index h; simp [Seeded.signDigestLoop] at h
   | succ attempts ih =>
-      intro trial randomness index h
+      intro start randomness index h
       simp only [Seeded.signDigestLoop, Seeded.signAttempt, evalWithAnswerFn_bind] at h
       split at h
       next hl =>
@@ -107,7 +104,7 @@ theorem signDigestLoop_spec (secretKey : Seeded.SecretKey) (message : Message) :
         by_contra hh
         simp only [if_neg hh, evalWithAnswerFn_pure] at hl
         contradiction
-      next => exact ih (trial + 1) h
+      next => exact ih (start + 1) h
 
 omit [Params] in
 theorem sequenceLayers_spec {α : Layer → Type}
@@ -140,10 +137,10 @@ theorem sign_spec (secretKey : Seeded.SecretKey) (message : Message) {signature 
       ∧ ∀ lay : Layer, evalWithAnswerFn f (Seeded.signLayer secretKey
           (digestIndex (digestValue f secretKey message signature.randomness)) lay
           : OracleComp HashSpec (Option (LayerSignature lay))) = some (signature.layers lay) := by
-  rw [Seeded.sign, evalWithAnswerFn_bind] at h
+  rw [Seeded.sign, evalWithAnswerFn_bind, evalWithAnswerFn_bind] at h
   split at h
   next randomness index hloop =>
-      have hland := signDigestLoop_spec f secretKey message digestAttemptLimit 0 hloop
+      have hland := signDigestLoop_spec f secretKey message digestAttemptLimit _ hloop
       rw [evalWithAnswerFn_bind, evalWithAnswerFn_bind, evalWithAnswerFn_bind] at h
       split at h
       next layers hlayers =>

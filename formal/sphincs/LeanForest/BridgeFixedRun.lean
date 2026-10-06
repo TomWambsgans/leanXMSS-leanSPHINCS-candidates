@@ -394,43 +394,46 @@ theorem revealsOf_of_assembled_none (parameter : PublicParameter) (data : Public
 
 theorem signLoop_support (parameter : PublicParameter) (seed : MasterSeed) (data : PublicData)
     (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
-    (message : Message) (attempts : Nat) (result : RunResult (Option Signature))
+    (message : Message) (attempts : Nat) (randomness : Randomness) (result : RunResult (Option Signature))
     (hresult : result ∈ support (costRun f table (withReveals
-      (signCostSourceLoop parameter data message attempts)))) :
+      (signCostSourceLoop parameter data message attempts randomness)))) :
     SignOutcome f parameter seed data message result.1 := by
-  induction attempts generalizing result with
+  induction attempts generalizing result randomness with
   | zero =>
       rw [signCostSourceLoop, costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at hresult
       subst result
       exact ⟨fun _ => rfl, fun _ h => by cases h⟩
   | succ attempts ih =>
       rw [signCostSourceLoop] at hresult
-      obtain ⟨r1, h1, r2, h2, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
-      obtain ⟨hr1, -⟩ := costRun_withReveals_liftProb f table _ r1 h1
-      obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ r2 h2
+      obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
       obtain rfl := costRun_withReveals_liftHash f table _ r3 h3
       dsimp only at h4 ⊢
-      rw [hr1, List.nil_append, List.nil_append]
+      rw [List.nil_append]
       split at h4
       · rename_i hland
         have hland' : Landed parameter (digestIndex (Completeness.digestValue f
-            ⟨seed, parameter, data.root⟩ message r1.1.1)) := by
+            ⟨seed, parameter, data.root⟩ message randomness)) := by
           simpa only [Completeness.digestValue, messageDigest, evalWithAnswerFn_bind,
             evalWithAnswerFn_pure, Completeness.digestIndex_truncate] using hland
-        obtain ⟨hvalue, hreveals⟩ := finish_support f table parameter data message r1.1.1 r4 h4
-        have hsign := eval_finishSign_assembled f parameter seed data table hdata htable message r1.1.1 hland'
-        refine ⟨fun hnone => ?_, fun signature hsome => ⟨r1.1.1, hland', ?_, hreveals⟩⟩
+        obtain ⟨hvalue, hreveals⟩ := finish_support f table parameter data message randomness r4 h4
+        have hsign := eval_finishSign_assembled f parameter seed data table hdata htable message randomness hland'
+        refine ⟨fun hnone => ?_, fun signature hsome => ⟨randomness, hland', ?_, hreveals⟩⟩
         · rw [hreveals]
           exact revealsOf_of_assembled_none f table parameter data message _ (hvalue ▸ hnone)
         · rw [hsign, ← hvalue, hsome]
-      · exact ih r4 h4
+      · exact ih (randomness + 1) r4 h4
 
 theorem sign_support (parameter : PublicParameter) (seed : MasterSeed) (data : PublicData)
     (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
     (message : Message) (result : RunResult (Option Signature))
     (hresult : result ∈ support (costRun f table (withReveals (signCostSource parameter data message)))) :
-    SignOutcome f parameter seed data message result.1 :=
-  signLoop_support f table parameter seed data hdata htable message _ result hresult
+    SignOutcome f parameter seed data message result.1 := by
+  rw [signCostSource] at hresult
+  obtain ⟨r1, h1, r2, h2, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
+  obtain ⟨hr1, -⟩ := costRun_withReveals_liftProb f table _ r1 h1
+  dsimp only
+  rw [hr1, List.nil_append]
+  exact signLoop_support f table parameter seed data hdata htable message _ _ r2 h2
 
 /-- Every logged signature is an honest landed assembly, and every revealed coordinate is
 revealed by some logged signature. -/

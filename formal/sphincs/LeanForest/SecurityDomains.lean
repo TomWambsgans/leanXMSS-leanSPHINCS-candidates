@@ -6,14 +6,15 @@ derivation and verification addresses distinct in later random-oracle reductions
 
 namespace LeanForest.Security
 
-/-- The fixed-width prefix determines its fields and parameter, with no restriction on payload. -/
+/-- The fixed-width prefix `P || A` determines its fields and parameter, with no restriction on
+payload. -/
 theorem fieldInput_injective {fields fields' : TweakFields}
     {parameter parameter' : PublicParameter} {payload payload' : HashInput}
-    (h : fieldBytes fields ++ bytesLE 16 parameter ++ payload =
-      fieldBytes fields' ++ bytesLE 16 parameter' ++ payload') :
+    (h : bytesLE 16 parameter ++ fieldBytes fields ++ payload =
+      bytesLE 16 parameter' ++ fieldBytes fields' ++ payload') :
     fields = fields' ∧ parameter = parameter' ∧ payload = payload' := by
   obtain ⟨hprefix, hpayload⟩ := List.append_inj h (by simp [fieldBytes, bytesLE_length])
-  obtain ⟨hfields, hparameter⟩ := List.append_inj' hprefix (by simp [bytesLE_length])
+  obtain ⟨hparameter, hfields⟩ := List.append_inj hprefix (by simp [bytesLE_length])
   exact ⟨fieldBytes_injective hfields, bytesLE_injective hparameter, hpayload⟩
 
 theorem tweakableInput_injective {parameter parameter' : PublicParameter}
@@ -51,12 +52,14 @@ theorem subSlot_inj {c c' : Coord} {s s' : SuperIdx} {j j' : SubIdx}
 theorem childSlot_inj {c c' : Coord} {s s' : SuperIdx} {j j' : SubIdx} {a a' : ChildIdx}
     (h : childSlot c s j a = childSlot c' s' j' a') : subSlot c s j = subSlot c' s' j' ∧ a = a' := by
   have := a.isLt; have := a'.isLt
+  have := subSlot_lt c s j; have := subSlot_lt c' s' j'
   simp only [childSlot, subHeight] at *
   refine ⟨?_, Fin.ext ?_⟩ <;> omega
 
 theorem chainSlot_inj {c c' : Coord} {s s' : SuperIdx} {j j' : SubIdx} {a a' : ChildIdx} {i i' : FChain}
     (h : chainSlot c s j a i = chainSlot c' s' j' a' i') : childSlot c s j a = childSlot c' s' j' a' ∧ i = i' := by
   have := i.isLt; have := i'.isLt
+  have := childSlot_lt c s j a; have := childSlot_lt c' s' j' a'
   simp only [chainSlot, childChains] at *
   refine ⟨?_, Fin.ext ?_⟩ <;> omega
 
@@ -76,15 +79,9 @@ theorem deriveFields_injective : Function.Injective keygenDomainFields := by
   all_goals try { simp at h; done }
   · rfl
   · rename_i lay tree leaf chain lay' tree' leaf' chain'
-    obtain ⟨_, hlay, htree, hchain, hleaf⟩ := h
-    have hl : lay = lay' := by
-      apply Fin.ext
-      exact ofNat_inj_of_lt (lay.isLt.trans_le (by decide))
-        (lay'.isLt.trans_le (by decide)) hlay
-    have ht : tree = tree' := by
-      apply Fin.ext
-      exact ofNat_inj_of_lt (tree.isLt.trans_le (by decide))
-        (tree'.isLt.trans_le (by decide)) htree
+    obtain ⟨_, _, hchain, hleaf⟩ := h
+    have hl : lay = lay' := Subsingleton.elim (α := Fin 1) _ _
+    have ht : tree = tree' := Subsingleton.elim (α := Fin 1) _ _
     have hc : chain = chain' := by
       apply Fin.ext
       exact ofNat_inj_of_lt (chain.isLt.trans_le (by decide))
@@ -95,7 +92,7 @@ theorem deriveFields_injective : Function.Injective keygenDomainFields := by
         (leaf'.isLt.trans_le (by decide)) hleaf
     cases hl; cases ht; cases he; cases hc; rfl
   · rename_i index c s j a i index' c' s' j' a' i'
-    obtain ⟨_, _, _, hpos, hindex⟩ := h
+    obtain ⟨_, _, hpos, hindex⟩ := h
     have hidx : index = index' := by
       apply Fin.ext
       exact ofNat_inj_of_lt (index.isLt.trans_le (by decide))
@@ -105,7 +102,7 @@ theorem deriveFields_injective : Function.Injective keygenDomainFields := by
     obtain ⟨hc, hs, hj, ha, hi⟩ := chainSlot_injective hp
     subst hidx hc hs hj ha hi; rfl
   · rename_i level level'
-    obtain ⟨_, _, _, hlevel, _⟩ := h
+    obtain ⟨_, _, hlevel, _⟩ := h
     have hl : level = level' := by
       apply Fin.ext
       exact ofNat_inj_of_lt (level.isLt.trans_le (by decide))

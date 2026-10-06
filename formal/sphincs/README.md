@@ -40,6 +40,11 @@ With this attack the best known lifetimes are about 100 / 99.8 / 97.3 / 96.5 / 9
 of N_att (b = 26 … 8), so the proved limits are 90–96% of them. [PROOF.md](PROOF.md) explains where the
 remaining gap comes from.
 
+These attack figures do not depend on how the signer picks its randomizer. With R0 + i, a forger that
+scans a message's randomizers up to the first one that lands knows in advance, per digest query, about
+twice as often which digest a pruned key will sign (`Walk.grp_step`); the proof pays for it, and it is
+far too rare to change the lifetimes above.
+
 ## Checked claims
 
 | Claim | Theorem / file |

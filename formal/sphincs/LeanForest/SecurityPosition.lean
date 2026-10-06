@@ -8,9 +8,10 @@ every instance. -/
 
 namespace LeanForest
 
-/-- The two natural-number fields must fit their serialized 32-bit slots. -/
+/-- The two natural-number fields of a tree node must fit their serialized slots: 24 bits for the
+level, 32 bits for the node index. -/
 def HashDomain.InRange : HashDomain → Prop
-  | .node _ _ level nodeIdx => level < 2 ^ 32 ∧ nodeIdx < 2 ^ 32
+  | .node _ _ level nodeIdx => level < 2 ^ 24 ∧ nodeIdx < 2 ^ 32
   | _ => True
 
 namespace Security
@@ -26,108 +27,92 @@ private theorem nat_eq_of_ofNat {w a b bound : Nat} (ha : a < bound) (hb : b < b
     (h : BitVec.ofNat w a = BitVec.ofNat w b) : a = b :=
   ofNat_inj_of_lt (ha.trans_le hn) (hb.trans_le hn) h
 
-/-- No wrapping or domain ambiguity occurs at an in-range verification address. -/
+/-- No wrapping or domain ambiguity occurs at an in-range verification address: the type, the step
+and the fields `hi` and `lo` determine the domain. The layer and the tree are not addressed; each has
+one value. -/
 theorem hashFields_injective {left right : HashDomain} (hl : HashDomain.InRange left)
     (hr : HashDomain.InRange right) (heq : hashDomainFields left = hashDomainFields right) : left = right := by
   cases left <;> cases right <;>
     simp only [hashDomainFields, tweakFields, TweakFields.mk.injEq] at heq
   all_goals try { simp at heq; done }
   · rename_i lay tree leaf chain step lay' tree' leaf' chain' step'
-    obtain ⟨_, hlay, htree, hposition, hleaf⟩ := heq
-    have hc := chain.isLt
-    have hc' := chain'.isLt
-    have hs := step.isLt
-    have hs' := step'.isLt
-    simp only [numChains, chainLength, winternitzBits] at hc hc' hs hs'
-    have hp := ofNat_inj_of_lt (a := chainLength * chain.val + step.val)
-      (b := chainLength * chain'.val + step'.val)
-      (by simp only [chainLength, winternitzBits]; omega)
-      (by simp only [chainLength, winternitzBits]; omega) hposition
-    simp only [chainLength, winternitzBits] at hp
-    have he1 := fin_of_ofNat_eq (by decide) hlay
-    have he2 := fin_of_ofNat_eq (by decide) htree
+    obtain ⟨_, hstep, hchain, hleaf⟩ := heq
+    have he1 : lay = lay' := Subsingleton.elim (α := Fin 1) _ _
+    have he2 : tree = tree' := Subsingleton.elim (α := Fin 1) _ _
     have he3 := fin_of_ofNat_eq (by decide) hleaf
-    have he4 : chain = chain' := Fin.ext (by omega)
-    have he5 : step = step' := Fin.ext (by omega)
+    have he4 := fin_of_ofNat_eq (by decide) hchain
+    have he5 := fin_of_ofNat_eq (by decide) hstep
     cases he1; cases he2; cases he3; cases he4; cases he5; rfl
-  · obtain ⟨_, hlay, htree, _, hleaf⟩ := heq
-    have he1 := fin_of_ofNat_eq (by decide) hlay
-    have he2 := fin_of_ofNat_eq (by decide) htree
+  · rename_i lay tree leaf lay' tree' leaf'
+    obtain ⟨_, _, _, hleaf⟩ := heq
+    have he1 : lay = lay' := Subsingleton.elim (α := Fin 1) _ _
+    have he2 : tree = tree' := Subsingleton.elim (α := Fin 1) _ _
     have he3 := fin_of_ofNat_eq (by decide) hleaf
     cases he1; cases he2; cases he3; rfl
-  · obtain ⟨_, hlay, htree, hlevel, hindex⟩ := heq
-    have he1 := fin_of_ofNat_eq (by decide) hlay
-    have he2 := fin_of_ofNat_eq (by decide) htree
+  · rename_i lay tree level nodeIdx lay' tree' level' nodeIdx'
+    obtain ⟨_, _, hlevel, hindex⟩ := heq
+    have he1 : lay = lay' := Subsingleton.elim (α := Fin 1) _ _
+    have he2 : tree = tree' := Subsingleton.elim (α := Fin 1) _ _
     have he3 := ofNat_inj_of_lt hl.1 hr.1 hlevel
     have he4 := ofNat_inj_of_lt hl.2 hr.2 hindex
     cases he1; cases he2; cases he3; cases he4; rfl
-  · obtain ⟨_, hlay, htree, _, hleaf⟩ := heq
-    have he1 := fin_of_ofNat_eq (by decide) hlay
-    have he2 := fin_of_ofNat_eq (by decide) htree
+  · rename_i lay tree leaf lay' tree' leaf'
+    obtain ⟨_, _, _, hleaf⟩ := heq
+    have he1 : lay = lay' := Subsingleton.elim (α := Fin 1) _ _
+    have he2 : tree = tree' := Subsingleton.elim (α := Fin 1) _ _
     have he3 := fin_of_ofNat_eq (by decide) hleaf
     cases he1; cases he2; cases he3; rfl
   · rename_i index c s j a i t index' c' s' j' a' i' t'
-    obtain ⟨_, _, _, hpos, hindex⟩ := heq
+    obtain ⟨_, hstep, hpos, hindex⟩ := heq
     have hidx := fin_of_ofNat_eq (by decide) hindex
-    have h1 := chainSlot_lt c s j a i; have h2 := chainSlot_lt c' s' j' a' i'
-    have ht := t.isLt; have ht' := t'.isLt
-    simp only [chainTop] at ht ht'
-    have hp := nat_eq_of_ofNat (bound := 49152) (by simp only [chainTop]; omega) (by simp only [chainTop]; omega)
-      (by decide) hpos
-    simp only [chainTop] at hp
-    have hslot : chainSlot c s j a i = chainSlot c' s' j' a' i' := by omega
-    have htt : t = t' := Fin.ext (by omega)
-    obtain ⟨hc, hs, hj, ha, hi⟩ := chainSlot_injective hslot
+    have htt := fin_of_ofNat_eq (by decide) hstep
+    have hp := nat_eq_of_ofNat (chainSlot_lt c s j a i) (chainSlot_lt c' s' j' a' i') (by decide) hpos
+    obtain ⟨hc, hs, hj, ha, hi⟩ := chainSlot_injective hp
     subst hidx hc hs hj ha hi htt; rfl
   · rename_i index c s j a index' c' s' j' a'
-    obtain ⟨_, _, _, hpos, hindex⟩ := heq
+    obtain ⟨_, _, hpos, hindex⟩ := heq
     have hidx := fin_of_ofNat_eq (by decide) hindex
     have hp := nat_eq_of_ofNat (childSlot_lt c s j a) (childSlot_lt c' s' j' a') (by decide) hpos
     obtain ⟨hsub, ha⟩ := childSlot_inj hp
     obtain ⟨hc, hs, hj⟩ := subSlot_inj hsub
     subst hidx hc hs hj ha; rfl
   · rename_i index c s j level node index' c' s' j' level' node'
-    obtain ⟨_, hlevel, _, hpos, hindex⟩ := heq
+    obtain ⟨_, _, hpos, hindex⟩ := heq
     have hidx := fin_of_ofNat_eq (by decide) hindex
     have hl := level.isLt; have hl' := level'.isLt
     have hn := node.isLt; have hn' := node'.isLt
     simp only [subHeight] at hl hl' hn hn'
-    have hlev := nat_eq_of_ofNat (bound := 4) (by omega) (by omega) (by decide) hlevel
     have h1 := subSlot_lt c s j; have h2 := subSlot_lt c' s' j'
-    have hp := nat_eq_of_ofNat (bound := 2048) (by simp only [subHeight]; omega) (by simp only [subHeight]; omega)
-      (by decide) hpos
-    simp only [subHeight] at hp
+    have hp := nat_eq_of_ofNat (bound := 8192) (by omega) (by omega) (by decide) hpos
     have hslot : subSlot c s j = subSlot c' s' j' := by omega
     have hnode : node = node' := Fin.ext (by omega)
     have hlv : level = level' := Fin.ext (by omega)
     obtain ⟨hc, hs, hj⟩ := subSlot_inj hslot
     subst hidx hc hs hj hnode hlv; rfl
   · rename_i index c s index' c' s'
-    obtain ⟨_, _, _, hpos, hindex⟩ := heq
+    obtain ⟨_, _, hpos, hindex⟩ := heq
     have hidx := fin_of_ofNat_eq (by decide) hindex
     have := c.isLt; have := s.isLt; have := c'.isLt; have := s'.isLt
     simp only [forestCoords, topHeight] at *
-    have hp := nat_eq_of_ofNat (bound := 128) (by omega) (by omega) (by decide) hpos
+    have hp := nat_eq_of_ofNat (bound := 136) (by omega) (by omega) (by decide) hpos
     have hc : c = c' := Fin.ext (by omega)
     have hs : s = s' := Fin.ext (by omega)
     subst hidx hc hs; rfl
   · rename_i index c level node index' c' level' node'
-    obtain ⟨_, hlevel, _, hpos, hindex⟩ := heq
+    obtain ⟨_, _, hpos, hindex⟩ := heq
     have hidx := fin_of_ofNat_eq (by decide) hindex
     have := c.isLt; have := node.isLt; have := c'.isLt; have := node'.isLt
     have := level.isLt; have := level'.isLt
     simp only [forestCoords, topHeight] at *
-    have hlev := nat_eq_of_ofNat (bound := 5) (by omega) (by omega) (by decide) hlevel
-    have hp := nat_eq_of_ofNat (bound := 128) (by omega) (by omega) (by decide) hpos
+    have hp := nat_eq_of_ofNat (bound := 1024) (by omega) (by omega) (by decide) hpos
     have hc : c = c' := Fin.ext (by omega)
     have hn : node = node' := Fin.ext (by omega)
     have hl : level = level' := Fin.ext (by omega)
     subst hidx hc hn hl; rfl
-  · obtain ⟨_, _, _, _, hindex⟩ := heq
+  · obtain ⟨_, _, _, hindex⟩ := heq
     have he := fin_of_ofNat_eq (by decide) hindex
     cases he; rfl
   · rfl
-
 /-- A structural position of the honest key. A `node` at `level` is the node of actual level
 `level + 1`, the leaves being the `leaf` positions; likewise for the forest's `subNode` (over the
 WOTS-key leaves `childLeaf`) and `topNode` (over the tree leaves `superChild`). -/
@@ -185,7 +170,7 @@ theorem domain_inRange (p : Position) : HashDomain.InRange p.domain := by
       have hlevel := level.isLt
       have hnode := nodeIdx.isLt
       simp only [maxLayerHeight] at hlevel hnode
-      show level.val + 1 < 2 ^ 32 ∧ nodeIdx.val < 2 ^ 32
+      show level.val + 1 < 2 ^ 24 ∧ nodeIdx.val < 2 ^ 32
       exact ⟨by omega, by omega⟩
   | _ => exact (trivial : True)
 

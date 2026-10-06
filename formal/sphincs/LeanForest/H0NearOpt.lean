@@ -130,16 +130,13 @@ theorem hNearOf_eq (q : ℕ) :
   unfold hNearOf hTermO excessW
   simp only [tsub_zero]
 
-/-- **The near H-term for every budget `q ≤ 2^127`, from a checked table and certificate.** -/
-theorem hNearOf_le (b N : ℕ) (hb : subtreeHeight = b) (hN : signatureLimit = N) (t : PoisT) (o : OptN)
-    (hr : checkRate b N t = true) (ht : checkPT t = true) (ho : checkOptN t o = true) (q : ℕ)
-    (hq : 2 * q ≤ 2 ^ 128) : hNearOf q ≤ ENNReal.ofReal ((2 ^ b * o.En : ℚ) : ℝ) := by
+/-- **The near H-term for every budget `q ≤ qtop`, from a checked table and certificate.** -/
+theorem hNearOf_le (b N qtop : ℕ) (hb : subtreeHeight = b) (hN : signatureLimit = N) (t : PoisT) (o : OptN)
+    (hr : checkRate b N qtop t = true) (ht : checkPT t = true) (ho : checkOptN t o = true) (q : ℕ)
+    (hq : q ≤ qtop) : hNearOf q ≤ ENNReal.ofReal ((2 ^ b * o.En : ℚ) : ℝ) := by
   obtain ⟨-, hl, hleaf, -, -, hEn⟩ := checkOptN_parts ho
-  have hq127 : q ≤ 2 ^ 127 := by
-    have : (2 : ℕ) ^ 128 = 2 * 2 ^ 127 := by norm_num
-    omega
   set w := wbarOf q with hwdef
-  have hw1 : w ≤ 1 := (fair_of q hq).le_one
+  have hw1 : w ≤ 1 := wbar_le_one q (fair_of_rate b N qtop t hr hb q hq)
   have hlw : landing * w ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top (mul_le_one' ForestPrice.landing_le_one hw1)
   have hcard : Fintype.card (Fin (2 ^ subtreeHeight)) = 2 ^ b := by rw [Fintype.card_fin, hb]
   set α : ℝ≥0 := ((2 : ℝ≥0) ^ b)⁻¹ with hαdef
@@ -162,7 +159,7 @@ theorem hNearOf_le (b N : ℕ) (hb : subtreeHeight = b) (hN : signatureLimit = N
     push_cast
     calc (signatureLimit : ℝ) * ((2 : ℝ) ^ b)⁻¹ + (q : ℝ) * ((landing * w).toReal / 2 ^ b)
         = (signatureLimit : ℝ) / 2 ^ b + (q : ℝ) * (landing * w).toReal / 2 ^ b := by ring
-      _ ≤ _ := rate_le_tableF b N t hr hN q hq127
+      _ ≤ _ := rate_le_tableF b N qtop t hr hb hN q hq
   rw [hNearOf_eq]
   refine le_trans (hTermO_near_le w landing hw1 ForestPrice.landing_le_one signatureLimit q
     (fun n => ENNReal.ofReal (leafQ o.nt o.Jn n : ℝ)) (leaf_sepGood hleaf) (avgN_near_le hb ho) α γ hα hγ μ hμ) ?_

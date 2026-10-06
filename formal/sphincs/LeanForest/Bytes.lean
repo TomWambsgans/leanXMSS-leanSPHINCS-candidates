@@ -26,17 +26,27 @@ theorem ofNat_inj_of_lt {w a b : Nat} (ha : a < 2 ^ w) (hb : b < 2 ^ w)
   have htoNat := congrArg BitVec.toNat h
   rwa [BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb] at htoNat
 
+/-- A concatenation determines its two halves. -/
+theorem bitVec_append_inj {n m : Nat} {a a' : BitVec n} {b b' : BitVec m}
+    (h : a ++ b = a' ++ b') : a = a' ∧ b = b' := by
+  constructor
+  · apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    have := congrArg (fun v : BitVec (n + m) => v.getLsbD (m + i)) h
+    simpa [BitVec.getLsbD_append] using this
+  · apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    have := congrArg (fun v : BitVec (n + m) => v.getLsbD i) h
+    simpa [BitVec.getLsbD_append, hi] using this
+
+/-- The 8 address bytes determine the type, the step and the two fields. -/
 theorem fieldBytes_injective {t1 t2 : TweakFields} (h : fieldBytes t1 = fieldBytes t2) : t1 = t2 := by
-  obtain ⟨tag1, layer1, tree1, position1, index1⟩ := t1
-  obtain ⟨tag2, layer2, tree2, position2, index2⟩ := t2
+  obtain ⟨tag1, step1, hi1, lo1⟩ := t1
+  obtain ⟨tag2, step2, hi2, lo2⟩ := t2
   simp only [fieldBytes] at h
-  obtain ⟨h, hindex⟩ := List.append_inj' h (by simp [bytesLE_length])
-  obtain ⟨h, htree⟩ := List.append_inj' h (by simp [bytesLE_length])
-  obtain ⟨h, hposition⟩ := List.append_inj' h (by simp [bytesLE_length])
-  have h := List.append_left_injective [0] h
-  obtain ⟨htag, hlayer⟩ := List.append_inj' h (by simp [bytesLE_length])
-  have htag := List.append_right_injective [protocolDomainSep] htag
-  simp only [bytesLE_injective htag, bytesLE_injective hlayer, bytesLE_injective htree,
-    bytesLE_injective hposition, bytesLE_injective hindex]
+  obtain ⟨h, htag⟩ := List.append_inj' h (by simp [bytesLE_length])
+  obtain ⟨hlo, hhi⟩ := List.append_inj' h (by simp [bytesLE_length])
+  obtain ⟨hstep, htag⟩ := bitVec_append_inj (bytesLE_injective htag)
+  simp only [bytesLE_injective hlo, bytesLE_injective hhi, hstep, htag]
 
 end LeanForest
