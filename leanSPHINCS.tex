@@ -54,7 +54,7 @@ Properties:
   \item public key: 32 bytes
   \item secret key: 32 bytes
   \item signature size: 5\,684 bytes
-  \item verification: 391 compressions (with BLAKE2s)
+  \item verification: 373 compressions (with BLAKE2s)
   \item security: NIST level 1 \cite{FIPS205} (applies to all the usages below) (127 bits SUF in the ROM, and $\approx 64$ bits in the QROM)
   \item lifetime: up to $2^{30}$ signatures.
 \end{itemize}
@@ -68,6 +68,8 @@ and the step in a chain).
         block. A pruned signer tries $R = R_0 + i$ for $i = 0, 1, \dots$, with $R_0$ a hash of the secret key and $m$,
         and keeps the first one that lands in its subtree. The first block is hashed once, so each try costs 1
         compression
+  \item a FORS tree has no root hash: the FORS public key hashes the two nodes below the root of every tree, which
+        saves one hash per tree
   \item the secrets are derived from the secret key two at a time: one hash gives 32 bytes, i.e.\ two chain starts
         or two FORS secrets
 \end{itemize}
@@ -227,8 +229,8 @@ inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
   \toprule
   FTS & size & verification & FTS signing \\
   \midrule
-  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 B & 391 & $61\cdot10^3$ \\
-  two-level WOTS forest & 4\,276 B & 321 & $61\cdot10^3$ \\
+  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 B & 373 & $61\cdot10^3$ \\
+  two-level WOTS forest & 4\,276 B & 307 & $61\cdot10^3$ \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -241,7 +243,8 @@ several signatures by the same key, it reaches exactly the codewords below their
 
 \paragraph{Trees.} The FTS has 8 independent trees of height 4, and its public key hashes their 8 roots. Each of
 the 16 leaves of a tree is $\hash(R_0,R_1)$, where $R_0$ and $R_1$ are the roots of two subtrees of height 3 over 8
-WOTS keys each. In each tree, the message picks a leaf, and in both of its subtrees a WOTS key and a codeword.
+WOTS keys each. In each tree, the message picks a leaf, and in both of its subtrees a WOTS key and a codeword. As for FORS, a tree or a subtree has
+no root hash: in $\hash(R_0,R_1)$ and in the public key, $R$ stands for the two nodes just below the root.
 
 \begin{center}
 \begin{tikzpicture}[x=1cm,y=1cm,line join=round,
@@ -324,8 +327,8 @@ so it still takes one hash.
 \paragraph{Costs.} Per tree:
 \begin{itemize}
   \item size: 22 values, i.e.\ 6 chain values and 3 nodes per subtree, plus 4 nodes in the tree
-  \item verification: 25 compressions, i.e.\ per subtree 5 chain steps, 2 for the leaf and 3 for the path, then 1 for
-        $\hash(R_0,R_1)$ and 4 for the path in the tree
+  \item verification: 23 compressions, i.e.\ per subtree 5 chain steps, 2 for the leaf and 2 for the path, then 2 for
+        $\hash(R_0,R_1)$ and 3 for the path in the tree
   \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 29 compressions each
 \end{itemize}
 Every signature has the same size and verification cost, and keygen is unchanged.

@@ -58,7 +58,8 @@ def main():
 
     # per-call costs (input after the 32-byte prefix)
     derive, step, node, enc = comp(32), comp(N), comp(2 * N), comp(N + 4)
-    wots_pk, fors_roots = comp(v * N), comp(k * N)
+    # A FORS tree has no root hash: the FORS key hashes the two nodes below the root of every tree.
+    wots_pk, fors_roots = comp(v * N), comp(2 * k * N)
     rnd, msg_block = comp(32 + 32), comp(32 + 8 + N)  # S || m ;  m || 0^8 || rho
     blocks = math.ceil((h + k * a) / 256)
     digest = blocks * msg_block
@@ -69,9 +70,9 @@ def main():
     alpha = n_sum(v, q, T) / q**v  # probability that a counter gives sum T
     # One derivation hash gives two secrets (its two 16-byte halves): two chain starts, or two FORS leaves.
     leaf = v // 2 * derive + v * (q - 1) * step + wots_pk
-    fors_sign = k * (2**a // 2 * derive + 2**a * step + (2**a - 1) * node) + fors_roots
+    fors_sign = k * (2**a // 2 * derive + 2**a * step + (2**a - 2) * node) + fors_roots
     wots_sign = enc / alpha + v // 2 * derive + T * step
-    verify = digest + k * (step + a * node) + fors_roots + enc + ((q - 1) * v - T) * step + wots_pk + h * node
+    verify = digest + k * (step + (a - 1) * node) + fors_roots + enc + ((q - 1) * v - T) * step + wots_pk + h * node
     keygen = derive + 2**h * leaf + (2**h - 1) * node
     size = N + k * (1 + a) * N + 4 + v * N + h * N
     L = max_log2_sigs(127, Params("", 16, h, a, k, 30), "exact", "max")  # the FORS term at 2^-127 per query
@@ -108,7 +109,7 @@ def main():
           f"costs in 64-byte compressions")
     print(f"  signature {size} B (rho 16, FORS {k * (1 + a) * N}, counter 4, WOTS {v * N}, path {h * N}); pk {2 * N} B")
     print(f"  per call: derive {derive}, chain {step}, node {node}, encode {enc}, WOTS leaf {wots_pk}, "
-          f"FORS roots {fors_roots}, randomizer {rnd}, digest {digest}")
+          f"FORS key {fors_roots}, randomizer {rnd}, digest {digest}")
     print(f"  WOTS encoding: {math.log2(n_sum(v, q, T)):.2f} bits of valid encodings, "
           f"expected {1 / alpha:.0f} counters")
     print(f"  lifetime at 127 bits: 2^{L:.2f} signatures")
@@ -136,7 +137,7 @@ def main():
     public = 2**b * (k * 2**a * N + v * N + 4)
     try_cost = 1  # R = R_0 + i, then the second block of the first digest call
     grind = 2 ** (h - b) * try_cost
-    rebuild = k * (2**a - 1) * node  # the combiner rebuilds the 24 FORS paths from the public leaves
+    rebuild = k * (2**a - 2) * node  # the combiner rebuilds the 24 FORS paths from the public leaves
     print(f"  threshold, 2^{b} kept leaves (lifetime 2^{pruned_log2_sigs(b):.2f}): {fmt(mpc_hashes)} MPC hashes at keygen, public data "
           f"{public / 1e9:.3g} GB; signing: grinding {fmt(grind)} + FORS paths {fmt(rebuild)} compressions, no MPC")
     # Keygen with a DKG: n-party replicated-sharing MPC, t = (n + 1) / 2, hash-based F. Bytes per operator for
@@ -145,7 +146,7 @@ def main():
     # Trusted dealer: F costs comb(n, t - 1) hashes per secret with the hash-based F.
     # The threshold PRF gives one secret per evaluation.
     leaf1 = v * derive + v * (q - 1) * step + wots_pk
-    fors1 = k * (2**a * (derive + step) + (2**a - 1) * node) + fors_roots
+    fors1 = k * (2**a * (derive + step) + (2**a - 2) * node) + fors_roots
     dealer = derive + 2**b * leaf1 + (2**b - 1) * node + (h - b) * (derive + node)
     dealer += 2**b * (fors1 + enc / alpha + v * derive + T * step)
     for n, (per_leaf, per_chain) in measured.items():

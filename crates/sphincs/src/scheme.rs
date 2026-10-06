@@ -361,8 +361,8 @@ mod tests {
         let sig = sign(&sk, &m);
         let digest = blake2s::hash(&sig.to_bytes());
         assert_eq!(hex(&pk.to_bytes()), "11fe383dcdd8029dc2c62e4978d963b85b9238b63cb662fb192b69310d19501e");
-        assert_eq!(hex(&digest), "721a4f470ac08f949fb182d8b0b2cb710a7e3a97b8e4bd388c6487127301050e");
-        assert_eq!(sig.counter, 885);
+        assert_eq!(hex(&digest), "2c7e52fc69d342eaaf22404f19bdd80c4dd51fd3010b8dcfd866b46d67b5d9e5");
+        assert_eq!(sig.counter, 5450);
     }
 
     #[test]
