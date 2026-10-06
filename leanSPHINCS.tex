@@ -206,9 +206,8 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
 \label{sec:twolevel}
 
 FORS can be replaced by a few-time signature (FTS) built from small WOTS keys. Signatures are 25\% smaller
-and verification 18\% cheaper, with slightly faster signing and the same lifetimes. The idea is inspired by Jonas Nick's (Blockstream) sig.golf
-submission~\cite{siggolf}.
-This variant is not covered by the Lean proofs yet.
+and verification 18\% cheaper, with slightly faster signing and longer lifetimes, proved in Lean~\cite{proofs}. The idea is
+inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
 
 \begin{center}
 \begin{tabular}{lrrr}
@@ -328,26 +327,22 @@ max of those openings. Let $f_t$ be the probability that $t$ random signatures b
 The lifetime is the largest $N$ with $2^{127}\,2^{b-26}\,\mathbb{E}_{r\sim\mathrm{Poisson}(N/2^b)}[\mathrm{cover}(r)]\le1$.
 This is the rule that defines the best known attack on FORS~\cite{proofs}, and the two-level forest is 10--12\%
 ahead at every subtree height. Counting also the WOTS$^+$C unit-neighbour attack (unchanged), it is about 12\% ahead
-for $b \ge 20$ and 9\% for $b \le 14$:
+for $b \ge 20$ and 9\% for $b \le 14$. The last two rows are the lifetimes proved in Lean~\cite{proofs} (rounded down): an adversary
+making $q$ hash queries forges with probability at most $q\cdot2^{-127}$.
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{lrrrrrrr}
   \toprule
   $b$ & 26 & 20 & 14 & 13 & 12 & 10 & 8 \\
   \midrule
-  FORS & $1.20\cdot10^9$ & $2.38\cdot10^7$ & $4.67\cdot10^5$ & $2.42\cdot10^5$ & $1.26\cdot10^5$ & $3.38\cdot10^4$ & $9.1\cdot10^3$ \\
-  two-level forest & $1.35\cdot10^9$ & $2.66\cdot10^7$ & $5.19\cdot10^5$ & $2.69\cdot10^5$ & $1.39\cdot10^5$ & $3.74\cdot10^4$ & $1.0\cdot10^4$ \\
+  FORS, attack & $1.20\cdot10^9$ & $2.38\cdot10^7$ & $4.67\cdot10^5$ & $2.42\cdot10^5$ & $1.26\cdot10^5$ & $3.38\cdot10^4$ & $9.1\cdot10^3$ \\
+  forest, attack & $1.35\cdot10^9$ & $2.66\cdot10^7$ & $5.19\cdot10^5$ & $2.69\cdot10^5$ & $1.39\cdot10^5$ & $3.74\cdot10^4$ & $1.0\cdot10^4$ \\
+  \midrule
+  FORS, proved & $1.15\cdot10^9$ & $2.23\cdot10^7$ & $4.12\cdot10^5$ & $2.11\cdot10^5$ & $1.08\cdot10^5$ & $2.86\cdot10^4$ & $7.5\cdot10^3$ \\
+  forest, proved & $1.26\cdot10^9$ & $2.37\cdot10^7$ & $4.38\cdot10^5$ & $2.26\cdot10^5$ & $1.15\cdot10^5$ & $3.06\cdot10^4$ & $8.1\cdot10^3$ \\
   \bottomrule
 \end{tabular}
 \end{center}
-
-\paragraph{Still to do.}
-\begin{itemize}
-  \item Bound attacks that invert a chain. The WOTS keys reveal values below the chain tops, so a chain preimage
-        combined with a partial cover is a possible route, as for WOTS$^+$C.
-  \item Adapt the Lean proofs~\cite{proofs}. Only their FORS-specific part, the cover price and its certificates,
-        changes.
-\end{itemize}
 
 \paragraph{Threshold signing.} In \cref{sec:threshold}, a signature reveals FORS secrets, which are outputs $F(\mathit{addr})$
 of the threshold PRF, so signing needs no MPC. Here a signature reveals $x_{i,4-d_i}$, i.e.\ the secret hashed
@@ -377,7 +372,8 @@ instance of the kept subtree:
   With (Almost) No Cost}. IEEE S\&P, 2023. \url{https://eprint.iacr.org/2022/778}.
 \bibitem{FIPS205} National Institute of Standards and Technology. \emph{Stateless Hash-Based Digital Signature
   Standard}. FIPS~205, 2024. \url{https://doi.org/10.6028/NIST.FIPS.205}.
-\bibitem{proofs} \emph{leanSphincs proofs in Lean 4}, \texttt{formal/sphincs} in
+\bibitem{proofs} \emph{leanSphincs proofs in Lean 4} (\texttt{LeanSphincs}, and \texttt{LeanForest} for
+  \cref{sec:twolevel}), \texttt{formal/sphincs} in
   \url{https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates}.
 
 \bibitem{conduition} conduition. \emph{Pruning Hypertrees for the Lax and Lazy}, 2026.
