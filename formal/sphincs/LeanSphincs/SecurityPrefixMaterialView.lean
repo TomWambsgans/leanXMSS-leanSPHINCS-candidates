@@ -73,7 +73,8 @@ theorem forsNode (index : Index) (tree : FtsTree) (level nodeIdx : Nat) :
 theorem forsKey (index : Index) :
     evalWithAnswerFn left (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest) =
       evalWithAnswerFn right (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest) := by
-  simp only [Seeded.ftsKey, evalWithAnswerFn_bind, eval_sequenceFin, h.forsNode, h.tweakable]
+  simp only [Seeded.ftsKey, evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_sequenceFin,
+    h.forsNode, h.tweakable]
 
 theorem forsOpen (index : Index) (leaves : IndexGroup → FtsLeaf) :
     evalWithAnswerFn left (Seeded.ftsOpen parameter index leaves seed :

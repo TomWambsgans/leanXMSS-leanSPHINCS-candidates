@@ -271,7 +271,7 @@ theorem compiled_ftsKey_eq (left right : MasterSeed) (material : Material) (inde
       (Seeded.ftsKey (parameter material) index left : OracleComp HashSpec Digest) =
     simulateQ (compileHash right material)
       (Seeded.ftsKey (parameter material) index right : OracleComp HashSpec Digest) := by
-  simp only [Seeded.ftsKey, simulateQ_bind, simulate_sequenceFin,
+  simp only [Seeded.ftsKey, simulateQ_bind, simulateQ_pure, simulate_sequenceFin,
     compiled_ftsNode_eq left right, compile_tweakableHash]
 
 omit [Params] in

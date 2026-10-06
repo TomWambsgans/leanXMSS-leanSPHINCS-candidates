@@ -250,7 +250,8 @@ omit [Params] in
 theorem ftsKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) :
     PreservesFresh target (Seeded.ftsKey parameter index seed) := by
   rw [Seeded.ftsKey]
-  exact bind (sequenceFin _ _ (fun _ => ftsNode hs _ _ _ _ _ _))
+  exact bind (sequenceFin _ _ (fun _ => bind (ftsNode hs _ _ _ _ _ _)
+      (fun _ => bind (ftsNode hs _ _ _ _ _ _) (fun _ => pure' _ _))))
     (fun _ => tweakableHash _ _ _ _ (hs.ftsRoots _ _ _))
 
 omit [Params] in

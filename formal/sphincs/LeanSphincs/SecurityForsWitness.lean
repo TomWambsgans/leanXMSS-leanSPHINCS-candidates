@@ -3,7 +3,11 @@ import LeanSphincs.SecurityChainWitness
 /-!
 Deterministic FORS extraction for the candidate's 24 trees. An opening recovering the canonical
 FORS key either exposes the canonical secrets and paths, or one of its actual oracle queries
-uses a different input producing a canonical leaf, node, or root-list hash value.
+uses a different input producing a canonical leaf, node, or key hash value. A tree has no root
+hash: the key hashes the two top nodes (level `a - 1`) of every tree, so an opening that reaches
+the key with the canonical key-hash input has the canonical top node on the side of its leaf, which
+is classified as a tree of height `a - 1`, and the other canonical top node as its last path
+element, which is compared as an input of the key hash.
 Adapted from leanVM b7a107256; no collision-freeness or security assumption is used.
 -/
 
@@ -30,10 +34,13 @@ theorem flatMap_ofFn_injective {α β : Type} (g : α → List β) (len : Nat)
       | zero => exact hzero
       | succ j => exact congrFun hsucc j
 
-theorem ftsRootsPayload_injective {roots roots' : FtsTree → Digest}
-    (h : ftsRootsPayload roots = ftsRootsPayload roots') : roots = roots' :=
-  flatMap_ofFn_injective (bytesLE 16) 16 (bytesLE_length 16)
-    (fun _ _ => bytesLE_injective) h
+theorem ftsTopsPayload_injective {tops tops' : FtsTree → Digest × Digest}
+    (h : ftsTopsPayload tops = ftsTopsPayload tops') : tops = tops' :=
+  flatMap_ofFn_injective (fun pair : Digest × Digest => nodePayload pair.1 pair.2) 32
+    (fun _ => by simp [nodePayload, bytesLE_length])
+    (fun left right hpair => by
+      obtain ⟨hfirst, hsecond⟩ := List.append_inj hpair (by rw [bytesLE_length, bytesLE_length])
+      exact Prod.ext (bytesLE_injective hfirst) (bytesLE_injective hsecond)) h
 
 namespace Fors
 
@@ -50,11 +57,15 @@ def leafValue (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (tree : FtsTree) (leaf : FtsLeaf) (secret : Digest) : Digest :=
   evalWithAnswerFn f (ftsLeafHash parameter index tree leaf secret : OracleComp HashSpec Digest)
 
-def rootValue (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+/-- The top node (level `a - 1`) an opening reaches on the side of its leaf. -/
+def topValue (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (tree : FtsTree) (leaf : FtsLeaf) (secret : Digest)
     (path : Fin ftsTreeHeight → Digest) : Digest :=
-  evalWithAnswerFn f (ftsFold parameter index tree leaf path ftsTreeHeight
+  evalWithAnswerFn f (ftsFold parameter index tree leaf path ftsTopLevel
     (leafValue f parameter index tree leaf secret) : OracleComp HashSpec Digest)
+
+/-- The last path element: the top node on the other side, an input of the key hash. -/
+def topSibling (path : Fin ftsTreeHeight → Digest) : Digest := path ⟨ftsTopLevel, by decide⟩
 
 theorem merkleFold_ftsFold (parameter : PublicParameter) (index : Index) (tree : FtsTree)
     (leaf : FtsLeaf) (path : Fin ftsTreeHeight → Digest) (levels : Nat) (value : Digest) :
@@ -69,14 +80,15 @@ theorem merkleFold_ftsFold (parameter : PublicParameter) (index : Index) (tree :
       intro current
       cases leaf.val.testBit levels <;> rfl
 
-theorem canonical_root (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+theorem canonical_top (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (tree : FtsTree) (seed : MasterSeed) (leaf : FtsLeaf) :
-    rootValue f parameter index tree leaf (Completeness.ftsSecret f parameter index tree leaf seed)
+    topValue f parameter index tree leaf (Completeness.ftsSecret f parameter index tree leaf seed)
       (canonicalPath f parameter index tree seed leaf) =
-        Completeness.ftsNodeValue f parameter index tree seed ftsTreeHeight 0 := by
-  rw [rootValue, leafValue, ← Completeness.ftsNodeValue_zero]
-  rw [Completeness.eval_ftsFold_path f parameter index tree seed leaf _ _ le_rfl
-    (fun _ _ _ => rfl), Nat.div_eq_of_lt leaf.isLt]
+        Completeness.ftsNodeValue f parameter index tree seed ftsTopLevel
+          (leaf.val / 2 ^ ftsTopLevel) := by
+  rw [topValue, leafValue, ← Completeness.ftsNodeValue_zero]
+  exact Completeness.eval_ftsFold_path f parameter index tree seed leaf _ _ (by decide)
+    (fun _ _ _ => rfl)
 
 /-- A selected secret differs but its leaf query produces the canonical leaf hash. -/
 def LeafMatch (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -94,49 +106,65 @@ def NodeMatch (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (leafValue f parameter index tree leaf secret)
     (leafValue f parameter index tree leaf (Completeness.ftsSecret f parameter index tree leaf seed)) level
 
+/-- One tree of an opening whose two top nodes, in node order, are the canonical ones: the
+opening is canonical, or its leaf query or one of its `a - 1` node queries hits a canonical value
+from another input. The last path element is not hashed here; it is read off the pair. -/
 theorem tree_classification (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (tree : FtsTree) (seed : MasterSeed) (leaf : FtsLeaf) (secret : Digest)
     (path : Fin ftsTreeHeight → Digest)
-    (hroot : rootValue f parameter index tree leaf secret path =
-      Completeness.ftsNodeValue f parameter index tree seed ftsTreeHeight 0) :
+    (htops : ftsTopPair leaf (topValue f parameter index tree leaf secret path) (topSibling path) =
+      Completeness.ftsTopsValue f parameter index seed tree) :
     (secret = Completeness.ftsSecret f parameter index tree leaf seed ∧
       path = canonicalPath f parameter index tree seed leaf) ∨
     LeafMatch f parameter index tree seed leaf secret ∨
-    ∃ level, level < ftsTreeHeight ∧ NodeMatch f parameter index tree seed leaf secret path level := by
+    ∃ level, level < ftsTopLevel ∧ NodeMatch f parameter index tree seed leaf secret path level := by
+  obtain ⟨htop, hsibling⟩ := (Completeness.ftsTopPair_eq_iff
+    (Completeness.ftsNodeValue f parameter index tree seed ftsTopLevel) leaf _ _).mp htops
   have hfold : merkleValue f parameter (fun height position => .ftsNode index tree height position)
-      leaf.val (extendPath path) (leafValue f parameter index tree leaf secret) ftsTreeHeight =
+      leaf.val (extendPath path) (leafValue f parameter index tree leaf secret) ftsTopLevel =
     merkleValue f parameter (fun height position => .ftsNode index tree height position)
       leaf.val (extendPath (canonicalPath f parameter index tree seed leaf))
       (leafValue f parameter index tree leaf (Completeness.ftsSecret f parameter index tree leaf seed))
-      ftsTreeHeight := by
+      ftsTopLevel := by
     simp only [merkleValue, merkleFold_ftsFold]
-    exact hroot.trans (canonical_root f parameter index tree seed leaf).symm
-  rcases merkleFold_same_index f parameter _ leaf.val _ _ _ _ ftsTreeHeight hfold with
+    exact htop.trans (canonical_top f parameter index tree seed leaf).symm
+  rcases merkleFold_same_index f parameter _ leaf.val _ _ _ _ ftsTopLevel hfold with
     ⟨hleaf, hpath⟩ | hmatch
   · by_cases hsecret : secret = Completeness.ftsSecret f parameter index tree leaf seed
     · refine Or.inl ⟨hsecret, ?_⟩
       funext level
-      have hp := hpath level.val level.isLt
-      simpa only [extendPath, dif_pos level.isLt] using hp
+      by_cases hlevel : level.val < ftsTopLevel
+      · have hp := hpath level.val hlevel
+        simpa only [extendPath, dif_pos level.isLt] using hp
+      · have hlast : level = ⟨ftsTopLevel, by decide⟩ := by
+          apply Fin.ext
+          have := level.isLt
+          simp only [ftsTopLevel, ftsTreeHeight] at hlevel this ⊢
+          omega
+        rw [hlast]
+        exact hsibling
     · exact Or.inr (Or.inl ⟨hsecret, hleaf⟩)
   · exact Or.inr (Or.inr hmatch)
 
-def roots (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index)
+/-- The `2 k` top nodes an opening reaches, in node order: the payload of the key hash. -/
+def tops (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index)
     (leaves : IndexGroup → FtsLeaf) (secrets : FtsTree → Digest)
-    (paths : FtsTree → Fin ftsTreeHeight → Digest) : FtsTree → Digest :=
-  fun tree => rootValue f parameter index tree (leaves tree) (secrets tree) (paths tree)
+    (paths : FtsTree → Fin ftsTreeHeight → Digest) : FtsTree → Digest × Digest :=
+  fun tree => ftsTopPair (leaves tree)
+    (topValue f parameter index tree (leaves tree) (secrets tree) (paths tree)) (topSibling (paths tree))
 
-def canonicalRoots (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (seed : MasterSeed) : FtsTree → Digest :=
-  fun tree => Completeness.ftsNodeValue f parameter index tree seed ftsTreeHeight 0
+def canonicalTops (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (index : Index) (seed : MasterSeed) : FtsTree → Digest × Digest :=
+  Completeness.ftsTopsValue f parameter index seed
 
-def RootsMatch (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index)
+/-- The key hash of the opening has another input than the canonical one and the same value. -/
+def TopsMatch (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index)
     (seed : MasterSeed) (leaves : IndexGroup → FtsLeaf) (secrets : FtsTree → Digest)
     (paths : FtsTree → Fin ftsTreeHeight → Digest) : Prop :=
-  ftsRootsPayload (roots f parameter index leaves secrets paths) ≠
-    ftsRootsPayload (canonicalRoots f parameter index seed) ∧
+  ftsTopsPayload (tops f parameter index leaves secrets paths) ≠
+    ftsTopsPayload (canonicalTops f parameter index seed) ∧
   truncateHash (f (tweakableHashInput parameter (.ftsRoots index)
-    (ftsRootsPayload (roots f parameter index leaves secrets paths)))) =
+    (ftsTopsPayload (tops f parameter index leaves secrets paths)))) =
     evalWithAnswerFn f (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest)
 
 def Opening (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index)
@@ -149,17 +177,17 @@ def Exception (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index :
     (seed : MasterSeed) (leaves : IndexGroup → FtsLeaf) (secrets : FtsTree → Digest)
     (paths : FtsTree → Fin ftsTreeHeight → Digest) : Prop :=
   (∃ tree, LeafMatch f parameter index tree seed (leaves tree) (secrets tree)) ∨
-  (∃ tree level, level < ftsTreeHeight ∧
+  (∃ tree level, level < ftsTopLevel ∧
     NodeMatch f parameter index tree seed (leaves tree) (secrets tree) (paths tree) level) ∨
-  RootsMatch f parameter index seed leaves secrets paths
+  TopsMatch f parameter index seed leaves secrets paths
 
 theorem eval_ftsRecover (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index)
     (leaves : IndexGroup → FtsLeaf) (secrets : FtsTree → Digest)
     (paths : FtsTree → Fin ftsTreeHeight → Digest) :
     evalWithAnswerFn f (ftsRecover parameter index leaves secrets paths : OracleComp HashSpec Digest) =
       truncateHash (f (tweakableHashInput parameter (.ftsRoots index)
-        (ftsRootsPayload (roots f parameter index leaves secrets paths)))) := by
-  simp only [ftsRecover, evalWithAnswerFn_bind, Completeness.eval_sequenceFin,
+        (ftsTopsPayload (tops f parameter index leaves secrets paths)))) := by
+  simp only [ftsRecover, evalWithAnswerFn_bind, evalWithAnswerFn_pure, Completeness.eval_sequenceFin,
     Completeness.eval_tweakableHash]
   rfl
 
@@ -172,18 +200,16 @@ theorem recover_classification (f : QueryImpl HashSpec Id) (parameter : PublicPa
     Opening f parameter index seed leaves secrets paths ∨
       Exception f parameter index seed leaves secrets paths := by
   classical
-  by_cases hpayload : ftsRootsPayload (roots f parameter index leaves secrets paths) =
-      ftsRootsPayload (canonicalRoots f parameter index seed)
-  · have hroots := ftsRootsPayload_injective hpayload
+  by_cases hpayload : ftsTopsPayload (tops f parameter index leaves secrets paths) =
+      ftsTopsPayload (canonicalTops f parameter index seed)
+  · have htops := ftsTopsPayload_injective hpayload
     by_cases hopening : Opening f parameter index seed leaves secrets paths
     · exact Or.inl hopening
     · unfold Opening at hopening
       push Not at hopening
       obtain ⟨tree, htree⟩ := hopening
-      have hroot : rootValue f parameter index tree (leaves tree) (secrets tree) (paths tree) =
-          Completeness.ftsNodeValue f parameter index tree seed ftsTreeHeight 0 := congrFun hroots tree
       rcases tree_classification f parameter index tree seed (leaves tree) (secrets tree)
-        (paths tree) hroot with hopen | hleaf | ⟨level, hlevel, hnode⟩
+        (paths tree) (congrFun htops tree) with hopen | hleaf | ⟨level, hlevel, hnode⟩
       · exact False.elim (htree hopen.1 hopen.2)
       · exact Or.inr (Or.inl ⟨tree, hleaf⟩)
       · exact Or.inr (Or.inr (Or.inl ⟨tree, level, hlevel, hnode⟩))
@@ -206,7 +232,7 @@ theorem leafInput_mem (f : QueryImpl HashSpec Id) (parameter : PublicParameter) 
 theorem nodeInput_mem (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index)
     (leaves : IndexGroup → FtsLeaf) (secrets : FtsTree → Digest)
     (paths : FtsTree → Fin ftsTreeHeight → Digest) (tree : FtsTree) (level : Nat)
-    (hlevel : level < ftsTreeHeight) :
+    (hlevel : level < ftsTopLevel) :
     merkleInput f parameter (fun height position => .ftsNode index tree height position)
       (leaves tree).val (extendPath (paths tree))
       (leafValue f parameter index tree (leaves tree) (secrets tree)) level ∈
@@ -215,19 +241,20 @@ theorem nodeInput_mem (f : QueryImpl HashSpec Id) (parameter : PublicParameter) 
   apply queriedInputs_mono_bind_left
   apply queriedInputs_sequenceFin_component f _ tree
   apply queriedInputs_mono_bind_right
+  apply queriedInputs_mono_bind_left
   rw [← merkleFold_ftsFold]
   exact merkleInput_mem f parameter _ _ _ _ _ _ hlevel
 
-theorem rootsInput_mem (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index)
+theorem topsInput_mem (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index)
     (leaves : IndexGroup → FtsLeaf) (secrets : FtsTree → Digest)
     (paths : FtsTree → Fin ftsTreeHeight → Digest) :
     tweakableHashInput parameter (.ftsRoots index)
-      (ftsRootsPayload (roots f parameter index leaves secrets paths)) ∈
+      (ftsTopsPayload (tops f parameter index leaves secrets paths)) ∈
       queriedInputs f (ftsRecover parameter index leaves secrets paths : OracleComp HashSpec Digest) := by
   rw [ftsRecover]
   apply queriedInputs_mono_bind_right
   rw [queriedInputs_tweakableHash, List.mem_singleton]
-  simp only [Completeness.eval_sequenceFin, evalWithAnswerFn_bind]
+  simp only [Completeness.eval_sequenceFin, evalWithAnswerFn_bind, evalWithAnswerFn_pure]
   rfl
 
 /-- An exact opening queries every selected canonical secret. Whether that secret was already
@@ -264,14 +291,12 @@ theorem Exception.queried_output_match (f : QueryImpl HashSpec Id) (parameter : 
       hnode.2.1, ?_⟩
     exact hnode.2.2.trans (merkleValue_succ f parameter _ _ _ _ level)
   · refine ⟨tweakableHashInput parameter (.ftsRoots index)
-        (ftsRootsPayload (roots f parameter index leaves secrets paths)),
+        (ftsTopsPayload (tops f parameter index leaves secrets paths)),
       tweakableHashInput parameter (.ftsRoots index)
-        (ftsRootsPayload (canonicalRoots f parameter index seed)),
-      rootsInput_mem f parameter index leaves secrets paths, ?_, ?_⟩
+        (ftsTopsPayload (canonicalTops f parameter index seed)),
+      topsInput_mem f parameter index leaves secrets paths, ?_, ?_⟩
     · exact fun hinput => hne (List.append_cancel_left hinput)
-    · rw [heq]
-      simp only [Seeded.ftsKey, evalWithAnswerFn_bind, Completeness.eval_sequenceFin,
-        Completeness.eval_tweakableHash]
+    · rw [heq, Completeness.eval_ftsKey]
       rfl
 
 end Fors

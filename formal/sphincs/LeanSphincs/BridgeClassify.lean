@@ -289,6 +289,7 @@ theorem forsException_hit (index : Index) (leaves : IndexGroup → FtsLeaf) (sec
         (bytesLE 16 (secrets tree)))) = _
       simpa only [Fors.leafValue, ftsLeafHash, Completeness.eval_tweakableHash] using heq
   · have hnodeInput := Fors.nodeInput_mem f parameter index leaves secrets paths tree level hlevel
+    replace hlevel : level < ftsTreeHeight := hlevel.trans_le (by decide)
     obtain ⟨hparent, hneq, hout⟩ := hnode
     refine ⟨_, hnodeInput, ?_⟩
     have hpos := active_hit f parameter seed labels
@@ -306,13 +307,13 @@ theorem forsException_hit (index : Index) (leaves : IndexGroup → FtsLeaf) (sec
         rw [fors_path_value f parameter seed labels hconsistent index tree (leaves tree) (level + 1) hlevel]
         exact hout)
     exact hpos
-  · refine ⟨_, Fors.rootsInput_mem f parameter index leaves secrets paths,
+  · refine ⟨_, Fors.topsInput_mem f parameter index leaves secrets paths,
       active_hit f parameter seed labels (.ftsRoots index) trivial _ ?_ ?_⟩
     · rw [fors_roots_input f parameter seed labels hconsistent index]
       intro hinput
       exact hne (tweakableInput_injective hinput).2.2
     · change truncateHash (f (tweakableHashInput parameter (.ftsRoots index)
-        (ftsRootsPayload (Fors.roots f parameter index leaves secrets paths)))) = _
+        (ftsTopsPayload (Fors.tops f parameter index leaves secrets paths)))) = _
       rw [heq, fors_key_value f parameter seed labels hconsistent index]
 
 include hconsistent in

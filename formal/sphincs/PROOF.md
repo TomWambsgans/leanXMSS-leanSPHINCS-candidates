@@ -18,9 +18,10 @@ target is q/2^127 = 2x. K = 226·2^b + 2(26 − b) is the key-generation cost in
    value read only through a hash input that contains the 256-bit seed; the later steps see the
    secret at a position (`PreparedScheme.compile_secret`) and are unchanged. An honest hash of
    the seed costs one query whether it gives one secret or two, so the signer's query counts go
-   down: 224 calls per one-time key (was 256), 152 for the opened chain values (was 184), 61,417
-   for a FORS key and 61,152 for its openings (were 73,705 and 73,416), 122,595 calls per
-   signature before the WOTS search (was 147,147).
+   down: 224 calls per one-time key (was 256), 152 for the opened chain values (was 184), 61,393
+   for a FORS key and 61,152 for its openings, 122,571 calls per signature before the WOTS
+   search (`hashCalls_forsKey_exact`, `hashCalls_forsOpen_exact`, `finishHashCost`,
+   [SecurityGraphCost](LeanSphincs/SecurityGraphCost.lean)).
 
 1. **Statement and memo reduction.** [StatementDet](LeanSphincs/StatementDet.lean) is the SUF-CMA game
    of [Statement](LeanSphincs/Statement.lean) with the signing oracle `Seeded.sign`.
@@ -52,6 +53,20 @@ target is q/2^127 = 2x. K = 226·2^b + 2(26 − b) is the key-generation cost in
    ([BridgeInterp](LeanSphincs/BridgeInterp.lean), [BridgeDebt](LeanSphincs/BridgeDebt.lean)). Chain
    values at and above the prepared word of a landed leaf are exposed at the start
    ([BridgeExpose](LeanSphincs/BridgeExpose.lean)).
+   - **FORS trees have no root hash.** The FORS key hashes the two level-9 nodes of each of the
+     24 trees (48 values, `ftsTopsPayload`), and the level-10 node is not computed. The graph has
+     the same positions as before; the children of the key hash are the 48 level-9 nodes
+     (`Position.children`), and the level-10 node positions stay in the type unread, like the node
+     indices beyond the width of a level. A forged opening that reaches the true FORS key either
+     gives the key hash another input, which is a first-order hit at the key hash
+     (`Fors.TopsMatch`, `topsMatch_hit`), or has the true 48 values. Then, per tree, the node it
+     computes from the leaf is the true level-9 node on that side, which is classified as a tree
+     of height 9 (canonical secret and path elements 0..8, a leaf match, or a node match at a
+     level below 9), and its last path element is the true level-9 node on the other side, read
+     off the key-hash input and not hashed (`Fors.tree_classification`,
+     [SecurityForsWitness](LeanSphincs/SecurityForsWitness.lean)). A signature reveals that
+     node as path element 9, as it did before, so the revealed values are unchanged
+     (`GraphView.publicData`, `forsPath`).
 3. **Classification.** `win_implies_badA` ([BridgeImplicationA](LeanSphincs/BridgeImplicationA.lean))
    shows a win is one of the following events:
    - a first-order target hit or a correct guess of a hidden value;
@@ -120,7 +135,9 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
   `.find(...).unwrap()` without this explicit failure case; overflow/wrapping and failure behavior are
   not modeled. Rust also panics on WOTS counter exhaustion.
 - The functional model recomputes tree/FORS nodes from the seed. Rust keeps the generated tree and
-  rebuilds FORS via stored arrays. In the model a subtree of 2^l FORS leaves, l ≥ 1, takes 2^(l−1)
+  rebuilds FORS via stored arrays (`ForsForest::from_leaves`, levels 0..9 of each tree, once per
+  signature); the model computes the two level-9 nodes of every tree for the key and each path
+  element again for the opening. In the model a subtree of 2^l FORS leaves, l ≥ 1, takes 2^(l−1)
   hashes of the seed, a single leaf (the level-0 sibling of an opening, or a revealed secret)
   takes one, and a one-time key takes 32, as `wots_secrets`, `fors_secret_pair` and `fors_secret`
   do. The hash-call counts above are those of the model; key generation makes the same calls in
@@ -130,8 +147,9 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
 - Verification does not enforce membership in the retained subtree. The proof accounts for forgeries
   entering through a surrogate sibling.
 - `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums BLAKE2s
-  block costs of the verifier's logged hash-input lengths: accepted signatures cost exactly 391
-  compressions, all signatures at most 391.
+  block costs of the verifier's logged hash-input lengths: accepted signatures cost exactly 373
+  compressions, all signatures at most 373 (2 for the digest, 24·(1 + 9) for the FORS leaves and
+  folds, 13 for the FORS key hash of 792 bytes, 116 for WOTS+C and the tree).
 - Every hash input is P ‖ A ‖ payload, with the 8-byte address A = `lo` ‖ `hi` ‖ (type + 32·step).
   The tree domains keep their layer and tree arguments, both always 0 and not serialized
   (`TreeIndex = Fin 1`). An input determines P, the address and the payload

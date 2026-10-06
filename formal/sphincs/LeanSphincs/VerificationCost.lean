@@ -141,13 +141,19 @@ theorem compressions_ftsFold (f : QueryImpl HashSpec Id) (parameter : PublicPara
       dsimp only
       split <;> simp [compressions_tweakableHash, nodePayload, bytesLE_length, blocks]
 
+/-- The payload of the FORS key hash: `2 k = 48` values, 768 bytes. -/
+theorem ftsTopsPayload_length (tops : FtsTree → Digest × Digest) :
+    (ftsTopsPayload tops).length = 768 := by
+  rw [ftsTopsPayload, List.length_flatMap]
+  simp [nodePayload, bytesLE_length, ftsTrees]
+
 @[simp] theorem compressions_ftsRecover (f : QueryImpl HashSpec Id)
     (parameter : PublicParameter) (index : Index) (leaves : IndexGroup → FtsLeaf)
     (secrets : FtsTree → Digest) (paths : FtsTree → Fin ftsTreeHeight → Digest) :
-    compressions f (ftsRecover parameter index leaves secrets paths) = 271 := by
+    compressions f (ftsRecover parameter index leaves secrets paths) = 253 := by
   rw [ftsRecover, compressions_bind, compressions_sequenceFin, compressions_tweakableHash]
   simp only [compressions_bind, compressions_ftsLeafHash, compressions_ftsFold,
-    ftsRootsPayload, digest_vector_length, Finset.sum_const, Finset.card_univ,
+    compressions_pure, ftsTopsPayload_length, Finset.sum_const, Finset.card_univ,
     Fintype.card_fin, smul_eq_mul]
   rfl
 
@@ -221,12 +227,12 @@ theorem compressions_verifyLayers (f : QueryImpl HashSpec Id) (parameter : Publi
 
 attribute [local semireducible] Concrete.verify
 
-/-- Every accepted signature causes exactly 391 BLAKE2s compressions in the verifier execution. -/
+/-- Every accepted signature causes exactly 373 BLAKE2s compressions in the verifier execution. -/
 theorem verification_compressions (f : QueryImpl HashSpec Id) (pk : PublicKey)
     (message : Message) (signature : Signature)
     (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
-    compressions f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = 391 := by
+    compressions f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = 373 := by
   rw [Concrete.verify, compressions_bind, compressions_messageDigest,
     compressions_bind, compressions_ftsRecover, compressions_bind, compressions_verifyLayers]
   simp only [Concrete.verify, evalWithAnswerFn_bind] at haccept
@@ -239,7 +245,7 @@ theorem verification_compressions (f : QueryImpl HashSpec Id) (pk : PublicKey)
 /-- Malformed signatures cannot make verification exceed its accepted-signature cost. -/
 theorem verification_compressions_le (f : QueryImpl HashSpec Id) (pk : PublicKey)
     (message : Message) (signature : Signature) :
-    compressions f (Concrete.verify pk message signature : OracleComp HashSpec Bool) ≤ 391 := by
+    compressions f (Concrete.verify pk message signature : OracleComp HashSpec Bool) ≤ 373 := by
   rw [Concrete.verify, compressions_bind, compressions_messageDigest,
     compressions_bind, compressions_ftsRecover, compressions_bind, compressions_verifyLayers]
   split <;> split <;> simp [compressions_pure]

@@ -5,9 +5,11 @@ model at the signature limits below (`LeanSphincs.Lifetimes.requestedSecurity`,
 [Lifetimes.lean](LeanSphincs/Lifetimes.lean)).** The proof uses only `propext`, `Classical.choice`
 and `Quot.sound`; [Axioms.lean](LeanSphincs/Axioms.lean) pins every public theorem to its axioms.
 
-`LeanSphincs/` models the candidate: one height-26 tree, 24 height-10 FORS trees, 64 WOTS+C
+`LeanSphincs/` models the candidate: one height-26 tree, 24 FORS trees of 1024 leaves, 64 WOTS+C
 chains with four positions and sum 120, two message-digest calls, and pruning with surrogate
-siblings. Every hash input is the 16-byte public parameter P, an 8-byte address (4 bytes `lo`,
+siblings. A FORS tree has no root hash: the FORS key is one hash of the two level-9 nodes of every
+tree, Th(P, A(11, 0, idx), n_0[0] ‖ n_0[1] ‖ … ‖ n_23[0] ‖ n_23[1]) (`ftsKey`, `ftsRecover`); the
+verifier folds an opened leaf nine levels and reads the other level-9 node as the last path element. Every hash input is the 16-byte public parameter P, an 8-byte address (4 bytes `lo`,
 3 bytes `hi`, one byte type + 32·step) and the payload; the message digest hashes m ‖ 0^8 ‖ ρ (the
 root is not hashed). One hash of the seed gives two secrets, the two 16-byte halves of its output:
 the starts of chains 2t and 2t + 1 of the one-time key at leaf e are the halves of
@@ -69,7 +71,7 @@ far too rare to change the lifetimes above.
 | Computed subtree and surrogate path recover the root | `Completeness.eval_treeFold_pruned_path`, [Pruning](LeanSphincs/Pruning.lean) |
 | Graph-label programming preserves the random-oracle continuation | `Security.Graph.evalDist_graph_continuation`, [SecurityGraphSampling](LeanSphincs/SecurityGraphSampling.lean) |
 | Serialized signature length = 5684 bytes | `signature_size`, [Layout](LeanSphincs/Layout.lean) |
-| Accepted verification uses exactly 391 compressions (at most 391 for any signature) | `Cost.verification_compressions`, [VerificationCost](LeanSphincs/VerificationCost.lean) |
+| Accepted verification uses exactly 373 compressions (at most 373 for any signature) | `Cost.verification_compressions`, [VerificationCost](LeanSphincs/VerificationCost.lean) |
 
 The proof route, its modules, the gap to the attack and the modeling differences with the Rust code
 are in [PROOF.md](PROOF.md).

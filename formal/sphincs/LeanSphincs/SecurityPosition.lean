@@ -87,7 +87,10 @@ theorem hashFields_injective {left right : HashDomain} (hl : left.InRange)
     cases he; rfl
 
 /-- A structural position of the honest key. A `node` at `level` is the node of actual level
-`level + 1`, the leaves being the `leaf` positions; likewise for `ftsNode`. -/
+`level + 1`, the leaves being the `leaf` positions; likewise for `ftsNode`. A FORS tree has no root
+hash: the children of `ftsRoots`, the FORS key hash, are the two nodes of actual level `a - 1` of
+every tree. The `ftsNode` positions of actual level `a` remain in the type, like the node indices
+beyond a level's width, and no position or scheme value reads them. -/
 inductive Position where
   | chain (lay : Layer) (tree : TreeIndex) (leafIdx : LeafIndex) (chainIdx : ChainIndex)
       (step : ChainStep)
@@ -160,8 +163,9 @@ def children : Position → List Position
             .ftsLeaf index tree ⟨2 * nodeIdx.val + 1, by omega⟩]
       else []
   | .ftsRoots index =>
-      List.ofFn fun tree : FtsTree =>
-        .ftsNode index tree ⟨ftsTreeHeight - 1, by decide⟩ ⟨0, by positivity⟩
+      (List.finRange ftsTrees).flatMap fun tree : FtsTree =>
+        [.ftsNode index tree ⟨ftsTopLevel - 1, by decide⟩ ⟨0, by decide⟩,
+          .ftsNode index tree ⟨ftsTopLevel - 1, by decide⟩ ⟨1, by decide⟩]
 
 /-! ### Depth and separated addresses
 
@@ -209,10 +213,10 @@ theorem depth_lt_of_mem_children {c d : Position} (hmem : c ∈ d.children) :
           simp only [depth] <;> omega
       · simp at hmem
   | ftsRoots =>
-      simp only [children, List.mem_ofFn] at hmem
+      simp only [children, List.mem_flatMap, List.mem_finRange, true_and] at hmem
       obtain ⟨tree, hmem⟩ := hmem
-      subst hmem
-      simp [depth, ftsTreeHeight]
+      rcases List.mem_pair.mp hmem with h | h <;> subst h <;>
+        simp [depth, ftsTopLevel, ftsTreeHeight]
 
 theorem fields_injective {left right : Position}
     (h : hashDomainFields left.domain = hashDomainFields right.domain) : left = right :=

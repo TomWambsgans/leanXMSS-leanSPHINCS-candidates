@@ -2454,7 +2454,7 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.assemble_agree
 
-/-- info: 'LeanSphincs.Security.HiddenBridge.canonicalGraphInput_struct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.HiddenBridge.canonicalGraphInput_struct' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.canonicalGraphInput_struct
 
@@ -2522,15 +2522,15 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.mix_known
 
-/-- info: 'LeanSphincs.Security.HiddenBridge.programGraphCache_congr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.HiddenBridge.programGraphCache_congr' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.programGraphCache_congr
 
-/-- info: 'LeanSphincs.Security.HiddenBridge.programGraphCache_empty_none' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.HiddenBridge.programGraphCache_empty_none' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.programGraphCache_empty_none
 
-/-- info: 'LeanSphincs.Security.HiddenBridge.programGraphCache_empty_some' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.HiddenBridge.programGraphCache_empty_some' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.programGraphCache_empty_some
 
@@ -2862,13 +2862,13 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.reach_expose
 
-/-- info: 'LeanSphincs.Security.HiddenBridge.rootsMatch_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.HiddenBridge.rootsMatch_hit
-
 /-- info: 'LeanSphincs.Security.HiddenBridge.secondOrder_tweakable' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.secondOrder_tweakable
+
+/-- info: 'LeanSphincs.Security.HiddenBridge.topsMatch_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.HiddenBridge.topsMatch_hit
 
 /-- info: 'LeanSphincs.Security.HiddenBridge.treeHit_hitA' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -4318,7 +4318,7 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Reduce.probEvent_bind_mono
 
-/-- info: 'LeanSphincs.Security.Reduce.programGraphCache_congr_base' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Reduce.programGraphCache_congr_base' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Reduce.programGraphCache_congr_base
 
@@ -5126,9 +5126,9 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Short.flatMap_bytes_length'
 
-/-- info: 'LeanSphincs.Security.Short.ftsRootsPayload_length' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Short.ftsTopsPayload_length' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.Short.ftsRootsPayload_length
+#print axioms LeanSphincs.Security.Short.ftsTopsPayload_length
 
 /-- info: 'LeanSphincs.Security.Short.keygenHashInput_length' depends on axioms: [propext] -/
 #guard_msgs (whitespace := lax) in
@@ -7798,6 +7798,10 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Completeness.eval_ftsFold_path
 
+/-- info: 'LeanSphincs.Completeness.eval_ftsKey' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Completeness.eval_ftsKey
+
 /-- info: 'LeanSphincs.Completeness.eval_ftsOpen' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Completeness.eval_ftsOpen
@@ -7849,6 +7853,14 @@ import LeanSphincs.World
 /-- info: 'LeanSphincs.Completeness.ftsNodeValue_zero' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Completeness.ftsNodeValue_zero
+
+/-- info: 'LeanSphincs.Completeness.ftsTopPair_canonical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Completeness.ftsTopPair_canonical
+
+/-- info: 'LeanSphincs.Completeness.ftsTopPair_eq_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Completeness.ftsTopPair_eq_iff
 
 /-- info: 'LeanSphincs.Completeness.leafOfNat_val' depends on axioms: [propext] -/
 #guard_msgs (whitespace := lax) in
@@ -8358,9 +8370,9 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Fors.Opening.trueSecretQuery
 
-/-- info: 'LeanSphincs.Security.Fors.canonical_root' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Fors.canonical_top' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.Fors.canonical_root
+#print axioms LeanSphincs.Security.Fors.canonical_top
 
 /-- info: 'LeanSphincs.Security.Fors.eval_ftsRecover' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8382,9 +8394,9 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Fors.recover_classification
 
-/-- info: 'LeanSphincs.Security.Fors.rootsInput_mem' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Fors.topsInput_mem' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.Fors.rootsInput_mem
+#print axioms LeanSphincs.Security.Fors.topsInput_mem
 
 /-- info: 'LeanSphincs.Security.Fors.tree_classification' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8394,15 +8406,15 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.flatMap_ofFn_injective
 
-/-- info: 'LeanSphincs.Security.ftsRootsPayload_injective' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.ftsTopsPayload_injective' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.ftsRootsPayload_injective
+#print axioms LeanSphincs.Security.ftsTopsPayload_injective
 
-/-- info: 'LeanSphincs.Security.Graph.canonicalGraphInput_congr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Graph.canonicalGraphInput_congr' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Graph.canonicalGraphInput_congr
 
-/-- info: 'LeanSphincs.Security.Graph.canonicalGraphInput_separated' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Graph.canonicalGraphInput_separated' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Graph.canonicalGraphInput_separated
 
@@ -8450,11 +8462,11 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.GraphCorrectness.canonicalPath_below
 
-/-- info: 'LeanSphincs.Security.GraphCorrectness.chain_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.GraphCorrectness.chain_input' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.GraphCorrectness.chain_input
 
-/-- info: 'LeanSphincs.Security.GraphCorrectness.chain_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.GraphCorrectness.chain_value' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.GraphCorrectness.chain_value
 
@@ -8482,7 +8494,7 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.GraphCorrectness.fors_key_value
 
-/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_leaf_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_leaf_input' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.GraphCorrectness.fors_leaf_input
 
@@ -8506,7 +8518,7 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.GraphCorrectness.fors_value
 
-/-- info: 'LeanSphincs.Security.GraphCorrectness.leaf_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.GraphCorrectness.leaf_input' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.GraphCorrectness.leaf_input
 
@@ -8682,23 +8694,23 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Graph.evalDist_samplePrepare_eq_uniform
 
-/-- info: 'LeanSphincs.Security.Graph.freshPositions_of_structural' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Graph.freshPositions_of_structural' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Graph.freshPositions_of_structural
 
-/-- info: 'LeanSphincs.Security.Graph.freshPositions_tail' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Graph.freshPositions_tail' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Graph.freshPositions_tail
 
-/-- info: 'LeanSphincs.Security.Graph.replayPrepare_congr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Graph.replayPrepare_congr' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Graph.replayPrepare_congr
 
-/-- info: 'LeanSphincs.Security.Graph.replayPrepare_eq_program' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Graph.replayPrepare_eq_program' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Graph.replayPrepare_eq_program
 
-/-- info: 'LeanSphincs.Security.Graph.replayPrepare_update' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Graph.replayPrepare_update' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Graph.replayPrepare_update
 
@@ -8734,7 +8746,7 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.GraphView.PublicData.mk.sizeOf_spec
 
-/-- info: 'LeanSphincs.Security.GraphView.coordinates_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.GraphView.coordinates_correct' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.GraphView.coordinates_correct
 
@@ -8850,15 +8862,15 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenGraph.coordinates_outgoing
 
-/-- info: 'LeanSphincs.Security.HiddenGraph.programGraphCache_label' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.HiddenGraph.programGraphCache_label' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenGraph.programGraphCache_label
 
-/-- info: 'LeanSphincs.Security.HiddenGraph.programGraphCache_preserves_label' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.HiddenGraph.programGraphCache_preserves_label' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenGraph.programGraphCache_preserves_label
 
-/-- info: 'LeanSphincs.Security.HiddenGraph.programGraphCache_preserves_other' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.HiddenGraph.programGraphCache_preserves_other' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenGraph.programGraphCache_preserves_other
 
@@ -9110,7 +9122,7 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Position.chain.sizeOf_spec
 
-/-- info: 'LeanSphincs.Security.Position.depth_lt_of_mem_children' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Security.Position.depth_lt_of_mem_children' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Position.depth_lt_of_mem_children
 
@@ -10249,6 +10261,10 @@ import LeanSphincs.World
 /-- info: 'LeanSphincs.Cost.encode_valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Cost.encode_valid
+
+/-- info: 'LeanSphincs.Cost.ftsTopsPayload_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.ftsTopsPayload_length
 
 /-- info: 'LeanSphincs.Cost.hashTrace_bind' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

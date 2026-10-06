@@ -325,22 +325,22 @@ theorem treeHit_hitA (hboundary : BoundaryCorrect f parameter seed labels) (pk :
     exact hsurrogate
 
 include hconsistent in
-/-- A FORS roots match hits at its roots input. -/
-theorem rootsMatch_hit (index : Index) (leaves : IndexGroup → FtsLeaf) (secrets : FtsTree → Digest)
+/-- A match at the FORS key hash hits at its input, the list of top nodes. -/
+theorem topsMatch_hit (index : Index) (leaves : IndexGroup → FtsLeaf) (secrets : FtsTree → Digest)
     (paths : FtsTree → Fin ftsTreeHeight → Digest)
-    (h : Fors.RootsMatch f parameter index seed leaves secrets paths) :
+    (h : Fors.TopsMatch f parameter index seed leaves secrets paths) :
     truncateHash (f (tweakableHashInput parameter (.ftsRoots index)
-        (ftsRootsPayload (Fors.roots f parameter index leaves secrets paths)))) ∈
+        (ftsTopsPayload (Fors.tops f parameter index leaves secrets paths)))) ∈
       targets parameter (graphTable f parameter seed labels)
         (tweakableHashInput parameter (.ftsRoots index)
-          (ftsRootsPayload (Fors.roots f parameter index leaves secrets paths))) := by
+          (ftsTopsPayload (Fors.tops f parameter index leaves secrets paths))) := by
   obtain ⟨hne, heq⟩ := h
   refine active_hit f parameter seed labels (.ftsRoots index) trivial _ ?_ ?_
   · rw [fors_roots_input f parameter seed labels hconsistent index]
     intro hinput
     exact hne (tweakableInput_injective hinput).2.2
   · change truncateHash (f (tweakableHashInput parameter (.ftsRoots index)
-      (ftsRootsPayload (Fors.roots f parameter index leaves secrets paths)))) = _
+      (ftsTopsPayload (Fors.tops f parameter index leaves secrets paths)))) = _
     rw [heq, fors_key_value f parameter seed labels hconsistent index]
 
 include hconsistent in
@@ -553,12 +553,12 @@ theorem badA_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput)
       leafMatch_contact parameterOutput highs table cacheF f entries hagree hcached seed hcoord hvalue _ _ _ _
         hm (hleafMem tree)
     rcases hrec.fors_classification with hroots | ⟨tree, level, hlevel, hnode⟩ | htrees
-    · exact hfirst _ (SignatureWitness.verification_fors_run f pk _ _ _ (Fors.rootsInput_mem f _ _ _ _ _))
-        (rootsMatch_hit f _ seed _ hcons _ _ _ _ hroots)
+    · exact hfirst _ (SignatureWitness.verification_fors_run f pk _ _ _ (Fors.topsInput_mem f _ _ _ _ _))
+        (topsMatch_hit f _ seed _ hcons _ _ _ _ hroots)
         (not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ h => by cases h))
     · refine hfirst _ (SignatureWitness.verification_fors_run f pk _ _ _
         (Fors.nodeInput_mem f _ _ _ _ _ tree level hlevel))
-        (nodeMatch_hit f _ seed _ hcons _ _ _ _ tree level hlevel hnode) ?_
+        (nodeMatch_hit f _ seed _ hcons _ _ _ _ tree level (hlevel.trans_le (by decide)) hnode) ?_
       unfold merkleInput
       exact not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
     · by_cases hrc : ∃ tree, Fors.LeafMatch f (truncateHash parameterOutput) index tree seed (leaves tree)

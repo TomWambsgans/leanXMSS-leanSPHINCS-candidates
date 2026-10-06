@@ -3,7 +3,8 @@ import LeanSphincs.BridgeClassify
 /-! Accepted-signature classification keeping the recovered FORS key. An accepted signature is a
 canonical WOTS and tree opening at a retained leaf whose FORS part recovers the canonical FORS
 key, a tree hit, or a WOTS exception at a retained leaf. A recovered canonical FORS key is a
-roots match, a node match, or every tree is canonical or a leaf match. -/
+match at the key hash (another list of top nodes), a node match below a top node, or every tree is
+canonical or a leaf match. -/
 
 open OracleComp OracleSpec
 
@@ -17,24 +18,22 @@ theorem recovered_classification (f : QueryImpl HashSpec Id) (parameter : Public
     (hrecover : evalWithAnswerFn f (ftsRecover parameter index leaves secrets paths :
       OracleComp HashSpec Digest) =
       evalWithAnswerFn f (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest)) :
-    RootsMatch f parameter index seed leaves secrets paths ∨
-    (∃ tree level, level < ftsTreeHeight ∧
+    TopsMatch f parameter index seed leaves secrets paths ∨
+    (∃ tree level, level < ftsTopLevel ∧
       NodeMatch f parameter index tree seed (leaves tree) (secrets tree) (paths tree) level) ∨
     ∀ tree, (secrets tree = Completeness.ftsSecret f parameter index tree (leaves tree) seed ∧
         paths tree = canonicalPath f parameter index tree seed (leaves tree)) ∨
       LeafMatch f parameter index tree seed (leaves tree) (secrets tree) := by
   classical
-  by_cases hpayload : ftsRootsPayload (roots f parameter index leaves secrets paths) =
-      ftsRootsPayload (canonicalRoots f parameter index seed)
-  · have hroots := ftsRootsPayload_injective hpayload
-    by_cases hnode : ∃ tree level, level < ftsTreeHeight ∧
+  by_cases hpayload : ftsTopsPayload (tops f parameter index leaves secrets paths) =
+      ftsTopsPayload (canonicalTops f parameter index seed)
+  · have htops := ftsTopsPayload_injective hpayload
+    by_cases hnode : ∃ tree level, level < ftsTopLevel ∧
         NodeMatch f parameter index tree seed (leaves tree) (secrets tree) (paths tree) level
     · exact Or.inr (Or.inl hnode)
     · refine Or.inr (Or.inr fun tree => ?_)
-      have hroot : rootValue f parameter index tree (leaves tree) (secrets tree) (paths tree) =
-          Completeness.ftsNodeValue f parameter index tree seed ftsTreeHeight 0 := congrFun hroots tree
       rcases tree_classification f parameter index tree seed (leaves tree) (secrets tree)
-        (paths tree) hroot with hopen | hleaf | ⟨level, hlevel, hmatch⟩
+        (paths tree) (congrFun htops tree) with hopen | hleaf | ⟨level, hlevel, hmatch⟩
       · exact Or.inl hopen
       · exact Or.inr hleaf
       · exact (hnode ⟨tree, level, hlevel, hmatch⟩).elim
@@ -148,14 +147,15 @@ theorem accepted_recovered_classification (f : QueryImpl HashSpec Id) (pk : Publ
     · exact Or.inr (Or.inl ⟨value, hleaf, hrunTree, Or.inl ⟨reference.val, reference.property, hmatch⟩⟩)
     · exact Or.inr (Or.inl ⟨value, hleaf, hrunTree, Or.inr hsurrogate⟩)
 
-/-- **The refined FORS case.** A recovered canonical FORS key is a roots match, a node match at
-some tree, or every tree is canonical (secret and path) or a leaf match. -/
+/-- **The refined FORS case.** A recovered canonical FORS key is a match at the key hash, a node
+match at some tree below its top node, or every tree is canonical (secret and path) or a leaf
+match. -/
 theorem RecoveredOpening.fors_classification {f : QueryImpl HashSpec Id} {pk : PublicKey}
     {seed : MasterSeed} {message : Message} {signature : Signature} {counter : Counter}
     (h : RecoveredOpening f pk seed message signature counter) :
-    Fors.RootsMatch f pk.parameter (index f pk message signature) seed
+    Fors.TopsMatch f pk.parameter (index f pk message signature) seed
         (digestLeaves (verificationDigest f pk message signature)) signature.ftsSecret signature.ftsPath ∨
-    (∃ tree level, level < ftsTreeHeight ∧
+    (∃ tree level, level < ftsTopLevel ∧
       Fors.NodeMatch f pk.parameter (index f pk message signature) tree seed
         (digestLeaves (verificationDigest f pk message signature) tree) (signature.ftsSecret tree)
         (signature.ftsPath tree) level) ∨

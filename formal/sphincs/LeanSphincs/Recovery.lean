@@ -5,7 +5,7 @@ import Mathlib.Data.Nat.Bitwise
 # Recovery: what the signer produces, the verifier accepts
 
 Adapted from leanVM b7a107256. One-time recovery returns the leaf the signer built,
-and each FORS authentication path returns its root. Pruning.lean adds the surrogate spine;
+and each FORS authentication path returns the two top nodes of its tree. Pruning.lean adds the surrogate spine;
 Correctness.lean composes these facts into signer/verifier correctness.
 
 Everything is deterministic once the oracle is fixed, so the whole file works under an answer
@@ -377,9 +377,10 @@ theorem eval_treeFold_path (parameter : PublicParameter) (lay : Layer) (tree : T
 
 /-! ## The few-time signature
 
-The forest repeats the layer argument at height `a = 10`: the signer opens one secret per tree with
-its siblings, so each recovered root is the honest root and the hash of the `k` roots is the
-few-time public key the bottom layer signed. -/
+The forest repeats the layer argument at height `a - 1 = 9`: the signer opens one secret per tree
+with its siblings, so each recovered top node is the honest one, the last path element is the other
+honest top node, and the hash of the `2 k` top nodes is the few-time public key the bottom layer
+signed. -/
 
 /-- The honest value at a node of one few-time tree. -/
 def ftsNodeValue (parameter : PublicParameter) (index : Index) (tree : FtsTree) (seed : MasterSeed)
@@ -454,6 +455,46 @@ theorem eval_ftsFold_path (parameter : PublicParameter) (index : Index) (tree : 
           simp only [Bool.false_eq_true, if_false, eval_tweakableHash]
           rw [hsib, hcur]
 
+omit f in
+/-- The top node on the side of a leaf and the other top node, put in node order, are the nodes
+`0` and `1` of level `a - 1`. -/
+theorem ftsTopPair_eq_iff (g : Nat → Digest) (leaf : FtsLeaf) (node other : Digest) :
+    ftsTopPair leaf node other = (g 0, g 1) ↔
+      node = g (leaf.val / 2 ^ ftsTopLevel) ∧ other = g (Nat.xor (leaf.val / 2 ^ ftsTopLevel) 1) := by
+  have hlt : leaf.val / 2 ^ ftsTopLevel < 2 := by
+    rw [Nat.div_lt_iff_lt_mul (Nat.two_pow_pos _)]
+    simp [ftsTopLevel, ftsTreeHeight]
+  unfold ftsTopPair
+  rw [Nat.testBit_eq_decide_div_mod_eq]
+  obtain h | h : leaf.val / 2 ^ ftsTopLevel = 0 ∨ leaf.val / 2 ^ ftsTopLevel = 1 := by
+    generalize leaf.val / 2 ^ ftsTopLevel = d at hlt
+    omega
+  · rw [h]
+    simp [Prod.ext_iff]
+  · rw [h]
+    simp [Prod.ext_iff, and_comm]
+
+omit f in
+theorem ftsTopPair_canonical (g : Nat → Digest) (leaf : FtsLeaf) :
+    ftsTopPair leaf (g (leaf.val / 2 ^ ftsTopLevel)) (g (Nat.xor (leaf.val / 2 ^ ftsTopLevel) 1)) =
+      (g 0, g 1) :=
+  (ftsTopPair_eq_iff g leaf _ _).mpr ⟨rfl, rfl⟩
+
+/-- The honest two top nodes (level `a - 1`) of one few-time tree. -/
+def ftsTopsValue (parameter : PublicParameter) (index : Index) (seed : MasterSeed)
+    (tree : FtsTree) : Digest × Digest :=
+  (ftsNodeValue f parameter index tree seed ftsTopLevel 0,
+    ftsNodeValue f parameter index tree seed ftsTopLevel 1)
+
+/-- The honest few-time key is the hash of the honest top nodes. -/
+theorem eval_ftsKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) :
+    evalWithAnswerFn f (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest) =
+      truncateHash (f (tweakableHashInput parameter (.ftsRoots index)
+        (ftsTopsPayload (ftsTopsValue f parameter index seed)))) := by
+  simp only [Seeded.ftsKey, eval_sequenceFin, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
+    eval_tweakableHash]
+  rfl
+
 /-- The verifier recovers the few-time public key the signer's bottom layer signed. -/
 theorem eval_ftsRecover (parameter : PublicParameter) (index : Index) (seed : MasterSeed)
     (leaves : IndexGroup → FtsLeaf) :
@@ -463,23 +504,26 @@ theorem eval_ftsRecover (parameter : PublicParameter) (index : Index) (seed : Ma
           : OracleComp HashSpec (FtsTree → Fin ftsTreeHeight → Digest)))
         : OracleComp HashSpec Digest)
       = evalWithAnswerFn f (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest) := by
-  have hroot : ∀ tree : FtsTree,
+  have htop : ∀ tree : FtsTree,
       evalWithAnswerFn f (ftsFold parameter index tree (leaves (ftsIndexOf tree))
           (evalWithAnswerFn f (Seeded.ftsOpen parameter index leaves seed
             : OracleComp HashSpec (FtsTree → Fin ftsTreeHeight → Digest)) tree)
-          ftsTreeHeight
+          ftsTopLevel
           (evalWithAnswerFn f (ftsLeafHash parameter index tree (leaves (ftsIndexOf tree))
             (ftsSecret f parameter index tree (leaves (ftsIndexOf tree)) seed)
             : OracleComp HashSpec Digest)) : OracleComp HashSpec Digest)
-        = ftsNodeValue f parameter index tree seed ftsTreeHeight 0 := by
+        = ftsNodeValue f parameter index tree seed ftsTopLevel
+            ((leaves (ftsIndexOf tree)).val / 2 ^ ftsTopLevel) := by
     intro tree
     rw [← ftsNodeValue_zero]
-    rw [eval_ftsFold_path f parameter index tree seed (leaves (ftsIndexOf tree)) _ ftsTreeHeight
-      (Nat.le_refl _) (fun level hlevel _ => eval_ftsOpen f parameter index seed leaves tree
-        ⟨level, hlevel⟩)]
-    congr 1
-    exact Nat.div_eq_of_lt (leaves (ftsIndexOf tree)).isLt
-  simp only [ftsRecover, Seeded.ftsKey, eval_sequenceFin, evalWithAnswerFn_bind, hroot,
-    ftsNodeValue]
+    exact eval_ftsFold_path f parameter index tree seed (leaves (ftsIndexOf tree)) _ ftsTopLevel
+      (by decide) (fun level hlevel _ => eval_ftsOpen f parameter index seed leaves tree
+        ⟨level, hlevel⟩)
+  rw [eval_ftsKey]
+  simp only [ftsRecover, eval_sequenceFin, evalWithAnswerFn_bind, evalWithAnswerFn_pure, htop,
+    eval_ftsOpen, eval_tweakableHash]
+  refine congrArg (fun tops => truncateHash (f (tweakableHashInput parameter (.ftsRoots index)
+    (ftsTopsPayload tops)))) (funext fun tree => ?_)
+  exact ftsTopPair_canonical (ftsNodeValue f parameter index tree seed ftsTopLevel) _
 
 end LeanSphincs.Completeness

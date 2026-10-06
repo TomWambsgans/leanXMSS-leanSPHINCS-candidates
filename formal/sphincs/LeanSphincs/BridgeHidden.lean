@@ -196,9 +196,10 @@ theorem cellKnown_children (parameter : PublicParameter) (position : Position)
         rcases hchild with rfl | rfl <;>
         first | exact cellKnown_struct parameter _ (fun h => h) | exact cellKnown_ftsLeaf parameter _ _ _
   | ftsRoots index =>
-      simp only [Position.children, List.mem_ofFn] at hchild
-      obtain ⟨tree, rfl⟩ := hchild
-      exact cellKnown_struct parameter _ (fun h => h)
+      simp only [Position.children, List.mem_flatMap, List.mem_finRange, true_and] at hchild
+      obtain ⟨tree, hchild⟩ := hchild
+      rcases List.mem_pair.mp hchild with rfl | rfl <;>
+        exact cellKnown_struct parameter _ (fun h => h)
 
 section Split
 

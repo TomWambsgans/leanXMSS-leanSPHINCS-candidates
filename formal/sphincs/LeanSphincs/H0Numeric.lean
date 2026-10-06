@@ -97,9 +97,6 @@ theorem touchQ_eq (n : ℕ) (μ : ℚ) :
 
 /-! ### The interval check -/
 
-/-- Keygen credit `K`. -/
-def kCredit (b : ℕ) : ℕ := 258 * 2 ^ b + 2 * (26 - b)
-
 /-- Upper bound for the Poisson rate at the right end `qb` of an interval. -/
 def muExactQ (b N qb R : ℕ) : ℚ :=
   ((N : ℚ) / 2 ^ b) * (1 + 2 ^ 26 / ((2 : ℚ) ^ 128 - qb - 2 ^ 32)) ^ (24 * R) *
@@ -120,26 +117,5 @@ def AQ (R e : ℕ) (β : ℚ) : ℚ := cRQ R / (((2 : ℚ) ^ e) ^ R * β ^ (R - 
 
 /-- A certificate entry: `(qa, qb, R, e, m)` with `t = 2^e` and rate bound `m / 2^64`. -/
 abbrev Entry := ℕ × ℕ × ℕ × ℕ × ℕ
-
-/-- The main inequality of an entry, given the Poisson mean `P`. -/
-def mainQ (b N qa qb R e : ℕ) (P : ℚ) : Prop :=
-  (qb : ℚ) * AQ R e (betaQ qb) * (2 ^ b * (P - 1) / (1 - 2 ^ b * (P - 1))) +
-      ((qb : ℚ) + kCredit b + N) / 2 ^ 200 ≤ ((qa : ℚ) / 2 ^ 128) ^ 2 + (kCredit b : ℚ) / 2 ^ 127
-
-instance (b N qa qb R e : ℕ) (P : ℚ) : Decidable (mainQ b N qa qb R e P) := by
-  unfold mainQ; infer_instance
-
-/-- The check of one entry. -/
-def checkI (b N : ℕ) (c : Entry) : Bool :=
-  decide (1 ≤ c.2.2.1) && decide (2 * c.2.1 ≤ 2 ^ 128) &&
-    decide (muExactQ b N c.2.1 c.2.2.1 ≤ (c.2.2.2.2 : ℚ) / 2 ^ 64) &&
-    (decide (c.2.2.1 = 1) || decide (0 < betaQ c.2.1)) &&
-    decide ((2 : ℚ) ^ b * (PQ c.2.2.1 c.2.2.2.1 ((c.2.2.2.2 : ℚ) / 2 ^ 64) - 1) < 1) &&
-    decide (mainQ b N c.1 c.2.1 c.2.2.1 c.2.2.2.1 (PQ c.2.2.1 c.2.2.2.1 ((c.2.2.2.2 : ℚ) / 2 ^ 64)))
-
-/-- Consecutive entries cover `[last, 2^127]`. -/
-def chain (b N : ℕ) : ℕ → List Entry → Bool
-  | last, [] => decide (2 ^ 127 < last)
-  | last, c :: rest => decide (c.1 ≤ last) && checkI b N c && chain b N (c.2.1 + 1) rest
 
 end LeanSphincs.Security.H0

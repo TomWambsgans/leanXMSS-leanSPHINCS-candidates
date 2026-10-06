@@ -112,10 +112,10 @@ theorem leafPayload_length (endpoints : ChainIndex → Digest) :
   rw [leafPayload, flatMap_bytes_length]
   rfl
 
-theorem ftsRootsPayload_length (roots : FtsTree → Digest) :
-    (ftsRootsPayload roots).length = 384 := by
-  rw [ftsRootsPayload, flatMap_bytes_length]
-  rfl
+theorem ftsTopsPayload_length (tops : FtsTree → Digest × Digest) :
+    (ftsTopsPayload tops).length = 768 := by
+  rw [ftsTopsPayload, List.length_flatMap]
+  simp [nodePayload, bytesLE_length, ftsTrees]
 
 theorem messageDigestPayload_length (root : Digest) (message : Message) (randomness : Randomness) :
     (messageDigestPayload root message randomness).length = 56 := by
@@ -190,9 +190,9 @@ theorem Only.ftsRecover (parameter : PublicParameter) (index : Index)
   unfold Concrete.ftsRecover
   refine Only.bind (Only.sequenceFin _ fun tree => ?_) ?_
   · exact Only.bind (Only.tweakableHash _ _ _ (by rw [bytes16_length]; omega))
-      (fun _ => Only.ftsFold _ _ _ _ _ _ _)
-  · intro roots
-    exact Only.tweakableHash _ _ _ (by rw [ftsRootsPayload_length]; omega)
+      (fun _ => Only.bind (Only.ftsFold _ _ _ _ _ _ _) (fun _ => Only.pure' _))
+  · intro tops
+    exact Only.tweakableHash _ _ _ (by rw [ftsTopsPayload_length]; omega)
 
 theorem Only.messageDigestCall (parameter : PublicParameter) (root : Digest) (message : Message)
     (randomness : Randomness) (call : Fin 2) :
@@ -297,8 +297,10 @@ theorem Only.ftsNode (parameter : PublicParameter) (index : Index) (tree : FtsTr
 theorem Only.ftsKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) :
     Short.Only (ftsKey parameter index seed : OracleComp HashSpec Digest) := by
   unfold LeanSphincs.Seeded.ftsKey
-  exact Short.Only.bind (Short.Only.sequenceFin _ fun _ => Only.ftsNode _ _ _ _ _ _)
-    (fun _ => Short.Only.tweakableHash _ _ _ (by rw [ftsRootsPayload_length]; omega))
+  exact Short.Only.bind (Short.Only.sequenceFin _ fun _ =>
+      Short.Only.bind (Only.ftsNode _ _ _ _ _ _) (fun _ =>
+        Short.Only.bind (Only.ftsNode _ _ _ _ _ _) (fun _ => Short.Only.pure' _)))
+    (fun _ => Short.Only.tweakableHash _ _ _ (by rw [ftsTopsPayload_length]; omega))
 
 theorem Only.ftsOpen (parameter : PublicParameter) (index : Index) (leaves : IndexGroup → FtsLeaf)
     (seed : MasterSeed) :
