@@ -276,8 +276,8 @@ mod tests {
             let before = compressions();
             let (sk, pk) = key_gen(&seed(b as u8), b);
             let keygen = compressions() - before;
-            // P, the kept subtree (273 per WOTS leaf plus the nodes), and a derivation and a node per surrogate.
-            assert_eq!(keygen, 1 + (1u64 << b) * 273 + ((1u64 << b) - 1) + 2 * (H - b) as u64);
+            // P, the kept subtree (241 per WOTS leaf plus the nodes), and a derivation and a node per surrogate.
+            assert_eq!(keygen, 1 + (1u64 << b) * 241 + ((1u64 << b) - 1) + 2 * (H - b) as u64);
             for t in 0..3u8 {
                 let m: Message = std::array::from_fn(|i| t ^ i as u8);
                 let sig = sign(&sk, &m);
@@ -360,9 +360,9 @@ mod tests {
         let m: Message = std::array::from_fn(|i| (7 * i) as u8);
         let sig = sign(&sk, &m);
         let digest = blake2s::hash(&sig.to_bytes());
-        assert_eq!(hex(&pk.to_bytes()), "778d2d0db7342a10c931f07c364b4cd65b9238b63cb662fb192b69310d19501e");
-        assert_eq!(hex(&digest), "d10a5e336f5b7acbb15f78939aaf63131a9eeb3e0b1a1a4a5385d415d41a7692");
-        assert_eq!(sig.counter, 256);
+        assert_eq!(hex(&pk.to_bytes()), "11fe383dcdd8029dc2c62e4978d963b85b9238b63cb662fb192b69310d19501e");
+        assert_eq!(hex(&digest), "721a4f470ac08f949fb182d8b0b2cb710a7e3a97b8e4bd388c6487127301050e");
+        assert_eq!(sig.counter, 885);
     }
 
     #[test]

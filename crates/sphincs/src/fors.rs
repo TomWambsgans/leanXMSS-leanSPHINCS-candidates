@@ -17,13 +17,19 @@ fn fors_position(kappa: usize, level: usize, j: usize) -> u32 {
     (kappa + 32 * level + 512 * j) as u32
 }
 
-pub fn fors_secret_tweak(idx: u64, kappa: usize, j: usize) -> Tweak {
-    tweak(TWEAK_FTS_PRF, fors_position(kappa, 0, j), idx as u32)
+/// The address of the hash that gives the secrets of leaves `2 t` and `2 t + 1` of tree `kappa`.
+pub fn fors_secret_tweak(idx: u64, kappa: usize, t: usize) -> Tweak {
+    tweak(TWEAK_FTS_PRF, fors_position(kappa, 0, t), idx as u32)
 }
 
-/// `s_{idx,kappa,j} = Th(P, tw_ftsprf(idx, kappa, j), S)`.
+/// The secrets of leaves `2 t` and `2 t + 1`: the two halves of one hash of the seed.
+pub fn fors_secret_pair(pp: &PublicParam, master: &MasterSecret, idx: u64, kappa: usize, t: usize) -> [Digest; 2] {
+    th_pair(pp, &fors_secret_tweak(idx, kappa, t), master)
+}
+
+/// The secret of leaf `j` of tree `kappa`.
 pub fn fors_secret(pp: &PublicParam, master: &MasterSecret, idx: u64, kappa: usize, j: usize) -> Digest {
-    th(pp, &fors_secret_tweak(idx, kappa, j), master)
+    fors_secret_pair(pp, master, idx, kappa, j / 2)[j % 2]
 }
 
 pub fn fors_leaf_tweak(idx: u64, kappa: usize, j: usize) -> Tweak {
@@ -85,10 +91,11 @@ impl ForsForest {
 
 /// The FORS leaves of instance `idx` from the master secret, tree after tree.
 pub fn fors_leaves(pp: &PublicParam, master: &MasterSecret, idx: u64) -> Vec<Digest> {
-    (0..K * FORS_LEAVES)
-        .map(|t| {
-            let (kappa, j) = (t / FORS_LEAVES, t % FORS_LEAVES);
-            fors_leaf(pp, idx, kappa, j, &fors_secret(pp, master, idx, kappa, j))
+    (0..K * FORS_LEAVES / 2)
+        .flat_map(|pair| {
+            let (kappa, t) = (pair / (FORS_LEAVES / 2), pair % (FORS_LEAVES / 2));
+            let secrets = fors_secret_pair(pp, master, idx, kappa, t);
+            [0, 1].map(|half| fors_leaf(pp, idx, kappa, 2 * t + half, &secrets[half]))
         })
         .collect()
 }

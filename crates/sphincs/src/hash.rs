@@ -90,6 +90,15 @@ pub fn th(pp: &PublicParam, tw: &Tweak, payload: &[u8]) -> Digest {
     hasher.finalize()[..N].try_into().unwrap()
 }
 
+/// Two secrets for one hash: the two 16-byte halves of the untruncated BLAKE2s of `P | address | payload`.
+pub fn th_pair(pp: &PublicParam, tw: &Tweak, payload: &[u8]) -> [Digest; 2] {
+    count(PUBLIC_PARAM_LEN + ADDRESS_LEN + payload.len());
+    let mut hasher = start(pp, tw);
+    hasher.update(payload);
+    let out = hasher.finalize();
+    [out[..N].try_into().unwrap(), out[N..].try_into().unwrap()]
+}
+
 /// `Th` over a concatenation of digests: a Merkle node, a one-time leaf, or the FORS roots.
 pub fn th_digests(pp: &PublicParam, tw: &Tweak, values: &[Digest]) -> Digest {
     count(PUBLIC_PARAM_LEN + ADDRESS_LEN + values.len() * N);

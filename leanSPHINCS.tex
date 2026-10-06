@@ -68,6 +68,8 @@ and the step in a chain).
         block. A pruned signer tries $R = R_0 + i$ for $i = 0, 1, \dots$, with $R_0$ a hash of the secret key and $m$,
         and keeps the first one that lands in its subtree. The first block is hashed once, so each try costs 1
         compression
+  \item the secrets are derived from the secret key two at a time: one hash gives 32 bytes, i.e.\ two chain starts
+        or two FORS secrets
 \end{itemize}
 
 \section{Usage}
@@ -78,8 +80,8 @@ For powerful devices.
 
 \begin{itemize}
   \item lifetime: $2^{30}$
-  \item keygen: $19 \cdot 10^9$ compressions
-  \item signing: $110\cdot10^3$ compressions, with a 16~MiB cache
+  \item keygen: $16 \cdot 10^9$ compressions
+  \item signing: $93\cdot10^3$ compressions, with a 16~MiB cache
 \end{itemize}
 
 \emph{A modern laptop CPU computes about $2^{29}$ SHA2 or BLAKE2s compressions per second.}
@@ -91,8 +93,8 @@ For weaker devices. The trick is to trade smaller lifetime for faster keygen, us
 
 \begin{itemize}
   \item lifetime: $2.1\cdot10^5$ signatures ($2^{17.7}$)
-  \item keygen: $2.2\cdot10^6$ compressions
-  \item signing: $86\cdot10^3$ compressions, with a 16~KiB cache (including $8\cdot10^3$ compressions of grinding)
+  \item keygen: $2.0\cdot10^6$ compressions
+  \item signing: $74\cdot10^3$ compressions, with a 16~KiB cache (including $8\cdot10^3$ compressions of grinding)
 \end{itemize}
 
 \emph{A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.}
@@ -104,8 +106,8 @@ surrogate siblings).
 
 \begin{itemize}
   \item lifetime: $2.2\cdot10^7$ signatures ($2^{24.4}$)
-  \item keygen: $287\cdot10^6$ compressions
-  \item signing: $84\cdot10^3$ compressions, with a 1~MiB cache (including 64 compressions of grinding)
+  \item keygen: $254\cdot10^6$ compressions
+  \item signing: $70\cdot10^3$ compressions, with a 1~MiB cache (including 64 compressions of grinding)
 \end{itemize}
 
 \subsection{Threshold signing}
@@ -217,7 +219,7 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
 \label{sec:twolevel}
 
 FORS can be replaced by a few-time signature (FTS) built from small WOTS keys. Signatures are 25\% smaller
-and verification 18\% cheaper, with slightly faster signing and longer lifetimes, proved in Lean~\cite{proofs}. The idea is
+and verification 18\% cheaper, with the same signing cost and longer lifetimes, proved in Lean~\cite{proofs}. The idea is
 inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
 
 \begin{center}
@@ -225,8 +227,8 @@ inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
   \toprule
   FTS & size & verification & FTS signing \\
   \midrule
-  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 B & 391 & $74\cdot10^3$ \\
-  two-level WOTS forest & 4\,276 B & 321 & $68\cdot10^3$ \\
+  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 B & 391 & $61\cdot10^3$ \\
+  two-level WOTS forest & 4\,276 B & 321 & $61\cdot10^3$ \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -324,7 +326,7 @@ so it still takes one hash.
   \item size: 22 values, i.e.\ 6 chain values and 3 nodes per subtree, plus 4 nodes in the tree
   \item verification: 25 compressions, i.e.\ per subtree 5 chain steps, 2 for the leaf and 3 for the path, then 1 for
         $\hash(R_0,R_1)$ and 4 for the path in the tree
-  \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 32 compressions each
+  \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 29 compressions each
 \end{itemize}
 Every signature has the same size and verification cost, and keygen is unchanged.
 

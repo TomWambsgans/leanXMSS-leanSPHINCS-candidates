@@ -67,9 +67,10 @@ def main():
     if not 0 <= T <= v * (q - 1):
         ap.error(f"--T must be between 0 and {v * (q - 1)}")
     alpha = n_sum(v, q, T) / q**v  # probability that a counter gives sum T
-    leaf = v * derive + v * (q - 1) * step + wots_pk
-    fors_sign = k * (2**a * (derive + step) + (2**a - 1) * node) + fors_roots
-    wots_sign = enc / alpha + v * derive + T * step
+    # One derivation hash gives two secrets (its two 16-byte halves): two chain starts, or two FORS leaves.
+    leaf = v // 2 * derive + v * (q - 1) * step + wots_pk
+    fors_sign = k * (2**a // 2 * derive + 2**a * step + (2**a - 1) * node) + fors_roots
+    wots_sign = enc / alpha + v // 2 * derive + T * step
     verify = digest + k * (step + a * node) + fors_roots + enc + ((q - 1) * v - T) * step + wots_pk + h * node
     keygen = derive + 2**h * leaf + (2**h - 1) * node
     size = N + k * (1 + a) * N + 4 + v * N + h * N
@@ -142,8 +143,11 @@ def main():
     # one FORS leaf and one 3-step WOTS chain, measured by `cargo run --release -p rss --bin bench`.
     measured = {3: (1699, 5064), 5: (2039, 6078), 7: (2186, 6514)}
     # Trusted dealer: F costs comb(n, t - 1) hashes per secret with the hash-based F.
-    dealer = derive + 2**b * leaf + (2**b - 1) * node + (h - b) * (derive + node)
-    dealer += 2**b * (fors_sign + wots_sign)
+    # The threshold PRF gives one secret per evaluation.
+    leaf1 = v * derive + v * (q - 1) * step + wots_pk
+    fors1 = k * (2**a * (derive + step) + (2**a - 1) * node) + fors_roots
+    dealer = derive + 2**b * leaf1 + (2**b - 1) * node + (h - b) * (derive + node)
+    dealer += 2**b * (fors1 + enc / alpha + v * derive + T * step)
     for n, (per_leaf, per_chain) in measured.items():
         f = n // 2
         traffic = 2**b * (k * 2**a * per_leaf + v * per_chain)

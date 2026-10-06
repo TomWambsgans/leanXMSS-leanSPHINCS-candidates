@@ -4,13 +4,21 @@
 
 use crate::*;
 
-/// `sk_{e,i} = Th(P, tw_prf(i, e), S)`: the start of chain `i` of the one-time key at leaf `e`.
-pub fn wots_secret(pp: &PublicParam, master: &MasterSecret, e: u32, i: usize) -> Digest {
-    th(pp, &wots_secret_tweak(e, i), master)
+/// The starts of the `v` chains of the one-time key at leaf `e`. One hash of the seed gives two of
+/// them: chains `2 t` and `2 t + 1` are the two halves of the hash at address `t`.
+pub fn wots_secrets(pp: &PublicParam, master: &MasterSecret, e: u32) -> [Digest; V] {
+    let mut secrets = [[0u8; N]; V];
+    for t in 0..V / 2 {
+        let pair = th_pair(pp, &wots_secret_tweak(e, t), master);
+        secrets[2 * t] = pair[0];
+        secrets[2 * t + 1] = pair[1];
+    }
+    secrets
 }
 
-pub fn wots_secret_tweak(e: u32, i: usize) -> Tweak {
-    tweak(TWEAK_PRF, i as u32, e)
+/// The address of the hash that gives the starts of chains `2 t` and `2 t + 1`.
+pub fn wots_secret_tweak(e: u32, t: usize) -> Tweak {
+    tweak(TWEAK_PRF, t as u32, e)
 }
 
 /// The tweak of the step of chain `i` (leaf `e`) that lands on position `to`, in `1..CHAIN_LEN`.
@@ -54,7 +62,8 @@ pub fn wots_encode(pp: &PublicParam, e: u32, m: &Digest) -> Option<(u32, [u8; V]
 /// `Ots.sign` from the master secret: the counter and the chain value each chunk opens.
 pub fn wots_sign(pp: &PublicParam, master: &MasterSecret, e: u32, m: &Digest) -> Option<(u32, [Digest; V])> {
     let (c, x) = wots_encode(pp, e, m)?;
-    let signature = std::array::from_fn(|i| chain(pp, e, i, 0, x[i] as usize, wots_secret(pp, master, e, i)));
+    let secrets = wots_secrets(pp, master, e);
+    let signature = std::array::from_fn(|i| chain(pp, e, i, 0, x[i] as usize, secrets[i]));
     Some((c, signature))
 }
 
@@ -70,5 +79,6 @@ pub fn wots_recover(pp: &PublicParam, e: u32, m: &Digest, c: u32, signature: &[D
 
 /// The chain ends of the one-time key at `e`, from the master secret.
 pub fn wots_ends(pp: &PublicParam, master: &MasterSecret, e: u32) -> [Digest; V] {
-    std::array::from_fn(|i| chain(pp, e, i, 0, CHAIN_LEN - 1, wots_secret(pp, master, e, i)))
+    let secrets = wots_secrets(pp, master, e);
+    std::array::from_fn(|i| chain(pp, e, i, 0, CHAIN_LEN - 1, secrets[i]))
 }
