@@ -12,3 +12,6 @@ name = "SphincsSecurity"
 
 [[lean_lib]]
 name = "LeanSphincs"
+
+[[lean_lib]]
+name = "LeanForest"
