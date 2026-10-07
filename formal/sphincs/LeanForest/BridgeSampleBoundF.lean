@@ -3,7 +3,7 @@ import LeanForest.BridgeSampleF
 /-! **One sample of the small-budget route of the forest.** The stopped experiment with the
 above-word values exposed is at most the linear potential `ρ q / 2^128`, the one-coin cover
 potential, the coin part of A4, and `κ` times its near term, once
-`2 - ρ + y / 2^128 + N rate ≤ κ ≤ 1`, `y = q - keygenCost`, `rate = 134 · 2^-b · 2^-15`. -/
+`2 - ρ + y / 2^128 + N rate ≤ κ ≤ 1`, `y = q - keygenCost`, `rate = 117 · 2^-b · 2^-15`. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -50,7 +50,7 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
       (knownOf (truncateHash parameterOutput) fixed)))
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℝ) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
-      (signatureLimit : ℝ) * (134 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ κ) (hκ1 : κ ≤ 1)
+      (signatureLimit : ℝ) * (117 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ κ) (hκ1 : κ ≤ 1)
     (b N : ℕ) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
     (hrt : H0.checkRate b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)

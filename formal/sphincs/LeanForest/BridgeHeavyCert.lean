@@ -382,8 +382,8 @@ theorem det_bitsFH (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b
   obtain ⟨hnum, hqh, hN70, hcthr, hB, hc, hpayR, hcheck⟩ := checkSmallF_sound hsmall
   have hN70' : signatureLimit ≤ 2 ^ 70 := hN ▸ hN70
   set c : ℚ := (2 ^ b * on.En : ℚ) / 2 with hcdef
-  set κ : ℚ := 2 - ρ + (qh : ℚ) / 2 ^ 128 + (N : ℚ) * 134 / (2 ^ b * 2 ^ 15) with hκdef
-  have hκR : (κ : ℝ) = 2 - (ρ : ℝ) + (qh : ℝ) / 2 ^ 128 + (N : ℝ) * 134 / (2 ^ b * 2 ^ 15) := by
+  set κ : ℚ := 2 - ρ + (qh : ℚ) / 2 ^ 128 + (N : ℚ) * 117 / (2 ^ b * 2 ^ 15) with hκdef
+  have hκR : (κ : ℝ) = 2 - (ρ : ℝ) + (qh : ℝ) / 2 ^ 128 + (N : ℝ) * 117 / (2 ^ b * 2 ^ 15) := by
     rw [hκdef]
     push_cast
     ring
@@ -392,7 +392,7 @@ theorem det_bitsFH (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b
       rw [hκR]
       have h1 : (ρ : ℝ) ≤ 2 := hnum.high
       have h2 : (0 : ℝ) ≤ (qh : ℝ) / 2 ^ 128 := by positivity
-      have h3 : (0 : ℝ) ≤ (N : ℝ) * 134 / (2 ^ b * 2 ^ 15) := by positivity
+      have h3 : (0 : ℝ) ≤ (N : ℝ) * 117 / (2 ^ b * 2 ^ 15) := by positivity
       linarith
     exact_mod_cast hR
   have hκ1 : κ ≤ 1 := by
@@ -420,9 +420,9 @@ theorem det_bitsFH (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b
     have hnum' : Numeric (ρ : ℝ) (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128) :=
       numeric_monoF hnum hx (by positivity)
     have hκq : 2 - (ρ : ℝ) + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
-        (signatureLimit : ℝ) * (134 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ) := by
-      have he : (signatureLimit : ℝ) * (134 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) =
-          (N : ℝ) * 134 / (2 ^ b * 2 ^ 15) := by
+        (signatureLimit : ℝ) * (117 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ) := by
+      have he : (signatureLimit : ℝ) * (117 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) =
+          (N : ℝ) * 117 / (2 ^ b * 2 ^ 15) := by
         rw [hb, hN]
         field_simp
       rw [hκR, he]

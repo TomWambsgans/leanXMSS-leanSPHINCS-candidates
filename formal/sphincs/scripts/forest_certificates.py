@@ -2,7 +2,6 @@
 """Generate LeanForest/LifetimeCertificates.lean: exact rational certificates for the forest lifetimes.
 
 Usage (from formal/sphincs):
-    python3 scripts/forest_certificates.py tables        # print the moment tables (H0PTab.lean, H0NTab.lean)
     python3 scripts/forest_certificates.py check B N LX  # check one parameter set
     python3 scripts/forest_certificates.py emit          # write LeanForest/LifetimeCertificates.lean
 then  lake build LeanForest.LifetimeCertificates  (the kernel re-checks every certificate).
@@ -14,12 +13,15 @@ For each parameter set (b, N, lx), with qh = floor(2^(128 + lx)):
   * the large route: a cover of every budget q' in [qh + 1, 2^127] at the survival-weighted baseline
     (checkCoverW, BridgeDetW.lean).
 Everything below mirrors the Lean checkers exactly (Fractions); floats only choose parameters.
-The moment tables P1tab, P2tab (H0PTab.lean) and PHtab (H0NTab.lean) are read from the Lean sources.
+The moment tables P1tab, P2tab (H0PTab.lean) and PHtab (H0NTab.lean) come from scripts/forest_table.py
+(the codeword table) and are compared with the Lean sources.
 """
 
 from fractions import Fraction as Fr
 from math import comb
 import itertools, math, os, re, sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -51,26 +53,16 @@ def betaWQ(qb): return Fr(2 * (2 ** 128 - qb) + 1, 2 ** 256)
 
 # ---------------- the moment tables ----------------
 
-def parse_table(path, name):
-    src = open(path).read()
-    i = src.index('def %s : List ℚ := [' % name)
-    j = src.index(']', i)
-    body = src[src.index('[', i) + 1:j]
-    out = []
-    for item in body.split(','):
-        item = item.strip()
-        if not item:
-            continue
-        if '/' in item:
-            a, b = item.split('/')
-            out.append(Fr(int(a.strip()), int(b.strip())))
-        else:
-            out.append(Fr(int(item)))
-    return out
+# The tables are computed from the codeword table (scripts/forest_table.py) and must be the ones of the
+# Lean sources (H0PTab.lean, H0NTab.lean), which the kernel checks against the same table.
+import forest_table
 
-P1 = parse_table(os.path.join(ROOT, 'LeanForest', 'H0PTab.lean'), 'P1tab')
-P2 = parse_table(os.path.join(ROOT, 'LeanForest', 'H0PTab.lean'), 'P2tab')
-PH = parse_table(os.path.join(ROOT, 'LeanForest', 'H0NTab.lean'), 'PHtab')
+LIT = 117   # the reveal-rate constant of the Lean proof (BridgeRevealRate.litCount_le_all, checkSmallF)
+assert max(forest_table.lit_counts()) <= LIT
+P1, P2, PH = forest_table.moment_tabs(*forest_table.f_tabs())
+for _name, _tab in (('P1tab', P1), ('P2tab', P2), ('PHtab', PH)):
+    assert forest_table.parse_list(open(forest_table.lean_path(_name)).read(), forest_table.FILES[_name][1]) == _tab, \
+        '%s differs from the Lean source: run scripts/forest_table.py write' % _name
 assert len(P1) == 151 and len(P2) == 151 and len(PH) == 151
 
 def getD(lst, n): return lst[n] if 0 <= n < len(lst) else Fr(0)
@@ -259,7 +251,7 @@ def checkOptN(t, o):
 
 def checkSmallF(b, N, qh, rho, cthr, B, c):
     x = Fr(qh, 2 ** 128)
-    rate = Fr(N * 134, 2 ** b * 2 ** 15)
+    rate = Fr(N * LIT, 2 ** b * 2 ** 15)
     conds = [Fr(3, 2) <= rho, rho <= 2, 1 + 4032 * (2 - rho) * x <= rho, 1 + 66 * x <= rho, 64 * x <= 1,
              qh <= 2 ** 127, N <= 2 ** 70, cthr <= rho / 2 ** 128, 0 <= B, 0 <= c, rate <= rho - 1 - x]
     if not all(conds): return False
@@ -268,7 +260,7 @@ def checkSmallF(b, N, qh, rho, cthr, B, c):
 
 def small_lhs(b, N, qh, rho, B, c):
     x = Fr(qh, 2 ** 128)
-    rate = Fr(N * 134, 2 ** b * 2 ** 15)
+    rate = Fr(N * LIT, 2 ** b * 2 ** 15)
     return rho + 2 ** 128 * B + Fr((2 * scanMb(b) - 1) * qh, scanMb(b) * 2 ** 129) + (2 - rho + x + rate) * qh * c + Fr(1, 2 ** 60)
 
 def choose_rho(qh):
@@ -485,8 +477,8 @@ set_option maxHeartbeats 0
     out.append('end LeanForest.Security.H0\n')
     open(path, 'w').write('\n'.join(out))
 
-# Best known attack lifetimes (forest, with the WOTS+C unit-neighbour route; FOREST.md).
-ATTACK = {26: 1.352e9, 20: 2.654e7, 14: 4.98e5, 13: 2.57e5, 12: 1.32e5, 10: 3.47e4, 8: 9.23e3}
+# Attack lifetimes of the forest in the cover model (one expected cover per 2^127 digest queries; FOREST.md).
+ATTACK = {26: 1.45521e9, 20: 2.88064e7, 14: 5.63003e5, 13: 2.91881e5, 12: 1.51278e5, 10: 4.06029e4, 8: 1.08862e4}
 # Proved lifetimes of the FORS variant (LeanSphincs.Lifetimes.requestedSecurity).
 FORS = {26: 1156000000, 20: 22380000, 14: 412500, 13: 211900, 12: 108700, 10: 28600, 8: 7530}
 
@@ -511,7 +503,7 @@ open Security ForsPotential
         b, N = c['b'], c['N']
         tag = 'b%d' % b
         name = pname(b)
-        out.append('/-- Subtree height %d, %d signatures (%.1f%% of the best known attack\'s %.4g; the FORS variant: %d). -/'
+        out.append('/-- Subtree height %d, %d signatures (%.1f%% of the cover attack\'s %.4g; the FORS variant: %d). -/'
                    % (b, N, 100.0 * N / ATTACK[b], ATTACK[b], FORS[b]))
         out.append('abbrev %s : Params := ⟨%d, %d, by decide⟩\n' % (name, b, N))
         out.append('/-- **127 bits for the deterministic signer** at subtree height %d and %d signatures. -/' % (b, N))
@@ -536,13 +528,13 @@ open Security ForsPotential
 
 # Parameter sets: (b, N, lx).
 PARAMS = [
-    (26, 1268000000, -10.0),
-    (20, 23700000, -9.0),
-    (14, 438800, -8.0),
-    (13, 226100, -7.75),
-    (12, 115800, -7.75),
-    (10, 30650, -7.5),
-    (8, 8110, -7.25),
+    (26, 1400000000, -10.421875),
+    (20, 26340000, -9.25),
+    (14, 486400, -8.171875),
+    (13, 249800, -8.015625),
+    (12, 128300, -7.859375),
+    (10, 33850, -7.609375),
+    (8, 8930, -7.390625),
 ]
 
 if __name__ == '__main__':
@@ -558,22 +550,31 @@ if __name__ == '__main__':
         emit_lifetimes([c], os.path.join(ROOT, 'LeanForest', 'Lifetimes.lean'))
         print('written')
     elif cmd == 'maxn':
-        # largest N (3 significant digits) with a certificate at one of the given lx
-        b, lo, hi = int(sys.argv[2]), int(float(sys.argv[3])), int(float(sys.argv[4]))
-        lxs = [float(a) for a in sys.argv[5:]]
-        def feasible(N):
-            for lx in lxs:
-                if certify(b, N, lx, verbose=False) is not None:
-                    return lx
-            return None
-        assert feasible(lo) is not None
-        while hi - lo > max(1, lo // 1000):
-            mid = (lo + hi) // 2
-            r = feasible(mid)
-            print('N %d -> %s' % (mid, r), flush=True)
-            if r is not None: lo = mid
-            else: hi = mid
-        print('b %d max N ~ %d (lx %s)' % (b, lo, feasible(lo)))
+        # maxn B N0 [STEP LXLO LXHI]: the largest N (to 1 part in 20000) that both routes certify at some
+        # split lx of the grid LXLO, LXLO + STEP, ..., LXHI, starting from a certified N0
+        b, best = int(sys.argv[2]), int(float(sys.argv[3]))
+        step, lx_lo, lx_hi = [float(a) for a in sys.argv[4:7]] if len(sys.argv) > 6 else (0.125, -11.5, -6.0)
+        def feasible(N, lx):
+            try:
+                c = certify(b, N, lx, verbose=False)
+            except Exception:       # the float search found no option
+                return False
+            return c is not None and c['complete']
+        best_lx, lx = None, lx_lo
+        while lx <= lx_hi + 1e-9:
+            lo = best + max(1, best // 20000)
+            if feasible(lo, lx):
+                hi = lo + lo // 50
+                while feasible(hi, lx):
+                    lo, hi = hi, hi + hi // 50
+                while hi - lo > max(1, lo // 20000):
+                    mid = (lo + hi) // 2
+                    if feasible(mid, lx): lo = mid
+                    else: hi = mid
+                best, best_lx = lo, lx
+                print('lx %.5f -> N %d' % (lx, lo), flush=True)
+            lx += step
+        print('b %d max N ~ %d (lx %s)' % (b, best, best_lx))
     elif cmd == 'scan':
         # small-route left-hand sides only, for several lx
         b, N = int(sys.argv[2]), int(float(sys.argv[3]))
@@ -586,7 +587,7 @@ if __name__ == '__main__':
             rho = choose_rho(qh)
             o, _ = make_opt(b, t, fm, rho / 2 ** 128)
             x = Fr(qh, 2 ** 128)
-            rate = Fr(N * 134, 2 ** b * 2 ** 15)
+            rate = Fr(N * LIT, 2 ** b * 2 ** 15)
             near = (2 - rho + x + rate) * qh * c
             print('lx %s: rho %.6f 2^128B %.5f coin %.5f near %.5f lhs %.6f rate ok %s' % (
                 lx, float(rho), float(2 ** 128 * o.B), float(Fr((2 * scanMb(b) - 1) * qh, scanMb(b) * 2 ** 129)), float(near),

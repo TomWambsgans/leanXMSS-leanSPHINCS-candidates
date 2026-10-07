@@ -320,8 +320,10 @@ no root hash: in $\hash(R_0,R_1)$ and in the public key, $R$ stands for the two 
 \end{center}
 
 \paragraph{Encoding.} Bit fields and one 256-entry table, and every digest is accepted. Each tree takes 26 bits:
-4 for the leaf, then, per subtree, 3 for the WOTS key and 8 for a table index. The table lists the 246 codewords in
-lexicographic order, followed by the first 10 again. With the 26 bits of the instance index, the digest is 234 bits,
+4 for the leaf, then, per subtree, 3 for the WOTS key and 8 for a table index. The table has 256 entries, chosen among
+the 246 codewords to maximize the lifetime: spread-out codewords are easier to forge once a key has signed twice, so
+the 32 most spread-out ones are left out, and 42 of the most concentrated ones appear twice (all those with digits
+4 and 1, and 12 of those with digits 3 and 2). The table is in the Lean model~\cite{proofs}. With the 26 bits of the instance index, the digest is 234 bits,
 so it still takes one hash.
 
 \paragraph{Costs.} Per tree:
@@ -336,14 +338,13 @@ Every signature has the same size and verification cost, and keygen is unchanged
 \paragraph{Security.} A forgery at an instance with $r$ prior signatures needs every tree to be covered: in
 both subtrees, the target WOTS key must have been opened, and the target codeword must lie below the componentwise
 max of those openings. Let $f_t$ be the probability that $t$ random signatures by one WOTS key cover a random codeword
-($f_1=0.0042$, $f_2=0.077$, $f_3=0.19$). Then
+($f_1=0.0052$, $f_2=0.067$, $f_3=0.17$). Then
 \[
 \mathrm{cover}(r)=\Big(\sum_{u\ge1}\mathrm{Bin}(r,\tfrac1{16})(u)\Big[\sum_{t\ge1}\mathrm{Bin}(u,\tfrac18)(t)\,f_t\Big]^2\Big)^8 .
 \]
 The lifetime is the largest $N$ with $2^{127}\,2^{b-26}\,\mathbb{E}_{r\sim\mathrm{Poisson}(N/2^b)}[\mathrm{cover}(r)]\le1$.
-This is the rule that defines the best known attack on FORS~\cite{proofs}, and the two-level forest is 10--12\%
-ahead at every subtree height. Counting also the WOTS$^+$C unit-neighbour attack (unchanged), it is about 12\% ahead
-for $b \ge 20$ and 9\% for $b \le 14$. The last two rows are the lifetimes proved in Lean~\cite{proofs} (rounded down): an adversary
+This is the rule that defines the best known attack on FORS~\cite{proofs}, and the two-level forest is about 20\%
+ahead at every subtree height. The last two rows are the lifetimes proved in Lean~\cite{proofs} (rounded down): an adversary
 making $q$ hash queries forges with probability at most $q\cdot2^{-127}$.
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
@@ -352,10 +353,10 @@ making $q$ hash queries forges with probability at most $q\cdot2^{-127}$.
   $b$ & 26 & 20 & 14 & 13 & 12 & 10 & 8 \\
   \midrule
   FORS, attack & $1.20\cdot10^9$ & $2.38\cdot10^7$ & $4.67\cdot10^5$ & $2.42\cdot10^5$ & $1.26\cdot10^5$ & $3.38\cdot10^4$ & $9.1\cdot10^3$ \\
-  forest, attack & $1.35\cdot10^9$ & $2.66\cdot10^7$ & $5.19\cdot10^5$ & $2.69\cdot10^5$ & $1.39\cdot10^5$ & $3.74\cdot10^4$ & $1.0\cdot10^4$ \\
+  forest, attack & $1.45\cdot10^9$ & $2.88\cdot10^7$ & $5.63\cdot10^5$ & $2.91\cdot10^5$ & $1.51\cdot10^5$ & $4.06\cdot10^4$ & $1.08\cdot10^4$ \\
   \midrule
   FORS, proved & $1.15\cdot10^9$ & $2.23\cdot10^7$ & $4.12\cdot10^5$ & $2.11\cdot10^5$ & $1.08\cdot10^5$ & $2.86\cdot10^4$ & $7.5\cdot10^3$ \\
-  forest, proved & $1.26\cdot10^9$ & $2.37\cdot10^7$ & $4.38\cdot10^5$ & $2.26\cdot10^5$ & $1.15\cdot10^5$ & $3.06\cdot10^4$ & $8.1\cdot10^3$ \\
+  forest, proved & $1.40\cdot10^9$ & $2.63\cdot10^7$ & $4.86\cdot10^5$ & $2.49\cdot10^5$ & $1.28\cdot10^5$ & $3.38\cdot10^4$ & $8.9\cdot10^3$ \\
   \bottomrule
 \end{tabular}
 \end{center}
