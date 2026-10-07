@@ -148,20 +148,29 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
   entering through a surrogate sibling.
 - `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums BLAKE2s
   block costs of the verifier's logged hash-input lengths: accepted signatures cost exactly 373
-  compressions, all signatures at most 373 (2 for the digest, 24·(1 + 9) for the FORS leaves and
-  folds, 13 for the FORS key hash of 792 bytes, 116 for WOTS+C and the tree).
-- Every hash input is P ‖ A ‖ payload, with the 8-byte address A = `lo` ‖ `hi` ‖ (type + 32·step).
+  compressions, all signatures at most 373 (4 for the digest, 24·(1 + 9) for the FORS leaves and
+  folds, 13 for the FORS key hash of 800 bytes, 116 for WOTS+C and the tree).
+- Every hash input is P ‖ A ‖ payload, with the 16-byte address A = `lo` ‖ `hi` ‖ (type + 32·step) ‖ 0^8
+  (`fieldBytes`), so every value of a payload starts on a 16-byte boundary.
   The tree domains keep their layer and tree arguments, both always 0 and not serialized
   (`TreeIndex = Fin 1`). An input determines P, the address and the payload
   (`fieldInput_injective`, [SecurityDomains](LeanSphincs/SecurityDomains.lean)), and in-range
   domains have distinct addresses (`hashFields_injective`,
   [SecurityPosition](LeanSphincs/SecurityPosition.lean)), so separating inputs costs no probability
-  term. The message digest hashes m ‖ 0^8 ‖ ρ and the randomizer derivation seed ‖ m, once per
+  term. The message digest hashes m ‖ ρ (80 bytes with P and A: the first block ends with m,
+  the second is ρ) and the randomizer derivation seed ‖ m, once per
   message: Rust keeps the BLAKE2s state after the first block of the digest and pays one
   compression per grinding attempt; the model hashes whole inputs, and its budgets count oracle
   queries. The root is
   not hashed in the digest (P binds the key); `messageDigestPayload` and the digest functions keep
   their `root` argument, which they ignore.
+- The digest's fields are disjoint bits of the two 256-bit outputs, none across two 64-bit words:
+  the index is bits 128..153 of call 0 (`blockIndex`), and each call gives 12 FORS indices, six in
+  each of its first two 64-bit words, index κ in call ⌊κ/12⌋ at bit 64·⌊(κ mod 12)/6⌋ + 10·(κ mod 6)
+  (`digestLeaves_truncate`, [Uniform](LeanSphincs/Uniform.lean)).
+  `truncateMessageDigest` collects them as the 266-bit string index ‖ u_0 ‖ … ‖ u_23, which is
+  uniform for two independent uniform outputs (`evalDist_digestBlocks_uniform`); the index depends
+  on call 0 alone (`digestIndex_truncate`), which is all the grinding and scan lemmas use.
 
 `Axioms.lean` uses `#guard_msgs` to pin each public theorem to its exact axiom list, a subset of
 `propext`, `Classical.choice` and `Quot.sound`.

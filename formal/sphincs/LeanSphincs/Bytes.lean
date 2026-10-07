@@ -26,11 +26,12 @@ theorem ofNat_inj_of_lt {w a b : Nat} (ha : a < 2 ^ w) (hb : b < 2 ^ w)
   have htoNat := congrArg BitVec.toNat h
   rwa [BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb] at htoNat
 
-/-- The 8 address bytes determine the type, the step and both fields. -/
+/-- The 16 address bytes determine the type, the step and both fields. -/
 theorem fieldBytes_injective {t1 t2 : TweakFields} (h : fieldBytes t1 = fieldBytes t2) : t1 = t2 := by
   obtain ⟨tag1, step1, hi1, lo1⟩ := t1
   obtain ⟨tag2, step2, hi2, lo2⟩ := t2
   simp only [fieldBytes] at h
+  have h := List.append_cancel_right h
   obtain ⟨h, htag⟩ := List.append_inj' h (by simp [bytesLE_length])
   obtain ⟨hlo, hhi⟩ := List.append_inj' h (by simp [bytesLE_length])
   have h1 := tag1.isLt
@@ -46,8 +47,21 @@ theorem fieldBytes_injective {t1 t2 : TweakFields} (h : fieldBytes t1 = fieldByt
 `lo = 0x89abcdef`. -/
 theorem fieldBytes_layout_example :
     fieldBytes (tweakFields 10 5 0x123456 0x89abcdef) =
-      [0xef, 0xcd, 0xab, 0x89, 0x56, 0x34, 0x12, 0xaa] := by
+      [0xef, 0xcd, 0xab, 0x89, 0x56, 0x34, 0x12, 0xaa, 0, 0, 0, 0, 0, 0, 0, 0] := by
   decide
+
+theorem fieldBytes_length (fields : TweakFields) : (fieldBytes fields).length = 16 := by
+  simp [fieldBytes, bytesLE_length]
+
+/-- A digest call hashes 80 bytes, `P || A || m || rho`: the first 64-byte block ends with the
+message and the second is the randomizer (`randomizer_and_digest_inputs` in
+`crates/sphincs/src/scheme.rs`). -/
+theorem messageDigestInput_length (parameter : PublicParameter) (root : Digest) (message : Message)
+    (randomness : Randomness) (call : Fin 2) :
+    (tweakableHashInput parameter (.message call)
+      (Concrete.messageDigestPayload root message randomness)).length = 80 := by
+  simp [tweakableHashInput, tweakBytes, fieldBytes_length, Concrete.messageDigestPayload,
+    bytesLE_length]
 
 /-- The scheme has one layer and one tree: these two arguments of a call are not serialized. -/
 theorem layer_eq (lay lay' : Layer) : lay = lay' := by

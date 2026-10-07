@@ -9,9 +9,11 @@ and `Quot.sound`; [Axioms.lean](LeanSphincs/Axioms.lean) pins every public theor
 chains with four positions and sum 120, two message-digest calls, and pruning with surrogate
 siblings. A FORS tree has no root hash: the FORS key is one hash of the two level-9 nodes of every
 tree, Th(P, A(11, 0, idx), n_0[0] ‖ n_0[1] ‖ … ‖ n_23[0] ‖ n_23[1]) (`ftsKey`, `ftsRecover`); the
-verifier folds an opened leaf nine levels and reads the other level-9 node as the last path element. Every hash input is the 16-byte public parameter P, an 8-byte address (4 bytes `lo`,
-3 bytes `hi`, one byte type + 32·step) and the payload; the message digest hashes m ‖ 0^8 ‖ ρ (the
-root is not hashed). One hash of the seed gives two secrets, the two 16-byte halves of its output:
+verifier folds an opened leaf nine levels and reads the other level-9 node as the last path element. Every hash input is the 16-byte public parameter P, a 16-byte address (4 bytes `lo`,
+3 bytes `hi`, one byte type + 32·step, then 8 zero bytes) and the payload; the message digest hashes
+m ‖ ρ (the root is not hashed), and its fields do not lie across 64-bit words: the index is bits
+128..153 of call 0, and FORS index κ is in call ⌊κ/12⌋ at bit 64·⌊(κ mod 12)/6⌋ + 10·(κ mod 6)
+(`truncateMessageDigest`, `digestLeaves_truncate`). One hash of the seed gives two secrets, the two 16-byte halves of its output:
 the starts of chains 2t and 2t + 1 of the one-time key at leaf e are the halves of
 H(P ‖ A(0, t, e) ‖ seed), and the secrets of leaves 2t and 2t + 1 of tree κ of FORS instance idx are
 the halves of H(P ‖ A(8, κ + 512·t, idx) ‖ seed) (`derivePair`, `otsValues`, `ftsNode`). The public

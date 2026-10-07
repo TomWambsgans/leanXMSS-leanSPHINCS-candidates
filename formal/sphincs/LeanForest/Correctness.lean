@@ -64,13 +64,11 @@ omit [Params] in
 theorem digestIndex_truncate (first : HashOutput) :
     digestIndex (truncateMessageDigest first) = blockIndex first := by
   unfold digestIndex truncateMessageDigest blockIndex
-  congr 1
-  apply BitVec.eq_of_getLsbD_eq
-  intro i hi
+  refine congrArg BitVec.toFin (BitVec.eq_of_getLsbD_eq fun i hi => ?_)
   have hi26 : i < 26 := hi
-  simp [
-    show i < messageDigestBits by change i < 234; omega,
-    show i < hashOutputBits by change i < 256; omega, hi]
+  have hlt : 128 + i < messageDigestBits := by change 128 + i < 234; omega
+  simp only [BitVec.getLsbD_extractLsb', indexOffset, hlt, hi, decide_true, Bool.true_and,
+    Nat.zero_add]
 
 def digestValue (secretKey : Seeded.SecretKey) (message : Message) (randomness : Randomness) :
     MessageDigest :=

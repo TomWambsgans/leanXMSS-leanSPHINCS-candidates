@@ -60,14 +60,18 @@ Properties:
 \end{itemize}
 
 \paragraph{Hash inputs.} Every hash input is $P \concat \mathit{address} \concat \mathit{data}$: the public
-parameter (16 bytes), then an 8-byte address (two fields of 4 and 3 bytes, and 1 byte for the type of the call
-and the step in a chain).
+parameter (16 bytes), then a 16-byte address: two fields of 4 and 3 bytes, 1 byte for the type of the call
+and the step in a chain, and 8 zero bytes. The two fill half of a 64-byte block, and every value that follows
+starts on a 16-byte boundary.
 \begin{itemize}
   \item a chain step and a tree node each fit in one 64-byte block
-  \item the message digest hashes $m\concat 0^{8}\concat R$: 8 zero bytes, so that the randomizer $R$ is the second
-        block. A pruned signer tries $R = R_0 + i$ for $i = 0, 1, \dots$, with $R_0$ a hash of the secret key and $m$,
+  \item the message digest hashes $m\concat R$: the message ends the first block, so the randomizer $R$ is the
+        second block. A pruned signer tries $R = R_0 + i$ for $i = 0, 1, \dots$, with $R_0$ a hash of the secret key and $m$,
         and keeps the first one that lands in its subtree. The first block is hashed once, so each try costs 1
         compression
+  \item no field of the digest lies across two 64-bit words: each of the two digest calls gives 12 FORS indices,
+        six in each of its first two words, and the instance index is the low 26 bits of the third word of the
+        first call
   \item a FORS tree has no root hash: the FORS public key hashes the two nodes below the root of every tree, which
         saves one hash per tree
   \item the secrets are derived from the secret key two at a time: one hash gives 32 bytes, i.e.\ two chain starts
@@ -320,7 +324,9 @@ no root hash: in $\hash(R_0,R_1)$ and in the public key, $R$ stands for the two 
 \end{center}
 
 \paragraph{Encoding.} Bit fields and one 256-entry table, and every digest is accepted. Each tree takes 26 bits:
-4 for the leaf, then, per subtree, 3 for the WOTS key and 8 for a table index. The table has 256 entries, chosen among
+4 for the leaf, then, per subtree, 3 for the WOTS key and 8 for a table index. The 16 table indices are the first
+16 bytes of the digest; its last 16 bytes, as a little-endian integer, hold the instance index, then the 8 leaves,
+then the 16 WOTS keys, so no field lies across two 64-bit words. The table has 256 entries, chosen among
 the 246 codewords to maximize the lifetime: spread-out codewords are easier to forge once a key has signed twice, so
 the 32 most spread-out ones are left out, and 42 of the most concentrated ones appear twice (all those with digits
 4 and 1, and 12 of those with digits 3 and 2). The table is in the Lean model~\cite{proofs}. With the 26 bits of the instance index, the digest is 234 bits,

@@ -90,9 +90,11 @@ Axiom guards: `lake env lean scripts/ForestTheorems.lean` then `python3 scripts/
 ## Hash inputs
 
 Every hash input is `P ‖ A ‖ payload` (`Scheme.lean`: `tweakableHashInput`, `keygenHashInput`,
-`randomizerHashInput`): the 16-byte public parameter, then the 8-byte address
-`A = lo (4 bytes) ‖ hi (3 bytes) ‖ (type + 32·step)` with `lo` and `hi` little endian (`fieldBytes`),
-then the payload. `Th` keeps the first 16 bytes of the hash. The public key is `root ‖ P`, 32 bytes.
+`randomizerHashInput`): the 16-byte public parameter, then the 16-byte address
+`A = lo (4 bytes) ‖ hi (3 bytes) ‖ (type + 32·step) ‖ 0^8` with `lo` and `hi` little endian
+(`fieldBytes`), then the payload, which starts at byte 32. There is no exception: the parameter
+derivation (under `P = 0`), the randomizer base, the seed derivations and the surrogates have the same
+address format. `Th` keeps the first 16 bytes of the hash. The public key is `root ‖ P`, 32 bytes.
 Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`, chain `i < 6`,
 `idx` the 26-bit instance. A seed derivation of chain starts is addressed by a pair of chains `t`
 (chains `2t` and `2t + 1`): `t < 32` in a WOTS+C key, `t < 3` in a forest WOTS key.
@@ -106,7 +108,7 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 | WOTS+C encoding | 4 | 0 | 0 | leaf | message ‖ counter (4 bytes) |
 | parameter derivation, under `P = 0` | 5 | 0 | 0 | 0 | seed |
 | randomizer base `R0` | 7 | 0 | 0 | 0 | seed ‖ message |
-| message digest | 12 | 0 | 0 | 0 | message ‖ eight zero bytes ‖ randomizer |
+| message digest | 12 | 0 | 0 | 0 | message ‖ randomizer |
 | surrogate sibling | 13 | 0 | level | 0 | seed |
 | forest chain secrets `2t`, `2t + 1` (both halves of the hash) | 14 | 0 | `c + 8s + 128j + 256a + 2048t` | `idx` | seed |
 | forest chain step from position `t` | 15 | `t` | `c + 8s + 128j + 256a + 2048i` | `idx` | value |
@@ -116,7 +118,9 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 | forest tree node, level 1 to 3 | 19 | 0 | `c + 8·level + 64·node` | `idx` | left ‖ right |
 | few-time public key | 20 | 0 | 0 | `idx` | `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]`, the level-3 nodes of the 8 trees (256 bytes) |
 
-The tree leaf input is 88 bytes (2 compressions) and the key input 280 bytes (5 compressions). The
+With a 32-byte prefix every call costs the same number of 64-byte blocks as with the former 24-byte
+one: a chain step is 48 bytes and a node 64 (1 compression), a forest WOTS-key leaf 128 and a tree
+leaf 96 (2), the key 288 (5), a one-time leaf 1,056 (17), the digest 80 (2). The
 addresses of a subtree root (type 17, level 3) and of a tree root (type 19, level 4) exist in
 `HashDomain` and no algorithm uses them.
 
@@ -134,8 +138,31 @@ hash query), and attempt `i` uses the randomizer `R0 + i` (addition modulo `2^12
 `Seeded.signDigestLoop`); it keeps the first attempt whose digest index lands in the kept subtree.
 The randomizer comes last in the digest payload: a grinding attempt changes only the last block of
 the digest hash. The digest input is 80 bytes: the first block is
-`P ‖ A ‖ message ‖ 0^8` and the second the randomizer alone. The root is not hashed (`P` binds the
+`P ‖ A ‖ message` and the second the randomizer alone. The root is not hashed (`P` binds the
 key); `messageDigestPayload` keeps its root argument for its callers and ignores it.
+
+### Digest fields
+
+The digest is the first 234 bits of the hash output (`truncateMessageDigest`), read as a little-endian
+number; a field is `extractLsb'` at a bit offset (`Scheme.lean`: `wordOffset`, `indexOffset`,
+`superOffset`, `childOffset`, `digestMarks`, `digestIndex`). With `c < 8` the tree and `j < 2` the
+subtree:
+
+| field | bits | bit offset |
+| --- | ---: | --- |
+| codeword-table index of WOTS key `(c, j)` | 8 | `8 (2c + j)`: byte `2c + j` of the digest |
+| instance index `idx` | 26 | 128: the low 26 bits of the last 16 bytes |
+| leaf of tree `c` | 4 | `154 + 4c` |
+| WOTS key of subtree `(c, j)` | 3 | `186 + 3 (2c + j)` |
+
+Bits 234 to 255 are unused. No field lies across two 64-bit words. The proof reads a digest as its
+index and one 26-bit field per tree (`ForestCoverage.lean`): `coordField` gathers the 26 bits of a
+tree from the three places that hold them (leaf, then per subtree WOTS key and table index), and
+`fullDigestView_bijective` states that the index and the 8 fields are a bijection of the 234 bits,
+so a uniform digest gives a uniform index and 8 independent uniform fields
+(`evalDist_fullDigestView_uniform`), each a uniform mark (`H0Mark.markEquiv`). The index of a
+uniform hash output is uniform (`evalDist_blockIndex_uniform`, from
+`evalDist_hashOutput_extractAt_uniform`: the bits at any offset of a uniform output are uniform).
 
 Separation is unconditional. An input determines its parameter, its address and its payload
 (`fieldBytes_injective` in `Bytes.lean`, `fieldInput_injective` in `SecurityDomains.lean`), two

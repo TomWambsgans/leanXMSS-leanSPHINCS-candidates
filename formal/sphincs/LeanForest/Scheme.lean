@@ -20,8 +20,10 @@ outputs) with the few-time signature under each tree leaf replaced by a **two-le
   and the child leaf hashes the 6 chain tops `x_{i,4}`;
 * a codeword is a deficit vector `d ∈ {0..4}^6` with `Σ d_i = 5` (246 of them); `lut` is a fixed list
   of 256 of them in lexicographic order, 214 distinct and 42 of these twice (`codewordCodes`);
-* one digest call gives `26 + 8 · 26 = 234` bits: the index, then per coordinate the super-child
-  (4 bits), the child and codeword index of sub-tree 0 (3 + 8 bits) and of sub-tree 1 (3 + 8 bits);
+* one digest call gives `26 + 8 · 26 = 234` bits. The first 16 bytes are the 16 codeword indices
+  (byte `2c + j` for sub-tree `j` of coordinate `c`); then, from bit 128, the index (26 bits), the 8
+  super-children (4 bits each, from bit 154) and the 16 children (3 bits each, from bit 186, in the
+  order `2c + j`). No field lies across two 64-bit words;
 * an opening reveals, per coordinate and sub-tree, `x_{i, 4 - d_i}` for the 6 chains and the 3 auth
   nodes of the sub-tree, then the 4 auth nodes of the top tree. The last auth node of a tree is its
   other top node: the verifier folds all levels but the last and hashes the two top nodes, in index
@@ -29,11 +31,12 @@ outputs) with the few-time signature under each tree leaf replaced by a **two-le
 
 Everything that is not the forest (parameters, WOTS+C, the tree, pruning, grinding, key generation)
 is `LeanSphincs.Scheme` verbatim. Every hash input is `P || A || payload`: the 16-byte public
-parameter, then the 8-byte address of the call (a 32-bit field `lo`, a 24-bit field `hi`, and one
-byte holding the type and a chain step). Forest hashes use types 14 (secret derivation) and 15 to
-20, with the instance `idx` in `lo` and the position inside the instance in `hi`. The message digest
-hashes `m || 0^8 || rho` (the root is not hashed: `P` binds the key) and the randomizer derivation
-`S || m || ctr`: what changes between two grinding attempts comes last.
+parameter, then the 16-byte address of the call (a 32-bit field `lo`, a 24-bit field `hi`, one byte
+holding the type and a chain step, then 8 zero bytes), so the payload starts at byte 32. Forest
+hashes use types 14 (secret derivation) and 15 to 20, with the instance `idx` in `lo` and the
+position inside the instance in `hi`. The message digest hashes `m || rho` (the root is not hashed:
+`P` binds the key) and the randomizer base `S || m`: the randomizer, which changes between two
+grinding attempts, comes last, alone in the second block.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -182,10 +185,10 @@ def lut (t : LutIdx) : Codeword := codeDigit (codewordCodes.getD t.val 0)
 
 /-! ### The message digest: one call, 234 bits -/
 
-/-- Bits of one coordinate's field: super-child 4, then child 3 and codeword 8 for each sub-tree. -/
+/-- Digest bits of one coordinate: super-child 4, and child 3 and codeword 8 for each sub-tree. -/
 def coordBits : Nat := 26
 
-/-- The message digest is `h + 8 · 26 = 234` bits, an index and 8 coordinate fields. -/
+/-- The message digest is `h + 8 · 26 = 234` bits: an index and the fields of 8 coordinates. -/
 def messageDigestBits : Nat := totalHeight + forestCoords * coordBits
 
 abbrev MessageDigest := BitVec messageDigestBits
@@ -248,10 +251,10 @@ structure TweakFields where
   lo : BitVec 32
 deriving DecidableEq
 
-/-- The 8 address bytes `lo || hi || (tag + 32 * step)`: `lo` on 4 bytes, `hi` on 3 bytes, each
-least significant byte first, then the type byte. -/
+/-- The 16 address bytes `lo || hi || (tag + 32 * step) || 0^8`: `lo` on 4 bytes, `hi` on 3 bytes,
+each least significant byte first, then the type byte, then 8 zero bytes. -/
 def fieldBytes (fields : TweakFields) : HashInput :=
-  bytesLE 4 fields.lo ++ bytesLE 3 fields.hi ++ bytesLE 1 (fields.step ++ fields.tag)
+  bytesLE 4 fields.lo ++ bytesLE 3 fields.hi ++ bytesLE 1 (fields.step ++ fields.tag) ++ bytesLE 8 0
 
 /-- Convert the four integer fields to their fixed widths. -/
 def tweakFields (tag step hi lo : Nat) : TweakFields :=
@@ -306,7 +309,7 @@ def hashDomainFields : HashDomain → TweakFields
   | .roots index => tweakFields 20 0 0 index
   | .message => tweakFields 12 0 0 0
 
-/-- The exact 8 address bytes of a hash domain. -/
+/-- The exact 16 address bytes of a hash domain. -/
 def tweakBytes (domain : HashDomain) : HashInput :=
   fieldBytes (hashDomainFields domain)
 
@@ -618,24 +621,27 @@ def forestRecover (parameter : PublicParameter) (index : Index) (marks : Coord �
 
 /-! ### The message digest -/
 
-/-- `m || 0^8 || rho`, what the message digest hashes after the parameter and the address. The eight
-zero bytes fill the first block, `P || A || m || 0^8`; the second block is the randomizer alone. The
-root is not hashed (`P` binds the key); the argument is kept for the callers. -/
+/-- `m || rho`, what the message digest hashes after the parameter and the address. The first block
+is `P || A || m` (64 bytes); the second block is the randomizer alone. The root is not hashed (`P`
+binds the key); the argument is kept for the callers. -/
 def messageDigestPayload (_root : Digest) (message : Message) (randomness : Randomness) : HashInput :=
-  bytesLE 32 message ++ bytesLE 8 0 ++ bytesLE 16 randomness
+  bytesLE 32 message ++ bytesLE 16 randomness
 
 /-- The single untruncated digest call (`digest_block`). -/
 def messageDigestCall (parameter : PublicParameter) (root : Digest) (message : Message)
     (randomness : Randomness) : m HashOutput :=
   oracleHash (tweakableHashInput parameter .message (messageDigestPayload root message randomness))
 
-/-- `idx = N mod 2^h`. -/
+/-- Bit offset of the index: the low 26 bits of the last 16 bytes of the digest. -/
+def indexOffset : Nat := 128
+
+/-- `idx`, the 26 bits of the digest from bit 128. -/
 def digestIndex (digest : MessageDigest) : Index :=
-  (digest.extractLsb' 0 totalHeight).toFin
+  (digest.extractLsb' indexOffset totalHeight).toFin
 
 /-- The leaf index of the digest call (`index_of_block`). -/
 def blockIndex (first : HashOutput) : Index :=
-  (first.extractLsb' 0 totalHeight).toFin
+  (first.extractLsb' indexOffset totalHeight).toFin
 
 /-- `Digest(P, m, rho)` (`message_digest`): the single call, truncated to 234 bits. The root is not
 an input of the hash. -/
@@ -644,20 +650,20 @@ def messageDigest (parameter : PublicParameter) (root : Digest) (message : Messa
   let first ← messageDigestCall parameter root message randomness
   return truncateMessageDigest first
 
-/-- Bit offset of coordinate `c`'s field. -/
-def coordOffset (c : Coord) : Nat := totalHeight + coordBits * c.val
+/-- Bit offset of the codeword index of sub-tree `j` of coordinate `c`: byte `2c + j` of the digest. -/
+def wordOffset (c : Coord) (j : SubIdx) : Nat := 8 * (2 * c.val + j.val)
 
-/-- Offset of sub-tree `j`'s child bits within a coordinate field. -/
-def childOffset (j : SubIdx) : Nat := 4 + 11 * j.val
+/-- Bit offset of coordinate `c`'s super-child (4 bits), after the index. -/
+def superOffset (c : Coord) : Nat := 154 + 4 * c.val
 
-/-- Offset of sub-tree `j`'s codeword bits within a coordinate field. -/
-def wordOffset (j : SubIdx) : Nat := 7 + 11 * j.val
+/-- Bit offset of the child of sub-tree `j` of coordinate `c` (3 bits), after the super-children. -/
+def childOffset (c : Coord) (j : SubIdx) : Nat := 186 + 3 * (2 * c.val + j.val)
 
 /-- The coordinate fields of a digest. -/
 def digestMarks (digest : MessageDigest) : Coord → CoordMark := fun c =>
-  { super := (digest.extractLsb' (coordOffset c) topHeight).toFin
-    child := fun j => (digest.extractLsb' (coordOffset c + childOffset j) subHeight).toFin
-    word := fun j => (digest.extractLsb' (coordOffset c + wordOffset j) 8).toFin }
+  { super := (digest.extractLsb' (superOffset c) topHeight).toFin
+    child := fun j => (digest.extractLsb' (childOffset c j) subHeight).toFin
+    word := fun j => (digest.extractLsb' (wordOffset c j) 8).toFin }
 
 /-! ### Verification -/
 

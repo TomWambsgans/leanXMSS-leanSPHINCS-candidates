@@ -39,11 +39,12 @@ theorem bitVec_append_inj {n m : Nat} {a a' : BitVec n} {b b' : BitVec m}
     have := congrArg (fun v : BitVec (n + m) => v.getLsbD i) h
     simpa [BitVec.getLsbD_append, hi] using this
 
-/-- The 8 address bytes determine the type, the step and the two fields. -/
+/-- The 16 address bytes determine the type, the step and the two fields. -/
 theorem fieldBytes_injective {t1 t2 : TweakFields} (h : fieldBytes t1 = fieldBytes t2) : t1 = t2 := by
   obtain ⟨tag1, step1, hi1, lo1⟩ := t1
   obtain ⟨tag2, step2, hi2, lo2⟩ := t2
   simp only [fieldBytes] at h
+  obtain ⟨h, _⟩ := List.append_inj' h (by simp [bytesLE_length])
   obtain ⟨h, htag⟩ := List.append_inj' h (by simp [bytesLE_length])
   obtain ⟨hlo, hhi⟩ := List.append_inj' h (by simp [bytesLE_length])
   obtain ⟨hstep, htag⟩ := bitVec_append_inj (bytesLE_injective htag)

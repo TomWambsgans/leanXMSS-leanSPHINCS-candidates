@@ -59,13 +59,13 @@ theorem compressions_bind {α β : Type} (f : QueryImpl HashSpec Id)
 
 theorem tweakableHashInput_length (parameter : PublicParameter) (domain : HashDomain)
     (payload : HashInput) :
-    (tweakableHashInput parameter domain payload).length = 24 + payload.length := by
+    (tweakableHashInput parameter domain payload).length = 32 + payload.length := by
   simp [tweakableHashInput, tweakBytes, fieldBytes, bytesLE_length]
   omega
 
 @[simp] theorem compressions_tweakableHash (f : QueryImpl HashSpec Id)
     (parameter : PublicParameter) (domain : HashDomain) (payload : HashInput) :
-    compressions f (Concrete.tweakableHash parameter domain payload) = blocks (24 + payload.length) := by
+    compressions f (Concrete.tweakableHash parameter domain payload) = blocks (32 + payload.length) := by
   rw [Concrete.tweakableHash, compressions_bind, compressions_oracleHash,
     compressions_pure, Nat.add_zero, tweakableHashInput_length]
 
@@ -187,7 +187,7 @@ theorem rootsPayload_length (tops : Coord → Digest × Digest) : (rootsPayload 
   simp [rootsPayload, nodePayload, bytesLE_length, forestCoords]
 
 /-- One coordinate costs 23 compressions: per sub-tree 5 chain steps, 2 for the WOTS-key leaf and 2
-folds; 2 for the tree leaf (88 bytes); 3 folds. -/
+folds; 2 for the tree leaf (96 bytes); 3 folds. -/
 @[simp] theorem compressions_coordRecover (mark : CoordMark) (opening : CoordOpening) :
     compressions f (coordRecover parameter index c mark opening) = 23 := by
   rw [coordRecover, compressions_bind, compressions_sequenceFin, compressions_bind, superHash,
@@ -201,7 +201,7 @@ folds; 2 for the tree leaf (88 bytes); 3 folds. -/
 
 end Coord
 
-/-- The forest recovery costs 189 compressions: 23 per coordinate and 5 for the key (280 bytes). -/
+/-- The forest recovery costs 189 compressions: 23 per coordinate and 5 for the key (288 bytes). -/
 @[simp] theorem compressions_forestRecover (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (marks : Coord → CoordMark) (opening : Coord → CoordOpening) :
     compressions f (forestRecover parameter index marks opening) = 189 := by

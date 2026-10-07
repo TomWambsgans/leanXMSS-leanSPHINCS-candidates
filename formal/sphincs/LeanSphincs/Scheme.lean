@@ -10,7 +10,7 @@ is unbounded at the source level over a u32 counter; see PROOF.md for that misma
 
 Parameters, serialized hash inputs, key generation, signing, and verification of the scheme in
 `leanSPHINCS.tex`, with the hash inputs of `crates/sphincs`: the 16-byte public parameter, the
-8-byte address of the call, then the payload. One XMSS tree of height
+16-byte address of the call (8 bytes of fields, then 8 zero bytes), then the payload. One XMSS tree of height
 `h = 26`, WOTS+C with `64` chains of length `4` and target sum `120`, and FORS with `k = 24`
 trees of `2^a = 1024` leaves, `a = 10`. A FORS tree has no root hash: the FORS key hashes the two
 nodes of level `a - 1 = 9` of every tree. A pruned key keeps one subtree of `2^b` leaves, placed by the low bits of
@@ -104,10 +104,23 @@ def messageDigestBits : Nat := totalHeight + ftsTrees * ftsTreeHeight
 
 abbrev MessageDigest := BitVec messageDigestBits
 
-/-- The first `h + k * a` bits of the two digest calls, read as one little-endian string: call `0`
-gives bits `0 .. 255`, call `1` the bits from `256` on. -/
+/-- The FORS indices one digest call gives: `12` fields of `a = 10` bits, six in each of the first
+two 64-bit words of the output (bits `0 .. 59` and `64 .. 123`). The top four bits of each word
+are not used. -/
+def callIndices (output : HashOutput) : BitVec 120 :=
+  output.extractLsb' 64 60 ++ output.extractLsb' 0 60
+
+/-- The fields call `0` gives, the index first: the low `h = 26` bits of the last 16 bytes of the
+output (bits `128 .. 153`), then its `12` FORS indices. -/
+def firstCallFields (first : HashOutput) : BitVec 146 :=
+  callIndices first ++ first.extractLsb' 128 totalHeight
+
+/-- The fields of the two digest calls, as one string of `h + k * a` bits: the index, then the
+`k = 24` FORS indices in order (`digest_fields` in `crates/sphincs/src/scheme.rs`). The index is bits
+`128 .. 153` of call `0`. FORS index `kappa` is in call `kappa / 12`, at bit
+`64 * ((kappa % 12) / 6) + 10 * (kappa % 6)`: no field lies across two 64-bit words. -/
 def truncateMessageDigest (first second : HashOutput) : MessageDigest :=
-  (second ++ first).extractLsb' 0 messageDigestBits
+  (callIndices second ++ firstCallFields first).extractLsb' 0 messageDigestBits
 
 /-- `pk = (root, P)`. -/
 structure PublicKey where
@@ -144,11 +157,12 @@ structure TweakFields where
   lo : BitVec 32
 deriving DecidableEq
 
-/-- The 8 address bytes `A` that follow `P` in every hash input: `lo` (4 bytes) and `hi` (3 bytes),
-least significant byte first, then one byte `type + 32 * step`. -/
+/-- The 16 address bytes `A` that follow `P` in every hash input: `lo` (4 bytes) and `hi` (3 bytes),
+least significant byte first, one byte `type + 32 * step`, then 8 zero bytes. With `P` they fill
+half a block, so every value of a payload starts on a 16-byte boundary. -/
 def fieldBytes (fields : TweakFields) : HashInput :=
   bytesLE 4 fields.lo ++ bytesLE 3 fields.hi ++
-    bytesLE 1 (BitVec.ofNat 8 (fields.tag.toNat + 32 * fields.step.toNat))
+    bytesLE 1 (BitVec.ofNat 8 (fields.tag.toNat + 32 * fields.step.toNat)) ++ List.replicate 8 0
 
 /-- Convert the four integer fields to their fixed widths. -/
 def tweakFields (tag step hi lo : Nat) : TweakFields :=
@@ -181,7 +195,7 @@ def hashDomainFields : HashDomain → TweakFields
   | .ftsRoots index => tweakFields 11 0 0 index
   | .message call => tweakFields 12 0 call 0
 
-/-- The exact 8 address bytes of a hash domain. -/
+/-- The exact 16 address bytes of a hash domain. -/
 def tweakBytes (domain : HashDomain) : HashInput :=
   fieldBytes (hashDomainFields domain)
 
@@ -434,12 +448,12 @@ def ftsRecover (parameter : PublicParameter) (index : Index) (leaves : IndexGrou
 
 /-! ### The message digest -/
 
-/-- `m || 0^8 || rho`, what the message digest hashes after the parameter and the address. The
-eight zero bytes fill the first 64-byte block `P || A || m || 0^8`, which a signer absorbs once per
-message; the second block is the randomizer alone. `P` binds the key, so the root is not hashed: the
-argument is kept for the callers. -/
+/-- `m || rho`, what the message digest hashes after the parameter and the address. The first
+64-byte block is `P || A || m`, which a signer absorbs once per message; the second block is the
+randomizer alone. `P` binds the key, so the root is not hashed: the argument is kept for the
+callers. -/
 def messageDigestPayload (_root : Digest) (message : Message) (randomness : Randomness) : HashInput :=
-  bytesLE 32 message ++ List.replicate 8 0 ++ bytesLE 16 randomness
+  bytesLE 32 message ++ bytesLE 16 randomness
 
 /-- One untruncated digest call (`digest_block`). -/
 def messageDigestCall (parameter : PublicParameter) (root : Digest) (message : Message)
@@ -450,11 +464,12 @@ def messageDigestCall (parameter : PublicParameter) (root : Digest) (message : M
 def digestIndex (digest : MessageDigest) : Index :=
   (digest.extractLsb' 0 totalHeight).toFin
 
-/-- The leaf index alone, from the first digest call (`index_of_block`). -/
+/-- The leaf index alone, from the first digest call (`index_of_block`): the low `h` bits of its
+last 16 bytes. -/
 def blockIndex (first : HashOutput) : Index :=
-  (first.extractLsb' 0 totalHeight).toFin
+  (first.extractLsb' digestBits totalHeight).toFin
 
-/-- `Digest(P, m, rho)` (`message_digest`): calls `0` and `1`, truncated to `h + k * a` bits. The
+/-- `Digest(P, m, rho)` (`message_digest`): the `h + k * a` field bits of calls `0` and `1`. The
 root is not hashed. -/
 def messageDigest (parameter : PublicParameter) (root : Digest) (message : Message)
     (randomness : Randomness) : m MessageDigest := do

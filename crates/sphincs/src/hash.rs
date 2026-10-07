@@ -4,7 +4,7 @@ use std::cell::Cell;
 
 use crate::*;
 
-pub const ADDRESS_LEN: usize = 8;
+pub const ADDRESS_LEN: usize = 16;
 
 // Hash types (low five bits of the last byte of the address).
 pub const TWEAK_PRF: u8 = 0;
@@ -44,7 +44,8 @@ impl Tweak {
     }
 }
 
-/// The 8 bytes that follow `P` in a hash input: `[lo:4 | hi:3 | t + 32 step:1]`, the fields little endian.
+/// The 16 bytes that follow `P` in a hash input: `[lo:4 | hi:3 | t + 32 step:1 | 0^8]`, the fields little
+/// endian. With `P` they fill half a block, so every value of a payload starts on a 16-byte boundary.
 pub fn address(tw: &Tweak) -> [u8; ADDRESS_LEN] {
     let mut out = [0u8; ADDRESS_LEN];
     out[..4].copy_from_slice(&tw.lo.to_le_bytes());
@@ -157,7 +158,7 @@ mod tests {
     #[test]
     fn address_layout() {
         let tw = tweak(TWEAK_FTS_NODE, 0x123456, 0x89abcdef).step(5);
-        assert_eq!(address(&tw), [0xef, 0xcd, 0xab, 0x89, 0x56, 0x34, 0x12, 0xaa]);
+        assert_eq!(address(&tw), [0xef, 0xcd, 0xab, 0x89, 0x56, 0x34, 0x12, 0xaa, 0, 0, 0, 0, 0, 0, 0, 0]);
         let pp: PublicParam = std::array::from_fn(|i| i as u8 + 1);
         let payload = [9u8; N];
         let mut input = pp.to_vec();
@@ -172,7 +173,7 @@ mod tests {
     fn midstate_matches_one_pass() {
         let pp: PublicParam = std::array::from_fn(|i| 3 * i as u8);
         let tw = tweak(TWEAK_MSG, 1, 0);
-        for fixed_len in [40, 48] {
+        for fixed_len in [32, 40] {
             let (fixed, tail) = (vec![7u8; fixed_len], [9u8; 16]);
             let input = [&pp[..], &address(&tw), &fixed, &tail].concat();
             let before = compressions();

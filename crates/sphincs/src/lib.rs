@@ -6,7 +6,7 @@
 
 //! The leanSphincs candidate over BLAKE2s.
 //!
-//! `Th(P, tw, M) = BLAKE2s(P | tw | M)` truncated to `n = 16` bytes, with an 8-byte address `tw`.
+//! `Th(P, tw, M) = BLAKE2s(P | tw | M)` truncated to `n = 16` bytes, with a 16-byte address `tw` (8 bytes of fields, 8 zero bytes).
 //! Every hash call goes through [`hash`], which also counts BLAKE2s compressions (thread-local) so
 //! tests can check the note's costs.
 

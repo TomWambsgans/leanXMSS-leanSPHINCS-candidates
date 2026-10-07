@@ -1790,11 +1790,11 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.ForsPotential.landing_le_one
 
-/-- info: 'LeanForest.Security.ForsPotential.localDigestView_fst' depends on axioms: [propext] -/
+/-- info: 'LeanForest.Security.ForsPotential.localDigestView_fst' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.ForsPotential.localDigestView_fst
 
-/-- info: 'LeanForest.Security.ForsPotential.localDigestView_snd' depends on axioms: [propext] -/
+/-- info: 'LeanForest.Security.ForsPotential.localDigestView_snd' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.ForsPotential.localDigestView_snd
 
@@ -6698,7 +6698,7 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.probEvent_accept
 
-/-- info: 'LeanForest.Concrete.digestMarks_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Concrete.digestMarks_eq' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Concrete.digestMarks_eq
 
@@ -6706,9 +6706,13 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Concrete.evalDist_fullDigestView_uniform
 
-/-- info: 'LeanForest.Concrete.extractLsb'_extractLsb'' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'LeanForest.Concrete.field_inj' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Concrete.extractLsb'_extractLsb'
+#print axioms LeanForest.Concrete.field_inj
+
+/-- info: 'LeanForest.Concrete.field_parts' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Concrete.field_parts
 
 /-- info: 'LeanForest.Concrete.fullDigestView_bijective' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -6717,6 +6721,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Concrete.fullDigestView_injective' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Concrete.fullDigestView_injective
+
+/-- info: 'LeanForest.Concrete.getLsbD_of_extract' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Concrete.getLsbD_of_extract
 
 /-- info: 'LeanForest.Completeness.PreservesFresh.bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -11454,6 +11462,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Adversary.mk.sizeOf_spec
 
+/-- info: 'LeanForest.evalDist_hashOutput_extractAt_uniform' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.evalDist_hashOutput_extractAt_uniform
+
 /-- info: 'LeanForest.evalDist_hashOutput_extract_uniform' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.evalDist_hashOutput_extract_uniform
@@ -11473,6 +11485,10 @@ import LeanForest.World
 /-- info: 'LeanForest.probEvent_uniform_truncateHash_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.probEvent_uniform_truncateHash_mem
+
+/-- info: 'LeanForest.splitHashOutputAt_bijective' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.splitHashOutputAt_bijective
 
 /-- info: 'LeanForest.splitHashOutput_bijective' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

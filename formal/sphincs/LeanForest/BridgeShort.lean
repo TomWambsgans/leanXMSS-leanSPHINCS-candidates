@@ -2,7 +2,7 @@ import LeanForest.SecurityVerifier
 import LeanForest.Randomized
 import VCVio.OracleComp.QueryTracking.QueryBound
 
-/-! Every hash input of the honest algorithms and of the verifier has at most 1048 bytes.
+/-! Every hash input of the honest algorithms and of the verifier has at most 1056 bytes.
 Longer adversarial inputs never meet honest work, which lets them be simulated privately. -/
 
 open OracleComp OracleSpec
@@ -13,8 +13,8 @@ open Concrete
 
 attribute [local irreducible] digestAttemptLimit encodingAttemptLimit
 
-/-- The longest honest input: 16 parameter bytes, 8 address bytes and 64 chain ends. -/
-def bound : Nat := 1048
+/-- The longest honest input: 16 parameter bytes, 16 address bytes and 64 chain ends. -/
+def bound : Nat := 1056
 
 def IsShort (input : HashInput) : Prop := input.length ≤ bound
 
@@ -50,16 +50,16 @@ theorem Only.query {input : HashInput} (h : IsShort input) :
   intro hlong
   exact absurd h hlong
 
-theorem fieldBytes_length (fields : TweakFields) : (fieldBytes fields).length = 8 := by
+theorem fieldBytes_length (fields : TweakFields) : (fieldBytes fields).length = 16 := by
   simp [fieldBytes, bytesLE_length]
 
 theorem tweakableHashInput_length (parameter : PublicParameter) (domain : HashDomain)
     (payload : HashInput) :
-    (tweakableHashInput parameter domain payload).length = 24 + payload.length := by
+    (tweakableHashInput parameter domain payload).length = 32 + payload.length := by
   simp only [tweakableHashInput, tweakBytes, List.length_append, fieldBytes_length, bytesLE_length]
 
 theorem keygenHashInput_length (parameter : PublicParameter) (domain : KeygenDomain)
-    (seed : MasterSeed) : (keygenHashInput parameter domain seed).length = 56 := by
+    (seed : MasterSeed) : (keygenHashInput parameter domain seed).length = 64 := by
   simp [keygenHashInput, fieldBytes_length, bytesLE_length]
 
 theorem Only.tweakableHash (parameter : PublicParameter) (domain : HashDomain)
@@ -126,7 +126,7 @@ theorem childPayload_length (ends : FChain → Digest) :
   rfl
 
 theorem messageDigestPayload_length (root : Digest) (message : Message) (randomness : Randomness) :
-    (messageDigestPayload root message randomness).length = 56 := by
+    (messageDigestPayload root message randomness).length = 48 := by
   simp [messageDigestPayload, bytesLE_length]
 
 theorem Only.chainWalk (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)

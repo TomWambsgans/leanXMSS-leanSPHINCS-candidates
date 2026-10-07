@@ -32,7 +32,7 @@ omit [Params] in
 theorem payload_pair_injective (root : Digest) {m m' : Message} {ρ ρ' : Randomness}
     (h : messageDigestPayload root m ρ = messageDigestPayload root m' ρ') : m = m' ∧ ρ = ρ' := by
   have hparts := List.append_inj h (by simp [bytesLE_length])
-  exact ⟨bytesLE_injective (List.append_cancel_right hparts.1), bytesLE_injective hparts.2⟩
+  exact ⟨bytesLE_injective hparts.1, bytesLE_injective hparts.2⟩
 
 section Defs
 

@@ -2,7 +2,7 @@
 """Sizes, compression counts and lifetime of the leanSphincs candidate (the numbers in leanSPHINCS.tex).
 
 Costs count compression-function calls of a hash with 64-byte blocks and no padding overhead, such as
-BLAKE2s: hashing l bytes costs max(1, ceil(l / 64)). Every call hashes P (16 B) || address (8 B) || input.
+BLAKE2s: hashing l bytes costs max(1, ceil(l / 64)). Every call hashes P (16 B) || address (16 B) || input.
 A pruned signer tries the randomizers R_0 + i, with R_0 one hash of the seed and the message. The digest's
 first block does not depend on the randomizer, so an attempt costs one compression.
 """
@@ -13,7 +13,7 @@ import math
 from fors_security import Params, forgery_bits_exact, max_log2_sigs
 
 N = 16  # bytes per hash value
-PREFIX = 24  # the public parameter and the address
+PREFIX = 32  # the public parameter and the address
 
 
 def comp(input_bytes):
@@ -60,7 +60,7 @@ def main():
     derive, step, node, enc = comp(32), comp(N), comp(2 * N), comp(N + 4)
     # A FORS tree has no root hash: the FORS key hashes the two nodes below the root of every tree.
     wots_pk, fors_roots = comp(v * N), comp(2 * k * N)
-    rnd, msg_block = comp(32 + 32), comp(32 + 8 + N)  # S || m ;  m || 0^8 || rho
+    rnd, msg_block = comp(32 + 32), comp(32 + N)  # S || m ;  m || rho
     blocks = math.ceil((h + k * a) / 256)
     digest = blocks * msg_block
     attempt = 1  # the second block of the first digest call, at randomizer R_0 + i

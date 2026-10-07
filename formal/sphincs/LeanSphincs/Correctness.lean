@@ -1,4 +1,5 @@
 import LeanSphincs.Pruning
+import LeanSphincs.Uniform
 
 /-! Signer/verifier correctness for the one-layer candidate and every pruned subtree. -/
 
@@ -63,14 +64,14 @@ theorem leafIndexAt_eq (index : Index) (lay : Layer) : leafIndexAt index lay = i
 omit [Params] in
 theorem digestIndex_truncate (first second : HashOutput) :
     digestIndex (truncateMessageDigest first second) = blockIndex first := by
-  unfold digestIndex truncateMessageDigest blockIndex
+  unfold digestIndex blockIndex
   congr 1
   apply BitVec.eq_of_getLsbD_eq
   intro i hi
   have hi26 : i < 26 := hi
-  simp [BitVec.getLsbD_append,
-    show i < messageDigestBits by change i < 266; omega,
-    show i < hashOutputBits by change i < 256; omega, hi]
+  rw [BitVec.getLsbD_extractLsb', BitVec.getLsbD_extractLsb',
+    getLsbD_truncateMessageDigest, Nat.zero_add, if_pos hi26]
+  rfl
 
 def digestValue (secretKey : Seeded.SecretKey) (message : Message) (randomness : Randomness) :
     MessageDigest :=

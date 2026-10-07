@@ -30,7 +30,7 @@ theorem msgInput_inj (secretKey : Seeded.SecretKey) (message : Message)
     randomness = randomness' := by
   simp only [msgInput, tweakableHashInput, messageDigestPayload, List.append_assoc] at h
   exact LeanForest.bytesLE_injective (List.append_cancel_left (List.append_cancel_left
-    (List.append_cancel_left (List.append_cancel_left h))))
+    (List.append_cancel_left h)))
 
 omit [Params] in
 theorem cached_run (input : HashInput) (cache : QueryCache HashSpec) (answer : HashOutput)

@@ -6290,9 +6290,17 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.fieldBytes_layout_example
 
+/-- info: 'LeanSphincs.fieldBytes_length' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.fieldBytes_length
+
 /-- info: 'LeanSphincs.layer_eq' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.layer_eq
+
+/-- info: 'LeanSphincs.messageDigestInput_length' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.messageDigestInput_length
 
 /-- info: 'LeanSphincs.ofNat_inj_of_lt' depends on axioms: [propext] -/
 #guard_msgs (whitespace := lax) in
@@ -10150,13 +10158,65 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Adversary.mk.sizeOf_spec
 
+/-- info: 'LeanSphincs.append_inj' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.append_inj
+
+/-- info: 'LeanSphincs.blockIndexBits_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.blockIndexBits_injective
+
+/-- info: 'LeanSphincs.callIndices_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.callIndices_injective
+
+/-- info: 'LeanSphincs.digestLeaves_truncate' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.digestLeaves_truncate
+
+/-- info: 'LeanSphincs.evalDist_blockIndexBits_uniform' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.evalDist_blockIndexBits_uniform
+
+/-- info: 'LeanSphincs.evalDist_callIndices_uniform' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.evalDist_callIndices_uniform
+
+/-- info: 'LeanSphincs.evalDist_firstCallFields_uniform' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.evalDist_firstCallFields_uniform
+
 /-- info: 'LeanSphincs.evalDist_hashOutput_extract_uniform' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.evalDist_hashOutput_extract_uniform
 
+/-- info: 'LeanSphincs.evalDist_hashOutput_field_uniform' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.evalDist_hashOutput_field_uniform
+
 /-- info: 'LeanSphincs.evalDist_truncateHash_uniform' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.evalDist_truncateHash_uniform
+
+/-- info: 'LeanSphincs.firstCallFields_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.firstCallFields_injective
+
+/-- info: 'LeanSphincs.getLsbD_callIndices' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.getLsbD_callIndices
+
+/-- info: 'LeanSphincs.getLsbD_eq_of_extract_eq' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.getLsbD_eq_of_extract_eq
+
+/-- info: 'LeanSphincs.getLsbD_firstCallFields' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.getLsbD_firstCallFields
+
+/-- info: 'LeanSphincs.getLsbD_truncateMessageDigest' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.getLsbD_truncateMessageDigest
 
 /-- info: 'LeanSphincs.hashOutput_eq_of_extract' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

@@ -17,7 +17,7 @@ attribute [local instance] Classical.propDecidable
 
 theorem randomizerHashInput_length (parameter : PublicParameter) (seed : MasterSeed)
     (message : Message) :
-    (randomizerHashInput parameter seed message).length = 88 := by
+    (randomizerHashInput parameter seed message).length = 96 := by
   simp [randomizerHashInput, fieldBytes_length, bytesLE_length]
 
 theorem randomizerHashInput_short (parameter : PublicParameter) (seed : MasterSeed)

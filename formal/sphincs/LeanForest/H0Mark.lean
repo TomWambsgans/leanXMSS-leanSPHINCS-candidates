@@ -1,7 +1,7 @@
 import LeanForest.ForestCoverage
 import LeanForest.H0Factor
 
-/-! A tree's 26-bit field is a uniform mark: decoding is a bijection onto the marks (a tree leaf,
+/-! A tree's 26-bit field (`coordField`, the 26 digest bits of the tree) is a uniform mark: decoding is a bijection onto the marks (a tree leaf,
 a WOTS key and a codeword index per subtree), so averages over uniform fields are averages over
 uniform marks. -/
 
@@ -22,13 +22,13 @@ theorem decodeMark_child_val (v : FieldVal) (j : SubIdx) :
     ((decodeMark v).child j).val = v.val / 2 ^ (4 + 11 * j.val) % 8 := by
   simp only [decodeMark]
   rw [extract_val]
-  simp [childOffset, subHeight]
+  simp [fieldChildOffset, subHeight]
 
 theorem decodeMark_word_val (v : FieldVal) (j : SubIdx) :
     ((decodeMark v).word j).val = v.val / 2 ^ (7 + 11 * j.val) % 256 := by
   simp only [decodeMark]
   rw [extract_val]
-  simp [wordOffset]
+  simp [fieldWordOffset]
 
 /-- The field of a mark. -/
 def encodeMark (m : CoordMark) : FieldVal :=

@@ -59,13 +59,13 @@ theorem compressions_bind {α β : Type} (f : QueryImpl HashSpec Id)
 
 theorem tweakableHashInput_length (parameter : PublicParameter) (domain : HashDomain)
     (payload : HashInput) :
-    (tweakableHashInput parameter domain payload).length = 24 + payload.length := by
+    (tweakableHashInput parameter domain payload).length = 32 + payload.length := by
   simp [tweakableHashInput, tweakBytes, fieldBytes, bytesLE_length]
   omega
 
 @[simp] theorem compressions_tweakableHash (f : QueryImpl HashSpec Id)
     (parameter : PublicParameter) (domain : HashDomain) (payload : HashInput) :
-    compressions f (Concrete.tweakableHash parameter domain payload) = blocks (24 + payload.length) := by
+    compressions f (Concrete.tweakableHash parameter domain payload) = blocks (32 + payload.length) := by
   rw [Concrete.tweakableHash, compressions_bind, compressions_oracleHash,
     compressions_pure, Nat.add_zero, tweakableHashInput_length]
 
@@ -162,7 +162,7 @@ theorem ftsTopsPayload_length (tops : FtsTree → Digest × Digest) :
     (randomness : Randomness) (call : Fin 2) :
     compressions f (messageDigestCall parameter root message randomness call) = 2 := by
   simp only [messageDigestCall, compressions_oracleHash, tweakableHashInput_length,
-    messageDigestPayload, List.length_append, List.length_replicate, bytesLE_length]
+    messageDigestPayload, List.length_append, bytesLE_length]
   rfl
 
 @[simp] theorem compressions_messageDigest (f : QueryImpl HashSpec Id)

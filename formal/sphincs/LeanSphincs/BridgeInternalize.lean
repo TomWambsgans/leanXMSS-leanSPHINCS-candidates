@@ -3,7 +3,7 @@ import LeanSphincs.SecuritySeedCoupling
 import LeanSphincs.SecurityPreparedScheme
 
 /-! Long adversarial hash inputs are simulated privately by the adversary. No honest party or
-verifier queries an input longer than 1048 bytes, so the adversary can answer its long inputs from
+verifier queries an input longer than 1056 bytes, so the adversary can answer its long inputs from
 a private cache. This file defines the internalized adversary, the run relation (`Block`) between
 the original and the internalized executions with their short and total query counts, and shows
 that the internalized game only queries short inputs. `BridgeDetInternalize` applies it to the

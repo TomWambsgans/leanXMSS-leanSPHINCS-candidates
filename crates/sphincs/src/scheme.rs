@@ -82,17 +82,14 @@ pub enum VerifyError {
     RootMismatch,
 }
 
-/// The 8 zero bytes that end the first block of the message digest.
-const DIGEST_PAD: [u8; 8] = [0; 8];
-
-/// The state of digest call `call` after its first block, `P | address | m | 0^8`. The randomizer
-/// is the second block, so grinding it costs one compression per attempt.
+/// The state of digest call `call` after its first block, `P | address | m`. The randomizer is the
+/// second block, so grinding it costs one compression per attempt.
 pub fn digest_midstate(pp: &PublicParam, m: &Message, call: u32) -> Midstate {
-    Midstate::new(pp, &tweak(TWEAK_MSG, call, 0), &[m, &DIGEST_PAD])
+    Midstate::new(pp, &tweak(TWEAK_MSG, call, 0), &[m])
 }
 
-/// One call of the message digest, `P | address | m | 0^8 | rho`, untruncated. `P` binds the key, so
-/// the root is not hashed. The leaf index lives in the low `h` bits of call 0.
+/// One call of the message digest, `P | address | m | rho`, untruncated. `P` binds the key, so the
+/// root is not hashed.
 pub fn digest_block(pp: &PublicParam, rho: &Randomizer, m: &Message, call: u32) -> [u8; 32] {
     digest_midstate(pp, m, call).finish(rho)
 }
@@ -102,23 +99,25 @@ pub fn digest_index(pp: &PublicParam, rho: &Randomizer, m: &Message) -> u64 {
     index_of_block(&digest_block(pp, rho, m, 0))
 }
 
+/// The leaf index: the low `h` bits of the last 16 bytes of call 0.
 pub fn index_of_block(d0: &[u8; 32]) -> u64 {
-    u64::from_le_bytes(d0[..8].try_into().unwrap()) & ((1 << H) - 1)
+    u64::from_le_bytes(d0[16..24].try_into().unwrap()) & ((1 << H) - 1)
 }
 
-/// The message digest: `h + k a = 266` bits from two calls, read as the leaf index and the `k`
-/// FORS indices (little-endian bit order).
+/// FORS indices per digest call: six in each of the two 64-bit words of its first 16 bytes.
+const INDICES_PER_CALL: usize = 12;
+
+/// The message digest, from two calls, read as the leaf index and the `k` FORS indices. No field
+/// lies across two 64-bit words: FORS index `kappa` is in call `kappa / 12`, word `(kappa % 12) / 6`
+/// of its first 16 bytes, at bit `a * (kappa % 6)`; the leaf index is in the last 16 bytes of call 0.
 pub fn message_digest(pp: &PublicParam, rho: &Randomizer, m: &Message) -> (u64, [u32; K]) {
-    let mut bits = [0u8; 64];
-    bits[..32].copy_from_slice(&digest_block(pp, rho, m, 0));
-    bits[32..].copy_from_slice(&digest_block(pp, rho, m, 1));
-    let field = |offset: usize, len: usize| {
-        (0..len).fold(0u64, |value, bit| {
-            let position = offset + bit;
-            value | (u64::from(bits[position / 8] >> (position % 8) & 1) << bit)
-        })
+    let calls = [digest_block(pp, rho, m, 0), digest_block(pp, rho, m, 1)];
+    let fors_index = |kappa: usize| {
+        let r = kappa % INDICES_PER_CALL;
+        let word = &calls[kappa / INDICES_PER_CALL][8 * (r / 6)..][..8];
+        (u64::from_le_bytes(word.try_into().unwrap()) >> (A * (r % 6)) & ((1 << A) - 1)) as u32
     };
-    (field(0, H), std::array::from_fn(|kappa| field(H + kappa * A, A) as u32))
+    (index_of_block(&calls[0]), std::array::from_fn(fors_index))
 }
 
 pub fn xmss_node(pp: &PublicParam, level: usize, j: u64, left: &Digest, right: &Digest) -> Digest {
@@ -360,9 +359,9 @@ mod tests {
         let m: Message = std::array::from_fn(|i| (7 * i) as u8);
         let sig = sign(&sk, &m);
         let digest = blake2s::hash(&sig.to_bytes());
-        assert_eq!(hex(&pk.to_bytes()), "11fe383dcdd8029dc2c62e4978d963b85b9238b63cb662fb192b69310d19501e");
-        assert_eq!(hex(&digest), "2c7e52fc69d342eaaf22404f19bdd80c4dd51fd3010b8dcfd866b46d67b5d9e5");
-        assert_eq!(sig.counter, 5450);
+        assert_eq!(hex(&pk.to_bytes()), "25e2cd4721a96bd25c7c164099a62f9df39e809c5482e50b8b8b76a66fab6507");
+        assert_eq!(hex(&digest), "a19b6a99d1e0efd22e9847929c7cde171fc9e840204465e658d55e470d697202");
+        assert_eq!(sig.counter, 246);
     }
 
     #[test]
@@ -396,9 +395,24 @@ mod tests {
         carry[0] = 0xff;
         assert_eq!(randomizer(&carry, 1)[..2], [0, 1], "little endian");
         let rho = randomizer(&base, 7);
-        let input = [&pp[..], &address(&tweak(TWEAK_MSG, 1, 0)), &m, &[0; 8], &rho].concat();
+        let input = [&pp[..], &address(&tweak(TWEAK_MSG, 1, 0)), &m, &rho].concat();
         assert_eq!(input.len(), 80, "the randomizer is the second block");
         assert_eq!(digest_block(&pp, &rho, &m, 1), blake2s::hash(&input));
+    }
+
+    /// Pins where the digest's fields are: six FORS indices in each of the first two 64-bit words of
+    /// a call, the leaf index in the third word of call 0.
+    #[test]
+    fn digest_fields() {
+        let (pp, m, rho) = ([3u8; PUBLIC_PARAM_LEN], [5u8; MESSAGE_LEN], [7u8; N]);
+        let calls = [digest_block(&pp, &rho, &m, 0), digest_block(&pp, &rho, &m, 1)];
+        let word = |call: usize, w: usize| u64::from_le_bytes(calls[call][8 * w..][..8].try_into().unwrap());
+        let (index, fors) = message_digest(&pp, &rho, &m);
+        assert_eq!(index, word(0, 2) % (1 << H));
+        for (kappa, &value) in fors.iter().enumerate() {
+            let expected = word(kappa / 12, kappa % 12 / 6) >> (A * (kappa % 6)) & 1023;
+            assert_eq!(u64::from(value), expected, "FORS index {kappa}");
+        }
     }
 
     #[test]
