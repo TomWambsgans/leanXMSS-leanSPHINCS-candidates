@@ -6,6 +6,13 @@ that recovers the canonical forest key either opens every needed chain at its ca
 canonical sub-tree and top-tree paths, or one of the verifier's actual queries uses a different input
 producing a canonical value: a forest chain step (`ChainMatch`), a child leaf, a sub-tree node, a
 super-child, a top-tree node or the roots hash. No collision-freeness or security assumption is used.
+
+A tree has no root hash. The roots hash takes the two level-3 nodes of every top tree and the
+super-child the two level-2 nodes of each of its sub-trees: the opening gives one of the two by
+folding and the other as its last path element. An opening whose sixteen level-3 nodes are the
+canonical ones (else `RootsMatch`) has, in every tree, the canonical last path element and a fold of
+3 levels that reaches a canonical node, which is classified as a fold to a root was; likewise for the
+four level-2 nodes of a super-child (`SuperMatch`) and the folds of 2 levels below them.
 -/
 
 open OracleComp OracleSpec
@@ -31,9 +38,19 @@ theorem flatMap_ofFn_injective {α β : Type} (g : α → List β) (len : Nat)
       | zero => exact hzero
       | succ j => exact congrFun hsucc j
 
-theorem rootsPayload_injective {roots roots' : Coord → Digest}
-    (h : rootsPayload roots = rootsPayload roots') : roots = roots' :=
-  flatMap_ofFn_injective (bytesLE 16) 16 (bytesLE_length 16) (fun _ _ => bytesLE_injective) h
+theorem rootsPayload_injective {tops tops' : Coord → Digest × Digest}
+    (h : rootsPayload tops = rootsPayload tops') : tops = tops' :=
+  flatMap_ofFn_injective (fun pair : Digest × Digest => nodePayload pair.1 pair.2) 32
+    (fun pair => by simp [nodePayload, bytesLE_length])
+    (fun _ _ hpair => Prod.ext (nodePayload_injective hpair).1 (nodePayload_injective hpair).2) h
+
+theorem superPayload_injective {tops tops' : SubIdx → Digest × Digest}
+    (h : superPayload tops = superPayload tops') : tops = tops' := by
+  obtain ⟨h0, h1⟩ := List.append_inj h (by simp [nodePayload, bytesLE_length])
+  funext j
+  fin_cases j
+  · exact Prod.ext (nodePayload_injective h0).1 (nodePayload_injective h0).2
+  · exact Prod.ext (nodePayload_injective h1).1 (nodePayload_injective h1).2
 
 theorem childPayload_injective {ends ends' : FChain → Digest}
     (h : childPayload ends = childPayload ends') : ends = ends' :=
@@ -210,43 +227,39 @@ def canonicalSubPath (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (lev
 def canonicalTopPath (c : Coord) (s : SuperIdx) (level : Fin topHeight) : Digest :=
   Completeness.topNodeValue f parameter index c seed level.val (Nat.xor (s.val / 2 ^ level.val) 1)
 
-/-- The canonical coordinate roots. -/
-def canonicalRoots : Coord → Digest :=
-  fun c => Completeness.topNodeValue f parameter index c seed topHeight 0
+/-- The canonical level-3 nodes of every coordinate, the inputs of the forest key. -/
+def canonicalRoots : Coord → Digest × Digest :=
+  fun c => Completeness.topTopsValue f parameter index c seed
 
-theorem canonical_sub_root (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) :
+/-- Folding the canonical child leaf through the canonical path reaches the canonical nodes. -/
+theorem canonical_sub_node (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (levels : Nat)
+    (hlevels : levels ≤ subHeight) :
     merkleValue f parameter (subDomain index c s j) a.val
         (subPathExt (canonicalSubPath f parameter index seed c s j a))
-        (Completeness.childLeafValue f parameter index c s j seed a) subHeight =
-      Completeness.subNodeValue f parameter index c s j seed subHeight 0 := by
-  rw [merkleValue, merkleFold_subFold _ _ _ _ _ _ _ _ le_rfl, ← Completeness.subNodeValue_zero,
-    Completeness.eval_subFold_path f parameter index c s j seed a _ _ le_rfl (fun _ _ _ => rfl),
-    Nat.div_eq_of_lt a.isLt]
+        (Completeness.childLeafValue f parameter index c s j seed a) levels =
+      Completeness.subNodeValue f parameter index c s j seed levels (a.val / 2 ^ levels) := by
+  rw [merkleValue, merkleFold_subFold _ _ _ _ _ _ _ _ hlevels, ← Completeness.subNodeValue_zero,
+    Completeness.eval_subFold_path f parameter index c s j seed a _ _ hlevels (fun _ _ _ => rfl)]
 
-theorem canonical_top_root (c : Coord) (s : SuperIdx) :
+/-- Folding the canonical super-child through the canonical top path reaches the canonical nodes. -/
+theorem canonical_top_node (c : Coord) (s : SuperIdx) (levels : Nat) (hlevels : levels ≤ topHeight) :
     merkleValue f parameter (topDomain index c) s.val (topPathExt (canonicalTopPath f parameter index seed c s))
-        (Completeness.superValue f parameter index c seed s) topHeight =
-      Completeness.topNodeValue f parameter index c seed topHeight 0 := by
-  rw [merkleValue, merkleFold_topFold _ _ _ _ _ _ le_rfl, ← Completeness.topNodeValue_zero,
-    Completeness.eval_topFold_path f parameter index c seed s _ _ le_rfl (fun _ _ _ => rfl),
-    Nat.div_eq_of_lt s.isLt]
+        (Completeness.superValue f parameter index c seed s) levels =
+      Completeness.topNodeValue f parameter index c seed levels (s.val / 2 ^ levels) := by
+  rw [merkleValue, merkleFold_topFold _ _ _ _ _ _ hlevels, ← Completeness.topNodeValue_zero,
+    Completeness.eval_topFold_path f parameter index c seed s _ _ hlevels (fun _ _ _ => rfl)]
 
 theorem superValue_eq (c : Coord) (s : SuperIdx) :
     Completeness.superValue f parameter index c seed s =
       truncateHash (f (tweakableHashInput parameter (.superChild index c s)
-        (nodePayload (Completeness.subNodeValue f parameter index c s 0 seed subHeight 0)
-          (Completeness.subNodeValue f parameter index c s 1 seed subHeight 0)))) := by
-  simp only [Completeness.superValue, Seeded.superNode, superHash, evalWithAnswerFn_bind,
-    Completeness.eval_sequenceFin, Completeness.eval_tweakableHash]
-  rfl
+        (superPayload (Completeness.subTopsValue f parameter index c seed s)))) :=
+  Completeness.superValue_eq f parameter index c seed s
 
 theorem forestKey_eq :
     evalWithAnswerFn f (Seeded.forestKey parameter index seed : OracleComp HashSpec Digest) =
       truncateHash (f (tweakableHashInput parameter (.roots index)
-        (rootsPayload (canonicalRoots f parameter index seed)))) := by
-  simp only [Seeded.forestKey, evalWithAnswerFn_bind, Completeness.eval_sequenceFin,
-    Completeness.eval_tweakableHash]
-  rfl
+        (rootsPayload (canonicalRoots f parameter index seed)))) :=
+  Completeness.forestKey_eq f parameter index seed
 
 end Canonical
 
@@ -266,25 +279,36 @@ def opLeaf (c : Coord) (mark : CoordMark) (j : SubIdx) (values : FChain → Dige
   truncateHash (f (tweakableHashInput parameter (.childLeaf index c mark.super j (mark.child j))
     (childPayload (opEnds f parameter index c mark j values))))
 
-/-- The sub-tree root an opening reaches. -/
-def opSubRoot (c : Coord) (mark : CoordMark) (j : SubIdx) (opening : SubOpening) : Digest :=
+/-- The level-2 node of sub-tree `j` that an opening reaches by folding 2 levels. -/
+def opSubNode (c : Coord) (mark : CoordMark) (j : SubIdx) (opening : SubOpening) : Digest :=
   merkleValue f parameter (subDomain index c mark.super j) (mark.child j).val (subPathExt opening.path)
-    (opLeaf f parameter index c mark j opening.values) subHeight
+    (opLeaf f parameter index c mark j opening.values) (subHeight - 1)
+
+/-- The two level-2 nodes of sub-tree `j` that an opening gives: the one it reaches and its last
+path element, in index order. -/
+def opSubTops (c : Coord) (mark : CoordMark) (j : SubIdx) (opening : SubOpening) : Digest × Digest :=
+  orderTops ((mark.child j).val.testBit (subHeight - 1)) (opSubNode f parameter index c mark j opening)
+    (opening.path subTopLevel)
 
 /-- The super-child an opening reaches. -/
 def opSuper (c : Coord) (mark : CoordMark) (opening : CoordOpening) : Digest :=
   truncateHash (f (tweakableHashInput parameter (.superChild index c mark.super)
-    (nodePayload (opSubRoot f parameter index c mark 0 (opening.sub 0))
-      (opSubRoot f parameter index c mark 1 (opening.sub 1)))))
+    (superPayload fun j => opSubTops f parameter index c mark j (opening.sub j))))
 
-/-- The coordinate root an opening reaches. -/
-def opRoot (c : Coord) (mark : CoordMark) (opening : CoordOpening) : Digest :=
+/-- The level-3 node of a coordinate that an opening reaches by folding 3 levels. -/
+def opTopNode (c : Coord) (mark : CoordMark) (opening : CoordOpening) : Digest :=
   merkleValue f parameter (topDomain index c) mark.super.val (topPathExt opening.top)
-    (opSuper f parameter index c mark opening) topHeight
+    (opSuper f parameter index c mark opening) (topHeight - 1)
 
-/-- The coordinate roots an opening reaches. -/
-def roots (marks : Coord → CoordMark) (opening : Coord → CoordOpening) : Coord → Digest :=
-  fun c => opRoot f parameter index c (marks c) (opening c)
+/-- The two level-3 nodes of a coordinate that an opening gives: the one it reaches and its last top
+path element, in index order. -/
+def opTops (c : Coord) (mark : CoordMark) (opening : CoordOpening) : Digest × Digest :=
+  orderTops (mark.super.val.testBit (topHeight - 1)) (opTopNode f parameter index c mark opening)
+    (opening.top topTopLevel)
+
+/-- The level-3 nodes of every coordinate that an opening gives, the inputs of the roots hash. -/
+def roots (marks : Coord → CoordMark) (opening : Coord → CoordOpening) : Coord → Digest × Digest :=
+  fun c => opTops f parameter index c (marks c) (opening c)
 
 theorem eval_childRecover (c : Coord) (mark : CoordMark) (j : SubIdx) (values : FChain → Digest) :
     evalWithAnswerFn f (childRecover parameter index c mark.super j (mark.child j) (lut (mark.word j)) values
@@ -293,19 +317,39 @@ theorem eval_childRecover (c : Coord) (mark : CoordMark) (j : SubIdx) (values : 
     Completeness.eval_sequenceFin, Completeness.eval_tweakableHash]
   rfl
 
-theorem eval_coordRecover (c : Coord) (mark : CoordMark) (opening : CoordOpening) :
-    evalWithAnswerFn f (coordRecover parameter index c mark opening : OracleComp HashSpec Digest) =
-      opRoot f parameter index c mark opening := by
-  have hsub : ∀ j : SubIdx, evalWithAnswerFn f (subFold parameter index c mark.super j (mark.child j)
-      (opening.sub j).path subHeight
+/-- The level-2 node the verifier's fold reaches in sub-tree `j`. -/
+theorem eval_subNode (c : Coord) (mark : CoordMark) (j : SubIdx) (opening : SubOpening) :
+    evalWithAnswerFn f (subFold parameter index c mark.super j (mark.child j) opening.path (subHeight - 1)
       (evalWithAnswerFn f (childRecover parameter index c mark.super j (mark.child j) (lut (mark.word j))
-        (opening.sub j).values : OracleComp HashSpec Digest)) : OracleComp HashSpec Digest) =
-      opSubRoot f parameter index c mark j (opening.sub j) := by
-    intro j
-    rw [eval_childRecover, opSubRoot, merkleValue, merkleFold_subFold _ _ _ _ _ _ _ _ le_rfl]
-  simp only [coordRecover, evalWithAnswerFn_bind, Completeness.eval_sequenceFin, hsub, superHash,
-    Completeness.eval_tweakableHash]
-  rw [opRoot, merkleValue, merkleFold_topFold _ _ _ _ _ _ le_rfl]
+        opening.values : OracleComp HashSpec Digest)) : OracleComp HashSpec Digest) =
+      opSubNode f parameter index c mark j opening := by
+  rw [eval_childRecover, opSubNode, merkleValue, merkleFold_subFold _ _ _ _ _ _ _ _ (by decide)]
+
+/-- The pair of level-2 nodes the verifier computes in sub-tree `j`. -/
+theorem eval_subTops (c : Coord) (mark : CoordMark) (opening : CoordOpening) (j : SubIdx) :
+    evalWithAnswerFn f (do
+      let leaf ← childRecover parameter index c mark.super j (mark.child j) (lut (mark.word j))
+        (opening.sub j).values
+      let node ← subFold parameter index c mark.super j (mark.child j) (opening.sub j).path (subHeight - 1) leaf
+      return orderTops ((mark.child j).val.testBit (subHeight - 1)) node ((opening.sub j).path subTopLevel)
+      : OracleComp HashSpec (Digest × Digest)) =
+      opSubTops f parameter index c mark j (opening.sub j) := by
+  simp only [evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_subNode]
+  rfl
+
+/-- The super-child the verifier computes. -/
+theorem eval_superHash (c : Coord) (mark : CoordMark) (opening : CoordOpening) :
+    evalWithAnswerFn f (superHash parameter index c mark.super
+      (fun j => opSubTops f parameter index c mark j (opening.sub j)) : OracleComp HashSpec Digest) =
+      opSuper f parameter index c mark opening := by
+  rw [superHash, Completeness.eval_tweakableHash, opSuper]
+
+theorem eval_coordRecover (c : Coord) (mark : CoordMark) (opening : CoordOpening) :
+    evalWithAnswerFn f (coordRecover parameter index c mark opening : OracleComp HashSpec (Digest × Digest)) =
+      opTops f parameter index c mark opening := by
+  simp only [coordRecover, evalWithAnswerFn_bind, evalWithAnswerFn_pure, Completeness.eval_sequenceFin,
+    eval_subNode]
+  rw [opTops, opTopNode, merkleValue, merkleFold_topFold _ _ _ _ _ _ (by decide), ← eval_superHash]
   rfl
 
 theorem eval_forestRecover (marks : Coord → CoordMark) (opening : Coord → CoordOpening) :
@@ -350,12 +394,10 @@ def SubNodeMatch (c : Coord) (mark : CoordMark) (j : SubIdx) (opening : SubOpeni
     (opLeaf f parameter index c mark j opening.values)
     (Completeness.childLeafValue f parameter index c mark.super j seed (mark.child j)) level
 
-/-- The two sub-tree roots differ from the canonical ones but hash to the canonical super-child. -/
+/-- The four level-2 nodes differ from the canonical ones but hash to the canonical super-child. -/
 def SuperMatch (c : Coord) (mark : CoordMark) (opening : CoordOpening) : Prop :=
-  nodePayload (opSubRoot f parameter index c mark 0 (opening.sub 0))
-      (opSubRoot f parameter index c mark 1 (opening.sub 1)) ≠
-    nodePayload (Completeness.subNodeValue f parameter index c mark.super 0 seed subHeight 0)
-      (Completeness.subNodeValue f parameter index c mark.super 1 seed subHeight 0) ∧
+  superPayload (fun j => opSubTops f parameter index c mark j (opening.sub j)) ≠
+    superPayload (Completeness.subTopsValue f parameter index c seed mark.super) ∧
   opSuper f parameter index c mark opening = Completeness.superValue f parameter index c seed mark.super
 
 /-- A top-tree node query hits the canonical value at the same address. -/
@@ -365,7 +407,7 @@ def TopNodeMatch (c : Coord) (mark : CoordMark) (opening : CoordOpening) (level 
     (opSuper f parameter index c mark opening)
     (Completeness.superValue f parameter index c seed mark.super) level
 
-/-- The coordinate roots differ from the canonical ones but hash to the forest key. -/
+/-- The sixteen level-3 nodes differ from the canonical ones but hash to the forest key. -/
 def RootsMatch (marks : Coord → CoordMark) (opening : Coord → CoordOpening) : Prop :=
   rootsPayload (roots f parameter index marks opening) ≠ rootsPayload (canonicalRoots f parameter index seed) ∧
   truncateHash (f (tweakableHashInput parameter (.roots index)
@@ -380,39 +422,107 @@ def Opening (marks : Coord → CoordMark) (opening : Coord → CoordOpening) : P
     (∀ j, ((opening c).sub j).path = canonicalSubPath f parameter index seed c (marks c).super j ((marks c).child j)) ∧
     (opening c).top = canonicalTopPath f parameter index seed c (marks c).super
 
-/-- The exceptional branches. -/
+/-- The exceptional branches. A node match is at a hashed level: sub-tree levels 1 and 2, top-tree
+levels 1 to 3. -/
 def Exception (marks : Coord → CoordMark) (opening : Coord → CoordOpening) : Prop :=
   (∃ c j i, ChainMatch f parameter index seed c (marks c) j ((opening c).sub j).values i) ∨
   (∃ c j, ChildLeafMatch f parameter index seed c (marks c) j ((opening c).sub j).values) ∨
-  (∃ c j level, level < subHeight ∧ SubNodeMatch f parameter index seed c (marks c) j ((opening c).sub j) level) ∨
+  (∃ c j level, level < subHeight - 1 ∧
+    SubNodeMatch f parameter index seed c (marks c) j ((opening c).sub j) level) ∨
   (∃ c, SuperMatch f parameter index seed c (marks c) (opening c)) ∨
-  (∃ c level, level < topHeight ∧ TopNodeMatch f parameter index seed c (marks c) (opening c) level) ∨
+  (∃ c level, level < topHeight - 1 ∧ TopNodeMatch f parameter index seed c (marks c) (opening c) level) ∨
   RootsMatch f parameter index seed marks opening
+
+/-- A sub-tree whose two level-2 nodes are canonical: its last path element is the canonical one,
+and its fold of 2 levels reaches a canonical node, so the child leaf and the path below are canonical
+or a node query matches. -/
+theorem sub_fold_classification (c : Coord) (mark : CoordMark) (j : SubIdx) (opening : SubOpening)
+    (htops : opSubTops f parameter index c mark j opening =
+      Completeness.subTopsValue f parameter index c seed mark.super j) :
+    (opLeaf f parameter index c mark j opening.values =
+        Completeness.childLeafValue f parameter index c mark.super j seed (mark.child j) ∧
+      opening.path = canonicalSubPath f parameter index seed c mark.super j (mark.child j)) ∨
+    ∃ level, level < subHeight - 1 ∧ SubNodeMatch f parameter index seed c mark j opening level := by
+  have hrange : (mark.child j).val / 2 ^ (subHeight - 1) < 2 := by
+    have := (mark.child j).isLt
+    simp only [subHeight] at this ⊢
+    omega
+  obtain ⟨hnode, hlast⟩ := (Completeness.orderTops_eq_iff
+    (fun node => Completeness.subNodeValue f parameter index c mark.super j seed (subHeight - 1) node)
+    (mark.child j).val (subHeight - 1) hrange _ _).mp htops
+  have hfold : merkleValue f parameter (subDomain index c mark.super j) (mark.child j).val
+      (subPathExt opening.path) (opLeaf f parameter index c mark j opening.values) (subHeight - 1) =
+    merkleValue f parameter (subDomain index c mark.super j) (mark.child j).val
+      (subPathExt (canonicalSubPath f parameter index seed c mark.super j (mark.child j)))
+      (Completeness.childLeafValue f parameter index c mark.super j seed (mark.child j)) (subHeight - 1) :=
+    hnode.trans (canonical_sub_node f parameter index seed c mark.super j (mark.child j) _ (by decide)).symm
+  rcases merkleFold_same_index f parameter _ (mark.child j).val _ _ _ _ (subHeight - 1) hfold with
+    ⟨hleaf, hpath⟩ | ⟨level, hlevel, hmatch⟩
+  · refine Or.inl ⟨hleaf, ?_⟩
+    funext level
+    by_cases hlow : level.val < subHeight - 1
+    · have hp := hpath level.val hlow
+      simpa only [subPathExt, dif_pos level.isLt] using hp
+    · have hlevel : level = subTopLevel := by
+        apply Fin.ext
+        have := level.isLt
+        simp only [subTopLevel]
+        omega
+      rw [hlevel]
+      exact hlast
+  · exact Or.inr ⟨level, hlevel, hmatch⟩
+
+/-- A coordinate whose two level-3 nodes are canonical: its last top path element is the canonical
+one, and its fold of 3 levels reaches a canonical node, so the super-child and the top path below are
+canonical or a node query matches. -/
+theorem top_fold_classification (c : Coord) (mark : CoordMark) (opening : CoordOpening)
+    (htops : opTops f parameter index c mark opening = Completeness.topTopsValue f parameter index c seed) :
+    (opSuper f parameter index c mark opening = Completeness.superValue f parameter index c seed mark.super ∧
+      opening.top = canonicalTopPath f parameter index seed c mark.super) ∨
+    ∃ level, level < topHeight - 1 ∧ TopNodeMatch f parameter index seed c mark opening level := by
+  have hrange : mark.super.val / 2 ^ (topHeight - 1) < 2 := by
+    have := mark.super.isLt
+    simp only [topHeight] at this ⊢
+    omega
+  obtain ⟨hnode, hlast⟩ := (Completeness.orderTops_eq_iff
+    (fun node => Completeness.topNodeValue f parameter index c seed (topHeight - 1) node)
+    mark.super.val (topHeight - 1) hrange _ _).mp htops
+  have hfold : merkleValue f parameter (topDomain index c) mark.super.val (topPathExt opening.top)
+      (opSuper f parameter index c mark opening) (topHeight - 1) =
+    merkleValue f parameter (topDomain index c) mark.super.val
+      (topPathExt (canonicalTopPath f parameter index seed c mark.super))
+      (Completeness.superValue f parameter index c seed mark.super) (topHeight - 1) :=
+    hnode.trans (canonical_top_node f parameter index seed c mark.super _ (by decide)).symm
+  rcases merkleFold_same_index f parameter _ mark.super.val _ _ _ _ (topHeight - 1) hfold with
+    ⟨hsuper, hpath⟩ | ⟨level, hlevel, hmatch⟩
+  · refine Or.inl ⟨hsuper, ?_⟩
+    funext level
+    by_cases hlow : level.val < topHeight - 1
+    · have hp := hpath level.val hlow
+      simpa only [topPathExt, dif_pos level.isLt] using hp
+    · have hlevel : level = topTopLevel := by
+        apply Fin.ext
+        have := level.isLt
+        simp only [topTopLevel]
+        omega
+      rw [hlevel]
+      exact hlast
+  · exact Or.inr ⟨level, hlevel, hmatch⟩
 
 /-- One sub-tree: canonical, or an exception at the chains, the child leaf or a node. -/
 theorem sub_classification (c : Coord) (mark : CoordMark) (j : SubIdx) (opening : SubOpening)
-    (hroot : opSubRoot f parameter index c mark j opening =
-      Completeness.subNodeValue f parameter index c mark.super j seed subHeight 0) :
+    (htops : opSubTops f parameter index c mark j opening =
+      Completeness.subTopsValue f parameter index c seed mark.super j) :
     ((∀ i, opening.values i = Completeness.chainValueOf f parameter index c mark.super j (mark.child j) i seed
         (chainTop - (lut (mark.word j) i).val)) ∧
       opening.path = canonicalSubPath f parameter index seed c mark.super j (mark.child j)) ∨
     (∃ i, ChainMatch f parameter index seed c mark j opening.values i) ∨
     ChildLeafMatch f parameter index seed c mark j opening.values ∨
-    ∃ level, level < subHeight ∧ SubNodeMatch f parameter index seed c mark j opening level := by
+    ∃ level, level < subHeight - 1 ∧ SubNodeMatch f parameter index seed c mark j opening level := by
   classical
-  have hfold : merkleValue f parameter (subDomain index c mark.super j) (mark.child j).val
-      (subPathExt opening.path) (opLeaf f parameter index c mark j opening.values) subHeight =
-    merkleValue f parameter (subDomain index c mark.super j) (mark.child j).val
-      (subPathExt (canonicalSubPath f parameter index seed c mark.super j (mark.child j)))
-      (Completeness.childLeafValue f parameter index c mark.super j seed (mark.child j)) subHeight :=
-    hroot.trans (canonical_sub_root f parameter index seed c mark.super j (mark.child j)).symm
-  rcases merkleFold_same_index f parameter _ (mark.child j).val _ _ _ _ subHeight hfold with
-    ⟨hleaf, hpath⟩ | ⟨level, hlevel, hmatch⟩
-  · have hpath' : opening.path = canonicalSubPath f parameter index seed c mark.super j (mark.child j) := by
-      funext level
-      have hp := hpath level.val level.isLt
-      simpa only [subPathExt, dif_pos level.isLt] using hp
-    by_cases hends : opEnds f parameter index c mark j opening.values =
+  rcases sub_fold_classification f parameter index seed c mark j opening htops with
+    ⟨hleaf, hpath'⟩ | ⟨level, hlevel, hmatch⟩
+  · by_cases hends : opEnds f parameter index c mark j opening.values =
         Completeness.childEnds f parameter index c mark.super j seed (mark.child j)
     · by_cases hall : ∀ i, opening.values i = Completeness.chainValueOf f parameter index c mark.super j
           (mark.child j) i seed (chainTop - (lut (mark.word j) i).val)
@@ -440,40 +550,24 @@ theorem sub_classification (c : Coord) (mark : CoordMark) (j : SubIdx) (opening 
 
 /-- One coordinate: canonical, or an exception. -/
 theorem coord_classification (c : Coord) (mark : CoordMark) (opening : CoordOpening)
-    (hroot : opRoot f parameter index c mark opening = Completeness.topNodeValue f parameter index c seed topHeight 0) :
+    (htops : opTops f parameter index c mark opening = Completeness.topTopsValue f parameter index c seed) :
     ((∀ j i, (opening.sub j).values i = Completeness.chainValueOf f parameter index c mark.super j
         (mark.child j) i seed (chainTop - (lut (mark.word j) i).val)) ∧
       (∀ j, (opening.sub j).path = canonicalSubPath f parameter index seed c mark.super j (mark.child j)) ∧
       opening.top = canonicalTopPath f parameter index seed c mark.super) ∨
     (∃ j i, ChainMatch f parameter index seed c mark j (opening.sub j).values i) ∨
     (∃ j, ChildLeafMatch f parameter index seed c mark j (opening.sub j).values) ∨
-    (∃ j level, level < subHeight ∧ SubNodeMatch f parameter index seed c mark j (opening.sub j) level) ∨
+    (∃ j level, level < subHeight - 1 ∧ SubNodeMatch f parameter index seed c mark j (opening.sub j) level) ∨
     SuperMatch f parameter index seed c mark opening ∨
-    ∃ level, level < topHeight ∧ TopNodeMatch f parameter index seed c mark opening level := by
+    ∃ level, level < topHeight - 1 ∧ TopNodeMatch f parameter index seed c mark opening level := by
   classical
-  have hfold : merkleValue f parameter (topDomain index c) mark.super.val (topPathExt opening.top)
-      (opSuper f parameter index c mark opening) topHeight =
-    merkleValue f parameter (topDomain index c) mark.super.val
-      (topPathExt (canonicalTopPath f parameter index seed c mark.super))
-      (Completeness.superValue f parameter index c seed mark.super) topHeight :=
-    hroot.trans (canonical_top_root f parameter index seed c mark.super).symm
-  rcases merkleFold_same_index f parameter _ mark.super.val _ _ _ _ topHeight hfold with
-    ⟨hsuper, hpath⟩ | ⟨level, hlevel, hmatch⟩
-  · have hpath' : opening.top = canonicalTopPath f parameter index seed c mark.super := by
-      funext level
-      have hp := hpath level.val level.isLt
-      simpa only [topPathExt, dif_pos level.isLt] using hp
-    by_cases hpayload : nodePayload (opSubRoot f parameter index c mark 0 (opening.sub 0))
-        (opSubRoot f parameter index c mark 1 (opening.sub 1)) =
-      nodePayload (Completeness.subNodeValue f parameter index c mark.super 0 seed subHeight 0)
-        (Completeness.subNodeValue f parameter index c mark.super 1 seed subHeight 0)
-    · obtain ⟨h0, h1⟩ := nodePayload_injective hpayload
-      have hj : ∀ j : SubIdx, opSubRoot f parameter index c mark j (opening.sub j) =
-          Completeness.subNodeValue f parameter index c mark.super j seed subHeight 0 := by
-        intro j
-        fin_cases j
-        · exact h0
-        · exact h1
+  rcases top_fold_classification f parameter index seed c mark opening htops with
+    ⟨hsuper, hpath'⟩ | ⟨level, hlevel, hmatch⟩
+  · by_cases hpayload : superPayload (fun j => opSubTops f parameter index c mark j (opening.sub j)) =
+        superPayload (Completeness.subTopsValue f parameter index c seed mark.super)
+    · have hj : ∀ j : SubIdx, opSubTops f parameter index c mark j (opening.sub j) =
+          Completeness.subTopsValue f parameter index c seed mark.super j :=
+        fun j => congrFun (superPayload_injective hpayload) j
       by_cases hall : ∀ j, ((∀ i, (opening.sub j).values i = Completeness.chainValueOf f parameter index c
           mark.super j (mark.child j) i seed (chainTop - (lut (mark.word j) i).val)) ∧
           (opening.sub j).path = canonicalSubPath f parameter index seed c mark.super j (mark.child j))
@@ -504,9 +598,9 @@ theorem recover_classification (marks : Coord → CoordMark) (opening : Coord �
     · unfold Opening at hopening
       push Not at hopening
       obtain ⟨c, hc⟩ := hopening
-      have hroot : opRoot f parameter index c (marks c) (opening c) =
-          Completeness.topNodeValue f parameter index c seed topHeight 0 := congrFun hroots c
-      rcases coord_classification f parameter index seed c (marks c) (opening c) hroot with
+      have htops : opTops f parameter index c (marks c) (opening c) =
+          Completeness.topTopsValue f parameter index c seed := congrFun hroots c
+      rcases coord_classification f parameter index seed c (marks c) (opening c) htops with
         hok | ⟨j, i, hchain⟩ | ⟨j, hleaf⟩ | ⟨j, level, hlevel, hnode⟩ | hsuper | ⟨level, hlevel, htop⟩
       · exact False.elim (hc hok.1 hok.2.1 hok.2.2)
       · exact Or.inr (Or.inl ⟨c, j, i, hchain⟩)
@@ -527,7 +621,8 @@ variable (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Inde
   (marks : Coord → CoordMark) (opening : Coord → CoordOpening)
 
 theorem coordInput_mem (c : Coord) {input : HashInput}
-    (h : input ∈ queriedInputs f (coordRecover parameter index c (marks c) (opening c) : OracleComp HashSpec Digest)) :
+    (h : input ∈ queriedInputs f (coordRecover parameter index c (marks c) (opening c)
+      : OracleComp HashSpec (Digest × Digest))) :
     input ∈ queriedInputs f (forestRecover parameter index marks opening : OracleComp HashSpec Digest) := by
   rw [forestRecover]
   apply queriedInputs_mono_bind_left
@@ -537,8 +632,10 @@ theorem subInput_mem (c : Coord) (j : SubIdx) {input : HashInput}
     (h : input ∈ queriedInputs f (do
       let leaf ← childRecover parameter index c (marks c).super j ((marks c).child j) (lut ((marks c).word j))
         ((opening c).sub j).values
-      subFold parameter index c (marks c).super j ((marks c).child j) ((opening c).sub j).path subHeight leaf
-        : OracleComp HashSpec Digest)) :
+      let node ← subFold parameter index c (marks c).super j ((marks c).child j) ((opening c).sub j).path
+        (subHeight - 1) leaf
+      return orderTops (((marks c).child j).val.testBit (subHeight - 1)) node (((opening c).sub j).path subTopLevel)
+        : OracleComp HashSpec (Digest × Digest))) :
     input ∈ queriedInputs f (forestRecover parameter index marks opening : OracleComp HashSpec Digest) := by
   apply coordInput_mem f parameter index marks opening c
   rw [coordRecover]
@@ -574,32 +671,31 @@ theorem childLeafInput_mem (c : Coord) (j : SubIdx) :
     Completeness.eval_sequenceFin]
   rfl
 
-/-- Every sub-tree node input is queried. -/
-theorem subNodeInput_mem (c : Coord) (j : SubIdx) (level : Nat) (hlevel : level < subHeight) :
+/-- Every sub-tree node input of the 2 folded levels is queried. -/
+theorem subNodeInput_mem (c : Coord) (j : SubIdx) (level : Nat) (hlevel : level < subHeight - 1) :
     merkleInput f parameter (subDomain index c (marks c).super j) ((marks c).child j).val
       (subPathExt ((opening c).sub j).path) (opLeaf f parameter index c (marks c) j ((opening c).sub j).values) level ∈
       queriedInputs f (forestRecover parameter index marks opening : OracleComp HashSpec Digest) := by
   apply subInput_mem f parameter index marks opening c j
   apply queriedInputs_mono_bind_right
-  rw [eval_childRecover, ← merkleFold_subFold _ _ _ _ _ _ _ _ le_rfl]
+  apply queriedInputs_mono_bind_left
+  rw [eval_childRecover, ← merkleFold_subFold _ _ _ _ _ _ _ _ (by decide)]
   exact merkleInput_mem f parameter _ _ _ _ _ _ hlevel
 
 /-- The super-child input of every coordinate is queried. -/
 theorem superInput_mem (c : Coord) :
     tweakableHashInput parameter (.superChild index c (marks c).super)
-        (nodePayload (opSubRoot f parameter index c (marks c) 0 ((opening c).sub 0))
-          (opSubRoot f parameter index c (marks c) 1 ((opening c).sub 1))) ∈
+        (superPayload fun j => opSubTops f parameter index c (marks c) j ((opening c).sub j)) ∈
       queriedInputs f (forestRecover parameter index marks opening : OracleComp HashSpec Digest) := by
   apply coordInput_mem f parameter index marks opening c
   rw [coordRecover]
   apply queriedInputs_mono_bind_right
   apply queriedInputs_mono_bind_left
   rw [superHash, queriedInputs_tweakableHash, List.mem_singleton]
-  simp only [evalWithAnswerFn_bind, Completeness.eval_sequenceFin, eval_childRecover]
-  simp only [opSubRoot, merkleValue, merkleFold_subFold _ _ _ _ _ _ _ _ le_rfl]
+  simp only [Completeness.eval_sequenceFin, eval_subTops]
 
-/-- Every top-tree node input is queried. -/
-theorem topNodeInput_mem (c : Coord) (level : Nat) (hlevel : level < topHeight) :
+/-- Every top-tree node input of the 3 folded levels is queried. -/
+theorem topNodeInput_mem (c : Coord) (level : Nat) (hlevel : level < topHeight - 1) :
     merkleInput f parameter (topDomain index c) (marks c).super.val (topPathExt (opening c).top)
       (opSuper f parameter index c (marks c) (opening c)) level ∈
       queriedInputs f (forestRecover parameter index marks opening : OracleComp HashSpec Digest) := by
@@ -607,18 +703,9 @@ theorem topNodeInput_mem (c : Coord) (level : Nat) (hlevel : level < topHeight) 
   rw [coordRecover]
   apply queriedInputs_mono_bind_right
   apply queriedInputs_mono_bind_right
-  have hsuper : evalWithAnswerFn f (superHash parameter index c (marks c).super
-      (evalWithAnswerFn f (sequenceFin fun j => do
-        let leaf ← childRecover parameter index c (marks c).super j ((marks c).child j) (lut ((marks c).word j))
-          ((opening c).sub j).values
-        subFold parameter index c (marks c).super j ((marks c).child j) ((opening c).sub j).path subHeight leaf
-          : OracleComp HashSpec (SubIdx → Digest))) : OracleComp HashSpec Digest) =
-      opSuper f parameter index c (marks c) (opening c) := by
-    simp only [superHash, evalWithAnswerFn_bind, Completeness.eval_sequenceFin, eval_childRecover,
-      Completeness.eval_tweakableHash]
-    rw [opSuper, opSubRoot, opSubRoot, merkleValue, merkleValue,
-      merkleFold_subFold _ _ _ _ _ _ _ _ le_rfl, merkleFold_subFold _ _ _ _ _ _ _ _ le_rfl]
-  rw [hsuper, ← merkleFold_topFold _ _ _ _ _ _ le_rfl]
+  apply queriedInputs_mono_bind_left
+  simp only [Completeness.eval_sequenceFin, eval_subTops, eval_superHash]
+  rw [← merkleFold_topFold _ _ _ _ _ _ (by decide)]
   exact merkleInput_mem f parameter _ _ _ _ _ _ hlevel
 
 theorem rootsInput_mem :
@@ -627,7 +714,7 @@ theorem rootsInput_mem :
   rw [forestRecover]
   apply queriedInputs_mono_bind_right
   rw [queriedInputs_tweakableHash, List.mem_singleton]
-  simp only [Completeness.eval_sequenceFin, evalWithAnswerFn_bind, eval_coordRecover]
+  simp only [Completeness.eval_sequenceFin, eval_coordRecover]
   rfl
 
 end Inputs
@@ -660,8 +747,7 @@ theorem Exception.queried_output_match (f : QueryImpl HashSpec Id) (parameter : 
   · refine ⟨_, _, subNodeInput_mem f parameter index marks opening c j level hlevel, hnode.2.1, ?_⟩
     exact hnode.2.2.trans (merkleValue_succ f parameter _ _ _ _ level)
   · refine ⟨_, tweakableHashInput parameter (.superChild index c (marks c).super)
-        (nodePayload (Completeness.subNodeValue f parameter index c (marks c).super 0 seed subHeight 0)
-          (Completeness.subNodeValue f parameter index c (marks c).super 1 seed subHeight 0)),
+        (superPayload (Completeness.subTopsValue f parameter index c seed (marks c).super)),
       superInput_mem f parameter index marks opening c, ?_, ?_⟩
     · exact fun hinput => hne (List.append_cancel_left hinput)
     · rw [← superValue_eq]

@@ -112,10 +112,13 @@ theorem leafPayload_length (endpoints : ChainIndex → Digest) :
   rw [leafPayload, flatMap_bytes_length]
   rfl
 
-theorem rootsPayload_length (roots : Coord → Digest) :
-    (rootsPayload roots).length = 128 := by
-  rw [rootsPayload, flatMap_bytes_length]
-  rfl
+theorem rootsPayload_length (tops : Coord → Digest × Digest) :
+    (rootsPayload tops).length = 256 := by
+  simp [rootsPayload, nodePayload, bytesLE_length, forestCoords]
+
+theorem superPayload_length (tops : SubIdx → Digest × Digest) :
+    (superPayload tops).length = 64 := by
+  simp [superPayload, nodePayload, bytesLE_length]
 
 theorem childPayload_length (ends : FChain → Digest) :
     (childPayload ends).length = 96 := by
@@ -228,14 +231,15 @@ theorem Only.forestRecover (parameter : PublicParameter) (index : Index)
     Only (Concrete.forestRecover parameter index marks opening : OracleComp HashSpec Digest) := by
   unfold Concrete.forestRecover Concrete.coordRecover
   refine Only.bind (Only.sequenceFin _ fun c => ?_) ?_
-  · refine Only.bind (Only.sequenceFin _ fun j => ?_) (fun roots => ?_)
+  · refine Only.bind (Only.sequenceFin _ fun j => ?_) (fun tops => ?_)
     · unfold Concrete.childRecover Concrete.forestRecoverChain
       exact Only.bind (Only.bind (Only.sequenceFin _ fun _ => Only.forestWalk _ _ _ _ _ _ _ _ _ _)
-        (fun _ => Only.childLeafHash _ _ _ _ _ _ _)) (fun _ => Only.subFold _ _ _ _ _ _ _ _ _)
+        (fun _ => Only.childLeafHash _ _ _ _ _ _ _))
+        (fun _ => Only.bind (Only.subFold _ _ _ _ _ _ _ _ _) (fun _ => Only.pure' _))
     · unfold Concrete.superHash
-      exact Only.bind (Only.tweakableHash _ _ _ (by rw [nodePayload_length]; omega))
-        (fun _ => Only.topFold _ _ _ _ _ _ _)
-  · intro roots
+      exact Only.bind (Only.tweakableHash _ _ _ (by rw [superPayload_length]; omega))
+        (fun _ => Only.bind (Only.topFold _ _ _ _ _ _ _) (fun _ => Only.pure' _))
+  · intro tops
     exact Only.tweakableHash _ _ _ (by rw [rootsPayload_length]; omega)
 
 theorem Only.messageDigestCall (parameter : PublicParameter) (root : Digest) (message : Message)
@@ -348,8 +352,10 @@ theorem Only.subNode (parameter : PublicParameter) (index : Index) (c : Coord) (
 theorem Only.superNode (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
     (seed : MasterSeed) : Short.Only (superNode parameter index c s seed : OracleComp HashSpec Digest) := by
   unfold LeanForest.Seeded.superNode Concrete.superHash
-  exact Short.Only.bind (Short.Only.sequenceFin _ fun _ => Only.subNode _ _ _ _ _ _ _ _)
-    (fun _ => Short.Only.tweakableHash _ _ _ (by rw [nodePayload_length]; omega))
+  exact Short.Only.bind (Short.Only.sequenceFin _ fun _ =>
+      Short.Only.bind (Only.subNode _ _ _ _ _ _ _ _) (fun _ =>
+        Short.Only.bind (Only.subNode _ _ _ _ _ _ _ _) (fun _ => Short.Only.pure' _)))
+    (fun _ => Short.Only.tweakableHash _ _ _ (by rw [Short.superPayload_length]; omega))
 
 theorem Only.topNode (parameter : PublicParameter) (index : Index) (c : Coord)
     (seed : MasterSeed) : ∀ level node, Short.Only (topNode parameter index c seed level node :
@@ -367,12 +373,15 @@ theorem Only.topNode (parameter : PublicParameter) (index : Index) (c : Coord)
 
 theorem Only.forestKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) :
     Short.Only (forestKey parameter index seed : OracleComp HashSpec Digest) := by
-  have htop : ∀ c, Short.Only (LeanForest.Seeded.topNode parameter index c seed topHeight 0 :
-      OracleComp HashSpec Digest) :=
-    fun c => Only.topNode parameter index c seed topHeight 0
-  have hroots : ∀ roots : Coord → Digest,
-      Short.Only (Concrete.tweakableHash parameter (.roots index) (rootsPayload roots) :
-        OracleComp HashSpec Digest) := fun roots =>
+  have htop : ∀ c, Short.Only (do
+      let left ← LeanForest.Seeded.topNode parameter index c seed (topHeight - 1) 0
+      let right ← LeanForest.Seeded.topNode parameter index c seed (topHeight - 1) 1
+      return (left, right) : OracleComp HashSpec (Digest × Digest)) :=
+    fun c => Short.Only.bind (Only.topNode parameter index c seed _ _) (fun _ =>
+      Short.Only.bind (Only.topNode parameter index c seed _ _) (fun _ => Short.Only.pure' _))
+  have hroots : ∀ tops : Coord → Digest × Digest,
+      Short.Only (Concrete.tweakableHash parameter (.roots index) (rootsPayload tops) :
+        OracleComp HashSpec Digest) := fun tops =>
     Short.Only.tweakableHash _ _ _ (by rw [rootsPayload_length]; omega)
   unfold LeanForest.Seeded.forestKey
   exact Short.Only.bind (Short.Only.sequenceFin _ htop) hroots

@@ -1,11 +1,19 @@
 # The forest variant of leanSphincs in Lean
 
 `LeanForest` is a Lean library next to `LeanSphincs` (`lakefile.toml`, namespace `LeanForest`). It
-replaces FORS by a two-level WOTS forest: 8 trees of height 4; each leaf of a tree is `H(R0, R1)` of
+replaces FORS by a two-level WOTS forest: 8 trees of height 4; each leaf of a tree is the hash of
 two subtrees of height 3 over WOTS keys. The digest picks, per tree, a leaf, a WOTS key in each of
 its two subtrees and a codeword for each WOTS key (`lut`, entries in `{0..4}` summing to 5); the
 signature opens each chain of the two WOTS keys at position `4 - d_i`. The FORS proof
 (`LeanSphincs`) is untouched.
+
+No tree of the forest has a root hash. A subtree is hashed up to level 2 and a tree leaf is the hash of the four
+level-2 nodes `m_0[0] ‖ m_0[1] ‖ m_1[0] ‖ m_1[1]` of its two subtrees; a tree is hashed up to level 3
+and the few-time key is the hash of the sixteen level-3 nodes `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]`.
+The signature is unchanged (3 path elements per subtree, 4 per tree): the last path element is the
+other top node of its tree. The verifier folds 2 levels in a subtree and 3 in a tree and puts the node
+it reached and the last path element in index order (`orderTops`: the reached node first when bit 2
+of the WOTS-key index, bit 3 of the leaf index, is 0).
 
 Final statement: `LeanForest.Lifetimes.requestedSecurity`, 127 classical bits (SUF-CMA in the ROM)
 for the deterministic Lean signer at subtree heights 26, 20, 14, 13, 12, 10, 8.
@@ -62,10 +70,14 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 | forest chain secrets `2t`, `2t + 1` (both halves of the hash) | 14 | 0 | `c + 8s + 128j + 256a + 2048t` | `idx` | seed |
 | forest chain step from position `t` | 15 | `t` | `c + 8s + 128j + 256a + 2048i` | `idx` | value |
 | forest WOTS-key leaf | 16 | 0 | `c + 8s + 128j + 256a` | `idx` | 6 chain tops |
-| subtree node, level 1 to 3 | 17 | 0 | `c + 8s + 128j + 256·level + 1024·node` | `idx` | left ‖ right |
-| tree leaf `H(R0, R1)` | 18 | 0 | `c + 8s` | `idx` | `R0 ‖ R1` |
-| forest tree node, level 1 to 4 | 19 | 0 | `c + 8·level + 64·node` | `idx` | left ‖ right |
-| few-time public key | 20 | 0 | 0 | `idx` | 8 tree roots |
+| subtree node, level 1 and 2 | 17 | 0 | `c + 8s + 128j + 256·level + 1024·node` | `idx` | left ‖ right |
+| tree leaf | 18 | 0 | `c + 8s` | `idx` | `m_0[0] ‖ m_0[1] ‖ m_1[0] ‖ m_1[1]`, the level-2 nodes of the two subtrees (64 bytes) |
+| forest tree node, level 1 to 3 | 19 | 0 | `c + 8·level + 64·node` | `idx` | left ‖ right |
+| few-time public key | 20 | 0 | 0 | `idx` | `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]`, the level-3 nodes of the 8 trees (256 bytes) |
+
+The tree leaf input is 88 bytes (2 compressions) and the key input 280 bytes (5 compressions). The
+addresses of a subtree root (type 17, level 3) and of a tree root (type 19, level 4) exist in
+`HashDomain` and no algorithm uses them.
 
 One hash of the seed gives two chain starts: the hash output is 32 bytes, the start of chain `2t`
 is bytes 0 to 15 and the start of chain `2t + 1` is bytes 16 to 31 (`deriveOutput`, `hashHalf`,
@@ -94,9 +106,11 @@ inputs of different types differ whatever their parameters (`fieldInput_ne_of_ta
 no tree field; the scheme has one of each (`Layer` and `TreeIndex` are `Fin 1`).
 
 `Layout.signature_size`: a signature serializes to 4,276 bytes. `Cost.verification_compressions`:
-an accepted signature costs exactly 321 BLAKE2s compressions (2 for the 80-byte digest input, 203
+an accepted signature costs exactly 307 BLAKE2s compressions (2 for the 80-byte digest input, 189
 for the forest, 116 for WOTS+C and the path), and no signature costs more
-(`verification_compressions_le`).
+(`verification_compressions_le`). The forest is 23 per tree (`compressions_coordRecover`: in each of
+the two subtrees 5 chain steps, 2 for the WOTS-key leaf and 2 folds; 2 for the tree leaf; 3 folds),
+times 8, plus 5 for the key.
 
 Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
 `SecurityPrefixErasedKeygen.lean`; exact counts on any oracle):
@@ -107,10 +121,19 @@ Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
 | tree node at level `l` (`hashCalls_treeNode`) | `226 · 2^l − 1` |
 | key generation (`hashCalls_keygenFromSeed`) | `226 · 2^b + 2 (26 − b)` |
 | forest WOTS key leaf (`hashCalls_childLeaf`) | `3 + 6 · 4 + 1 = 28` |
-| forest key of an instance (`hashCalls_forestKey`) | 59,385 |
-| forest opening (`hashCalls_forsOpen_exact`) | 59,200 |
+| subtree node at level `l ≤ 2` (`hashCalls_subNode`) | `29 · 2^l − 1` |
+| tree leaf (`hashCalls_superNode`) | `2 · 2 · 115 + 1 = 461` |
+| tree node at level `l ≤ 3` (`hashCalls_topNode`) | `462 · 2^l − 1` |
+| forest key of an instance (`hashCalls_forestKey`) | `8 · 2 · 3,695 + 1 = 59,121` |
+| opening of one tree (`hashCalls_coordOpen_exact`) | `2 · 222 + 6,926 = 7,370` |
+| forest opening (`hashCalls_forsOpen_exact`) | 58,960 |
 | WOTS+C values of a signature (`hashCalls_published_values`) | `32 + 120 = 152` |
-| signature after the scan (`hashCalls_finishSign_exact`) | `118,586 + counter search + 152 + path` |
+| signature after the scan (`hashCalls_finishSign_exact`) | `118,082 + counter search + 152 + path` |
+
+Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less: the forest key went
+from 59,385 to 59,121 calls, the opening from 59,200 to 58,960 and the fixed part of a signature
+from 118,586 to 118,082 (`1 + 58,960 + 59,121`; the signer's tick is 118,081 after the digest call).
+These counts do not enter the certificates: only the key-generation credit does.
 
 The Lean signer recomputes the forest instance for its key and again for the opening, and the tree
 nodes of the path; these are the counts of that signer, and the budget `q` of the theorem counts
@@ -144,6 +167,24 @@ second-order event, or one of the forest events of the refined classification
 (`BridgeImplicationA`): a contact without guess record, two contacts at different chains of one
 index, a recorded contact at a chain opened at or below its step, a near cover with a recorded
 contact, or a cover. Budgets are split at `qh ≈ 2^(128 + lx)`.
+
+**No root hashes.** The graph of hashed values (`SecurityPosition.lean`) keeps its positions; only
+the children of two kinds of position change: a tree leaf (`superChild`) reads the four level-2
+nodes of its two subtrees and the key (`roots`) the sixteen level-3 nodes of the trees. The root of a
+subtree and the root of a tree remain positions that nothing reads: the position set already
+over-approximates what is hashed, every position is prepared, and an address still determines one
+position, so a query has one target as before. The values a signature reveals are unchanged
+(`GraphView.publicData`: the subtree path at levels 0 to 2 and the tree path at levels 0 to 3, the
+last of each being the other top node, which was already a path element). In the forest witness
+(`SecurityForestWitness.lean`) an opening gives two top nodes per tree, the one its fold reaches and
+its last path element (`opSubTops`, `opTops`). If the sixteen level-3 nodes differ from the honest
+ones and the key is reached, the key hash has a second preimage (`RootsMatch`, a first-order event as
+for the 8 roots before). Otherwise each tree has the honest last path element and its fold of 3
+levels reaches an honest node (`Completeness.orderTops_eq_iff`), which is classified as a fold to
+the root was (`top_fold_classification`: honest tree leaf and path, or a node match at levels 1 to
+3); likewise for the four level-2 nodes of a tree leaf (`SuperMatch`, `sub_fold_classification`,
+node matches at levels 1 and 2). The statements above the witness (`Forest.Opening`,
+`recovered_classification`, the classification of a win) are unchanged.
 
 ### The scan signer `R = R0 + i`
 

@@ -17,14 +17,15 @@ attribute [local irreducible] firstEncoding ReferenceChoice.search encodingAttem
 
 theorem hashCalls_forsKey_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (seed : MasterSeed) :
-    hashCalls f (Seeded.forestKey parameter index seed : OracleComp HashSpec Digest) = 59385 :=
+    hashCalls f (Seeded.forestKey parameter index seed : OracleComp HashSpec Digest) = 59121 :=
   hashCalls_forestKey f parameter index seed
 
-/-- Opening one tree costs 7400 calls: 3 seed derivations, 19 chain steps and 200 subtree-path calls
-per subtree (the opened positions sum to `6 · 4 - 5`), and 6956 tree-path calls. -/
+/-- Opening one tree costs 7370 calls: 3 seed derivations, 19 chain steps and 200 subtree-path calls
+per subtree (the opened positions sum to `6 · 4 - 5`), and 6926 tree-path calls. The last element of
+each path is the other top node of its tree. -/
 theorem hashCalls_coordOpen_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (c : Coord) (mark : CoordMark) (seed : MasterSeed) :
-    hashCalls f (Seeded.coordOpen parameter index c mark seed : OracleComp HashSpec CoordOpening) = 7400 := by
+    hashCalls f (Seeded.coordOpen parameter index c mark seed : OracleComp HashSpec CoordOpening) = 7370 := by
   rw [Seeded.coordOpen, hashCalls_bind, hashCalls_bind, hashCalls_sequenceFin, hashCalls_sequenceFin]
   simp only [hashCalls_bind, hashCalls_sequenceFin, hashCalls_pure, Nat.add_zero, hashCalls_forestSecrets]
   have hchain : ∀ (j : SubIdx) (i : FChain) (value : Digest),
@@ -53,7 +54,7 @@ theorem hashCalls_coordOpen_exact (f : QueryImpl HashSpec Id) (parameter : Publi
   have htop : ∀ level : Fin topHeight,
       hashCalls f (Seeded.topNode parameter index c seed level.val
         (Nat.xor (mark.super.val / 2 ^ level.val) 1) : OracleComp HashSpec Digest) =
-        464 * 2 ^ level.val - 1 := fun level =>
+        462 * 2 ^ level.val - 1 := fun level =>
     hashCalls_topNode f parameter index c seed _ _ (Nat.le_of_lt level.isLt)
   simp only [hchain, hsum, hsub, htop]
   decide
@@ -61,7 +62,7 @@ theorem hashCalls_coordOpen_exact (f : QueryImpl HashSpec Id) (parameter : Publi
 theorem hashCalls_forsOpen_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (marks : Coord → CoordMark) (seed : MasterSeed) :
     hashCalls f (Seeded.forestOpen parameter index marks seed :
-      OracleComp HashSpec (Coord → CoordOpening)) = 59200 := by
+      OracleComp HashSpec (Coord → CoordOpening)) = 58960 := by
   simp only [Seeded.forestOpen, hashCalls_sequenceFin, hashCalls_coordOpen_exact]
   decide
 
@@ -130,7 +131,7 @@ theorem hashCalls_treePath_exact (f : QueryImpl HashSpec Id) (parameter : Public
 theorem hashCalls_signLayer_exact (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey)
     (index : Index) (lay : Layer) :
     hashCalls f (Seeded.signLayer sk index lay : OracleComp HashSpec (Option (LayerSignature lay))) =
-      59385 + hashCalls f (ReferenceChoice.search sk.parameter lay rootTree index
+      59121 + hashCalls f (ReferenceChoice.search sk.parameter lay rootTree index
         (evalWithAnswerFn f (Seeded.forestKey sk.parameter index sk.seed : OracleComp HashSpec Digest))
         encodingAttemptLimit 0) +
       if (firstEncoding f sk.parameter lay rootTree index
@@ -151,12 +152,12 @@ noncomputable def finishHashCost (f : QueryImpl HashSpec Id) (parameter : Public
     (data : PublicData) (message : Message) (randomness : Randomness) : Nat :=
   let index := digestIndex (evalWithAnswerFn f
     (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest))
-  118586 + hashCalls f (ReferenceChoice.search parameter topLayer rootTree index
+  118082 + hashCalls f (ReferenceChoice.search parameter topLayer rootTree index
     (data.forestKey index) encodingAttemptLimit 0) +
     if (firstEncoding f parameter topLayer rootTree index (data.forestKey index)
       encodingAttemptLimit 0).isSome then 152 + treePathCost else 0
 
-/-- The `118586 = 1 + 59200 + 59385` calls are the digest block, the forest opening (chain values
+/-- The `118082 = 1 + 58960 + 59121` calls are the digest block, the forest opening (chain values
 and all subtree and tree authentication nodes) and the canonical forest-key computation, even when
 WOTS fails. -/
 theorem hashCalls_finishSign_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)

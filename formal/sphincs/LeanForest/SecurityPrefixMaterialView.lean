@@ -99,8 +99,8 @@ theorem topNode (index : Index) (c : Coord) (level node : Nat) :
       evalWithAnswerFn right (Seeded.topNode parameter index c seed level node : OracleComp HashSpec Digest) := by
   induction level generalizing node with
   | zero =>
-      simp only [Seeded.topNode, Seeded.superNode, evalWithAnswerFn_bind, eval_sequenceFin, h.subNode,
-        superHash, h.tweakable]
+      simp only [Seeded.topNode, Seeded.superNode, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
+        eval_sequenceFin, h.subNode, superHash, h.tweakable]
   | succ level ih =>
       simp only [Seeded.topNode, evalWithAnswerFn_bind, ih]
       split
@@ -110,7 +110,8 @@ theorem topNode (index : Index) (c : Coord) (level node : Nat) :
 theorem forsKey (index : Index) :
     evalWithAnswerFn left (Seeded.forestKey parameter index seed : OracleComp HashSpec Digest) =
       evalWithAnswerFn right (Seeded.forestKey parameter index seed : OracleComp HashSpec Digest) := by
-  simp only [Seeded.forestKey, evalWithAnswerFn_bind, eval_sequenceFin, h.topNode, h.tweakable]
+  simp only [Seeded.forestKey, evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_sequenceFin, h.topNode,
+    h.tweakable]
 
 theorem forsOpen (index : Index) (marks : Coord → CoordMark) :
     evalWithAnswerFn left (Seeded.forestOpen parameter index marks seed :

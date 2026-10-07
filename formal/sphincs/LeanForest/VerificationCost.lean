@@ -180,23 +180,33 @@ theorem compressions_topFold (s : SuperIdx) (path : Fin topHeight → Digest)
       dsimp only
       split <;> simp [compressions_tweakableHash, nodePayload, bytesLE_length, blocks]
 
+theorem superPayload_length (tops : SubIdx → Digest × Digest) : (superPayload tops).length = 64 := by
+  simp [superPayload, nodePayload, bytesLE_length]
+
+theorem rootsPayload_length (tops : Coord → Digest × Digest) : (rootsPayload tops).length = 256 := by
+  simp [rootsPayload, nodePayload, bytesLE_length, forestCoords]
+
+/-- One coordinate costs 23 compressions: per sub-tree 5 chain steps, 2 for the WOTS-key leaf and 2
+folds; 2 for the tree leaf (88 bytes); 3 folds. -/
 @[simp] theorem compressions_coordRecover (mark : CoordMark) (opening : CoordOpening) :
-    compressions f (coordRecover parameter index c mark opening) = 25 := by
+    compressions f (coordRecover parameter index c mark opening) = 23 := by
   rw [coordRecover, compressions_bind, compressions_sequenceFin, compressions_bind, superHash,
-    compressions_tweakableHash, compressions_topFold f parameter index c _ _ _ le_rfl]
-  simp only [compressions_bind, compressions_childRecover, compressions_subFold f parameter index c _ _ _ _ _ le_rfl,
-    nodePayload, List.length_append, bytesLE_length, Finset.sum_const, Finset.card_univ, Fintype.card_fin,
+    compressions_tweakableHash, compressions_bind,
+    compressions_topFold f parameter index c _ _ _ (by decide : topHeight - 1 ≤ topHeight)]
+  simp only [compressions_bind, compressions_childRecover,
+    compressions_subFold f parameter index c _ _ _ _ _ (by decide : subHeight - 1 ≤ subHeight),
+    compressions_pure, superPayload_length, Finset.sum_const, Finset.card_univ, Fintype.card_fin,
     smul_eq_mul]
   rfl
 
 end Coord
 
-/-- The forest recovery costs 203 compressions: 25 per coordinate and 3 for the roots. -/
+/-- The forest recovery costs 189 compressions: 23 per coordinate and 5 for the key (280 bytes). -/
 @[simp] theorem compressions_forestRecover (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (marks : Coord → CoordMark) (opening : Coord → CoordOpening) :
-    compressions f (forestRecover parameter index marks opening) = 203 := by
+    compressions f (forestRecover parameter index marks opening) = 189 := by
   rw [forestRecover, compressions_bind, compressions_sequenceFin, compressions_tweakableHash]
-  simp only [compressions_coordRecover, rootsPayload, digest_vector_length, Finset.sum_const,
+  simp only [compressions_coordRecover, rootsPayload_length, Finset.sum_const,
     Finset.card_univ, Fintype.card_fin, smul_eq_mul]
   rfl
 
@@ -270,12 +280,13 @@ theorem compressions_verifyLayers (f : QueryImpl HashSpec Id) (parameter : Publi
 
 attribute [local semireducible] Concrete.verify
 
-/-- Every accepted signature causes exactly 321 BLAKE2s compressions in the verifier execution. -/
+/-- Every accepted signature causes exactly 307 BLAKE2s compressions in the verifier execution: 2 for
+the digest, 189 for the forest and 116 for WOTS+C and the path. -/
 theorem verification_compressions (f : QueryImpl HashSpec Id) (pk : PublicKey)
     (message : Message) (signature : Signature)
     (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
-    compressions f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = 321 := by
+    compressions f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = 307 := by
   rw [Concrete.verify, compressions_bind, compressions_messageDigest,
     compressions_bind, compressions_forestRecover, compressions_bind, compressions_verifyLayers]
   simp only [Concrete.verify, evalWithAnswerFn_bind] at haccept
@@ -288,7 +299,7 @@ theorem verification_compressions (f : QueryImpl HashSpec Id) (pk : PublicKey)
 /-- Malformed signatures cannot make verification exceed its accepted-signature cost. -/
 theorem verification_compressions_le (f : QueryImpl HashSpec Id) (pk : PublicKey)
     (message : Message) (signature : Signature) :
-    compressions f (Concrete.verify pk message signature : OracleComp HashSpec Bool) ≤ 321 := by
+    compressions f (Concrete.verify pk message signature : OracleComp HashSpec Bool) ≤ 307 := by
   rw [Concrete.verify, compressions_bind, compressions_messageDigest,
     compressions_bind, compressions_forestRecover, compressions_bind, compressions_verifyLayers]
   split <;> split <;> simp [compressions_pure]

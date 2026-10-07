@@ -3,8 +3,11 @@ import LeanForest.SecurityDomains
 /-! Finite structural positions and their exact serialized addresses, adapted from leanVM
 b7a107256. The position type deliberately overapproximates the single retained subtree;
 pruning selects the positions that are actually prepared. Forest positions are the chain steps,
-the WOTS-key leaves, the subtree nodes, the tree leaves `H(R0, R1)`, the tree nodes and the roots of
-every instance. -/
+the WOTS-key leaves, the subtree nodes, the tree leaves, the tree nodes and the key (`roots`) of
+every instance. A tree leaf is the hash of the four level-2 nodes of its two subtrees and the key the
+hash of the sixteen level-3 nodes of the trees: the root of a subtree (`subNode` at the last level)
+and the root of a tree (`topNode` at the last level) are positions that no other position and no
+algorithm reads. -/
 
 namespace LeanForest
 
@@ -212,8 +215,10 @@ def children : Position → List Position
             .childLeaf index c s j ⟨2 * nd.val + 1, by omega⟩]
       else []
   | .superChild index c s =>
-      [.subNode index c s 0 ⟨subHeight - 1, by decide⟩ ⟨0, by decide⟩,
-        .subNode index c s 1 ⟨subHeight - 1, by decide⟩ ⟨0, by decide⟩]
+      [.subNode index c s 0 ⟨subHeight - 2, by decide⟩ ⟨0, by decide⟩,
+        .subNode index c s 0 ⟨subHeight - 2, by decide⟩ ⟨1, by decide⟩,
+        .subNode index c s 1 ⟨subHeight - 2, by decide⟩ ⟨0, by decide⟩,
+        .subNode index c s 1 ⟨subHeight - 2, by decide⟩ ⟨1, by decide⟩]
   | .topNode index c level nd =>
       if hidx : 2 * nd.val + 1 < 2 ^ topHeight then
         if hlevel : 0 < level.val then
@@ -224,7 +229,9 @@ def children : Position → List Position
             .superChild index c ⟨2 * nd.val + 1, by omega⟩]
       else []
   | .roots index =>
-      List.ofFn fun c : Coord => .topNode index c ⟨topHeight - 1, by decide⟩ ⟨0, by decide⟩
+      (List.finRange forestCoords).flatMap fun c : Coord =>
+        [.topNode index c ⟨topHeight - 2, by decide⟩ ⟨0, by decide⟩,
+          .topNode index c ⟨topHeight - 2, by decide⟩ ⟨1, by decide⟩]
 
 /-! ### Depth and separated addresses
 
@@ -287,8 +294,8 @@ theorem depth_lt_of_mem_children {c d : Position} (hmem : c ∈ d.children) :
           simp only [depth] <;> omega
       · simp at hmem
   | superChild =>
-      simp only [children] at hmem
-      rcases List.mem_pair.mp hmem with h | h <;> subst h <;> simp [depth, subHeight]
+      simp only [children, List.mem_cons, List.not_mem_nil, or_false] at hmem
+      rcases hmem with h | h | h | h <;> subst h <;> simp [depth, subHeight]
   | topNode index c level nd =>
       rw [children] at hmem
       split at hmem
@@ -296,10 +303,8 @@ theorem depth_lt_of_mem_children {c d : Position} (hmem : c ∈ d.children) :
           simp only [depth] <;> omega
       · simp at hmem
   | roots =>
-      simp only [children, List.mem_ofFn] at hmem
-      obtain ⟨c, hmem⟩ := hmem
-      subst hmem
-      simp [depth, topHeight]
+      simp only [children, List.mem_flatMap, List.mem_cons, List.not_mem_nil, or_false] at hmem
+      obtain ⟨c, -, h | h⟩ := hmem <;> subst h <;> simp [depth, topHeight]
 
 theorem fields_injective {left right : Position}
     (h : hashDomainFields left.domain = hashDomainFields right.domain) : left = right :=

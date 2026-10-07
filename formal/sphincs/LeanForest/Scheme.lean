@@ -8,10 +8,13 @@ The scheme of `LeanSphincs.Scheme` (one height-26 tree of WOTS+C keys with 64 ch
 target sum 120, pruning with surrogate siblings, randomizer grinding, tweakable hash with 16-byte
 outputs) with the few-time signature under each tree leaf replaced by a **two-level WOTS forest**:
 
-* 8 independent coordinates; the forest public key is `Th(roots(idx), root_0 || ... || root_7)`, the
-  message WOTS+C signs;
-* a coordinate is a top Merkle tree of height 4 over 16 super-children; super-child `s` is
-  `Th(super(idx, c, s), R_0 || R_1)` where `R_j` is the root of a height-3 Merkle tree over 8 children;
+* 8 independent coordinates; a coordinate is a top Merkle tree of height 4 over 16 super-children,
+  hashed up to level 3 only: its two level-3 nodes `t_c[0]`, `t_c[1]` are not hashed into a root. The
+  forest public key is `Th(roots(idx), t_0[0] || t_0[1] || ... || t_7[0] || t_7[1])`, the message
+  WOTS+C signs;
+* a sub-tree is a Merkle tree of height 3 over 8 children, hashed up to level 2 only; super-child `s`
+  is `Th(super(idx, c, s), m_0[0] || m_0[1] || m_1[0] || m_1[1])` where `m_j[0]`, `m_j[1]` are the two
+  level-2 nodes of sub-tree `j`;
 * a child is 6 hash chains of length 5: `x_{i,0}` is derived from the seed (one hash of the seed
   gives the two starts `x_{2t,0}` and `x_{2t+1,0}`, its two 16-byte halves), `x_{i,t+1} = Th(x_{i,t})`,
   and the child leaf hashes the 6 chain tops `x_{i,4}`;
@@ -20,7 +23,9 @@ outputs) with the few-time signature under each tree leaf replaced by a **two-le
 * one digest call gives `26 + 8 · 26 = 234` bits: the index, then per coordinate the super-child
   (4 bits), the child and codeword index of sub-tree 0 (3 + 8 bits) and of sub-tree 1 (3 + 8 bits);
 * an opening reveals, per coordinate and sub-tree, `x_{i, 4 - d_i}` for the 6 chains and the 3 auth
-  nodes of the sub-tree, then the 4 auth nodes of the top tree.
+  nodes of the sub-tree, then the 4 auth nodes of the top tree. The last auth node of a tree is its
+  other top node: the verifier folds all levels but the last and hashes the two top nodes, in index
+  order, into the hash above.
 
 Everything that is not the forest (parameters, WOTS+C, the tree, pruning, grinding, key generation)
 is `LeanSphincs.Scheme` verbatim. Every hash input is `P || A || payload`: the 16-byte public
@@ -262,7 +267,8 @@ def chainSlot (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain
 
 /-- The verification hash domains. Seed derivation uses `KeygenDomain`. Forest levels count from the
 leaves: a `subNode` at `level` is the node of sub-tree level `level + 1`, a `topNode` at `level` the
-node of top-tree level `level + 1`. -/
+node of top-tree level `level + 1`. The scheme hashes sub-tree levels 1 and 2 and top-tree levels 1
+to 3: the address of a tree's root exists and no algorithm uses it. -/
 inductive HashDomain where
   | chain (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (chainIdx : ChainIndex) (step : ChainStep)
   | leaf (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
@@ -541,10 +547,20 @@ def subFold (parameter : PublicParameter) (index : Index) (c : Coord) (s : Super
       else
         pure 0
 
-/-- The super-child `Th(super(idx, c, s), R_0 || R_1)`. -/
+/-- The two top nodes of a tree in index order, from the one the fold reached and the last path
+element: the reached node is node 1 exactly when `bit`, the top bit of the leaf index, is set. -/
+def orderTops (bit : Bool) (current sibling : Digest) : Digest × Digest :=
+  if bit then (sibling, current) else (current, sibling)
+
+/-- `m_0[0] || m_0[1] || m_1[0] || m_1[1]`, the level-2 nodes of the two sub-trees. -/
+def superPayload (tops : SubIdx → Digest × Digest) : HashInput :=
+  nodePayload (tops 0).1 (tops 0).2 ++ nodePayload (tops 1).1 (tops 1).2
+
+/-- The super-child `Th(super(idx, c, s), m_0[0] || m_0[1] || m_1[0] || m_1[1])`: the hash of the two
+level-2 nodes of each of its sub-trees. A sub-tree has no root hash. -/
 def superHash (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
-    (roots : SubIdx → Digest) : m Digest :=
-  tweakableHash parameter (.superChild index c s) (nodePayload (roots 0) (roots 1))
+    (tops : SubIdx → Digest × Digest) : m Digest :=
+  tweakableHash parameter (.superChild index c s) (superPayload tops)
 
 /-- Fold a super-child and a top path into the coordinate root. -/
 def topFold (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
@@ -563,25 +579,37 @@ def topFold (parameter : PublicParameter) (index : Index) (c : Coord) (s : Super
       else
         pure 0
 
-/-- The coordinate root an opening reaches. -/
+/-- The last level of a sub-tree path: the other level-2 node. -/
+def subTopLevel : Fin subHeight := ⟨subHeight - 1, by decide⟩
+
+/-- The last level of a top-tree path: the other level-3 node. -/
+def topTopLevel : Fin topHeight := ⟨topHeight - 1, by decide⟩
+
+/-- The two level-3 nodes of a coordinate's top tree that an opening reaches. In each sub-tree the
+child leaf is folded 2 levels and the last path element is the other level-2 node; the four level-2
+nodes hash into the super-child, which is folded 3 levels, and the last top path element is the
+other level-3 node. -/
 def coordRecover (parameter : PublicParameter) (index : Index) (c : Coord) (mark : CoordMark)
-    (opening : CoordOpening) : m Digest := do
-  let roots ← sequenceFin fun j => do
+    (opening : CoordOpening) : m (Digest × Digest) := do
+  let tops ← sequenceFin fun j => do
     let leaf ← childRecover parameter index c mark.super j (mark.child j) (lut (mark.word j))
       (opening.sub j).values
-    subFold parameter index c mark.super j (mark.child j) (opening.sub j).path subHeight leaf
-  let super ← superHash parameter index c mark.super roots
-  topFold parameter index c mark.super opening.top topHeight super
+    let node ← subFold parameter index c mark.super j (mark.child j) (opening.sub j).path (subHeight - 1) leaf
+    return orderTops ((mark.child j).val.testBit (subHeight - 1)) node ((opening.sub j).path subTopLevel)
+  let super ← superHash parameter index c mark.super tops
+  let node ← topFold parameter index c mark.super opening.top (topHeight - 1) super
+  return orderTops (mark.super.val.testBit (topHeight - 1)) node (opening.top topTopLevel)
 
-/-- `root_0 || ... || root_7`. -/
-def rootsPayload (roots : Coord → Digest) : HashInput :=
-  (List.ofFn roots).flatMap (bytesLE 16)
+/-- `t_0[0] || t_0[1] || ... || t_7[0] || t_7[1]`, the level-3 nodes of the 8 top trees. -/
+def rootsPayload (tops : Coord → Digest × Digest) : HashInput :=
+  (List.ofFn tops).flatMap fun pair => nodePayload pair.1 pair.2
 
-/-- `Fts.recover`: the forest key an opening reaches. -/
+/-- `Fts.recover`: the forest key an opening reaches, the hash of the sixteen level-3 nodes. A top
+tree has no root hash. -/
 def forestRecover (parameter : PublicParameter) (index : Index) (marks : Coord → CoordMark)
     (opening : Coord → CoordOpening) : m Digest := do
-  let roots ← sequenceFin fun c => coordRecover parameter index c (marks c) (opening c)
-  tweakableHash parameter (.roots index) (rootsPayload roots)
+  let tops ← sequenceFin fun c => coordRecover parameter index c (marks c) (opening c)
+  tweakableHash parameter (.roots index) (rootsPayload tops)
 
 /-! ### The message digest -/
 
@@ -863,11 +891,14 @@ def subNode (parameter : PublicParameter) (index : Index) (c : Coord) (s : Super
       else
         pure 0
 
-/-- A super-child, from the roots of its two sub-trees. -/
+/-- A super-child, from the two level-2 nodes of each of its two sub-trees. -/
 def superNode (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
     (seed : MasterSeed) : m Digest := do
-  let roots ← sequenceFin fun j => subNode parameter index c s j seed subHeight 0
-  superHash parameter index c s roots
+  let tops ← sequenceFin fun j => do
+    let left ← subNode parameter index c s j seed (subHeight - 1) 0
+    let right ← subNode parameter index c s j seed (subHeight - 1) 1
+    return (left, right)
+  superHash parameter index c s tops
 
 /-- A node of a coordinate's top tree at tree level `level`. -/
 def topNode (parameter : PublicParameter) (index : Index) (c : Coord) (seed : MasterSeed) :
@@ -882,12 +913,16 @@ def topNode (parameter : PublicParameter) (index : Index) (c : Coord) (seed : Ma
       else
         pure 0
 
-/-- The forest key of instance `idx`: every coordinate root, then the hash of the roots. -/
+/-- The forest key of instance `idx`: the two level-3 nodes of every coordinate, then their hash. -/
 def forestKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) : m Digest := do
-  let roots ← sequenceFin fun c => topNode parameter index c seed topHeight 0
-  tweakableHash parameter (.roots index) (rootsPayload roots)
+  let tops ← sequenceFin fun c => do
+    let left ← topNode parameter index c seed (topHeight - 1) 0
+    let right ← topNode parameter index c seed (topHeight - 1) 1
+    return (left, right)
+  tweakableHash parameter (.roots index) (rootsPayload tops)
 
-/-- The opening of one coordinate at a mark. -/
+/-- The opening of one coordinate at a mark. The last element of each path (level 2 of a sub-tree,
+level 3 of the top tree) is the top node the verifier does not compute. -/
 def coordOpen (parameter : PublicParameter) (index : Index) (c : Coord) (mark : CoordMark)
     (seed : MasterSeed) : m CoordOpening := do
   let sub ← sequenceFin fun j => do

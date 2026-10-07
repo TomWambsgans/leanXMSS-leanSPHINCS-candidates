@@ -4,7 +4,9 @@ import LeanForest.BridgeClassify
 canonical WOTS and tree opening at a retained leaf whose forest part recovers the canonical forest
 key, a tree hit, or a WOTS exception at a retained leaf. A recovered canonical forest key is a
 structural match (WOTS-key leaf, subtree node, tree leaf, tree node or roots), or every path is
-canonical and every opened chain value is canonical or walks into its chain through a match. -/
+canonical and every opened chain value is canonical or walks into its chain through a match. A tree
+has no root hash: the roots hash takes the two level-3 nodes of every tree and a tree leaf the two
+level-2 nodes of each of its subtrees, one reached by the fold and one the last path element. -/
 
 open OracleComp OracleSpec
 
@@ -16,39 +18,31 @@ section Refined
 variable (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index) (seed : MasterSeed)
 
 /-- The exceptional branches other than a chain match: a WOTS-key leaf, a subtree node, a tree leaf,
-a tree node or the roots. -/
+a tree node or the roots. A node match is at a hashed level: subtree levels 1 and 2, tree levels 1
+to 3. -/
 def StructException (marks : Coord → CoordMark) (opening : Coord → CoordOpening) : Prop :=
   (∃ c j, ChildLeafMatch f parameter index seed c (marks c) j ((opening c).sub j).values) ∨
-  (∃ c j level, level < subHeight ∧ SubNodeMatch f parameter index seed c (marks c) j ((opening c).sub j) level) ∨
+  (∃ c j level, level < subHeight - 1 ∧
+    SubNodeMatch f parameter index seed c (marks c) j ((opening c).sub j) level) ∨
   (∃ c, SuperMatch f parameter index seed c (marks c) (opening c)) ∨
-  (∃ c level, level < topHeight ∧ TopNodeMatch f parameter index seed c (marks c) (opening c) level) ∨
+  (∃ c level, level < topHeight - 1 ∧ TopNodeMatch f parameter index seed c (marks c) (opening c) level) ∨
   RootsMatch f parameter index seed marks opening
 
-/-- One subtree with the canonical root: a WOTS-key leaf match, a node match, or a canonical path
-with every chain canonical or a chain match. -/
+/-- One subtree with the two canonical level-2 nodes: a WOTS-key leaf match, a node match, or a
+canonical path with every chain canonical or a chain match. -/
 theorem sub_refined (c : Coord) (mark : CoordMark) (j : SubIdx) (opening : SubOpening)
-    (hroot : opSubRoot f parameter index c mark j opening =
-      Completeness.subNodeValue f parameter index c mark.super j seed subHeight 0) :
+    (htops : opSubTops f parameter index c mark j opening =
+      Completeness.subTopsValue f parameter index c seed mark.super j) :
     ChildLeafMatch f parameter index seed c mark j opening.values ∨
-    (∃ level, level < subHeight ∧ SubNodeMatch f parameter index seed c mark j opening level) ∨
+    (∃ level, level < subHeight - 1 ∧ SubNodeMatch f parameter index seed c mark j opening level) ∨
     (opening.path = canonicalSubPath f parameter index seed c mark.super j (mark.child j) ∧
       ∀ i, opening.values i = Completeness.chainValueOf f parameter index c mark.super j (mark.child j) i seed
           (chainTop - (lut (mark.word j) i).val) ∨
         ChainMatch f parameter index seed c mark j opening.values i) := by
   classical
-  have hfold : merkleValue f parameter (subDomain index c mark.super j) (mark.child j).val
-      (subPathExt opening.path) (opLeaf f parameter index c mark j opening.values) subHeight =
-    merkleValue f parameter (subDomain index c mark.super j) (mark.child j).val
-      (subPathExt (canonicalSubPath f parameter index seed c mark.super j (mark.child j)))
-      (Completeness.childLeafValue f parameter index c mark.super j seed (mark.child j)) subHeight :=
-    hroot.trans (canonical_sub_root f parameter index seed c mark.super j (mark.child j)).symm
-  rcases merkleFold_same_index f parameter _ (mark.child j).val _ _ _ _ subHeight hfold with
-    ⟨hleaf, hpath⟩ | ⟨level, hlevel, hmatch⟩
-  · have hpath' : opening.path = canonicalSubPath f parameter index seed c mark.super j (mark.child j) := by
-      funext level
-      have hp := hpath level.val level.isLt
-      simpa only [subPathExt, dif_pos level.isLt] using hp
-    by_cases hends : opEnds f parameter index c mark j opening.values =
+  rcases sub_fold_classification f parameter index seed c mark j opening htops with
+    ⟨hleaf, hpath'⟩ | ⟨level, hlevel, hmatch⟩
+  · by_cases hends : opEnds f parameter index c mark j opening.values =
         Completeness.childEnds f parameter index c mark.super j seed (mark.child j)
     · refine Or.inr (Or.inr ⟨hpath', fun i => ?_⟩)
       by_cases hi : opening.values i = Completeness.chainValueOf f parameter index c mark.super j
@@ -73,37 +67,21 @@ theorem sub_refined (c : Coord) (mark : CoordMark) (j : SubIdx) (opening : SubOp
     · exact Or.inl ⟨hends, hleaf⟩
   · exact Or.inr (Or.inl ⟨level, hlevel, hmatch⟩)
 
-/-- One tree with the canonical root: a tree-leaf match, a tree-node match, or a canonical top path
-with both subtree roots canonical. -/
+/-- One tree with the two canonical level-3 nodes: a tree-leaf match, a tree-node match, or a
+canonical top path with the level-2 nodes of both subtrees canonical. -/
 theorem coord_refined (c : Coord) (mark : CoordMark) (opening : CoordOpening)
-    (hroot : opRoot f parameter index c mark opening = Completeness.topNodeValue f parameter index c seed topHeight 0) :
+    (htops : opTops f parameter index c mark opening = Completeness.topTopsValue f parameter index c seed) :
     SuperMatch f parameter index seed c mark opening ∨
-    (∃ level, level < topHeight ∧ TopNodeMatch f parameter index seed c mark opening level) ∨
+    (∃ level, level < topHeight - 1 ∧ TopNodeMatch f parameter index seed c mark opening level) ∨
     (opening.top = canonicalTopPath f parameter index seed c mark.super ∧
-      ∀ j, opSubRoot f parameter index c mark j (opening.sub j) =
-        Completeness.subNodeValue f parameter index c mark.super j seed subHeight 0) := by
+      ∀ j, opSubTops f parameter index c mark j (opening.sub j) =
+        Completeness.subTopsValue f parameter index c seed mark.super j) := by
   classical
-  have hfold : merkleValue f parameter (topDomain index c) mark.super.val (topPathExt opening.top)
-      (opSuper f parameter index c mark opening) topHeight =
-    merkleValue f parameter (topDomain index c) mark.super.val
-      (topPathExt (canonicalTopPath f parameter index seed c mark.super))
-      (Completeness.superValue f parameter index c seed mark.super) topHeight :=
-    hroot.trans (canonical_top_root f parameter index seed c mark.super).symm
-  rcases merkleFold_same_index f parameter _ mark.super.val _ _ _ _ topHeight hfold with
-    ⟨hsuper, hpath⟩ | ⟨level, hlevel, hmatch⟩
-  · have hpath' : opening.top = canonicalTopPath f parameter index seed c mark.super := by
-      funext level
-      have hp := hpath level.val level.isLt
-      simpa only [topPathExt, dif_pos level.isLt] using hp
-    by_cases hpayload : nodePayload (opSubRoot f parameter index c mark 0 (opening.sub 0))
-        (opSubRoot f parameter index c mark 1 (opening.sub 1)) =
-      nodePayload (Completeness.subNodeValue f parameter index c mark.super 0 seed subHeight 0)
-        (Completeness.subNodeValue f parameter index c mark.super 1 seed subHeight 0)
-    · obtain ⟨h0, h1⟩ := nodePayload_injective hpayload
-      refine Or.inr (Or.inr ⟨hpath', fun j => ?_⟩)
-      fin_cases j
-      · exact h0
-      · exact h1
+  rcases top_fold_classification f parameter index seed c mark opening htops with
+    ⟨hsuper, hpath'⟩ | ⟨level, hlevel, hmatch⟩
+  · by_cases hpayload : superPayload (fun j => opSubTops f parameter index c mark j (opening.sub j)) =
+        superPayload (Completeness.subTopsValue f parameter index c seed mark.super)
+    · exact Or.inr (Or.inr ⟨hpath', fun j => congrFun (superPayload_injective hpayload) j⟩)
     · exact Or.inl ⟨hpayload, hsuper⟩
   · exact Or.inr (Or.inl ⟨level, hlevel, hmatch⟩)
 
@@ -130,9 +108,9 @@ theorem recovered_classification (marks : Coord → CoordMark) (opening : Coord 
     exact hrootsS ⟨hne, by rwa [← eval_forestRecover]⟩
   have hroots := rootsPayload_injective hpayload
   intro c
-  have hroot : opRoot f parameter index c (marks c) (opening c) =
-      Completeness.topNodeValue f parameter index c seed topHeight 0 := congrFun hroots c
-  rcases coord_refined f parameter index seed c (marks c) (opening c) hroot with hsup | ⟨level, hlevel, htop⟩ |
+  have htops : opTops f parameter index c (marks c) (opening c) =
+      Completeness.topTopsValue f parameter index c seed := congrFun hroots c
+  rcases coord_refined f parameter index seed c (marks c) (opening c) htops with hsup | ⟨level, hlevel, htop⟩ |
       ⟨htop, hsubs⟩
   · exact (hsuperS c hsup).elim
   · exact (htopS c level hlevel htop).elim

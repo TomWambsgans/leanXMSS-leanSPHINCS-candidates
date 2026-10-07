@@ -299,7 +299,8 @@ theorem lut_sum (t : LutIdx) : ∑ i, (lut t i).val = codewordSum := by
 
 Each opened chain is the signer's partial walk from the derived secret, so the verifier's `d_i` steps
 reach the chain top; the child leaf, the sub-tree fold, the super-child and the top-tree fold then
-climb the honest trees, and the hash of the coordinate roots is the forest key the bottom layer signed. -/
+climb the honest trees up to their two top nodes, and the hash of the top nodes of the 8 trees is the
+forest key the bottom layer signed. -/
 
 section Chain
 
@@ -515,6 +516,56 @@ theorem eval_topFold_path (s : SuperIdx) (path : Fin topHeight → Digest) :
 
 end Top
 
+section Tops
+
+/-- The two top nodes of a tree in index order: the fold reaches the top node above the leaf and the
+last path element is the other one. -/
+theorem orderTops_eq_iff (value : Nat → Digest) (leaf level : Nat) (hleaf : leaf / 2 ^ level < 2)
+    (current sibling : Digest) :
+    orderTops (leaf.testBit level) current sibling = (value 0, value 1) ↔
+      current = value (leaf / 2 ^ level) ∧ sibling = value (Nat.xor (leaf / 2 ^ level) 1) := by
+  have hbit : leaf.testBit level = (leaf / 2 ^ level).testBit 0 := (testBit_div_pow leaf level).symm
+  rw [hbit]
+  generalize leaf / 2 ^ level = node at hleaf ⊢
+  obtain h | h : node = 0 ∨ node = 1 := by omega
+  · subst h
+    simp only [orderTops, Nat.testBit_zero, Nat.zero_mod, zero_ne_one, decide_false, Bool.false_eq_true,
+      ↓reduceIte, Prod.mk.injEq]
+    exact Iff.rfl
+  · subst h
+    simp only [orderTops, Nat.testBit_zero, Nat.one_mod, decide_true, ↓reduceIte, Prod.mk.injEq]
+    exact and_comm
+
+variable (parameter : PublicParameter) (index : Index) (c : Coord) (seed : MasterSeed)
+
+/-- The two honest level-2 nodes of a sub-tree, the inputs of its super-child. -/
+def subTopsValue (s : SuperIdx) (j : SubIdx) : Digest × Digest :=
+  (subNodeValue f parameter index c s j seed (subHeight - 1) 0,
+    subNodeValue f parameter index c s j seed (subHeight - 1) 1)
+
+/-- The two honest level-3 nodes of a top tree, the inputs of the forest key. -/
+def topTopsValue : Digest × Digest :=
+  (topNodeValue f parameter index c seed (topHeight - 1) 0,
+    topNodeValue f parameter index c seed (topHeight - 1) 1)
+
+theorem superValue_eq (s : SuperIdx) :
+    superValue f parameter index c seed s =
+      truncateHash (f (tweakableHashInput parameter (.superChild index c s)
+        (superPayload (subTopsValue f parameter index c seed s)))) := by
+  simp only [superValue, Seeded.superNode, superHash, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
+    eval_sequenceFin, eval_tweakableHash]
+  rfl
+
+theorem forestKey_eq :
+    evalWithAnswerFn f (Seeded.forestKey parameter index seed : OracleComp HashSpec Digest) =
+      truncateHash (f (tweakableHashInput parameter (.roots index)
+        (rootsPayload fun c => topTopsValue f parameter index c seed))) := by
+  simp only [Seeded.forestKey, evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_sequenceFin,
+    eval_tweakableHash]
+  rfl
+
+end Tops
+
 section Key
 
 variable (parameter : PublicParameter) (index : Index) (seed : MasterSeed)
@@ -531,37 +582,45 @@ theorem eval_coordOpen (c : Coord) (mark : CoordMark) :
   simp only [Seeded.coordOpen, evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_sequenceFin,
     eval_forestSecrets, chainValueOf, fwalk, subNodeValue, topNodeValue]
 
-/-- The verifier recovers the honest root of every coordinate. -/
+/-- The verifier recovers the two honest level-3 nodes of every coordinate. -/
 theorem eval_coordRecover (c : Coord) (mark : CoordMark) :
     evalWithAnswerFn f (coordRecover parameter index c mark
         (evalWithAnswerFn f (Seeded.coordOpen parameter index c mark seed : OracleComp HashSpec CoordOpening))
-        : OracleComp HashSpec Digest)
-      = topNodeValue f parameter index c seed topHeight 0 := by
+        : OracleComp HashSpec (Digest × Digest))
+      = topTopsValue f parameter index c seed := by
   have hsub : ∀ jj : SubIdx,
-      evalWithAnswerFn f (subFold parameter index c mark.super jj (mark.child jj)
+      orderTops ((mark.child jj).val.testBit (subHeight - 1))
+        (evalWithAnswerFn f (subFold parameter index c mark.super jj (mark.child jj)
           (fun level => subNodeValue f parameter index c mark.super jj seed level.val
-            (Nat.xor ((mark.child jj).val / 2 ^ level.val) 1)) subHeight
+            (Nat.xor ((mark.child jj).val / 2 ^ level.val) 1)) (subHeight - 1)
           (evalWithAnswerFn f (childRecover parameter index c mark.super jj (mark.child jj) (lut (mark.word jj))
             (fun i => chainValueOf f parameter index c mark.super jj (mark.child jj) i seed
-              (chainTop - (lut (mark.word jj) i).val)) : OracleComp HashSpec Digest)) : OracleComp HashSpec Digest)
-        = subNodeValue f parameter index c mark.super jj seed subHeight 0 := by
+              (chainTop - (lut (mark.word jj) i).val)) : OracleComp HashSpec Digest)) : OracleComp HashSpec Digest))
+        (subNodeValue f parameter index c mark.super jj seed subTopLevel.val
+          (Nat.xor ((mark.child jj).val / 2 ^ subTopLevel.val) 1))
+        = subTopsValue f parameter index c seed mark.super jj := by
     intro jj
     rw [eval_childRecover, ← subNodeValue_zero,
-      eval_subFold_path f parameter index c mark.super jj seed (mark.child jj) _ subHeight le_rfl
+      eval_subFold_path f parameter index c mark.super jj seed (mark.child jj) _ (subHeight - 1) (by decide)
         (fun level hlevel _ => rfl)]
-    congr 1
-    exact Nat.div_eq_of_lt (mark.child jj).isLt
+    refine (orderTops_eq_iff (fun node => subNodeValue f parameter index c mark.super jj seed (subHeight - 1) node)
+      (mark.child jj).val (subHeight - 1) ?_ _ _).mpr ⟨rfl, rfl⟩
+    have := (mark.child jj).isLt
+    simp only [subHeight] at this ⊢
+    omega
   have hsuper : evalWithAnswerFn f (superHash parameter index c mark.super
-      (fun jj => subNodeValue f parameter index c mark.super jj seed subHeight 0) : OracleComp HashSpec Digest)
+      (subTopsValue f parameter index c seed mark.super) : OracleComp HashSpec Digest)
       = superValue f parameter index c seed mark.super := by
-    simp only [superHash, superValue, Seeded.superNode, evalWithAnswerFn_bind, eval_sequenceFin,
-      subNodeValue]
+    rw [superValue_eq, superHash, eval_tweakableHash]
   rw [eval_coordOpen]
-  simp only [coordRecover, evalWithAnswerFn_bind, eval_sequenceFin, hsub]
+  simp only [coordRecover, evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_sequenceFin, hsub]
   rw [hsuper, ← topNodeValue_zero,
-    eval_topFold_path f parameter index c seed mark.super _ topHeight le_rfl (fun level hlevel _ => rfl)]
-  congr 1
-  exact Nat.div_eq_of_lt mark.super.isLt
+    eval_topFold_path f parameter index c seed mark.super _ (topHeight - 1) (by decide) (fun level hlevel _ => rfl)]
+  refine (orderTops_eq_iff (fun node => topNodeValue f parameter index c seed (topHeight - 1) node)
+    mark.super.val (topHeight - 1) ?_ _ _).mpr ⟨rfl, rfl⟩
+  have := mark.super.isLt
+  simp only [topHeight] at this ⊢
+  omega
 
 /-- **The verifier recovers the forest key the bottom layer signed.** -/
 theorem eval_forestRecover (marks : Coord → CoordMark) :
@@ -569,8 +628,9 @@ theorem eval_forestRecover (marks : Coord → CoordMark) :
         (evalWithAnswerFn f (Seeded.forestOpen parameter index marks seed
           : OracleComp HashSpec (Coord → CoordOpening))) : OracleComp HashSpec Digest)
       = evalWithAnswerFn f (Seeded.forestKey parameter index seed : OracleComp HashSpec Digest) := by
-  simp only [forestRecover, Seeded.forestKey, Seeded.forestOpen, evalWithAnswerFn_bind, eval_sequenceFin,
-    eval_coordRecover, topNodeValue]
+  rw [forestKey_eq]
+  simp only [forestRecover, Seeded.forestOpen, evalWithAnswerFn_bind, eval_sequenceFin,
+    eval_coordRecover, eval_tweakableHash]
 
 end Key
 

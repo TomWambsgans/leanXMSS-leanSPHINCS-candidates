@@ -200,15 +200,14 @@ theorem cellKnown_children (parameter : PublicParameter) (position : Position)
         rcases hchild with rfl | rfl <;> exact cellKnown_struct parameter _ (fun h => h)
   | superChild index c s =>
       simp only [Position.children, List.mem_cons, List.not_mem_nil, or_false] at hchild
-      rcases hchild with rfl | rfl <;> exact cellKnown_struct parameter _ (fun h => h)
+      rcases hchild with rfl | rfl | rfl | rfl <;> exact cellKnown_struct parameter _ (fun h => h)
   | topNode index c level nd =>
       simp only [Position.children] at hchild
       split_ifs at hchild <;> simp only [List.mem_cons, List.not_mem_nil, or_false] at hchild <;>
         rcases hchild with rfl | rfl <;> exact cellKnown_struct parameter _ (fun h => h)
   | roots index =>
-      simp only [Position.children, List.mem_ofFn] at hchild
-      obtain ⟨c, rfl⟩ := hchild
-      exact cellKnown_struct parameter _ (fun h => h)
+      simp only [Position.children, List.mem_flatMap, List.mem_cons, List.not_mem_nil, or_false] at hchild
+      obtain ⟨c, -, rfl | rfl⟩ := hchild <;> exact cellKnown_struct parameter _ (fun h => h)
 
 section Split
 

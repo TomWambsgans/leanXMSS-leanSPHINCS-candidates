@@ -286,7 +286,8 @@ theorem superNode (parameter : PublicParameter) (index : Index) (c : Coord) (s :
     (seed : MasterSeed) :
     PreservesFresh target (Seeded.superNode parameter index c s seed) := by
   rw [Seeded.superNode]
-  exact bind (sequenceFin _ _ (fun _ => subNode hs _ _ _ _ _ _ _ _))
+  exact bind (sequenceFin _ _ (fun _ => bind (subNode hs _ _ _ _ _ _ _ _) (fun _ =>
+      bind (subNode hs _ _ _ _ _ _ _ _) (fun _ => pure' _ _))))
     (fun _ => tweakableHash _ _ _ _ (hs.superChild _ _ _ _ _))
 
 omit [Params] in
@@ -308,7 +309,8 @@ omit [Params] in
 theorem forestKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) :
     PreservesFresh target (Seeded.forestKey parameter index seed) := by
   rw [Seeded.forestKey]
-  exact bind (sequenceFin _ _ (fun _ => topNode hs _ _ _ _ _ _))
+  exact bind (sequenceFin _ _ (fun _ => bind (topNode hs _ _ _ _ _ _) (fun _ =>
+      bind (topNode hs _ _ _ _ _ _) (fun _ => pure' _ _))))
     (fun _ => tweakableHash _ _ _ _ (hs.roots _ _ _))
 
 omit [Params] in

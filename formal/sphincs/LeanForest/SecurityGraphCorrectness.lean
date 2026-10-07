@@ -505,7 +505,8 @@ theorem tree_root_value (hboundary : BoundaryCorrect f parameter seed labels)
 
 Every forest position is prepared. Its label is the honest value: chain steps the chain values,
 WOTS-key leaves the child leaves, subtree and tree nodes the honest nodes, the tree leaves the
-`H(R0, R1)` values and the roots position the forest key. -/
+hashes of the four level-2 nodes of their subtrees and the roots position the forest key, the hash of
+the sixteen level-3 nodes of the trees. -/
 
 section Forest
 
@@ -590,7 +591,7 @@ def subPosition (s : SuperIdx) (j : SubIdx) :
   | 0, _, a => .childLeaf index c s j a
   | level + 1, hlevel, nd => .subNode index c s j ⟨level, by omega⟩ nd
 
-/-- Graph location for a tree node, including the level-zero tree leaf `H(R0, R1)`. -/
+/-- Graph location for a tree node, including the level-zero tree leaf. -/
 def topPosition :
     (level : Nat) → level ≤ topHeight → SuperIdx → Position
   | 0, _, s => .superChild index c s
@@ -647,17 +648,16 @@ theorem super_input (s : SuperIdx) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
       (.superChild index c s) labels =
     tweakableHashInput parameter (.superChild index c s)
-      (nodePayload (Completeness.subNodeValue f parameter index c s 0 seed subHeight 0)
-        (Completeness.subNodeValue f parameter index c s 1 seed subHeight 0)) := by
-  have h0 : truncateHash (labels (.subNode index c s 0 ⟨subHeight - 1, by decide⟩ ⟨0, by decide⟩)) =
-      Completeness.subNodeValue f parameter index c s 0 seed subHeight 0 :=
-    sub_value f parameter seed labels hconsistent index c s 0 subHeight le_rfl ⟨0, by decide⟩ (by simp)
-  have h1 : truncateHash (labels (.subNode index c s 1 ⟨subHeight - 1, by decide⟩ ⟨0, by decide⟩)) =
-      Completeness.subNodeValue f parameter index c s 1 seed subHeight 0 :=
-    sub_value f parameter seed labels hconsistent index c s 1 subHeight le_rfl ⟨0, by decide⟩ (by simp)
+      (superPayload (Completeness.subTopsValue f parameter index c seed s)) := by
+  have h : ∀ (j : SubIdx) (nd : ChildIdx) (_ : nd.val < 2 ^ (subHeight - (subHeight - 1))),
+      truncateHash (labels (.subNode index c s j ⟨subHeight - 2, by decide⟩ nd)) =
+        Completeness.subNodeValue f parameter index c s j seed (subHeight - 1) nd.val :=
+    fun j nd hnd => sub_value f parameter seed labels hconsistent index c s j (subHeight - 1) (by decide) nd hnd
   simp only [canonicalGraphInput, canonicalGraphSlots, Position.children, Position.domain,
-    List.map_cons, List.map_nil, List.flatMap_cons, List.flatMap_nil, List.append_nil, nodePayload]
-  rw [h0, h1]
+    List.map_cons, List.map_nil, List.flatMap_cons, List.flatMap_nil, List.append_nil, superPayload,
+    nodePayload, Completeness.subTopsValue, List.append_assoc]
+  rw [h 0 ⟨0, by decide⟩ (by decide), h 0 ⟨1, by decide⟩ (by decide), h 1 ⟨0, by decide⟩ (by decide),
+    h 1 ⟨1, by decide⟩ (by decide)]
 
 include hconsistent in
 theorem super_value (s : SuperIdx) :
@@ -690,13 +690,19 @@ theorem roots_input :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
       (.roots index) labels =
     tweakableHashInput parameter (.roots index) (rootsPayload (Forest.canonicalRoots f parameter index seed)) := by
+  have h : ∀ (c' : Coord) (nd : SuperIdx) (_ : nd.val < 2 ^ (topHeight - (topHeight - 1))),
+      truncateHash (labels (.topNode index c' ⟨topHeight - 2, by decide⟩ nd)) =
+        Completeness.topNodeValue f parameter index c' seed (topHeight - 1) nd.val :=
+    fun c' nd hnd => top_value f parameter seed labels hconsistent index c' (topHeight - 1) (by decide) nd hnd
   unfold canonicalGraphInput canonicalGraphSlots
-  simp only [Position.children, Position.domain, List.map_ofFn]
+  simp only [Position.children, Position.domain]
   congr 1
-  apply congrArg (fun values : List Digest => values.flatMap (bytesLE 16))
-  apply congrArg List.ofFn
-  funext c'
-  exact top_value f parameter seed labels hconsistent index c' topHeight le_rfl ⟨0, by decide⟩ (by simp)
+  rw [List.map_flatMap, List.flatMap_assoc, rootsPayload, List.ofFn_eq_map, List.flatMap_map]
+  apply List.flatMap_congr
+  intro c' _
+  simp only [List.map_cons, List.map_nil, List.flatMap_cons, List.flatMap_nil, List.append_nil, nodePayload,
+    Forest.canonicalRoots, Completeness.topTopsValue]
+  rw [h c' ⟨0, by decide⟩ (by decide), h c' ⟨1, by decide⟩ (by decide)]
 
 include hconsistent in
 theorem forest_key_value :

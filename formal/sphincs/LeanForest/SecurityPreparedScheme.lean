@@ -296,7 +296,7 @@ theorem compiled_superNode_eq (left right : MasterSeed) (material : Material)
     simulateQ (compileHash right material)
       (Seeded.superNode (parameter material) index c s right : OracleComp HashSpec Digest) := by
   simp only [Seeded.superNode, simulateQ_bind, simulate_sequenceFin, compiled_subNode_eq left right,
-    superHash, compile_tweakableHash]
+    superHash, compile_tweakableHash, simulateQ_pure]
 
 omit [Params] in
 theorem compiled_topNode_eq (left right : MasterSeed) (material : Material)
@@ -324,7 +324,7 @@ theorem compiled_forestKey_eq (left right : MasterSeed) (material : Material) (i
     simulateQ (compileHash right material)
       (Seeded.forestKey (parameter material) index right : OracleComp HashSpec Digest) := by
   simp only [Seeded.forestKey, simulateQ_bind, simulate_sequenceFin,
-    compiled_topNode_eq left right, compile_tweakableHash]
+    compiled_topNode_eq left right, compile_tweakableHash, simulateQ_pure]
 
 omit [Params] in
 theorem compiled_coordOpen_eq (left right : MasterSeed) (material : Material) (index : Index)

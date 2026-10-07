@@ -123,7 +123,7 @@ variable [Params]
 /-- The final assembly after its digest call. -/
 noncomputable def finishRest (parameter : PublicParameter) (data : PublicData) (_message : Message)
     (randomness : Randomness) (digest : MessageDigest) : OracleComp CostSpec (Option Signature) := do
-  HiddenCost.tick 118585
+  HiddenCost.tick 118081
   let index := digestIndex digest
   let some (counter, word) ← liftM (ReferenceChoice.search parameter topLayer rootTree index
     (data.forestKey index) encodingAttemptLimit 0) | return none

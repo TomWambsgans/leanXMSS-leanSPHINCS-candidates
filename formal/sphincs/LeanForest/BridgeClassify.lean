@@ -317,8 +317,10 @@ theorem forestException_hit (index : Index) (marks : Coord → CoordMark) (openi
       exact hne (childPayload_injective (tweakableInput_injective hinput).2.2)
     · rw [childLeaf_value f parameter seed labels hconsistent]
       exact heq
-  · have hl1 : level + 1 ≤ subHeight := hlevel
-    refine ⟨_, Forest.subNodeInput_mem f parameter index marks opening c j level hlevel,
+  · have hfolded := hlevel
+    have hlevel : level < subHeight := Nat.lt_of_lt_of_le hfolded (by decide)
+    have hl1 : level + 1 ≤ subHeight := hlevel
+    refine ⟨_, Forest.subNodeInput_mem f parameter index marks opening c j level hfolded,
       active_hit' f parameter seed labels (subPosition index c (marks c).super j (level + 1) hl1
         ⟨((marks c).child j).val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt ((marks c).child j).isLt⟩)
         trivial _ ?_ ?_ ?_⟩
@@ -340,8 +342,10 @@ theorem forestException_hit (index : Index) (marks : Coord → CoordMark) (openi
       exact hne (tweakableInput_injective hinput).2.2
     · rw [super_value f parameter seed labels hconsistent]
       exact heq
-  · have hl1 : level + 1 ≤ topHeight := hlevel
-    refine ⟨_, Forest.topNodeInput_mem f parameter index marks opening c level hlevel,
+  · have hfolded := hlevel
+    have hlevel : level < topHeight := Nat.lt_of_lt_of_le hfolded (by decide)
+    have hl1 : level + 1 ≤ topHeight := hlevel
+    refine ⟨_, Forest.topNodeInput_mem f parameter index marks opening c level hfolded,
       active_hit' f parameter seed labels (topPosition index c (level + 1) hl1
         ⟨(marks c).super.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt (marks c).super.isLt⟩)
         trivial _ ?_ ?_ ?_⟩

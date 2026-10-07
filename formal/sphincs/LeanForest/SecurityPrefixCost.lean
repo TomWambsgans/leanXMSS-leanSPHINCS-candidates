@@ -145,17 +145,20 @@ theorem hashCalls_subNode (f : QueryImpl HashSpec Id) (parameter : PublicParamet
       rw [pow_succ]
       omega
 
+/-- A tree leaf costs `2 · 2 · (29 · 4 - 1) + 1 = 461` calls: the two level-2 nodes of each of its two
+subtrees and their hash. A subtree has no root hash. -/
 theorem hashCalls_superNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (c : Coord) (s : SuperIdx) (seed : MasterSeed) :
-    hashCalls f (Seeded.superNode parameter index c s seed : OracleComp HashSpec Digest) = 463 := by
+    hashCalls f (Seeded.superNode parameter index c s seed : OracleComp HashSpec Digest) = 461 := by
   rw [Seeded.superNode, hashCalls_bind, hashCalls_sequenceFin, superHash, hashCalls_tweakableHash]
-  simp only [hashCalls_subNode f parameter index c s _ seed subHeight 0 le_rfl]
+  simp only [hashCalls_bind, hashCalls_pure,
+    hashCalls_subNode f parameter index c s _ seed (subHeight - 1) _ (by decide)]
   decide
 
 theorem hashCalls_topNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (c : Coord) (seed : MasterSeed) (level node : Nat) (hlevel : level ≤ topHeight) :
     hashCalls f (Seeded.topNode parameter index c seed level node : OracleComp HashSpec Digest) =
-      464 * 2 ^ level - 1 := by
+      462 * 2 ^ level - 1 := by
   induction level generalizing node with
   | zero => rw [Seeded.topNode, hashCalls_superNode]; rfl
   | succ level ih =>
@@ -165,12 +168,14 @@ theorem hashCalls_topNode (f : QueryImpl HashSpec Id) (parameter : PublicParamet
       rw [pow_succ]
       omega
 
-/-- Building the forest key costs `8 · (464 · 16 - 1) + 1 = 59385` hash calls. -/
+/-- Building the forest key costs `8 · 2 · (462 · 8 - 1) + 1 = 59121` hash calls: the two level-3
+nodes of each of the 8 trees and their hash. A tree has no root hash. -/
 theorem hashCalls_forestKey (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (seed : MasterSeed) :
-    hashCalls f (Seeded.forestKey parameter index seed : OracleComp HashSpec Digest) = 59385 := by
+    hashCalls f (Seeded.forestKey parameter index seed : OracleComp HashSpec Digest) = 59121 := by
   rw [Seeded.forestKey, hashCalls_bind, hashCalls_sequenceFin, hashCalls_tweakableHash]
-  simp only [hashCalls_topNode f parameter index _ seed topHeight 0 le_rfl]
+  simp only [hashCalls_bind, hashCalls_pure,
+    hashCalls_topNode f parameter index _ seed (topHeight - 1) _ (by decide)]
   decide
 
 theorem hashCalls_encode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
