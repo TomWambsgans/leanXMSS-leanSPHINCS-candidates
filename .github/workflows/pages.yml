@@ -26,12 +26,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Serve the pages at /sphincs/ and /xmss/, and redirect the root to /sphincs/
+      - name: Serve the pages at / and /xmss/, and redirect /sphincs/ to the root
         run: |
           mkdir -p _site/sphincs _site/xmss
-          cp site/index.html _site/sphincs/index.html
+          cp site/index.html _site/index.html
           cp site/xmss/index.html _site/xmss/index.html
-          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=sphincs/"><link rel="canonical" href="sphincs/"><title>leanSPHINCS</title><a href="sphincs/">leanSPHINCS</a>\n' > _site/index.html
+          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=../"><link rel="canonical" href="../"><title>leanSPHINCS</title><a href="../">leanSPHINCS</a>\n' > _site/sphincs/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
