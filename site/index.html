@@ -174,6 +174,7 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
 .split .cmp col.label { width: 8.5rem; }
 .split .cmp tbody th { white-space: nowrap; }
 .cmp thead .sub { font-weight: 400; color: var(--muted); }
+.m-only { display: none; }
 
 footer { display: flex; justify-content: space-between; gap: 2rem; margin-top: 1.5rem; color: var(--muted); }
 footer p { margin: 0; }
@@ -210,11 +211,84 @@ footer a + a { margin-left: 1.25rem; }
   footer { flex-direction: column; gap: 0.5rem; }
 }
 @media (max-width: 600px) {
-  main { padding: 1.25rem 1rem; }
+  main { padding: 1.25rem 1rem 1.5rem; }
   h1 { font-size: 2.2rem; }
-  .params p, .idea { font-size: 1.1rem; }
-  .params th, .params td { padding-right: 0.9rem; }
+  .idea { font-size: 1.1rem; text-align: left; margin: 0.4rem 0 1.2rem; }
   .info::after { white-space: pre-wrap; width: max-content; max-width: 70vw; }
+  .m-only { display: inline; }
+
+  /* Title, author, then the variant switch and what it changes */
+  header { display: flex; flex-direction: column; }
+  .titlerow { display: contents; }
+  .by { order: 1; margin-top: 0.3rem; color: var(--muted); }
+  .toggle { order: 2; align-self: flex-start; margin: 1.1rem 0 0; }
+  .notes, .notes.flow { order: 3; flex-flow: row wrap; gap: 0.4rem 1.5rem; margin: 1.6rem 0 0; }
+
+  /* The parameter table fits the screen */
+  .params { margin-top: 1.5rem; }
+  .params table { width: 100%; font-size: 0.9rem; }
+  .params th, .params td { padding-right: 0.5rem; vertical-align: baseline; white-space: nowrap; }
+  .params th:last-child, .params td:last-child { padding-right: 0; width: 100%; white-space: normal; }
+  .params .unit { font-size: 0.78em; }
+  .params .old { margin-right: 0.4em; }
+  .params .new { margin-left: 0; white-space: nowrap; }
+  .params td.two { white-space: nowrap; }
+  .params td.two .new::before { content: "\A"; white-space: pre; }
+
+  /* The diagram: larger labels, and no blank band below the vanilla one */
+  figure { margin-top: 0.4rem; }
+  figure svg { overflow: visible; }
+  svg .lb, svg .nm, svg .pv { font-size: 18px; }
+  body:not([data-v="spicy"]) figure svg { margin-bottom: -15%; }
+
+  /* The tables become lists: each cell is a block, laid out on a grid in column order */
+  .tables .scroll { overflow: visible; }
+  .tables .cmp { display: grid; width: 100%; font-variant-numeric: tabular-nums; }
+  .tables .cmp colgroup { display: none; }
+  .tables .cmp thead, .tables .cmp tbody, .tables .cmp tr { display: contents; }
+  .tables .scroll .cmp tr > * { display: block; padding: 0; border: 0; white-space: normal; }
+  .tables .scroll .cmp tr > :nth-child(2) { order: 2; }
+  .tables .scroll .cmp tr > :nth-child(3) { order: 3; }
+  .tables .scroll .cmp tr > :nth-child(4) { order: 4; }
+  .tables h2 { margin-top: 1.6rem; }
+  .split { gap: 1.6rem; }
+
+  /* One signer: one block per device */
+  .tables .scroll .cards { grid-template-columns: minmax(0, 1fr); }
+  .tables .scroll .cards thead th:first-child, .tables .scroll .cards tbody th { display: none; }
+  .tables .scroll .cards thead th { margin: 1.1rem 0 0.35rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--rule); }
+  .tables .scroll .cards thead th:nth-child(2) { margin-top: 0.3rem; }
+  .tables .scroll .cards td { display: grid; grid-template-columns: 7rem minmax(0, 1fr); align-items: baseline; padding: 0.14rem 0; }
+  .cards td::before { content: attr(data-l); color: var(--muted); font-size: 0.92em; }
+  .cards td .hd { gap: 0.6em; }
+  .cards td .hd > :first-child { flex: 1 1 auto; min-width: 0; }
+  .cards .st { display: block; color: var(--muted); }
+  .cards .br { font-size: 0; }
+  .cards .br::after { content: "\A"; white-space: pre; }
+
+  /* With DKG: the thresholds as columns, one line per lifetime above its three values */
+  .tables .scroll .groups { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 0.3rem; }
+  .tables .scroll .groups thead th:first-child { display: none; }
+  .tables .scroll .groups tbody th { order: 0; padding-bottom: 0.35rem; border-bottom: 1px solid var(--rule); color: var(--muted); font-weight: 400; }
+  .tables .scroll .groups thead th { grid-column: 1 / -1; margin-top: 0.7rem; }
+  .groups thead th br { display: none; }
+  .groups .m-only { font-weight: 400; }
+
+  /* With a trusted dealer: one line per lifetime */
+  .tables .scroll .pairs { grid-template-columns: minmax(0, 1fr) auto; margin-top: 0.3rem; }
+  .tables .scroll .pairs tr > * { padding: 0.4rem 0; border-top: 1px solid var(--rule); }
+  .tables .scroll .pairs thead th:first-child, .tables .scroll .pairs tbody th { order: 0; padding-top: 0; border-top: 0; color: var(--muted); font-weight: 400; }
+  .pairs thead th:first-child br { display: none; }
+  .pairs thead th:first-child .sub { margin-left: 0.35em; }
+  .tables .scroll .pairs td, .tables .scroll .pairs tbody th { text-align: right; }
+
+  footer { margin-top: 2rem; }
+}
+@media (max-width: 374px) {
+  .params table { font-size: 0.84rem; }
+}
+@media (max-width: 359px) {
+  html, body { font-size: 14px; }
 }
 </style>
 </head>
@@ -238,7 +312,7 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th><i>k</i></th><td>6</td><td><span class="old">24</span><span class="new s-only">8</span></td></tr>
           <tr><th><i>a</i></th><td>24</td><td><span class="old">10</span><span class="new s-only">4 + 3</span></td></tr>
           <tr><th>OTS</th><td>WOTS+</td><td>WOTS+C</td></tr>
-          <tr><th>FTS</th><td>FORS</td><td><span class="old">FORS</span><span class="new s-only">WOTS forest</span><span class="info r s-only" tabindex="0" data-tip="8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5">i</span></td></tr>
+          <tr><th>FTS</th><td>FORS</td><td class="two"><span class="old">FORS</span><span class="new s-only">WOTS forest</span><span class="info r s-only" tabindex="0" data-tip="8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5">i</span></td></tr>
           <tr><th>Hash</th><td>SHA-2 or SHAKE</td><td>BLAKE2s<span class="info" tabindex="0" data-tip="A placeholder: SHA-2 would also work">i</span></td></tr>
         </tbody>
         <tbody class="out">
@@ -601,15 +675,15 @@ footer a + a { margin-left: 1.25rem; }
     <div class="tables">
       <h2>One signer</h2>
       <div class="scroll">
-      <table class="cmp">
+      <table class="cmp cards">
         <colgroup><col class="label"><col><col><col></colgroup>
         <thead>
           <tr><th></th><th><div class="hd">Light<span class="dev">Ledger Nano S+<span class="info" tabindex="0" data-tip="33K compressions per second">i</span></span></div></th><th><div class="hd">Standard<span class="dev">weak CPU<span class="info" tabindex="0" data-tip="128M compressions per second">i</span></span></div></th><th><div class="hd">Full<span class="dev">powerful CPU<span class="info" tabindex="0" data-tip="1B compressions per second">i</span></span></div></th></tr>
         </thead>
         <tbody>
-          <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td><span class="old">210K</span><span class="new s-only">249K</span> signatures (subtree of 2<sup>13</sup>)</td><td><span class="old">22M</span><span class="new s-only">26M</span> signatures (subtree of 2<sup>20</sup>)</td><td><span class="old">1.15B</span><span class="new s-only">1.4B</span> signatures (full tree of 2<sup>26</sup>)</td></tr>
-          <tr><th>Key generation</th><td><div class="hd"><span>1.98M compressions</span><span class="ex">60&nbsp;s</span></div></td><td><div class="hd"><span>254M compressions</span><span class="ex">2.0&nbsp;s</span></div></td><td><div class="hd"><span>16.2B compressions</span><span class="ex">16&nbsp;s</span></div></td></tr>
-          <tr><th>Signing</th><td><div class="hd"><span>74K compressions, 16&nbsp;KiB cache</span><span class="ex">2.2&nbsp;s</span></div></td><td><div class="hd"><span>70K compressions, 1&nbsp;MiB cache</span><span class="ex">0.5&nbsp;ms</span></div></td><td><div class="hd"><span>93K compressions, 16&nbsp;MiB cache</span><span class="ex">0.1&nbsp;ms</span></div></td></tr>
+          <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Lifetime"><div><span class="old">210K</span><span class="new s-only">249K</span> signatures <span class="st">(subtree of 2<sup>13</sup>)</span></div></td><td data-l="Lifetime"><div><span class="old">22M</span><span class="new s-only">26M</span> signatures <span class="st">(subtree of 2<sup>20</sup>)</span></div></td><td data-l="Lifetime"><div><span class="old">1.15B</span><span class="new s-only">1.4B</span> signatures <span class="st">(full tree of 2<sup>26</sup>)</span></div></td></tr>
+          <tr><th>Key generation</th><td data-l="Key generation"><div class="hd"><span>1.98M compressions</span><span class="ex">60&nbsp;s</span></div></td><td data-l="Key generation"><div class="hd"><span>254M compressions</span><span class="ex">2.0&nbsp;s</span></div></td><td data-l="Key generation"><div class="hd"><span>16.2B compressions</span><span class="ex">16&nbsp;s</span></div></td></tr>
+          <tr><th>Signing</th><td data-l="Signing"><div class="hd"><span>74K compressions<span class="br">, </span>16&nbsp;KiB cache</span><span class="ex">2.2&nbsp;s</span></div></td><td data-l="Signing"><div class="hd"><span>70K compressions<span class="br">, </span>1&nbsp;MiB cache</span><span class="ex">0.5&nbsp;ms</span></div></td><td data-l="Signing"><div class="hd"><span>93K compressions<span class="br">, </span>16&nbsp;MiB cache</span><span class="ex">0.1&nbsp;ms</span></div></td></tr>
         </tbody>
       </table>
       </div>
@@ -620,9 +694,9 @@ footer a + a { margin-left: 1.25rem; }
           <h3>With DKG</h3>
           <p class="bn">Bottleneck: keygen traffic per operator</p>
           <div class="scroll">
-          <table class="cmp">
+          <table class="cmp groups">
             <colgroup><col class="label"><col><col><col></colgroup>
-            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><br><span class="sub">(signatures)</span></th><th><span class="old">7.5K</span><span class="new s-only">8.9K</span><br><span class="sub">(subtree of 2<sup>8</sup>)</span></th><th><span class="old">28.5K</span><span class="new s-only">33.5K</span><br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th><span class="old">108K</span><span class="new s-only">128K</span><br><span class="sub">(subtree of 2<sup>12</sup>)</span></th></tr></thead>
+            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><br><span class="sub">(signatures)</span></th><th><span class="old">7.5K</span><span class="new s-only">8.9K</span><span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>8</sup>)</span></th><th><span class="old">28.5K</span><span class="new s-only">33.5K</span><span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th><span class="old">108K</span><span class="new s-only">128K</span><span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>12</sup>)</span></th></tr></thead>
             <tbody>
               <tr><th>2-of-3</th><td><span class="old">11</span><span class="new s-only">21</span>&nbsp;GB</td><td><span class="old">43</span><span class="new s-only">85</span>&nbsp;GB</td><td><span class="old">172</span><span class="new s-only">342</span>&nbsp;GB</td></tr>
               <tr><th>3-of-5</th><td><span class="old">13</span><span class="new s-only">26</span>&nbsp;GB</td><td><span class="old">52</span><span class="new s-only">103</span>&nbsp;GB</td><td><span class="old">207</span><span class="new s-only">410</span>&nbsp;GB</td></tr>
@@ -635,7 +709,7 @@ footer a + a { margin-left: 1.25rem; }
           <h3>With a trusted dealer</h3>
           <p class="bn">Bottleneck: public data to store (also applies to the DKG version)</p>
           <div class="scroll">
-          <table class="cmp">
+          <table class="cmp pairs">
             <colgroup><col class="label"><col><col><col></colgroup>
             <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><br><span class="sub">(signatures)</span></th><th><span class="old">28.5K</span><span class="new s-only">33.5K</span><br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th><span class="old">108K</span><span class="new s-only">128K</span><br><span class="sub">(subtree of 2<sup>12</sup>)</span></th><th><span class="old">410K</span><span class="new s-only">485K</span><br><span class="sub">(subtree of 2<sup>14</sup>)</span></th></tr></thead>
             <tbody>
