@@ -57,7 +57,7 @@ def betaWQ(qb): return Fr(2 * (2 ** 128 - qb) + 1, 2 ** 256)
 # Lean sources (H0PTab.lean, H0NTab.lean), which the kernel checks against the same table.
 import forest_table
 
-LIT = 117   # the reveal-rate constant of the Lean proof (BridgeRevealRate.litCount_le_all, checkSmallF)
+LIT = 123   # the reveal-rate constant of the Lean proof (BridgeRevealRate.litCount_le_all, checkSmallF)
 assert max(forest_table.lit_counts()) <= LIT
 P1, P2, PH = forest_table.moment_tabs(*forest_table.f_tabs())
 for _name, _tab in (('P1tab', P1), ('P2tab', P2), ('PHtab', PH)):
@@ -478,7 +478,7 @@ set_option maxHeartbeats 0
     open(path, 'w').write('\n'.join(out))
 
 # Attack lifetimes of the forest in the cover model (one expected cover per 2^127 digest queries; FOREST.md).
-ATTACK = {26: 1.45521e9, 20: 2.88064e7, 14: 5.63003e5, 13: 2.91881e5, 12: 1.51278e5, 10: 4.06029e4, 8: 1.08862e4}
+ATTACK = {26: 1.43966e9, 20: 2.85120e7, 14: 5.57495e5, 13: 2.89047e5, 12: 1.49820e5, 10: 4.02171e4, 8: 1.07843e4}
 # Proved lifetimes of the FORS variant (LeanSphincs.Lifetimes.requestedSecurity).
 FORS = {26: 1156000000, 20: 22380000, 14: 412500, 13: 211900, 12: 108700, 10: 28600, 8: 7530}
 
@@ -528,13 +528,13 @@ open Security ForsPotential
 
 # Parameter sets: (b, N, lx).
 PARAMS = [
-    (26, 1400000000, -10.421875),
-    (20, 26340000, -9.25),
-    (14, 486400, -8.171875),
-    (13, 249800, -8.015625),
-    (12, 128300, -7.859375),
-    (10, 33850, -7.609375),
-    (8, 8930, -7.390625),
+    (26, 1383000000, -10.40625),
+    (20, 26030000, -9.25),
+    (14, 480900, -8.171875),
+    (13, 247000, -8.015625),
+    (12, 126900, -7.875),
+    (10, 33490, -7.609375),
+    (8, 8830, -7.390625),
 ]
 
 if __name__ == '__main__':

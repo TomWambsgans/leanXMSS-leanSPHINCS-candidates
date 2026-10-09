@@ -190,7 +190,7 @@ theorem small_seedFree_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (
     (hq : q < 2 ^ 256)
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℚ) (hκ0 : 0 ≤ κ) (hκ1 : κ ≤ 1) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
-      (signatureLimit : ℝ) * (117 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ))
+      (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ))
     (b N : ℕ) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
     (hrt : H0.checkRate b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
@@ -240,7 +240,7 @@ theorem det_smallF (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ)
     (hbound : Det.HasHashQueryBoundDet adversary q) (hq : q < 2 ^ 256)
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℚ) (hκ0 : 0 ≤ κ) (hκ1 : κ ≤ 1) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
-      (signatureLimit : ℝ) * (117 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ))
+      (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ))
     (b N : ℕ) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
     (hrt : H0.checkRate b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
@@ -260,23 +260,23 @@ end Close
 
 /-- The rational small-route check at the right end `qh` of the small budgets: the coin term is
 `(2 M − 1) qh / (M 2^129)` with `M = 2^(26 − b)` (the creation rate of the scan signer), the near term
-is multiplied by `κ = 2 - ρ + qh / 2^128 + N · 117 / (2^b 2^15)`. -/
+is multiplied by `κ = 2 - ρ + qh / 2^128 + N · 123 / (2^b 2^15)`. -/
 def checkSmallF (b N qh : ℕ) (ρ cthr B c : ℚ) : Bool :=
   decide (3 / 2 ≤ ρ) && decide (ρ ≤ 2) &&
     decide (1 + 4032 * (2 - ρ) * ((qh : ℚ) / 2 ^ 128) ≤ ρ) && decide (1 + 66 * ((qh : ℚ) / 2 ^ 128) ≤ ρ) &&
     decide (64 * ((qh : ℚ) / 2 ^ 128) ≤ 1) && decide (qh ≤ 2 ^ 127) && decide (N ≤ 2 ^ 70) &&
     decide (cthr ≤ ρ / 2 ^ 128) && decide (0 ≤ B) && decide (0 ≤ c) &&
-    decide ((N : ℚ) * 117 / (2 ^ b * 2 ^ 15) ≤ ρ - 1 - (qh : ℚ) / 2 ^ 128) &&
+    decide ((N : ℚ) * 123 / (2 ^ b * 2 ^ 15) ≤ ρ - 1 - (qh : ℚ) / 2 ^ 128) &&
     decide (ρ + 2 ^ 128 * B + (2 * (H0.scanMb b : ℚ) - 1) * (qh : ℚ) / ((H0.scanMb b : ℚ) * 2 ^ 129) +
-      (2 - ρ + (qh : ℚ) / 2 ^ 128 + (N : ℚ) * 117 / (2 ^ b * 2 ^ 15)) * qh * c + 1 / 2 ^ 60 ≤ 2)
+      (2 - ρ + (qh : ℚ) / 2 ^ 128 + (N : ℚ) * 123 / (2 ^ b * 2 ^ 15)) * qh * c + 1 / 2 ^ 60 ≤ 2)
 
 omit [Params] in
 theorem checkSmallF_sound {b N qh : ℕ} {ρ cthr B c : ℚ} (h : checkSmallF b N qh ρ cthr B c = true) :
     Numeric (ρ : ℝ) ((qh : ℝ) / 2 ^ 128) ∧ qh ≤ 2 ^ 127 ∧ N ≤ 2 ^ 70 ∧ (cthr : ℝ) ≤ (ρ : ℝ) / 2 ^ 128 ∧
       0 ≤ B ∧ 0 ≤ c ∧
-      (N : ℝ) * 117 / (2 ^ b * 2 ^ 15) ≤ (ρ : ℝ) - 1 - (qh : ℝ) / 2 ^ 128 ∧
+      (N : ℝ) * 123 / (2 ^ b * 2 ^ 15) ≤ (ρ : ℝ) - 1 - (qh : ℝ) / 2 ^ 128 ∧
       (ρ : ℝ) + 2 ^ 128 * (B : ℝ) + (2 * (H0.scanMb b : ℝ) - 1) * (qh : ℝ) / ((H0.scanMb b : ℝ) * 2 ^ 129) +
-        (2 - (ρ : ℝ) + (qh : ℝ) / 2 ^ 128 + (N : ℝ) * 117 / (2 ^ b * 2 ^ 15)) * qh * (c : ℝ) + 1 / 2 ^ 60 ≤ 2 := by
+        (2 - (ρ : ℝ) + (qh : ℝ) / 2 ^ 128 + (N : ℝ) * 123 / (2 ^ b * 2 ^ 15)) * qh * (c : ℝ) + 1 / 2 ^ 60 ≤ 2 := by
   simp only [checkSmallF, Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩ := h
   have r1 := (Rat.cast_le (K := ℝ)).mpr h1
@@ -330,8 +330,8 @@ theorem det_bitsF (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b)
   obtain ⟨hnum, hqh, hN70, hcthr, hB, hc, hpayR, hcheck⟩ := checkSmallF_sound hsmall
   have hN70' : signatureLimit ≤ 2 ^ 70 := hN ▸ hN70
   set c : ℚ := (2 ^ b * on.En : ℚ) / 2 with hcdef
-  set κ : ℚ := 2 - ρ + (qh : ℚ) / 2 ^ 128 + (N : ℚ) * 117 / (2 ^ b * 2 ^ 15) with hκdef
-  have hκR : (κ : ℝ) = 2 - (ρ : ℝ) + (qh : ℝ) / 2 ^ 128 + (N : ℝ) * 117 / (2 ^ b * 2 ^ 15) := by
+  set κ : ℚ := 2 - ρ + (qh : ℚ) / 2 ^ 128 + (N : ℚ) * 123 / (2 ^ b * 2 ^ 15) with hκdef
+  have hκR : (κ : ℝ) = 2 - (ρ : ℝ) + (qh : ℝ) / 2 ^ 128 + (N : ℝ) * 123 / (2 ^ b * 2 ^ 15) := by
     rw [hκdef]
     push_cast
     ring
@@ -340,7 +340,7 @@ theorem det_bitsF (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b)
       rw [hκR]
       have h1 : (ρ : ℝ) ≤ 2 := hnum.high
       have h2 : (0 : ℝ) ≤ (qh : ℝ) / 2 ^ 128 := by positivity
-      have h3 : (0 : ℝ) ≤ (N : ℝ) * 117 / (2 ^ b * 2 ^ 15) := by positivity
+      have h3 : (0 : ℝ) ≤ (N : ℝ) * 123 / (2 ^ b * 2 ^ 15) := by positivity
       linarith
     exact_mod_cast hR
   have hκ1 : κ ≤ 1 := by
@@ -368,9 +368,9 @@ theorem det_bitsF (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b)
     have hnum' : Numeric (ρ : ℝ) (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128) :=
       numeric_monoF hnum hx (by positivity)
     have hκq : 2 - (ρ : ℝ) + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
-        (signatureLimit : ℝ) * (117 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ) := by
-      have he : (signatureLimit : ℝ) * (117 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) =
-          (N : ℝ) * 117 / (2 ^ b * 2 ^ 15) := by
+        (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ) := by
+      have he : (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) =
+          (N : ℝ) * 123 / (2 ^ b * 2 ^ 15) := by
         rw [hb, hN]
         field_simp
       rw [hκR, he]

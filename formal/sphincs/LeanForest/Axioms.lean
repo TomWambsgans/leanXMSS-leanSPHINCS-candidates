@@ -6498,6 +6498,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.bytesLE_length
 
+/-- info: 'LeanForest.codewordCodes_eq_rule' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.codewordCodes_eq_rule
+
 /-- info: 'LeanForest.fieldBytes_injective' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.fieldBytes_injective

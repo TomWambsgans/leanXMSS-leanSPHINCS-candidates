@@ -18,50 +18,58 @@ of the WOTS-key index, bit 3 of the leaf index, is 0).
 Final statement: `LeanForest.Lifetimes.requestedSecurity`, 127 classical bits (SUF-CMA in the ROM)
 for the deterministic Lean signer at subtree heights 26, 20, 14, 13, 12, 10, 8.
 
-| b | proved N (forest) | cover attack | ratio | proved N, previous table | proved N (FORS variant) |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 26 | 1,400,000,000 | 1.45521e9 | 96.2% | 1,268,000,000 | 1,156,000,000 |
-| 20 | 26,340,000 | 2.88064e7 | 91.4% | 23,700,000 | 22,380,000 |
-| 14 | 486,400 | 5.63003e5 | 86.4% | 438,800 | 412,500 |
-| 13 | 249,800 | 2.91881e5 | 85.6% | 226,100 | 211,900 |
-| 12 | 128,300 | 1.51278e5 | 84.8% | 115,800 | 108,700 |
-| 10 | 33,850 | 4.06029e4 | 83.4% | 30,650 | 28,600 |
-| 8 | 8,930 | 1.08862e4 | 82.0% | 8,110 | 7,530 |
+| b | proved N (forest) | cover attack | ratio | proved N (FORS variant) |
+| ---: | ---: | ---: | ---: | ---: |
+| 26 | 1,383,000,000 | 1.43966e9 | 96.1% | 1,156,000,000 |
+| 20 | 26,030,000 | 2.85120e7 | 91.3% | 22,380,000 |
+| 14 | 480,900 | 5.57495e5 | 86.3% | 412,500 |
+| 13 | 247,000 | 2.89047e5 | 85.5% | 211,900 |
+| 12 | 126,900 | 1.49820e5 | 84.7% | 108,700 |
+| 10 | 33,490 | 4.02171e4 | 83.3% | 28,600 |
+| 8 | 8,830 | 1.07843e4 | 81.9% | 7,530 |
 
 The cover attack column is the lifetime in the cover model: the number of signatures at which a
 digest query covers a forest with probability `2^-127` (Poisson loads of the kept indices). The
 WOTS+C unit-neighbour route applies unchanged and lowers the best known attack below this column for
-small `b`: with the previous table the best known attack was 100.0 / 99.4 / 95.7 / 95.3 / 94.4 /
+small `b`: with the first table (below) the best known attack was 100.0 / 99.4 / 95.7 / 95.3 / 94.4 /
 92.5 / 91.8% of the cover lifetime (`b = 26 … 8`). That figure has not been recomputed for this
-table. Every forest lifetime is above the FORS one, and 10.1% to 11.1% above the one proved with the
-previous table.
+table. Every forest lifetime is 16% to 20% above the FORS one.
 
 ## The codeword table
 
-`lut` (`Scheme.lean`, `codewordCodes`) is a fixed list of 256 codewords `d ∈ {0..4}^6` with digit sum
-5, in lexicographic order with repeated codewords adjacent; the 8-bit digest field of a WOTS key is
-the index. Of the 246 codewords of digit sum 5 it holds 214, and 42 of them twice:
+`lut` (`Scheme.lean`, `codewordCodes`) is a list of 256 codewords `d ∈ {0..4}^6` with digit sum 5; the
+8-bit digest field of a WOTS key is the index. The table is a rule: sort the 246 codewords of digit sum
+5 by decreasing `Σ d_i²`, then lexicographically; entry `t` is codeword number `t mod 214`
+(`codewordRule`, and `codewordCodes_eq_rule`, checked by the kernel). It holds 214 codewords, and the
+first 42 twice:
 
-| digits of the codeword | codewords | in the table | entries |
-| --- | ---: | --- | ---: |
-| `{4,1}` | 30 | all, twice each | 60 |
-| `{3,2}` | 30 | 12 twice, 18 once | 42 |
-| `{3,1,1}` | 60 | all, once | 60 |
-| `{2,2,1}` | 60 | all, once | 60 |
-| `{2,1,1,1}` | 60 | 34, once | 34 |
-| `{1,1,1,1,1}` | 6 | none | 0 |
+| digits of the codeword | `Σ d_i²` | codewords | in the table | entries |
+| --- | ---: | ---: | --- | ---: |
+| `{4,1}` | 17 | 30 | all, twice each | 60 |
+| `{3,2}` | 13 | 30 | the first 12 twice, 18 once | 42 |
+| `{3,1,1}` | 11 | 60 | all, once | 60 |
+| `{2,2,1}` | 9 | 60 | all, once | 60 |
+| `{2,1,1,1}` | 7 | 60 | the first 34, once | 34 |
+| `{1,1,1,1,1}` | 5 | 6 | none | 0 |
 
-The previous table was the 246 codewords in lexicographic order followed by the first 10 again. With
-`f(t)` the probability that a uniform entry is covered by the componentwise maximum of `t` uniform
-entries, `f(1..6)` went from 0.004211, 0.076621, 0.196680, 0.313069, 0.409923, 0.487520 to 0.005188,
-0.066766, 0.170372, 0.278539, 0.374536, 0.454930: more weight on the codewords with few large digits
-costs a little at one signature (`f(1) = Σ w_d² / 256²`) and gains from two on. The cover lifetimes
-went from 1.35236e9 / 2.66937e7 / 5.20592e5 / 2.69813e5 / 1.39801e5 / 3.75025e4 / 1.00502e4 to the
-column above (+7.6% to +8.3%). At most 117 entries have a given digit at least one (134 before),
-which lowers the reveal rate of the contact bound; the proved limits gain from both.
+With `f(t)` the probability that a uniform entry is covered by the componentwise maximum of `t`
+uniform entries, `f(1..6)` = 0.005188, 0.067847, 0.172139, 0.280345, 0.376068, 0.456117: weight on
+the codewords with few large digits costs a little at one signature (`f(1) = Σ w_d² / 256²`) and
+gains from two on. At most 123 entries have a given digit at least one, which sets the reveal rate
+of the contact bound.
 
-Every entry still has digit sum 5 (`Completeness.lut_sum`, `Cost.lut_sum`), so a WOTS key is verified
-with exactly 5 chain steps: the verification cost and the signature size below are unchanged. The
+Two earlier tables, for comparison (cover lifetimes, `b = 26 … 8`):
+
+- the 246 codewords in lexicographic order followed by the first 10 again: 1.35236e9 / 2.66937e7 /
+  5.20592e5 / 2.69813e5 / 1.39801e5 / 3.75025e4 / 1.00502e4, 7% below the rule;
+- a table found by search, with the same number of entries per digit pattern as the rule but other
+  codewords of `{3,2}` and `{2,1,1,1}` (reveal constant 117): 1.45521e9 / 2.88064e7 / 5.63003e5 /
+  2.91881e5 / 1.51278e5 / 4.06029e4 / 1.08862e4, 1% above the rule, proved at 1,400,000,000 /
+  26,340,000 / 486,400 / 249,800 / 128,300 / 33,850 / 8,930. The rule replaced it to make the table
+  one sentence of the specification.
+
+Every entry has digit sum 5 (`Completeness.lut_sum`, `Cost.lut_sum`), so a WOTS key is verified
+with exactly 5 chain steps: the verification cost and the signature size below do not depend on the table. The
 proof uses the table through that lemma, through `litCount_le_all` (`BridgeRevealRate.lean`) and
 through the counts `pmfT` of `H0Tables.lean` (a fold over the 256 indices: a repeated codeword is a
 count of 2); nothing uses that the entries are distinct. `scripts/forest_table.py` holds the table
@@ -305,9 +313,9 @@ future of the pairs still to come:
   signing call (`sign_contact`): the signer asks no forest step input, so it records no forest step,
   keeps every step answer and exposes a written coordinate only by revealing its chain
   (`BridgeRunFacts`); a completed call reveals upward-closed chains (`closedRuns_loop`); a call opens
-  a given chain at or below `min(t + 1, 3)` with chance at most `117 · 2^-b · 2^-15` plus `wbar` per
+  a given chain at or below `min(t + 1, 3)` with chance at most `123 · 2^-b · 2^-15` plus `wbar` per
   cached pair of the message, over every run (`reveal_le_all`, `BridgeRevealAll`, `BridgeRevealRate`:
-  at most 117 of the 256 table entries have a given digit at least one; with the scan signer the second
+  at most 123 of the 256 table entries have a given digit at least one; with the scan signer the second
   part is `hitMass`, the probability that the signature uses a cached landed pair, and the coin
   part of the potential is `ν (budget · offSum + C(budget, 2) · rateS)` with
   `rateS = (2 − p)/2^128`: a unit of budget is a contact attempt or a digest query, not both);
@@ -331,7 +339,7 @@ option, the near certificate, `checkSmallF` at `qh` (coin summand `(2 − p) qh 
 of covers of `[qh + 1, 2^127)`, each with its own Poisson table: light covers (`checkCoverW`, coin
 `wbarOf`) up to about `0.249 · 2^128`, then one heavy cover (`checkCoverH`, `N + 1` signatures, coin
 `wbarH`). For `b = 26` there is no grinding and one light cover reaches `2^127`. The splits are
-`lx` = −10.42 / −9.25 / −8.17 / −8.02 / −7.86 / −7.61 / −7.39 (`b = 26 … 8`, `PARAMS` in the script),
+`lx` = −10.41 / −9.25 / −8.17 / −8.02 / −7.88 / −7.61 / −7.39 (`b = 26 … 8`, `PARAMS` in the script),
 the best of a grid of step 1/8 refined to 1/64 around its optimum; the limits are the largest `N`
 both routes certify there, rounded down to four digits. For `b = 26` the large route alone limits
 `N`; below, both routes are tight.

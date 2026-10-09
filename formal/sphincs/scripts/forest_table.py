@@ -7,8 +7,9 @@ Usage (from formal/sphincs):
     python3 scripts/forest_table.py write    # rewrite the literals in Scheme.lean, H0FTab.lean, H0PTab.lean, H0NTab.lean
 
 CODES is the table: entry `t` (the 8-bit digest field) is the codeword `d ∈ {0..4}^6`, digit sum 5,
-written as the base-5 number with `d_0` the most significant digit. The list is sorted, repeated
-codewords are adjacent. `scripts/forest_certificates.py` imports this module.
+written as the base-5 number with `d_0` the most significant digit. The table is a rule (`rule_codes`):
+the codewords sorted by decreasing sum of squared digits, then lexicographically, entry `t` being
+codeword number `t mod 214`. `scripts/forest_certificates.py` imports this module.
 
 The tables mirror the Lean definitions exactly (Fractions):
   fTab, f2Tab    H0Tables.lean (`sumTL … KT DK`, `sumTL … KT DK2`), `u ≤ 40`
@@ -23,23 +24,15 @@ import itertools, os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
-CODES = [
-    9, 9, 13, 13, 17, 21, 21, 29, 29, 33, 37, 41, 45, 45, 53, 57,
-    61, 65, 77, 81, 85, 101, 101, 105, 105, 129, 129, 133, 137, 141, 145, 145,
-    153, 157, 161, 165, 177, 185, 201, 205, 225, 225, 253, 257, 261, 265, 265, 277,
-    285, 301, 305, 325, 325, 377, 381, 385, 385, 401, 405, 425, 425, 501, 501, 505,
-    505, 525, 525, 629, 629, 633, 637, 641, 645, 645, 653, 657, 665, 677, 681, 685,
-    701, 705, 725, 725, 753, 765, 785, 801, 805, 825, 877, 881, 885, 901, 925, 1001,
-    1005, 1025, 1125, 1125, 1253, 1253, 1257, 1261, 1265, 1277, 1281, 1285, 1301, 1305, 1325, 1377,
-    1385, 1405, 1425, 1501, 1505, 1525, 1625, 1877, 1877, 1881, 1885, 1901, 1905, 1925, 2001, 2005,
-    2025, 2125, 2125, 2501, 2501, 2505, 2505, 2525, 2525, 2625, 2625, 3129, 3129, 3133, 3137, 3141,
-    3145, 3145, 3153, 3161, 3165, 3177, 3181, 3185, 3201, 3205, 3225, 3225, 3253, 3257, 3265, 3277,
-    3301, 3325, 3377, 3381, 3385, 3405, 3425, 3501, 3505, 3525, 3625, 3625, 3753, 3761, 3765, 3777,
-    3805, 3825, 3877, 3885, 4025, 4125, 4377, 4385, 4401, 4405, 4425, 4501, 4505, 4625, 5001, 5005,
-    5025, 5125, 5625, 5625, 6253, 6257, 6261, 6265, 6265, 6277, 6285, 6301, 6305, 6325, 6325, 6377,
-    6381, 6385, 6401, 6425, 6501, 6505, 6525, 6625, 6877, 6881, 6885, 6905, 6925, 7001, 7025, 7125,
-    7501, 7505, 7525, 7625, 8125, 9377, 9381, 9385, 9385, 9401, 9405, 9425, 9425, 9501, 9505, 9525,
-    9625, 10001, 10005, 10025, 10125, 10625, 12501, 12501, 12505, 12505, 12525, 12525, 12625, 12625, 13125, 13125]
+def rule_codes():
+    """The 246 codewords sorted by decreasing sum of squared digits, then lexicographically; entry `t` is
+    codeword number `t mod 214`."""
+    words = [w for w in itertools.product(range(5), repeat=6) if sum(w) == 5]
+    words.sort(key=lambda w: (-sum(d * d for d in w), w))
+    return [sum(d * 5 ** (5 - i) for i, d in enumerate(words[t % 214])) for t in range(256)]
+
+
+CODES = rule_codes()
 
 D = 6        # chains of a forest WOTS key
 UMAX = 40    # fTab, f2Tab
@@ -55,7 +48,7 @@ def table(codes=CODES):
 
 
 def validate(codes=CODES):
-    assert len(codes) == 256 and codes == sorted(codes)
+    assert len(codes) == 256
     for w in table(codes):
         assert all(0 <= d <= 4 for d in w) and sum(w) == 5
     assert all(sum(d * 5 ** (D - 1 - i) for i, d in enumerate(digits(c))) == c for c in codes)

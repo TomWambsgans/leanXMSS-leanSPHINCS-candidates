@@ -187,7 +187,7 @@ theorem digestCount_cons_inrF {D R ι : Type} (tg : Targeting D R ι) (amount : 
   simp [digestCount]
 
 /-- The reveal rate in real form. -/
-theorem revRate_eq : revRate = ENNReal.ofReal (117 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) := by
+theorem revRate_eq : revRate = ENNReal.ofReal (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) := by
   unfold revRate
   rw [ENNReal.ofReal_mul (by norm_num), ENNReal.ofReal_ofNat, ← ENNReal.ofReal_natCast,
     ENNReal.ofReal_inv_of_pos (by positivity)]
@@ -202,10 +202,10 @@ theorem arm_splitF (κ : ℝ) : ν ≤ ν * ENNReal.ofReal (1 - κ) + ENNReal.of
 
 /-- **The A4 payments per forest step query fit in the slack of the linear potential.** -/
 theorem arm_paysF (ρ x κ : ℝ) (hκ1 : κ ≤ 1)
-    (hκ : 2 - ρ + x + (signatureLimit : ℝ) * (117 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ κ) :
+    (hκ : 2 - ρ + x + (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ κ) :
     ν * ((signatureLimit : ℝ≥0∞) * revRate) + ν * ENNReal.ofReal (1 - κ) ≤
       ENNReal.ofReal ((ρ - 1 - x) / 2 ^ 128) := by
-  have hm : (0 : ℝ) ≤ (signatureLimit : ℝ) * (117 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) := by positivity
+  have hm : (0 : ℝ) ≤ (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) := by positivity
   have hν : (0 : ℝ) ≤ ((2 : ℝ) ^ 128)⁻¹ := by positivity
   have h1 : (0 : ℝ) ≤ 1 - κ := by linarith
   rw [ν_eq_ofReal, revRate_eq, ← ENNReal.ofReal_natCast, ← ENNReal.ofReal_mul (Nat.cast_nonneg _),

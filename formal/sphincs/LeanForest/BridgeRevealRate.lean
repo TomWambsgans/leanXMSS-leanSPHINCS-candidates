@@ -5,8 +5,8 @@ import LeanForest.BridgeRevealAll
 
 /-! **One signing call opens a given forest chain rarely.** A fresh landed digest opens chain `i` of
 the WOTS key `a` of subtree `j` under the leaf `sp` of tree `c` at the index of a given step, at or
-below a position `k ≤ 3`, with probability at most `2^-b · 2^-4 · 2^-3 · 117/256`: the digest picks
-the index, the leaf and the WOTS key uniformly, and at most 117 of the 256 codewords have digit `i`
+below a position `k ≤ 3`, with probability at most `2^-b · 2^-4 · 2^-3 · 123/256`: the digest picks
+the index, the leaf and the WOTS key uniformly, and at most 123 of the 256 codewords have digit `i`
 at least one. The cached landed pairs of the signed message add the probability that the scan from a
 uniform start signs with one of them (`hitMass`). -/
 
@@ -31,7 +31,7 @@ variable [Params]
 def litCount (i : FChain) : ℕ := (Finset.univ.filter fun w : LutIdx => 1 ≤ (lut w i).val).card
 
 omit [Params] in
-theorem litCount_le_all : ∀ i : FChain, litCount i ≤ 117 := by
+theorem litCount_le_all : ∀ i : FChain, litCount i ≤ 123 := by
   unfold litCount
   decide +kernel
 
@@ -43,7 +43,7 @@ omit [Params] in
 /-- The fields opening a given chain at or below position `k < 4`. -/
 theorem card_opens_le (sp : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (k : ℕ) (hk : k < chainTop) :
     (Finset.univ.filter fun x : FieldVal => (decodeMark x).super = sp ∧ (decodeMark x).child j = a ∧
-      chainTop - (lut ((decodeMark x).word j) i).val ≤ k).card ≤ 2048 * 117 := by
+      chainTop - (lut ((decodeMark x).word j) i).val ≤ k).card ≤ 2048 * 123 := by
   set S := Finset.univ.filter fun x : FieldVal => (decodeMark x).super = sp ∧ (decodeMark x).child j = a ∧
     chainTop - (lut ((decodeMark x).word j) i).val ≤ k with hS
   set T := (Finset.univ : Finset (ChildIdx × LutIdx)) ×ˢ (Finset.univ.filter fun w : LutIdx => 1 ≤ (lut w i).val)
@@ -85,7 +85,7 @@ theorem card_opens_le (sp : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (
     _ = 2048 * litCount i := by
         rw [hT, Finset.card_product, Finset.card_univ, Fintype.card_prod]
         rfl
-    _ ≤ 2048 * 117 := Nat.mul_le_mul_left _ (litCount_le_all i)
+    _ ≤ 2048 * 123 := Nat.mul_le_mul_left _ (litCount_le_all i)
 
 /-! ### Hitting one chain -/
 
@@ -95,8 +95,8 @@ noncomputable def opensAt (index : Index) (c : Coord) (sp : SuperIdx) (j : SubId
   if v.1 = localIdx index ∧ (decodeMark (v.2 c)).super = sp ∧ (decodeMark (v.2 c)).child j = a ∧
     chainTop - (lut ((decodeMark (v.2 c)).word j) i).val ≤ k then 1 else 0
 
-/-- The reveal rate `117 · 2^-b · 2^-15`. -/
-noncomputable def revRate : ℝ≥0∞ := 117 * ((2 ^ subtreeHeight * 2 ^ 15 : ℕ) : ℝ≥0∞)⁻¹
+/-- The reveal rate `123 · 2^-b · 2^-15`. -/
+noncomputable def revRate : ℝ≥0∞ := 123 * ((2 ^ subtreeHeight * 2 ^ 15 : ℕ) : ℝ≥0∞)⁻¹
 
 theorem opensAt_le_one (index : Index) (c : Coord) (sp : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain)
     (k : ℕ) (v : View) : opensAt index c sp j a i k v ≤ 1 := by
@@ -116,7 +116,7 @@ theorem freshAvg_opensAt (index : Index) (c : Coord) (sp : SuperIdx) (j : SubIdx
     simp only [if_true, opensAt, hP]
     split_ifs <;> simp_all
   have hfield : freshAvg (Finset.univ : Finset FieldVal) (fun t => if P t then (1 : ℝ≥0∞) else 0) ≤
-      ((2 ^ 26 : ℕ) : ℝ≥0∞)⁻¹ * (2048 * 117 : ℕ) := by
+      ((2 ^ 26 : ℕ) : ℝ≥0∞)⁻¹ * (2048 * 123 : ℕ) := by
     unfold freshAvg
     rw [Finset.card_univ]
     have hc : Fintype.card FieldVal = 2 ^ 26 := by simp [FieldVal, coordBits]
@@ -161,7 +161,7 @@ theorem freshAvg_opensAt (index : Index) (c : Coord) (sp : SuperIdx) (j : SubIdx
   rw [hidx]
   calc ((2 ^ subtreeHeight : ℕ) : ℝ≥0∞)⁻¹ *
         freshAvg (Finset.univ : Finset FieldVal) (fun t => if P t then (1 : ℝ≥0∞) else 0)
-      ≤ ((2 ^ subtreeHeight : ℕ) : ℝ≥0∞)⁻¹ * (((2 ^ 26 : ℕ) : ℝ≥0∞)⁻¹ * (2048 * 117 : ℕ)) :=
+      ≤ ((2 ^ subtreeHeight : ℕ) : ℝ≥0∞)⁻¹ * (((2 ^ 26 : ℕ) : ℝ≥0∞)⁻¹ * (2048 * 123 : ℕ)) :=
         mul_le_mul_right hfield _
     _ = revRate := by
         unfold revRate
@@ -170,8 +170,8 @@ theorem freshAvg_opensAt (index : Index) (c : Coord) (sp : SuperIdx) (j : SubIdx
           Nat.cast_pow, Nat.cast_pow, Nat.cast_ofNat]
         have h2048 : (2048 : ℝ≥0∞)⁻¹ * 2048 = 1 := ENNReal.inv_mul_cancel (by norm_num) (by norm_num)
         rw [ENNReal.mul_inv (Or.inr (by norm_num)) (Or.inr (by norm_num))]
-        calc ((2 : ℝ≥0∞) ^ subtreeHeight)⁻¹ * (((2 : ℝ≥0∞) ^ 15)⁻¹ * (2048 : ℝ≥0∞)⁻¹ * (2048 * 117))
-            = 117 * (((2 : ℝ≥0∞) ^ subtreeHeight)⁻¹ * ((2 : ℝ≥0∞) ^ 15)⁻¹) * ((2048 : ℝ≥0∞)⁻¹ * 2048) := by ring
+        calc ((2 : ℝ≥0∞) ^ subtreeHeight)⁻¹ * (((2 : ℝ≥0∞) ^ 15)⁻¹ * (2048 : ℝ≥0∞)⁻¹ * (2048 * 123))
+            = 123 * (((2 : ℝ≥0∞) ^ subtreeHeight)⁻¹ * ((2 : ℝ≥0∞) ^ 15)⁻¹) * ((2048 : ℝ≥0∞)⁻¹ * 2048) := by ring
           _ = _ := by rw [h2048, mul_one]
 
 /-! ### One signing call -/
