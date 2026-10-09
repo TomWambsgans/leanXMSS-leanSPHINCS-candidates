@@ -98,8 +98,8 @@ with `decide +kernel` during the build.
 `LeanForest/` proves the same statement for the variant that replaces FORS by a two-level WOTS
 forest (4,276-byte signatures, 307 compressions to verify), at lifetimes above the ones of this
 table: `LeanForest.Lifetimes.requestedSecurity`, see [FOREST.md](FOREST.md). It is not a default
-target: `env LEAN_NUM_THREADS=1 nice -n 19 lake build LeanForest` (its certificates take about 18
-minutes and 12 GB of memory).
+target: `env LEAN_NUM_THREADS=1 nice -n 19 lake build LeanForest` (its certificates take about 6
+minutes and 7 GB of memory).
 
 ## The leanVM library
 
