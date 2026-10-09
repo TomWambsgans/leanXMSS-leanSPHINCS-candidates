@@ -18,22 +18,26 @@ of the WOTS-key index, bit 3 of the leaf index, is 0).
 Final statement: `LeanForest.Lifetimes.requestedSecurity`, 127 classical bits (SUF-CMA in the ROM)
 for the deterministic Lean signer at subtree heights 26, 20, 14, 13, 12, 10, 8.
 
-| b | proved N (forest) | cover attack | ratio | proved N (FORS variant) |
-| ---: | ---: | ---: | ---: | ---: |
-| 26 | 1,383,000,000 | 1.43966e9 | 96.1% | 1,156,000,000 |
-| 20 | 26,030,000 | 2.85120e7 | 91.3% | 22,380,000 |
-| 14 | 480,900 | 5.57495e5 | 86.3% | 412,500 |
-| 13 | 247,000 | 2.89047e5 | 85.5% | 211,900 |
-| 12 | 126,900 | 1.49820e5 | 84.7% | 108,700 |
-| 10 | 33,490 | 4.02171e4 | 83.3% | 28,600 |
-| 8 | 8,830 | 1.07843e4 | 81.9% | 7,530 |
+| b | proved N (forest) | cover attack | best known attack | proved / best known | proved N (FORS variant) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 26 | 1,383,000,000 | 1.43966e9 | 1.440e9 | 96.0% | 1,156,000,000 |
+| 20 | 26,030,000 | 2.85120e7 | 2.840e7 | 91.7% | 22,380,000 |
+| 14 | 480,900 | 5.57495e5 | 5.405e5 | 89.0% | 412,500 |
+| 13 | 247,000 | 2.89047e5 | 2.781e5 | 88.8% | 211,900 |
+| 12 | 126,900 | 1.49820e5 | 1.432e5 | 88.6% | 108,700 |
+| 10 | 33,490 | 4.02171e4 | 3.764e4 | 89.0% | 28,600 |
+| 8 | 8,830 | 1.07843e4 | 9.945e3 | 88.8% | 7,530 |
 
 The cover attack column is the lifetime in the cover model: the number of signatures at which a
-digest query covers a forest with probability `2^-127` (Poisson loads of the kept indices). The
-WOTS+C unit-neighbour route applies unchanged and lowers the best known attack below this column for
-small `b`: with the first table (below) the best known attack was 100.0 / 99.4 / 95.7 / 95.3 / 94.4 /
-92.5 / 91.8% of the cover lifetime (`b = 26 … 8`). That figure has not been recomputed for this
-table. Every forest lifetime is 16% to 20% above the FORS one.
+digest query covers a forest with probability `2^-127` (Poisson loads of the kept indices). The best
+known attack also uses the WOTS+C unit-neighbour route, which applies unchanged: a forger that sees
+the realized key takes the better of the cover rate `Y` and the rate `r` of that route, and the
+lifetime is the largest `N` with `E[max(Y, r)] ≤ 1`. It is 100.0 / 99.6 / 96.9 / 96.2 / 95.6 / 93.6 /
+92.2% of the cover lifetime (`b = 26 … 8`). `scripts/forest_attack.py` computes both columns: a Monte
+Carlo of the realized key (loads, leaves, WOTS keys, codewords), with about 0.3% of noise on `N`,
+and `r = 0.96875`, the value that reproduces the figures first computed for the lexicographic table
+(100.0 / 99.4 / 95.7 / 95.3 / 94.4 / 92.5 / 91.8%) to 0.3 points (0.9 at `b = 8`). Every forest
+lifetime is 16% to 20% above the FORS one.
 
 ## The codeword table
 
