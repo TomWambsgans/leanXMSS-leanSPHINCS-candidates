@@ -1160,7 +1160,10 @@ fn coalition_views_two_worlds_messages() {
             let (const_a, const_b) = (ca == 0 || ca == t, cb == 0 || cb == t);
             if const_a && const_b && ca == cb {
                 constant += 1;
-            } else if !const_a && !const_b && (ca as i64 - cb as i64).abs() < t as i64 / 3 {
+            // A masked bit is a fair coin in both worlds: the two counts differ by a sum of 2t fair signs,
+            // of standard deviation sqrt(t / 2) (6.9 for t = 96). The bound is 7.5 standard deviations (about
+            // 1e-13 per bit), so that the millions of bits compared never trip it by chance.
+            } else if !const_a && !const_b && (ca as i64 - cb as i64).abs() < t as i64 * 13 / 24 {
                 masked += 1;
             } else {
                 panic!("n = {parties}, C = {set:?}: view bit {b} is {ca} vs {cb} of {t} in the two worlds");

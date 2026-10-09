@@ -6,9 +6,9 @@
 
 //! BLAKE2s (RFC 7693), the repo's one hash function.
 //!
-//! - The 10-round compression: every hash here is a chain of them, and the VM proves one per opcode.
+//! - The 10-round compression: every hash here is a chain of them, and costs are counted in compressions.
 //! - Ordinary BLAKE2s-256 over bytes, one-shot or streaming.
-//! - The batched form: many equal-length inputs at once, one SIMD lane each, for the PCS Merkle tree.
+//! - The batched form: many equal-length inputs at once, one SIMD lane each (used by the MPC benchmarks).
 //!
 //! Why BLAKE2s: the byte counter and final flag are ordinary compression inputs.
 //!

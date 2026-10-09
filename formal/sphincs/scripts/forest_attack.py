@@ -9,9 +9,10 @@ Cover model: the largest N with E[Y] <= 1, Y the cover rate of a digest query in
 loads of the 2^b instances). Best known attack: the largest N with E[max(Y, r)] <= 1, where Y is the
 cover rate of the realized key (random loads, leaves, WOTS keys and codewords) and r the rate of the
 other searches in the same units: 1/2 for plain searches, RATE_WOTS for the WOTS+C unit-neighbour
-route. RATE_WOTS is the value that reproduces the figures first computed for the lexicographic table
-(100.0 / 99.4 / 95.7 / 95.3 / 94.4 / 92.5 / 91.8% of the cover lifetimes) to 0.3 points, 0.9 at b = 8.
-The Monte Carlo noise is about 0.3% of N.
+route. That route is a search of about 2^116 hashes for a counter whose encoding is a unit neighbour
+of a published one, then one chain preimage at 2 * 2^-128 per query: its success rate per query is
+best after about 2^122 queries, at 0.9694 (rate_wots below). The Monte Carlo noise is about 0.3% of N,
+0.6% at b = 8: three digits are printed.
 """
 import warnings; warnings.filterwarnings('ignore')
 import itertools, math, os, sys
@@ -22,7 +23,14 @@ import forest_table as ft
 
 UMAX = 48; NMAX = 220; NMIN, NMX = 1, 125
 BS = [26, 20, 14, 13, 12, 10, 8]
-RATE_WOTS = 0.96875
+
+def rate_wots(search=2.0 ** 116):
+    """best success rate per query, in units 2^-127, of: `search` hashes, then 2 * 2^-128 per query"""
+    m = search / 2.0 ** 127
+    x = np.exp(np.linspace(math.log(m * 1.001), 0.0, 200001))
+    return float(((1 - np.exp(-(x - m))) / x).max())
+
+RATE_WOTS = rate_wots()
 
 def f_of_counts(cnt, U=UMAX):
     """cnt: array shape (W,)*D of multiplicities. f[u] = P(codeword <= max of u iid table entries)."""
@@ -134,6 +142,7 @@ if __name__=='__main__':
     print('pool mean / exact:',' '.join('%d:%.3f'%(n,chk[n]) for n in (10,20,40,80,120)))
     cov=[lifetime(P,8,b) for b in BS]
     print('cover model     ',' '.join('%.5e'%x for x in cov))
+    print('rate of the WOTS route: %.4f'%RATE_WOTS)
     for label,r in (('plain searches ',0.5),('with WOTS route',RATE_WOTS)):
-        Ls=[life(P,ys,b,r,cov[i]) for i,b in enumerate(BS)]
-        print(label,' ',' '.join('%.3e'%x for x in Ls),' | % of cover:',' '.join('%.1f'%(100*x/c) for x,c in zip(Ls,cov)),flush=True)
+        Ls=[min(life(P,ys,b,r,cov[i]),cov[i]) for i,b in enumerate(BS)]      # never above the cover lifetime
+        print(label,' ',' '.join('%.2e'%x for x in Ls),' | % of cover:',' '.join('%.0f'%(100*x/c) for x,c in zip(Ls,cov)),flush=True)

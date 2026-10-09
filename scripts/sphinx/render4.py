@@ -4,8 +4,10 @@
     python3 render4.py 1000 head     # a close-up of the head, to work on the model
 
 model4.py is the 3D model (a signed distance function, ray-marched); model3d.py holds its primitives. sphinx.png is
-used as a CSS mask; stones.json (image size, outline, and for each stone of the path tree: parent, depth, polygon)
-is the object `D` of the last script of site/index.html. A stone is [dx, dy, x0, y0, x1, y1, ...]: its outline, and
+used as a CSS mask (sphinx_preview.png is the same picture, black on white, to look at). stones.json holds the image
+size (w, h), the outline seen from above (top), the direction of the light on the image, the stones and the routes;
+it is the object `D` of the last script of site/index.html: paste it after `var D = `, and when the image changes
+raise the `?v=` number of the three `sphinx.png` references of that page. A stone is [dx, dy, x0, y0, x1, y1, ...]: its outline, and
 (dx, dy), how its face moves when it is pushed in. A route is the list of its stones, from the line to the head.
     python3 render4.py 1900 full check   # also prints the quality of the stones and of the routes"""
 import sys, json, math, numpy as np
@@ -111,19 +113,8 @@ while q:
         for b in adj.get(a, ()):
             if b in gset and b not in dist: dist[b] = dist[a] + 1; nq.append(b)
     q = nq
-rng = np.random.default_rng(11)
 rowmax = {i: int(pix(i)[0].max()) for i in good}
 leaves = [i for i in good if i in dist and ((ids[i] >> 44) & 3) == 3 and rowmax[i] >= cut - 45]     # the two courses at the line
-rng.shuffle(leaves)
-parent = {}
-def climb(a):
-    while a != root and a not in parent:
-        ups = [b for b in adj[a] if b in dist and dist[b] == dist[a] - 1]
-        ups.sort(key=lambda b: -zc[b]); b = ups[int(rng.integers(0, min(2, len(ups))))]
-        parent[a] = b; a = b
-for l in leaves: climb(l)
-nodes = [root] + [a for a in parent]
-index = {a: n for n, a in enumerate(nodes)}
 from scipy import ndimage
 
 def region(i):

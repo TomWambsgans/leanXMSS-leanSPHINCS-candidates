@@ -1,11 +1,12 @@
 > Historical documentation for the unchanged three-layer leanVM instance.
-> It is not a security claim about the leanSPHINCS candidate. See README.md and PROOF.md.
+> It is not a security claim about the leanSPHINCS candidate, whose documents are README.md and PROOF.md.
+> The route of this proof is in LEANVM_PROOF.md.
 
 # SPHINCS security in Lean 4
 
 [Scheme.lean](SphincsSecurity/Scheme.lean) defines the scheme with a 32-byte master seed: parameters, serialized hash inputs, key generation, signing, and verification. [Statement.lean](SphincsSecurity/Statement.lean) imports it and defines the SUF-CMA game, hash-query budget, and 127-bit security target. Public parameters, signing secrets, and signing randomizers are derived in separate hash domains. Every hash call in the experiment counts, including derivation, signing failures, repeated calls and final verification.
 
-[Completeness.lean](SphincsSecurity/Completeness.lean) states the other side. Correctness, for every hash function: a signature the signer produces verifies. Completeness, against the same random oracle: the sum over all messages of the probability that sampling a seed, generating a key, signing and verifying fails is at most $2^{-256}$, where failing means the signer returned no signature or the verifier rejected it. This is the union-bound budget for one key signing every message. `sphincs_is_correct` and `sphincs_is_complete` prove the two statements; [PROOF.md](PROOF.md#completeness) outlines the route.
+[Completeness.lean](SphincsSecurity/Completeness.lean) states the other side. Correctness, for every hash function: a signature the signer produces verifies. Completeness, against the same random oracle: the sum over all messages of the probability that sampling a seed, generating a key, signing and verifying fails is at most $2^{-256}$, where failing means the signer returned no signature or the verifier rejected it. This is the union-bound budget for one key signing every message. `sphincs_is_correct` and `sphincs_is_complete` prove the two statements; [LEANVM_PROOF.md](LEANVM_PROOF.md#completeness) outlines the route.
 
 The public adversary may use private randomness adaptively and has no running-time or memory bound. The probability is over the master seed, the shared consistent random oracle and the adversary's private randomness. Private sampling does not count toward the hash-query budget. [Proof/Adversary](SphincsSecurity/Proof/Adversary) identifies this game with the internal probabilistic game, preserving success probabilities and query counts exactly.
 
@@ -25,7 +26,7 @@ The cache command is needed on initial setup. The root module pins the axiom foo
 
 ## Where to work
 
-[PROOF.md](PROOF.md) explains the route, the constants, the component facades that seal each component's parameters, and which modules must change if a component changes. The proof is split by component:
+[LEANVM_PROOF.md](LEANVM_PROOF.md) explains the route, the constants, the component facades that seal each component's parameters, and which modules must change if a component changes. The proof is split by component:
 
 | Entry | Purpose |
 | --- | --- |

@@ -118,7 +118,7 @@ surrogate siblings).
   \item $t$-of-$n$
   \item signing: malicious security against $t-1$ operators (with abort); 432 bytes per signer, 3 rounds
   \item keygen: no trusted dealer, a one-time MPC among the $n$ operators, fewer than $n/2$ corrupt
-  \item lifetime: $7.5\cdot10^3$, $2.85\cdot10^4$ or $1.08\cdot10^5$ signatures, with a pruned subtree of $2^b$ leaves, $b=8$,
+  \item lifetime: $7.5\cdot10^3$, $2.86\cdot10^4$ or $1.08\cdot10^5$ signatures, with a pruned subtree of $2^b$ leaves, $b=8$,
         10 or 12
 \end{itemize}
 
@@ -182,7 +182,7 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
 \begin{tabular}{lrrr}
   \toprule
   subtree & $2^8$ & $2^{10}$ & $2^{12}$ \\
-  lifetime & $7.5\cdot10^3$ & $2.85\cdot10^4$ & $1.08\cdot10^5$ \\
+  lifetime & $7.5\cdot10^3$ & $2.86\cdot10^4$ & $1.08\cdot10^5$ \\
   \midrule
   2-of-3 & 11~GB & 43~GB & 172~GB \\
   3-of-5 & 13~GB & 52~GB & 207~GB \\
@@ -236,7 +236,7 @@ inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
 \paragraph{WOTS keys.} The FTS is built from small WOTS keys: 6 chains of length 5, with leaf
 $\hash(\text{6 chain tops})$. A codeword is a vector $d\in\{0,\dots,4\}^6$ with $\sum_i d_i=5$; there are 246 of them.
 Signing at $d$ reveals each chain $d_i$ steps below its top. The verifier hashes up to the tops: always 5
-steps. The fixed sum acts as the checksum: from one signature, hashing forward cannot reach any other codeword. From
+steps in total. The fixed sum acts as the checksum: from one signature, hashing forward cannot reach any other codeword. From
 several signatures by the same key, it reaches exactly the codewords below their componentwise max.
 
 \paragraph{Trees.} The FTS has 8 independent trees of height 4, and its public key hashes their 8 roots. Each of
@@ -317,11 +317,11 @@ no root hash: in $\hash(R_0,R_1)$ and in the public key, $R$ stands for the two 
 \small One of the 8 trees.
 \end{center}
 
-\paragraph{Encoding.} Bit fields and one 256-entry table, and every digest is accepted. Each tree takes 26 bits:
+\paragraph{Encoding.} Bit fields and one 256-entry table: the encoding rejects no digest. Each tree takes 26 bits:
 4 for the leaf, then, per subtree, 3 for the WOTS key and 8 for a table index. The 16 table indices are the first
 16 bytes of the digest; its last 16 bytes, as a little-endian integer, hold the instance index, then the 8 leaves,
 then the 16 WOTS keys, so no field lies across two 64-bit words. The table has 256 entries: sort the 246
-codewords by decreasing $\sum_i d_i^2$, then lexicographically; entry $t$ is codeword number $t \bmod 214$.
+codewords by decreasing $\sum_i d_i^2$, then in increasing lexicographic order (first digit most significant); entry $t$ is codeword number $t \bmod 214$.
 Spread-out codewords are easier to forge once a key has signed twice, so the 32 most spread-out ones are left out,
 and the 42 most concentrated ones appear twice. With the 26 bits of the instance index, the digest is 234 bits,
 so it still takes one hash.
@@ -343,8 +343,9 @@ max of those openings. Let $f_t$ be the probability that $t$ random signatures b
 \mathrm{cover}(r)=\Big(\sum_{u\ge1}\mathrm{Bin}(r,\tfrac1{16})(u)\Big[\sum_{t\ge1}\mathrm{Bin}(u,\tfrac18)(t)\,f_t\Big]^2\Big)^8 .
 \]
 The lifetime is the largest $N$ with $2^{127}\,2^{b-26}\,\mathbb{E}_{r\sim\mathrm{Poisson}(N/2^b)}[\mathrm{cover}(r)]\le1$.
-This is the rule that defines the best known attack on FORS~\cite{proofs}, and the two-level forest is about 19\%
-ahead at every subtree height. The last two rows are the lifetimes proved in Lean~\cite{proofs} (rounded down): an adversary
+The same cover rule applied to FORS gives the first row~\cite{proofs}, and the two-level forest is about 19\%
+ahead at every subtree height. The best known attack also uses the WOTS$^+$C key (a counter search for a neighbouring
+encoding, then one chain preimage): for both schemes it is up to 8\% below the cover figure at small $b$~\cite{proofs}. Every figure is rounded down. The last two rows are the lifetimes proved in Lean~\cite{proofs}: an adversary
 making $q$ hash queries forges with probability at most $q\cdot2^{-127}$.
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
@@ -352,8 +353,8 @@ making $q$ hash queries forges with probability at most $q\cdot2^{-127}$.
   \toprule
   $b$ & 26 & 20 & 14 & 13 & 12 & 10 & 8 \\
   \midrule
-  FORS, attack & $1.20\cdot10^9$ & $2.38\cdot10^7$ & $4.67\cdot10^5$ & $2.42\cdot10^5$ & $1.26\cdot10^5$ & $3.38\cdot10^4$ & $9.1\cdot10^3$ \\
-  forest, attack & $1.44\cdot10^9$ & $2.85\cdot10^7$ & $5.57\cdot10^5$ & $2.89\cdot10^5$ & $1.49\cdot10^5$ & $4.02\cdot10^4$ & $1.07\cdot10^4$ \\
+  FORS, cover & $1.20\cdot10^9$ & $2.37\cdot10^7$ & $4.66\cdot10^5$ & $2.42\cdot10^5$ & $1.25\cdot10^5$ & $3.38\cdot10^4$ & $9.0\cdot10^3$ \\
+  forest, cover & $1.43\cdot10^9$ & $2.85\cdot10^7$ & $5.57\cdot10^5$ & $2.89\cdot10^5$ & $1.49\cdot10^5$ & $4.02\cdot10^4$ & $1.07\cdot10^4$ \\
   \midrule
   FORS, proved & $1.15\cdot10^9$ & $2.23\cdot10^7$ & $4.12\cdot10^5$ & $2.11\cdot10^5$ & $1.08\cdot10^5$ & $2.86\cdot10^4$ & $7.5\cdot10^3$ \\
   forest, proved & $1.38\cdot10^9$ & $2.60\cdot10^7$ & $4.80\cdot10^5$ & $2.47\cdot10^5$ & $1.26\cdot10^5$ & $3.34\cdot10^4$ & $8.8\cdot10^3$ \\
@@ -372,7 +373,7 @@ under $F$:
   \item position 4, the top: published
 \end{itemize}
 Revealing $x_{i,j}$ is then one context-aware evaluation of $F$, as for a FORS secret, so signing still needs no MPC.
-Each signer sends a part for every revealed value below the top: 48 on average and at most 80, instead of 24. Per
+Each signer sends a part for every revealed value below the top: 44 on average and at most 64, instead of 24. Per
 instance of the kept subtree:
 \begin{itemize}
   \item keygen MPC: 4 hashes per chain, $2048\cdot6\cdot4 = 49\,152$, instead of $24\cdot2^{10} = 24\,576$ FORS leaves:
@@ -382,10 +383,10 @@ instance of the kept subtree:
 \end{itemize}
 }
 
-\begin{thebibliography}{9}
+\begin{thebibliography}{99}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
   Cases}. NIST SP~800-230 (draft), 2026. \url{https://csrc.nist.gov/pubs/sp/800/230/ipd}.
-\bibitem{HK22C} M.~Kudinov, A.~H\"ulsing, E.~Ronen, E.~Yogev. \emph{SPHINCS$^+$C: Compressing SPHINCS$^+$
+\bibitem{HK22C} A.~H\"ulsing, M.~Kudinov, E.~Ronen, E.~Yogev. \emph{SPHINCS$^+$C: Compressing SPHINCS$^+$
   With (Almost) No Cost}. IEEE S\&P, 2023. \url{https://eprint.iacr.org/2022/778}.
 \bibitem{FIPS205} National Institute of Standards and Technology. \emph{Stateless Hash-Based Digital Signature
   Standard}. FIPS~205, 2024. \url{https://doi.org/10.6028/NIST.FIPS.205}.

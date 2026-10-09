@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Sizes, compression counts and lifetime of the leanSphincs candidate (the numbers in leanSPHINCS.tex).
+"""Sizes and compression counts of the leanSphincs candidate and of its spicy variant (the costs in leanSPHINCS.tex).
+The lifetimes printed here are estimates from the cover model; the note quotes the limits proved in Lean.
 
 Costs count compression-function calls of a hash with 64-byte blocks and no padding overhead, such as
 BLAKE2s: hashing l bytes costs max(1, ceil(l / 64)). Every call hashes P (16 B) || address (16 B) || input.
@@ -9,6 +10,8 @@ first block does not depend on the randomizer, so an attempt costs one compressi
 
 import argparse
 import math
+import os
+import sys
 
 from fors_security import Params, forgery_bits_exact, max_log2_sigs
 
@@ -129,6 +132,32 @@ def main():
         print(f"  pruned, 2^{b} leaves: lifetime 2^{pruned_log2_sigs(b):.2f}, key generation {fmt(kg)}, "
               f"signing {signs} (grinding {fmt(grind)})")
 
+    # The spicy variant (leanSPHINCS.tex, section 3): FORS is replaced by a two-level WOTS forest. 8 trees of
+    # 16 leaves; a leaf hashes the top nodes of 2 subtrees of 8 WOTS keys; a WOTS key is 6 chains of 4 steps
+    # under a leaf hash, signed at a codeword of digit sum 5. No tree or subtree has a root hash.
+    trees, tree_leaves, subs, keys, chains, chain_steps, digit_sum = 8, 16, 2, 8, 6, 4, 5
+    key_leaf, leaf_hash, forest_key = comp(chains * N), comp(subs * 2 * N), comp(trees * 2 * N)
+    wots_key = chains // 2 * derive + chains * chain_steps * step + key_leaf
+    subtree = keys * wots_key + (keys - 2) * node
+    tree = tree_leaves * (subs * subtree + leaf_hash) + (tree_leaves - 2) * node
+    forest_sign = trees * tree + forest_key
+    sub_path, tree_path = int(math.log2(keys)), int(math.log2(tree_leaves))
+    values = subs * (chains + sub_path) + tree_path
+    per_tree = subs * (digit_sum * step + key_leaf + (sub_path - 1) * node) + leaf_hash + (tree_path - 1) * node
+    digest_s = msg_block  # 26 + 8 * 26 = 234 bits: one digest call
+    size_s = N + trees * values * N + 4 + v * N + h * N
+    verify_s = digest_s + trees * per_tree + forest_key + enc + ((q - 1) * v - T) * step + wots_pk + h * node
+    print(f"spicy (two-level WOTS forest): signature {size_s} B ({1 - size_s / size:.1%} smaller), verification "
+          f"{verify_s} compressions ({1 - verify_s / verify:.1%} fewer; {per_tree} per tree, {values} values per tree)")
+    print(f"  WOTS key {wots_key}; forest signing {fmt(forest_sign)} (FORS {fmt(fors_sign)}); key generation unchanged")
+    for mib in x.cache_mib:
+        tree_c = tree_cost(h, nodes(mib))
+        print(f"  signing with a {mib:g} MiB cache: {fmt(rnd + digest_s + forest_sign + wots_sign + tree_c)}")
+    for b in x.pruned:
+        grind = 2 ** (h - b) * attempt
+        base = grind + rnd + digest_s - attempt + forest_sign + wots_sign
+        signs = ", ".join(f"{fmt(base + tree_cost(b, nodes(kib / 1024)))} with {kib:g} KiB" for kib in x.pruned_cache_kib)
+        print(f"  pruned, 2^{b} leaves: signing {signs} (grinding {fmt(grind)})")
     # Threshold signing (adapted from PRAWNS): every FORS secret is F(addr) for a threshold PRF F. A one-time
     # ceremony hashes the secrets of the 2^b kept instances (FORS leaves and WOTS chains) and publishes the
     # FORS leaves and the WOTS signature of every FORS root; signing reveals 24 values of F, with no MPC.
@@ -155,6 +184,24 @@ def main():
         dealer_n = dealer + 2**b * (k * 2**a + v) * (math.comb(n, f) - 1)
         print(f"    {f + 1}-of-{n}: DKG traffic {traffic / 1e9:.3g} GB per operator; "
               f"trusted dealer {fmt(dealer_n)} compressions")
+
+    # Spicy threshold signing: a signature reveals the chain values below the top, one per non-zero digit of the
+    # 16 codewords. The ceremony hashes every chain of the forest 4 times (the secret, positions 1 to 3 published
+    # under F, and the top) instead of every FORS leaf once; a 4-step chain is counted as a measured 3-step chain
+    # plus one measured leaf hash. Public data: 4 values per chain.
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "formal", "sphincs", "scripts"))
+    import forest_table
+    nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
+    opened = trees * subs
+    forest_chains = trees * tree_leaves * subs * keys * chains
+    mpc_hashes_s = 2**b * (forest_chains * chain_steps + v * (q - 1))
+    public_s = 2**b * (forest_chains * chain_steps * N + v * N + 4)
+    print(f"  spicy threshold: {opened * sum(nonzero) / len(nonzero):.2f} values revealed per signature on average, at most "
+          f"{opened * max(nonzero)} (FORS: {k}); 2^{b} kept leaves: {fmt(mpc_hashes_s)} MPC hashes at keygen, "
+          f"public data {public_s / 1e9:.3g} GB")
+    for n, (per_leaf, per_chain) in measured.items():
+        traffic_s = 2**b * (forest_chains * (per_chain + per_leaf) + v * per_chain)
+        print(f"    {n // 2 + 1}-of-{n}: DKG traffic {traffic_s / 1e9:.3g} GB per operator")
 
 if __name__ == "__main__":
     main()

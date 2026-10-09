@@ -20,24 +20,25 @@ for the deterministic Lean signer at subtree heights 26, 20, 14, 13, 12, 10, 8.
 
 | b | proved N (forest) | cover attack | best known attack | proved / best known | proved N (FORS variant) |
 | ---: | ---: | ---: | ---: | ---: | ---: |
-| 26 | 1,383,000,000 | 1.43966e9 | 1.440e9 | 96.0% | 1,156,000,000 |
-| 20 | 26,030,000 | 2.85120e7 | 2.840e7 | 91.7% | 22,380,000 |
-| 14 | 480,900 | 5.57495e5 | 5.405e5 | 89.0% | 412,500 |
-| 13 | 247,000 | 2.89047e5 | 2.781e5 | 88.8% | 211,900 |
-| 12 | 126,900 | 1.49820e5 | 1.432e5 | 88.6% | 108,700 |
-| 10 | 33,490 | 4.02171e4 | 3.764e4 | 89.0% | 28,600 |
-| 8 | 8,830 | 1.07843e4 | 9.945e3 | 88.8% | 7,530 |
+| 26 | 1,383,000,000 | 1.43966e9 | 1.44e9 | 96% | 1,156,000,000 |
+| 20 | 26,030,000 | 2.85120e7 | 2.84e7 | 92% | 22,380,000 |
+| 14 | 480,900 | 5.57495e5 | 5.40e5 | 89% | 412,500 |
+| 13 | 247,000 | 2.89047e5 | 2.78e5 | 89% | 211,900 |
+| 12 | 126,900 | 1.49820e5 | 1.43e5 | 89% | 108,700 |
+| 10 | 33,490 | 4.02171e4 | 3.76e4 | 89% | 28,600 |
+| 8 | 8,830 | 1.07843e4 | 9.9e3 | 89% | 7,530 |
 
 The cover attack column is the lifetime in the cover model: the number of signatures at which a
 digest query covers a forest with probability `2^-127` (Poisson loads of the kept indices). The best
 known attack also uses the WOTS+C unit-neighbour route, which applies unchanged: a forger that sees
 the realized key takes the better of the cover rate `Y` and the rate `r` of that route, and the
-lifetime is the largest `N` with `E[max(Y, r)] ≤ 1`. It is 100.0 / 99.6 / 96.9 / 96.2 / 95.6 / 93.6 /
-92.2% of the cover lifetime (`b = 26 … 8`). `scripts/forest_attack.py` computes both columns: a Monte
-Carlo of the realized key (loads, leaves, WOTS keys, codewords), with about 0.3% of noise on `N`,
-and `r = 0.96875`, the value that reproduces the figures first computed for the lexicographic table
-(100.0 / 99.4 / 95.7 / 95.3 / 94.4 / 92.5 / 91.8%) to 0.3 points (0.9 at `b = 8`). Every forest
-lifetime is 16% to 20% above the FORS one.
+lifetime is the largest `N` with `E[max(Y, r)] ≤ 1`. It is 100 / 100 / 97 / 96 / 96 / 94 / 92% of the
+cover lifetime (`b = 26 … 8`). `scripts/forest_attack.py` computes both columns. `Y` comes from a
+Monte Carlo of the realized key (loads, leaves, WOTS keys, codewords), with about 0.3% of noise on `N`
+and 0.6% at `b = 8`: the column has three digits and the ratios are good to about a point. The rate is
+`r = 0.9694`: a search of about `2^116` hashes for a neighbouring encoding, then one chain preimage at
+`2 · 2^-128` per query, is at its best after about `2^122` queries. A rate between 0.95 and 0.98 moves
+the lowest ratio between 87.5% and 89.4%. Every forest lifetime is 16% to 20% above the FORS one.
 
 ## The codeword table
 

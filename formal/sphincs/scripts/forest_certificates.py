@@ -2,12 +2,17 @@
 """Generate LeanForest/LifetimeCertificates.lean: exact rational certificates for the forest lifetimes.
 
 Usage (from formal/sphincs):
-    python3 scripts/forest_certificates.py check B N LX  # check one parameter set
-    python3 scripts/forest_certificates.py emit          # write LeanForest/LifetimeCertificates.lean
-then  lake build LeanForest.LifetimeCertificates  (the kernel re-checks every certificate).
+    python3 scripts/forest_certificates.py check B N LX   # check one parameter set (exit status 1 if it fails)
+    python3 scripts/forest_certificates.py emit           # write LeanForest/LifetimeCertificates.lean and Lifetimes.lean
+    python3 scripts/forest_certificates.py maxn B N0 [STEP LXLO LXHI]   # search the largest N above N0, over a grid of lx
+    python3 scripts/forest_certificates.py scan B N LX...  # the terms of the small route at several lx
+    python3 scripts/forest_certificates.py emit1 B N LX   # debugging: write the two Lean files for that set only
+then  lake build LeanForest.LifetimeCertificates  (the kernel re-checks every certificate). `maxn` is a search:
+its result counts only once `check` accepts it and it is in PARAMS.
 
 For each parameter set (b, N, lx), with qh = floor(2^(128 + lx)):
-  * a Poisson table at rate N/2^b + 2^127/((2^127 - 2^32) 2^b) (checkPT, checkRate);
+  * a Poisson table at rate N/2^b + (2M - 1) qtop / (M denB 2^b), M = 2^(26 - b), qtop the largest budget
+    it serves (rate_of; checkPT, checkRate);
   * the small route at qh: a Chernoff option at baseline rho/2^128 (checkOptF), the near certificate
     (checkOptN) and the rational check checkSmallF (BridgeDetCloseF.lean);
   * the large route: a cover of every budget q' in [qh + 1, 2^127] at the survival-weighted baseline
@@ -20,8 +25,7 @@ The moment tables P1tab, P2tab (H0PTab.lean) and PHtab (H0NTab.lean) come from s
 """
 
 from fractions import Fraction as Fr
-from math import comb
-import itertools, math, os, re, sys
+import math, os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -559,10 +563,12 @@ PARAMS = [
 ]
 
 if __name__ == '__main__':
-    cmd = sys.argv[1] if len(sys.argv) > 1 else 'emit'
+    cmd = sys.argv[1] if len(sys.argv) > 1 else None
     if cmd == 'check':
         b, N, lx = int(sys.argv[2]), int(float(sys.argv[3])), float(sys.argv[4])
-        certify(b, N, lx)
+        c = certify(b, N, lx)
+        if c is None or not c['complete']:
+            sys.exit('NOT certified')
     elif cmd == 'emit1':
         b, N, lx = int(sys.argv[2]), int(float(sys.argv[3])), float(sys.argv[4])
         c = certify(b, N, lx)
@@ -581,7 +587,7 @@ if __name__ == '__main__':
             except Exception:       # the float search found no option
                 return False
             return c is not None and c['complete']
-        best_lx, lx = None, lx_lo
+        best_lx, lx, n0 = None, lx_lo, best
         while lx <= lx_hi + 1e-9:
             lo = best + max(1, best // 20000)
             if feasible(lo, lx):
@@ -595,16 +601,18 @@ if __name__ == '__main__':
                 best, best_lx = lo, lx
                 print('lx %.5f -> N %d' % (lx, lo), flush=True)
             lx += step
+        if best_lx is None:
+            sys.exit('b %d: nothing above N0 = %d was certified on this grid (N0 itself was not checked)' % (b, n0))
         print('b %d max N ~ %d (lx %s)' % (b, best, best_lx))
     elif cmd == 'scan':
         # small-route left-hand sides only, for several lx
         b, N = int(sys.argv[2]), int(float(sys.argv[3]))
-        t = make_poisT(b, N)
-        fm = FModel(t)
-        on = make_optN(b, t)
-        c = (2 ** b * on.En) / 2
         for lx in [float(a) for a in sys.argv[4:]]:
             qh = int(2 ** (128 + lx))
+            t = make_poisT(b, N, qh)
+            fm = FModel(t)
+            on = make_optN(b, t)
+            c = (2 ** b * on.En) / 2
             rho = choose_rho(qh)
             o, _ = make_opt(b, t, fm, rho / 2 ** 128)
             x = Fr(qh, 2 ** 128)
@@ -622,3 +630,5 @@ if __name__ == '__main__':
         emit(certs, os.path.join(ROOT, 'LeanForest', 'LifetimeCertificates.lean'))
         emit_lifetimes(certs, os.path.join(ROOT, 'LeanForest', 'Lifetimes.lean'))
         print('written')
+    else:
+        sys.exit(__doc__)

@@ -17,7 +17,7 @@ pub const TWEAK_RANDOMIZER: u8 = 7;
 pub const TWEAK_FTS_PRF: u8 = 8;
 pub const TWEAK_FTS_LEAF: u8 = 9;
 pub const TWEAK_FTS_NODE: u8 = 10;
-pub const TWEAK_FTS_ROOTS: u8 = 11;
+pub const TWEAK_FTS_KEY: u8 = 11;
 pub const TWEAK_MSG: u8 = 12;
 /// A pruned key's surrogate siblings (the kept subtree's position comes from the low bits of `P`).
 pub const TWEAK_SURROGATE: u8 = 13;
@@ -100,7 +100,7 @@ pub fn th_pair(pp: &PublicParam, tw: &Tweak, payload: &[u8]) -> [Digest; 2] {
     [out[..N].try_into().unwrap(), out[N..].try_into().unwrap()]
 }
 
-/// `Th` over a concatenation of digests: a Merkle node, a one-time leaf, or the FORS roots.
+/// `Th` over a concatenation of digests: a Merkle node, a one-time leaf, or the FORS key (the two top nodes of every tree).
 pub fn th_digests(pp: &PublicParam, tw: &Tweak, values: &[Digest]) -> Digest {
     count(PUBLIC_PARAM_LEN + ADDRESS_LEN + values.len() * N);
     let mut hasher = start(pp, tw);

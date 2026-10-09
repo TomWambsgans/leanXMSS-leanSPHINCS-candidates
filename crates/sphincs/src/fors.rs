@@ -47,7 +47,7 @@ fn fors_node(pp: &PublicParam, idx: u64, kappa: usize, level: usize, j: usize, l
 
 /// The FORS public key: `Th` over the two top nodes (level `a - 1`) of each of the `k` trees.
 pub fn fors_key_of_tops(pp: &PublicParam, idx: u64, tops: &[[Digest; 2]; K]) -> Digest {
-    th_digests(pp, &tweak(TWEAK_FTS_ROOTS, 0, idx as u32), tops.as_flattened())
+    th_digests(pp, &tweak(TWEAK_FTS_KEY, 0, idx as u32), tops.as_flattened())
 }
 
 /// A FORS instance whose leaves are known: every tree level, kept for the openings.
