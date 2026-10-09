@@ -61,17 +61,12 @@ Properties:
 
 \paragraph{Hash inputs.} Every hash input is $P \concat \mathit{address} \concat \mathit{data}$: the public
 parameter (16 bytes), then a 16-byte address: two fields of 4 and 3 bytes, 1 byte for the type of the call
-and the step in a chain, and 8 zero bytes. The two fill half of a 64-byte block, and every value that follows
-starts on a 16-byte boundary.
+and the step in a chain, and 8 zero bytes.
 \begin{itemize}
-  \item a chain step and a tree node each fit in one 64-byte block
-  \item the message digest hashes $m\concat R$: the message ends the first block, so the randomizer $R$ is the
+  \item the encoding uses $\mathit{data} = m\concat R$ ($R$ is the randomizer): the message ends the first block, so $R$ is the
         second block. A pruned signer tries $R = R_0 + i$ for $i = 0, 1, \dots$, with $R_0$ a hash of the secret key and $m$,
         and keeps the first one that lands in its subtree. The first block is hashed once, so each try costs 1
         compression
-  \item no field of the digest lies across two 64-bit words: each of the two digest calls gives 12 FORS indices,
-        six in each of its first two words, and the instance index is the low 26 bits of the third word of the
-        first call
   \item a FORS tree has no root hash: the FORS public key hashes the two nodes below the root of every tree, which
         saves one hash per tree
   \item the secrets are derived from the secret key two at a time: one hash gives 32 bytes, i.e.\ two chain starts
@@ -85,20 +80,20 @@ starts on a 16-byte boundary.
 For powerful devices.
 
 \begin{itemize}
-  \item lifetime: $2^{30}$
+  \item lifetime: $2^{30}$ (at 127 bits of security in the ROM)
   \item keygen: $16 \cdot 10^9$ compressions
   \item signing: $93\cdot10^3$ compressions, with a 16~MiB cache
 \end{itemize}
 
-\emph{A modern laptop CPU computes about $2^{29}$ SHA2 or BLAKE2s compressions per second.}
+\emph{A modern laptop CPU computes around $2^{30}$ SHA2 or BLAKE2s compressions per second.}
 
 
 \subsection{Pruned: \texorpdfstring{$2.1\cdot10^5$}{210K} lifetime}
 
-For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 13, and replace the 13 siblings above it by pseudorandom surrogate nodes. A forgery must land in the subtree (probability $2^{-13}$), which the lifetime accounts for. For every lifetime below, an adversary making $q$ hash queries forges with probability at most $q\cdot 2^{-127}$~\cite{proofs}.
+For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 13, and replace the 13 siblings above it by pseudorandom surrogate nodes.
 
 \begin{itemize}
-  \item lifetime: $2.1\cdot10^5$ signatures ($2^{17.7}$)
+  \item lifetime: $2.1\cdot10^5$ signatures (at 127 bits of security in the ROM)
   \item keygen: $2.0\cdot10^6$ compressions
   \item signing: $74\cdot10^3$ compressions, with a 16~KiB cache (including $8\cdot10^3$ compressions of grinding)
 \end{itemize}
@@ -111,7 +106,7 @@ For laptops, phones and powerful hardware wallets. The same pruning, with a subt
 surrogate siblings).
 
 \begin{itemize}
-  \item lifetime: $2.2\cdot10^7$ signatures ($2^{24.4}$)
+  \item lifetime: $2.2\cdot10^7$ signatures (at 127 bits of security in the ROM)
   \item keygen: $254\cdot10^6$ compressions
   \item signing: $70\cdot10^3$ compressions, with a 1~MiB cache (including 64 compressions of grinding)
 \end{itemize}
@@ -172,8 +167,7 @@ Parts from signings of different $(m,J)$ don't combine, so aborted signings reve
 \begin{enumerate}
   \item agree on $m$
   \item each signer commits to a random $r_i$, then reveals it; $R_0=\hash(r_1,\dots,r_t,m)$, and the signers
-        take the first $R=R_0+i$ that lands in the kept subtree. No signer may choose $R$: it could steer
-        signatures to the FORS instances of its choice~\cite{PRAWNS}
+        take the first $R=R_0+i$ that lands in the kept subtree.
   \item open $F$ at the 24 FORS addresses; check each against its leaf
   \item output $R$, the 24 secrets and paths, the WOTS signature, the authentication path
 \end{enumerate}
@@ -233,8 +227,8 @@ inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
   \toprule
   FTS & size & verification & FTS signing \\
   \midrule
-  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 B & 373 & $61\cdot10^3$ \\
-  two-level WOTS forest & 4\,276 B & 307 & $61\cdot10^3$ \\
+  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 bytes & 373 compressions & $61\cdot10^3$ compressions \\
+  two-level WOTS forest & 4\,276 bytes & 307 compressions & $61\cdot10^3$ compressions \\
   \bottomrule
 \end{tabular}
 \end{center}
