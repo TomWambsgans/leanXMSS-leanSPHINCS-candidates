@@ -73,7 +73,7 @@ far too rare to change the lifetimes above.
 | Computed subtree and surrogate path recover the root | `Completeness.eval_treeFold_pruned_path`, [Pruning](LeanSphincs/Pruning.lean) |
 | Graph-label programming preserves the random-oracle continuation | `Security.Graph.evalDist_graph_continuation`, [SecurityGraphSampling](LeanSphincs/SecurityGraphSampling.lean) |
 | Serialized signature length = 5684 bytes | `signature_size`, [Layout](LeanSphincs/Layout.lean) |
-| Accepted verification uses exactly 373 compressions (at most 373 for any signature) | `Cost.verification_compressions`, [VerificationCost](LeanSphincs/VerificationCost.lean) |
+| Accepted verification uses exactly 355 Keccak-f permutations (at most 355 for any signature) | `Cost.verification_permutations`, [VerificationCost](LeanSphincs/VerificationCost.lean) |
 
 The proof route, its modules, the gap to the attack and the modeling differences with the Rust code
 are in [PROOF.md](PROOF.md).
@@ -96,7 +96,7 @@ with `decide +kernel` during the build.
 ## The forest variant (leanSphincs-spicy)
 
 `LeanForest/` proves the same statement for the variant that replaces FORS by a two-level WOTS
-forest (4,276-byte signatures, 307 compressions to verify), at lifetimes above the ones of this
+forest (4,276-byte signatures, 271 Keccak-f permutations to verify), at lifetimes above the ones of this
 table: `LeanForest.Lifetimes.requestedSecurity`, see [FOREST.md](FOREST.md). It is not a default
 target: `env LEAN_NUM_THREADS=1 nice -n 19 lake build LeanForest` (its certificates take about 6
 minutes and 7 GB of memory).

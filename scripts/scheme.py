@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Sizes and compression counts of the leanSphincs candidate and of its spicy variant (the costs in leanSPHINCS.tex).
+"""Sizes and permutation counts of the leanSphincs candidate and of its spicy variant (the costs in leanSPHINCS.tex).
 The lifetimes printed here are estimates from the cover model; the note quotes the limits proved in Lean.
 
-Costs count compression-function calls of a hash with 64-byte blocks and no padding overhead, such as
-BLAKE2s: hashing l bytes costs max(1, ceil(l / 64)). Every call hashes P (16 B) || address (16 B) || input.
-A pruned signer tries the randomizers R_0 + i, with R_0 one hash of the seed and the message. The digest's
-first block does not depend on the randomizer, so an attempt costs one compression.
+Costs count Keccak-f[1600] permutations of SHA3-256 (rate 136 bytes, at least one byte of padding):
+hashing l bytes costs floor(l / 136) + 1. Every call hashes P (16 B) || address (16 B) || input.
+A pruned signer tries the randomizers R_0 + i, with R_0 one hash of the seed and the message. The digest
+input P || address || m || rho is 80 bytes, one block, so an attempt costs one permutation.
 """
 
 import argparse
@@ -19,8 +19,11 @@ N = 16  # bytes per hash value
 PREFIX = 32  # the public parameter and the address
 
 
+RATE = 136  # SHA3-256
+
+
 def comp(input_bytes):
-    return max(1, math.ceil((PREFIX + input_bytes) / 64))
+    return (PREFIX + input_bytes) // RATE + 1
 
 
 def n_sum(v, q, s):
@@ -66,7 +69,7 @@ def main():
     rnd, msg_block = comp(32 + 32), comp(32 + N)  # S || m ;  m || rho
     blocks = math.ceil((h + k * a) / 256)
     digest = blocks * msg_block
-    attempt = 1  # the second block of the first digest call, at randomizer R_0 + i
+    attempt = msg_block  # the first digest call, at randomizer R_0 + i
 
     if not 0 <= T <= v * (q - 1):
         ap.error(f"--T must be between 0 and {v * (q - 1)}")
@@ -109,14 +112,14 @@ def main():
         return int(mib * 2**20) // N
 
     print(f"leanSphincs candidate: h={h} a={a} k={k}, WOTS+C with {v} chains of length {q} and T={T}; "
-          f"costs in 64-byte compressions")
+          f"costs in Keccak-f permutations (SHA3-256)")
     print(f"  signature {size} B (rho 16, FORS {k * (1 + a) * N}, counter 4, WOTS {v * N}, path {h * N}); pk {2 * N} B")
     print(f"  per call: derive {derive}, chain {step}, node {node}, encode {enc}, WOTS leaf {wots_pk}, "
           f"FORS key {fors_roots}, randomizer {rnd}, digest {digest}")
     print(f"  WOTS encoding: {math.log2(n_sum(v, q, T)):.2f} bits of valid encodings, "
           f"expected {1 / alpha:.0f} counters")
     print(f"  lifetime at 127 bits: 2^{L:.2f} signatures")
-    print(f"  verification: {verify} compressions")
+    print(f"  verification: {verify} permutations")
     print(f"  WOTS leaf {leaf}; key generation {keygen:,} ({fmt(keygen)})")
     for mib in x.cache_mib:
         tree = tree_cost(h, nodes(mib))
@@ -148,7 +151,7 @@ def main():
     size_s = N + trees * values * N + 4 + v * N + h * N
     verify_s = digest_s + trees * per_tree + forest_key + enc + ((q - 1) * v - T) * step + wots_pk + h * node
     print(f"spicy (two-level WOTS forest): signature {size_s} B ({1 - size_s / size:.1%} smaller), verification "
-          f"{verify_s} compressions ({1 - verify_s / verify:.1%} fewer; {per_tree} per tree, {values} values per tree)")
+          f"{verify_s} permutations ({1 - verify_s / verify:.1%} fewer; {per_tree} per tree, {values} values per tree)")
     print(f"  WOTS key {wots_key}; forest signing {fmt(forest_sign)} (FORS {fmt(fors_sign)}); key generation unchanged")
     for mib in x.cache_mib:
         tree_c = tree_cost(h, nodes(mib))
@@ -164,14 +167,14 @@ def main():
     b = x.threshold
     mpc_hashes = 2**b * (k * 2**a + v * (q - 1))
     public = 2**b * (k * 2**a * N + v * N + 4)
-    try_cost = 1  # R = R_0 + i, then the second block of the first digest call
+    try_cost = msg_block  # R = R_0 + i, then the first digest call
     grind = 2 ** (h - b) * try_cost
     rebuild = k * (2**a - 2) * node  # the combiner rebuilds the 24 FORS paths from the public leaves
     print(f"  threshold, 2^{b} kept leaves (lifetime 2^{pruned_log2_sigs(b):.2f}): {fmt(mpc_hashes)} MPC hashes at keygen, public data "
-          f"{public / 1e9:.3g} GB; signing: grinding {fmt(grind)} + FORS paths {fmt(rebuild)} compressions, no MPC")
+          f"{public / 1e9:.3g} GB; signing: grinding {fmt(grind)} + FORS paths {fmt(rebuild)} permutations, no MPC")
     # Keygen with a DKG: n-party replicated-sharing MPC, t = (n + 1) / 2, hash-based F. Bytes per operator for
     # one FORS leaf and one 3-step WOTS chain, measured by `cargo run --release -p rss --bin bench`.
-    measured = {3: (1699, 5064), 5: (2039, 6078), 7: (2186, 6514)}
+    measured = {3: (4553, 13625), 5: (5464, 16352), 7: (5855, 17522)}
     # Trusted dealer: F costs comb(n, t - 1) hashes per secret with the hash-based F.
     # The threshold PRF gives one secret per evaluation.
     leaf1 = v * derive + v * (q - 1) * step + wots_pk
@@ -183,7 +186,7 @@ def main():
         traffic = 2**b * (k * 2**a * per_leaf + v * per_chain)
         dealer_n = dealer + 2**b * (k * 2**a + v) * (math.comb(n, f) - 1)
         print(f"    {f + 1}-of-{n}: DKG traffic {traffic / 1e9:.3g} GB per operator; "
-              f"trusted dealer {fmt(dealer_n)} compressions")
+              f"trusted dealer {fmt(dealer_n)} permutations")
 
     # Spicy threshold signing: a signature reveals the chain values below the top, one per non-zero digit of the
     # 16 codewords. The ceremony hashes every chain of the forest 4 times (the secret, positions 1 to 3 published

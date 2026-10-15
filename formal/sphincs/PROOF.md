@@ -141,15 +141,16 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
   hashes of the seed, a single leaf (the level-0 sibling of an opening, or a revealed secret)
   takes one, and a one-time key takes 32, as `wots_secrets`, `fors_secret_pair` and `fors_secret`
   do. The hash-call counts above are those of the model; key generation makes the same calls in
-  Rust (241 compressions per leaf there, 17 of them for the leaf hash). The byte inputs and recovered values were ported by source
+  Rust (232 Keccak-f permutations per leaf there, 8 of them for the leaf hash). The byte inputs and recovered values were ported by source
   inspection; this is not a mechanized Rust refinement or an exact hash-trace equivalence. A
   security transfer using total experiment query counts must account for caching.
 - Verification does not enforce membership in the retained subtree. The proof accounts for forgeries
   entering through a surrogate sibling.
-- `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums BLAKE2s
-  block costs of the verifier's logged hash-input lengths: accepted signatures cost exactly 373
-  compressions, all signatures at most 373 (4 for the digest, 24·(1 + 9) for the FORS leaves and
-  folds, 13 for the FORS key hash of 800 bytes, 116 for WOTS+C and the tree).
+- `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums SHA3-256
+  permutation costs (`n / 136 + 1` for `n` bytes) of the verifier's logged hash-input lengths:
+  accepted signatures cost exactly 355 Keccak-f permutations, all signatures at most 355 (2 for the
+  digest, 24·(1 + 9) for the FORS leaves and folds, 6 for the FORS key hash of 800 bytes, 107 for
+  WOTS+C and the tree).
 - Every hash input is P ‖ A ‖ payload, with the 16-byte address A = `lo` ‖ `hi` ‖ (type + 32·step) ‖ 0^8
   (`fieldBytes`), so every value of a payload starts on a 16-byte boundary.
   The tree domains keep their layer and tree arguments, both always 0 and not serialized
@@ -157,11 +158,10 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
   (`fieldInput_injective`, [SecurityDomains](LeanSphincs/SecurityDomains.lean)), and in-range
   domains have distinct addresses (`hashFields_injective`,
   [SecurityPosition](LeanSphincs/SecurityPosition.lean)), so separating inputs costs no probability
-  term. The message digest hashes m ‖ ρ (80 bytes with P and A: the first block ends with m,
-  the second is ρ) and the randomizer derivation seed ‖ m, once per
-  message: Rust keeps the BLAKE2s state after the first block of the digest and pays one
-  compression per grinding attempt; the model hashes whole inputs, and its budgets count oracle
-  queries. The root is
+  term. The message digest hashes m ‖ ρ (80 bytes with P and A, within one 136-byte block) and the
+  randomizer derivation seed ‖ m, once per message: Rust absorbs P ‖ A ‖ m of the digest once and
+  pays one permutation per grinding attempt; the model hashes whole inputs, and its budgets count
+  oracle queries. The root is
   not hashed in the digest (P binds the key); `messageDigestPayload` and the digest functions keep
   their `root` argument, which they ignore.
 - The digest's fields are disjoint bits of the two 256-bit outputs, none across two 64-bit words:

@@ -137,9 +137,9 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 | forest tree node, level 1 to 3 | 19 | 0 | `c + 8·level + 64·node` | `idx` | left ‖ right |
 | few-time public key | 20 | 0 | 0 | `idx` | `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]`, the level-3 nodes of the 8 trees (256 bytes) |
 
-With a 32-byte prefix every call costs the same number of 64-byte blocks as with the former 24-byte
-one: a chain step is 48 bytes and a node 64 (1 compression), a forest WOTS-key leaf 128 and a tree
-leaf 96 (2), the key 288 (5), a one-time leaf 1,056 (17), the digest 80 (2). The
+With SHA3-256 a call of `n` bytes costs `n / 136 + 1` Keccak-f permutations: a chain step is 48 bytes,
+a node 64, a forest WOTS-key leaf 128, a tree leaf 96 and the digest 80 (1 permutation each), the key
+288 (3), a one-time leaf 1,056 (8). The
 addresses of a subtree root (type 17, level 3) and of a tree root (type 19, level 4) exist in
 `HashDomain` and no algorithm uses them.
 
@@ -192,12 +192,12 @@ inputs of different types differ whatever their parameters (`fieldInput_ne_of_ta
 `randomizerHashInput_injective` (`BridgeDet.lean`) for the randomizer base. The address has no layer and
 no tree field; the scheme has one of each (`Layer` and `TreeIndex` are `Fin 1`).
 
-`Layout.signature_size`: a signature serializes to 4,276 bytes. `Cost.verification_compressions`:
-an accepted signature costs exactly 307 BLAKE2s compressions (2 for the 80-byte digest input, 189
-for the forest, 116 for WOTS+C and the path), and no signature costs more
-(`verification_compressions_le`). The forest is 23 per tree (`compressions_coordRecover`: in each of
-the two subtrees 5 chain steps, 2 for the WOTS-key leaf and 2 folds; 2 for the tree leaf; 3 folds),
-times 8, plus 5 for the key.
+`Layout.signature_size`: a signature serializes to 4,276 bytes. `Cost.verification_permutations`:
+an accepted signature costs exactly 271 Keccak-f permutations (1 for the 80-byte digest input, 163
+for the forest, 107 for WOTS+C and the path), and no signature costs more
+(`verification_permutations_le`). The forest is 20 per tree (`permutations_coordRecover`: in each of
+the two subtrees 5 chain steps, 1 for the WOTS-key leaf and 2 folds; 1 for the tree leaf; 3 folds),
+times 8, plus 3 for the key.
 
 Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
 `SecurityPrefixErasedKeygen.lean`; exact counts on any oracle):
