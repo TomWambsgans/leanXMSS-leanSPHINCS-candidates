@@ -265,7 +265,7 @@ theorem noQ_bind {bad : HashInput → Prop} [DecidablePred bad] {α β : Type} {
 omit [Params] in
 /-- The encoding search queries only encoding inputs. -/
 theorem noQ_search {bad : HashInput → Prop} [DecidablePred bad]
-    (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : Digest)
+    (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : FtsTops)
     (hbad : ∀ payload, ¬bad (tweakableHashInput parameter (.encoding lay tree leaf) payload)) :
     ∀ attempts start, (ReferenceChoice.search parameter lay tree leaf message attempts start :
       OracleComp HashSpec (Option (Counter × Encoding))).IsQueryBoundP bad 0
@@ -463,10 +463,10 @@ attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSamp
 
 omit [Params] in
 theorem search_eq_searchLoop (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (message : Digest) : ∀ (n t : ℕ),
+    (message : FtsTops) : ∀ (n t : ℕ),
     (ReferenceChoice.search parameter lay tree leaf message n t : OracleComp HashSpec (Option (Counter × Encoding))) =
       searchLoop (fun c => tweakableHashInput parameter (.encoding lay tree leaf)
-          (bytesLE 16 message ++ bytesLE 4 (BitVec.ofNat counterBits c)))
+          (ftsTopsPayload message ++ bytesLE 4 (BitVec.ofNat counterBits c)))
         (fun out => TargetSum.decodeDigest (truncateHash out))
         (fun c encoding => pure (BitVec.ofNat counterBits c, encoding)) n t := by
   intro n
@@ -483,7 +483,7 @@ theorem search_eq_searchLoop (parameter : PublicParameter) (lay : Layer) (tree :
 omit [Params] in
 /-- One search over fresh counters fails with at most the rejection share to the trial budget. -/
 theorem search_fail_le (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (message : Digest) (cache : QueryCache HashSpec)
+    (message : FtsTops) (cache : QueryCache HashSpec)
     (hfresh : ∀ s, s < encodingAttemptLimit → cache (encodeInput parameter lay tree leaf message s) = none) :
     Pr[fun r => r.1 = none | (simulateQ (randomOracle (spec := HashSpec))
         (ReferenceChoice.search parameter lay tree leaf message encodingAttemptLimit 0)).run cache] ≤

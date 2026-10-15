@@ -123,7 +123,7 @@ theorem chainInput_inj {p : PublicParameter} {l l' : Index} {i i' : ChainIndex} 
   exact ⟨rfl, rfl, rfl, bytesLE_injective hm⟩
 
 theorem chainInput_ne_enc {p p' : PublicParameter} {l : Index} {i : ChainIndex} {st : ChainStep} {v : Digest}
-    {lay : Layer} {tree : TreeIndex} {l' : LeafIndex} {m : Digest} {c : Counter} :
+    {lay : Layer} {tree : TreeIndex} {l' : LeafIndex} {m : FtsTops} {c : Counter} :
     chainInput p l i st v ≠ Wots.encodingInput p' lay tree l' m c := by
   intro h
   have hd := (domain_eq_of_input h trivial trivial).1
@@ -136,14 +136,14 @@ theorem chainInput_ne_fors {p p' : PublicParameter} {l : Index} {i : ChainIndex}
   have hd := (domain_eq_of_input h trivial trivial).1
   cases hd
 
-theorem enc_ne_fors {p p' : PublicParameter} {lay : Layer} {tree : TreeIndex} {l : LeafIndex} {m : Digest}
+theorem enc_ne_fors {p p' : PublicParameter} {lay : Layer} {tree : TreeIndex} {l : LeafIndex} {m : FtsTops}
     {c : Counter} {index : Index} {tree' : FtsTree} {leaf : FtsLeaf} {secret : Digest} :
     Wots.encodingInput p lay tree l m c ≠ forsLeafInput p' index tree' leaf secret := by
   intro h
   have hd := (domain_eq_of_input h trivial trivial).1
   cases hd
 
-theorem enc_inj {p : PublicParameter} {l l' : LeafIndex} {m m' : Digest} {c c' : Counter}
+theorem enc_inj {p : PublicParameter} {l l' : LeafIndex} {m m' : FtsTops} {c c' : Counter}
     (h : Wots.encodingInput p topLayer rootTree l m c = Wots.encodingInput p topLayer rootTree l' m' c') :
     l = l' ∧ m = m' ∧ c = c' := by
   have hd := (domain_eq_of_input h trivial trivial).1
@@ -312,13 +312,13 @@ theorem isA_not_isB {l l' : Index} {i i' : ChainIndex} {v : Digest} {x : HashInp
   obtain ⟨rfl, rfl, rfl, -⟩ := chainInput_inj heq
   omega
 
-theorem isA_ne_enc {l : Index} {i : ChainIndex} {x : HashInput} (h : K.IsA l i x) (l' : LeafIndex) (msg : Digest)
+theorem isA_ne_enc {l : Index} {i : ChainIndex} {x : HashInput} (h : K.IsA l i x) (l' : LeafIndex) (msg : FtsTops)
     (ctr : Counter) : x ≠ Wots.encodingInput K.p topLayer rootTree l' msg ctr := by
   obtain ⟨st, pay, -, rfl⟩ := h
   exact chainInput_ne_enc
 
 theorem isB_ne_enc {l : Index} {i : ChainIndex} {v : Digest} {x : HashInput} (h : K.IsB l i v x) (l' : LeafIndex)
-    (msg : Digest) (ctr : Counter) : x ≠ Wots.encodingInput K.p topLayer rootTree l' msg ctr := by
+    (msg : FtsTops) (ctr : Counter) : x ≠ Wots.encodingInput K.p topLayer rootTree l' msg ctr := by
   obtain ⟨st, -, rfl⟩ := h
   exact chainInput_ne_enc
 

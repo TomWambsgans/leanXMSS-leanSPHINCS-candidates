@@ -18,8 +18,8 @@ target is q/2^127 = 2x. K = 226·2^b + 2(26 − b) is the key-generation cost in
    value read only through a hash input that contains the 256-bit seed; the later steps see the
    secret at a position (`PreparedScheme.compile_secret`) and are unchanged. An honest hash of
    the seed costs one query whether it gives one secret or two, so the signer's query counts go
-   down: 224 calls per one-time key (was 256), 152 for the opened chain values (was 184), 61,393
-   for a FORS key and 61,152 for its openings, 122,571 calls per signature before the WOTS
+   down: 224 calls per one-time key (was 256), 152 for the opened chain values (was 184), 61,392
+   for the FORS tops and 61,152 for their openings, 122,570 calls per signature before the WOTS
    search (`hashCalls_forsKey_exact`, `hashCalls_forsOpen_exact`, `finishHashCost`,
    [SecurityGraphCost](LeanSphincs/SecurityGraphCost.lean)).
 
@@ -53,17 +53,17 @@ target is q/2^127 = 2x. K = 226·2^b + 2(26 − b) is the key-generation cost in
    ([BridgeInterp](LeanSphincs/BridgeInterp.lean), [BridgeDebt](LeanSphincs/BridgeDebt.lean)). Chain
    values at and above the prepared word of a landed leaf are exposed at the start
    ([BridgeExpose](LeanSphincs/BridgeExpose.lean)).
-   - **FORS trees have no root hash.** The FORS key hashes the two level-9 nodes of each of the
-     24 trees (48 values, `ftsTopsPayload`), and the level-10 node is not computed. The graph has
-     the same positions as before; the children of the key hash are the 48 level-9 nodes
-     (`Position.children`), and the level-10 node positions stay in the type unread, like the node
-     indices beyond the width of a level. A forged opening that reaches the true FORS key either
-     gives the key hash another input, which is a first-order hit at the key hash
-     (`Fors.TopsMatch`, `topsMatch_hit`), or has the true 48 values. Then, per tree, the node it
-     computes from the leaf is the true level-9 node on that side, which is classified as a tree
-     of height 9 (canonical secret and path elements 0..8, a leaf match, or a node match at a
-     level below 9), and its last path element is the true level-9 node on the other side, read
-     off the key-hash input and not hashed (`Fors.tree_classification`,
+   - **FORS trees have no root hash, and no key hash.** The WOTS+C encoding hashes the two
+     level-9 nodes of each of the 24 trees (48 values, `ftsTopsPayload`) with the counter, so the
+     one-time signature signs the 48 values themselves, and the level-10 node is not computed.
+     The graph has no key position; the level-10 node positions stay in the type unread, like the
+     node indices beyond the width of a level. A forged signature whose encoding input differs
+     from the reference one (other tops or another counter) is a WOTS event of the encoding, as a
+     forged key was before; one that recovers the true 48 values computes, per tree, the true
+     level-9 node on the side of its leaf, which is classified as a tree of height 9 (canonical
+     secret and path elements 0..8, a leaf match, or a node match at a level below 9), and its
+     last path element is the true level-9 node on the other side, read off the encoding input
+     and not hashed (`Fors.recover_classification`, `Fors.tree_classification`,
      [SecurityForsWitness](LeanSphincs/SecurityForsWitness.lean)). A signature reveals that
      node as path element 9, as it did before, so the revealed values are unchanged
      (`GraphView.publicData`, `forsPath`).
@@ -148,9 +148,11 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
   entering through a surrogate sibling.
 - `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums SHA3-256
   permutation costs (`n / 136 + 1` for `n` bytes) of the verifier's logged hash-input lengths:
-  accepted signatures cost exactly 355 Keccak-f permutations, all signatures at most 355 (2 for the
-  digest, 24·(1 + 9) for the FORS leaves and folds, 6 for the FORS key hash of 800 bytes, 107 for
-  WOTS+C and the tree).
+  accepted signatures cost exactly 354 Keccak-f permutations, all signatures at most 354 (2 for the
+  digest, 24·(1 + 9) for the FORS leaves and folds, 6 for the encoding of the 48 tops and the
+  counter, 804 bytes, 72 chain steps, 8 for the leaf and 26 for the path). Rust absorbs
+  P ‖ A ‖ tops of the encoding once and pays one permutation per counter; the model hashes whole
+  inputs.
 - Every hash input is P ‖ A ‖ payload, with the 16-byte address A = `lo` ‖ `hi` ‖ (type + 32·step) ‖ 0^8
   (`fieldBytes`), so every value of a payload starts on a 16-byte boundary.
   The tree domains keep their layer and tree arguments, both always 0 and not serialized
