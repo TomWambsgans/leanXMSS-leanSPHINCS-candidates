@@ -9815,10 +9815,6 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Forest.recover_classification
 
-/-- info: 'LeanForest.Security.Forest.rootsInput_mem' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.Forest.rootsInput_mem
-
 /-- info: 'LeanForest.Security.Forest.subInput_mem' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Forest.subInput_mem
@@ -9858,14 +9854,6 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.childPayload_injective' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.childPayload_injective
-
-/-- info: 'LeanForest.Security.flatMap_ofFn_injective' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.flatMap_ofFn_injective
-
-/-- info: 'LeanForest.Security.rootsPayload_injective' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.rootsPayload_injective
 
 /-- info: 'LeanForest.Security.superPayload_injective' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -11663,6 +11651,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.canonicalTreePath_surrogate
 
+/-- info: 'LeanForest.Security.flatMap_ofFn_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.flatMap_ofFn_injective
+
 /-- info: 'LeanForest.Security.inside_subtree_treeFold_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.inside_subtree_treeFold_witness
@@ -11726,6 +11718,14 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.quotient_eq_of_parent_bit_eq' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.quotient_eq_of_parent_bit_eq
+
+/-- info: 'LeanForest.Security.rootsPayload_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.rootsPayload_injective
+
+/-- info: 'LeanForest.Security.rootsPayload_len' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.rootsPayload_len
 
 /-- info: 'LeanForest.Security.verification_forest_run' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -11835,6 +11835,26 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.splitHashOutput_injective
 
+/-- info: 'LeanForest.Cost.encode_valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.encode_valid
+
+/-- info: 'LeanForest.Cost.hashTrace_bind' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.hashTrace_bind
+
+/-- info: 'LeanForest.Cost.hashTrace_pure' does not depend on any axioms -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.hashTrace_pure
+
+/-- info: 'LeanForest.Cost.hashTrace_query_bind' does not depend on any axioms -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.hashTrace_query_bind
+
+/-- info: 'LeanForest.Cost.lut_sum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.lut_sum
+
 /-- info: 'LeanForest.Cost.permutations_bind' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Cost.permutations_bind
@@ -11922,26 +11942,6 @@ import LeanForest.World
 /-- info: 'LeanForest.Cost.permutations_verifyLayers' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Cost.permutations_verifyLayers
-
-/-- info: 'LeanForest.Cost.encode_valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.encode_valid
-
-/-- info: 'LeanForest.Cost.hashTrace_bind' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.hashTrace_bind
-
-/-- info: 'LeanForest.Cost.hashTrace_pure' does not depend on any axioms -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.hashTrace_pure
-
-/-- info: 'LeanForest.Cost.hashTrace_query_bind' does not depend on any axioms -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.hashTrace_query_bind
-
-/-- info: 'LeanForest.Cost.lut_sum' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.lut_sum
 
 /-- info: 'LeanForest.Cost.rootsPayload_length' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
