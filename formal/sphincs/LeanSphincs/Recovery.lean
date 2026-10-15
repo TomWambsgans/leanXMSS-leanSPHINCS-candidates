@@ -379,8 +379,7 @@ theorem eval_treeFold_path (parameter : PublicParameter) (lay : Layer) (tree : T
 
 The forest repeats the layer argument at height `a - 1 = 9`: the signer opens one secret per tree
 with its siblings, so each recovered top node is the honest one, the last path element is the other
-honest top node, and the hash of the `2 k` top nodes is the few-time public key the bottom layer
-signed. -/
+honest top node, and the `2 k` top nodes are the few-time public key the bottom layer signed. -/
 
 /-- The honest value at a node of one few-time tree. -/
 def ftsNodeValue (parameter : PublicParameter) (index : Index) (tree : FtsTree) (seed : MasterSeed)
@@ -493,7 +492,7 @@ theorem eval_ftsKey (parameter : PublicParameter) (index : Index) (seed : Master
   simp only [Seeded.ftsKey, eval_sequenceFin, evalWithAnswerFn_bind, evalWithAnswerFn_pure]
   rfl
 
-/-- The verifier recovers the few-time public key the signer's bottom layer signed. -/
+/-- The verifier recovers the few-time tops the signer's bottom layer signed. -/
 theorem eval_ftsRecover (parameter : PublicParameter) (index : Index) (seed : MasterSeed)
     (leaves : IndexGroup → FtsLeaf) :
     evalWithAnswerFn f (ftsRecover parameter index leaves

@@ -38,7 +38,7 @@ def topValue (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
   evalWithAnswerFn f (ftsFold parameter index tree leaf path ftsTopLevel
     (leafValue f parameter index tree leaf secret) : OracleComp HashSpec Digest)
 
-/-- The last path element: the top node on the other side, an input of the key hash. -/
+/-- The last path element: the top node on the other side, an input of the encoding. -/
 def topSibling (path : Fin ftsTreeHeight → Digest) : Digest := path ⟨ftsTopLevel, by decide⟩
 
 theorem merkleFold_ftsFold (parameter : PublicParameter) (index : Index) (tree : FtsTree)

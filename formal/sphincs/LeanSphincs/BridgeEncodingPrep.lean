@@ -14,7 +14,7 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-/-- Every leaf's canonical WOTS encoding search of its FORS key, run in order. -/
+/-- Every leaf's canonical WOTS encoding search of its FORS tops, run in order. -/
 def searchAll (parameter : PublicParameter) (forsKey : Index → FtsTops) :
     OracleComp HashSpec (Index → Option (Counter × Encoding)) :=
   Concrete.sequenceFin fun leaf => ReferenceChoice.search parameter topLayer rootTree leaf (forsKey leaf)
