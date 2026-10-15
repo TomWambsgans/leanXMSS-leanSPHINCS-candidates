@@ -334,7 +334,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
   <div class="text">
     <header>
       <div class="titlerow"><h1>A proposal for leanSphincs</h1><div class="toggle" role="group" aria-label="Variant"><button type="button" data-v="vanilla" aria-pressed="true">vanilla</button><button type="button" data-v="spicy" aria-pressed="false">spicy</button></div></div>
-      <div class="notes"><ul class="pro"><li>25% smaller signatures</li><li>24% faster verification<span class="info" tabindex="0" data-tip="Measured in Keccak-f permutations: 355 → 271">i</span></li></ul><ul class="con"><li>more complex</li><li>2× worse threshold</li></ul></div>
+      <div class="notes"><ul class="pro"><li>25% smaller signatures</li><li>25% faster verification<span class="info" tabindex="0" data-tip="Measured in Keccak-f permutations: 354 → 267">i</span></li></ul><ul class="con"><li>more complex</li><li>2× worse threshold</li></ul></div>
       <svg class="arrow" aria-hidden="true"><path class="line"/><path class="head"/></svg>
       <p class="by">by Tom Wambsgans</p>
     </header>
@@ -353,7 +353,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
         <tbody class="out">
           <tr><th>Lifetime</th><td>2<sup>24</sup></td><td>2<sup>30</sup><span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></td></tr>
           <tr><th>Size</th><td>3,856 bytes</td><td><span class="old">5,684</span><span class="new s-only">4,276</span> bytes</td></tr>
-          <tr><th>Verification<br><span class="unit">(permutations)</span></th><td>296<span class="info" tabindex="0" data-tip="SHA-2 compressions">i</span></td><td><span class="old">355</span><span class="new s-only">271</span><span class="info" tabindex="0" data-tip="Keccak-f[1600] permutations">i</span></td></tr>
+          <tr><th>Verification<br><span class="unit">(permutations)</span></th><td>296<span class="info" tabindex="0" data-tip="SHA-2 compressions">i</span></td><td><span class="old">354</span><span class="new s-only">267</span><span class="info" tabindex="0" data-tip="Keccak-f[1600] permutations">i</span></td></tr>
         </tbody>
       </table>
       </div>
@@ -361,7 +361,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
   </div>
   <figure>
       <svg viewBox="10 -13 572 569" preserveAspectRatio="xMaxYMid meet" role="img" aria-labelledby="dia-title">
-        <title id="dia-title">A leanSphincs signature: a path in a tree of height 26 to a leaf, the hash of a WOTS+C key of 64 chains of length 4, which signs the root of a FORS key of 24 trees of height 10</title>
+        <title id="dia-title">A leanSphincs signature: a path in a tree of height 26 to a leaf, the hash of a WOTS+C key of 64 chains of length 4, which signs the tops of a FORS instance of 24 trees of height 10</title>
         <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient></defs>
         <g class="tree">
           <line x1="256.0" y1="22" x2="136.0" y2="48"/>

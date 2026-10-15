@@ -54,7 +54,7 @@ Properties:
   \item public key: 32 bytes
   \item secret key: 32 bytes
   \item signature size: 5\,684 bytes
-  \item verification: 355 Keccak-f[1600] permutations (hash: SHA3-256)
+  \item verification: 354 Keccak-f[1600] permutations (hash: SHA3-256)
   \item security: NIST level 1 \cite{FIPS205} (applies to all the usages below) (127 bits SUF in the ROM, and $\approx 64$ bits in the QROM)
   \item lifetime: up to $2^{30}$ signatures.
 \end{itemize}
@@ -68,8 +68,9 @@ and the step in a chain, and 8 zero bytes.
   \item the encoding uses $\mathit{data} = m\concat R$ ($R$ is the randomizer): 80 bytes in all, one block. A pruned
         signer tries $R = R_0 + i$ for $i = 0, 1, \dots$, with $R_0$ a hash of the secret key and $m$, and keeps the first
         one that lands in its subtree. Each try costs 1 permutation
-  \item a FORS tree has no root hash: the FORS public key hashes the two nodes below the root of every tree, which
-        saves one hash per tree
+  \item a FORS tree has no root hash, and there is no FORS public key: the WOTS$^+$C encoding hashes the two nodes
+        below the root of every tree, then the counter. This saves one hash per tree and the hash of a FORS key; the
+        counter falls in the last block, so each counter the signer tries costs 1 permutation
   \item the secrets are derived from the secret key two at a time: one hash gives 32 bytes, i.e.\ two chain starts
         or two FORS secrets
 \end{itemize}
@@ -127,8 +128,8 @@ surrogate siblings).
 \paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS}).} Each FORS secret is $F(\mathit{addr})$, for a
 threshold PRF $F$: $t$ operators evaluate it together, $t-1$ learn nothing (context-aware, see below).
 \begin{itemize}
-  \item keygen (MPC): computes and publishes all FORS leaves $\hash(F(\mathit{addr}))$, and the signature of
-        each FORS root by its WOTS key
+  \item keygen (MPC): computes and publishes all FORS leaves $\hash(F(\mathit{addr}))$, and the WOTS signature
+        of each FORS instance (of its tree tops)
   \item signing: the $t$ signers evaluate $F$ at the 24 FORS addresses selected by the message; everything
         else (FORS paths, WOTS signature, authentication path) is read from the public data
 \end{itemize}
@@ -159,7 +160,7 @@ Parts from signings of different $(m,J)$ don't combine, so aborted signings reve
         verifiable Shamir sharing of $\mathit{msk}$), and the pairwise keys $k_{ij}$
   \item MPC: $F$ at the $2^b\cdot24\cdot2^{10}$ FORS addresses, hashed into leaves; $F$ at the
         $2^b\cdot64$ WOTS chain starts, hashed 3 times. Open the leaves and chain ends
-  \item in the clear: FORS roots, WOTS$^+$C counters; open the WOTS signatures; build the tree
+  \item in the clear: FORS tree tops, WOTS$^+$C counters; open the WOTS signatures; build the tree
   \item the operators check they all got the same public data (public key, FORS leaves, WOTS signatures;
         1.6~GB for $b=12$) by comparing its hash. Each keeps the public data and its key share of $F$, and
         deletes everything else
@@ -222,7 +223,7 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
 \label{sec:twolevel}
 
 FORS can be replaced by a few-time signature (FTS) built from small WOTS keys. Signatures are 25\% smaller
-and verification 24\% cheaper, with about the same signing cost and longer lifetimes, proved in Lean~\cite{proofs}. The idea is
+and verification 25\% cheaper, with about the same signing cost and longer lifetimes, proved in Lean~\cite{proofs}. The idea is
 inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
 
 \begin{center}
@@ -230,8 +231,8 @@ inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
   \toprule
   FTS & size & verification & FTS signing \\
   \midrule
-  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 bytes & 355 permutations & $61\cdot10^3$ permutations \\
-  two-level WOTS forest & 4\,276 bytes & 271 permutations & $59\cdot10^3$ permutations \\
+  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 bytes & 354 permutations & $61\cdot10^3$ permutations \\
+  two-level WOTS forest & 4\,276 bytes & 267 permutations & $59\cdot10^3$ permutations \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -242,10 +243,10 @@ Signing at $d$ reveals each chain $d_i$ steps below its top. The verifier hashes
 steps in total. The fixed sum acts as the checksum: from one signature, hashing forward cannot reach any other codeword. From
 several signatures by the same key, it reaches exactly the codewords below their componentwise max.
 
-\paragraph{Trees.} The FTS has 8 independent trees of height 4, and its public key hashes their 8 roots. Each of
+\paragraph{Trees.} The FTS has 8 independent trees of height 4, and the WOTS$^+$C encoding hashes their 8 roots. Each of
 the 16 leaves of a tree is $\hash(R_0,R_1)$, where $R_0$ and $R_1$ are the roots of two subtrees of height 3 over 8
 WOTS keys each. In each tree, the message picks a leaf, and in both of its subtrees a WOTS key and a codeword. As for FORS, a tree or a subtree has
-no root hash: in $\hash(R_0,R_1)$ and in the public key, $R$ stands for the two nodes just below the root.
+no root hash: in $\hash(R_0,R_1)$ and in the encoding, $R$ stands for the two nodes just below the root.
 
 \begin{center}
 \begin{tikzpicture}[x=1cm,y=1cm,line join=round,
@@ -336,7 +337,10 @@ so it still takes one hash.
         $\hash(R_0,R_1)$ and 3 for the path in the tree
   \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 28 permutations each
 \end{itemize}
-Every signature has the same size and verification cost, and keygen is unchanged.
+Every signature has the same size and verification cost, and keygen is unchanged. The WOTS$^+$C key that signs
+the forest uses a target sum of 123 instead of 120: 3 fewer chain steps at verification, for about 2\,200 counter
+tries instead of 830 when signing ($1.4\cdot10^3$ more permutations, still within the signing costs of
+\cref{sec:scheme}).
 
 \paragraph{Security.} A forgery at an instance with $r$ prior signatures needs every tree to be covered: in
 both subtrees, the target WOTS key must have been opened, and the target codeword must lie below the componentwise
