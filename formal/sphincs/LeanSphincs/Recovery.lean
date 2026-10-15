@@ -232,7 +232,7 @@ theorem eval_otsValues (parameter : PublicParameter) (lay : Layer) (tree : TreeI
 
 /-- What a successful counter search produced: the counter encodes the message, and every chain value is the signer's partial walk from the derived secret. -/
 theorem otsSignFrom_spec (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (seed : MasterSeed) (message : Digest) :
+    (leaf : LeafIndex) (seed : MasterSeed) (message : FtsTops) :
     ∀ (attempts start : Nat) {counter : Counter} {values : ChainIndex → Digest},
       evalWithAnswerFn f (otsSignFrom parameter lay tree leaf seed message attempts start
           : OracleComp HashSpec (Option (Counter × (ChainIndex → Digest)))) = some (counter, values) →
@@ -262,7 +262,7 @@ theorem otsSignFrom_spec (parameter : PublicParameter) (lay : Layer) (tree : Tre
 
 /-- The verifier's leaf is the leaf the signer's tree was built from. -/
 theorem eval_otsLeaf_of_otsSign (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (seed : MasterSeed) (message : Digest) {counter : Counter}
+    (leaf : LeafIndex) (seed : MasterSeed) (message : FtsTops) {counter : Counter}
     {values : ChainIndex → Digest}
     (h : evalWithAnswerFn f (otsSign parameter lay tree leaf seed message
         : OracleComp HashSpec (Option (Counter × (ChainIndex → Digest)))) = some (counter, values)) :
@@ -486,13 +486,11 @@ def ftsTopsValue (parameter : PublicParameter) (index : Index) (seed : MasterSee
   (ftsNodeValue f parameter index tree seed ftsTopLevel 0,
     ftsNodeValue f parameter index tree seed ftsTopLevel 1)
 
-/-- The honest few-time key is the hash of the honest top nodes. -/
+/-- The honest few-time key is the honest top nodes. -/
 theorem eval_ftsKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) :
-    evalWithAnswerFn f (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest) =
-      truncateHash (f (tweakableHashInput parameter (.ftsRoots index)
-        (ftsTopsPayload (ftsTopsValue f parameter index seed)))) := by
-  simp only [Seeded.ftsKey, eval_sequenceFin, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
-    eval_tweakableHash]
+    evalWithAnswerFn f (Seeded.ftsKey parameter index seed : OracleComp HashSpec FtsTops) =
+      ftsTopsValue f parameter index seed := by
+  simp only [Seeded.ftsKey, eval_sequenceFin, evalWithAnswerFn_bind, evalWithAnswerFn_pure]
   rfl
 
 /-- The verifier recovers the few-time public key the signer's bottom layer signed. -/
@@ -502,8 +500,8 @@ theorem eval_ftsRecover (parameter : PublicParameter) (index : Index) (seed : Ma
         (fun tree => ftsSecret f parameter index tree (leaves (ftsIndexOf tree)) seed)
         (evalWithAnswerFn f (Seeded.ftsOpen parameter index leaves seed
           : OracleComp HashSpec (FtsTree → Fin ftsTreeHeight → Digest)))
-        : OracleComp HashSpec Digest)
-      = evalWithAnswerFn f (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest) := by
+        : OracleComp HashSpec FtsTops)
+      = evalWithAnswerFn f (Seeded.ftsKey parameter index seed : OracleComp HashSpec FtsTops) := by
   have htop : ∀ tree : FtsTree,
       evalWithAnswerFn f (ftsFold parameter index tree (leaves (ftsIndexOf tree))
           (evalWithAnswerFn f (Seeded.ftsOpen parameter index leaves seed
@@ -521,9 +519,8 @@ theorem eval_ftsRecover (parameter : PublicParameter) (index : Index) (seed : Ma
         ⟨level, hlevel⟩)
   rw [eval_ftsKey]
   simp only [ftsRecover, eval_sequenceFin, evalWithAnswerFn_bind, evalWithAnswerFn_pure, htop,
-    eval_ftsOpen, eval_tweakableHash]
-  refine congrArg (fun tops => truncateHash (f (tweakableHashInput parameter (.ftsRoots index)
-    (ftsTopsPayload tops)))) (funext fun tree => ?_)
+    eval_ftsOpen]
+  funext tree
   exact ftsTopPair_canonical (ftsNodeValue f parameter index tree seed ftsTopLevel) _
 
 end LeanSphincs.Completeness

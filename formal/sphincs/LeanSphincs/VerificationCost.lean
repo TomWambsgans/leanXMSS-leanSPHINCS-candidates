@@ -105,12 +105,18 @@ theorem permutations_chainWalk (f : QueryImpl HashSpec Id) (parameter : PublicPa
   rw [leafHash, permutations_tweakableHash, leafPayload, digest_vector_length]
   rfl
 
+/-- The FORS tops the encoding absorbs: `2 k = 48` values, 768 bytes. -/
+theorem ftsTopsPayload_length (tops : FtsTree → Digest × Digest) :
+    (ftsTopsPayload tops).length = 768 := by
+  rw [ftsTopsPayload, List.length_flatMap]
+  simp [nodePayload, bytesLE_length, ftsTrees]
+
 @[simp] theorem permutations_encode (f : QueryImpl HashSpec Id)
     (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (message : Digest) (counter : Counter) :
-    permutations f (encode parameter lay tree leaf message counter) = 1 := by
+    (message : FtsTops) (counter : Counter) :
+    permutations f (encode parameter lay tree leaf message counter) = 6 := by
   simp only [encode, permutations_bind, permutations_tweakableHash, List.length_append,
-    bytesLE_length, permutations_pure]
+    ftsTopsPayload_length, bytesLE_length, permutations_pure]
   rfl
 
 theorem permutations_treeFold (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -141,20 +147,13 @@ theorem permutations_ftsFold (f : QueryImpl HashSpec Id) (parameter : PublicPara
       dsimp only
       split <;> simp [permutations_tweakableHash, nodePayload, bytesLE_length, blocks]
 
-/-- The payload of the FORS key hash: `2 k = 48` values, 768 bytes. -/
-theorem ftsTopsPayload_length (tops : FtsTree → Digest × Digest) :
-    (ftsTopsPayload tops).length = 768 := by
-  rw [ftsTopsPayload, List.length_flatMap]
-  simp [nodePayload, bytesLE_length, ftsTrees]
-
 @[simp] theorem permutations_ftsRecover (f : QueryImpl HashSpec Id)
     (parameter : PublicParameter) (index : Index) (leaves : IndexGroup → FtsLeaf)
     (secrets : FtsTree → Digest) (paths : FtsTree → Fin ftsTreeHeight → Digest) :
-    permutations f (ftsRecover parameter index leaves secrets paths) = 246 := by
-  rw [ftsRecover, permutations_bind, permutations_sequenceFin, permutations_tweakableHash]
+    permutations f (ftsRecover parameter index leaves secrets paths) = 240 := by
+  rw [ftsRecover, permutations_sequenceFin]
   simp only [permutations_bind, permutations_ftsLeafHash, permutations_ftsFold,
-    permutations_pure, ftsTopsPayload_length, Finset.sum_const, Finset.card_univ,
-    Fintype.card_fin, smul_eq_mul]
+    permutations_pure, Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul]
   rfl
 
 @[simp] theorem permutations_messageDigestCall (f : QueryImpl HashSpec Id)
@@ -172,7 +171,7 @@ theorem ftsTopsPayload_length (tops : FtsTree → Digest × Digest) :
     permutations_pure]
 
 theorem encode_valid (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : Digest)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : FtsTops)
     (counter : Counter) (word : Encoding)
     (hword : evalWithAnswerFn f (encode parameter lay tree leaf message counter
       : OracleComp HashSpec (Option Encoding)) = some word) : TargetSum.Valid word := by
@@ -184,13 +183,14 @@ theorem encode_valid (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     exact hvalid
   next => simp at hword
 
-/-- Recovery spends 81 permutations after an admissible encoding, or one on rejection. -/
+/-- Recovery spends 86 permutations after an admissible encoding (6 for the encoding of the tops and
+the counter, 72 chain steps, 8 for the leaf), or the encoding's 6 on rejection. -/
 theorem permutations_otsLeaf (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : Digest)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : FtsTops)
     (counter : Counter) (values : ChainIndex → Digest) :
     permutations f (otsLeaf parameter lay tree leaf message counter values) =
       if (evalWithAnswerFn f (otsLeaf parameter lay tree leaf message counter values
-        : OracleComp HashSpec (Option Digest))).isSome then 81 else 1 := by
+        : OracleComp HashSpec (Option Digest))).isSome then 86 else 6 := by
   cases henc : evalWithAnswerFn f (encode parameter lay tree leaf message counter
       : OracleComp HashSpec (Option Encoding)) with
   | none =>
@@ -207,34 +207,34 @@ theorem permutations_otsLeaf (f : QueryImpl HashSpec Id) (parameter : PublicPara
 attribute [local irreducible] otsLeaf encode sequenceFin chainWalk recoverChain leafHash
   ftsRecover treeFold messageDigest
 
-/-- The one actual tree layer costs 107 permutations, or one if its encoding is rejected. -/
-theorem permutations_verifyLayers (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (signature : Signature) (message : Digest) :
-    permutations f (verifyLayers parameter index signature numLayers message) =
-      if (evalWithAnswerFn f (verifyLayers parameter index signature numLayers message
-        : OracleComp HashSpec (Option Digest))).isSome then 107 else 1 := by
-  rw [show numLayers = 0 + 1 from rfl, verifyLayers, dif_pos (by decide : 0 < numLayers)]
+/-- The one tree layer costs 112 permutations, or 6 if its encoding is rejected. -/
+theorem permutations_verifyLayer (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (index : Index) (signature : Signature) (message : FtsTops) :
+    permutations f (verifyLayer parameter index signature message) =
+      if (evalWithAnswerFn f (verifyLayer parameter index signature message
+        : OracleComp HashSpec (Option Digest))).isSome then 112 else 6 := by
+  rw [verifyLayer]
   simp only [permutations_bind, evalWithAnswerFn_bind]
   rw [permutations_otsLeaf]
   cases hleaf : evalWithAnswerFn f (otsLeaf parameter topLayer (treeIndexAt index topLayer)
       (leafIndexAt index topLayer) message (signature.layers topLayer).counter
       (signature.layers topLayer).chainValues : OracleComp HashSpec (Option Digest)) <;>
     simp only [topLayer] at hleaf
-  all_goals simp only [hleaf, permutations_bind, permutations_treeFold, verifyLayers,
+  all_goals simp only [hleaf, permutations_bind, permutations_treeFold,
     evalWithAnswerFn_bind, evalWithAnswerFn_pure, permutations_pure, Nat.add_zero,
     Option.isSome_some, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
   rfl
 
 attribute [local semireducible] Concrete.verify
 
-/-- Every accepted signature causes exactly 355 Keccak-f permutations in the verifier execution. -/
+/-- Every accepted signature causes exactly 354 Keccak-f permutations in the verifier execution. -/
 theorem verification_permutations (f : QueryImpl HashSpec Id) (pk : PublicKey)
     (message : Message) (signature : Signature)
     (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
-    permutations f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = 355 := by
+    permutations f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = 354 := by
   rw [Concrete.verify, permutations_bind, permutations_messageDigest,
-    permutations_bind, permutations_ftsRecover, permutations_bind, permutations_verifyLayers]
+    permutations_bind, permutations_ftsRecover, permutations_bind, permutations_verifyLayer]
   simp only [Concrete.verify, evalWithAnswerFn_bind] at haccept
   split at haccept
   next root hroot =>
@@ -245,9 +245,9 @@ theorem verification_permutations (f : QueryImpl HashSpec Id) (pk : PublicKey)
 /-- Malformed signatures cannot make verification exceed its accepted-signature cost. -/
 theorem verification_permutations_le (f : QueryImpl HashSpec Id) (pk : PublicKey)
     (message : Message) (signature : Signature) :
-    permutations f (Concrete.verify pk message signature : OracleComp HashSpec Bool) ≤ 355 := by
+    permutations f (Concrete.verify pk message signature : OracleComp HashSpec Bool) ≤ 354 := by
   rw [Concrete.verify, permutations_bind, permutations_messageDigest,
-    permutations_bind, permutations_ftsRecover, permutations_bind, permutations_verifyLayers]
+    permutations_bind, permutations_ftsRecover, permutations_bind, permutations_verifyLayer]
   split <;> split <;> simp [permutations_pure]
 
 end LeanSphincs.Cost
