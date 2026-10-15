@@ -59,8 +59,9 @@ pub const DIGEST_BITS: usize = H + K * A;
 
 pub const PUB_KEY_SIZE: usize = N + PUBLIC_PARAM_LEN;
 pub const SIG_SIZE: usize = RANDOMIZER_LEN + K * (1 + A) * N + COUNTER_LEN + V * N + H * N;
-/// Permutations of one verification: digest 2, FORS 24 * 10 + 6, encoding 1, chains 192 - 120, leaf 8, path 26.
-pub const VERIFY_PERMUTATIONS: u64 = 355;
+/// Permutations of one verification: digest 2, FORS 24 * 10, encoding 6 (the 48 FORS tops and the
+/// counter), chains 192 - 120, leaf 8, path 26.
+pub const VERIFY_PERMUTATIONS: u64 = 354;
 
 const _: () = assert!(W * V == 8 * N);
 const _: () = assert!(TARGET_SUM < V * (CHAIN_LEN - 1));

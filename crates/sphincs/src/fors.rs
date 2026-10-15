@@ -1,5 +1,5 @@
 //! FORS: `k = 24` Merkle trees of `2^a = 1024` secret leaves; the digest opens one leaf per tree.
-//! A tree has no root hash: the FORS key hashes the two nodes below the root of every tree.
+//! A tree has no root hash: the WOTS+C encoding hashes the two nodes below the root of every tree.
 
 use crate::*;
 
@@ -45,16 +45,15 @@ fn fors_node(pp: &PublicParam, idx: u64, kappa: usize, level: usize, j: usize, l
     th_digests(pp, &tweak(TWEAK_FTS_NODE, fors_position(kappa, level, j), idx as u32), &[*left, *right])
 }
 
-/// The FORS public key: `Th` over the two top nodes (level `a - 1`) of each of the `k` trees.
-pub fn fors_key_of_tops(pp: &PublicParam, idx: u64, tops: &[[Digest; 2]; K]) -> Digest {
-    th_digests(pp, &tweak(TWEAK_FTS_KEY, 0, idx as u32), tops.as_flattened())
-}
+/// The FORS tops of an instance: the two nodes below the root (level `a - 1`) of each of the `k` trees.
+/// No hash folds them into a key: the WOTS+C encoding absorbs them (see [`encoding_midstate`]).
+pub type ForsTops = [[Digest; 2]; K];
 
 /// A FORS instance whose leaves are known: every tree level, kept for the openings.
 pub struct ForsForest {
     /// `levels[kappa][level][j]`, level 0 being the leaves and level `a - 1` the two top nodes.
     levels: Vec<Vec<Vec<Digest>>>,
-    pub key: Digest,
+    pub tops: ForsTops,
 }
 
 impl ForsForest {
@@ -75,7 +74,7 @@ impl ForsForest {
             })
             .collect();
         let tops = std::array::from_fn(|kappa| [levels[kappa][A - 1][0], levels[kappa][A - 1][1]]);
-        Self { key: fors_key_of_tops(pp, idx, &tops), levels }
+        Self { tops, levels }
     }
 
     pub fn leaf(&self, kappa: usize, j: usize) -> Digest {
@@ -101,9 +100,9 @@ pub fn fors_leaves(pp: &PublicParam, master: &MasterSecret, idx: u64) -> Vec<Dig
         .collect()
 }
 
-/// `Fts.recover`: the FORS key an opening reaches.
-pub fn fors_recover(pp: &PublicParam, idx: u64, u: &[u32; K], opening: &ForsOpening) -> Digest {
-    let tops = std::array::from_fn(|kappa| {
+/// `Fts.recover`: the FORS tops an opening reaches.
+pub fn fors_recover(pp: &PublicParam, idx: u64, u: &[u32; K], opening: &ForsOpening) -> ForsTops {
+    std::array::from_fn(|kappa| {
         let opened = u[kappa] as usize;
         let leaf = fors_leaf(pp, idx, kappa, opened, &opening.secrets[kappa]);
         let ordered = |node: Digest, level: usize| {
@@ -115,6 +114,5 @@ pub fn fors_recover(pp: &PublicParam, idx: u64, u: &[u32; K], opening: &ForsOpen
             fors_node(pp, idx, kappa, level + 1, opened >> (level + 1), &left, &right)
         });
         ordered(top, A - 1)
-    });
-    fors_key_of_tops(pp, idx, &tops)
+    })
 }

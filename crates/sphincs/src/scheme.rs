@@ -77,7 +77,7 @@ impl Signature {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum VerifyError {
-    /// The counter does not encode the FORS key into a codeword.
+    /// The counter does not encode the FORS tops into a codeword.
     InadmissibleEncoding,
     RootMismatch,
 }
@@ -232,7 +232,7 @@ pub fn randomizer(base: &Randomizer, i: u32) -> Randomizer {
 }
 
 /// `Sign`: take the least `i` whose randomizer `R_0 + i` lands in the kept subtree (`i = 0` for a
-/// full key), open FORS, sign its key with WOTS+C.
+/// full key), open FORS, sign its tops with WOTS+C.
 pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
     let pp = &sk.public_param;
     // The digest's fixed part is absorbed once, and the randomizers are `R_0 + i`: an attempt costs
@@ -248,7 +248,7 @@ pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
         secrets: std::array::from_fn(|kappa| fors_secret(pp, &sk.master, idx, kappa, u[kappa] as usize)),
         paths: forest.paths(&u),
     };
-    let (counter, wots) = wots_sign(pp, &sk.master, idx as u32, &forest.key).expect("no admissible WOTS+C encoding");
+    let (counter, wots) = wots_sign(pp, &sk.master, idx as u32, &forest.tops).expect("no admissible WOTS+C encoding");
     Signature { randomizer: rho, fors, counter, wots, path: sk.tree.path(idx) }
 }
 
@@ -256,8 +256,8 @@ pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
 pub fn verify(pk: &PublicKey, m: &Message, sig: &Signature) -> Result<(), VerifyError> {
     let pp = &pk.public_param;
     let (idx, u) = message_digest(pp, &sig.randomizer, m);
-    let fors_key = fors_recover(pp, idx, &u, &sig.fors);
-    let leaf = wots_recover(pp, idx as u32, &fors_key, sig.counter, &sig.wots).ok_or(VerifyError::InadmissibleEncoding)?;
+    let tops = fors_recover(pp, idx, &u, &sig.fors);
+    let leaf = wots_recover(pp, idx as u32, &tops, sig.counter, &sig.wots).ok_or(VerifyError::InadmissibleEncoding)?;
     if tree_fold(pp, idx, leaf, &sig.path) == pk.root { Ok(()) } else { Err(VerifyError::RootMismatch) }
 }
 
@@ -360,8 +360,8 @@ mod tests {
         let sig = sign(&sk, &m);
         let digest = sha3::hash(&sig.to_bytes());
         assert_eq!(hex(&pk.to_bytes()), "ced0da376ebd4ba4c48590830d773e2b84d69cadea1e1374ab3bd20be993910c");
-        assert_eq!(hex(&digest), "239e9abde3344e5d287ed3346867c6472ccc8d384e1e390bd268c19ba46f5d81");
-        assert_eq!(sig.counter, 1620);
+        assert_eq!(hex(&digest), "4274d10ccd1f06c3d00c5ea4716054e8d8416a8f13b3489639b2e9c5da193609");
+        assert_eq!(sig.counter, 573);
     }
 
     #[test]
@@ -415,10 +415,30 @@ mod tests {
         }
     }
 
+    /// Pins the encoding's input, `P | A(enc, 0, e) | tops | counter`, and its costs: 6 permutations
+    /// for the verifier, and 5 once plus 1 per counter for the signer.
+    #[test]
+    fn encoding_absorbs_the_tops_and_the_counter() {
+        let pp = [3u8; PUBLIC_PARAM_LEN];
+        let tops: ForsTops = std::array::from_fn(|kappa| std::array::from_fn(|half| [(2 * kappa + half) as u8; N]));
+        let input = [&pp[..], &address(&tweak(TWEAK_ENC, 0, 77)), tops.as_flattened().as_flattened(), &5u32.to_le_bytes()].concat();
+        assert_eq!(input.len(), 804);
+        let expected = codeword(sha3::hash(&input)[..N].try_into().unwrap());
+        let before = permutations();
+        assert_eq!(encode(&pp, 77, &tops, 5), expected);
+        assert_eq!(permutations() - before, 6);
+        let before = permutations();
+        let state = encoding_midstate(&pp, 77, &tops);
+        assert_eq!(permutations() - before, 5, "the whole blocks of the tops, once");
+        let before = permutations();
+        assert_eq!(encode_from(&state, 5), expected);
+        assert_eq!(permutations() - before, 1, "one permutation per counter");
+    }
+
     #[test]
     fn wots_encoding_takes_about_829_tries() {
         let pp = [7u8; PUBLIC_PARAM_LEN];
-        let tries: u64 = (0..200u32).map(|e| u64::from(wots_encode(&pp, e, &[e as u8; N]).unwrap().0) + 1).sum();
+        let tries: u64 = (0..200u32).map(|e| u64::from(wots_encode(&pp, e, &[[[e as u8; N]; 2]; K]).unwrap().0) + 1).sum();
         let mean = tries as f64 / 200.0;
         assert!((400.0..1600.0).contains(&mean), "mean tries {mean}");
     }
