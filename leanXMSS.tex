@@ -29,8 +29,8 @@
 \end{center}
 
 A stateful hash-based signature for Ethereum attestations: $2^{32}$ signatures (1\,361 years of 10-second
-slots), small and fast to verify, and thresholdizable, with a DKG or a trusted dealer. Same hash as leanSPHINCS: $\hash(P,\mathit{tw},M)$ is BLAKE2s truncated to
-16 bytes, costs are in compressions, and security is NIST level 1.
+slots), small and fast to verify, and thresholdizable, with a DKG or a trusted dealer. Same hash as leanSPHINCS: $\hash(P,\mathit{tw},M)$ is SHA3-256 truncated to
+16 bytes, costs are in Keccak-f[1600] permutations ($\lfloor\ell/136\rfloor+1$ for $\ell$ bytes), and security is NIST level 1.
 
 \section{The scheme}
 
@@ -50,8 +50,9 @@ slots), small and fast to verify, and thresholdizable, with a DKG or a trusted d
 \begin{itemize}
   \item signature: 2 halves of 1\,200 bytes each. The top half is the same for $2^{16}$ slots, so it can
         be sent once and cached
-  \item verification: 201 compressions, 100 per layer, plus 1 as the attestation's digest spans two blocks
-  \item keygen: $16\cdot10^6$ compressions for the top tree, and the same for each bottom tree
+  \item verification: 186 permutations, 93 per layer: 1 for the digest, 68 chain steps, 8 for the leaf
+        (960 bytes) and 16 for the path
+  \item keygen: $16\cdot10^6$ permutations for the top tree, and the same for each bottom tree
 \end{itemize}
 
 \section{Threshold signing}
@@ -99,9 +100,9 @@ per bottom tree, and once at keygen. Traffic sent by the busiest operator (about
 \begin{center}
 \begin{tabular}{lrr}
   & traffic & average rate (10-second slots) \\
-  2-of-3 & 19.2~GB & 29~KB/s \\
-  3-of-5 & 23.1~GB & 35~KB/s \\
-  4-of-7 & 24.8~GB & 38~KB/s \\
+  2-of-3 & 51.8~GB & 79~KB/s \\
+  3-of-5 & 62.2~GB & 95~KB/s \\
+  4-of-7 & 66.6~GB & 102~KB/s \\
 \end{tabular}
 \end{center}
 
@@ -121,7 +122,7 @@ operators; consensus on the message tolerates $f$, as in BLS-based DVT. After $L
 setup gives a new public key.
 
 \paragraph{Cost.} The dealer hashes the chains and their $F$ values (3 per chain, one hash per seed): about
-40~s of CPU per year of lifetime for 5-of-7. The bottleneck is the public data, 182~MB per bottom tree,
+$2\cdot10^{10}$ hashes per year of lifetime for 5-of-7, i.e.\ about 4 minutes on a 16-core laptop. The bottleneck is the public data, 182~MB per bottom tree,
 i.e.\ 8.8~GB per year of lifetime with 10-second slots (44~GB for 5 years, 88~GB for 10).
 
 \subsection{\texorpdfstring{Signing (both setups, any $t$, no MPC)}{Signing (both setups, any t, no MPC)}}

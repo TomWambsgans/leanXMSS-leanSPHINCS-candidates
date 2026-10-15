@@ -54,19 +54,20 @@ Properties:
   \item public key: 32 bytes
   \item secret key: 32 bytes
   \item signature size: 5\,684 bytes
-  \item verification: 373 compressions (with BLAKE2s)
+  \item verification: 355 Keccak-f[1600] permutations (hash: SHA3-256)
   \item security: NIST level 1 \cite{FIPS205} (applies to all the usages below) (127 bits SUF in the ROM, and $\approx 64$ bits in the QROM)
   \item lifetime: up to $2^{30}$ signatures.
 \end{itemize}
 
-\paragraph{Hash inputs.} Every hash input is $P \concat \mathit{address} \concat \mathit{data}$: the public
+\paragraph{Hash inputs.} $\hash$ is SHA3-256, truncated to 16 bytes except where noted, and costs are counted in
+Keccak-f[1600] permutations: hashing $\ell$ bytes costs $\lfloor \ell/136\rfloor+1$ (the rate is 136 bytes, and the
+padding takes at least one byte). Every hash input is $P \concat \mathit{address} \concat \mathit{data}$: the public
 parameter (16 bytes), then a 16-byte address: two fields of 4 and 3 bytes, 1 byte for the type of the call
 and the step in a chain, and 8 zero bytes.
 \begin{itemize}
-  \item the encoding uses $\mathit{data} = m\concat R$ ($R$ is the randomizer): the message ends the first block, so $R$ is the
-        second block. A pruned signer tries $R = R_0 + i$ for $i = 0, 1, \dots$, with $R_0$ a hash of the secret key and $m$,
-        and keeps the first one that lands in its subtree. The first block is hashed once, so each try costs 1
-        compression
+  \item the encoding uses $\mathit{data} = m\concat R$ ($R$ is the randomizer): 80 bytes in all, one block. A pruned
+        signer tries $R = R_0 + i$ for $i = 0, 1, \dots$, with $R_0$ a hash of the secret key and $m$, and keeps the first
+        one that lands in its subtree. Each try costs 1 permutation
   \item a FORS tree has no root hash: the FORS public key hashes the two nodes below the root of every tree, which
         saves one hash per tree
   \item the secrets are derived from the secret key two at a time: one hash gives 32 bytes, i.e.\ two chain starts
@@ -81,11 +82,12 @@ For powerful devices.
 
 \begin{itemize}
   \item lifetime: $2^{30}$ (at 127 bits of security in the ROM)
-  \item keygen: $16 \cdot 10^9$ compressions
-  \item signing: $93\cdot10^3$ compressions, with a 16~MiB cache
+  \item keygen: $15.6 \cdot 10^9$ permutations
+  \item signing: $92\cdot10^3$ permutations, with a 16~MiB cache
 \end{itemize}
 
-\emph{A modern laptop CPU computes around $2^{30}$ SHA2 or BLAKE2s compressions per second.}
+\emph{A modern laptop CPU computes around $2^{26}$ Keccak-f permutations per second (16-core Apple M4 Max, with the
+unvectorized code of this repository).}
 
 
 \subsection{Pruned: \texorpdfstring{$2.1\cdot10^5$}{210K} lifetime}
@@ -94,11 +96,11 @@ For weaker devices. The trick is to trade smaller lifetime for faster keygen, us
 
 \begin{itemize}
   \item lifetime: $2.1\cdot10^5$ signatures (at 127 bits of security in the ROM)
-  \item keygen: $2.0\cdot10^6$ compressions
-  \item signing: $74\cdot10^3$ compressions, with a 16~KiB cache (including $8\cdot10^3$ compressions of grinding)
+  \item keygen: $1.9\cdot10^6$ permutations
+  \item signing: $74\cdot10^3$ permutations, with a 16~KiB cache (including $8\cdot10^3$ permutations of grinding)
 \end{itemize}
 
-\emph{A Ledger Nano S+ can compute $33$ (resp $25$) thousand BLAKE2s (resp SHA2) per second.}
+\emph{A Ledger Nano S+ can compute $25$ thousand SHA2 compressions per second (Keccak-f: not measured yet).}
 
 \subsection{Pruned: \texorpdfstring{$2.2\cdot10^7$}{22M} lifetime}
 
@@ -107,8 +109,8 @@ surrogate siblings).
 
 \begin{itemize}
   \item lifetime: $2.2\cdot10^7$ signatures (at 127 bits of security in the ROM)
-  \item keygen: $254\cdot10^6$ compressions
-  \item signing: $70\cdot10^3$ compressions, with a 1~MiB cache (including 64 compressions of grinding)
+  \item keygen: $244\cdot10^6$ permutations
+  \item signing: $70\cdot10^3$ permutations, with a 1~MiB cache (including 64 permutations of grinding)
 \end{itemize}
 
 \subsection{Threshold signing}
@@ -173,7 +175,8 @@ Parts from signings of different $(m,J)$ don't combine, so aborted signings reve
 \end{enumerate}
 
 \paragraph{Keygen cost (measured, hash-based $F$, $t=(n+1)/2$).} $\approx2.5\cdot10^4\cdot2^b$ MPC hashes (mostly FORS leaves) of
-$\approx13.5\cdot10^3$ AND gates. The MPC uses replicated sharing over $\mathrm{GF}(2)$ as
+$36.3\cdot10^3$ AND gates and AND-depth 24 (Keccak-f has 1\,600 AND gates per round, in its non-linear layer $\chi$; part of the
+first round is public, and the truncated output skips most of the last one). The MPC uses replicated sharing over $\mathrm{GF}(2)$ as
 in~\cite{BGIN19}, generalized to $n=2f+1$: each AND gate is computed locally and reshared through one
 collector, $(n-1)+f$ bits in total, i.e.\ 1, 1.2 and 1.29 bits per operator for $n=3$, 5, 7, plus a
 check~\cite{GS20} of negligible traffic. Traffic per operator:
@@ -184,9 +187,9 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
   subtree & $2^8$ & $2^{10}$ & $2^{12}$ \\
   lifetime & $7.5\cdot10^3$ & $2.86\cdot10^4$ & $1.08\cdot10^5$ \\
   \midrule
-  2-of-3 & 11~GB & 43~GB & 172~GB \\
-  3-of-5 & 13~GB & 52~GB & 207~GB \\
-  4-of-7 & 14~GB & 55~GB & 222~GB \\
+  2-of-3 & 29~GB & 116~GB & 462~GB \\
+  3-of-5 & 35~GB & 139~GB & 554~GB \\
+  4-of-7 & 37~GB & 149~GB & 594~GB \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -194,7 +197,7 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
 \paragraph{Remarks.}
 \begin{itemize}
   \item With a trusted dealer instead, keygen needs no MPC: the dealer computes everything in the clear
-        ($5\cdot10^8$ to $4\cdot10^9$ compressions for $b=12$, from 2-of-3 to 4-of-7 with the hash-based
+        ($5\cdot10^8$ to $4\cdot10^9$ permutations for $b=12$, from 2-of-3 to 4-of-7 with the hash-based
         $F$) and gives each operator its key share of $F$.
   \item The key shares can be refreshed, and the committee changed (including $n$ and $t$), with the same
         public key:
@@ -219,7 +222,7 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
 \label{sec:twolevel}
 
 FORS can be replaced by a few-time signature (FTS) built from small WOTS keys. Signatures are 25\% smaller
-and verification 18\% cheaper, with the same signing cost and longer lifetimes, proved in Lean~\cite{proofs}. The idea is
+and verification 24\% cheaper, with about the same signing cost and longer lifetimes, proved in Lean~\cite{proofs}. The idea is
 inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
 
 \begin{center}
@@ -227,8 +230,8 @@ inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
   \toprule
   FTS & size & verification & FTS signing \\
   \midrule
-  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 bytes & 373 compressions & $61\cdot10^3$ compressions \\
-  two-level WOTS forest & 4\,276 bytes & 307 compressions & $61\cdot10^3$ compressions \\
+  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 bytes & 355 permutations & $61\cdot10^3$ permutations \\
+  two-level WOTS forest & 4\,276 bytes & 271 permutations & $59\cdot10^3$ permutations \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -329,9 +332,9 @@ so it still takes one hash.
 \paragraph{Costs.} Per tree:
 \begin{itemize}
   \item size: 22 values, i.e.\ 6 chain values and 3 nodes per subtree, plus 4 nodes in the tree
-  \item verification: 23 compressions, i.e.\ per subtree 5 chain steps, 2 for the leaf and 2 for the path, then 2 for
+  \item verification: 20 permutations, i.e.\ per subtree 5 chain steps, 1 for the leaf and 2 for the path, then 1 for
         $\hash(R_0,R_1)$ and 3 for the path in the tree
-  \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 29 compressions each
+  \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 28 permutations each
 \end{itemize}
 Every signature has the same size and verification cost, and keygen is unchanged.
 
