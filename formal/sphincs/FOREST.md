@@ -9,7 +9,10 @@ signature opens each chain of the two WOTS keys at position `4 - d_i`. The FORS 
 
 No tree of the forest has a root hash. A subtree is hashed up to level 2 and a tree leaf is the hash of the four
 level-2 nodes `m_0[0] ‖ m_0[1] ‖ m_1[0] ‖ m_1[1]` of its two subtrees; a tree is hashed up to level 3
-and the few-time key is the hash of the sixteen level-3 nodes `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]`.
+and the few-time key is the sixteen level-3 nodes `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]` themselves:
+no hash folds them, and the WOTS+C encoding absorbs them before its counter,
+`Th(P, A(4, 0, idx), t_0[0] ‖ … ‖ t_7[1] ‖ ctr)` (`Concrete.encode`, `ForestKey`). The WOTS+C key has 64 chains of
+4 positions and target sum 123 (`targetSum`).
 The signature is unchanged (3 path elements per subtree, 4 per tree): the last path element is the
 other top node of its tree. The verifier folds 2 levels in a subtree and 3 in a tree and puts the node
 it reached and the last path element in index order (`orderTops`: the reached node first when bit 2
@@ -124,7 +127,7 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 | WOTS+C chain step onto position `to` | 1 | `to − 1` | chain | leaf | value |
 | WOTS+C leaf | 2 | 0 | 0 | leaf | 64 chain ends |
 | tree node | 3 | 0 | level | node | left ‖ right |
-| WOTS+C encoding | 4 | 0 | 0 | leaf | message ‖ counter (4 bytes) |
+| WOTS+C encoding | 4 | 0 | 0 | leaf | `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]` (the forest key, 256 bytes) ‖ counter (4 bytes) |
 | parameter derivation, under `P = 0` | 5 | 0 | 0 | 0 | seed |
 | randomizer base `R0` | 7 | 0 | 0 | 0 | seed ‖ message |
 | message digest | 12 | 0 | 0 | 0 | message ‖ randomizer |
@@ -135,12 +138,12 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 | subtree node, level 1 and 2 | 17 | 0 | `c + 8s + 128j + 256·level + 1024·node` | `idx` | left ‖ right |
 | tree leaf | 18 | 0 | `c + 8s` | `idx` | `m_0[0] ‖ m_0[1] ‖ m_1[0] ‖ m_1[1]`, the level-2 nodes of the two subtrees (64 bytes) |
 | forest tree node, level 1 to 3 | 19 | 0 | `c + 8·level + 64·node` | `idx` | left ‖ right |
-| few-time public key | 20 | 0 | 0 | `idx` | `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]`, the level-3 nodes of the 8 trees (256 bytes) |
 
 With SHA3-256 a call of `n` bytes costs `n / 136 + 1` Keccak-f permutations: a chain step is 48 bytes,
-a node 64, a forest WOTS-key leaf 128, a tree leaf 96 and the digest 80 (1 permutation each), the key
-288 (3), a one-time leaf 1,056 (8). The
-addresses of a subtree root (type 17, level 3) and of a tree root (type 19, level 4) exist in
+a node 64, a forest WOTS-key leaf 128, a tree leaf 96 and the digest 80 (1 permutation each), the
+encoding 292 (3: the counter falls in the last block, so the signer absorbs the key once and pays
+one permutation per counter), a one-time leaf 1,056 (8). The addresses of a subtree root (type 17,
+level 3), of a tree root (type 19, level 4) and of the former key hash (type 20, `roots`) exist in
 `HashDomain` and no algorithm uses them.
 
 One hash of the seed gives two chain starts: the hash output is 32 bytes, the start of chain `2t`
@@ -193,11 +196,11 @@ inputs of different types differ whatever their parameters (`fieldInput_ne_of_ta
 no tree field; the scheme has one of each (`Layer` and `TreeIndex` are `Fin 1`).
 
 `Layout.signature_size`: a signature serializes to 4,276 bytes. `Cost.verification_permutations`:
-an accepted signature costs exactly 271 Keccak-f permutations (1 for the 80-byte digest input, 163
-for the forest, 107 for WOTS+C and the path), and no signature costs more
-(`verification_permutations_le`). The forest is 20 per tree (`permutations_coordRecover`: in each of
-the two subtrees 5 chain steps, 1 for the WOTS-key leaf and 2 folds; 1 for the tree leaf; 3 folds),
-times 8, plus 3 for the key.
+an accepted signature costs exactly 267 Keccak-f permutations (1 for the 80-byte digest input, 160
+for the forest, 106 for WOTS+C and the path: 3 for the encoding of the key, 69 chain steps, 8 for the
+leaf and 26 nodes), and no signature costs more (`verification_permutations_le`). The forest is 20
+per tree (`permutations_coordRecover`: in each of the two subtrees 5 chain steps, 1 for the WOTS-key
+leaf and 2 folds; 1 for the tree leaf; 3 folds), times 8. The key is not hashed.
 
 Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
 `SecurityPrefixErasedKeygen.lean`; exact counts on any oracle):
@@ -211,15 +214,18 @@ Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
 | subtree node at level `l ≤ 2` (`hashCalls_subNode`) | `29 · 2^l − 1` |
 | tree leaf (`hashCalls_superNode`) | `2 · 2 · 115 + 1 = 461` |
 | tree node at level `l ≤ 3` (`hashCalls_topNode`) | `462 · 2^l − 1` |
-| forest key of an instance (`hashCalls_forestKey`) | `8 · 2 · 3,695 + 1 = 59,121` |
+| forest key of an instance (`hashCalls_forestKey`) | `8 · 2 · 3,695 = 59,120` |
 | opening of one tree (`hashCalls_coordOpen_exact`) | `2 · 222 + 6,926 = 7,370` |
 | forest opening (`hashCalls_forsOpen_exact`) | 58,960 |
-| WOTS+C values of a signature (`hashCalls_published_values`) | `32 + 120 = 152` |
-| signature after the scan (`hashCalls_finishSign_exact`) | `118,082 + counter search + 152 + path` |
+| WOTS+C values of a signature (`hashCalls_published_values`) | `32 + 123 = 155` |
+| signature after the scan (`hashCalls_finishSign_exact`) | `118,081 + counter search + 155 + path` |
 
-Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less: the forest key went
-from 59,385 to 59,121 calls, the opening from 59,200 to 58,960 and the fixed part of a signature
-from 118,586 to 118,082 (`1 + 58,960 + 59,121`; the signer's tick is 118,081 after the digest call).
+Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less, and without the key
+hash the key costs 1 call less: the forest key went from 59,385 to 59,120 calls, the opening from
+59,200 to 58,960 and the fixed part of a signature from 118,586 to 118,081 (`1 + 58,960 + 59,120`; the
+signer's tick is 118,080 after the digest call). A counter of the encoding search is one hash call,
+as before; the expected search is 2,197 calls (`2^128` over the 154,880,076,975,771,860,577,080,744,218,814,592
+codewords of digit sum 123), 829 with the former sum 120.
 These counts do not enter the certificates: only the key-generation credit does.
 
 The Lean signer recomputes the forest instance for its key and again for the opening, and the tree
@@ -257,16 +263,17 @@ contact, or a cover. Budgets are split at `qh ≈ 2^(128 + lx)`.
 
 **No root hashes.** The graph of hashed values (`SecurityPosition.lean`) keeps its positions; only
 the children of two kinds of position change: a tree leaf (`superChild`) reads the four level-2
-nodes of its two subtrees and the key (`roots`) the sixteen level-3 nodes of the trees. The root of a
-subtree and the root of a tree remain positions that nothing reads: the position set already
+nodes of its two subtrees and the position `roots` the sixteen level-3 nodes of the trees. The root
+of a subtree, the root of a tree and `roots` remain positions that nothing reads (the key is not
+hashed; `GraphCorrectness.keyLabels` reads it off the sixteen level-3 positions): the position set already
 over-approximates what is hashed, every position is prepared, and an address still determines one
 position, so a query has one target as before. The values a signature reveals are unchanged
 (`GraphView.publicData`: the subtree path at levels 0 to 2 and the tree path at levels 0 to 3, the
 last of each being the other top node, which was already a path element). In the forest witness
 (`SecurityForestWitness.lean`) an opening gives two top nodes per tree, the one its fold reaches and
-its last path element (`opSubTops`, `opTops`). If the sixteen level-3 nodes differ from the honest
-ones and the key is reached, the key hash has a second preimage (`RootsMatch`, a first-order event as
-for the 8 roots before). Otherwise each tree has the honest last path element and its fold of 3
+its last path element (`opSubTops`, `opTops`). An opening that recovers the honest key has the
+sixteen honest level-3 nodes, since the key is those nodes (a different key is a different encoding
+input, which the WOTS+C classification handles). So each tree has the honest last path element and its fold of 3
 levels reaches an honest node (`Completeness.orderTops_eq_iff`), which is classified as a fold to
 the root was (`top_fold_classification`: honest tree leaf and path, or a node match at levels 1 to
 3); likewise for the four level-2 nodes of a tree leaf (`SuperMatch`, `sub_fold_classification`,
