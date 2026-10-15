@@ -1,11 +1,11 @@
-//! End-to-end tests: correctness against the clear evaluation and BLAKE2s, traffic, and corrupt
+//! End-to-end tests: correctness against the clear evaluation and SHA3-256, traffic, and corrupt
 //! coalitions (faults on every message kind, consistent and split lies, rushing, forgeries), with a
 //! two-world test that what they see opened does not depend on the honest parties' secrets.
 
 use std::sync::Arc;
 
-use mpc::blake2s_circuit::{Word, add2, add3, split_prefixes, th_circuit};
-use mpc::circuit::{Builder, Program};
+use mpc::circuit::{Builder, Program, Wire, ZERO};
+use mpc::keccak_circuit::{split_prefixes, th_circuit};
 
 use crate::engine::{Cheat, Party, Record, Shares};
 use crate::net::{Abort, Fault, Stats, Tamper, network};
@@ -26,16 +26,32 @@ fn tail(n: usize) -> u64 {
     if n.is_multiple_of(64) { u64::MAX } else { (1 << (n % 64)) - 1 }
 }
 
+type Word = [Wire; 6];
+
+/// `x + y mod 2^6`, ripple carry: one AND per carry, `maj(x, y, c) = x ^ ((x ^ y) & (x ^ c))`.
+fn add(b: &mut Builder, x: &Word, y: &Word) -> Word {
+    let mut carry = ZERO;
+    std::array::from_fn(|i| {
+        let xy = b.xor(x[i], y[i]);
+        let sum = b.xor(xy, carry);
+        let xc = b.xor(x[i], carry);
+        let t = b.and(xy, xc);
+        carry = b.xor(x[i], t);
+        sum
+    })
+}
+
 /// A small circuit with a few AND levels: `(x + y + z) + (x & public)` on 6-bit words.
 fn toy() -> Program {
     let mut b = Builder::new();
     let p: Vec<_> = (0..6).map(|_| b.pub_input()).collect();
-    let word = |b: &mut Builder| -> Word { std::array::from_fn(|i| if i < 6 { b.sec_input() } else { 0 }) };
+    let word = |b: &mut Builder| -> Word { std::array::from_fn(|_| b.sec_input()) };
     let (x, y, z) = (word(&mut b), word(&mut b), word(&mut b));
-    let s = add3(&mut b, &x, &y, &z);
-    let m: Word = std::array::from_fn(|i| if i < 6 { b.and(x[i], p[i]) } else { 0 });
-    let out = add2(&mut b, &s, &m);
-    for &bit in out.iter().take(6) {
+    let xy = add(&mut b, &x, &y);
+    let s = add(&mut b, &xy, &z);
+    let m: Word = std::array::from_fn(|i| b.and(x[i], p[i]));
+    let out = add(&mut b, &s, &m);
+    for &bit in &out {
         b.output(bit);
     }
     b.compile()
@@ -212,7 +228,7 @@ fn toy_circuit_matches_clear_evaluation() {
 }
 
 #[test]
-fn th_in_mpc_matches_blake2s() {
+fn th_in_mpc_matches_sha3() {
     let n = 130;
     let (prog, pub_in, prefixes) = th(n);
     let mut r = rng(5);
@@ -236,7 +252,7 @@ fn th_in_mpc_matches_blake2s() {
             for k in 0..n {
                 let mut input = prefixes[k].to_vec();
                 input.extend_from_slice(&secrets[k]);
-                let want = blake2s::hash(&input);
+                let want = sha3::hash(&input);
                 for bit in 0..128 {
                     assert_eq!((out[bit][k / 64] >> (k % 64)) & 1, u64::from((want[bit / 8] >> (bit % 8)) & 1), "n = {parties}");
                 }
@@ -454,7 +470,7 @@ fn rushing_adversaries() {
                     if round != target {
                         return;
                     }
-                    let h = blake2s::hash(&got.concat());
+                    let h = sha3::hash(&got.concat());
                     let pick = u64::from_le_bytes(h[..8].try_into().unwrap()) as usize;
                     // Only messages to honest parties are left here.
                     for m in out.iter_mut().filter(|m| !m.is_empty()) {
@@ -965,7 +981,7 @@ fn keygen_prf_inputs_mpc_outputs_end_to_end() {
             });
             let mut input = prefixes[k].to_vec();
             input.extend_from_slice(&fk);
-            let want = blake2s::hash(&input);
+            let want = sha3::hash(&input);
             for out in &run {
                 let out = out.result.as_ref().unwrap();
                 for bit in 0..128 {

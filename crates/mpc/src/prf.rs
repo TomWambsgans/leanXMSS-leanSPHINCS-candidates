@@ -1,4 +1,4 @@
-//! Pseudorandomness from BLAKE2s: keyed PRF streams, tags, and OS randomness.
+//! Pseudorandomness from SHA3-256: keyed PRF streams, tags, and OS randomness.
 
 use std::io::Read;
 
@@ -9,7 +9,7 @@ pub type Tag = [u8; 16];
 
 /// A 16-byte domain tag for `purpose` within `session`.
 pub fn tag(session: &[u8; 16], purpose: &[u8]) -> Tag {
-    let mut h = blake2s::Hasher::new();
+    let mut h = sha3::Hasher::new();
     h.update(b"leansphincs-mpc-tag").update(session).update(purpose);
     h.finalize()[..16].try_into().unwrap()
 }
@@ -21,17 +21,15 @@ fn block_input(key: &Key, tag: &Tag, index: u64, block: u64, out: &mut [u8]) {
     out[56..64].copy_from_slice(&block.to_le_bytes());
 }
 
-/// Fills `out` with the stream `BLAKE2s(key | tag | index | i)`, `i = 0, 1, ...`, 4 words a block.
+/// Fills `out` with the stream `SHA3-256(key | tag | index | i)`, `i = 0, 1, ...`, 4 words a hash.
 pub fn prf_words(key: &Key, tag: &Tag, index: u64, out: &mut [u64]) {
-    let blocks = out.len().div_ceil(4);
-    let mut input = vec![0u8; blocks * 64];
-    for b in 0..blocks {
-        block_input(key, tag, index, b as u64, &mut input[b * 64..(b + 1) * 64]);
-    }
-    let mut digests = vec![0u8; blocks * 32];
-    blake2s::hash_many::<64>(&input, &mut digests);
-    for (w, chunk) in out.iter_mut().zip(digests.as_chunks::<8>().0) {
-        *w = u64::from_le_bytes(*chunk);
+    let mut input = [0u8; 64];
+    for (b, words) in out.chunks_mut(4).enumerate() {
+        block_input(key, tag, index, b as u64, &mut input);
+        let digest = sha3::hash(&input);
+        for (w, chunk) in words.iter_mut().zip(digest.as_chunks::<8>().0) {
+            *w = u64::from_le_bytes(*chunk);
+        }
     }
 }
 
@@ -39,7 +37,7 @@ pub fn prf_words(key: &Key, tag: &Tag, index: u64, out: &mut [u64]) {
 pub fn prf_field(key: &Key, tag: &Tag, index: u64, j: u64) -> Gf128 {
     let mut input = [0u8; 64];
     block_input(key, tag, index, j, &mut input);
-    Gf128::from_bytes(&blake2s::hash(&input)[..16].try_into().unwrap())
+    Gf128::from_bytes(&sha3::hash(&input)[..16].try_into().unwrap())
 }
 
 /// `count` pseudorandom field elements for `index`.

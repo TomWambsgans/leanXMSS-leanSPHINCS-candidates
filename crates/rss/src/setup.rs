@@ -36,7 +36,7 @@ impl SessionId {
 pub fn establish(net: &mut Net) -> Result<SessionId, Abort> {
     let nonce: [u8; 16] = os_random();
     let got = net.exchange(vec![nonce.to_vec(); net.n])?;
-    let mut h = blake2s::Hasher::new();
+    let mut h = sha3::Hasher::new();
     h.update(b"leansphincs-rss-session").update(&(net.n as u64).to_le_bytes());
     for (j, m) in got.iter().enumerate() {
         if j == net.id {
@@ -76,7 +76,7 @@ pub fn deal(s: &Structure) -> Vec<Keys> {
 }
 
 fn derive(label: &[u8], ids: &[u64], parts: &[&[u8]]) -> Key {
-    let mut h = blake2s::Hasher::new();
+    let mut h = sha3::Hasher::new();
     h.update(label);
     for id in ids {
         h.update(&id.to_le_bytes());
@@ -144,7 +144,7 @@ pub fn prf_term(key: &Key, addr: &[u8; 32]) -> [u8; 16] {
     let mut input = [0u8; 64];
     input[..32].copy_from_slice(key);
     input[32..].copy_from_slice(addr);
-    blake2s::hash(&input)[..16].try_into().unwrap()
+    sha3::hash(&input)[..16].try_into().unwrap()
 }
 
 /// Party `i`'s replicated shares of `F(addr) = XOR_T H(k_T, addr)` at every address, bit-sliced:

@@ -3,27 +3,27 @@
 version = 4
 
 [[package]]
-name = "blake2s"
-version = "0.1.0"
-
-[[package]]
 name = "mpc"
 version = "0.1.0"
 dependencies = [
- "blake2s",
+ "sha3",
 ]
 
 [[package]]
 name = "rss"
 version = "0.1.0"
 dependencies = [
- "blake2s",
  "mpc",
+ "sha3",
 ]
+
+[[package]]
+name = "sha3"
+version = "0.1.0"
 
 [[package]]
 name = "sphincs"
 version = "0.1.0"
 dependencies = [
- "blake2s",
+ "sha3",
 ]

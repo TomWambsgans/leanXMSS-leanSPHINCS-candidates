@@ -1,10 +1,10 @@
 [package]
-name = "blake2s"
+name = "sha3"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
-description = "BLAKE2s-256, scalar and batched SIMD (vendored from leanVM)"
+description = "SHA3-256 (FIPS 202): Keccak-f[1600] and the sponge, scalar"
 
 [lints]
 workspace = true
