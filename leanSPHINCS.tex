@@ -88,8 +88,7 @@ For powerful devices.
   \item signing: $92\cdot10^3$ permutations, with a 16~MiB cache
 \end{itemize}
 
-\emph{A modern laptop CPU computes around $2^{26}$ Keccak-f permutations per second (16-core Apple M4 Max, with the
-unvectorized code of this repository).}
+\emph{A modern laptop CPU computes around $2^{29}$ Keccak-f permutations per second.}
 
 
 \subsection{Pruned: \texorpdfstring{$2.1\cdot10^5$}{210K} lifetime}
@@ -102,7 +101,7 @@ For weaker devices. The trick is to trade smaller lifetime for faster keygen, us
   \item signing: $74\cdot10^3$ permutations, with a 16~KiB cache (including $8\cdot10^3$ permutations of grinding)
 \end{itemize}
 
-\emph{A Ledger Nano S+ can compute $25$ thousand SHA2 compressions per second (Keccak-f: not measured yet).}
+\emph{A Ledger Nano S+ can compute $5.8$ thousand Keccak-f permutations per second~\cite{hwbench}.}
 
 \subsection{Pruned: \texorpdfstring{$2.2\cdot10^7$}{22M} lifetime}
 
@@ -402,6 +401,8 @@ instance of the kept subtree:
   \cref{sec:twolevel}), \texttt{formal/sphincs} in
   \url{https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates}.
 
+\bibitem{hwbench} T.~Wambsgans. \emph{Hardware wallet benchmark}.
+  \url{https://github.com/TomWambsgans/hardware-wallet-benchmark}.
 \bibitem{conduition} conduition. \emph{Pruning Hypertrees for the Lax and Lazy}, 2026.
   \url{https://conduition.io/cryptography/hypertree-pruning/}.
 \bibitem{CDI05} R.~Cramer, I.~Damg{\aa}rd, Y.~Ishai. \emph{Share Conversion, Pseudorandom Secret-Sharing and
