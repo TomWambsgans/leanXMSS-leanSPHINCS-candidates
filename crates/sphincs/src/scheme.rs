@@ -358,10 +358,10 @@ mod tests {
         let (sk, pk) = key_gen(&seed(1), 11);
         let m: Message = std::array::from_fn(|i| (7 * i) as u8);
         let sig = sign(&sk, &m);
-        let digest = sha3::hash(&sig.to_bytes());
-        assert_eq!(hex(&pk.to_bytes()), "ced0da376ebd4ba4c48590830d773e2b84d69cadea1e1374ab3bd20be993910c");
-        assert_eq!(hex(&digest), "4274d10ccd1f06c3d00c5ea4716054e8d8416a8f13b3489639b2e9c5da193609");
-        assert_eq!(sig.counter, 573);
+        let digest = keccak::hash(&sig.to_bytes());
+        assert_eq!(hex(&pk.to_bytes()), "63b118353523319f8f74f387824956482e582128e480149accc2ed4f19edcd00");
+        assert_eq!(hex(&digest), "9a21b6bc61d6ba500b4d67809912c1424be1f58486eda144e4ef70afd01cf94d");
+        assert_eq!(sig.counter, 1176);
     }
 
     #[test]
@@ -384,7 +384,7 @@ mod tests {
         let (pp, m) = ([3u8; PUBLIC_PARAM_LEN], [5u8; MESSAGE_LEN]);
         let base = randomizer_base(&pp, &seed(2), &m);
         let input = [&pp[..], &address(&tweak(TWEAK_RANDOMIZER, 0, 0)), &seed(2), &m].concat();
-        assert_eq!(base[..], sha3::hash(&input)[..N]);
+        assert_eq!(base[..], keccak::hash(&input)[..N]);
         assert_eq!(randomizer(&base, 0), base);
         assert_eq!(randomizer(&[0xff; N], 2), {
             let mut wrapped = [0u8; N];
@@ -397,7 +397,7 @@ mod tests {
         let rho = randomizer(&base, 7);
         let input = [&pp[..], &address(&tweak(TWEAK_MSG, 1, 0)), &m, &rho].concat();
         assert_eq!(input.len(), 80, "one block");
-        assert_eq!(digest_block(&pp, &rho, &m, 1), sha3::hash(&input));
+        assert_eq!(digest_block(&pp, &rho, &m, 1), keccak::hash(&input));
     }
 
     /// Pins where the digest's fields are: six FORS indices in each of the first two 64-bit words of
@@ -423,7 +423,7 @@ mod tests {
         let tops: ForsTops = std::array::from_fn(|kappa| std::array::from_fn(|half| [(2 * kappa + half) as u8; N]));
         let input = [&pp[..], &address(&tweak(TWEAK_ENC, 0, 77)), tops.as_flattened().as_flattened(), &5u32.to_le_bytes()].concat();
         assert_eq!(input.len(), 804);
-        let expected = codeword(sha3::hash(&input)[..N].try_into().unwrap());
+        let expected = codeword(keccak::hash(&input)[..N].try_into().unwrap());
         let before = permutations();
         assert_eq!(encode(&pp, 77, &tops, 5), expected);
         assert_eq!(permutations() - before, 6);

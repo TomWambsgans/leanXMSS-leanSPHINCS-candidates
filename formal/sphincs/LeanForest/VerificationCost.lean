@@ -4,7 +4,7 @@ import LeanForest.Correctness
 
 /-!
 Keccak-f permutation counts for the actual verifier's logged hash-input bytes. A hash of `n` bytes
-costs `n / 136 + 1` (rounded down), the SHA3-256 accounting used by `crates/sphincs/src/hash.rs` and
+costs `n / 136 + 1` (rounded down), the Keccak-256 accounting used by `crates/sphincs/src/hash.rs` and
 `scripts/scheme.py`. The oracle's answers remain arbitrary; only the byte lengths are counted.
 -/
 
@@ -14,7 +14,7 @@ namespace LeanForest.Cost
 
 open Concrete
 
-/-- SHA3-256 permutations: the rate is 136 bytes and the padding takes at least one byte. -/
+/-- Keccak-256 permutations: the rate is 136 bytes and the padding takes at least one byte. -/
 def blocks (bytes : Nat) : Nat := bytes / 136 + 1
 
 /-- Actual hash inputs on the execution selected by an arbitrary answer function. -/

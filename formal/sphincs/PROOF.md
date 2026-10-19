@@ -146,7 +146,7 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
   security transfer using total experiment query counts must account for caching.
 - Verification does not enforce membership in the retained subtree. The proof accounts for forgeries
   entering through a surrogate sibling.
-- `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums SHA3-256
+- `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums Keccak-256
   permutation costs (`n / 136 + 1` for `n` bytes) of the verifier's logged hash-input lengths:
   accepted signatures cost exactly 354 Keccak-f permutations, all signatures at most 354 (2 for the
   digest, 24·(1 + 9) for the FORS leaves and folds, 6 for the encoding of the 48 tops and the

@@ -2,7 +2,7 @@
 """Sizes and permutation counts of the leanSphincs candidate and of its spicy variant (the costs in leanSPHINCS.tex).
 The lifetimes printed here are estimates from the cover model; the note quotes the limits proved in Lean.
 
-Costs count Keccak-f[1600] permutations of SHA3-256 (rate 136 bytes, at least one byte of padding):
+Costs count Keccak-f[1600] permutations of Keccak-256 (rate 136 bytes, at least one byte of padding):
 hashing l bytes costs floor(l / 136) + 1. Every call hashes P (16 B) || address (16 B) || input.
 A pruned signer tries the randomizers R_0 + i, with R_0 one hash of the seed and the message. The digest
 input P || address || m || rho is 80 bytes, one block, so an attempt costs one permutation.
@@ -19,7 +19,7 @@ N = 16  # bytes per hash value
 PREFIX = 32  # the public parameter and the address
 
 
-RATE = 136  # SHA3-256
+RATE = 136  # Keccak-256
 
 
 def comp(input_bytes):
@@ -122,7 +122,7 @@ def main():
         return int(mib * 2**20) // N
 
     print(f"leanSphincs candidate: h={h} a={a} k={k}, WOTS+C with {v} chains of length {q} and T={T}; "
-          f"costs in Keccak-f permutations (SHA3-256)")
+          f"costs in Keccak-f permutations (Keccak-256)")
     print(f"  signature {size} B (rho 16, FORS {k * (1 + a) * N}, counter 4, WOTS {v * N}, path {h * N}); pk {2 * N} B")
     print(f"  per call: derive {derive}, chain {step}, node {node}, encode {enc} (FORS tops + counter; signer "
           f"{enc_fixed} once + {enc_try} per counter), WOTS leaf {wots_pk}, randomizer {rnd}, digest {digest}")

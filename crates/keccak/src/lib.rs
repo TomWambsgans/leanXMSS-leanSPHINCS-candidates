@@ -1,14 +1,15 @@
-//! SHA3-256 (FIPS 202), the repo's one hash function.
+//! Keccak-256, the repo's one hash function: Ethereum's `keccak256`, the original Keccak padding (not FIPS 202's SHA3-256).
 //!
 //! - Keccak-f[1600]: every hash here is a chain of permutations, and costs are counted in permutations.
-//! - SHA3-256 over bytes, one-shot or streaming: a sponge of rate 136 bytes, padding `0x06 .. 0x80`.
+//! - Keccak-256 over bytes, one-shot or streaming: a sponge of rate 136 bytes, padding `0x01 .. 0x80`
+//!   (SHA3-256 differs only in its first padding byte, `0x06`).
 //!
 //! Hashing `len` bytes costs `len / 136 + 1` permutations: the padding takes at least one byte, so an
 //! input that fills its last block exactly pays one more permutation for the padding alone.
 
 /// Digest length in bytes.
 pub const OUT_LEN: usize = 32;
-/// Sponge rate of SHA3-256 in bytes: `1600 - 2 * 256` bits.
+/// Sponge rate of Keccak-256 in bytes: `1600 - 2 * 256` bits.
 pub const RATE: usize = 136;
 /// Rounds per permutation.
 pub const ROUNDS: usize = 24;
@@ -78,7 +79,7 @@ pub fn keccak_f(a: &mut [u64; 25]) {
     }
 }
 
-/// Permutations SHA3-256 spends on `len` bytes.
+/// Permutations Keccak-256 spends on `len` bytes.
 pub const fn permutations(len: usize) -> u64 {
     (len / RATE + 1) as u64
 }
@@ -91,7 +92,7 @@ fn absorb_block(state: &mut [u64; 25], block: &[u8; RATE]) {
     }
 }
 
-/// Streaming SHA3-256. A full block is permuted as soon as it is complete: the padding always
+/// Streaming Keccak-256. A full block is permuted as soon as it is complete: the padding always
 /// follows, so it is never the last.
 #[derive(Clone)]
 pub struct Hasher {
@@ -125,7 +126,7 @@ impl Hasher {
         let mut state = self.state;
         let mut block = self.buf;
         block[self.buf_len..].fill(0);
-        block[self.buf_len] ^= 0x06;
+        block[self.buf_len] ^= 0x01;
         block[RATE - 1] ^= 0x80;
         absorb_block(&mut state, &block);
         keccak_f(&mut state);
@@ -143,7 +144,7 @@ impl Default for Hasher {
     }
 }
 
-/// One-shot SHA3-256.
+/// One-shot Keccak-256.
 pub fn hash(data: &[u8]) -> [u8; OUT_LEN] {
     Hasher::new().update(data).finalize()
 }
@@ -156,8 +157,9 @@ mod tests {
         (0..n).map(|j| j as u8).collect()
     }
 
-    /// `test_vectors.txt`, line `n`: SHA3-256 of the bytes `0, 1, .., n - 1` (mod 256), from
-    /// Python's `hashlib.sha3_256`, for `n` up to 3 blocks.
+    /// `test_vectors.txt`, line `n`: Keccak-256 of the bytes `0, 1, .., n - 1` (mod 256), for `n` up
+    /// to 3 blocks, from a Python Keccak checked against `hashlib.sha3_256` (with SHA3's padding) and
+    /// Ethereum's `keccak256("")` and `keccak256("abc")`.
     #[test]
     fn matches_reference_vectors() {
         let lines: Vec<&str> = include_str!("test_vectors.txt").lines().collect();
@@ -171,8 +173,8 @@ mod tests {
     #[test]
     fn known_answers() {
         let hex = |d: [u8; 32]| d.iter().map(|b| format!("{b:02x}")).collect::<String>();
-        assert_eq!(hex(hash(b"")), "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a");
-        assert_eq!(hex(hash(b"abc")), "3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532");
+        assert_eq!(hex(hash(b"")), "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+        assert_eq!(hex(hash(b"abc")), "4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45");
     }
 
     #[test]

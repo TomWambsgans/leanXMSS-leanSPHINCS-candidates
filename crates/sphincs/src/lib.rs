@@ -4,9 +4,9 @@
 // h = 26, plain FORS with k = 24 trees of height a = 10, WOTS+C with w = 4, 64 chains and target sum
 // 120, and pruned keys (a kept subtree plus pseudorandom surrogate siblings).
 
-//! The leanSphincs candidate over SHA3-256.
+//! The leanSphincs candidate over Keccak-256.
 //!
-//! `Th(P, tw, M) = SHA3-256(P | tw | M)` truncated to `n = 16` bytes, with a 16-byte address `tw` (8 bytes of fields, 8 zero bytes).
+//! `Th(P, tw, M) = Keccak-256(P | tw | M)` truncated to `n = 16` bytes, with a 16-byte address `tw` (8 bytes of fields, 8 zero bytes).
 //! Every hash call goes through [`hash`], which also counts Keccak-f permutations (thread-local) so
 //! tests can check the note's costs.
 

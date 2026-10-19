@@ -12,7 +12,7 @@ needless_range_loop = "allow"
 too_many_arguments = "allow"
 
 [workspace.dependencies]
-sha3 = { path = "crates/sha3" }
+keccak = { path = "crates/keccak" }
 sphincs = { path = "crates/sphincs" }
 mpc = { path = "crates/mpc" }
 

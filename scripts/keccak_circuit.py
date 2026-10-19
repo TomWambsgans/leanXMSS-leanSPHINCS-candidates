@@ -41,7 +41,7 @@ def permutation(secret, out_lanes=range(25)):
 
 
 def th(steps=1):
-    """AND gates per hash and AND-depth of `steps` chained hashes Th(P, tw, x) = SHA3-256(P | tw | x)[:16]:
+    """AND gates per hash and AND-depth of `steps` chained hashes Th(P, tw, x) = Keccak-256(P | tw | x)[:16]:
     P and tw public (bytes 0..31), the 16-byte x secret (bytes 32..47), the output truncated to 16 bytes."""
     secret = [[32 <= (8 * l + i // 8) < 48 for i in range(64)] for l in range(25)]
     return permutation(secret, out_lanes=[0, 1]), ROUNDS * steps

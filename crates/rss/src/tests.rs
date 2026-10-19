@@ -1,4 +1,4 @@
-//! End-to-end tests: correctness against the clear evaluation and SHA3-256, traffic, and corrupt
+//! End-to-end tests: correctness against the clear evaluation and Keccak-256, traffic, and corrupt
 //! coalitions (faults on every message kind, consistent and split lies, rushing, forgeries), with a
 //! two-world test that what they see opened does not depend on the honest parties' secrets.
 
@@ -228,7 +228,7 @@ fn toy_circuit_matches_clear_evaluation() {
 }
 
 #[test]
-fn th_in_mpc_matches_sha3() {
+fn th_in_mpc_matches_keccak() {
     let n = 130;
     let (prog, pub_in, prefixes) = th(n);
     let mut r = rng(5);
@@ -252,7 +252,7 @@ fn th_in_mpc_matches_sha3() {
             for k in 0..n {
                 let mut input = prefixes[k].to_vec();
                 input.extend_from_slice(&secrets[k]);
-                let want = sha3::hash(&input);
+                let want = keccak::hash(&input);
                 for bit in 0..128 {
                     assert_eq!((out[bit][k / 64] >> (k % 64)) & 1, u64::from((want[bit / 8] >> (bit % 8)) & 1), "n = {parties}");
                 }
@@ -470,7 +470,7 @@ fn rushing_adversaries() {
                     if round != target {
                         return;
                     }
-                    let h = sha3::hash(&got.concat());
+                    let h = keccak::hash(&got.concat());
                     let pick = u64::from_le_bytes(h[..8].try_into().unwrap()) as usize;
                     // Only messages to honest parties are left here.
                     for m in out.iter_mut().filter(|m| !m.is_empty()) {
@@ -981,7 +981,7 @@ fn keygen_prf_inputs_mpc_outputs_end_to_end() {
             });
             let mut input = prefixes[k].to_vec();
             input.extend_from_slice(&fk);
-            let want = sha3::hash(&input);
+            let want = keccak::hash(&input);
             for out in &run {
                 let out = out.result.as_ref().unwrap();
                 for bit in 0..128 {

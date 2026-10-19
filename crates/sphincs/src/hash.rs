@@ -55,8 +55,8 @@ pub fn address(tw: &Tweak) -> [u8; ADDRESS_LEN] {
 }
 
 /// A hasher that has absorbed `P | address`.
-fn start(pp: &PublicParam, tw: &Tweak) -> sha3::Hasher {
-    let mut hasher = sha3::Hasher::new();
+fn start(pp: &PublicParam, tw: &Tweak) -> keccak::Hasher {
+    let mut hasher = keccak::Hasher::new();
     hasher.update(pp).update(&address(tw));
     hasher
 }
@@ -70,9 +70,9 @@ pub fn permutations() -> u64 {
     PERMUTATIONS.with(Cell::get)
 }
 
-/// Permutations SHA3-256 spends on `len` bytes: `len / 136 + 1`.
+/// Permutations Keccak-256 spends on `len` bytes: `len / 136 + 1`.
 pub const fn blocks(len: usize) -> u64 {
-    sha3::permutations(len)
+    keccak::permutations(len)
 }
 
 fn count(len: usize) {
@@ -83,7 +83,7 @@ fn count_blocks(n: u64) {
     PERMUTATIONS.with(|c| c.set(c.get() + n));
 }
 
-/// `Th(P, tw, payload)`: SHA3-256 of `P | address | payload`, truncated.
+/// `Th(P, tw, payload)`: Keccak-256 of `P | address | payload`, truncated.
 pub fn th(pp: &PublicParam, tw: &Tweak, payload: &[u8]) -> Digest {
     count(PUBLIC_PARAM_LEN + ADDRESS_LEN + payload.len());
     let mut hasher = start(pp, tw);
@@ -91,7 +91,7 @@ pub fn th(pp: &PublicParam, tw: &Tweak, payload: &[u8]) -> Digest {
     hasher.finalize()[..N].try_into().unwrap()
 }
 
-/// Two secrets for one hash: the two 16-byte halves of the untruncated SHA3-256 of `P | address | payload`.
+/// Two secrets for one hash: the two 16-byte halves of the untruncated Keccak-256 of `P | address | payload`.
 pub fn th_pair(pp: &PublicParam, tw: &Tweak, payload: &[u8]) -> [Digest; 2] {
     count(PUBLIC_PARAM_LEN + ADDRESS_LEN + payload.len());
     let mut hasher = start(pp, tw);
@@ -115,7 +115,7 @@ pub fn th_digests(pp: &PublicParam, tw: &Tweak, values: &[Digest]) -> Digest {
 /// [`Midstate::finish`] pays for the rest and the padding.
 #[derive(Clone)]
 pub struct Midstate {
-    hasher: sha3::Hasher,
+    hasher: keccak::Hasher,
     /// The end of the fixed part that is not a whole block, in bytes.
     rest: usize,
 }
@@ -128,11 +128,11 @@ impl Midstate {
             hasher.update(part);
             len += part.len();
         }
-        count_blocks((len / sha3::RATE) as u64);
-        Self { hasher, rest: len % sha3::RATE }
+        count_blocks((len / keccak::RATE) as u64);
+        Self { hasher, rest: len % keccak::RATE }
     }
 
-    /// The untruncated 32-byte SHA3-256 of the input completed by `tail`.
+    /// The untruncated 32-byte Keccak-256 of the input completed by `tail`.
     pub fn finish(&self, tail: &[u8]) -> [u8; 32] {
         count(self.rest + tail.len());
         let mut hasher = self.hasher.clone();
@@ -155,7 +155,7 @@ mod tests {
         let mut input = pp.to_vec();
         input.extend_from_slice(&address(&tw));
         input.extend_from_slice(&payload);
-        assert_eq!(th(&pp, &tw, &payload)[..], sha3::hash(&input)[..N]);
+        assert_eq!(th(&pp, &tw, &payload)[..], keccak::hash(&input)[..N]);
     }
 
     /// A midstate gives the same hash as one pass, and pays for each whole block once, whether or
@@ -172,7 +172,7 @@ mod tests {
             assert_eq!(permutations() - before, 1, "the first block");
             for _ in 0..3 {
                 let before = permutations();
-                assert_eq!(state.finish(&tail), sha3::hash(&input));
+                assert_eq!(state.finish(&tail), keccak::hash(&input));
                 assert_eq!(permutations() - before, 1, "one permutation per tail");
             }
         }

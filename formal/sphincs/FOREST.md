@@ -139,7 +139,7 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 | tree leaf | 18 | 0 | `c + 8s` | `idx` | `m_0[0] ‖ m_0[1] ‖ m_1[0] ‖ m_1[1]`, the level-2 nodes of the two subtrees (64 bytes) |
 | forest tree node, level 1 to 3 | 19 | 0 | `c + 8·level + 64·node` | `idx` | left ‖ right |
 
-With SHA3-256 a call of `n` bytes costs `n / 136 + 1` Keccak-f permutations: a chain step is 48 bytes,
+With Keccak-256 a call of `n` bytes costs `n / 136 + 1` Keccak-f permutations: a chain step is 48 bytes,
 a node 64, a forest WOTS-key leaf 128, a tree leaf 96 and the digest 80 (1 permutation each), the
 encoding 292 (3: the counter falls in the last block, so the signer absorbs the key once and pays
 one permutation per counter), a one-time leaf 1,056 (8). The addresses of a subtree root (type 17,

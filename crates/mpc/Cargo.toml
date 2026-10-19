@@ -10,4 +10,4 @@ description = "Boolean circuits (Keccak-f[1600]), GF(2^128), PRFs and network ac
 workspace = true
 
 [dependencies]
-sha3.workspace = true
+keccak.workspace = true

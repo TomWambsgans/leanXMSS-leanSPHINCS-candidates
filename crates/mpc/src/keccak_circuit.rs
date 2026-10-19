@@ -24,9 +24,9 @@ fn rotl_l(x: &Lane, r: u32) -> Lane {
     std::array::from_fn(|i| x[(i + 64 - r as usize) % 64])
 }
 
-/// Keccak-f[1600] on 25 lanes, lane `x + 5 y` being `A[x][y]`, as in [`sha3::keccak_f`].
+/// Keccak-f[1600] on 25 lanes, lane `x + 5 y` being `A[x][y]`, as in [`keccak::keccak_f`].
 pub fn keccak_f(b: &mut Builder, a: &mut [Lane; 25]) {
-    for rc in sha3::RC {
+    for rc in keccak::RC {
         // theta
         let mut c = [[ZERO; 64]; 5];
         for x in 0..5 {
@@ -44,8 +44,8 @@ pub fn keccak_f(b: &mut Builder, a: &mut [Lane; 25]) {
         // rho and pi
         let mut carried = a[1];
         for i in 0..24 {
-            let next = a[sha3::PI[i]];
-            a[sha3::PI[i]] = rotl_l(&carried, sha3::RHO[i]);
+            let next = a[keccak::PI[i]];
+            a[keccak::PI[i]] = rotl_l(&carried, keccak::RHO[i]);
             carried = next;
         }
         // chi
@@ -72,7 +72,7 @@ pub enum PubBit {
     Input,
 }
 
-/// The circuit of `Th(P, tw, x) = SHA3-256(P | tw | x)[..16]` on a secret 16-byte `x`: one
+/// The circuit of `Th(P, tw, x) = Keccak-256(P | tw | x)[..16]` on a secret 16-byte `x`: one
 /// permutation of a 48-byte input. `prefix[i]` describes bit `i` of `P | tw` (little endian);
 /// public inputs come in that order, then the 128 secret bits of `x`, and the outputs are the 128
 /// bits of the truncated digest.
@@ -86,17 +86,17 @@ pub fn th_circuit(prefix: &[PubBit; 256]) -> Builder {
         })
         .collect();
     let secret: Vec<Wire> = (0..128).map(|_| b.sec_input()).collect();
-    // The padded block: `P | tw | x`, then 0x06 at byte 48 and 0x80 at byte 135.
-    let mut padding = [0u8; sha3::RATE];
-    padding[48] = 0x06;
-    padding[sha3::RATE - 1] = 0x80;
+    // The padded block: `P | tw | x`, then 0x01 at byte 48 and 0x80 at byte 135.
+    let mut padding = [0u8; keccak::RATE];
+    padding[48] = 0x01;
+    padding[keccak::RATE - 1] = 0x80;
     let mut a: [Lane; 25] = std::array::from_fn(|lane| {
         std::array::from_fn(|i| {
             let bit = 64 * lane + i;
             match bit {
                 0..256 => prefix_wires[bit],
                 256..384 => secret[bit - 256],
-                _ if bit < 8 * sha3::RATE => b.constant((padding[bit / 8] >> (bit % 8)) & 1 == 1),
+                _ if bit < 8 * keccak::RATE => b.constant((padding[bit / 8] >> (bit % 8)) & 1 == 1),
                 _ => ZERO,
             }
         })
@@ -169,7 +169,7 @@ mod tests {
         let got = p.eval_plain(1, &[], &sec_in);
         for (k, state) in states.iter().enumerate() {
             let mut want = *state;
-            sha3::keccak_f(&mut want);
+            keccak::keccak_f(&mut want);
             for bit in 0..1600 {
                 assert_eq!((got[bit][0] >> k) & 1, (want[bit / 64] >> (bit % 64)) & 1, "instance {k} bit {bit}");
             }
@@ -177,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn th_circuit_matches_sha3() {
+    fn th_circuit_matches_keccak() {
         let mut r = rng(2);
         let pp: [u8; 16] = std::array::from_fn(|_| r() as u8);
         // A batch whose addresses differ only in a few bytes, as in the protocol.
@@ -209,7 +209,7 @@ mod tests {
         for k in 0..100 {
             let mut input = prefixes[k].to_vec();
             input.extend_from_slice(&secrets[k]);
-            let want = sha3::hash(&input);
+            let want = keccak::hash(&input);
             for bit in 0..128 {
                 assert_eq!((out[bit][k / 64] >> (k % 64)) & 1, u64::from((want[bit / 8] >> (bit % 8)) & 1));
             }

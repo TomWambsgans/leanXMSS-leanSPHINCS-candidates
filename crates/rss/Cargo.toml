@@ -14,5 +14,5 @@ workspace = true
 testing = []
 
 [dependencies]
-sha3.workspace = true
+keccak.workspace = true
 mpc.workspace = true

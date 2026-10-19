@@ -54,12 +54,13 @@ Properties:
   \item public key: 32 bytes
   \item secret key: 32 bytes
   \item signature size: 5\,684 bytes
-  \item verification: 354 Keccak-f[1600] permutations (hash: SHA3-256)
+  \item verification: 354 Keccak-f[1600] permutations (hash: Keccak-256)
   \item security: NIST level 1 \cite{FIPS205} (applies to all the usages below) (127 bits SUF in the ROM, and $\approx 64$ bits in the QROM)
   \item lifetime: up to $2^{30}$ signatures.
 \end{itemize}
 
-\paragraph{Hash inputs.} $\hash$ is SHA3-256, truncated to 16 bytes except where noted, and costs are counted in
+\paragraph{Hash inputs.} $\hash$ is Keccak-256 (Ethereum's \texttt{keccak256}: SHA3-256 with the original Keccak padding), truncated to
+16 bytes except where noted, and costs are counted in
 Keccak-f[1600] permutations: hashing $\ell$ bytes costs $\lfloor \ell/136\rfloor+1$ (the rate is 136 bytes, and the
 padding takes at least one byte). Every hash input is $P \concat \mathit{address} \concat \mathit{data}$: the public
 parameter (16 bytes), then a 16-byte address: two fields of 4 and 3 bytes, 1 byte for the type of the call

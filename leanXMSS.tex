@@ -29,7 +29,7 @@
 \end{center}
 
 A stateful hash-based signature for Ethereum attestations: $2^{32}$ signatures (1\,361 years of 10-second
-slots), small and fast to verify, and thresholdizable, with a DKG or a trusted dealer. Same hash as leanSPHINCS: $\hash(P,\mathit{tw},M)$ is SHA3-256 truncated to
+slots), small and fast to verify, and thresholdizable, with a DKG or a trusted dealer. Same hash as leanSPHINCS: $\hash(P,\mathit{tw},M)$ is Keccak-256 truncated to
 16 bytes, costs are in Keccak-f[1600] permutations ($\lfloor\ell/136\rfloor+1$ for $\ell$ bytes), and security is NIST level 1.
 
 \section{The scheme}
