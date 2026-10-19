@@ -65,6 +65,10 @@ h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height:
 .params tbody tr:first-child > * { padding-top: 0.5rem; }
 .params tbody.out tr:first-child > * { border-top: 1px solid var(--rule); padding-top: 0.5rem; }
 .params .unit { color: var(--muted); }
+body[data-h="blake2s"] .hk, body:not([data-h="blake2s"]) .hb { display: none !important; }
+.hashsw { display: inline-flex; vertical-align: middle; border: 1px solid var(--rule); border-radius: 999px; padding: 2px; margin: -0.2rem 0; background: #fff; white-space: nowrap; }
+.hashsw button { font: inherit; font-size: 0.85rem; line-height: 1.3; border: 0; background: none; color: var(--muted); padding: 0.12rem 0.7rem; border-radius: 999px; cursor: pointer; }
+.hashsw button[aria-pressed="true"] { background: var(--ink); color: #fff; }
 
 figure { margin: 0; position: relative; min-height: 18rem; }
 figure svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -188,7 +192,7 @@ footer a + a { margin-left: 1.25rem; }
 }
 </style>
 </head>
-<body>
+<body data-h="keccak">
 <main>
 
 <div class="page">
@@ -207,12 +211,12 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th><i>w</i></th><td>4</td></tr>
           <tr><th><i>ℓ</i></th><td>58<span class="info" tabindex="0" data-tip="64 base-4 digits: grinding forces the last 6&#10;to 0, so their chains are dropped">i</span></td></tr>
           <tr><th>Target sum</th><td>106<span class="info" tabindex="0" data-tip="2²⁰ grinding tries">i</span></td></tr>
-          <tr><th>Hash</th><td>BLAKE2s<span class="info" tabindex="0" data-tip="A placeholder: SHA-2 would also work">i</span></td></tr>
+          <tr><th>Hash</th><td><div class="hashsw" role="group" aria-label="Hash"><button type="button" data-h="keccak" aria-pressed="true">Keccak-256</button><button type="button" data-h="blake2s" aria-pressed="false">BLAKE2s</button></div><span class="info hk r" tabindex="0" data-tip="Ethereum&#39;s keccak256: SHA3-256&#10;with the original Keccak padding">i</span></td></tr>
         </tbody>
         <tbody class="out">
           <tr><th>Lifetime</th><td>2<sup>32</sup> slots<span class="info" tabindex="0" data-tip="1,361 years of 10-second slots">i</span></td></tr>
           <tr><th>Size</th><td>2 × 1,200 bytes<span class="info" tabindex="0" data-tip="The top half is the same for 2¹⁶ slots:&#10;it can be sent once and cached">i</span></td></tr>
-          <tr><th>Verification<br><span class="unit">(compressions)</span></th><td>201</td></tr>
+          <tr><th>Verification<br><span class="unit">(<span class="hk">permutations</span><span class="hb">compressions</span>)</span></th><td><span class="hk">186</span><span class="hb">201</span><span class="info hk" tabindex="0" data-tip="Keccak-f[1600] permutations">i</span><span class="info hb" tabindex="0" data-tip="BLAKE2s compressions">i</span></td></tr>
         </tbody>
       </table>
       </div>
@@ -572,9 +576,9 @@ footer a + a { margin-left: 1.25rem; }
             <colgroup><col class="label"><col><col></colgroup>
             <thead><tr><th></th><th>Traffic per operator<br><span class="sub">per 2<sup>16</sup> slots</span></th><th>Average rate<span class="info" tabindex="0" data-tip="Over the 2¹⁶ ten-second slots&#10;of a bottom tree (7.6 days)">i</span></th></tr></thead>
             <tbody>
-              <tr><th>2-of-3</th><td>19.2&nbsp;GB</td><td>29&nbsp;KB/s</td></tr>
-              <tr><th>3-of-5</th><td>23.1&nbsp;GB</td><td>35&nbsp;KB/s</td></tr>
-              <tr><th>4-of-7</th><td>24.8&nbsp;GB</td><td>38&nbsp;KB/s</td></tr>
+              <tr><th>2-of-3</th><td><span class="hk">51.8</span><span class="hb">19.2</span>&nbsp;GB</td><td><span class="hk">79</span><span class="hb">29</span>&nbsp;KB/s</td></tr>
+              <tr><th>3-of-5</th><td><span class="hk">62.2</span><span class="hb">23.1</span>&nbsp;GB</td><td><span class="hk">95</span><span class="hb">35</span>&nbsp;KB/s</td></tr>
+              <tr><th>4-of-7</th><td><span class="hk">66.6</span><span class="hb">24.8</span>&nbsp;GB</td><td><span class="hk">102</span><span class="hb">38</span>&nbsp;KB/s</td></tr>
             </tbody>
           </table>
           </div>
@@ -598,9 +602,27 @@ footer a + a { margin-left: 1.25rem; }
 </div>
 
 <footer>
-  <p><a href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/releases/download/doc-latest/leanXMSS.pdf">Note</a><a href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/main">Code</a></p>
+  <p><a href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/releases/download/doc-latest/leanXMSS.pdf">Note</a><a class="hk" href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/keccak">Code</a><a class="hb" href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/main">Code</a></p>
 </footer>
 
 </main>
+<script>
+// The hash the costs are counted in, Keccak-256 or BLAKE2s: the same on both pages, remembered.
+(function () {
+  var buttons = document.querySelectorAll('.hashsw button');
+  function set(h) {
+    document.body.dataset.h = h;
+    buttons.forEach(function (o) { o.setAttribute('aria-pressed', String(o.dataset.h === h)); });
+  }
+  try { if (localStorage.getItem('hash') === 'blake2s') set('blake2s'); } catch (e) {}
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      set(b.dataset.h);
+      try { localStorage.setItem('hash', b.dataset.h); } catch (e) {}
+      window.dispatchEvent(new Event('resize'));
+    });
+  });
+})();
+</script>
 </body>
 </html>
