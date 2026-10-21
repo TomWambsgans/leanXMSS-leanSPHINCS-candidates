@@ -721,7 +721,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
   <hr class="sep">
 
   <section class="modes">
-    <p class="idea"><strong>Key idea:</strong> the signer builds only part of the XMSS tree (<a href="https://conduition.io/cryptography/hypertree-pruning/">pruning</a>), so lifetime scales with keygen time.<span class="info r w" tabindex="0" data-tip="Security: one risk is reusing the same 32-byte seed on different pruning parameters. We suggest the following straightforward fix: hardcode the pruning parameter in the 1st byte of the seed (31 bytes is enough entropy).">i</span></p>
+    <p class="idea"><strong>Key idea:</strong> the signer builds only part of the XMSS tree (<a href="https://conduition.io/cryptography/hypertree-pruning/">pruning</a>), so lifetime scales with keygen time.<span class="info r w" tabindex="0" data-tip="Security: one risk is reusing the same 32-byte seed under different pruning parameters. A straightforward fix: derive the actual seed as H(seed ‖ m), where the metadata m encodes the pruning parameter. A different m then gives a completely unrelated key.">i</span></p>
     <div class="tables">
       <h2>One signer</h2>
       <div class="scroll">
