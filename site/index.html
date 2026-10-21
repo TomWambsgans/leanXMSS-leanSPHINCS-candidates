@@ -178,6 +178,7 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
   transition: opacity 0.12s;
   z-index: 10;
 }
+.info.w::after { white-space: normal; width: max-content; max-width: 32rem; }
 .info:hover::after, .info:focus::after { opacity: 1; }
 .cmp tbody th { font-weight: 500; }
 .cmp tbody tr:first-child > * { padding-top: 0.45rem; }
@@ -200,7 +201,7 @@ footer p { margin: 0; }
 footer a + a { margin-left: 1.25rem; }
 
 @media (hover: none), (max-width: 600px) {
-  .info::after, .cmp .dev .info::after, .info.r::after {
+  .info::after, .cmp .dev .info::after, .info.r::after, .info.w::after {
     position: fixed;
     left: 1rem;
     right: 1rem;
@@ -720,7 +721,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
   <hr class="sep">
 
   <section class="modes">
-    <p class="idea"><strong>Key idea:</strong> the signer builds only part of the XMSS tree (<a href="https://conduition.io/cryptography/hypertree-pruning/">pruning</a>), so lifetime scales with keygen time.<span class="info r" tabindex="0" data-tip="Security: one risk is reusing the same 32-byte seed on&#10;different pruning parameters. We suggest the following&#10;straightforward fix: hardcode the pruning parameter in the&#10;1st byte of the seed (31 bytes is enough entropy).">i</span></p>
+    <p class="idea"><strong>Key idea:</strong> the signer builds only part of the XMSS tree (<a href="https://conduition.io/cryptography/hypertree-pruning/">pruning</a>), so lifetime scales with keygen time.<span class="info r w" tabindex="0" data-tip="Security: one risk is reusing the same 32-byte seed on different pruning parameters. We suggest the following straightforward fix: hardcode the pruning parameter in the 1st byte of the seed (31 bytes is enough entropy).">i</span></p>
     <div class="tables">
       <h2>One signer</h2>
       <div class="scroll">
