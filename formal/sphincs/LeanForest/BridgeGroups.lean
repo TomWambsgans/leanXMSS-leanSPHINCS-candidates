@@ -34,7 +34,7 @@ noncomputable def extOf (s : State) (excl : Pair → Prop) (m : Message) (ρ : R
 /-- **The group of a message.** -/
 noncomputable def grpM (s : State) (excl : Pair → Prop) (m : Message) (F : Multiset View → ℝ≥0∞)
     (d : Multiset View) : ℝ≥0∞ :=
-  grp nextRand landing digestAttemptLimit Finset.univ (stOf parameter data m s) (extOf parameter data s excl m) F d
+  grp (nextRand (data.steps m)) landing digestAttemptLimit Finset.univ (stOf parameter data m s) (extOf parameter data s excl m) F d
 
 /-- The groups of a list of messages. -/
 noncomputable def grpAll (s : State) (excl : Pair → Prop) : List Message → (Multiset View → ℝ≥0∞) →
@@ -44,7 +44,7 @@ noncomputable def grpAll (s : State) (excl : Pair → Prop) : List Message → (
 
 /-- The mass that the group of a message leaves on the identity. -/
 noncomputable def idMassM (s : State) (m : Message) : ℝ≥0∞ :=
-  idMass nextRand landing digestAttemptLimit (stOf parameter data m s)
+  idMass (nextRand (data.steps m)) landing digestAttemptLimit (stOf parameter data m s)
 
 end Defs
 
@@ -127,7 +127,7 @@ theorem grpM_grpAll (s : State) (excl : Pair → Prop) (m : Message) (F : Multis
   | m' :: Ms, d => by
       have h1 : grpM parameter data s excl m (grpM parameter data s excl m' (grpAll parameter data s excl Ms F)) d =
           grpM parameter data s excl m' (grpM parameter data s excl m (grpAll parameter data s excl Ms F)) d :=
-        grp_comm nextRand digestAttemptLimit _ _ _ _ _ d
+        grp_comm _ digestAttemptLimit _ _ _ _ _ d
       exact h1.trans (grp_congr _ _ (fun e => grpM_grpAll s excl m F Ms e) d)
 
 /-- The groups do not depend on the order of the messages. -/
@@ -141,7 +141,7 @@ theorem grpAll_perm (s : State) (excl : Pair → Prop) (F : Multiset View → �
       exact grp_congr _ _ ih d
   | swap a b l =>
       intro d
-      exact grp_comm nextRand digestAttemptLimit _ _ _ _ _ d
+      exact grp_comm _ digestAttemptLimit _ _ _ _ _ d
   | trans _ _ ih1 ih2 => intro d; rw [ih1, ih2]
 
 /-- A message without cached digest has the identity as its group. -/
@@ -211,7 +211,7 @@ theorem grpAll_withPair_other (s : State) (p : Pair) (u0 : HashOutput) (excl : P
 theorem grpM_withPair_self (s : State) (p : Pair) (u0 : HashOutput) (excl : Pair → Prop)
     (F : Multiset View → ℝ≥0∞) (d : Multiset View) :
     grpM parameter data (withPair parameter data s p u0) excl p.1 F d =
-      grp nextRand landing digestAttemptLimit Finset.univ
+      grp (nextRand (data.steps p.1)) landing digestAttemptLimit Finset.univ
         (Function.update (stOf parameter data p.1 s) p.2 (if Landed parameter (blockIndex u0) then .hit else .miss))
         (Function.update (extOf parameter data s excl p.1) p.2 (if excl p then 0 else {viewOf u0})) F d := by
   unfold grpM
@@ -261,10 +261,10 @@ theorem grpAll_probe {w : ℝ≥0∞} (hw : w ≤ 1) {f : Multiset View → ℝ�
     have h : s.cache (blk parameter data p.1 p.2) = none := hp0
     simp [stOf, h]
   -- the left-hand side through the group of the message
-  set Fh : View → ℝ≥0∞ := fun v => grp nextRand landing digestAttemptLimit Finset.univ
+  set Fh : View → ℝ≥0∞ := fun v => grp (nextRand (data.steps p.1)) landing digestAttemptLimit Finset.univ
     (Function.update (stOf parameter data p.1 s) p.2 .hit)
     (Function.update (extOf parameter data s excl p.1) p.2 (if excl p then 0 else {v})) X d with hFh
-  set Cm : ℝ≥0∞ := grp nextRand landing digestAttemptLimit Finset.univ
+  set Cm : ℝ≥0∞ := grp (nextRand (data.steps p.1)) landing digestAttemptLimit Finset.univ
     (Function.update (stOf parameter data p.1 s) p.2 .miss) (extOf parameter data s excl p.1) X d with hCm
   have hleft : ∀ u0, grpAll parameter data (withPair parameter data s p u0) excl Ms
       (virtualOnce Finset.univ w f n I) d =
@@ -285,9 +285,9 @@ theorem grpAll_probe {w : ℝ≥0∞} (hw : w ≤ 1) {f : Multiset View → ℝ�
   rw [show (fun u0 => grpAll parameter data (withPair parameter data s p u0) excl Ms
       (virtualOnce Finset.univ w f n I) d) = fun u0 => if Landed parameter (blockIndex u0) then Fh (viewOf u0) else Cm
       from funext hleft, pairE_landed parameter Fh Cm]
-  have hstep := probe_step (σ := nextRand) (p := landing) (A := digestAttemptLimit) (U := (Finset.univ : Finset View))
+  have hstep := probe_step (σ := (nextRand (data.steps p.1))) (p := landing) (A := digestAttemptLimit) (U := (Finset.univ : Finset View))
     landing_le_one Finset.univ_nonempty (stOf parameter data p.1 s) (extOf parameter data s excl p.1) hXmono hXfin d
-    p.2 hst (fun j h0 hj => nextRand_pow_ne p.2 j h0 (lt_trans hj (by unfold digestAttemptLimit; norm_num))) w hw
+    p.2 hst (fun j h0 hj => nextRand_pow_ne (data.steps p.1) p.2 j h0 (lt_trans hj (by unfold digestAttemptLimit; norm_num))) w hw
     (fun v => if excl p then 0 else {v}) (fun v => by split_ifs <;> simp) hrate
   refine le_trans hstep (le_of_eq ?_)
   -- the right-hand side through the group of the message
@@ -326,9 +326,9 @@ theorem scan_bound_comb
     (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none) (s : State)
     (gf : View → ℝ≥0∞) (gp : Randomness → View → ℝ≥0∞) (attempts : ℕ) (hA : attempts ≤ 2 ^ 128)
     (budget : ℕ) (start : Randomness) :
-    ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m attempts start) budget s] *
+    ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m (data.step m) attempts start) budget s] *
         (freshNewWeight parameter data m s gf out + outWeight parameter data m s 0 gp out) ≤
-      walk nextRand landing (stOf parameter data m s) (poolValue parameter data m s gp)
+      walk (nextRand (data.steps m)) landing (stOf parameter data m s) (poolValue parameter data m s gp)
         (freshAvg Finset.univ gf) 0 attempts start := by
   refine scan_boundW tg initial model parameter data m hparse s gf gp
     (fun r s' => freshNewWeight parameter data m s gf ((r, [], [], []), s') +
@@ -448,7 +448,7 @@ theorem sign_term (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none
     (excl : Pair → Prop) (budget : ℕ) :
     ∑' out, Pr[= out | interp tg initial model
           ((liftM ($ᵗ Randomness : ProbComp Randomness) : OracleComp CostSpec Randomness) >>= fun start =>
-            signCostSourceLoop parameter data m digestAttemptLimit start) budget s] *
+            signCostSourceLoop parameter data m (data.step m) digestAttemptLimit start) budget s] *
         (X d + (freshNewWeight parameter data m s (fun v => X (d + {v}) - X d) out +
           outWeight parameter data m s 0 (fun ρ v => if excl (m, ρ) then 0 else X (d + {v}) - X d) out)) ≤
       grpM parameter data s excl m (fun e => freshAvg Finset.univ fun v => X (e + {v})) d := by
@@ -464,9 +464,9 @@ theorem sign_term (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none
   -- the scan part
   have hscan : ∑' out, Pr[= out | interp tg initial model
         ((liftM ($ᵗ Randomness : ProbComp Randomness) : OracleComp CostSpec Randomness) >>= fun start =>
-          signCostSourceLoop parameter data m digestAttemptLimit start) budget s] *
+          signCostSourceLoop parameter data m (data.step m) digestAttemptLimit start) budget s] *
         (freshNewWeight parameter data m s gf out + outWeight parameter data m s 0 gp out) ≤
-      c * ∑ start, walk nextRand landing (stOf parameter data m s) (poolValue parameter data m s gp)
+      c * ∑ start, walk (nextRand (data.steps m)) landing (stOf parameter data m s) (poolValue parameter data m s gp)
         (freshAvg Finset.univ gf) 0 digestAttemptLimit start := by
     rw [interp_liftProb_bind, tsum_probOutput_bind_mul]
     have hpr : ∀ ρ, Pr[= ρ | ($ᵗ Randomness : ProbComp Randomness)] = c := by
@@ -479,15 +479,15 @@ theorem sign_term (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none
       (by unfold digestAttemptLimit; norm_num) budget start
   have hsum : ∑' out, Pr[= out | interp tg initial model
         ((liftM ($ᵗ Randomness : ProbComp Randomness) : OracleComp CostSpec Randomness) >>= fun start =>
-          signCostSourceLoop parameter data m digestAttemptLimit start) budget s] *
+          signCostSourceLoop parameter data m (data.step m) digestAttemptLimit start) budget s] *
         (X d + (freshNewWeight parameter data m s gf out + outWeight parameter data m s 0 gp out)) ≤
-      X d + c * ∑ start, walk nextRand landing (stOf parameter data m s) (poolValue parameter data m s gp)
+      X d + c * ∑ start, walk (nextRand (data.steps m)) landing (stOf parameter data m s) (poolValue parameter data m s gp)
         (freshAvg Finset.univ gf) 0 digestAttemptLimit start := by
     rw [tsum_congr fun out => mul_add _ _ _, ENNReal.tsum_add, ENNReal.tsum_mul_right]
     exact add_le_add (mul_le_of_le_one_left' tsum_probOutput_le_one) hscan
   refine le_trans hsum ?_
   -- the base value joins every walk
-  have hbase : X d = c * ∑ start : Randomness, walk nextRand landing (stOf parameter data m s) (fun _ => X d)
+  have hbase : X d = c * ∑ start : Randomness, walk (nextRand (data.steps m)) landing (stOf parameter data m s) (fun _ => X d)
       (X d) (X d) digestAttemptLimit start := by
     simp only [walk_const landing_le_one, Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
     rw [← mul_assoc, hcard, one_mul]

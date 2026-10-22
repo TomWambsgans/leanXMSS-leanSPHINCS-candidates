@@ -1,7 +1,7 @@
 import LeanForest.BridgeSignerPost
 import LeanForest.GroupFuture
 
-/-! The scan signer `R = R0 + i` in the interpreted lazy run: from a start, the weight of the signed
+/-! The scan signer `R = R0 + i δ` in the interpreted lazy run: from a start, the weight of the signed
 pair is at most the walk value of `LoopWalk` over the digest cache of the message (cached landed
 pairs are hits, cached rejected ones are misses, the others are fresh and land with probability
 `landing`). Averaged over the uniform start this is the selection law of the scan signer. -/
@@ -17,12 +17,13 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-/-- The successor of a randomizer. -/
-def nextRand : Equiv.Perm Randomness := Equiv.addRight 1
+/-- The successor of a randomizer in a walk whose step is `walkStep half`. -/
+def nextRand (half : Randomness) : Equiv.Perm Randomness := Equiv.addRight (walkStep half)
 
-theorem nextRand_apply (ρ : Randomness) : nextRand ρ = ρ + 1 := rfl
+theorem nextRand_apply (half ρ : Randomness) : nextRand half ρ = ρ + walkStep half := rfl
 
-theorem nextRand_pow (j : ℕ) (ρ : Randomness) : (nextRand ^ j) ρ = ρ + (j : Randomness) := by
+theorem nextRand_pow (half : Randomness) (j : ℕ) (ρ : Randomness) :
+    (nextRand half ^ j) ρ = ρ + (j : Randomness) * walkStep half := by
   induction j with
   | zero => simp
   | succ j ih =>
@@ -31,26 +32,22 @@ theorem nextRand_pow (j : ℕ) (ρ : Randomness) : (nextRand ^ j) ρ = ρ + (j :
       ring
 
 /-- The scan does not return to a randomizer within `2^128` steps. -/
-theorem nextRand_pow_ne (ρ : Randomness) (j : ℕ) (h0 : 0 < j) (hj : j < 2 ^ 128) : (nextRand ^ j) ρ ≠ ρ := by
-  rw [nextRand_pow]
-  intro h
-  have h1 : (j : Randomness) = 0 := add_left_cancel (a := ρ) (h.trans (add_zero ρ).symm)
-  have h2 := congrArg BitVec.toNat h1
-  rw [BitVec.natCast_eq_ofNat, BitVec.toNat_ofNat] at h2
-  have h3 : j % 2 ^ digestBits = j := Nat.mod_eq_of_lt (by simpa [digestBits] using hj)
-  rw [h3] at h2
-  simp at h2
-  omega
+theorem nextRand_pow_ne (half ρ : Randomness) (j : ℕ) (h0 : 0 < j) (hj : j < 2 ^ 128) :
+    (nextRand half ^ j) ρ ≠ ρ := by
+  obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
+  have h := walk_iterate_ne half ρ i hj
+  rwa [walk_iterate, show ρ + walkStep half + (i : Randomness) * walkStep half =
+    ρ + ((i + 1 : ℕ) : Randomness) * walkStep half by push_cast; ring, ← nextRand_pow] at h
 
 variable [Params]
 
 theorem signCostSourceLoop_succ (parameter : PublicParameter) (data : PublicData) (message : Message)
     (attempts : ℕ) (randomness : Randomness) :
-    signCostSourceLoop parameter data message (attempts + 1) randomness =
+    signCostSourceLoop parameter data message (data.step message) (attempts + 1) randomness =
       liftM (CostSpec.query (.inl (.inr (.inl
         (Security.digestInput parameter data.root message randomness))))) >>= fun first =>
           if Landed parameter (blockIndex first) then finishCostSource parameter data message randomness
-          else signCostSourceLoop parameter data message attempts (nextRand randomness) := by
+          else signCostSourceLoop parameter data message (data.step message) attempts (nextRand (data.steps message) randomness) := by
   rw [signCostSourceLoop]
   rfl
 
@@ -165,11 +162,11 @@ theorem scan_boundW
         W out.1.1 out.2 ≤ (if out.1.1.isSome then (out.2.cache (blk parameter data message ρ)).elim 0
           (pairWeight parameter data message reference gf gp ρ) else 0)) :
     ∀ attempts, attempts ≤ 2 ^ 128 → ∀ budget state ρ, Related parameter data message reference state →
-      (∀ i, i < attempts → state.cache (blk parameter data message ((nextRand ^ i) ρ)) =
-        reference.cache (blk parameter data message ((nextRand ^ i) ρ))) →
-      ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message attempts ρ) budget state] *
+      (∀ i, i < attempts → state.cache (blk parameter data message ((nextRand (data.steps message) ^ i) ρ)) =
+        reference.cache (blk parameter data message ((nextRand (data.steps message) ^ i) ρ))) →
+      ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts ρ) budget state] *
           W out.1.1 out.2 ≤
-        walk nextRand ForestPrice.landing (stOf parameter data message reference)
+        walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
           (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts ρ := by
   intro attempts
   induction attempts with
@@ -185,17 +182,17 @@ theorem scan_boundW
       rw [signCostSourceLoop_succ]
       have hnext : ∀ s', Related parameter data message reference s' →
           (∀ x, x ≠ blk parameter data message ρ → s'.cache x = state.cache x) → ∀ b,
-          ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message attempts (nextRand ρ)) b s'] *
+          ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts (nextRand (data.steps message) ρ)) b s'] *
             W out.1.1 out.2 ≤
-          walk nextRand ForestPrice.landing (stOf parameter data message reference)
+          walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
             (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts
-            (nextRand ρ) := by
+            (nextRand (data.steps message) ρ) := by
         intro s' hrel' hsame b
-        refine ih (Nat.le_of_succ_le hA) b s' (nextRand ρ) hrel' fun i hi => ?_
-        have hpow : (nextRand ^ i) (nextRand ρ) = (nextRand ^ (i + 1)) ρ := by
+        refine ih (Nat.le_of_succ_le hA) b s' (nextRand (data.steps message) ρ) hrel' fun i hi => ?_
+        have hpow : (nextRand (data.steps message) ^ i) (nextRand (data.steps message) ρ) = (nextRand (data.steps message) ^ (i + 1)) ρ := by
           rw [pow_succ, Equiv.Perm.mul_apply]
         rw [hpow, hsame _ (blk_ne_of_ne parameter data message
-          (nextRand_pow_ne ρ (i + 1) (Nat.succ_pos i) (by omega)))]
+          (nextRand_pow_ne (data.steps message) ρ (i + 1) (Nat.succ_pos i) (by omega)))]
         exact hahead (i + 1) (Nat.succ_lt_succ hi)
       refine le_trans (trial_boundS tg initial model parameter data message hparse reference ρ gf gp W hWabort
         (hWfin ρ) _ state hrel _ hnext budget) ?_
@@ -207,9 +204,9 @@ theorem scan_boundW
           have hst : stOf parameter data message reference ρ = .fresh := by simp [stOf, hc]
           rw [walk_succ_fresh _ _ _ _ hst]
           simp only [Option.elim]
-          set bound := walk nextRand ForestPrice.landing (stOf parameter data message reference)
+          set bound := walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
             (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts
-            (nextRand ρ)
+            (nextRand (data.steps message) ρ)
           have hsplit : (∑' u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] *
               (if Landed parameter (blockIndex u0) then gf (viewOf u0) else bound)) =
               (∑' u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] *
@@ -245,7 +242,7 @@ theorem scan_post (hparse : ∀ ρ, model.parse (blk parameter data message ρ) 
       ∀ out ∈ support (interp tg initial model (finishRest parameter data message ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail) :
     ∀ attempts budget (s : DebtState HashInput HashOutput Coordinate) (ρ : Randomness), Prepared initial s →
-      ∀ out ∈ support (interp tg initial model (signCostSourceLoop parameter data message attempts ρ) budget s),
+      ∀ out ∈ support (interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts ρ) budget s),
         ∀ r, out.1.1 = some r → SignPost parameter data message Fail s out.2 out.1.2.1 r := by
   intro attempts
   induction attempts with
@@ -302,7 +299,7 @@ theorem scan_post (hparse : ∀ ρ, model.parse (blk parameter data message ρ) 
               · exact Or.inr ⟨hn, res.1, hb0, hl⟩
               · exact Or.inl (hb0.trans hs.symm)
             · exact Or.inl (hrest _ (blk_ne_of_ne parameter data message hρ))
-          rcases ih _ res.2 (nextRand ρ) hprep1 o ho r hr with ⟨hrn, hrv, hrel⟩ | ⟨ρs, u0, hsel, hrev, hsig, hfl⟩
+          rcases ih _ res.2 (nextRand (data.steps message) ρ) hprep1 o ho r hr with ⟨hrn, hrv, hrel⟩ | ⟨ρs, u0, hsel, hrev, hsig, hfl⟩
           · exact Or.inl ⟨hrn, hrv, fun ρ' => (hrel1 ρ').trans parameter data message (hrel ρ')⟩
           · obtain ⟨hs0, hland, hs0r, hothers⟩ := hsel
             have hr1 := hrel1 ρs
@@ -343,7 +340,7 @@ theorem source_post (hparse : ∀ ρ, model.parse (blk parameter data message ρ
 theorem avoids_scan :
     ∀ attempts ρ, Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate)
       (fun x => IsMsgInput x ∧ ∀ ρ, x ≠ blk parameter data message ρ)
-      (signCostSourceLoop parameter data message attempts ρ) := by
+      (signCostSourceLoop parameter data message (data.step message) attempts ρ) := by
   intro attempts
   induction attempts with
   | zero => intro ρ; exact avoids_pure _ _

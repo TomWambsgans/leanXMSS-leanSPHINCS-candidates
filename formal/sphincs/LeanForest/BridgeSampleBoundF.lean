@@ -43,7 +43,7 @@ set_option maxHeartbeats 1000000 in
 theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (remaining : RemainingOutputs) (steps : Message → Randomness) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (known : Knowledge Coordinate)
     (hk : known ∈ support (exposeR (aboveList (truncateHash parameterOutput) prepared.1)
@@ -57,7 +57,7 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
     (ho : H0.checkOptF b t o = true) (hon : H0.checkOptN t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
     Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
         (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-          (sampleData parameterOutput fixed highs remaining)))) known prepared.2] ≤
+          (sampleData parameterOutput fixed highs remaining steps)))) known prepared.2] ≤
       ENNReal.ofReal (ρ * (q - keygenCost : ℕ) / 2 ^ 128) +
         (((q - keygenCost : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + failMass (failSet prepared.1)) +
           signatureLimit * failMass (failSet prepared.1)) +
@@ -68,7 +68,7 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
             ((q - keygenCost : ℕ) * failMass (failSet prepared.1) + signatureLimit * failMass (failSet prepared.1))) +
         2 * lam (H0.LmaxOf (q - keygenCost)) 0 (q - keygenCost) := by
   set param := truncateHash parameterOutput with hparam
-  set data := sampleData parameterOutput fixed highs remaining with hdata
+  set data := sampleData parameterOutput fixed highs remaining steps with hdata
   set model := sampleModel parameterOutput highs with hmodel
   set tgA := targetingA parameterOutput fixed highs remaining prepared.1 with htgA
   set start : State := DebtState.start prepared.2 known with hstart
@@ -105,7 +105,7 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
   have hfail : ∀ m ρ' digest budget (s1 : State), Prepared prepared.2 s1 →
       ∀ out ∈ support (interp tgA prepared.2 model (finishRest param data m ρ' digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fset :=
-    fun m ρ' digest budget s1 hprep out hout hnone => finishRest_fail parameterOutput fixed highs remaining
+    fun m ρ' digest budget s1 hprep out hout hnone => finishRest_fail parameterOutput fixed highs remaining steps
       prepared hprepared tgA m ρ' digest budget s1 hprep out hout hnone
   have hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p) := sampleModel_parse parameterOutput highs
   have hMi : model.incoming = Address.inputCoordinate := sampleModel_incoming parameterOutput highs
@@ -201,7 +201,7 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
       refine le_trans (le_of_eq ?_) bot_le
       rfl
   -- pointwise split and summation
-  refine le_trans (stopped_le_interp_exposeV hb adversary q hq parameterOutput fixed highs remaining prepared
+  refine le_trans (stopped_le_interp_exposeV hb adversary q hq parameterOutput fixed highs remaining steps prepared
     hprepared tgA known hk) ?_
   change Pr[_ | run >>= fun result => (fun table => (table, result)) <$> completion result.2.known] ≤ _
   have hstep : ∀ out, Pr[= out | run] *
@@ -242,7 +242,7 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
               simp only [tableExtending]
               cases out.2.known c <;> rfl
             rcases small_pointwiseF parameterOutput fixed highs remaining prepared hprepared known hk ρ adversary q
-              out hout T hTe h with h1 | h2 | h3
+              steps out hout T hTe h with h1 | h2 | h3
             · exact Or.inl h1
             · exact Or.inr (Or.inl h2)
             · exact Or.inr (Or.inr h3)

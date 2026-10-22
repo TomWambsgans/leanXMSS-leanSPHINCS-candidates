@@ -1,8 +1,8 @@
 import LeanForest.Scheme
 
 /-!
-The signer variant with a truly uniform randomizer base per signing call (attempt `i` uses
-`start + i`). Key derivation and surrogate
+The signer variant with a truly uniform randomizer base and step half per signing call (attempt `i`
+uses `start + i * walkStep half`). Key derivation and surrogate
 derivation still use the master seed and the same shared hash oracle as the reference scheme.
 This is distinct from Rust's seed-derived randomizers; no equivalence is assumed.
 -/
@@ -15,21 +15,22 @@ open Concrete
 
 variable [Params]
 
-/-- The scan from a start: no randomness. -/
-def scanLoop (sk : Seeded.SecretKey) (message : Message) :
+/-- The scan from a start with a step: no randomness. -/
+def scanLoop (sk : Seeded.SecretKey) (message : Message) (step : Randomness) :
     Nat → Randomness → OracleComp HashSpec (Option Randomness)
   | 0, _ => pure none
   | attempts + 1, randomness => do
       let result ← Seeded.signAttempt sk message randomness
       match result with
       | some _ => pure (some randomness)
-      | none => scanLoop sk message attempts (randomness + 1)
+      | none => scanLoop sk message step attempts (randomness + step)
 
-/-- One uniform start, then the scan. -/
+/-- One uniform start and step half, then the scan. -/
 noncomputable def signDigestLoop (sk : Seeded.SecretKey) (message : Message) (attempts : Nat) :
     OracleComp OracleWorld (Option Randomness) := do
   let start ← liftM ($ᵗ Randomness : ProbComp Randomness)
-  liftM (scanLoop sk message attempts start)
+  let half ← liftM ($ᵗ Randomness : ProbComp Randomness)
+  liftM (scanLoop sk message (walkStep half) attempts start)
 
 /-- Assemble the signature after a randomizer lands, using the reference hash layouts. -/
 def finishSign (sk : Seeded.SecretKey) (message : Message) (randomness : Randomness) :

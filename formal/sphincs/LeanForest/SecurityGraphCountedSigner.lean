@@ -211,21 +211,24 @@ theorem finishCostSource_correct (f : QueryImpl HashSpec Id) (parameter : Public
     eval_finishSign_assembled f parameter seed data table hdata htable message randomness hland,
     hashCalls_finishSign_exact f parameter seed data hdata]
 
-/-- The scan from a start: no randomness. -/
+/-- The scan from a start with a step: no randomness. -/
 noncomputable def signCostSourceLoop (parameter : PublicParameter) (data : PublicData)
-    (message : Message) : Nat → Randomness → OracleComp CostSpec (Option Signature)
+    (message : Message) (step : Randomness) : Nat → Randomness → OracleComp CostSpec (Option Signature)
   | 0, _ => pure none
   | attempts + 1, randomness => do
       let first ← liftM (messageDigestCall parameter data.root message randomness :
         OracleComp HashSpec HashOutput)
       if Landed parameter (blockIndex first) then
         finishCostSource parameter data message randomness
-      else signCostSourceLoop parameter data message attempts (randomness + 1)
+      else signCostSourceLoop parameter data message step attempts (randomness + step)
 
-/-- One uniform start, then the scan. -/
+/-- The step of the walk of `message`. -/
+def PublicData.step (data : PublicData) (message : Message) : Randomness := walkStep (data.steps message)
+
+/-- One uniform start, then the scan with the message's step. -/
 noncomputable def signCostSource (parameter : PublicParameter) (data : PublicData)
     (message : Message) : OracleComp CostSpec (Option Signature) := do
   let start ← liftM ($ᵗ Randomness : ProbComp Randomness)
-  signCostSourceLoop parameter data message digestAttemptLimit start
+  signCostSourceLoop parameter data message (data.step message) digestAttemptLimit start
 
 end LeanForest.Security.GraphView

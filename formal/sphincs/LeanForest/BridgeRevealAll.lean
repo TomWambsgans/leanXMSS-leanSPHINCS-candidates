@@ -129,11 +129,11 @@ theorem loop_boundV
       ∀ out ∈ support (interp tg initial model (finishCostSource parameter data message ρ) b s'),
         V out.1.2.1 ≤ pairWeight parameter data message reference gf gp ρ u0) :
     ∀ attempts, attempts ≤ 2 ^ 128 → ∀ budget state ρ, Related parameter data message reference state →
-      (∀ i, i < attempts → state.cache (blk parameter data message ((nextRand ^ i) ρ)) =
-        reference.cache (blk parameter data message ((nextRand ^ i) ρ))) →
-      ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message attempts ρ) budget state] *
+      (∀ i, i < attempts → state.cache (blk parameter data message ((nextRand (data.steps message) ^ i) ρ)) =
+        reference.cache (blk parameter data message ((nextRand (data.steps message) ^ i) ρ))) →
+      ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts ρ) budget state] *
           V out.1.2.1 ≤
-        walk nextRand ForestPrice.landing (stOf parameter data message reference)
+        walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
           (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts ρ := by
   intro attempts
   induction attempts with
@@ -149,17 +149,17 @@ theorem loop_boundV
       rw [signCostSourceLoop_succ]
       have hnext : ∀ s', Related parameter data message reference s' →
           (∀ x, x ≠ blk parameter data message ρ → s'.cache x = state.cache x) → ∀ b,
-          ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message attempts (nextRand ρ)) b s'] *
+          ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts (nextRand (data.steps message) ρ)) b s'] *
             V out.1.2.1 ≤
-          walk nextRand ForestPrice.landing (stOf parameter data message reference)
+          walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
             (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts
-            (nextRand ρ) := by
+            (nextRand (data.steps message) ρ) := by
         intro s' hrel' hsame b
-        refine ih (Nat.le_of_succ_le hA) b s' (nextRand ρ) hrel' fun i hi => ?_
-        have hpow : (nextRand ^ i) (nextRand ρ) = (nextRand ^ (i + 1)) ρ := by
+        refine ih (Nat.le_of_succ_le hA) b s' (nextRand (data.steps message) ρ) hrel' fun i hi => ?_
+        have hpow : (nextRand (data.steps message) ^ i) (nextRand (data.steps message) ρ) = (nextRand (data.steps message) ^ (i + 1)) ρ := by
           rw [pow_succ, Equiv.Perm.mul_apply]
         rw [hpow, hsame _ (blk_ne_of_ne parameter data message
-          (nextRand_pow_ne ρ (i + 1) (Nat.succ_pos i) (by omega)))]
+          (nextRand_pow_ne (data.steps message) ρ (i + 1) (Nat.succ_pos i) (by omega)))]
         exact hahead (i + 1) (Nat.succ_lt_succ hi)
       refine le_trans (trial_boundV tg initial model parameter data message hparse reference ρ gf gp V hV0
         (hVfin ρ) _ state hrel _ hnext budget) ?_
@@ -171,9 +171,9 @@ theorem loop_boundV
           have hst : stOf parameter data message reference ρ = .fresh := by simp [stOf, hc]
           rw [walk_succ_fresh _ _ _ _ hst]
           simp only [Option.elim]
-          set bound := walk nextRand ForestPrice.landing (stOf parameter data message reference)
+          set bound := walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
             (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts
-            (nextRand ρ)
+            (nextRand (data.steps message) ρ)
           have hsplit : (∑' u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] *
               (if Landed parameter (blockIndex u0) then gf (viewOf u0) else bound)) =
               (∑' u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] *

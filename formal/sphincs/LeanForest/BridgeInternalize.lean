@@ -405,20 +405,21 @@ theorem Block.forward (sk : LeanForest.Seeded.SecretKey) (input : AdvSpec.Domain
 attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Randomized.finishSign
   LeanForest.Seeded.signAttempt
 
-theorem Only.scanLoop (sk : LeanForest.Seeded.SecretKey) (message : Message) :
-    ∀ attempts randomness, Short.Only (Randomized.scanLoop sk message attempts randomness)
+theorem Only.scanLoop (sk : LeanForest.Seeded.SecretKey) (message : Message) (step : Randomness) :
+    ∀ attempts randomness, Short.Only (Randomized.scanLoop sk message step attempts randomness)
   | 0, _ => Short.Only.pure' _
   | attempts + 1, randomness => by
       rw [Randomized.scanLoop]
       refine Short.Only.bind (Short.Seeded.Only.signAttempt _ _ _) (fun result => ?_)
       cases result with
-      | none => exact Only.scanLoop sk message attempts (randomness + 1)
+      | none => exact Only.scanLoop sk message step attempts (randomness + step)
       | some _ => exact Short.Only.pure' _
 
 theorem OnlyW.signDigestLoop (sk : LeanForest.Seeded.SecretKey) (message : Message)
     (attempts : Nat) : OnlyW (Randomized.signDigestLoop sk message attempts) := by
   rw [Randomized.signDigestLoop]
-  exact OnlyW.bind (OnlyW.liftProb _) (fun _ => OnlyW.liftHash (Only.scanLoop sk message _ _))
+  refine OnlyW.bind (OnlyW.liftProb _) (fun _ => ?_)
+  exact OnlyW.bind (OnlyW.liftProb _) (fun _ => OnlyW.liftHash (Only.scanLoop sk message _ _ _))
 
 theorem OnlyW.sign (sk : LeanForest.Seeded.SecretKey) (message : Message) :
     OnlyW (Randomized.sign sk message) := by

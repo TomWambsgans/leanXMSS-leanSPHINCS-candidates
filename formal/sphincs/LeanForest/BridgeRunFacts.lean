@@ -455,7 +455,7 @@ theorem closedRuns_ordinary_bind (x : HashInput) {β : Type} (next : HashOutput 
 
 /-- **A completed signing call reveals upward-closed chains.** -/
 theorem closedRuns_loop (parameter : PublicParameter) (data : PublicData) (message : Message) :
-    ∀ attempts ρ, ClosedRuns tg initial model (signCostSourceLoop parameter data message attempts ρ) := by
+    ∀ attempts ρ, ClosedRuns tg initial model (signCostSourceLoop parameter data message (data.step message) attempts ρ) := by
   intro attempts
   induction attempts with
   | zero => intro ρ; exact closedRuns_pure tg initial model _
@@ -494,7 +494,7 @@ theorem avoids_finishRest_fchain (p : PublicParameter) (parameter : PublicParame
 /-- **The signing loop queries no forest step input.** -/
 theorem avoids_loop_fchain (p : PublicParameter) (parameter : PublicParameter) (data : PublicData)
     (message : Message) : ∀ attempts ρ, Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate) (IsFchainIn p)
-      (signCostSourceLoop parameter data message attempts ρ) := by
+      (signCostSourceLoop parameter data message (data.step message) attempts ρ) := by
   intro attempts
   induction attempts with
   | zero => intro ρ; exact avoids_pure _ _

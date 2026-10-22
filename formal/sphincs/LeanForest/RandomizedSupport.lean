@@ -69,11 +69,11 @@ attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Seeded.tre
   Seeded.treeNode Seeded.subNode Seeded.topNode Seeded.spineNode Randomized.finishSign
 
 /-- A successful scan leaves a cached answer certifying that it landed. -/
-theorem scanLoop_support (sk : Seeded.SecretKey) (message : Message) :
+theorem scanLoop_support (sk : Seeded.SecretKey) (message : Message) (step : Randomness) :
     ∀ (n : Nat) (start : Randomness) (cache : QueryCache HashSpec) (result : Option Randomness)
       (cache' : QueryCache HashSpec),
       (result, cache') ∈ support ((simulateQ randomOracle
-        (Randomized.scanLoop sk message n start)).run cache) →
+        (Randomized.scanLoop sk message step n start)).run cache) →
       cache ≤ cache' ∧ ∀ ρ, result = some ρ → ∃ answer,
         cache' (msgInput sk message ρ) = some answer ∧
           Landed sk.parameter (blockIndex answer) := by
@@ -99,7 +99,7 @@ theorem scanLoop_support (sk : Seeded.SecretKey) (message : Message) :
         cases Option.some.inj heq
         exact ⟨answer, hcached, hland⟩
       next =>
-        obtain ⟨hrestLe, hresult⟩ := ih (start + 1) cacheMid result cache' hrest
+        obtain ⟨hrestLe, hresult⟩ := ih (start + step) cacheMid result cache' hrest
         exact ⟨hqueryLe.trans hrestLe, hresult⟩
 
 /-- A successful randomized grinding loop leaves a cached answer certifying that it landed. -/
@@ -113,7 +113,9 @@ theorem randomizedDigest_support (sk : Seeded.SecretKey) (message : Message)
         Landed sk.parameter (blockIndex answer) := by
   rw [run_randomizedDigest_start, mem_support_bind_iff] at hmem
   obtain ⟨start, _, hmem⟩ := hmem
-  exact scanLoop_support sk message n start cache result cache' hmem
+  rw [mem_support_bind_iff] at hmem
+  obtain ⟨half, _, hmem⟩ := hmem
+  exact scanLoop_support sk message _ n start cache result cache' hmem
 
 /-- A successful randomized sign run replays as assembly with a landed randomizer. -/
 theorem randomized_sign_replay (sk : Seeded.SecretKey) (message : Message)

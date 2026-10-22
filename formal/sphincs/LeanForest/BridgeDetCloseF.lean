@@ -187,7 +187,7 @@ open Completeness SeedModel Graph Assembly Reduce Internalize
 set_option maxRecDepth 100000 in
 /-- **Small budgets, seed-free win.** -/
 theorem small_seedFree_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
-    (hq : q < 2 ^ 256)
+    (steps : Message → Randomness) (hq : q < 2 ^ 256)
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℚ) (hκ0 : 0 ≤ κ) (hκ1 : κ ≤ 1) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
       (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ))
@@ -195,10 +195,10 @@ theorem small_seedFree_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
     (hrt : H0.checkRate b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
     (ho : H0.checkOptF b t o = true) (hon : H0.checkOptN t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
-    Pr[Win | seedFreeExperiment (internalize adversary) q] ≤
+    Pr[Win | seedFreeExperiment (internalize adversary) q steps] ≤
       (smallMainFF ρ q o.B (κ * ((2 ^ b * on.En : ℚ) / 2)) +
         2 * lam (H0.LmaxOf (q - keygenCost)) 0 (q - keygenCost)) + smallFailF q * expectedFail := by
-  refine le_trans (seedFree_le_exposeP adversary q) ?_
+  refine le_trans (seedFree_le_exposeP adversary q steps) ?_
   set A := smallMainFF ρ q o.B (κ * ((2 ^ b * on.En : ℚ) / 2)) +
     2 * lam (H0.LmaxOf (q - keygenCost)) 0 (q - keygenCost) with hA
   set C := smallFailF q with hC
@@ -209,10 +209,10 @@ theorem small_seedFree_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (
         (knownOf (truncateHash parameterOutput) fixed)),
       Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
           (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-            (sampleData parameterOutput fixed highs remaining)))) known prepared.2] ≤
+            (sampleData parameterOutput fixed highs remaining steps)))) known prepared.2] ≤
         A + C * failMass (failSet prepared.1) := by
     intro parameterOutput fixed highs remaining prepared hprepared known hk
-    refine le_trans (sample_boundF hb adversary hnr q hq parameterOutput fixed highs remaining prepared
+    refine le_trans (sample_boundF hb adversary hnr q hq parameterOutput fixed highs remaining steps prepared
       hprepared known hk ρ hN (κ : ℝ) hκ hκ1R b N hbb hNN t o on hpt qtop hrt hqtop ho hon hcthr) (le_of_eq ?_)
     rw [hA, hC]
     unfold smallMainFF smallFailF
@@ -248,9 +248,9 @@ theorem det_smallF (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ)
     Det.forgeAdvantageDet adversary ≤
       smallMainFF ρ q o.B (κ * ((2 ^ b * on.En : ℚ) / 2)) + smallFailF q * (2 : ℝ≥0∞)⁻¹ ^ 201 +
         2 * lam (H0.LmaxOf (q - keygenCost)) 0 (q - keygenCost) + 2 * ((q : ℝ≥0∞) / 2 ^ 256) := by
-  refine le_trans (Det.forgeAdvantageDet_le_seedFree adversary q hbound) (add_le_add ?_ le_rfl)
-  refine le_trans (small_seedFree_boundF hb (Memo.memoAdv adversary) (Memo.memoAdv_noRepeat adversary) q hq ρ hN
-    κ hκ0 hκ1 hκ b N hbb hNN t o on hpt qtop hrt hqtop ho hon hcthr) ?_
+  refine le_trans (Det.forgeAdvantageDet_le_seedFree adversary q hbound _ fun steps =>
+    small_seedFree_boundF hb (Memo.memoAdv adversary) (Memo.memoAdv_noRepeat adversary) q steps hq ρ hN
+      κ hκ0 hκ1 hκ b N hbb hNN t o on hpt qtop hrt hqtop ho hon hcthr) (add_le_add ?_ le_rfl)
   rw [add_right_comm]
   exact add_le_add (add_le_add le_rfl (mul_le_mul_right expectedFail_le _)) le_rfl
 

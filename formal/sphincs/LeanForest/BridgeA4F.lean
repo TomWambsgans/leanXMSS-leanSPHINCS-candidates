@@ -87,7 +87,7 @@ value with payoff 1 at every cached landed pair, 0 for a fresh start that ends a
 and 1 for a cached start that ends at a fresh position (pending mass). -/
 noncomputable def offMass (parameter : PublicParameter) (data : PublicData) (s : State) (m : Message) : ℝ≥0∞ :=
   (Fintype.card Randomness : ℝ≥0∞)⁻¹ *
-    gv nextRand landing (stOf parameter data m s) (fun _ => 1) 0 1 digestAttemptLimit
+    gv (nextRand (data.steps m)) landing (stOf parameter data m s) (fun _ => 1) 0 1 digestAttemptLimit
 
 /-- The coin part of the reveal rate: the mass off the identity of the groups of the live messages
 and the creation rate of the remaining budget. -/
@@ -246,8 +246,8 @@ theorem offMass_newPair (s : State) (p : Pair) (hp0 : s.cache (pblk parameter da
   have hst : st p.2 = .fresh := by
     have h : s.cache (blk parameter data p.1 p.2) = none := hp0
     simp [hstdef, stOf, h]
-  set Gh := gv nextRand landing (Function.update st p.2 .hit) (fun _ => (1 : ℝ≥0∞)) 0 1 digestAttemptLimit with hGh
-  set Gm := gv nextRand landing (Function.update st p.2 .miss) (fun _ => (1 : ℝ≥0∞)) 0 1 digestAttemptLimit with hGm
+  set Gh := gv (nextRand (data.steps p.1)) landing (Function.update st p.2 .hit) (fun _ => (1 : ℝ≥0∞)) 0 1 digestAttemptLimit with hGh
+  set Gm := gv (nextRand (data.steps p.1)) landing (Function.update st p.2 .miss) (fun _ => (1 : ℝ≥0∞)) 0 1 digestAttemptLimit with hGm
   have hpt : ∀ u0, offMass parameter data (withPair parameter data s p u0) p.1 =
       if Landed parameter (blockIndex u0) then (fun _ : View => cinv * Gh) (viewOf u0) else cinv * Gm := by
     intro u0
@@ -256,9 +256,9 @@ theorem offMass_newPair (s : State) (p : Pair) (hp0 : s.cache (pblk parameter da
     split_ifs <;> rfl
   simp only [hpt]
   rw [pairE_landed parameter (fun _ => cinv * Gh) (cinv * Gm), freshAvg_const _ Finset.univ_nonempty]
-  have hc := creation_le (σ := nextRand) (p := landing) landing_le_one st (fun _ => (1 : ℝ≥0∞)) 0 1
+  have hc := creation_le (σ := (nextRand (data.steps p.1))) (p := landing) landing_le_one st (fun _ => (1 : ℝ≥0∞)) 0 1
     ENNReal.zero_ne_top ENNReal.one_ne_top p.2 hst digestAttemptLimit
-    (fun j h0 hj => nextRand_pow_ne p.2 j h0 (lt_trans hj (by unfold digestAttemptLimit; norm_num)))
+    (fun j h0 hj => nextRand_pow_ne (data.steps p.1) p.2 j h0 (lt_trans hj (by unfold digestAttemptLimit; norm_num)))
   have hupd : Function.update (fun _ : Randomness => (1 : ℝ≥0∞)) p.2 (0 + 1) = fun _ => 1 := by
     funext x
     by_cases hx : x = p.2
@@ -268,7 +268,7 @@ theorem offMass_newPair (s : State) (p : Pair) (hp0 : s.cache (pblk parameter da
   unfold offMass rateS
   calc landing * (cinv * Gh) + (1 - landing) * (cinv * Gm)
       = cinv * (landing * Gh + (1 - landing) * Gm) := by ring
-    _ ≤ cinv * (gv nextRand landing st (fun _ => (1 : ℝ≥0∞)) 0 1 digestAttemptLimit + (1 - landing) + 1) :=
+    _ ≤ cinv * (gv (nextRand (data.steps p.1)) landing st (fun _ => (1 : ℝ≥0∞)) 0 1 digestAttemptLimit + (1 - landing) + 1) :=
         mul_le_mul' le_rfl hc
     _ = _ := by ring
 

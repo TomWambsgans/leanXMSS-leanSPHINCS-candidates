@@ -440,12 +440,12 @@ theorem compile_signAttempt (seed : MasterSeed) (material : Material)
 
 /-- The scan from a start makes only digest calls, which do not depend on the seed. -/
 theorem compiled_scanLoop_eq (left right : MasterSeed) (material : Material) (root : Digest)
-    (message : Message) :
+    (message : Message) (step : Randomness) :
     ∀ (attempts : Nat) (randomness : Randomness),
       simulateQ (compileHash left material)
-        (Randomized.scanLoop ⟨left, parameter material, root⟩ message attempts randomness) =
+        (Randomized.scanLoop ⟨left, parameter material, root⟩ message step attempts randomness) =
       simulateQ (compileHash right material)
-        (Randomized.scanLoop ⟨right, parameter material, root⟩ message attempts randomness) := by
+        (Randomized.scanLoop ⟨right, parameter material, root⟩ message step attempts randomness) := by
   intro attempts
   induction attempts with
   | zero => intro randomness; simp only [Randomized.scanLoop, simulateQ_pure]
@@ -455,7 +455,7 @@ theorem compiled_scanLoop_eq (left right : MasterSeed) (material : Material) (ro
       apply bind_congr
       intro result
       cases result with
-      | none => exact ih (randomness + 1)
+      | none => exact ih (randomness + step)
       | some index => rw [simulateQ_pure, simulateQ_pure]
 
 /-- The genuinely private start draw is retained while compiling the grinding loop. -/

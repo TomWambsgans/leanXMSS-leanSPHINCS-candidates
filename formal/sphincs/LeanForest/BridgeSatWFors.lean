@@ -43,7 +43,7 @@ theorem interp_weight_constW {s : State} {α : Type} (computation : OracleComp C
 (the arithmetic of `sign_term`). -/
 theorem walk_avg_le_grpM {X : Multiset View → ℝ≥0∞} (hX : Monotone' X) (s : State) (d : Multiset View)
     (excl : Pair → Prop) :
-    X d + (Fintype.card Randomness : ℝ≥0∞)⁻¹ * ∑ start, walk nextRand landing (stOf parameter data m s)
+    X d + (Fintype.card Randomness : ℝ≥0∞)⁻¹ * ∑ start, walk (nextRand (data.steps m)) landing (stOf parameter data m s)
         (poolValue parameter data m s (fun ρ v => if excl (m, ρ) then 0 else X (d + {v}) - X d))
         (freshAvg Finset.univ (fun v => X (d + {v}) - X d)) 0 digestAttemptLimit start ≤
       grpM parameter data s excl m (fun e => freshAvg Finset.univ fun v => X (e + {v})) d := by
@@ -57,7 +57,7 @@ theorem walk_avg_le_grpM {X : Multiset View → ℝ≥0∞} (hX : Monotone' X) (
     calc X e = freshAvg Finset.univ (fun _ : View => X e) := (freshAvg_const _ Finset.univ_nonempty _).symm
       _ ≤ _ := freshAvg_mono _ fun v _ => hX _ _ (Multiset.le_add_right _ _)
   -- the base value joins every walk
-  have hbase : X d = c * ∑ start : Randomness, walk nextRand landing (stOf parameter data m s) (fun _ => X d)
+  have hbase : X d = c * ∑ start : Randomness, walk (nextRand (data.steps m)) landing (stOf parameter data m s) (fun _ => X d)
       (X d) (X d) digestAttemptLimit start := by
     simp only [walk_const landing_le_one, Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
     rw [← mul_assoc, hcard, one_mul]
@@ -123,7 +123,7 @@ theorem upper_expectW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = 
   have hscan : ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
         (weight tg initial out.2 *
           (freshNewWeight parameter data m s gf out + outWeight parameter data m s 0 gp out)) ≤
-      weight tg initial s * (c * ∑ start, walk nextRand landing (stOf parameter data m s)
+      weight tg initial s * (c * ∑ start, walk (nextRand (data.steps m)) landing (stOf parameter data m s)
         (poolValue parameter data m s gp) (freshAvg Finset.univ gf) 0 digestAttemptLimit start) := by
     unfold signCostSource
     rw [interp_liftProb_bind, tsum_probOutput_bind_mul]
@@ -152,7 +152,7 @@ theorem fresh_expectW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = 
   unfold signCostSource
   rw [interp_liftProb_bind, tsum_probOutput_bind_mul]
   have hstart : ∀ start : Randomness, ∑' out, Pr[= out | interp tg initial model
-      (signCostSourceLoop parameter data m digestAttemptLimit start) budget s] *
+      (signCostSourceLoop parameter data m (data.step m) digestAttemptLimit start) budget s] *
       (weight tg initial out.2 * freshNewWeight parameter data m s gf out) ≤
       weight tg initial s * freshAvg Finset.univ gf := by
     intro start

@@ -180,21 +180,22 @@ theorem OnlyC.finishCostSource (parameter : PublicParameter) (data : PublicData)
     refine OnlyC.bind (OnlyC.sequenceFin _ fun _ => OnlyC.coordCostSource _ _ _ _) (fun _ => ?_)
     exact OnlyC.bind (OnlyC.tick _) (fun _ => OnlyC.pure' _)
 
-theorem OnlyC.signCostSourceLoop (parameter : PublicParameter) (data : PublicData) (message : Message) :
+theorem OnlyC.signCostSourceLoop (parameter : PublicParameter) (data : PublicData) (message : Message)
+    (step : Randomness) :
     ∀ attempts randomness,
-      OnlyC (GraphView.signCostSourceLoop parameter data message attempts randomness)
+      OnlyC (GraphView.signCostSourceLoop parameter data message step attempts randomness)
   | 0, _ => OnlyC.pure' _
   | attempts + 1, randomness => by
       rw [GraphView.signCostSourceLoop]
       refine OnlyC.bind (OnlyC.liftHash (Short.Only.messageDigestCall _ _ _ _)) (fun first => ?_)
       split
       · exact OnlyC.finishCostSource _ _ _ _
-      · exact OnlyC.signCostSourceLoop parameter data message attempts (randomness + 1)
+      · exact OnlyC.signCostSourceLoop parameter data message step attempts (randomness + step)
 
 theorem OnlyC.signCostSource (parameter : PublicParameter) (data : PublicData) (message : Message) :
     OnlyC (GraphView.signCostSource parameter data message) := by
   unfold GraphView.signCostSource
-  exact OnlyC.bind (OnlyC.liftProb _) (fun _ => OnlyC.signCostSourceLoop parameter data message _ _)
+  exact OnlyC.bind (OnlyC.liftProb _) (fun _ => OnlyC.signCostSourceLoop parameter data message _ _ _)
 
 theorem OnlyC.costInteraction (parameter : PublicParameter) (data : PublicData) {β : Type}
     (M : OracleComp AdvSpec β) (h : OnlyAdv M) :

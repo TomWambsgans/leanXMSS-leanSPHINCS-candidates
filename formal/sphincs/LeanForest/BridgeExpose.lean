@@ -67,10 +67,10 @@ set_option maxRecDepth 100000 in
 /-- **Seed-free to stopped, with exposure.** The stopped experiment may start from the known
 coordinates together with any list of table coordinates, chosen from the public, structural and
 outside samples. -/
-theorem seedFree_le_expose (adversary : Adversary) (q : Nat)
+theorem seedFree_le_expose (adversary : Adversary) (q : Nat) (steps : Message → Randomness)
     (event : Option Bool × List (HiddenCost.Entry HashInput) → Prop)
     (cs : HashOutput → HiddenGraph.Table → CoordinateHighs → RemainingOutputs → Eager.Table → List Coordinate) :
-    Pr[event | seedFreeExperiment adversary q] ≤
+    Pr[event | seedFreeExperiment adversary q steps] ≤
       Pr[HiddenReveal.StopOr event | do
         let parameterOutput ← $ᵗ HashOutput
         let fixed ← $ᵗ HiddenGraph.Table
@@ -83,9 +83,9 @@ theorem seedFree_le_expose (adversary : Adversary) (q : Nat)
           (outsideFn (splitMaterial parameterOutput highs remaining fixed)
             (splitAnswers highs remaining fixed) outsideTable)
           (HiddenCost.erase (HiddenCost.trace
-            (sampleProgram adversary q parameterOutput fixed highs remaining)))
+            (sampleProgram adversary q steps parameterOutput fixed highs remaining)))
           known] := by
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_seedFree_completion adversary q)]
+  rw [probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_seedFree_completion adversary q steps)]
   refine probEvent_bind_mono_support _ _ _ _ _ fun parameterOutput _ => ?_
   refine probEvent_bind_mono_support _ _ _ _ _ fun fixed _ => ?_
   refine probEvent_bind_mono_support _ _ _ _ _ fun highs _ => ?_
@@ -96,7 +96,7 @@ theorem seedFree_le_expose (adversary : Adversary) (q : Nat)
     (fun table known => HiddenRows.stopped (sampleModel parameterOutput highs) table
       (outsideFn (splitMaterial parameterOutput highs remaining fixed)
         (splitAnswers highs remaining fixed) outsideTable)
-      (HiddenCost.erase (HiddenCost.trace (sampleProgram adversary q parameterOutput fixed highs remaining)))
+      (HiddenCost.erase (HiddenCost.trace (sampleProgram adversary q steps parameterOutput fixed highs remaining)))
       known)
     (cs parameterOutput fixed highs remaining outsideTable) (knownOf (truncateHash parameterOutput) fixed)).symm]
   refine probEvent_bind_mono_support _ _ _ _ _ fun table htable => ?_
@@ -108,7 +108,7 @@ theorem seedFree_le_expose (adversary : Adversary) (q : Nat)
   rw [hiddenRun_eq]
   exact costRun_le_stopped (sampleModel parameterOutput highs) table
     (outsideFn (splitMaterial parameterOutput highs remaining fixed) (splitAnswers highs remaining fixed) outsideTable)
-    (sampleProgram adversary q parameterOutput fixed highs remaining) _
+    (sampleProgram adversary q steps parameterOutput fixed highs remaining) _
     (knownAgrees_exposeT table _ _ hagree) event
 
 /-- The preparation's search results read off an answer function. -/

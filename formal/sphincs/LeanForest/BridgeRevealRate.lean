@@ -187,7 +187,7 @@ message: the mean over the starts of the walk value with payoff 1 at every cache
 elsewhere. -/
 noncomputable def hitMass (s : State) (m : Message) : ℝ≥0∞ :=
   (Fintype.card Randomness : ℝ≥0∞)⁻¹ *
-    ∑ ρ, walk nextRand landing (stOf parameter data m s) (fun _ => 1) 0 0 digestAttemptLimit ρ
+    ∑ ρ, walk (nextRand (data.steps m)) landing (stOf parameter data m s) (fun _ => 1) 0 0 digestAttemptLimit ρ
 
 theorem hitMass_le_one (s : State) : hitMass parameter data s m ≤ 1 := by
   unfold hitMass
@@ -200,10 +200,10 @@ theorem hitMass_le_one (s : State) : hitMass parameter data s m ≤ 1 := by
 
 /-- A walk paying 1 at the cached landed pairs and `x` at a fresh landing pays at most `x` plus the
 walk of the cached landed pairs alone. -/
-theorem walk_hit_split (st : Randomness → St) (x : ℝ≥0∞) (attempts : ℕ) (ρ : Randomness) :
-    walk nextRand landing st (fun _ => 1) x 0 attempts ρ ≤
-      x + walk nextRand landing st (fun _ => 1) 0 0 attempts ρ := by
-  have h := walk_add (σ := nextRand) (p := landing) st (fun _ => 0) (fun _ => 1) x 0 0 0 attempts ρ
+theorem walk_hit_split (half : Randomness) (st : Randomness → St) (x : ℝ≥0∞) (attempts : ℕ) (ρ : Randomness) :
+    walk (nextRand half) landing st (fun _ => 1) x 0 attempts ρ ≤
+      x + walk (nextRand half) landing st (fun _ => 1) 0 0 attempts ρ := by
+  have h := walk_add (σ := (nextRand half)) (p := landing) st (fun _ => 0) (fun _ => 1) x 0 0 0 attempts ρ
   simp only [zero_add, add_zero] at h
   rw [h]
   exact add_le_add (walk_le landing_le_one st (fun _ => bot_le) le_rfl bot_le attempts ρ) le_rfl
@@ -212,7 +212,7 @@ theorem walk_hit_split (st : Randomness → St) (x : ℝ≥0∞) (attempts : ℕ
 theorem reveal_point (hparse : ∀ p, model.parse (pblk parameter data p) = none)
     {s : State} (hprep : Prepared initial s)
     (attempts budget : ℕ) (start : Randomness) (o1 : Run HashInput Coordinate (Option Signature) × State)
-    (ho1 : o1 ∈ support (interp tg initial model (signCostSourceLoop parameter data m attempts start) budget s))
+    (ho1 : o1 ∈ support (interp tg initial model (signCostSourceLoop parameter data m (data.step m) attempts start) budget s))
     (r : Option Signature) (hr : o1.1.1 = some r)
     (index : Index) (c : Coord) (sp : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (k : ℕ) (q : FPos)
     (hq : q.val ≤ k) (hrev : Coordinate.fchain index c sp j a i q ∈ o1.1.2.1) :
@@ -274,9 +274,9 @@ landing and 1 at a cached landed pair of the message. -/
 theorem reveal_scan_all (hparse : ∀ p, model.parse (pblk parameter data p) = none)
     {s : State} (attempts : ℕ) (hA : attempts ≤ 2 ^ 128) (budget : ℕ) (start : Randomness)
     (index : Index) (c : Coord) (sp : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (k : ℕ) (hk : k < chainTop) :
-    ∑' o1, Pr[= o1 | interp tg initial model (signCostSourceLoop parameter data m attempts start) budget s] *
+    ∑' o1, Pr[= o1 | interp tg initial model (signCostSourceLoop parameter data m (data.step m) attempts start) budget s] *
         (if ∃ q : FPos, q.val ≤ k ∧ Coordinate.fchain index c sp j a i q ∈ o1.1.2.1 then 1 else 0) ≤
-      walk nextRand landing (stOf parameter data m s) (fun _ => 1) revRate 0 attempts start := by
+      walk (nextRand (data.steps m)) landing (stOf parameter data m s) (fun _ => 1) revRate 0 attempts start := by
   have hparse' : ∀ ρ, model.parse (blk parameter data m ρ) = none := fun ρ => hparse (m, ρ)
   set g : View → ℝ≥0∞ := opensAt index c sp j a i k with hgdef
   set gp : Randomness → View → ℝ≥0∞ := fun _ v => g v with hgp
@@ -347,11 +347,11 @@ theorem reveal_le_all (hparse : ∀ p, model.parse (pblk parameter data p) = non
   simp only [hpr]
   rw [ENNReal.tsum_mul_left, tsum_fintype]
   calc _ ≤ cinv * ∑ start : Randomness, (revRate +
-          walk nextRand landing (stOf parameter data m s) (fun _ => 1) 0 0 digestAttemptLimit start) :=
+          walk (nextRand (data.steps m)) landing (stOf parameter data m s) (fun _ => 1) 0 0 digestAttemptLimit start) :=
         mul_le_mul' le_rfl (Finset.sum_le_sum fun start _ =>
           le_trans (reveal_scan_all tg initial model parameter data m hparse digestAttemptLimit
             (by unfold digestAttemptLimit; norm_num) budget start index c sp j a i k hk)
-            (walk_hit_split _ _ _ _))
+            (walk_hit_split _ _ _ _ _))
     _ = revRate + hitMass parameter data s m := by
         rw [Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_add, ← mul_assoc, hcard,
           one_mul]

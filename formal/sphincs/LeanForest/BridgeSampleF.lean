@@ -101,10 +101,10 @@ variable (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : Coo
 include hprepared hk in
 /-- **Pointwise split.** A correct guess or the refined bad event of a valid finished run is a
 payoff event of the linear potential, the contact event A4, or a cover without a decided hit. -/
-theorem small_pointwiseF (out : Run HashInput Coordinate HiddenBridge.Outcome × State)
+theorem small_pointwiseF (steps : Message → Randomness) (out : Run HashInput Coordinate HiddenBridge.Outcome × State)
     (hout : out ∈ support (interp (targetingA parameterOutput fixed highs remaining prepared.1) prepared.2
       (sampleModel parameterOutput highs)
-      (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+      (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
         (internalize adversary)) q (DebtState.start prepared.2 known)))
     (T : Coordinate → Digest) (hTe : tableExtending out.2.known T = T)
     (h : CorrectGuess T out.2 ∨ badAV parameterOutput fixed highs remaining prepared.1 T
@@ -113,14 +113,14 @@ theorem small_pointwiseF (out : Run HashInput Coordinate HiddenBridge.Outcome ×
       (∃ outcome, out.1.1 = some outcome ∧ SigningTranscript.Valid outcome.2.1 ∧
         A4ev (ctxA parameterOutput fixed highs remaining prepared known ρ)
           (sampleData parameterOutput fixed highs remaining).root T out.2 outcome out.1.2.1) ∨
-      finalValue (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+      finalValue (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
         (targetingA parameterOutput fixed highs remaining prepared.1) prepared.2 [] out = 1 := by
   set K := ctxA parameterOutput fixed highs remaining prepared known ρ with hK
   have hinv := inv_final parameterOutput fixed highs remaining prepared known ρ hk
     (targetingA parameterOutput fixed highs remaining prepared.1) _ q out hout
   have hfix := knownOf_extending_final (parameterOutput := parameterOutput) (fixed := fixed) (highs := highs)
     (prepared := prepared) (known := known) hk (tg := targetingA parameterOutput fixed highs remaining prepared.1)
-    (comp := costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+    (comp := costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
       (internalize adversary)) (total := q) out hout T hTe
   have hpay : Hit K.tg prepared.2 T out.2 → payoffA parameterOutput fixed highs remaining prepared known ρ T out.2 = 1 := by
     intro hh

@@ -4,9 +4,9 @@ import Mathlib.Data.Fintype.BigOperators
 import Mathlib.Algebra.BigOperators.Ring.Finset
 
 /-!
-# The value of the scan loop `R = R0 + i`
+# The value of the scan loop `R = R0 + i δ`
 
-A signer that derives one start `R0` per message and tries `R0, R0 + 1, ...` is, for one message and
+A signer that derives one start `R0` per message and tries `R0, R0 + δ, ...` is, for one message and
 one state of the digest cache, a walk over positions: a position is `fresh` (digest not queried: it
 lands with probability `p`), a cached `miss` (the walk goes on) or a cached `hit` (the walk stops
 there). `walk` is the expected payoff of the walk from a start, with a payoff `item x` at a cached

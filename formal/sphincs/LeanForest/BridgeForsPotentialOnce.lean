@@ -1,6 +1,6 @@
 import LeanForest.BridgeGroups
 
-/-! The forest potential of the scan signer `R = R0 + i`, for adversaries that never request a
+/-! The forest potential of the scan signer `R = R0 + i δ`, for adversaries that never request a
 signature on the same message twice. A term with base function `f` is forecast by
 `creations … (fun I => grpAll s excl (live messages) (virtualOnce … f n I) d) k []`: the future pairs
 are independent coins on uniform views, the cached pairs of the messages not yet signed act through
@@ -420,9 +420,9 @@ theorem rate_of_fair {Cmax Lmax : ℕ} (hfair : FairS w Cmax Lmax) (s : State) (
   refine le_trans hfair.rate ?_
   rw [show landing * w * idMassM parameter data s m = w * (landing * idMassM parameter data s m) by ring]
   refine mul_le_mul' le_rfl ?_
-  have hid := idMass_ge (σ := nextRand) (p := landing) (A := digestAttemptLimit) landing_le_one
+  have hid := idMass_ge (σ := (nextRand (data.steps m))) (p := landing) (A := digestAttemptLimit) landing_le_one
     (stOf parameter data m s)
-    (fun x j h0 hj => nextRand_pow_ne x j h0 (lt_trans hj (by unfold digestAttemptLimit; norm_num)))
+    (fun x j h0 hj => nextRand_pow_ne (data.steps m) x j h0 (lt_trans hj (by unfold digestAttemptLimit; norm_num)))
   have hcc : (Finset.univ.filter fun r => stOf parameter data m s r ≠ .fresh).card = cachedCount parameter data m s := by
     unfold cachedCount
     refine congrArg Finset.card (Finset.filter_congr fun ρ _ => ?_)
@@ -1175,7 +1175,7 @@ theorem fresh_expectO (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = 
   unfold signCostSource
   rw [interp_liftProb_bind, tsum_probOutput_bind_mul]
   have hstart : ∀ start : Randomness, ∑' out, Pr[= out | interp tg initial model
-      (signCostSourceLoop parameter data m digestAttemptLimit start) budget s] *
+      (signCostSourceLoop parameter data m (data.step m) digestAttemptLimit start) budget s] *
       freshNewWeight parameter data m s gf out ≤ freshAvg Finset.univ gf := by
     intro start
     have h := scan_bound_comb tg initial model parameter data m hparse s gf (fun _ _ => 0) digestAttemptLimit

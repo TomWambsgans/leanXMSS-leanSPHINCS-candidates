@@ -126,7 +126,7 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 | tree node | 3 | 0 | level | node | left ‖ right |
 | WOTS+C encoding | 4 | 0 | 0 | leaf | message ‖ counter (4 bytes) |
 | parameter derivation, under `P = 0` | 5 | 0 | 0 | 0 | seed |
-| randomizer base `R0` | 7 | 0 | 0 | 0 | seed ‖ message |
+| randomizer base `R0` and step `δ` (both halves of the hash) | 7 | 0 | 0 | 0 | seed ‖ message |
 | message digest | 12 | 0 | 0 | 0 | message ‖ randomizer |
 | surrogate sibling | 13 | 0 | level | 0 | seed |
 | forest chain secrets `2t`, `2t + 1` (both halves of the hash) | 14 | 0 | `c + 8s + 128j + 256a + 2048t` | `idx` | seed |
@@ -146,15 +146,19 @@ addresses of a subtree root (type 17, level 3) and of a tree root (type 19, leve
 One hash of the seed gives two chain starts: the hash output is 32 bytes, the start of chain `2t`
 is bytes 0 to 15 and the start of chain `2t + 1` is bytes 16 to 31 (`deriveOutput`, `hashHalf`,
 `Seeded.otsSecrets`, `Seeded.forestSecrets` in `Scheme.lean`). A one-time key takes 32 derivations
-for its 64 chains and a forest WOTS key 3 for its 6 chains. The parameter, the surrogates and the
-randomizer base are one hash each and keep its first 16 bytes; so does every verification hash.
+for its 64 chains and a forest WOTS key 3 for its 6 chains. The parameter and the surrogates are one
+hash each and keep its first 16 bytes; so does every verification hash. The randomizer hash gives the
+base `R0` (bytes 0 to 15) and the step `δ` (bytes 16 to 31 with the lowest bit set, `walkStep`).
 `Seeded.otsStart`, `Seeded.forestStart` and `Seeded.chainValue` are the per-chain views (one
 derivation each), used in statements only: the signer's values are theirs
 (`Completeness.eval_otsSecrets`, `eval_forestSecrets`).
 
-The signer derives one randomizer base per message, `R0 = Th(P, A(7, 0, 0), seed ‖ message)` (one
-hash query), and attempt `i` uses the randomizer `R0 + i` (addition modulo `2^128`,
-`Seeded.signDigestLoop`); it keeps the first attempt whose digest index lands in the kept subtree.
+The signer derives the base `R0` and the step `δ` of a message from one hash,
+`H(P ‖ A(7, 0, 0) ‖ seed ‖ message)` (one hash query), and attempt `i` uses the randomizer `R0 + i δ`
+(arithmetic modulo `2^128`, `Seeded.signDigestLoop`); it keeps the first attempt whose digest index
+lands in the kept subtree. `δ` is odd, so the scan does not come back within `2^128` attempts
+(`walk_iterate_ne`, `BridgeScan.nextRand_pow_ne`), and secret, so a signature does not tell which
+randomizers were rejected before it.
 The randomizer comes last in the digest payload: a grinding attempt changes only the last block of
 the digest hash. The digest input is 80 bytes: the first block is
 `P ‖ A ‖ message` and the second the randomizer alone. The root is not hashed (`P` binds the
@@ -273,10 +277,14 @@ the root was (`top_fold_classification`: honest tree leaf and path, or a node ma
 node matches at levels 1 and 2). The statements above the witness (`Forest.Opening`,
 `recovered_classification`, the classification of a win) are unchanged.
 
-### The scan signer `R = R0 + i`
+### The scan signer `R = R0 + i δ`
 
-After the seed is eliminated the start `R0` of a message is uniform and hidden, and the signature of
-a message uses the first landing randomizer at or after it. For one unsigned message a randomizer is
+After the seed is eliminated the randomizer hash of a message is uniform; its two halves are an
+independent start and step (`Det.evalDist_rtable_split`). The proof fixes the steps of all messages
+(the seed-free game takes them as a parameter, `PublicData.steps`, and is bounded for every table of
+steps, as if the forger knew them) and averages the starts. The start `R0` of a message is uniform and
+hidden, and the signature of a message uses the first landing randomizer of the scan
+`R0, R0 + δ, …` (`BridgeScan.nextRand`). For one unsigned message a randomizer is
 fresh, cached and rejected, or cached and landing; the law of the signed pair is the walk value of
 `LoopWalk.lean` over these statuses (`BridgeScan.scan_boundW`). A cached landed pair is selected
 with a probability that depends on the cache (the run of rejected values before it), not `1/(n + R)`,

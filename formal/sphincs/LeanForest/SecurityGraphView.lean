@@ -20,14 +20,19 @@ attribute [local irreducible] firstEncoding encodingAttemptLimit Seeded.forestKe
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 
+/-- The values the graph view fixes: the public key and paths, and the step halves of the
+randomizer walks (`steps m` gives the step `walkStep (steps m)` of message `m`). The steps are
+secret in the scheme; the proof bounds the game for every table of steps. -/
 structure PublicData where
   root : Digest
   forestKey : Index → Digest
   treePath : LeafIndex → Fin (layerHeight topLayer) → Digest
   subPath : Index → Coord → SuperIdx → SubIdx → ChildIdx → Fin subHeight → Digest
   topPath : Index → Coord → SuperIdx → Fin topHeight → Digest
+  steps : Message → Randomness
 
-def publicData (labels : CanonicalGraphLabels) : PublicData where
+def publicData (labels : CanonicalGraphLabels) (steps : Message → Randomness) : PublicData where
+  steps := steps
   root := truncateHash (labels (treePosition topLayer rootTree totalHeight le_rfl ⟨0, by decide⟩))
   forestKey := fun index => truncateHash (labels (.roots index))
   treePath := fun leaf level => truncateHash (labels
@@ -60,8 +65,8 @@ structure DataCorrect (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
 theorem publicData_correct (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (labels : CanonicalGraphLabels)
     (hconsistent : Consistent f parameter seed labels)
-    (hboundary : BoundaryCorrect f parameter seed labels) :
-    DataCorrect f parameter seed (publicData labels) := by
+    (hboundary : BoundaryCorrect f parameter seed labels) (steps : Message → Randomness) :
+    DataCorrect f parameter seed (publicData labels steps) := by
   constructor
   · exact tree_root_value f parameter seed labels hconsistent hboundary topLayer rootTree
   · exact forest_key_value f parameter seed labels hconsistent

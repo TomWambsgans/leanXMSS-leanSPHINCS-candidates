@@ -107,7 +107,7 @@ theorem evalDist_completion_bind {β : Type} (known : HiddenReveal.Knowledge Coo
     distribution >>= fun fresh => 𝒟[next (tableExtending known fresh)]) h).trans (evalDist_bind _ _).symm)
 
 /-- One public/structural sample's hidden-row run at coordinate table `table`. -/
-noncomputable def hiddenRun (adversary : Adversary) (q : Nat) (parameterOutput : HashOutput)
+noncomputable def hiddenRun (adversary : Adversary) (q : Nat) (steps : Message → Randomness) (parameterOutput : HashOutput)
     (fixed : HiddenGraph.Table) (highs : CoordinateHighs) (remaining : RemainingOutputs)
     (outsideTable : Eager.Table) (table : HiddenGraph.Table) :
     ProbComp (Option Bool × List (HiddenCost.Entry HashInput)) :=
@@ -119,12 +119,12 @@ noncomputable def hiddenRun (adversary : Adversary) (q : Nat) (parameterOutput :
     table
     (HiddenCost.cap (GraphView.costGame (truncateHash parameterOutput)
       (GraphView.publicData (labelsOf (splitMaterial parameterOutput highs remaining fixed)
-        (splitAnswers highs remaining fixed))) adversary) q)
+        (splitAnswers highs remaining fixed)) steps) adversary) q)
 
 /-- **Hidden decomposition.** The seed-free experiment samples every public and structural
 value first and then the coordinate table as an exact completion of the known coordinates. -/
-theorem evalDist_seedFree_completion (adversary : Adversary) (q : Nat) :
-    𝒟[seedFreeExperiment adversary q] =
+theorem evalDist_seedFree_completion (adversary : Adversary) (q : Nat) (steps : Message → Randomness) :
+    𝒟[seedFreeExperiment adversary q steps] =
       𝒟[do
         let parameterOutput ← $ᵗ HashOutput
         let fixed ← $ᵗ HiddenGraph.Table
@@ -132,7 +132,7 @@ theorem evalDist_seedFree_completion (adversary : Adversary) (q : Nat) :
         let remaining ← $ᵗ RemainingOutputs
         let outsideTable ← $ᵗ Eager.Table
         let table ← HiddenReveal.completion (knownOf (truncateHash parameterOutput) fixed)
-        hiddenRun adversary q parameterOutput fixed highs remaining outsideTable table] := by
+        hiddenRun adversary q steps parameterOutput fixed highs remaining outsideTable table] := by
   unfold seedFreeExperiment
   rw [evalDist_material_graph_continuation]
   apply evalDist_bind_congr'
@@ -144,7 +144,7 @@ theorem evalDist_seedFree_completion (adversary : Adversary) (q : Nat) :
   simp only [joinedPair]
   change 𝒟[($ᵗ HiddenGraph.Table) >>= fun fresh => ($ᵗ CoordinateHighs) >>= fun highs =>
       ($ᵗ RemainingOutputs) >>= fun remaining => ($ᵗ Eager.Table) >>= fun outsideTable =>
-        seedFreeRun adversary q
+        seedFreeRun adversary q steps
           (splitMaterial parameterOutput highs remaining (mix (truncateHash parameterOutput) fixed fresh))
           (splitAnswers highs remaining (mix (truncateHash parameterOutput) fixed fresh)) outsideTable] = _
   simp only [seedFreeRun_mix]
@@ -179,30 +179,30 @@ noncomputable def sampleModel (parameterOutput : HashOutput) (highs : Coordinate
     (fun address => highs address.outputCoordinate)
 
 /-- The capped graph-view program of one sample. -/
-noncomputable def sampleProgram (adversary : Adversary) (q : Nat) (parameterOutput : HashOutput)
+noncomputable def sampleProgram (adversary : Adversary) (q : Nat) (steps : Message → Randomness) (parameterOutput : HashOutput)
     (fixed : HiddenGraph.Table) (highs : CoordinateHighs) (remaining : RemainingOutputs) :
     OracleComp GraphView.CostSpec (Option Bool) :=
   HiddenCost.cap (GraphView.costGame (truncateHash parameterOutput)
     (GraphView.publicData (labelsOf (splitMaterial parameterOutput highs remaining fixed)
-      (splitAnswers highs remaining fixed))) adversary) q
+      (splitAnswers highs remaining fixed)) steps) adversary) q
 
-theorem hiddenRun_eq (adversary : Adversary) (q : Nat) (parameterOutput : HashOutput)
+theorem hiddenRun_eq (adversary : Adversary) (q : Nat) (steps : Message → Randomness) (parameterOutput : HashOutput)
     (fixed : HiddenGraph.Table) (highs : CoordinateHighs) (remaining : RemainingOutputs)
     (outsideTable : Eager.Table) (table : HiddenGraph.Table) :
-    hiddenRun adversary q parameterOutput fixed highs remaining outsideTable table =
+    hiddenRun adversary q steps parameterOutput fixed highs remaining outsideTable table =
       Stop.costRun (HiddenRows.answer (sampleModel parameterOutput highs) table
         (outsideFn (splitMaterial parameterOutput highs remaining fixed)
           (splitAnswers highs remaining fixed) outsideTable)) table
-        (sampleProgram adversary q parameterOutput fixed highs remaining) := by
+        (sampleProgram adversary q steps parameterOutput fixed highs remaining) := by
   unfold hiddenRun sampleModel sampleProgram
   rw [rowModel_answer]
 
 /-- **Seed-free to stopped.** Every event of the seed-free experiment is bounded by the same
 event or a hidden-input stop in the existing stopped hidden-row experiment, averaged over the
 public and structural samples. -/
-theorem seedFree_le_stopped (adversary : Adversary) (q : Nat)
+theorem seedFree_le_stopped (adversary : Adversary) (q : Nat) (steps : Message → Randomness)
     (event : Option Bool × List (HiddenCost.Entry HashInput) → Prop) :
-    Pr[event | seedFreeExperiment adversary q] ≤
+    Pr[event | seedFreeExperiment adversary q steps] ≤
       Pr[HiddenReveal.StopOr event | do
         let parameterOutput ← $ᵗ HashOutput
         let fixed ← $ᵗ HiddenGraph.Table
@@ -213,9 +213,9 @@ theorem seedFree_le_stopped (adversary : Adversary) (q : Nat)
           (outsideFn (splitMaterial parameterOutput highs remaining fixed)
             (splitAnswers highs remaining fixed) outsideTable)
           (HiddenCost.erase (HiddenCost.trace
-            (sampleProgram adversary q parameterOutput fixed highs remaining)))
+            (sampleProgram adversary q steps parameterOutput fixed highs remaining)))
           (knownOf (truncateHash parameterOutput) fixed)] := by
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_seedFree_completion adversary q)]
+  rw [probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_seedFree_completion adversary q steps)]
   refine probEvent_bind_mono_support _ _ _ _ _ fun parameterOutput _ => ?_
   refine probEvent_bind_mono_support _ _ _ _ _ fun fixed _ => ?_
   refine probEvent_bind_mono_support _ _ _ _ _ fun highs _ => ?_
@@ -230,7 +230,7 @@ theorem seedFree_le_stopped (adversary : Adversary) (q : Nat)
     (tableExtending (knownOf (truncateHash parameterOutput) fixed) fresh)
     (outsideFn (splitMaterial parameterOutput highs remaining fixed)
       (splitAnswers highs remaining fixed) outsideTable)
-    (sampleProgram adversary q parameterOutput fixed highs remaining)
+    (sampleProgram adversary q steps parameterOutput fixed highs remaining)
     (knownOf (truncateHash parameterOutput) fixed) hagree event
   rw [hiddenRun_eq]
   exact h

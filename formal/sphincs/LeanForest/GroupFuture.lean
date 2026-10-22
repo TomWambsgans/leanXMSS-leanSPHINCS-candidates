@@ -4,7 +4,7 @@ import LeanForest.BridgeVirtualMono
 /-!
 # The group of one message in the virtual future
 
-For the scan loop `R = R0 + i` the cached digests of one unsigned message act on the potential as
+For the scan loop `R = R0 + i δ` the cached digests of one unsigned message act on the potential as
 one operator `grp`: the mean, over the start `R0`, of the walk payoffs, where a cached hit `x`
 discloses `ext x` (its view), a fresh position that lands discloses nothing for a fresh start (the
 fresh view of that signature is the slot's) and a fresh uniform view for a cached start (pending

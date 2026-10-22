@@ -98,19 +98,20 @@ theorem costRun_cap_cost_le {α : Type} (f : HashInput → HashOutput) (table : 
         subst hresult
         simp [traceCost]
 
-/-- One seed-free capped graph-view run. -/
-noncomputable def seedFreeRun (adversary : Adversary) (q : Nat) (material : Material)
-    (answers : CanonicalGraphLabels) (table : Eager.Table) :
+/-- One seed-free capped graph-view run, with the randomizer walks of the step table `steps`. -/
+noncomputable def seedFreeRun (adversary : Adversary) (q : Nat) (steps : Message → Randomness)
+    (material : Material) (answers : CanonicalGraphLabels) (table : Eager.Table) :
     ProbComp (Option Bool × List (Entry HashInput)) :=
   costRun (graphFn material answers table) (graphCoordinates material answers)
-    (cap (costGame (parameter material) (publicData (labelsOf material answers)) adversary) q)
+    (cap (costGame (parameter material) (publicData (labelsOf material answers) steps) adversary) q)
 
-noncomputable def seedFreeExperiment (adversary : Adversary) (q : Nat) :
+/-- The seed-free experiment for a fixed table of walk steps. -/
+noncomputable def seedFreeExperiment (adversary : Adversary) (q : Nat) (steps : Message → Randomness) :
     ProbComp (Option Bool × List (Entry HashInput)) := do
   let material ← sampleMaterial
   let answers ← $ᵗ CanonicalGraphLabels
   let table ← $ᵗ Eager.Table
-  seedFreeRun adversary q material answers table
+  seedFreeRun adversary q steps material answers table
 
 def Win (result : Option Bool × List (Entry HashInput)) : Prop :=
   ∃ value, result.1 = some value ∧ value = true

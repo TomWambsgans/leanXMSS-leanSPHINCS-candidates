@@ -17,14 +17,77 @@ set_option maxRecDepth 10000
 /-- Randomizer-base derivation outputs (`R0`), by message. -/
 abbrev RTable := Message → HashOutput
 
+/-- One half of every randomizer derivation output, by message: the base randomizers, or the step
+halves. -/
+abbrev LTable := Message → Randomness
+
+/-- The hash output whose low half is `low` and whose high half is `high`. -/
+def joinHalves (low high : Digest) : HashOutput :=
+  BitVec.ofNat hashOutputBits (high.toNat * 2 ^ digestBits + low.toNat)
+
+theorem joinHalves_toNat (low high : Digest) :
+    (joinHalves low high).toNat = high.toNat * 2 ^ 128 + low.toNat := by
+  have hl : low.toNat < 2 ^ 128 := low.isLt
+  have hh : high.toNat < 2 ^ 128 := high.isLt
+  rw [joinHalves, BitVec.toNat_ofNat]
+  exact Nat.mod_eq_of_lt (by simp only [hashOutputBits, digestBits]; omega)
+
+theorem truncateHash_joinHalves (low high : Digest) : truncateHash (joinHalves low high) = low := by
+  apply BitVec.eq_of_toNat_eq
+  rw [truncateHash, BitVec.extractLsb'_toNat, joinHalves_toNat, Nat.shiftRight_zero]
+  show (high.toNat * 2 ^ 128 + low.toNat) % 2 ^ 128 = low.toNat
+  have hl : low.toNat < 2 ^ 128 := low.isLt
+  omega
+
+theorem upperHash_joinHalves (low high : Digest) : upperHash (joinHalves low high) = high := by
+  apply BitVec.eq_of_toNat_eq
+  rw [upperHash, BitVec.extractLsb'_toNat, joinHalves_toNat, Nat.shiftRight_eq_div_pow]
+  show (high.toNat * 2 ^ 128 + low.toNat) / 2 ^ 128 % 2 ^ 128 = high.toNat
+  have hl : low.toNat < 2 ^ 128 := low.isLt
+  have hh : high.toNat < 2 ^ 128 := high.isLt
+  omega
+
+theorem joinHalves_truncate (x : HashOutput) : joinHalves (truncateHash x) (upperHash x) = x := by
+  apply BitVec.eq_of_toNat_eq
+  rw [joinHalves_toNat, truncateHash, upperHash, BitVec.extractLsb'_toNat, BitVec.extractLsb'_toNat,
+    Nat.shiftRight_zero, Nat.shiftRight_eq_div_pow]
+  have hx : x.toNat < 2 ^ 256 := x.isLt
+  show x.toNat / 2 ^ 128 % 2 ^ 128 * 2 ^ 128 + x.toNat % 2 ^ 128 = x.toNat
+  omega
+
+/-- The randomizer table with base randomizers `lows` and step halves `highs`. -/
+def joinTable (lows highs : LTable) : RTable := fun message => joinHalves (lows message) (highs message)
+
+theorem joinTable_bijective : Function.Bijective (fun pair : LTable × LTable => joinTable pair.1 pair.2) := by
+  refine ⟨fun a b h => ?_, fun rnd => ⟨(fun m => truncateHash (rnd m), fun m => upperHash (rnd m)), ?_⟩⟩
+  · have hl : ∀ m, a.1 m = b.1 m := fun m => by
+      have := congrArg (fun t : RTable => truncateHash (t m)) h
+      simpa only [joinTable, truncateHash_joinHalves] using this
+    have hh : ∀ m, a.2 m = b.2 m := fun m => by
+      have := congrArg (fun t : RTable => upperHash (t m)) h
+      simpa only [joinTable, upperHash_joinHalves] using this
+    exact Prod.ext (funext hl) (funext hh)
+  · funext m
+    exact joinHalves_truncate (rnd m)
+
+theorem joinTable_update (lows highs : LTable) (message : Message) (low : Randomness) :
+    joinTable (Function.update lows message low) highs =
+      Function.update (joinTable lows highs) message (joinHalves low (highs message)) := by
+  funext m
+  by_cases h : m = message
+  · subst h
+    simp [joinTable]
+  · simp [joinTable, Function.update_of_ne h]
+
 variable [Params]
 
 /-- The deterministic signer in the graph view: charge the one derivation call of the randomizer
-base, read the base from the table, then scan from it. -/
+base and step, read them from the table, then scan. -/
 noncomputable def signCostDet (parameter : PublicParameter) (data : PublicData) (rnd : RTable)
     (message : Message) : OracleComp CostSpec (Option Signature) := do
   HiddenCost.tick 1
-  signCostSourceLoop parameter data message digestAttemptLimit (truncateHash (rnd message))
+  signCostSourceLoop parameter data message (walkStep (upperHash (rnd message))) digestAttemptLimit
+    (truncateHash (rnd message))
 
 noncomputable def costInteractionDet (parameter : PublicParameter) (data : PublicData) (rnd : RTable) :
     QueryImpl (OracleWorld + SigningSpec) (WriterT (QueryLog SigningSpec) (OracleComp CostSpec)) :=
@@ -45,23 +108,24 @@ noncomputable def costGameDet (parameter : PublicParameter) (data : PublicData) 
   costRestDet parameter data rnd adversary
 
 /-- The deterministic signer from a scan of `attempts` trials starting at `start`. -/
-def seededFrom (sk : Seeded.SecretKey) (message : Message) (attempts : Nat) (start : Randomness) :
-    OracleComp HashSpec (Option Signature) := do
-  let some (randomness, _) ← Seeded.signDigestLoop sk message attempts start | return none
+def seededFrom (sk : Seeded.SecretKey) (message : Message) (step : Randomness) (attempts : Nat)
+    (start : Randomness) : OracleComp HashSpec (Option Signature) := do
+  let some (randomness, _) ← Seeded.signDigestLoop sk message step attempts start | return none
   Randomized.finishSign sk message randomness
 
 omit [Params] in
 theorem eval_deriveRandomizer (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (message : Message) :
-    evalWithAnswerFn f (deriveRandomizer parameter seed message : OracleComp HashSpec Randomness) =
-      truncateHash (f (randomizerHashInput parameter seed message)) := by
+    evalWithAnswerFn f (deriveRandomizer parameter seed message : OracleComp HashSpec (Randomness × Randomness)) =
+      (truncateHash (f (randomizerHashInput parameter seed message)),
+        walkStep (upperHash (f (randomizerHashInput parameter seed message)))) := by
   simp only [deriveRandomizer, evalWithAnswerFn_bind, evalWithAnswerFn_pure]
   rfl
 
 omit [Params] in
 theorem hashCalls_deriveRandomizer (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (message : Message) :
-    hashCalls f (deriveRandomizer parameter seed message : OracleComp HashSpec Randomness) = 1 := by
+    hashCalls f (deriveRandomizer parameter seed message : OracleComp HashSpec (Randomness × Randomness)) = 1 := by
   simp only [deriveRandomizer, hashCalls_bind, hashCalls_oracleHash, hashCalls_pure]
 
 theorem eval_signAttempt (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (message : Message)
@@ -80,21 +144,21 @@ any start. -/
 theorem fixed_signCostDetLoop (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (data : PublicData) (table : HiddenGraph.Table)
     (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
-    (message : Message) (attempts : Nat) (start : Randomness) :
-    simulateQ (fixedCostSource f table) (signCostSourceLoop parameter data message attempts start) =
-      simulateQ (fixedWorldCost f) (liftM (seededFrom ⟨seed, parameter, data.root⟩ message attempts start) :
+    (message : Message) (step : Randomness) (attempts : Nat) (start : Randomness) :
+    simulateQ (fixedCostSource f table) (signCostSourceLoop parameter data message step attempts start) =
+      simulateQ (fixedWorldCost f) (liftM (seededFrom ⟨seed, parameter, data.root⟩ message step attempts start) :
         OracleComp OracleWorld (Option Signature)) := by
   induction attempts generalizing start with
   | zero =>
       simp only [signCostSourceLoop, seededFrom, Seeded.signDigestLoop, pure_bind, simulateQ_pure,
         liftM_pure]
   | succ attempts ih =>
-      have hX : seededFrom ⟨seed, parameter, data.root⟩ message (attempts + 1) start =
+      have hX : seededFrom ⟨seed, parameter, data.root⟩ message step (attempts + 1) start =
           (Seeded.signAttempt ⟨seed, parameter, data.root⟩ message start :
               OracleComp HashSpec (Option Index)) >>= fun result =>
                 match result with
                 | some _ => Randomized.finishSign ⟨seed, parameter, data.root⟩ message start
-                | none => seededFrom ⟨seed, parameter, data.root⟩ message attempts (start + 1) := by
+                | none => seededFrom ⟨seed, parameter, data.root⟩ message step attempts (start + step) := by
         simp only [seededFrom, Seeded.signDigestLoop, bind_assoc]
         refine bind_congr fun result => ?_
         cases result <;> simp
@@ -130,8 +194,8 @@ theorem signCostDet_correct (f : QueryImpl HashSpec Id) (parameter : PublicParam
         OracleComp HashSpec (Option Signature)) : OracleComp OracleWorld (Option Signature)) := by
   have hX : (Seeded.sign ⟨seed, parameter, data.root⟩ message :
       OracleComp HashSpec (Option Signature)) =
-      (deriveRandomizer parameter seed message : OracleComp HashSpec Randomness) >>= fun base =>
-        seededFrom ⟨seed, parameter, data.root⟩ message digestAttemptLimit base := by
+      (deriveRandomizer parameter seed message : OracleComp HashSpec (Randomness × Randomness)) >>= fun walk =>
+        seededFrom ⟨seed, parameter, data.root⟩ message walk.2 digestAttemptLimit walk.1 := by
     rw [seededSign_eq]
     rfl
   rw [hX, fixedWorldCost_lift_hash]

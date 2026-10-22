@@ -639,6 +639,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.HiddenDebt.withTable_swap
 
+/-- info: 'LeanForest.Security.Det.evalDist_rtable_split' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Det.evalDist_rtable_split
+
 /-- info: 'LeanForest.Security.Det.evalDist_table_split' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Det.evalDist_table_split
@@ -650,6 +654,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.Det.hashDomain_tag_ne_seven' depends on axioms: [propext] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Det.hashDomain_tag_ne_seven
+
+/-- info: 'LeanForest.Security.Det.highsOf_joinTable' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Det.highsOf_joinTable
 
 /-- info: 'LeanForest.Security.Det.marked_hit_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -787,9 +795,33 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Det.hashCalls_deriveRandomizer
 
+/-- info: 'LeanForest.Security.Det.joinHalves_toNat' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Det.joinHalves_toNat
+
+/-- info: 'LeanForest.Security.Det.joinHalves_truncate' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Det.joinHalves_truncate
+
+/-- info: 'LeanForest.Security.Det.joinTable_bijective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Det.joinTable_bijective
+
+/-- info: 'LeanForest.Security.Det.joinTable_update' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Det.joinTable_update
+
 /-- info: 'LeanForest.Security.Det.signCostDet_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Det.signCostDet_correct
+
+/-- info: 'LeanForest.Security.Det.truncateHash_joinHalves' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Det.truncateHash_joinHalves
+
+/-- info: 'LeanForest.Security.Det.upperHash_joinHalves' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.Det.upperHash_joinHalves
 
 /-- info: 'LeanForest.Security.Det.BlockD.bind' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -9023,11 +9055,11 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.randomized_digest_exhaustion_bound
 
-/-- info: 'LeanForest.Completeness.randomness_add_ne' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'LeanForest.Completeness.randomness_add_ne' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.randomness_add_ne
 
-/-- info: 'LeanForest.Completeness.randomness_add_succ' depends on axioms: [propext] -/
+/-- info: 'LeanForest.Completeness.randomness_add_succ' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Completeness.randomness_add_succ
 
@@ -9494,6 +9526,18 @@ import LeanForest.World
 /-- info: 'LeanForest.codewordCodes_eq_rule' depends on axioms: [propext] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.codewordCodes_eq_rule
+
+/-- info: 'LeanForest.walkStep_toNat_mod_two' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.walkStep_toNat_mod_two
+
+/-- info: 'LeanForest.walk_iterate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.walk_iterate
+
+/-- info: 'LeanForest.walk_iterate_ne' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.walk_iterate_ne
 
 /-- info: 'LeanForest.Completeness.bytesLE_inj' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

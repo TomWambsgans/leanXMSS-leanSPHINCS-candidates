@@ -23,8 +23,8 @@ attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSamp
 
 set_option maxRecDepth 100000 in
 /-- **The seed-free win in the stopped prepared world.** -/
-theorem seedFree_le_prep (adversary : Adversary) (q : Nat) :
-    Pr[Win | seedFreeExperiment (internalize adversary) q] ≤
+theorem seedFree_le_prep (adversary : Adversary) (q : Nat) (steps : Message → Randomness) :
+    Pr[Win | seedFreeExperiment (internalize adversary) q steps] ≤
       Pr[HiddenReveal.StopOr RichWin | do
         let parameterOutput ← $ᵗ HashOutput
         let fixed ← $ᵗ HiddenGraph.Table
@@ -33,18 +33,18 @@ theorem seedFree_le_prep (adversary : Adversary) (q : Nat) :
         let prepared ← preparation parameterOutput fixed highs remaining
         HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
           (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-            (sampleData parameterOutput fixed highs remaining))))
+            (sampleData parameterOutput fixed highs remaining steps))))
           (knownOf (truncateHash parameterOutput) fixed) prepared.2] := by
-  refine (seedFree_le_stopped (internalize adversary) q Win).trans (le_of_eq ?_)
+  refine (seedFree_le_stopped (internalize adversary) q steps Win).trans (le_of_eq ?_)
   refine probEvent_bind_congr₂ _ _ _ _ _ fun parameterOutput => ?_
   refine probEvent_bind_congr₂ _ _ _ _ _ fun fixed => ?_
   refine probEvent_bind_congr₂ _ _ _ _ _ fun highs => ?_
   refine probEvent_bind_congr₂ _ _ _ _ _ fun remaining => ?_
   have hshort : OnlyShort (HiddenCost.erase (HiddenCost.trace
-      (sampleProgram (internalize adversary) q parameterOutput fixed highs remaining))) :=
+      (sampleProgram (internalize adversary) q steps parameterOutput fixed highs remaining))) :=
     OnlyC.erase (OnlyC.trace (OnlyC.cap (OnlyC.costGame (truncateHash parameterOutput)
       (GraphView.publicData (labelsOf (splitMaterial parameterOutput highs remaining fixed)
-        (splitAnswers highs remaining fixed))) adversary) q))
+        (splitAnswers highs remaining fixed)) steps) adversary) q))
   unfold outsideFn
   rw [probEvent_congr' (fun _ _ => Iff.rfl)
     (evalDist_stoppedExperiment_prep (sampleModel parameterOutput highs) _ (truncateHash parameterOutput)
@@ -53,9 +53,9 @@ theorem seedFree_le_prep (adversary : Adversary) (q : Nat) :
   rw [probEvent_stopOr_map]
   unfold HiddenOutside.stoppedExperiment
   refine probEvent_bind_congr₂ _ _ _ _ _ fun table => ?_
-  have hprog : sampleProgram (internalize adversary) q parameterOutput fixed highs remaining =
+  have hprog : sampleProgram (internalize adversary) q steps parameterOutput fixed highs remaining =
       (fun result => Option.map outcomeWins result.1) <$> richProgram (internalize adversary) q
-        (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining) :=
+        (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps) :=
     cap_costGame_eq _ _ _ _
   rw [hprog, trace_map, erase_map, outside_stopped_map, probEvent_stopOr_map]
   have hevent : (HiddenReveal.StopOr ((Win ∘ Prod.fst) ∘ fun result :
@@ -70,8 +70,8 @@ theorem seedFree_le_prep (adversary : Adversary) (q : Nat) :
 
 set_option maxRecDepth 100000 in
 /-- **The seed-free win in the stopped prepared world, with the above-word values exposed.** -/
-theorem seedFree_le_exposeP (adversary : Adversary) (q : Nat) :
-    Pr[Win | seedFreeExperiment (internalize adversary) q] ≤
+theorem seedFree_le_exposeP (adversary : Adversary) (q : Nat) (steps : Message → Randomness) :
+    Pr[Win | seedFreeExperiment (internalize adversary) q steps] ≤
       Pr[HiddenReveal.StopOr RichWin | do
         let parameterOutput ← $ᵗ HashOutput
         let fixed ← $ᵗ HiddenGraph.Table
@@ -82,9 +82,9 @@ theorem seedFree_le_exposeP (adversary : Adversary) (q : Nat) :
           (knownOf (truncateHash parameterOutput) fixed)
         HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
           (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-            (sampleData parameterOutput fixed highs remaining))))
+            (sampleData parameterOutput fixed highs remaining steps))))
           known prepared.2] := by
-  refine (seedFree_le_expose (internalize adversary) q Win
+  refine (seedFree_le_expose (internalize adversary) q steps Win
     (fun parameterOutput fixed highs remaining outsideTable =>
       aboveList (truncateHash parameterOutput)
         (resultsOf (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).forestKey
@@ -95,10 +95,10 @@ theorem seedFree_le_exposeP (adversary : Adversary) (q : Nat) :
   refine probEvent_bind_congr₂ _ _ _ _ _ fun highs => ?_
   refine probEvent_bind_congr₂ _ _ _ _ _ fun remaining => ?_
   have hshort : OnlyShort (HiddenCost.erase (HiddenCost.trace
-      (sampleProgram (internalize adversary) q parameterOutput fixed highs remaining))) :=
+      (sampleProgram (internalize adversary) q steps parameterOutput fixed highs remaining))) :=
     OnlyC.erase (OnlyC.trace (OnlyC.cap (OnlyC.costGame (truncateHash parameterOutput)
       (GraphView.publicData (labelsOf (splitMaterial parameterOutput highs remaining fixed)
-        (splitAnswers highs remaining fixed))) adversary) q))
+        (splitAnswers highs remaining fixed)) steps) adversary) q))
   unfold outsideFn
   rw [probEvent_congr' (fun _ _ => Iff.rfl)
     (evalDist_expose_prep (sampleModel parameterOutput highs) _ (truncateHash parameterOutput)
@@ -109,9 +109,9 @@ theorem seedFree_le_exposeP (adversary : Adversary) (q : Nat) :
   rw [probEvent_stopOr_map]
   unfold HiddenOutside.stoppedExperiment
   refine probEvent_bind_congr₂ _ _ _ _ _ fun table => ?_
-  have hprog : sampleProgram (internalize adversary) q parameterOutput fixed highs remaining =
+  have hprog : sampleProgram (internalize adversary) q steps parameterOutput fixed highs remaining =
       (fun result => Option.map outcomeWins result.1) <$> richProgram (internalize adversary) q
-        (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining) :=
+        (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps) :=
     cap_costGame_eq _ _ _ _
   rw [hprog, trace_map, erase_map, outside_stopped_map, probEvent_stopOr_map]
   have hevent : (HiddenReveal.StopOr ((Win ∘ Prod.fst) ∘ fun result :

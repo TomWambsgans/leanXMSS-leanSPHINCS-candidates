@@ -394,9 +394,10 @@ theorem revealsOf_of_assembled_none (parameter : PublicParameter) (data : Public
 
 theorem signLoop_support (parameter : PublicParameter) (seed : MasterSeed) (data : PublicData)
     (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
-    (message : Message) (attempts : Nat) (randomness : Randomness) (result : RunResult (Option Signature))
+    (message : Message) (step : Randomness) (attempts : Nat) (randomness : Randomness)
+    (result : RunResult (Option Signature))
     (hresult : result ∈ support (costRun f table (withReveals
-      (signCostSourceLoop parameter data message attempts randomness)))) :
+      (signCostSourceLoop parameter data message step attempts randomness)))) :
     SignOutcome f parameter seed data message result.1 := by
   induction attempts generalizing result randomness with
   | zero =>
@@ -421,7 +422,7 @@ theorem signLoop_support (parameter : PublicParameter) (seed : MasterSeed) (data
         · rw [hreveals]
           exact revealsOf_of_assembled_none f table parameter data message _ (hvalue ▸ hnone)
         · rw [hsign, ← hvalue, hsome]
-      · exact ih (randomness + 1) r4 h4
+      · exact ih (randomness + step) r4 h4
 
 theorem sign_support (parameter : PublicParameter) (seed : MasterSeed) (data : PublicData)
     (hdata : DataCorrect f parameter seed data) (htable : CoordinatesCorrect f parameter seed table)
@@ -433,7 +434,7 @@ theorem sign_support (parameter : PublicParameter) (seed : MasterSeed) (data : P
   obtain ⟨hr1, -⟩ := costRun_withReveals_liftProb f table _ r1 h1
   dsimp only
   rw [hr1, List.nil_append]
-  exact signLoop_support f table parameter seed data hdata htable message _ _ r2 h2
+  exact signLoop_support f table parameter seed data hdata htable message _ _ _ r2 h2
 
 /-- Every logged signature is an honest landed assembly, and every revealed coordinate is
 revealed by some logged signature. -/

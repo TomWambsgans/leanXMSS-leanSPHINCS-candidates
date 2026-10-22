@@ -28,7 +28,8 @@ theorem randomizerHashInput_short (parameter : PublicParameter) (seed : MasterSe
 
 theorem Only.deriveRandomizer (parameter : PublicParameter) (seed : MasterSeed)
     (message : Message) :
-    Only (LeanForest.deriveRandomizer parameter seed message : OracleComp HashSpec Randomness) := by
+    Only (LeanForest.deriveRandomizer parameter seed message :
+      OracleComp HashSpec (Randomness × Randomness)) := by
   unfold LeanForest.deriveRandomizer
   exact Only.bind (Only.query (randomizerHashInput_short _ _ _)) (fun _ => Only.pure' _)
 
@@ -37,22 +38,23 @@ variable [Params]
 attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Randomized.finishSign
   LeanForest.Seeded.signAttempt
 
-theorem Only.seededLoop (sk : LeanForest.Seeded.SecretKey) (message : Message) :
-    ∀ attempts randomness, Only (LeanForest.Seeded.signDigestLoop sk message attempts randomness :
+theorem Only.seededLoop (sk : LeanForest.Seeded.SecretKey) (message : Message) (step : Randomness) :
+    ∀ attempts randomness, Only (LeanForest.Seeded.signDigestLoop sk message step attempts randomness :
       OracleComp HashSpec (Option (Randomness × Index)))
   | 0, _ => Only.pure' _
   | attempts + 1, randomness => by
       rw [LeanForest.Seeded.signDigestLoop]
       refine Only.bind (Short.Seeded.Only.signAttempt _ _ _) (fun result => ?_)
       cases result with
-      | none => exact Only.seededLoop sk message attempts (randomness + 1)
+      | none => exact Only.seededLoop sk message step attempts (randomness + step)
       | some _ => exact Only.pure' _
 
-/-- The deterministic signer is the randomizer derivation, the scan, and the common assembly. -/
+/-- The deterministic signer is the derivation of the base and the step, the scan, and the common
+assembly. -/
 theorem seededSign_eq (sk : LeanForest.Seeded.SecretKey) (message : Message) :
     (LeanForest.Seeded.sign sk message : OracleComp HashSpec (Option Signature)) = (do
-      let base ← LeanForest.deriveRandomizer sk.parameter sk.seed message
-      let some (randomness, _) ← LeanForest.Seeded.signDigestLoop sk message digestAttemptLimit base
+      let walk ← LeanForest.deriveRandomizer sk.parameter sk.seed message
+      let some (randomness, _) ← LeanForest.Seeded.signDigestLoop sk message walk.2 digestAttemptLimit walk.1
         | return none
       Randomized.finishSign sk message randomness) := by
   unfold LeanForest.Seeded.sign Randomized.finishSign
@@ -61,8 +63,8 @@ theorem seededSign_eq (sk : LeanForest.Seeded.SecretKey) (message : Message) :
 theorem Only.seededSign (sk : LeanForest.Seeded.SecretKey) (message : Message) :
     Only (LeanForest.Seeded.sign sk message : OracleComp HashSpec (Option Signature)) := by
   rw [seededSign_eq]
-  refine Only.bind (Only.deriveRandomizer _ _ _) (fun base => ?_)
-  refine Only.bind (Only.seededLoop sk message _ _) (fun result => ?_)
+  refine Only.bind (Only.deriveRandomizer _ _ _) (fun walk => ?_)
+  refine Only.bind (Only.seededLoop sk message _ _ _) (fun result => ?_)
   rcases result with _ | ⟨randomness, _⟩
   · exact Only.pure' _
   · exact Short.Only.finishSign _ _ _

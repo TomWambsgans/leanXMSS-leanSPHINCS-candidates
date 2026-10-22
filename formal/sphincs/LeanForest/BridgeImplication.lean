@@ -144,11 +144,11 @@ theorem graphCoordinates_T (table : HiddenGraph.Table)
   unfold materialT answersT
   rw [graphCoordinates_split, masked_mix, htable]
 
-theorem publicData_T (table : HiddenGraph.Table) :
+theorem publicData_T (table : HiddenGraph.Table) (steps : Message → Randomness) :
     GraphView.publicData (labelsOf (materialT parameterOutput fixed highs remaining table)
-      (answersT parameterOutput fixed highs remaining table)) =
-      sampleData parameterOutput fixed highs remaining :=
-  publicData_agree parameterOutput highs remaining _ fixed (mix_agree_fixed parameterOutput fixed table)
+      (answersT parameterOutput fixed highs remaining table)) steps =
+      sampleData parameterOutput fixed highs remaining steps :=
+  publicData_agree parameterOutput highs remaining _ fixed steps (mix_agree_fixed parameterOutput fixed table)
 
 /-- Away from the chosen seed's derivations, the consistent preparation is the hidden-row oracle. -/
 theorem sampleFn_answer (table : HiddenGraph.Table)
@@ -831,7 +831,7 @@ attribute [local irreducible] ReferenceChoice.selection encodingAttemptLimit
 final cache on the run's queries, an accepted fresh forgery yields a cached target hit or FORS
 coverage. -/
 theorem bad_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
-    (highs : CoordinateHighs) (remaining : RemainingOutputs) (table : HiddenGraph.Table)
+    (highs : CoordinateHighs) (remaining : RemainingOutputs) (steps : Message → Randomness) (table : HiddenGraph.Table)
     (htable : tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table)
     (results : Index → Option (Counter × Encoding)) (cacheF : QueryCache HashSpec)
     (reveals : List Coordinate) (entries : List (HiddenCost.Entry HashInput))
@@ -843,7 +843,7 @@ theorem bad_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) 
       (labelsOf (materialT parameterOutput fixed highs remaining table)
         (answersT parameterOutput fixed highs remaining table)))
     (hdata : GraphView.DataCorrect f (truncateHash parameterOutput) seed
-      (sampleData parameterOutput fixed highs remaining))
+      (sampleData parameterOutput fixed highs remaining steps))
     (hcoord : GraphView.CoordinatesCorrect f (truncateHash parameterOutput) seed table)
     (hfors : ∀ leaf : Index, SignatureWitness.canonicalForest f (truncateHash parameterOutput) seed leaf =
       (sampleData parameterOutput fixed highs remaining).forestKey leaf)
@@ -859,7 +859,7 @@ theorem bad_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) 
     (forgery : Forgery) (log : QueryLog SigningSpec)
     (htrace : ∀ input ∈ SignatureWitness.trace f ⟨(sampleData parameterOutput fixed highs remaining).root,
       truncateHash parameterOutput⟩ forgery.message forgery.signature, Sum.inl input ∈ entries)
-    (hgood : LogGood f (truncateHash parameterOutput) seed (sampleData parameterOutput fixed highs remaining)
+    (hgood : LogGood f (truncateHash parameterOutput) seed (sampleData parameterOutput fixed highs remaining steps)
       log reveals)
     (hverify : evalWithAnswerFn f (Concrete.verify ⟨(sampleData parameterOutput fixed highs remaining).root,
       truncateHash parameterOutput⟩ forgery.message forgery.signature : OracleComp HashSpec Bool) = true)
@@ -1010,7 +1010,7 @@ the original game, either a cached answer hits one of the sample's fixed targets
 reveals cover the FORS openings of a cached, landed, unsigned forgery digest. -/
 theorem win_implies_bad (hb : 0 < subtreeHeight) (adversary : Adversary) (q : Nat) (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs)
+    (remaining : RemainingOutputs) (steps : Message → Randomness)
     (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (table : HiddenGraph.Table)
@@ -1020,7 +1020,7 @@ theorem win_implies_bad (hb : 0 < subtreeHeight) (adversary : Adversary) (q : Na
     (hstop : some (((some outcome, reveals), entries), cacheF) ∈ support
       (HiddenOutside.stopped (sampleModel parameterOutput highs) table
         (HiddenCost.erase (HiddenCost.trace (richProgram (Internalize.internalize adversary) q
-          (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining))))
+          (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps))))
         (knownOf (truncateHash parameterOutput) fixed) prepared.2))
     (hwin : outcomeWins outcome = true) :
     CacheMatch.Bad (targets (truncateHash parameterOutput)
@@ -1032,7 +1032,7 @@ theorem win_implies_bad (hb : 0 < subtreeHeight) (adversary : Adversary) (q : Na
   obtain ⟨-, hcached⟩ := lazy_cached (sampleModel parameterOutput highs) table _
     (knownOf (truncateHash parameterOutput) fixed) prepared.2 cacheF _ entries hstop
   have hOnly : OnlyC (richProgram (Internalize.internalize adversary) q (truncateHash parameterOutput)
-      (sampleData parameterOutput fixed highs remaining)) :=
+      (sampleData parameterOutput fixed highs remaining steps)) :=
     OnlyC.withReveals (OnlyC.cap (OnlyC.costGameX _ _ adversary) q)
   have hshortE := costRun_entries_short _ table _ hOnly _ hrun
   have hcost := costRun_withReveals_cap_cost _ table _ q _ hrun
@@ -1064,8 +1064,8 @@ theorem win_implies_bad (hb : 0 < subtreeHeight) (adversary : Adversary) (q : Na
   have hbound := sample_boundary (materialT parameterOutput fixed highs remaining table) seed
     (answersT parameterOutput fixed highs remaining table) (finalTable parameterOutput highs table cacheF)
   have hdata : GraphView.DataCorrect f' (truncateHash parameterOutput) seed
-      (sampleData parameterOutput fixed highs remaining) := by
-    have h := GraphView.publicData_correct f' _ seed _ hcons hbound
+      (sampleData parameterOutput fixed highs remaining steps) := by
+    have h := GraphView.publicData_correct f' _ seed _ hcons hbound steps
     rwa [publicData_T] at h
   have hcoord : GraphView.CoordinatesCorrect f' (truncateHash parameterOutput) seed table := by
     have h := GraphView.coordinates_correct f' _ seed _ hcons
@@ -1075,7 +1075,7 @@ theorem win_implies_bad (hb : 0 < subtreeHeight) (adversary : Adversary) (q : Na
     unfold Assembly.sampleCoordinates at heq
     rwa [heq] at h
   obtain ⟨hverified, htrace, hgood⟩ := rich_support f' table (Internalize.internalize adversary) q
-    (truncateHash parameterOutput) seed (sampleData parameterOutput fixed highs remaining) hdata hcoord
+    (truncateHash parameterOutput) seed (sampleData parameterOutput fixed highs remaining steps) hdata hcoord
     outcome reveals entries hrun'
   have hfors : ∀ leaf : Index, SignatureWitness.canonicalForest f' (truncateHash parameterOutput) seed leaf =
       (sampleData parameterOutput fixed highs remaining).forestKey leaf := fun leaf => (hdata.forestKey leaf).symm
@@ -1094,7 +1094,7 @@ theorem win_implies_bad (hb : 0 < subtreeHeight) (adversary : Adversary) (q : Na
   obtain ⟨forgery, log, verified⟩ := outcome
   simp only [outcomeWins, Bool.and_eq_true, decide_eq_true_eq] at hwin
   obtain ⟨⟨hvalid, hnotContains⟩, rfl⟩ := hwin
-  exact bad_of_accepted hb parameterOutput fixed highs remaining table htable prepared.1 cacheF reveals entries
+  exact bad_of_accepted hb parameterOutput fixed highs remaining steps table htable prepared.1 cacheF reveals entries
     f' seed hcons hbound hdata hcoord hfors hfull hagree hcached hguess forgery log htrace hgood
     hverified.symm hvalid hnotContains
 
