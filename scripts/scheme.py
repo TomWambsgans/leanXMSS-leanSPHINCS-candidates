@@ -4,8 +4,8 @@ The lifetimes printed here are estimates from the cover model; the note quotes t
 
 Costs count compression-function calls of a hash with 64-byte blocks and no padding overhead, such as
 BLAKE2s: hashing l bytes costs max(1, ceil(l / 64)). Every call hashes P (16 B) || address (16 B) || input.
-A pruned signer tries the randomizers R_0 + i, with R_0 one hash of the seed and the message. The digest's
-first block does not depend on the randomizer, so an attempt costs one compression.
+A pruned signer tries the randomizers R_0 + i * delta, with R_0 and delta (odd) the two halves of one hash of the
+seed and the message. The digest's first block does not depend on the randomizer, so an attempt costs one compression.
 """
 
 import argparse
@@ -66,7 +66,7 @@ def main():
     rnd, msg_block = comp(32 + 32), comp(32 + N)  # S || m ;  m || rho
     blocks = math.ceil((h + k * a) / 256)
     digest = blocks * msg_block
-    attempt = 1  # the second block of the first digest call, at randomizer R_0 + i
+    attempt = 1  # the second block of the first digest call, at randomizer R_0 + i * delta
 
     if not 0 <= T <= v * (q - 1):
         ap.error(f"--T must be between 0 and {v * (q - 1)}")
@@ -164,7 +164,7 @@ def main():
     b = x.threshold
     mpc_hashes = 2**b * (k * 2**a + v * (q - 1))
     public = 2**b * (k * 2**a * N + v * N + 4)
-    try_cost = 1  # R = R_0 + i, then the second block of the first digest call
+    try_cost = 1  # R = R_0 + i * delta, then the second block of the first digest call
     grind = 2 ** (h - b) * try_cost
     rebuild = k * (2**a - 2) * node  # the combiner rebuilds the 24 FORS paths from the public leaves
     print(f"  threshold, 2^{b} kept leaves (lifetime 2^{pruned_log2_sigs(b):.2f}): {fmt(mpc_hashes)} MPC hashes at keygen, public data "

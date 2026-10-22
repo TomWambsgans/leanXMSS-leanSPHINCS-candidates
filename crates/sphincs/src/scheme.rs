@@ -2,7 +2,8 @@
 //!
 //! A pruned key keeps one subtree of height `b` and replaces the `h - b` siblings above it by
 //! pseudorandom surrogate nodes; the signer grinds its randomizer until the leaf index lands in the
-//! kept subtree. A full key is the pruned key with `b = h`.
+//! kept subtree. A full key is the pruned key with `b = h`. The attempts `R_0 + i * delta` step by a
+//! secret odd `delta`, so a signature does not tell which randomizers were rejected before it.
 
 use crate::*;
 
@@ -217,29 +218,40 @@ pub fn key_gen(seed: &MasterSecret, b: usize) -> (SecretKey, PublicKey) {
     (sk, pk)
 }
 
-/// `R_0 = Th(P, tw_rand, S | m)`: the first randomizer a message tries.
-pub fn randomizer_base(pp: &PublicParam, master: &MasterSecret, m: &Message) -> Randomizer {
+/// The walk of a message's randomizers, from one hash `Th_pair(P, tw_rand, S | m)`: the first half
+/// is the start `R_0`, the second half with its lowest bit set is the step `delta`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RandomizerWalk {
+    pub base: Randomizer,
+    pub step: Randomizer,
+}
+
+pub fn randomizer_walk(pp: &PublicParam, master: &MasterSecret, m: &Message) -> RandomizerWalk {
     let mut payload = [0u8; MASTER_SECRET_LEN + MESSAGE_LEN];
     payload[..MASTER_SECRET_LEN].copy_from_slice(master);
     payload[MASTER_SECRET_LEN..].copy_from_slice(m);
-    th(pp, &tweak(TWEAK_RANDOMIZER, 0, 0), &payload)
+    let [base, mut step] = th_pair(pp, &tweak(TWEAK_RANDOMIZER, 0, 0), &payload);
+    step[0] |= 1;
+    RandomizerWalk { base, step }
 }
 
-/// The randomizer of attempt `i`: `R_0 + i`, as little-endian 128-bit numbers. No hash is needed
-/// from one attempt to the next.
-pub fn randomizer(base: &Randomizer, i: u32) -> Randomizer {
-    u128::from_le_bytes(*base).wrapping_add(u128::from(i)).to_le_bytes()
+/// The randomizer of attempt `i`: `R_0 + i * delta`, as little-endian 128-bit numbers. No hash is
+/// needed from one attempt to the next, and `delta` is odd, so the walk does not come back before
+/// `2^128` attempts.
+pub fn randomizer(walk: &RandomizerWalk, i: u32) -> Randomizer {
+    let (base, step) = (u128::from_le_bytes(walk.base), u128::from_le_bytes(walk.step));
+    base.wrapping_add(step.wrapping_mul(u128::from(i))).to_le_bytes()
 }
 
-/// `Sign`: take the least `i` whose randomizer `R_0 + i` lands in the kept subtree (`i = 0` for a
-/// full key), open FORS, sign its key with WOTS+C.
+/// `Sign`: take the least `i` whose randomizer `R_0 + i * delta` lands in the kept subtree (`i = 0`
+/// for a full key), open FORS, sign its key with WOTS+C.
 pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
     let pp = &sk.public_param;
-    // The digest's first block is hashed once, and the randomizers are `R_0 + i`: an attempt costs
-    // one compression.
-    let (base, digests) = (randomizer_base(pp, &sk.master, m), digest_midstate(pp, m, 0));
+    // The digest's first block is hashed once, and the randomizers are `R_0 + i * delta`: an attempt
+    // costs one compression.
+    let (walk, digests) = (randomizer_walk(pp, &sk.master, m), digest_midstate(pp, m, 0));
     let rho = (0u32..)
-        .map(|i| randomizer(&base, i))
+        .map(|i| randomizer(&walk, i))
         .find(|rho| sk.tree.contains(index_of_block(&digests.finish(rho))))
         .unwrap();
     let (idx, u) = message_digest(pp, &rho, m);
@@ -360,41 +372,70 @@ mod tests {
         let sig = sign(&sk, &m);
         let digest = blake2s::hash(&sig.to_bytes());
         assert_eq!(hex(&pk.to_bytes()), "25e2cd4721a96bd25c7c164099a62f9df39e809c5482e50b8b8b76a66fab6507");
-        assert_eq!(hex(&digest), "a19b6a99d1e0efd22e9847929c7cde171fc9e840204465e658d55e470d697202");
-        assert_eq!(sig.counter, 246);
+        assert_eq!(hex(&digest), "0d13351aa6575f3b3512d06fe447f54e1a0d311b028fc55dd673cc30c4940afc");
+        assert_eq!(sig.counter, 1040);
+    }
+
+    /// The signature's randomizer is the first attempt of the message's walk that lands, and the
+    /// attempts before it are not `R - 1, R - 2, ...`.
+    #[test]
+    fn the_signer_takes_the_first_landing_attempt() {
+        let (sk, _) = key_gen(&seed(4), 10);
+        let pp = &sk.public_param;
+        for t in 0..4u8 {
+            let m: Message = std::array::from_fn(|i| t.wrapping_mul(17) ^ i as u8);
+            let walk = randomizer_walk(pp, &sk.master, &m);
+            assert_eq!(walk.step[0] & 1, 1);
+            let lands = |rho: &Randomizer| sk.tree.contains(digest_index(pp, rho, &m));
+            let i = (0u32..).find(|&i| lands(&randomizer(&walk, i))).unwrap();
+            let sig = sign(&sk, &m);
+            assert_eq!(sig.randomizer, randomizer(&walk, i));
+            if i > 0 {
+                let previous = u128::from_le_bytes(sig.randomizer).wrapping_sub(u128::from_le_bytes(walk.step));
+                assert_eq!(previous.to_le_bytes(), randomizer(&walk, i - 1));
+                assert_ne!(previous, u128::from_le_bytes(sig.randomizer).wrapping_sub(1));
+            }
+        }
     }
 
     #[test]
     fn a_randomizer_attempt_costs_one_compression() {
         let (pp, m) = ([3u8; PUBLIC_PARAM_LEN], [5u8; MESSAGE_LEN]);
         let before = compressions();
-        let (base, digests) = (randomizer_base(&pp, &seed(2), &m), digest_midstate(&pp, &m, 0));
-        assert_eq!(compressions() - before, 3, "R_0 and the digest's first block, once per message");
+        let (walk, digests) = (randomizer_walk(&pp, &seed(2), &m), digest_midstate(&pp, &m, 0));
+        assert_eq!(compressions() - before, 3, "R_0, delta and the digest's first block, once per message");
         for i in 0..4 {
             let before = compressions();
-            let index = index_of_block(&digests.finish(&randomizer(&base, i)));
+            let index = index_of_block(&digests.finish(&randomizer(&walk, i)));
             assert_eq!(compressions() - before, 1);
-            assert_eq!(index, digest_index(&pp, &randomizer(&base, i), &m));
+            assert_eq!(index, digest_index(&pp, &randomizer(&walk, i), &m));
         }
     }
 
-    /// Pins the byte order of the randomizer derivation and of the digest, and the addition.
+    /// Pins the byte order of the randomizer derivation and of the digest, and the walk.
     #[test]
     fn randomizer_and_digest_inputs() {
         let (pp, m) = ([3u8; PUBLIC_PARAM_LEN], [5u8; MESSAGE_LEN]);
-        let base = randomizer_base(&pp, &seed(2), &m);
+        let walk = randomizer_walk(&pp, &seed(2), &m);
         let input = [&pp[..], &address(&tweak(TWEAK_RANDOMIZER, 0, 0)), &seed(2), &m].concat();
-        assert_eq!(base[..], blake2s::hash(&input)[..N]);
-        assert_eq!(randomizer(&base, 0), base);
-        assert_eq!(randomizer(&[0xff; N], 2), {
-            let mut wrapped = [0u8; N];
-            wrapped[0] = 1;
-            wrapped
-        });
+        let output = blake2s::hash(&input);
+        assert_eq!(walk.base[..], output[..N]);
+        assert_eq!(walk.step[0], output[N] | 1, "the step is odd");
+        assert_eq!(walk.step[1..], output[N + 1..]);
+        assert_eq!(randomizer(&walk, 0), walk.base);
+        let mut one = [0u8; N];
+        one[0] = 1;
+        let ones = RandomizerWalk { base: [0xff; N], step: one };
+        assert_eq!(randomizer(&ones, 2), one, "wraps modulo 2^128");
         let mut carry = [0u8; N];
         carry[0] = 0xff;
-        assert_eq!(randomizer(&carry, 1)[..2], [0, 1], "little endian");
-        let rho = randomizer(&base, 7);
+        let mut three = [0u8; N];
+        three[0] = 3;
+        assert_eq!(randomizer(&RandomizerWalk { base: carry, step: three }, 1)[..2], [2, 1], "little endian");
+        assert_eq!(randomizer(&RandomizerWalk { base: [0; N], step: [0xff; N] }, 5), 5u128.wrapping_neg().to_le_bytes(), "-5");
+        let rho = randomizer(&walk, 7);
+        let (base, step) = (u128::from_le_bytes(walk.base), u128::from_le_bytes(walk.step));
+        assert_eq!(rho, base.wrapping_add(7 * step).to_le_bytes(), "R_0 + 7 delta");
         let input = [&pp[..], &address(&tweak(TWEAK_MSG, 1, 0)), &m, &rho].concat();
         assert_eq!(input.len(), 80, "the randomizer is the second block");
         assert_eq!(digest_block(&pp, &rho, &m, 1), blake2s::hash(&input));

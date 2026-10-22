@@ -64,9 +64,11 @@ parameter (16 bytes), then a 16-byte address: two fields of 4 and 3 bytes, 1 byt
 and the step in a chain, and 8 zero bytes.
 \begin{itemize}
   \item the encoding uses $\mathit{data} = m\concat R$ ($R$ is the randomizer): the message ends the first block, so $R$ is the
-        second block. A pruned signer tries $R = R_0 + i$ for $i = 0, 1, \dots$, with $R_0$ a hash of the secret key and $m$,
-        and keeps the first one that lands in its subtree. The first block is hashed once, so each try costs 1
-        compression
+        second block. A pruned signer tries $R = R_0 + i\Delta$ for $i = 0, 1, \dots$ (modulo $2^{128}$), with $R_0$ and
+        $\Delta$ the two halves of one hash of the secret key and $m$, the lowest bit of $\Delta$ set, and keeps the first
+        one that lands in its subtree. The first block is hashed once, so each try costs 1 compression. $\Delta$ is
+        secret: a signature does not tell which randomizers were tried and rejected before it (with $R_0 + i$,
+        $R-1, R-2, \dots$ were, which reveals that a key is pruned)
   \item a FORS tree has no root hash: the FORS public key hashes the two nodes below the root of every tree, which
         saves one hash per tree
   \item the secrets are derived from the secret key two at a time: one hash gives 32 bytes, i.e.\ two chain starts
@@ -166,8 +168,9 @@ Parts from signings of different $(m,J)$ don't combine, so aborted signings reve
 \paragraph{Signing (any $t$).}
 \begin{enumerate}
   \item agree on $m$
-  \item each signer commits to a random $r_i$, then reveals it; $R_0=\hash(r_1,\dots,r_t,m)$, and the signers
-        take the first $R=R_0+i$ that lands in the kept subtree.
+  \item each signer commits to a random $r_i$, then reveals it; $R_0$ and $\Delta$ are the two halves of
+        $\hash(r_1,\dots,r_t,m)$, the lowest bit of $\Delta$ set, and the signers take the first $R=R_0+i\Delta$ that
+        lands in the kept subtree.
   \item open $F$ at the 24 FORS addresses; check each against its leaf
   \item output $R$, the 24 secrets and paths, the WOTS signature, the authentication path
 \end{enumerate}
