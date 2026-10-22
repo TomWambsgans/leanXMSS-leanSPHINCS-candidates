@@ -69,7 +69,7 @@ potential of covers, the coin part `2^-128 C(y, 2) rate5` of A4a, and `κ` times
 theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (hq : q < 2 ^ 256) (hq2 : 2 * (q - keygenCost) ≤ 2 ^ 128)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (remaining : RemainingOutputs) (steps : Message → Randomness) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (known : Knowledge Coordinate)
     (hk : known ∈ support (exposeR (aboveList (truncateHash parameterOutput) prepared.1)
@@ -82,7 +82,7 @@ theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : a
     (qb m : ℕ) (c : ℚ) (hnear : H0.checkNear b N qb m c = true) (hqb : q - keygenCost ≤ qb) :
     Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
         (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-          (sampleData parameterOutput fixed highs remaining)))) known prepared.2] ≤
+          (sampleData parameterOutput fixed highs remaining steps)))) known prepared.2] ≤
       ENNReal.ofReal (ρ * (q - keygenCost : ℕ) / 2 ^ 128) +
         (((q - keygenCost : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + failMass (failSet prepared.1)) +
           signatureLimit * failMass (failSet prepared.1)) +
@@ -92,7 +92,7 @@ theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : a
           (((q - keygenCost : ℕ) : ℝ≥0∞) * contactRate) *
             ((q - keygenCost : ℕ) * failMass (failSet prepared.1) + signatureLimit * failMass (failSet prepared.1))) := by
   set param := truncateHash parameterOutput with hparam
-  set data := sampleData parameterOutput fixed highs remaining with hdata
+  set data := sampleData parameterOutput fixed highs remaining steps with hdata
   set model := sampleModel parameterOutput highs with hmodel
   set tgA := targetingA parameterOutput fixed highs remaining prepared.1 with htgA
   set start : State := DebtState.start prepared.2 known with hstart
@@ -108,9 +108,9 @@ theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : a
   have hmsg : ∀ x, IsMsgInput x → tgA.kind x = .none := fun x h =>
     targetingA_msg parameterOutput fixed highs remaining prepared.1 x h
   -- the contact bounds
-  have hA4a := a4a_bound_gameF adversary hnr q parameterOutput fixed highs remaining prepared hprepared tgA hmsg
+  have hA4a := a4a_bound_gameF adversary hnr q parameterOutput fixed highs remaining steps prepared hprepared tgA hmsg
     known known
-  have hA4b := a4b_bound_checkArm adversary hnr q b N qb m c hbb hNN hnear hqb parameterOutput fixed highs remaining
+  have hA4b := a4b_bound_checkArm adversary hnr q b N qb m c hbb hNN hnear hqb parameterOutput fixed highs remaining steps
     prepared hprepared tgA hmsg known (arm_split κ) known
   -- the linear potential with both payments, after the keygen tick
   have hA3 : ∑' out, Pr[= out | run] * (endValue pay out.2 + b0 * (digestCount tgA out.1.2.2.1 : ℝ≥0∞) +
@@ -162,7 +162,7 @@ theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : a
       have hfail : ∀ m ρ digest budget (s1 : State), Prepared prepared.2 s1 →
           ∀ out ∈ support (interp tgA prepared.2 model (finishRest param data m ρ digest) budget s1),
             out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ failSet prepared.1 :=
-        fun m ρ digest budget s1 hprep out hout hnone => finishRest_fail parameterOutput fixed highs remaining
+        fun m ρ digest budget s1 hprep out hout hnone => finishRest_fail parameterOutput fixed highs remaining steps
           prepared hprepared tgA m ρ digest budget s1 hprep out hout hnone
       have hfair : Fair5 H0.wbar5 := H0.fair5
       have hgood := goodO_advProg param data H0.wbar5 b0 (failSet prepared.1) q' tgA prepared.2 model
@@ -206,7 +206,7 @@ theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : a
       rfl
   -- pointwise split and summation
   rw [hrun] at hcover
-  refine le_trans (stopped_le_interp_exposeV hb adversary q hq parameterOutput fixed highs remaining prepared
+  refine le_trans (stopped_le_interp_exposeV hb adversary q hq parameterOutput fixed highs remaining steps prepared
     hprepared tgA known hk) ?_
   change Pr[_ | run >>= fun result => (fun table => (table, result)) <$> completion result.2.known] ≤ _
   have hstep : ∀ out, Pr[= out | run] *
@@ -231,7 +231,7 @@ theorem sample_boundSA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : a
               simp only [tableExtending]
               cases out.2.known c <;> rfl
             rcases small_pointwise parameterOutput fixed highs remaining prepared hprepared known hk ρ adversary q
-              out hout T hTe h with h1 | h2 | h3 | h4
+              steps out hout T hTe h with h1 | h2 | h3 | h4
             · exact Or.inl h1
             · exact Or.inr (Or.inl h2)
             · exact Or.inr (Or.inr (Or.inl h3))
@@ -315,16 +315,16 @@ set_option maxRecDepth 100000 in
 /-- **Small budgets, seed-free win, A4b armed.** The near term enters at `κ` times half the
 certified near H-term, with `κ` rational. -/
 theorem small_seedFree_boundA (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
-    (hq : q < 2 ^ 256) (hq2 : 2 * (q - keygenCost) ≤ 2 ^ 128)
+    (steps : Message → Randomness) (hq : q < 2 ^ 256) (hq2 : 2 * (q - keygenCost) ≤ 2 ^ 128)
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℚ) (hκ0 : 0 ≤ κ) (hκ1 : κ ≤ 1) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
       (signatureLimit : ℝ) * ((2 : ℝ) ^ subtreeHeight * 2 ^ 10)⁻¹ ≤ (κ : ℝ))
     (b N : ℕ) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
     (t : H0.PoisTable) (o : H0.OptS) (hthr : H0.checkThreshS b N t o = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128)
     (qb m : ℕ) (c : ℚ) (hnear : H0.checkNear b N qb m c = true) (hqb : q - keygenCost ≤ qb) :
-    Pr[Win | seedFreeExperiment (internalize adversary) q] ≤
+    Pr[Win | seedFreeExperiment (internalize adversary) q steps] ≤
       smallMainF ρ q o.B (κ * (c / 2)) + smallFail q * expectedFail := by
-  refine le_trans (seedFree_le_exposeP adversary q) ?_
+  refine le_trans (seedFree_le_exposeP adversary q steps) ?_
   set A := smallMainF ρ q o.B (κ * (c / 2)) with hA
   set C := smallFail q with hC
   have hκ1R : (κ : ℝ) ≤ 1 := by exact_mod_cast hκ1
@@ -334,10 +334,10 @@ theorem small_seedFree_boundA (hb : 0 < subtreeHeight) (adversary : Adversary) (
         (knownOf (truncateHash parameterOutput) fixed)),
       Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
           (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-            (sampleData parameterOutput fixed highs remaining)))) known prepared.2] ≤
+            (sampleData parameterOutput fixed highs remaining steps)))) known prepared.2] ≤
         A + C * failMass (failSet prepared.1) := by
     intro parameterOutput fixed highs remaining prepared hprepared known hk
-    refine le_trans (sample_boundSA hb adversary hnr q hq hq2 parameterOutput fixed highs remaining prepared
+    refine le_trans (sample_boundSA hb adversary hnr q hq hq2 parameterOutput fixed highs remaining steps prepared
       hprepared known hk ρ hN (κ : ℝ) hκ hκ1R b N hbb hNN t o hthr hcthr qb m c hnear hqb) (le_of_eq ?_)
     rw [hA, hC]
     unfold smallMainF smallFail
@@ -371,9 +371,9 @@ theorem det_smallA (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ)
     (qb m : ℕ) (c : ℚ) (hnear : H0.checkNear b N qb m c = true) (hqb : q - keygenCost ≤ qb) :
     Det.forgeAdvantageDet adversary ≤
       smallMainF ρ q o.B (κ * (c / 2)) + smallFail q * (2 : ℝ≥0∞)⁻¹ ^ 201 + 2 * ((q : ℝ≥0∞) / 2 ^ 256) := by
-  refine le_trans (Det.forgeAdvantageDet_le_seedFree adversary q hbound) (add_le_add ?_ le_rfl)
-  refine le_trans (small_seedFree_boundA hb (Memo.memoAdv adversary) (Memo.memoAdv_noRepeat adversary) q hq hq2 ρ hN
-    κ hκ0 hκ1 hκ b N hbb hNN t o hthr hcthr qb m c hnear hqb) ?_
+  refine le_trans (Det.forgeAdvantageDet_le_seedFree adversary q hbound _ fun steps =>
+    small_seedFree_boundA hb (Memo.memoAdv adversary) (Memo.memoAdv_noRepeat adversary) q steps hq hq2 ρ hN
+      κ hκ0 hκ1 hκ b N hbb hNN t o hthr hcthr qb m c hnear hqb) (add_le_add ?_ le_rfl)
   exact add_le_add le_rfl (mul_le_mul_right expectedFail_le _)
 
 end Close

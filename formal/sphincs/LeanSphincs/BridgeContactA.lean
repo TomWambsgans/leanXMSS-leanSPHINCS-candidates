@@ -5,7 +5,7 @@ import LeanSphincs.BridgeContact5
 made at unexposed secrets, so a contact is revealed only by a later signature. One signing call
 reveals a given leaf only through the pair it signs: a fresh landed view, which hits the leaf with
 probability `2^-b 2^-10`, or a cached landed pair of the signed message; under the signer that
-tries `R0, R0 + 1, ...` the cached pairs are selected with total probability at most the group of
+tries `R0, R0 + δ, ...` the cached pairs are selected with total probability at most the group of
 the message on the card function, `grpM m s (fun _ => False) cardFn 0` (`BridgeContact5`). This file
 proves that reveal bound and defines the event, its final value, and the counts of revealed and
 unrevealed contacts and of cached landed pairs of messages not yet signed (`coinCount`: a count of

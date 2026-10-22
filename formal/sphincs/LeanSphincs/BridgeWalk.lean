@@ -1,6 +1,6 @@
 import LeanSphincs.BridgeVirtualOnce
 
-/-! The walk of a signer that tries `R0, R0 + 1, ...`. `val` is the expected payoff of a walk of
+/-! The walk of a signer that tries `R0, R0 + δ, ...`. `val` is the expected payoff of a walk of
 `a` attempts from a start: at `x` the walk stops with weight `s x` (payoff `c x`) and continues
 with weight `t x`. Nothing here depends on the scheme: the randomizer space is a finite type with
 a successor bijection. The facts proved are the ones a potential needs: linearity, the martingale

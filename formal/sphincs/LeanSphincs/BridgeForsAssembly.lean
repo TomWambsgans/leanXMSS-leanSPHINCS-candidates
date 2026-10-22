@@ -134,19 +134,19 @@ def badFor (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : C
 /-- One table: the stopped run against the comparison run. -/
 theorem stopped_table_le (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ) (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs)
+    (remaining : RemainingOutputs) (steps : Message → Randomness)
     (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (table : Coordinate → Digest) (hagree : Agrees (knownOf (truncateHash parameterOutput) fixed) table) :
     Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stopped (sampleModel parameterOutput highs) table
         (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-          (sampleData parameterOutput fixed highs remaining))))
+          (sampleData parameterOutput fixed highs remaining steps))))
         (knownOf (truncateHash parameterOutput) fixed) prepared.2] ≤
       Pr[fun r => CorrectGuess table r.2 ∨
           badFor parameterOutput fixed highs remaining prepared.1 table (r.1, r.2.cache) |
         fixedRun (sampleModel parameterOutput highs) table
           (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-            (sampleData parameterOutput fixed highs remaining))))
+            (sampleData parameterOutput fixed highs remaining steps))))
           (DebtState.start prepared.2 (knownOf (truncateHash parameterOutput) fixed))] := by
   have htable := (agrees_iff_extending _ table).1 hagree
   refine le_trans (probEvent_mono fun r hr hwin => ?_)
@@ -157,7 +157,7 @@ theorem stopped_table_le (hb : 0 < subtreeHeight) (adversary : Adversary) (q : �
   · obtain ⟨outcome, hres, hw⟩ := hwin
     simp only at hres
     subst hres
-    rcases win_implies_bad hb adversary q hq parameterOutput fixed highs remaining prepared hprepared table htable
+    rcases win_implies_bad hb adversary q hq parameterOutput fixed highs remaining steps prepared hprepared table htable
       outcome reveals entries cacheF hr hw with h | h
     · exact Or.inl h
     · exact Or.inr ⟨outcome, rfl, h⟩
@@ -166,18 +166,18 @@ set_option maxRecDepth 100000 in
 /-- **From the stopped experiment to the interpreted run.** -/
 theorem stopped_le_interp (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ) (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs)
+    (remaining : RemainingOutputs) (steps : Message → Randomness)
     (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate) :
     Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
         (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-          (sampleData parameterOutput fixed highs remaining))))
+          (sampleData parameterOutput fixed highs remaining steps))))
         (knownOf (truncateHash parameterOutput) fixed) prepared.2] ≤
       Pr[fun x => CorrectGuess x.1 x.2.2 ∨
           badFor parameterOutput fixed highs remaining prepared.1 x.1 (((x.2.1.1, x.2.1.2.1), x.2.1.2.2.1), x.2.2.cache) |
         interp tg prepared.2 (sampleModel parameterOutput highs)
-          (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+          (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
             (internalize adversary)) q (DebtState.start prepared.2 (knownOf (truncateHash parameterOutput) fixed)) >>=
           fun result => (fun table => (table, result)) <$> completion result.2.known] := by
   unfold HiddenOutside.stoppedExperiment
@@ -187,7 +187,7 @@ theorem stopped_le_interp (hb : 0 < subtreeHeight) (adversary : Adversary) (q : 
             badFor parameterOutput fixed highs remaining prepared.1 table (r.1, r.2.cache) |
           fixedRun (sampleModel parameterOutput highs) table
             (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-              (sampleData parameterOutput fixed highs remaining))))
+              (sampleData parameterOutput fixed highs remaining steps))))
             (DebtState.start prepared.2 (knownOf (truncateHash parameterOutput) fixed))] := by
         refine ENNReal.tsum_le_tsum fun table => ?_
         by_cases htab : table ∈ support (completion (knownOf (truncateHash parameterOutput) fixed))
@@ -196,7 +196,7 @@ theorem stopped_le_interp (hb : 0 < subtreeHeight) (adversary : Adversary) (q : 
             rw [support_map] at htab
             obtain ⟨t, _, rfl⟩ := htab
             exact fun c v hc => completion_known _ c v hc t
-          have := stopped_table_le hb adversary q hq parameterOutput fixed highs remaining prepared
+          have := stopped_table_le hb adversary q hq parameterOutput fixed highs remaining steps prepared
             hprepared table hag
           exact mul_le_mul_right this _
         · rw [probOutput_eq_zero_of_not_mem_support htab, zero_mul, zero_mul]
@@ -204,7 +204,7 @@ theorem stopped_le_interp (hb : 0 < subtreeHeight) (adversary : Adversary) (q : 
             badFor parameterOutput fixed highs remaining prepared.1 x.1 (x.2.1, x.2.2.cache) |
           withTable (fun table => fixedRun (sampleModel parameterOutput highs) table
             (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-              (sampleData parameterOutput fixed highs remaining))))
+              (sampleData parameterOutput fixed highs remaining steps))))
             (DebtState.start prepared.2 (knownOf (truncateHash parameterOutput) fixed)))
             (knownOf (truncateHash parameterOutput) fixed)] := by
         unfold withTable
@@ -216,7 +216,7 @@ theorem stopped_le_interp (hb : 0 < subtreeHeight) (adversary : Adversary) (q : 
             badFor parameterOutput fixed highs remaining prepared.1 x.1 (x.2.1, x.2.2.cache) |
           lazyRun (sampleModel parameterOutput highs)
             (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-              (sampleData parameterOutput fixed highs remaining))))
+              (sampleData parameterOutput fixed highs remaining steps))))
             (DebtState.start prepared.2 (knownOf (truncateHash parameterOutput) fixed)) >>= fun result =>
               (fun table => (table, result)) <$> completion result.2.known] :=
         probEvent_congr' (fun _ _ => Iff.rfl) (withTable_fixedRun _ _ _)
@@ -226,13 +226,13 @@ theorem stopped_le_interp (hb : 0 < subtreeHeight) (adversary : Adversary) (q : 
         have hcomp : ((fun out : Run HashInput Coordinate HiddenBridge.Outcome × State =>
               (((out.1.1, out.1.2.1), out.1.2.2.1), out.2)) <$>
             interp tg prepared.2 (sampleModel parameterOutput highs)
-              (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+              (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
                 (internalize adversary)) q (DebtState.start prepared.2 (knownOf (truncateHash parameterOutput) fixed))) >>=
               (fun result => (fun table => (table, result)) <$> completion result.2.known) =
             (fun x : (Coordinate → Digest) × (Run HashInput Coordinate HiddenBridge.Outcome × State) =>
               (x.1, (((x.2.1.1, x.2.1.2.1), x.2.1.2.2.1), x.2.2))) <$>
             (interp tg prepared.2 (sampleModel parameterOutput highs)
-              (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+              (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
                 (internalize adversary)) q (DebtState.start prepared.2 (knownOf (truncateHash parameterOutput) fixed)) >>=
               fun result => (fun table => (table, result)) <$> completion result.2.known) := by
           rw [bind_map_left, map_bind]
@@ -317,14 +317,14 @@ noncomputable def failSet (results : Index → Option (Counter × Encoding)) : F
 
 /-- **A failed final assembly is at a failing index.** -/
 theorem finishRest_fail (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs)
+    (remaining : RemainingOutputs) (steps : Message → Randomness)
     (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate) (m : Message) (ρ : Randomness) (digest : MessageDigest)
     (budget : ℕ) (s1 : State) (hprep : Prepared prepared.2 s1)
     (out : Run HashInput Coordinate (Option Signature) × State)
     (hout : out ∈ support (interp tg prepared.2 (sampleModel parameterOutput highs)
-      (finishRest (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining) m ρ digest) budget s1))
+      (finishRest (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps) m ρ digest) budget s1))
     (hnone : out.1.1 = some none) :
     (Lifetime.localDigestView digest).1 ∈ failSet prepared.1 := by
   set model := sampleModel parameterOutput highs

@@ -1,5 +1,6 @@
 import VCVio.OracleComp.QueryTracking.LoggingOracle
 import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+import Mathlib.Data.BitVec
 
 /-!
 # The leanSPHINCS scheme
@@ -561,10 +562,50 @@ def derivePair {m : Type → Type} [Monad m] [HasQuery HashSpec m]
   let output ← Concrete.oracleHash (keygenHashInput parameter domain seed)
   return (truncateHash output, truncateHashHigh output)
 
+/-- The step of a randomizer walk: its lowest bit is set, so the walk `R0 + i * step` does not come
+back before `2^128` attempts. -/
+def walkStep (half : Randomness) : Randomness := half ||| 1#digestBits
+
+theorem walkStep_toNat_mod_two (half : Randomness) : (walkStep half).toNat % 2 = 1 := by
+  unfold walkStep
+  rw [BitVec.toNat_or, Nat.or_mod_two_eq_one]
+  right
+  rfl
+
+/-- `j` steps of the walk from `y`. -/
+theorem walk_iterate (step y : Randomness) (j : Nat) :
+    (fun x : Randomness => x + step)^[j] y = y + (j : Randomness) * step := by
+  induction j with
+  | zero => simp
+  | succ j ih =>
+      rw [Function.iterate_succ_apply', ih]
+      push_cast
+      ring
+
+/-- A walk with an odd step does not come back within `2^128` steps. -/
+theorem walk_iterate_ne (half y : Randomness) (j : Nat) (hj : j + 1 < 2 ^ 128) :
+    (fun x : Randomness => x + walkStep half)^[j] (y + walkStep half) ≠ y := by
+  rw [walk_iterate]
+  intro h
+  have hzero : ((j + 1 : Nat) : Randomness) * walkStep half = 0 := by
+    push_cast
+    linear_combination h
+  have h2 := congrArg BitVec.toNat hzero
+  have hd : (2 : Nat) ^ digestBits = 2 ^ 128 := rfl
+  rw [BitVec.toNat_mul, BitVec.natCast_eq_ofNat, BitVec.toNat_ofNat, hd, Nat.mod_eq_of_lt hj] at h2
+  have hdvd : 2 ^ 128 ∣ (j + 1) * (walkStep half).toNat := Nat.dvd_of_mod_eq_zero h2
+  have hcop : Nat.Coprime (2 ^ 128) (walkStep half).toNat :=
+    Nat.Coprime.pow_left 128 (Nat.coprime_two_left.mpr (Nat.odd_iff.mpr (walkStep_toNat_mod_two half)))
+  have := Nat.le_of_dvd (Nat.succ_pos j) (hcop.dvd_of_dvd_mul_right hdvd)
+  omega
+
+/-- One hash per message (`randomizer_walk`): its first half is the base randomizer `R0`, its second
+half gives the step of the walk. -/
 def deriveRandomizer {m : Type → Type} [Monad m] [HasQuery HashSpec m]
     (parameter : PublicParameter) (seed : MasterSeed)
-    (message : Message) : m Randomness := do
-  return truncateHash (← Concrete.oracleHash (randomizerHashInput parameter seed message))
+    (message : Message) : m (Randomness × Randomness) := do
+  let output ← Concrete.oracleHash (randomizerHashInput parameter seed message)
+  return (truncateHash output, walkStep (truncateHashHigh output))
 
 noncomputable def sampleMasterSeed : ProbComp MasterSeed :=
   letI := SampleableType.ofFintype MasterSeed
@@ -747,21 +788,22 @@ def signLayer (secretKey : SecretKey) (index : Index) (lay : Layer) : m (Option 
   let path ← treePath secretKey.parameter lay tree secretKey.seed leaf
   return some ⟨counter, values, path⟩
 
-/-- Grind from a randomizer: try `rho`, `rho + 1`, ... (little-endian 128-bit addition modulo
-`2^128`), stopping at the first that lands in the kept subtree. -/
-def signDigestLoop (secretKey : SecretKey) (message : Message) : Nat → Randomness →
+/-- Grind from a randomizer: try `rho`, `rho + step`, `rho + 2 step`, ... (little-endian 128-bit
+arithmetic modulo `2^128`), stopping at the first that lands in the kept subtree. -/
+def signDigestLoop (secretKey : SecretKey) (message : Message) (step : Randomness) : Nat → Randomness →
     m (Option (Randomness × Index))
   | 0, _ => pure none
   | attempts + 1, randomness => do
       match ← signAttempt secretKey message randomness with
       | some index => return some (randomness, index)
-      | none => signDigestLoop secretKey message attempts (randomness + 1)
+      | none => signDigestLoop secretKey message step attempts (randomness + step)
 
-/-- `Sign`: derive the base randomizer `R0` of the message, grind `R0 + i` into the kept subtree,
-compute the digest, open FORS, sign its key with WOTS+C and attach the path. -/
+/-- `Sign`: derive the base randomizer `R0` and the step `delta` of the message (one hash), grind
+`R0 + i * delta` into the kept subtree, compute the digest, open FORS, sign its key with WOTS+C and
+attach the path. -/
 def sign (secretKey : SecretKey) (message : Message) : m (Option Signature) := do
-  let base ← deriveRandomizer secretKey.parameter secretKey.seed message
-  let some (randomness, _) ← signDigestLoop secretKey message digestAttemptLimit base
+  let walk ← deriveRandomizer secretKey.parameter secretKey.seed message
+  let some (randomness, _) ← signDigestLoop secretKey message walk.2 digestAttemptLimit walk.1
     | return none
   let digest ← messageDigest secretKey.parameter secretKey.root message randomness
   let index := digestIndex digest

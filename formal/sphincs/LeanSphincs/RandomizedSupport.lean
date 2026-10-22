@@ -69,11 +69,11 @@ attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Seeded.tre
   Seeded.treeNode Seeded.ftsNode Seeded.spineNode Randomized.finishSign
 
 /-- A successful grinding walk leaves a cached answer certifying that it landed. -/
-theorem walk_support (sk : Seeded.SecretKey) (message : Message) :
+theorem walk_support (sk : Seeded.SecretKey) (message : Message) (step : Randomness) :
     ∀ (n : Nat) (base : Randomness) (cache : QueryCache HashSpec)
       (result : Option (Randomness × Index)) (cache' : QueryCache HashSpec),
       (result, cache') ∈ support ((simulateQ randomOracle
-        (Seeded.signDigestLoop sk message n base :
+        (Seeded.signDigestLoop sk message step n base :
           OracleComp HashSpec (Option (Randomness × Index)))).run cache) →
       cache ≤ cache' ∧ ∀ ρ index, result = some (ρ, index) → ∃ answer,
         cache' (msgInput sk message ρ) = some answer ∧
@@ -100,7 +100,7 @@ theorem walk_support (sk : Seeded.SecretKey) (message : Message) :
         cases Option.some.inj heq
         exact ⟨answer, hcached, hland⟩
       next =>
-        obtain ⟨hrestLe, hresult⟩ := ih (base + 1) cacheMid result cache' hrest
+        obtain ⟨hrestLe, hresult⟩ := ih (base + step) cacheMid result cache' hrest
         exact ⟨hqueryLe.trans hrestLe, hresult⟩
 
 /-- A successful randomized grinding loop leaves a cached answer certifying that it landed. -/
@@ -115,10 +115,12 @@ theorem randomizedDigest_support (sk : Seeded.SecretKey) (message : Message)
   rw [run_randomizedDigest, mem_support_bind_iff] at hmem
   obtain ⟨base, _, hmem⟩ := hmem
   rw [mem_support_bind_iff] at hmem
+  obtain ⟨half, _, hmem⟩ := hmem
+  rw [mem_support_bind_iff] at hmem
   obtain ⟨⟨walked, cacheW⟩, hwalk, hpure⟩ := hmem
   simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hpure
   obtain ⟨rfl, rfl⟩ := hpure
-  obtain ⟨hle, hres⟩ := walk_support sk message n base cache walked _ hwalk
+  obtain ⟨hle, hres⟩ := walk_support sk message _ n base cache walked _ hwalk
   refine ⟨hle, fun ρ hρ => ?_⟩
   cases walked with
   | none => simp at hρ

@@ -1,6 +1,6 @@
 import LeanSphincs.BridgeStateFn
 
-/-! Helpers for the contact modules under the signer that tries `R0, R0 + 1, ...`: the card
+/-! Helpers for the contact modules under the signer that tries `R0, R0 + δ, ...`: the card
 function, whose group value `grpM m s (fun _ => False) cardFn 0` is the selection mass of the known
 landed randomizers of a message (it replaces "`wbar` times the number of cached landed pairs of the
 message" of the per-attempt signer), and the pool part of a signing call for weights at most one. -/
@@ -46,11 +46,11 @@ theorem gain_cardFn (d : Multiset View) (v : View) : gain cardFn d v = 1 := by
 no fresh weight) is at most the group of the message on the card function. -/
 theorem pool_walk_le_grpM (parameter : PublicParameter) (data : PublicData) (m : Message) (s : State)
     (gp : Randomness → View → ℝ≥0∞) (hgp : ∀ ρ v, gp ρ v ≤ 1) :
-    ((Fintype.card Randomness : ℕ) : ℝ≥0∞)⁻¹ * ∑ ρ, Walk.val (fun x : Randomness => x + 1)
+    ((Fintype.card Randomness : ℕ) : ℝ≥0∞)⁻¹ * ∑ ρ, Walk.val (fun x : Randomness => x + data.step m)
         (Walk.sOf landing (stat parameter data m s)) (Walk.tOf landing (stat parameter data m s))
         (walkPay parameter data m s (fun _ => 0) gp) 0 digestAttemptLimit ρ ≤
       grpM parameter data m s (fun _ => False) cardFn 0 := by
-  have hpool := Walk.grp_ge_pool (e := succR) (p := landing) (L := digestAttemptLimit) landing_le_one cardFn_mono
+  have hpool := Walk.grp_ge_pool (e := succR (data.steps m)) (p := landing) (L := digestAttemptLimit) landing_le_one cardFn_mono
     (stat parameter data m s) (exB (fun _ => False) m) (0 : Multiset View)
   rw [cardFn_zero, zero_add] at hpool
   unfold grpM

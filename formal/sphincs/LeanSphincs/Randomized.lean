@@ -14,12 +14,13 @@ open Concrete
 
 variable [Params]
 
-/-- The grinding of `Seeded.sign` from a truly uniform base randomizer `R0`: the trials are `R0`,
-`R0 + 1`, ... -/
+/-- The grinding of `Seeded.sign` from a truly uniform base randomizer `R0` and step half: the trials
+are `R0`, `R0 + delta`, ... with `delta = walkStep half`. -/
 noncomputable def signDigestLoop (sk : Seeded.SecretKey) (message : Message) (attempts : Nat) :
     OracleComp OracleWorld (Option Randomness) := do
   let base ← liftM ($ᵗ Randomness : ProbComp Randomness)
-  let result ← liftM (Seeded.signDigestLoop sk message attempts base
+  let half ← liftM ($ᵗ Randomness : ProbComp Randomness)
+  let result ← liftM (Seeded.signDigestLoop sk message (walkStep half) attempts base
     : OracleComp HashSpec (Option (Randomness × Index)))
   return result.map Prod.fst
 

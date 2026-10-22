@@ -1,7 +1,7 @@
 import LeanSphincs.H0BoundOnce
 import LeanSphincs.BridgeStateFn
 
-/-! The coin of a future digest pair under the signer that tries `R0, R0 + 1, ...`:
+/-! The coin of a future digest pair under the signer that tries `R0, R0 + δ, ...`:
 `wbar5 = (2 - landing) / (2^128 · landing)`, independent of the budget. A digest query adds at most
 `rate5 = (2 - landing) / 2^128` selection mass (`Walk.grp_step`), and the selection probabilities of
 the walk are exact, so the budget-dependent share `wbarOf q` of the per-attempt signer is not

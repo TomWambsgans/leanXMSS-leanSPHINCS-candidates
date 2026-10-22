@@ -17,11 +17,14 @@ m ‖ ρ (the root is not hashed), and its fields do not lie across 64-bit words
 the starts of chains 2t and 2t + 1 of the one-time key at leaf e are the halves of
 H(P ‖ A(0, t, e) ‖ seed), and the secrets of leaves 2t and 2t + 1 of tree κ of FORS instance idx are
 the halves of H(P ‖ A(8, κ + 512·t, idx) ‖ seed) (`derivePair`, `otsValues`, `ftsNode`). The public
-parameter, the surrogates and R0 each take one hash and keep its first half.
+parameter and the surrogates each take one hash and keep its first half; the randomizer hash gives R0 (its
+first half) and the step δ (its second half with the lowest bit set).
 [Scheme.lean](LeanSphincs/Scheme.lean) is the functional model; `Seeded.sign`
-derives one base randomizer R0 = Th(P, A(7, 0, 0), seed ‖ m) per message and tries R0, R0 + 1, …
-(128-bit little-endian addition) until the digest index lands in the kept subtree, as the Rust
-signer does, so a repeated request returns the same signature. The SUF-CMA game is [StatementDet.lean](LeanSphincs/StatementDet.lean): every
+derives R0 and δ from one hash H(P ‖ A(7, 0, 0) ‖ seed ‖ m) per message and tries R0, R0 + δ,
+R0 + 2δ, … (128-bit little-endian arithmetic, `walkStep`) until the digest index lands in the kept
+subtree, as the Rust signer does, so a repeated request returns the same signature. δ is odd, so the
+walk does not come back within 2^128 attempts (`walk_iterate_ne`), and secret, so a signature does not
+tell which randomizers were rejected before it. The SUF-CMA game is [StatementDet.lean](LeanSphincs/StatementDet.lean): every
 adversary, every number q ≥ 1 of hash queries (keygen, signing and verification included), forges
 with probability at most q / 2^127.
 
@@ -49,10 +52,12 @@ With this attack the best known lifetimes are about 100 / 99.8 / 97.3 / 96.5 / 9
 of N_att (b = 26 … 8), so the proved limits are 90–96% of them. [PROOF.md](PROOF.md) explains where the
 remaining gap comes from.
 
-These attack figures do not depend on how the signer picks its randomizer. With R0 + i, a forger that
-scans a message's randomizers up to the first one that lands knows in advance, per digest query, about
-twice as often which digest a pruned key will sign (`Walk.grp_step`); the proof pays for it, and it is
-far too rare to change the lifetimes above.
+These attack figures do not depend on how the signer picks its randomizer. The proof fixes the steps
+δ of all messages and averages only the starts R0 (`Det.forgeAdvantageDet_le_seedFree`): the bound
+holds for every table of steps, as if the forger knew them. A forger that knows δ and scans a message's
+randomizers up to the first one that lands knows in advance, per digest query, about twice as often
+which digest a pruned key will sign (`Walk.grp_step`); the proof pays for it, and it is far too rare
+to change the lifetimes above.
 
 ## Checked claims
 
@@ -63,7 +68,8 @@ far too rare to change the lifetimes above.
 | The deterministic signer reduces to a seed-free game of an adversary that never repeats a message | `Det.forgeAdvantageDet_le_seedFree`, [BridgeDet](LeanSphincs/BridgeDet.lean) |
 | The secrets are independent uniform values hidden behind the seed: the hash answers the proof programs, two secrets each, are independent uniform outputs | `SeedCoupling.evalDist_hashAnswers`, `SeedCoupling.evalDist_prepared_continuation`, [SecuritySeedCoupling](LeanSphincs/SecuritySeedCoupling.lean) |
 | Key generation makes exactly 226·2^b + 2(26 − b) hash calls (per leaf: 32 hashes of the seed, 192 chain steps, the leaf hash) | `Prefix.hashCalls_keygenFromSeed`, [SecurityPrefixErasedKeygen](LeanSphincs/SecurityPrefixErasedKeygen.lean) |
-| The signer that walks R0, R0 + 1, … selects a cached digest with exactly the walk probability | `GraphView.loop_bound`, [BridgeSignerFors](LeanSphincs/BridgeSignerFors.lean) |
+| The signer that walks R0, R0 + δ, … selects a cached digest with exactly the walk probability | `GraphView.loop_bound`, [BridgeSignerFors](LeanSphincs/BridgeSignerFors.lean) |
+| A uniform randomizer table is a uniform table of steps and an independent uniform table of starts | `Det.evalDist_rtable_split`, [BridgeDet](LeanSphincs/BridgeDet.lean) |
 | One digest query adds at most (2 − 2^-(26−b)) / 2^128 selection mass to a message | `Walk.grp_step`, [BridgeGroup](LeanSphincs/BridgeGroup.lean) |
 | A successful seeded signature verifies | `Completeness.correct`, [Correctness](LeanSphincs/Correctness.lean) |
 | A signature assembled from any landed randomizer verifies | `Completeness.verify_of_finishSign`, [RandomizedCorrectness](LeanSphincs/RandomizedCorrectness.lean) |

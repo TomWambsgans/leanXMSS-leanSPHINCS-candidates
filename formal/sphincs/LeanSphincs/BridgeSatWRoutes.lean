@@ -194,7 +194,7 @@ set_option maxRecDepth 100000 in
 theorem sample_boundW (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs)
+    (remaining : RemainingOutputs) (steps : Message → Randomness)
     (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate)
@@ -209,26 +209,26 @@ theorem sample_boundW (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
     (Fail : Finset (Fin (2 ^ subtreeHeight)))
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared prepared.2 s1 →
       ∀ out ∈ support (interp tg prepared.2 (sampleModel parameterOutput highs)
-        (finishRest (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining) m ρ digest) budget s1),
+        (finishRest (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps) m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
     (wbar : ℝ≥0∞) (htotal : 2 * ((q - keygenCost : ℕ) : ℝ) + 2 ≤ spaceReal)
     (hfair : Fair5 wbar) :
     Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
         (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-          (sampleData parameterOutput fixed highs remaining))))
+          (sampleData parameterOutput fixed highs remaining steps))))
         (knownOf (truncateHash parameterOutput) fixed) prepared.2] ≤
       (1 - budget 0 (q - keygenCost)) + ((q - keygenCost : ℕ) * (hValueO (truncateHash parameterOutput)
-        (sampleData parameterOutput fixed highs remaining) wbar (baselineW (q - keygenCost))
+        (sampleData parameterOutput fixed highs remaining steps) wbar (baselineW (q - keygenCost))
         (DebtState.start prepared.2 (knownOf (truncateHash parameterOutput) fixed)) [] [] 0 signatureLimit
         (q - keygenCost) + failMass Fail) + signatureLimit * failMass Fail) := by
   set param := truncateHash parameterOutput with hparam
-  set data := sampleData parameterOutput fixed highs remaining with hdata
+  set data := sampleData parameterOutput fixed highs remaining steps with hdata
   set known := knownOf param fixed with hknown
   set model := sampleModel parameterOutput highs with hmodel
   set start : State := DebtState.start prepared.2 known with hstart
   have hparse : ∀ p call, model.parse (pblk param data p call) = none := fun p call =>
     hcompat.digestParse _ (hmsg _ (msgInput_digestInput param data.root p.1 p.2 call)).2
-  refine le_trans (stopped_le_interp hb adversary q hq parameterOutput fixed highs remaining prepared hprepared tg) ?_
+  refine le_trans (stopped_le_interp hb adversary q hq parameterOutput fixed highs remaining steps prepared hprepared tg) ?_
   -- a correct guess or a bad cache is a decided hit
   refine le_trans (probEvent_mono (q := fun r => Hit tg prepared.2 r.1 r.2.2 ∨ CoverOf param data r.2)
     fun x hx hp => ?_) ?_
@@ -276,7 +276,7 @@ set_option maxRecDepth 100000 in
 weighted saturation budget, `q - keygenCost` times the one-coin excess forecast at the baseline
 `baselineW (q - keygenCost)`, and the failing share of the prepared searches. -/
 theorem large_seedFree_boundW (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
-    (hq : q < 2 ^ 256)
+    (steps : Message → Randomness) (hq : q < 2 ^ 256)
     (htarget : ∀ parameterOutput fixed highs remaining prepared,
       prepared ∈ support (preparation parameterOutput fixed highs remaining) →
       ∃ tg : Targeting HashInput HashOutput Coordinate,
@@ -291,11 +291,11 @@ theorem large_seedFree_boundW (hb : 0 < subtreeHeight) (adversary : Adversary) (
       prepared ∈ support (preparation parameterOutput fixed highs remaining) → ∀ x, IsMsgInput x → prepared.2 x = none)
     (wbar : ℝ≥0∞) (hfair : Fair5 wbar)
     (htotal : 2 * ((q - keygenCost : ℕ) : ℝ) + 2 ≤ spaceReal) :
-    Pr[Win | seedFreeExperiment (internalize adversary) q] ≤
+    Pr[Win | seedFreeExperiment (internalize adversary) q steps] ≤
       ((1 - budget 0 (q - keygenCost)) + (q - keygenCost : ℕ) * startExcessO wbar (baselineW (q - keygenCost))
         (q - keygenCost)) +
       ((q - keygenCost : ℕ) + signatureLimit) * expectedFail := by
-  refine le_trans (HiddenBridge.seedFree_le_prep adversary q) ?_
+  refine le_trans (HiddenBridge.seedFree_le_prep adversary q steps) ?_
   set A := (1 - budget 0 (q - keygenCost)) + (q - keygenCost : ℕ) * startExcessO wbar (baselineW (q - keygenCost))
     (q - keygenCost) with hA
   set C : ℝ≥0∞ := ((q - keygenCost : ℕ) + signatureLimit) with hC
@@ -304,13 +304,13 @@ theorem large_seedFree_boundW (hb : 0 < subtreeHeight) (adversary : Adversary) (
       prepared ∈ support (preparation parameterOutput fixed highs remaining) →
       Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
           (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
-            (sampleData parameterOutput fixed highs remaining))))
+            (sampleData parameterOutput fixed highs remaining steps))))
           (knownOf (truncateHash parameterOutput) fixed) prepared.2] ≤ A + C * failMass (failSet prepared.1) := by
     intro parameterOutput fixed highs remaining prepared hprepared
     obtain ⟨tg, hcompat, htrunc, hmsg, hhit⟩ := htarget parameterOutput fixed highs remaining prepared hprepared
-    refine le_trans (sample_boundW hb adversary hnr q hq parameterOutput fixed highs remaining prepared hprepared tg hhit
+    refine le_trans (sample_boundW hb adversary hnr q hq parameterOutput fixed highs remaining steps prepared hprepared tg hhit
       hcompat htrunc hmsg (hclean _ _ _ _ _ hprepared) (failSet prepared.1)
-      (fun m ρ digest budget s1 hprep out hout hnone => finishRest_fail parameterOutput fixed highs remaining prepared
+      (fun m ρ digest budget s1 hprep out hout hnone => finishRest_fail parameterOutput fixed highs remaining steps prepared
         hprepared tg m ρ digest budget s1 hprep out hout hnone) wbar htotal hfair) (le_of_eq ?_)
     rw [hValueO_start _ _ _ _ _ (fun m ρ => hclean _ _ _ _ _ hprepared _
       (msgInput_digestInput (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).root
@@ -347,10 +347,10 @@ theorem det_largeW (hb : 0 < subtreeHeight) (hN : signatureLimit ≤ 2 ^ 70) (ad
     unfold spaceReal
     have : (2 * q' + 2 : ℕ) ≤ 2 ^ 128 := by omega
     exact_mod_cast this
-  have hmain := large_seedFree_boundW hb (Memo.memoAdv adversary) (Memo.memoAdv_noRepeat adversary) q
-    (by omega) (fun _ _ _ _ _ hprep => targetingAll hb _ _ _ _ _ hprep)
+  have hmain := fun steps => large_seedFree_boundW hb (Memo.memoAdv adversary) (Memo.memoAdv_noRepeat adversary) q
+    steps (by omega) (fun _ _ _ _ _ hprep => targetingAll hb _ _ _ _ _ hprep)
     (fun _ _ _ _ _ hprep => prepared_clean _ _ _ _ _ hprep) H0.wbar5 H0.fair5 htotal
-  refine le_trans (Det.forgeAdvantageDet_le_seedFree adversary q hbound) ?_
+  refine le_trans (Det.forgeAdvantageDet_le_seedFree adversary q hbound _ hmain) ?_
   have hE := expectedFail_le
   -- the negligible terms fit in the slack
   have hslack : ((q' : ℝ≥0∞) + signatureLimit) * expectedFail + 2 * ((q : ℝ≥0∞) / 2 ^ 256) ≤
@@ -380,7 +380,7 @@ theorem det_largeW (hb : 0 < subtreeHeight) (hN : signatureLimit ≤ 2 ^ 70) (ad
           mul_le_mul' hnat le_rfl
       _ = _ := by rw [mul_comm (2 : ℝ≥0∞), mul_assoc, two_mul_inv_pow_succ]
   calc _ ≤ (((1 - budget 0 q') + (q' : ℝ≥0∞) * startExcessO H0.wbar5 (baselineW q') q') +
-          ((q' : ℕ) + signatureLimit) * expectedFail) + 2 * ((q : ℝ≥0∞) / 2 ^ 256) := add_le_add hmain le_rfl
+          ((q' : ℕ) + signatureLimit) * expectedFail) + 2 * ((q : ℝ≥0∞) / 2 ^ 256) := le_rfl
     _ = ((1 - budget 0 q') + (q' : ℝ≥0∞) * startExcessO H0.wbar5 (baselineW q') q') +
           (((q' : ℝ≥0∞) + signatureLimit) * expectedFail + 2 * ((q : ℝ≥0∞) / 2 ^ 256)) := by
         ring

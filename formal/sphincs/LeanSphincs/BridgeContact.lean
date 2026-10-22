@@ -531,7 +531,7 @@ theorem avoids_finishRestF (parameter : PublicParameter) (data : PublicData) (me
 /-- The signing walk queries no FORS leaf input. -/
 theorem avoids_walkF (parameter : PublicParameter) (data : PublicData) (message : Message) :
     ∀ attempts ρ, Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate) IsFLInput
-      (signCostSourceWalk parameter data message attempts ρ) := by
+      (signCostSourceWalk parameter data message (data.step message) attempts ρ) := by
   intro attempts
   induction attempts with
   | zero => intro ρ; exact avoids_pure _ _

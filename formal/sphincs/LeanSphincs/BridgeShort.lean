@@ -357,15 +357,15 @@ theorem Only.signAttempt (secretKey : SecretKey) (message : Message) (randomness
   exact Short.Only.bind (Short.Only.messageDigestCall _ _ _ _ _) (fun _ =>
     Short.Only.ite _ (Short.Only.pure' _) (Short.Only.pure' _))
 
-theorem Only.signDigestLoop (secretKey : SecretKey) (message : Message) :
-    ∀ attempts randomness, Short.Only (signDigestLoop secretKey message attempts randomness :
+theorem Only.signDigestLoop (secretKey : SecretKey) (message : Message) (step : Randomness) :
+    ∀ attempts randomness, Short.Only (signDigestLoop secretKey message step attempts randomness :
       OracleComp HashSpec (Option (Randomness × Index)))
   | 0, _ => Short.Only.pure' _
   | attempts + 1, randomness => by
       rw [LeanSphincs.Seeded.signDigestLoop]
       refine Short.Only.bind (Only.signAttempt _ _ _) (fun result => ?_)
       cases result with
-      | none => exact Only.signDigestLoop secretKey message attempts (randomness + 1)
+      | none => exact Only.signDigestLoop secretKey message step attempts (randomness + step)
       | some _ => exact Short.Only.pure' _
 
 attribute [local irreducible] LeanSphincs.Seeded.treeNode LeanSphincs.Seeded.ftsNode

@@ -261,7 +261,7 @@ theorem hTermO_near_le (N q : ℕ) (hN : 1 ≤ N) (α w γ : ℝ≥0∞) (hw : w
         ring
 
 /-- The near H-term at budget `q`: the start value of the near potential's new-pair forecast, with
-the coin `wbar5` of the signer that tries `R0, R0 + 1, ...`. -/
+the coin `wbar5` of the signer that tries `R0, R0 + δ, ...`. -/
 noncomputable def hNearOf (q : ℕ) : ℝ≥0∞ :=
   creations Finset.univ landing (fun I => virtualOnce Finset.univ wbar5
     (excessW witnessNear 0) signatureLimit I 0) q []

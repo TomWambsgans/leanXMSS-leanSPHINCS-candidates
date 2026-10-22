@@ -2,7 +2,7 @@ import LeanSphincs.H0SplitCert
 import LeanSphincs.H0Bound5
 
 /-! The closing lemmas of `H0SplitCert` for the coin `wbar5` of the signer that tries
-`R0, R0 + 1, ...`. The table check is the one of `H0SplitCert` (`checkTable`, unchanged): it asks
+`R0, R0 + δ, ...`. The table check is the one of `H0SplitCert` (`checkTable`, unchanged): it asks
 for `N / 2^b + 2^127 / ((2^127 - 2^32) 2^b) ≤ μ`, and for `q ≤ 2^127` the rate of the new coin is
 `q · landing · wbar5 = q (2 - landing) / 2^128 ≤ 1 ≤ 2^127 / (2^127 - 2^32)`, so the certificates
 of the large route stay valid unchanged. -/

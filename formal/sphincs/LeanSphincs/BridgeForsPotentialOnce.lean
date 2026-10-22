@@ -6,7 +6,7 @@ import LeanSphincs.BridgeStateFn
 The virtual future gives every remaining signature a fresh uniform view and every future digest
 pair one coin. The cached pairs of the messages that were not signed yet sit in the base function
 (`stateFn`, `fut` of `BridgeStateFn`): one exclusive group per message, with the exact selection
-probabilities of the signer that tries `R0, R0 + 1, ...`. -/
+probabilities of the signer that tries `R0, R0 + δ, ...`. -/
 
 open OracleComp OracleSpec ENNReal
 

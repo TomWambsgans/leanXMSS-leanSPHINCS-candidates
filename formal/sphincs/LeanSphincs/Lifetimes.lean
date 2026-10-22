@@ -1,7 +1,7 @@
 import LeanSphincs.LifetimeCertificates
 
-/-! Proved lifetimes for the deterministic signer (one seed-derived base randomizer `R0` per message,
-attempt `i` uses `R0 + i`): 127 classical bits
+/-! Proved lifetimes for the deterministic signer (one seed-derived base randomizer `R0` and step `δ` per message,
+attempt `i` uses `R0 + i δ`): 127 classical bits
 against any adversary. Small budgets use the linear potential (which also pays the signature part of
 the contact-before-reveal term and the shortfall of FORS leaf queries at near-covered leaves), the
 cover potential at baseline `ρ / 2^128` and the FORS contact bounds; large budgets use the one-coin

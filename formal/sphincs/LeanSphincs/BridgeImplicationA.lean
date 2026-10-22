@@ -438,7 +438,7 @@ with the final cache on the run's queries, an accepted fresh forgery yields a ca
 hit, a WOTS event at a landed leaf, a FORS contact at a revealed leaf, two FORS contacts at one
 instance, a near cover, or a cover of a cached, landed, unsigned digest. -/
 theorem badA_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
-    (highs : CoordinateHighs) (remaining : RemainingOutputs) (table : HiddenGraph.Table)
+    (highs : CoordinateHighs) (remaining : RemainingOutputs) (steps : Message → Randomness) (table : HiddenGraph.Table)
     (htable : tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table)
     (results : Index → Option (Counter × Encoding)) (cacheF : QueryCache HashSpec)
     (reveals : List Coordinate) (entries : List (HiddenCost.Entry HashInput))
@@ -450,7 +450,7 @@ theorem badA_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput)
       (labelsOf (materialT parameterOutput fixed highs remaining table)
         (answersT parameterOutput fixed highs remaining table)))
     (hdata : GraphView.DataCorrect f (truncateHash parameterOutput) seed
-      (sampleData parameterOutput fixed highs remaining))
+      (sampleData parameterOutput fixed highs remaining steps))
     (hcoord : GraphView.CoordinatesCorrect f (truncateHash parameterOutput) seed table)
     (hfors : ∀ leaf : Index, SignatureWitness.canonicalFors f (truncateHash parameterOutput) seed leaf =
       (sampleData parameterOutput fixed highs remaining).forsKey leaf)
@@ -473,9 +473,9 @@ theorem badA_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput)
     (forgery : Forgery) (log : QueryLog SigningSpec)
     (htrace : ∀ input ∈ SignatureWitness.trace f ⟨(sampleData parameterOutput fixed highs remaining).root,
       truncateHash parameterOutput⟩ forgery.message forgery.signature, Sum.inl input ∈ entries)
-    (hgood : LogGood f (truncateHash parameterOutput) seed (sampleData parameterOutput fixed highs remaining)
+    (hgood : LogGood f (truncateHash parameterOutput) seed (sampleData parameterOutput fixed highs remaining steps)
       log reveals)
-    (hsigned : SignedRevealed f (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+    (hsigned : SignedRevealed f (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
       log reveals)
     (hverify : evalWithAnswerFn f (Concrete.verify ⟨(sampleData parameterOutput fixed highs remaining).root,
       truncateHash parameterOutput⟩ forgery.message forgery.signature : OracleComp HashSpec Bool) = true)
@@ -691,7 +691,7 @@ knowledge that contains the fixed knowledge and otherwise only above-word chain 
 winning outcome yields the refined bad event of the table. -/
 theorem win_implies_badA (hb : 0 < subtreeHeight) (adversary : Adversary) (q : Nat) (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs)
+    (remaining : RemainingOutputs) (steps : Message → Randomness)
     (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (known : HiddenReveal.Knowledge Coordinate)
@@ -704,7 +704,7 @@ theorem win_implies_badA (hb : 0 < subtreeHeight) (adversary : Adversary) (q : N
     (hstop : some (((some outcome, reveals), entries), cacheF) ∈ support
       (HiddenOutside.stopped (sampleModel parameterOutput highs) table
         (HiddenCost.erase (HiddenCost.trace (richProgram (Internalize.internalize adversary) q
-          (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining))))
+          (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps))))
         known prepared.2))
     (hwin : outcomeWins outcome = true) :
     badA parameterOutput fixed highs remaining prepared.1 table (((some outcome, reveals), entries), cacheF) := by
@@ -716,7 +716,7 @@ theorem win_implies_badA (hb : 0 < subtreeHeight) (adversary : Adversary) (q : N
   obtain ⟨-, hcached⟩ := lazy_cached (sampleModel parameterOutput highs) table _
     known prepared.2 cacheF _ entries hstop
   have hOnly : OnlyC (richProgram (Internalize.internalize adversary) q (truncateHash parameterOutput)
-      (sampleData parameterOutput fixed highs remaining)) :=
+      (sampleData parameterOutput fixed highs remaining steps)) :=
     OnlyC.withReveals (OnlyC.cap (OnlyC.costGameX _ _ adversary) q)
   have hshortE := costRun_entries_short _ table _ hOnly _ hrun
   have hcost := costRun_withReveals_cap_cost _ table _ q _ hrun
@@ -748,8 +748,8 @@ theorem win_implies_badA (hb : 0 < subtreeHeight) (adversary : Adversary) (q : N
   have hbound := sample_boundary (materialT parameterOutput fixed highs remaining table) seed
     (answersT parameterOutput fixed highs remaining table) (finalTable parameterOutput highs table cacheF)
   have hdata : GraphView.DataCorrect f' (truncateHash parameterOutput) seed
-      (sampleData parameterOutput fixed highs remaining) := by
-    have h := GraphView.publicData_correct f' _ seed _ hcons hbound
+      (sampleData parameterOutput fixed highs remaining steps) := by
+    have h := GraphView.publicData_correct f' _ seed _ hcons hbound steps
     rwa [publicData_T] at h
   have hcoord : GraphView.CoordinatesCorrect f' (truncateHash parameterOutput) seed table := by
     have h := GraphView.coordinates_correct f' _ seed _ hcons
@@ -759,10 +759,10 @@ theorem win_implies_badA (hb : 0 < subtreeHeight) (adversary : Adversary) (q : N
     unfold Assembly.sampleCoordinates at heq
     rwa [heq] at h
   obtain ⟨hverified, htrace, hgood⟩ := rich_support f' table (Internalize.internalize adversary) q
-    (truncateHash parameterOutput) seed (sampleData parameterOutput fixed highs remaining) hdata hcoord
+    (truncateHash parameterOutput) seed (sampleData parameterOutput fixed highs remaining steps) hdata hcoord
     outcome reveals entries hrun'
   have hsigned := rich_revealed f' table (Internalize.internalize adversary) q (truncateHash parameterOutput)
-    (sampleData parameterOutput fixed highs remaining) outcome reveals entries hrun'
+    (sampleData parameterOutput fixed highs remaining steps) outcome reveals entries hrun'
   have hfors : ∀ leaf : Index, SignatureWitness.canonicalFors f' (truncateHash parameterOutput) seed leaf =
       (sampleData parameterOutput fixed highs remaining).forsKey leaf := fun leaf => (hdata.forsKey leaf).symm
   have hencAgree : ∀ (leaf : Index) (counter : Counter),
@@ -789,7 +789,7 @@ theorem win_implies_badA (hb : 0 < subtreeHeight) (adversary : Adversary) (q : N
   obtain ⟨forgery, log, verified⟩ := outcome
   simp only [outcomeWins, Bool.and_eq_true, decide_eq_true_eq] at hwin
   obtain ⟨⟨hvalid, hnotContains⟩, rfl⟩ := hwin
-  exact badA_of_accepted hb parameterOutput fixed highs remaining table htable' prepared.1 cacheF reveals entries
+  exact badA_of_accepted hb parameterOutput fixed highs remaining steps table htable' prepared.1 cacheF reveals entries
     f' seed hcons hbound hdata hcoord hfors hfull hword hvalue hagree hcached known hknown hguess forgery log
     htrace hgood hsigned hverified.symm hvalid hnotContains
 

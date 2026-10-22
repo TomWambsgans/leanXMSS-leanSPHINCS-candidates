@@ -112,9 +112,9 @@ theorem randomOracle_preserves_encoding (sk : Seeded.SecretKey) (message : Messa
   · simpa only [oracleHash, HasQuery.query, simulateQ_spec_query] using hr
 
 /-- The grinding walk reads only the message domain and never consumes an encoding input. -/
-theorem walk_preserves_encoding (sk : Seeded.SecretKey) (message : Message) :
+theorem walk_preserves_encoding (sk : Seeded.SecretKey) (message : Message) (step : Randomness) :
     ∀ n (base : Randomness) (cache : QueryCache HashSpec), EncodingFresh cache →
-      ∀ r ∈ support ((simulateQ randomOracle (Seeded.signDigestLoop sk message n base :
+      ∀ r ∈ support ((simulateQ randomOracle (Seeded.signDigestLoop sk message step n base :
         OracleComp HashSpec (Option (Randomness × Index)))).run cache),
         EncodingFresh r.2 := by
   intro n
@@ -132,7 +132,7 @@ theorem walk_preserves_encoding (sk : Seeded.SecretKey) (message : Message) :
       split at hr
       · simp only [support_pure, Set.mem_singleton_iff] at hr
         exact hr ▸ hnext
-      · exact ih (base + 1) answer.2 hnext r hr
+      · exact ih (base + step) answer.2 hnext r hr
 
 /-- Grinding reads only the message domain and never consumes an encoding input. -/
 theorem randomizedDigest_preserves_encoding (sk : Seeded.SecretKey) (message : Message)
@@ -143,10 +143,12 @@ theorem randomizedDigest_preserves_encoding (sk : Seeded.SecretKey) (message : M
   rw [run_randomizedDigest, mem_support_bind_iff] at hr
   obtain ⟨base, _, hr⟩ := hr
   rw [mem_support_bind_iff] at hr
+  obtain ⟨half, _, hr⟩ := hr
+  rw [mem_support_bind_iff] at hr
   obtain ⟨walked, hwalk, hpure⟩ := hr
   simp only [support_pure, Set.mem_singleton_iff] at hpure
   subst hpure
-  exact walk_preserves_encoding sk message n base cache hfresh walked hwalk
+  exact walk_preserves_encoding sk message _ n base cache hfresh walked hwalk
 
 /-- The complete randomized signer has only the two bounded exhaustion cases. -/
 theorem randomized_sign_exhaustion_bound (sk : Seeded.SecretKey) (message : Message)

@@ -28,7 +28,8 @@ theorem randomizerHashInput_short (parameter : PublicParameter) (seed : MasterSe
 
 theorem Only.deriveRandomizer (parameter : PublicParameter) (seed : MasterSeed)
     (message : Message) :
-    Only (LeanSphincs.deriveRandomizer parameter seed message : OracleComp HashSpec Randomness) := by
+    Only (LeanSphincs.deriveRandomizer parameter seed message :
+      OracleComp HashSpec (Randomness × Randomness)) := by
   unfold LeanSphincs.deriveRandomizer
   exact Only.bind (Only.query (randomizerHashInput_short _ _ _)) (fun _ => Only.pure' _)
 
@@ -37,17 +38,18 @@ variable [Params]
 attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Randomized.finishSign
   LeanSphincs.Seeded.signAttempt
 
-theorem Only.seededLoop (sk : LeanSphincs.Seeded.SecretKey) (message : Message) (attempts : Nat)
-    (randomness : Randomness) :
-    Only (LeanSphincs.Seeded.signDigestLoop sk message attempts randomness :
+theorem Only.seededLoop (sk : LeanSphincs.Seeded.SecretKey) (message : Message) (step : Randomness)
+    (attempts : Nat) (randomness : Randomness) :
+    Only (LeanSphincs.Seeded.signDigestLoop sk message step attempts randomness :
       OracleComp HashSpec (Option (Randomness × Index))) :=
-  Short.Seeded.Only.signDigestLoop sk message attempts randomness
+  Short.Seeded.Only.signDigestLoop sk message step attempts randomness
 
-/-- The deterministic signer is the base derivation, the randomizer walk and the common assembly. -/
+/-- The deterministic signer is the derivation of the base and the step, the randomizer walk and the
+common assembly. -/
 theorem seededSign_eq (sk : LeanSphincs.Seeded.SecretKey) (message : Message) :
     (LeanSphincs.Seeded.sign sk message : OracleComp HashSpec (Option Signature)) = (do
-      let base ← LeanSphincs.deriveRandomizer sk.parameter sk.seed message
-      let some (randomness, _) ← LeanSphincs.Seeded.signDigestLoop sk message digestAttemptLimit base
+      let walk ← LeanSphincs.deriveRandomizer sk.parameter sk.seed message
+      let some (randomness, _) ← LeanSphincs.Seeded.signDigestLoop sk message walk.2 digestAttemptLimit walk.1
         | return none
       Randomized.finishSign sk message randomness) := by
   unfold LeanSphincs.Seeded.sign Randomized.finishSign
@@ -56,8 +58,8 @@ theorem seededSign_eq (sk : LeanSphincs.Seeded.SecretKey) (message : Message) :
 theorem Only.seededSign (sk : LeanSphincs.Seeded.SecretKey) (message : Message) :
     Only (LeanSphincs.Seeded.sign sk message : OracleComp HashSpec (Option Signature)) := by
   rw [seededSign_eq]
-  refine Only.bind (Only.deriveRandomizer _ _ _) (fun base => ?_)
-  refine Only.bind (Only.seededLoop sk message _ _) (fun result => ?_)
+  refine Only.bind (Only.deriveRandomizer _ _ _) (fun walk => ?_)
+  refine Only.bind (Only.seededLoop sk message _ _ _) (fun result => ?_)
   rcases result with _ | ⟨randomness, _⟩
   · exact Only.pure' _
   · exact Short.Only.finishSign _ _ _

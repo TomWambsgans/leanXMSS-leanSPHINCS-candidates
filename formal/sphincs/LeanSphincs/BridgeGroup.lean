@@ -1,6 +1,6 @@
 import LeanSphincs.BridgeMix
 
-/-! The exclusive group of one message under a signer that tries `R0, R0 + 1, ...`. A status
+/-! The exclusive group of one message under a signer that tries `R0, R0 + δ, ...`. A status
 assigns to every randomizer `none` (unqueried), `some none` (queried, the digest does not land) or
 `some (some v)` (queried, lands, view `v`). `grp σ ex h d` is the mean of the base function `h`
 over the selection of the signer: a start absorbed by a known landed value discloses its view, an

@@ -73,9 +73,9 @@ attribute [local irreducible] ReferenceChoice.search encodingAttemptLimit Concre
 
 /-- A signing walk that returns a signature revealed exactly that signature's coordinates. -/
 theorem signWalk_revealed (parameter : PublicParameter) (data : PublicData) (message : Message)
-    (attempts : Nat) (randomness : Randomness) (result : RunResult (Option Signature))
+    (step : Randomness) (attempts : Nat) (randomness : Randomness) (result : RunResult (Option Signature))
     (hresult : result ∈ support (costRun f table (withReveals
-      (signCostSourceWalk parameter data message attempts randomness)))) :
+      (signCostSourceWalk parameter data message step attempts randomness)))) :
     ∀ signature, result.1.1 = some signature →
       (∃ pair, firstEncoding f parameter topLayer rootTree
         (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message signature.randomness :
@@ -102,7 +102,7 @@ theorem signWalk_revealed (parameter : PublicParameter) (data : PublicData) (mes
           (hvalue ▸ hsome)
         rw [hrandomness]
         exact ⟨hpair, hreveals⟩
-      · exact ih (randomness + 1) r4 h4
+      · exact ih (randomness + step) r4 h4
 
 /-- A signing loop that returns a signature revealed exactly that signature's coordinates. -/
 theorem signLoop_revealed (parameter : PublicParameter) (data : PublicData) (message : Message)
@@ -121,7 +121,7 @@ theorem signLoop_revealed (parameter : PublicParameter) (data : PublicData) (mes
   obtain ⟨hr1, -⟩ := costRun_withReveals_liftProb f table _ r1 h1
   dsimp only
   rw [hr1, List.nil_append]
-  exact signWalk_revealed f table parameter data message attempts r1.1.1 r2 h2
+  exact signWalk_revealed f table parameter data message _ attempts r1.1.1 r2 h2
 
 /-- A signature returned by the signer revealed exactly that signature's coordinates. -/
 theorem sign_revealed (parameter : PublicParameter) (data : PublicData) (message : Message)

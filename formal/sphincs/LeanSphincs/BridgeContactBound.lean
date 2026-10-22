@@ -1,6 +1,6 @@
 import LeanSphincs.BridgeContactSample
 
-/-! The coin `wbar5` of the signer that tries `R0, R0 + 1, ...`, as used by the A4 bounds: its near
+/-! The coin `wbar5` of the signer that tries `R0, R0 + δ, ...`, as used by the A4 bounds: its near
 forecast is the near H-term and it pays the rate of the walk (`Fair5`); its product with `landing`
 is `rate5` (`H0.wbar5_mul_landing`, `H0.rate5_eq`). The fair share `wbarOf y` of the per-attempt
 signer is kept for the frozen modules: it is fair for the signer's attempts, and its product with

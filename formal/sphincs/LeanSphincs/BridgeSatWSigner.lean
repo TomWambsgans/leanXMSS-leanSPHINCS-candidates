@@ -5,7 +5,7 @@ import LeanSphincs.BridgeSignerFors
 message-digest blocks are untargeted, so their reads keep the weight; everything after the two
 digest reads of the final assembly lowers it in expectation. Each bound of `BridgeSignerFors`
 therefore holds with the integrand multiplied by the final weight and the bound multiplied by
-the initial weight. The signer samples one base randomizer and walks `R0, R0 + 1, ...`: the bounds
+the initial weight. The signer samples one base randomizer and walks `R0, R0 + δ, ...`: the bounds
 are by induction over the walk, as in `BridgeSignerFors`. -/
 
 open OracleComp OracleSpec ENNReal
@@ -168,11 +168,11 @@ theorem walk_boundW
       Landed parameter (blockIndex u0) → reference.cache (blk parameter data message ρ 1) ≠ none)
     (gf : Lifetime.KeptDigestView → ℝ≥0∞) (gp : Randomness → Lifetime.KeptDigestView → ℝ≥0∞) :
     ∀ attempts ρ budget state, attempts ≤ 2 ^ 128 → Related parameter data message reference state →
-      (∀ j, j < attempts → state.cache (blk parameter data message ((fun x : Randomness => x + 1)^[j] ρ) 0) =
-        reference.cache (blk parameter data message ((fun x : Randomness => x + 1)^[j] ρ) 0)) →
-      ∑' out, Pr[= out | interp tg initial model (signCostSourceWalk parameter data message attempts ρ) budget state] *
+      (∀ j, j < attempts → state.cache (blk parameter data message ((fun x : Randomness => x + data.step message)^[j] ρ) 0) =
+        reference.cache (blk parameter data message ((fun x : Randomness => x + data.step message)^[j] ρ) 0)) →
+      ∑' out, Pr[= out | interp tg initial model (signCostSourceWalk parameter data message (data.step message) attempts ρ) budget state] *
           (weight tg initial out.2 * outWeight parameter data message reference gf gp out) ≤
-        weight tg initial state * Walk.val (fun x : Randomness => x + 1)
+        weight tg initial state * Walk.val (fun x : Randomness => x + data.step message)
           (Walk.sOf ForsPrice.landing (stat parameter data message reference))
           (Walk.tOf ForsPrice.landing (stat parameter data message reference))
           (walkPay parameter data message reference gf gp) 0 attempts ρ := by
@@ -188,29 +188,29 @@ theorem walk_boundW
       exact bot_le
   | succ attempts ih =>
       intro ρ budget state hatt hrel hpos
-      set bound := Walk.val (fun x : Randomness => x + 1)
+      set bound := Walk.val (fun x : Randomness => x + data.step message)
         (Walk.sOf ForsPrice.landing (stat parameter data message reference))
         (Walk.tOf ForsPrice.landing (stat parameter data message reference))
-        (walkPay parameter data message reference gf gp) 0 attempts (ρ + 1) with hbound
+        (walkPay parameter data message reference gf gp) 0 attempts (ρ + data.step message) with hbound
       have hpos0 : state.cache (blk parameter data message ρ 0) = reference.cache (blk parameter data message ρ 0) :=
         hpos 0 (Nat.succ_pos _)
       have hih : ∀ s', (s' = state ∨ ∃ u, ¬Landed parameter (blockIndex u) ∧
           state.cache (blk parameter data message ρ 0) = none ∧ s' = state.store (blk parameter data message ρ 0) u) →
-          ∀ b, ∑' out, Pr[= out | interp tg initial model (signCostSourceWalk parameter data message attempts (ρ + 1)) b s'] *
+          ∀ b, ∑' out, Pr[= out | interp tg initial model (signCostSourceWalk parameter data message (data.step message) attempts (ρ + data.step message)) b s'] *
             (weight tg initial out.2 * outWeight parameter data message reference gf gp out) ≤
               weight tg initial s' * bound := by
         intro s' hs' b
-        have hposS : ∀ j, j < attempts → state.cache (blk parameter data message ((fun x : Randomness => x + 1)^[j] (ρ + 1)) 0) =
-            reference.cache (blk parameter data message ((fun x : Randomness => x + 1)^[j] (ρ + 1)) 0) := by
+        have hposS : ∀ j, j < attempts → state.cache (blk parameter data message ((fun x : Randomness => x + data.step message)^[j] (ρ + data.step message)) 0) =
+            reference.cache (blk parameter data message ((fun x : Randomness => x + data.step message)^[j] (ρ + data.step message)) 0) := by
           intro j hj
           have := hpos (j + 1) (Nat.succ_lt_succ hj)
           simpa only [Function.iterate_succ_apply] using this
         rcases hs' with rfl | ⟨u, hu, hc, rfl⟩
-        · exact ih (ρ + 1) b s' (by omega) hrel hposS
-        · refine ih (ρ + 1) b _ (by omega) (related_store parameter data message reference state hrel ρ hc u hu)
+        · exact ih (ρ + data.step message) b s' (by omega) hrel hposS
+        · refine ih (ρ + data.step message) b _ (by omega) (related_store parameter data message reference state hrel ρ hc u hu)
             fun j hj => ?_
-          have hne : (fun x : Randomness => x + 1)^[j] (ρ + 1) ≠ ρ := succ_iterate_ne ρ j (by omega)
-          have hbl : blk parameter data message ((fun x : Randomness => x + 1)^[j] (ρ + 1)) 0 ≠
+          have hne : (fun x : Randomness => x + data.step message)^[j] (ρ + data.step message) ≠ ρ := succ_iterate_ne (data.steps message) ρ j (by omega)
+          have hbl : blk parameter data message ((fun x : Randomness => x + data.step message)^[j] (ρ + data.step message)) 0 ≠
               blk parameter data message ρ 0 := fun h =>
             hne (payload_randomness_injective data.root message (tweakableInput_injective h).2.2)
           rw [store_cache_ne state _ _ hbl u]
@@ -219,7 +219,7 @@ theorem walk_boundW
       refine le_trans (trial_boundW tg initial model parameter data message hparse hkind reference hnob1 gf gp bound
         state hrel _ ρ hih budget) (mul_le_mul_right ?_ _)
       rw [hpos0]
-      have hval : Walk.val (fun x : Randomness => x + 1)
+      have hval : Walk.val (fun x : Randomness => x + data.step message)
           (Walk.sOf ForsPrice.landing (stat parameter data message reference))
           (Walk.tOf ForsPrice.landing (stat parameter data message reference))
           (walkPay parameter data message reference gf gp) 0 (attempts + 1) ρ =
@@ -259,7 +259,7 @@ theorem loop_boundW
     ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message attempts) budget reference] *
         (weight tg initial out.2 * outWeight parameter data message reference gf gp out) ≤
       weight tg initial reference *
-        (((Fintype.card Randomness : ℕ) : ℝ≥0∞)⁻¹ * ∑ ρ, Walk.val (fun x : Randomness => x + 1)
+        (((Fintype.card Randomness : ℕ) : ℝ≥0∞)⁻¹ * ∑ ρ, Walk.val (fun x : Randomness => x + data.step message)
           (Walk.sOf ForsPrice.landing (stat parameter data message reference))
           (Walk.tOf ForsPrice.landing (stat parameter data message reference))
           (walkPay parameter data message reference gf gp) 0 attempts ρ) := by
@@ -271,11 +271,11 @@ theorem loop_boundW
   simp only [hpr]
   rw [ENNReal.tsum_mul_left, tsum_fintype]
   set c : ℝ≥0∞ := ((Fintype.card Randomness : ℕ) : ℝ≥0∞)⁻¹ with hc
-  set V : Randomness → ℝ≥0∞ := fun ρ => Walk.val (fun x : Randomness => x + 1)
+  set V : Randomness → ℝ≥0∞ := fun ρ => Walk.val (fun x : Randomness => x + data.step message)
     (Walk.sOf ForsPrice.landing (stat parameter data message reference))
     (Walk.tOf ForsPrice.landing (stat parameter data message reference))
     (walkPay parameter data message reference gf gp) 0 attempts ρ with hV
-  have hwalk : ∀ ρ, ∑' out, Pr[= out | interp tg initial model (signCostSourceWalk parameter data message attempts ρ)
+  have hwalk : ∀ ρ, ∑' out, Pr[= out | interp tg initial model (signCostSourceWalk parameter data message (data.step message) attempts ρ)
         budget reference] * (weight tg initial out.2 * outWeight parameter data message reference gf gp out) ≤
       weight tg initial reference * V ρ := fun ρ =>
     walk_boundW tg initial model parameter data message hparse hkind reference hnob1 hlandb1 gf gp attempts ρ
@@ -403,7 +403,7 @@ theorem walk_bound_freshW
       Landed parameter (blockIndex u0) → reference.cache (blk parameter data message ρ 1) ≠ none)
     (gf : Lifetime.KeptDigestView → ℝ≥0∞) :
     ∀ attempts ρ budget state, Related parameter data message reference state →
-      ∑' out, Pr[= out | interp tg initial model (signCostSourceWalk parameter data message attempts ρ) budget state] *
+      ∑' out, Pr[= out | interp tg initial model (signCostSourceWalk parameter data message (data.step message) attempts ρ) budget state] *
           (weight tg initial out.2 * freshNewWeight parameter data message reference gf out) ≤
         weight tg initial state * Domination.freshAvg Finset.univ gf := by
   set a := Domination.freshAvg Finset.univ gf with ha
@@ -428,7 +428,7 @@ theorem walk_bound_freshW
       intro ρ budget state hrel
       rw [signCostSourceWalk_succ]
       refine le_trans (trial_bound_freshW tg initial model parameter data message hparse hkind reference hnob1
-        hlandb1 gf a state hrel _ (fun s' hs' b => ih (ρ + 1) b s' hs') ρ budget) (mul_le_mul_right ?_ _)
+        hlandb1 gf a state hrel _ (fun s' hs' b => ih (ρ + data.step message) b s' hs') ρ budget) (mul_le_mul_right ?_ _)
       have hland1 : ForsPrice.landing ≤ 1 := by
         unfold ForsPrice.landing
         exact ENNReal.inv_le_one.2 (by exact_mod_cast Nat.one_le_two_pow)

@@ -27,9 +27,14 @@ target is q/2^127 = 2x. K = 226·2^b + 2(26 − b) is the key-generation cost in
    of [Statement](LeanSphincs/Statement.lean) with the signing oracle `Seeded.sign`.
    `Det.forgeAdvantageDet_le_seedFree` ([BridgeDet](LeanSphincs/BridgeDet.lean)) bounds the advantage
    by the seed-free win of the memoizing adversary, which never asks for the same message twice, plus
-   2q/2^256: the base randomizer R0 of each message is replaced by a uniform value, one per
-   message. The FORS loads are N/2^b.
-   - **The walk.** The seed-free signer samples R0 and tries R0, R0 + 1, … The statuses of the
+   2q/2^256: the randomizer hash of each message is replaced by a uniform value, one per message,
+   split into a table of step halves and an independent table of starts R0
+   (`Det.evalDist_rtable_split`). The steps are fixed (the seed-free game takes the table of steps as
+   a parameter, in `PublicData.steps`, and is bounded for every table) and the starts averaged
+   (`DetValue.avg_advDet`). The FORS loads are N/2^b.
+   - **The walk.** The seed-free signer samples R0 and tries R0, R0 + δ, … with the step δ of the
+     message, which is odd, so the walk does not come back within 2^128 attempts
+     (`walk_iterate_ne`). The statuses of the
      randomizers of one message (unqueried, queried without landing, landed with a known view) fix
      the law of the selected randomizer exactly (`Walk.val`, [BridgeWalk](LeanSphincs/BridgeWalk.lean);
      `loop_bound`, [BridgeSignerFors](LeanSphincs/BridgeSignerFors.lean)): a known landed value is
@@ -128,8 +133,9 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
 
 ## Modeling differences and obligations
 
-- `Randomized.sign` samples a uniform 16-byte base randomizer and walks from it. Rust derives the
-  base from the seed and message; that signer is `Seeded.sign`, the one in the security statement.
+- `Randomized.sign` samples a uniform 16-byte base randomizer and step half and walks from them. Rust
+  derives both from the seed and message; that signer is `Seeded.sign`, the one in the security
+  statement.
   Honest completeness is proved for the randomized variant; correctness for the seeded one.
 - The formal signer returns `none` after 2^32 randomizer trials. Rust uses `(0u32..)` and
   `.find(...).unwrap()` without this explicit failure case; overflow/wrapping and failure behavior are
@@ -158,7 +164,7 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
   domains have distinct addresses (`hashFields_injective`,
   [SecurityPosition](LeanSphincs/SecurityPosition.lean)), so separating inputs costs no probability
   term. The message digest hashes m ‖ ρ (80 bytes with P and A: the first block ends with m,
-  the second is ρ) and the randomizer derivation seed ‖ m, once per
+  the second is ρ) and the randomizer derivation (R0 and δ) seed ‖ m, once per
   message: Rust keeps the BLAKE2s state after the first block of the digest and pays one
   compression per grinding attempt; the model hashes whole inputs, and its budgets count oracle
   queries. The root is

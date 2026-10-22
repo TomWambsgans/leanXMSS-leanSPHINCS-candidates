@@ -227,7 +227,7 @@ theorem walk_post (hparse : ∀ ρ call, model.parse (blk parameter data message
       ∀ out ∈ support (interp tg initial model (finishRest parameter data message ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail) :
     ∀ attempts ρ budget (s : DebtState HashInput HashOutput Coordinate), Prepared initial s →
-      ∀ out ∈ support (interp tg initial model (signCostSourceWalk parameter data message attempts ρ) budget s),
+      ∀ out ∈ support (interp tg initial model (signCostSourceWalk parameter data message (data.step message) attempts ρ) budget s),
         ∀ r, out.1.1 = some r → SignPost parameter data message Fail s out.2 out.1.2.1 r := by
   intro attempts
   induction attempts with
@@ -338,7 +338,7 @@ theorem loop_post (hparse : ∀ ρ call, model.parse (blk parameter data message
 theorem avoids_walk :
     ∀ attempts ρ, Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate)
       (fun x => IsMsgInput x ∧ ∀ ρ call, x ≠ blk parameter data message ρ call)
-      (signCostSourceWalk parameter data message attempts ρ) := by
+      (signCostSourceWalk parameter data message (data.step message) attempts ρ) := by
   intro attempts
   induction attempts with
   | zero => intro ρ; exact avoids_pure _ _
@@ -357,7 +357,7 @@ theorem avoids_walk :
           · cases hb
             exact hx.2 ρ 1 rfl
           exact avoids_mono (fun x hx => hx.1) (avoids_finishRest parameter data message ρ _)
-        · exact ih (ρ + 1)
+        · exact ih (ρ + data.step message)
 
 /-- The signing loop only queries message inputs of the signed message. -/
 theorem avoids_loop (attempts : ℕ) :

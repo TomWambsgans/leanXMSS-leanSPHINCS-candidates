@@ -87,9 +87,9 @@ theorem digestValue_index (secretKey : Seeded.SecretKey) (message : Message)
   simp only [digestValue, messageDigest, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
     digestIndex_truncate]
 
-theorem signDigestLoop_spec (secretKey : Seeded.SecretKey) (message : Message) :
+theorem signDigestLoop_spec (secretKey : Seeded.SecretKey) (message : Message) (step : Randomness) :
     ∀ (attempts : Nat) (trial : Randomness) {randomness : Randomness} {index : Index},
-      evalWithAnswerFn f (Seeded.signDigestLoop secretKey message attempts trial
+      evalWithAnswerFn f (Seeded.signDigestLoop secretKey message step attempts trial
         : OracleComp HashSpec (Option (Randomness × Index))) = some (randomness, index) →
       Landed secretKey.parameter (digestIndex (digestValue f secretKey message randomness)) := by
   intro attempts
@@ -105,7 +105,7 @@ theorem signDigestLoop_spec (secretKey : Seeded.SecretKey) (message : Message) :
         by_contra hh
         simp only [if_neg hh, evalWithAnswerFn_pure] at hl
         contradiction
-      next => exact ih (trial + 1) h
+      next => exact ih (trial + step) h
 
 omit [Params] in
 theorem sequenceLayers_spec {α : Layer → Type}
@@ -145,7 +145,7 @@ theorem sign_spec (secretKey : Seeded.SecretKey) (message : Message) {signature 
   rw [Seeded.sign, evalWithAnswerFn_bind, evalWithAnswerFn_bind] at h
   split at h
   next randomness index hloop =>
-      have hland := signDigestLoop_spec f secretKey message digestAttemptLimit _ hloop
+      have hland := signDigestLoop_spec f secretKey message _ digestAttemptLimit _ hloop
       rw [evalWithAnswerFn_bind, evalWithAnswerFn_bind, evalWithAnswerFn_bind,
         evalWithAnswerFn_bind] at h
       split at h

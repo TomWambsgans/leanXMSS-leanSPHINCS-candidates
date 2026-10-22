@@ -379,12 +379,12 @@ theorem compile_signAttempt (seed : MasterSeed) (material : Material)
 
 /-- The grinding walk makes no derivation call: it compiles to itself, for any seed. -/
 theorem compile_signDigestWalk (seed : MasterSeed) (material : Material)
-    (p : PublicParameter) (root : Digest) (message : Message) :
+    (p : PublicParameter) (root : Digest) (message : Message) (step : Randomness) :
     ∀ (attempts : Nat) (randomness : Randomness),
       simulateQ (compileHash seed material)
-        (Seeded.signDigestLoop ⟨seed, p, root⟩ message attempts randomness :
+        (Seeded.signDigestLoop ⟨seed, p, root⟩ message step attempts randomness :
           OracleComp HashSpec (Option (Randomness × Index))) =
-        liftM (Seeded.signDigestLoop ⟨0, p, root⟩ message attempts randomness :
+        liftM (Seeded.signDigestLoop ⟨0, p, root⟩ message step attempts randomness :
           OracleComp HashSpec (Option (Randomness × Index)))
   | 0, _ => by simp only [Seeded.signDigestLoop, simulateQ_pure, liftM_pure]
   | attempts + 1, randomness => by
@@ -392,7 +392,7 @@ theorem compile_signDigestWalk (seed : MasterSeed) (material : Material)
       apply bind_congr
       intro result
       cases result with
-      | none => exact compile_signDigestWalk seed material p root message attempts (randomness + 1)
+      | none => exact compile_signDigestWalk seed material p root message step attempts (randomness + step)
       | some index => simp only [simulateQ_pure, liftM_pure]
 
 /-- The private base-randomizer draw is retained while compiling the grinding loop. -/

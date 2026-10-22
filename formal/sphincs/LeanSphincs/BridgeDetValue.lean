@@ -193,22 +193,20 @@ abbrev Row := HashOutput
 
 variable [Params]
 
-/-- Averaging the base-randomizer output of one message gives the signer of the seed-free game. -/
+/-- Averaging the base randomizer of one message, its step fixed, gives the signer of the
+seed-free game. -/
 theorem row_le {α : Type} (E : α → Prop) (parameter : PublicParameter) (data : PublicData)
     (message : Message) (k : Option Signature → OracleComp CostSpec α) (n b : ℕ) :
-    ∑' row, Pr[= row | ($ᵗ Row : ProbComp Row)] *
+    ∑' r, Pr[= r | ($ᵗ Randomness : ProbComp Randomness)] *
         val g c E ((HiddenCost.tick 1 >>= fun _ =>
-          signCostSourceWalk parameter data message n (truncateHash row)) >>= k) b ≤
+          signCostSourceWalk parameter data message (data.step message) n r) >>= k) b ≤
       val g c E (signCostSourceLoop parameter data message n >>= k) b := by
   calc
-    _ ≤ ∑' row, Pr[= row | ($ᵗ Row : ProbComp Row)] *
-          val g c E (signCostSourceWalk parameter data message n (truncateHash row) >>= k) b := by
-      refine ENNReal.tsum_le_tsum fun row => mul_le_mul' le_rfl ?_
+    _ ≤ ∑' r, Pr[= r | ($ᵗ Randomness : ProbComp Randomness)] *
+          val g c E (signCostSourceWalk parameter data message (data.step message) n r >>= k) b := by
+      refine ENNReal.tsum_le_tsum fun r => mul_le_mul' le_rfl ?_
       rw [bind_assoc]
       exact val_tick_le g c E 1 _ b
-    _ = ∑' r, Pr[= r | ($ᵗ Randomness : ProbComp Randomness)] *
-          val g c E (signCostSourceWalk parameter data message n r >>= k) b :=
-      tsum_uniform_truncate (fun r => val g c E (signCostSourceWalk parameter data message n r >>= k) b)
     _ = _ := by
       rw [signCostSourceLoop, bind_assoc, val_liftProb_bind]
 
@@ -347,13 +345,15 @@ attribute [local irreducible] digestAttemptLimit
 
 noncomputable instance rtableSampleable : SampleableType Det.RTable := SampleableType.ofFintype Det.RTable
 
-/-- **Averaging the derived-randomizer table.** For a program that never repeats a request, the
-deterministic game with a uniform randomizer table wins (within budget) at most as often as the
-fresh-randomizer game. -/
+noncomputable instance ltableSampleable : SampleableType Det.LTable := SampleableType.ofFintype Det.LTable
+
+/-- **Averaging the derived base randomizers.** For a program that never repeats a request, the
+deterministic game whose base randomizers are uniform and whose step halves are those of `data`
+wins (within budget) at most as often as the fresh-randomizer game. -/
 theorem avg_advDet (E : Bool → Prop) (parameter : PublicParameter) (data : PublicData) :
     ∀ (M : OracleComp AdvSpec Forgery) (S : List Message) (L : QueryLog SigningSpec), NoRepeat M S → ∀ b,
-      ∑' rnd, Pr[= rnd | ($ᵗ Det.RTable : ProbComp Det.RTable)] *
-          val g c E (advDet parameter data rnd M L) b ≤
+      ∑' lows, Pr[= lows | ($ᵗ Det.LTable : ProbComp Det.LTable)] *
+          val g c E (advDet parameter data (Det.joinTable lows data.steps) M L) b ≤
         val g c E (advRand parameter data M L) b := by
   intro M
   induction M using OracleComp.inductionOn with
@@ -369,24 +369,26 @@ theorem avg_advDet (E : Bool → Prop) (parameter : PublicParameter) (data : Pub
       · obtain ⟨hnot, hrest⟩ := hnr
         simp only [advDet_sign, advRand_sign]
         rw [tsum_uniform_update m]
-        have hloc : ∀ (row : Row) (rnd : Det.RTable),
-            (Det.signCostDet parameter data (Function.update rnd m row) m >>= fun r =>
-              advDet parameter data (Function.update rnd m row) (next r) (L ++ [⟨m, r⟩])) =
+        have hloc : ∀ (low : Randomness) (lows : Det.LTable),
+            (Det.signCostDet parameter data (Det.joinTable (Function.update lows m low) data.steps) m >>= fun r =>
+              advDet parameter data (Det.joinTable (Function.update lows m low) data.steps) (next r)
+                (L ++ [⟨m, r⟩])) =
             ((HiddenCost.tick 1 >>= fun _ =>
-                signCostSourceWalk parameter data m digestAttemptLimit (truncateHash row)) >>= fun r =>
-              advDet parameter data rnd (next r) (L ++ [⟨m, r⟩])) := by
-          intro row rnd
+                signCostSourceWalk parameter data m (data.step m) digestAttemptLimit low) >>= fun r =>
+              advDet parameter data (Det.joinTable lows data.steps) (next r) (L ++ [⟨m, r⟩])) := by
+          intro low lows
+          rw [Det.joinTable_update]
           unfold Det.signCostDet
-          rw [Function.update_self]
-          exact bind_congr fun r => advDet_update parameter data (next r) (S ++ [m]) _ rnd m row (hrest r)
+          rw [Function.update_self, Det.truncateHash_joinHalves, Det.truncateHashHigh_joinHalves]
+          exact bind_congr fun r => advDet_update parameter data (next r) (S ++ [m]) _ _ m _ (hrest r)
             (List.mem_append_right _ (List.mem_singleton_self m))
         simp_rw [hloc]
         calc
-          _ ≤ ∑' row, Pr[= row | ($ᵗ Row : ProbComp Row)] *
+          _ ≤ ∑' low, Pr[= low | ($ᵗ Randomness : ProbComp Randomness)] *
                 val g c E ((HiddenCost.tick 1 >>= fun _ =>
-                    signCostSourceWalk parameter data m digestAttemptLimit (truncateHash row)) >>= fun r =>
+                    signCostSourceWalk parameter data m (data.step m) digestAttemptLimit low) >>= fun r =>
                   advRand parameter data (next r) (L ++ [⟨m, r⟩])) b := by
-            refine ENNReal.tsum_le_tsum fun row => mul_le_mul' le_rfl ?_
+            refine ENNReal.tsum_le_tsum fun low => mul_le_mul' le_rfl ?_
             exact val_bind_le_avg g c E _ _ _ _ (fun r _ b' => ih r (S ++ [m]) _ (hrest r) b') b
           _ ≤ _ := by
             rw [signCostSource]
@@ -449,8 +451,8 @@ theorem finishCostSource_det (parameter : PublicParameter) (data : PublicData) (
   · exact ⟨_, rfl⟩
 
 theorem signCostDetLoop_det (parameter : PublicParameter) (data : PublicData)
-    (message : Message) : ∀ n (randomness : Randomness),
-    ∃ x, simulateQ (fixedCostP g c) (signCostSourceWalk parameter data message n randomness) = pure x := by
+    (message : Message) (step : Randomness) : ∀ n (randomness : Randomness),
+    ∃ x, simulateQ (fixedCostP g c) (signCostSourceWalk parameter data message step n randomness) = pure x := by
   intro n
   induction n with
   | zero => intro t; exact ⟨none, rfl⟩
@@ -459,7 +461,7 @@ theorem signCostDetLoop_det (parameter : PublicParameter) (data : PublicData)
       simp only [signCostSourceWalk, simulateQ_bind, pure_bind, fixedCostP_liftHash]
       split
       · exact finishCostSource_det g c parameter data message _
-      · exact ih (t + 1)
+      · exact ih (t + step)
 
 /-! ### Memoizing at the cost level -/
 
@@ -524,8 +526,8 @@ theorem memo_le (parameter : PublicParameter) (data : PublicData) (rnd : Det.RTa
               exact le_trans hinv.2.2 (Nat.le_add_right _ _)
         | none =>
             rw [memoImpl_sign_none m record hm, bind_map_left, map_bind, advDet_sign, advDet_sign]
-            obtain ⟨x0, hx0⟩ := signCostDetLoop_det g c parameter data m digestAttemptLimit
-              (truncateHash (rnd m))
+            obtain ⟨x0, hx0⟩ := signCostDetLoop_det g c parameter data m
+              (walkStep (truncateHashHigh (rnd m))) digestAttemptLimit (truncateHash (rnd m))
             have hdet : simulateQ (fixedCostP g c) (Det.signCostDet parameter data rnd m) = pure x0 := by
               rw [Det.signCostDet, simulateQ_bind, fixedCostP_tick, pure_bind]
               exact hx0
@@ -563,28 +565,30 @@ theorem memo_game_le (parameter : PublicParameter) (data : PublicData) (rnd : De
 
 theorem avg_game (parameter : PublicParameter) (data : PublicData) (adversary : Adversary)
     (hnr : adversary.NoRepeat) (b : ℕ) :
-    ∑' rnd, Pr[= rnd | ($ᵗ Det.RTable : ProbComp Det.RTable)] *
-        val g c (· = true) (Det.costGameDet parameter data rnd adversary) b ≤
+    ∑' lows, Pr[= lows | ($ᵗ Det.LTable : ProbComp Det.LTable)] *
+        val g c (· = true) (Det.costGameDet parameter data (Det.joinTable lows data.steps) adversary) b ≤
       val g c (· = true) (costGame parameter data adversary) b := by
   unfold Det.costGameDet costGame
   refine val_bind_le_avg g c _ _ _ _ _ (fun _ _ b' => ?_) b
   simp only [costRestDet_eq, costRest_eq]
   exact avg_advDet g c _ parameter data _ [] [] (hnr _) b'
 
-/-- **Deterministic randomizers, memoized and averaged.** With a uniform randomizer table, the
-deterministic game of any adversary wins (within budget) at most as often as the fresh-randomizer
-game of its memoizing version. -/
+/-- **Deterministic randomizers, memoized and averaged.** With uniform base randomizers and the step
+halves of `data`, the deterministic game of any adversary wins (within budget) at most as often as
+the fresh-randomizer game of its memoizing version. -/
 theorem win_avg_le (parameter : PublicParameter) (data : PublicData) (adversary : Adversary)
     (hnr : (Memo.memoAdv adversary).NoRepeat) (b : ℕ) :
     Pr[Reduce.Win | do
-        let rnd ← ($ᵗ Det.RTable : ProbComp Det.RTable)
-        costRun g c (cap (Det.costGameDet parameter data rnd adversary) b)] ≤
+        let lows ← ($ᵗ Det.LTable : ProbComp Det.LTable)
+        costRun g c (cap (Det.costGameDet parameter data (Det.joinTable lows data.steps) adversary) b)] ≤
       Pr[Reduce.Win | costRun g c (cap (costGame parameter data (Memo.memoAdv adversary)) b)] := by
   rw [probEvent_bind_eq_tsum]
   calc
-    _ ≤ ∑' rnd, Pr[= rnd | ($ᵗ Det.RTable : ProbComp Det.RTable)] *
-          val g c (· = true) (Det.costGameDet parameter data rnd (Memo.memoAdv adversary)) b :=
-      ENNReal.tsum_le_tsum fun rnd => mul_le_mul' le_rfl (memo_game_le g c parameter data rnd adversary b)
+    _ ≤ ∑' lows, Pr[= lows | ($ᵗ Det.LTable : ProbComp Det.LTable)] *
+          val g c (· = true) (Det.costGameDet parameter data (Det.joinTable lows data.steps)
+            (Memo.memoAdv adversary)) b :=
+      ENNReal.tsum_le_tsum fun lows => mul_le_mul' le_rfl
+        (memo_game_le g c parameter data _ adversary b)
     _ ≤ _ := avg_game g c parameter data _ hnr b
 
 end LeanSphincs.Security.DetValue

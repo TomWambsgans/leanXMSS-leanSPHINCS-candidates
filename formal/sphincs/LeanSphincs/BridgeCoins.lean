@@ -3,7 +3,7 @@ import LeanSphincs.BridgeVirtualOnce
 /-! Coins of unequal probability. The expected potential `slotValue` is affine and monotone in the
 probability of each coin: a coin whose probability is itself random, independent of the rest, is
 worth the coin of its mean probability, and lowering a probability lowers the value. These are the
-two facts a signer that scans `R0, R0 + 1, ...` needs: the selection probability of a cached value
+two facts a signer that scans `R0, R0 + δ, ...` needs: the selection probability of a cached value
 is a martingale under further queries, not a constant. Nothing here depends on the scheme. -/
 
 open ENNReal

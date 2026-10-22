@@ -169,21 +169,21 @@ theorem OnlyC.finishCostSource (parameter : PublicParameter) (data : PublicData)
     refine OnlyC.bind (OnlyC.sequenceFin _ fun _ => OnlyC.reveal _) (fun _ => ?_)
     exact OnlyC.bind (OnlyC.tick _) (fun _ => OnlyC.pure' _)
 
-theorem OnlyC.signCostSourceWalk (parameter : PublicParameter) (data : PublicData) (message : Message) :
-    ∀ attempts randomness,
-      OnlyC (GraphView.signCostSourceWalk parameter data message attempts randomness)
+theorem OnlyC.signCostSourceWalk (parameter : PublicParameter) (data : PublicData) (message : Message)
+    (step : Randomness) : ∀ attempts randomness,
+      OnlyC (GraphView.signCostSourceWalk parameter data message step attempts randomness)
   | 0, _ => OnlyC.pure' _
   | attempts + 1, randomness => by
       rw [GraphView.signCostSourceWalk]
       refine OnlyC.bind (OnlyC.liftHash (Short.Only.messageDigestCall _ _ _ _ _)) (fun first => ?_)
       split
       · exact OnlyC.finishCostSource _ _ _ _
-      · exact OnlyC.signCostSourceWalk parameter data message attempts (randomness + 1)
+      · exact OnlyC.signCostSourceWalk parameter data message step attempts (randomness + step)
 
 theorem OnlyC.signCostSourceLoop (parameter : PublicParameter) (data : PublicData) (message : Message)
     (attempts : Nat) : OnlyC (GraphView.signCostSourceLoop parameter data message attempts) := by
   rw [GraphView.signCostSourceLoop]
-  exact OnlyC.bind (OnlyC.liftProb _) (fun _ => OnlyC.signCostSourceWalk _ _ _ _ _)
+  exact OnlyC.bind (OnlyC.liftProb _) (fun _ => OnlyC.signCostSourceWalk _ _ _ _ _ _)
 
 theorem OnlyC.signCostSource (parameter : PublicParameter) (data : PublicData) (message : Message) :
     OnlyC (GraphView.signCostSource parameter data message) :=

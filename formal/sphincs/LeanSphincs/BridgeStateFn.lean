@@ -1,7 +1,7 @@
 import LeanSphincs.BridgeForsPotential
 import LeanSphincs.BridgeVirtualOnce
 
-/-! The cached digest pairs of a state, seen through the signer `R0, R0 + 1, ...`. Every message
+/-! The cached digest pairs of a state, seen through the signer `R0, R0 + δ, ...`. Every message
 that was not signed yet has one exclusive group (`Walk.grp`) over the statuses of its randomizers;
 `stateFn s L excl f` is a base function `f` averaged over the selections of all these groups. The
 potentials forecast `stateFn s L excl f` instead of `f`: one more digest query costs one future
@@ -19,15 +19,16 @@ set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 attribute [local irreducible] digestAttemptLimit
 
-/-- The next randomizer of the walk. -/
-def succR : Randomness ≃ Randomness where
-  toFun x := x + 1
-  invFun x := x - 1
+/-- The next randomizer of a walk whose step is `walkStep half`. -/
+def succR (half : Randomness) : Randomness ≃ Randomness where
+  toFun x := x + walkStep half
+  invFun x := x - walkStep half
   left_inv x := by simp
   right_inv x := by simp
 
-theorem succR_free (y : Randomness) (j : ℕ) (hj : j < 2 ^ 128 - 1) : succR^[j] (succR y) ≠ y :=
-  succ_iterate_ne y j (by omega)
+theorem succR_free (half y : Randomness) (j : ℕ) (hj : j < 2 ^ 128 - 1) :
+    (succR half)^[j] (succR half y) ≠ y :=
+  succ_iterate_ne half y j (by omega)
 
 variable [Params]
 
@@ -75,7 +76,7 @@ theorem exB_false (m : Message) : exB (fun _ => False) m = fun _ => false := by
 /-- The group of one message in a state. -/
 noncomputable def grpM (m : Message) (s : State) (excl : Pair → Prop) (h : Multiset View → ℝ≥0∞)
     (d : Multiset View) : ℝ≥0∞ :=
-  Walk.grp succR landing digestAttemptLimit (stat parameter data m s) (exB excl m) h d
+  Walk.grp (succR (data.steps m)) landing digestAttemptLimit (stat parameter data m s) (exB excl m) h d
 
 /-- The messages that were not signed. -/
 noncomputable def freshMsgs (L : QueryLog SigningSpec) : List Message :=
@@ -286,7 +287,7 @@ theorem grpM_clean (m : Message) (s : State) (excl : Pair → Prop)
     simp [stat, hclean ρ]
   unfold grpM Walk.grp
   rw [hσ]
-  have hat : ∀ x0 : Randomness, Walk.grpAt succR landing digestAttemptLimit (fun _ => none)
+  have hat : ∀ x0 : Randomness, Walk.grpAt (succR (data.steps m)) landing digestAttemptLimit (fun _ => none)
       (exB excl m) f d x0 = f d := by
     intro x0
     unfold Walk.grpAt
@@ -374,9 +375,9 @@ theorem stateFn_newPair {f : Multiset View → ℝ≥0∞} (hf : Monotone' f ∧
       intro u0 u1
       refine stateFn_withPair_other s _ excl f (m, y) u0 u1 fun hall => ?_
       exact hall ⟨m, none⟩ (List.mem_append_right _ (List.mem_singleton_self _)) rfl
-    set F : View → ℝ≥0∞ := fun v => Walk.grp succR landing digestAttemptLimit
+    set F : View → ℝ≥0∞ := fun v => Walk.grp (succR (data.steps m)) landing digestAttemptLimit
       (Function.update (stat parameter data m s) y (some (some v))) (exB excl m) h d with hF
-    set C : ℝ≥0∞ := Walk.grp succR landing digestAttemptLimit
+    set C : ℝ≥0∞ := Walk.grp (succR (data.steps m)) landing digestAttemptLimit
       (Function.update (stat parameter data m s) y (some none)) (exB excl m) h d with hC
     have hpoint : (fun u0 u1 => stateFn parameter data (withPair parameter data s (m, y) u0 u1) L excl f d) =
         fun u0 u1 => if Landed parameter (blockIndex u0) then F (viewOf u0 u1) else C := by
@@ -391,9 +392,9 @@ theorem stateFn_newPair {f : Multiset View → ℝ≥0∞} (hf : Monotone' f ∧
     have hσy : stat parameter data m s y = none := by
       have : s.cache (blk parameter data m y 0) = none := hp0
       simp [stat, this]
-    have := Walk.grp_avg_step (e := succR) (p := landing) (L := digestAttemptLimit) landing_le_one landing_ne_zero
+    have := Walk.grp_avg_step (e := (succR (data.steps m))) (p := landing) (L := digestAttemptLimit) landing_le_one landing_ne_zero
       (2 ^ 128 - 1) (by unfold digestAttemptLimit; norm_num) (by unfold digestAttemptLimit; norm_num)
-      succR_free hhp (stat parameter data m s) y hσy (exB excl m) (Bool.eq_false_iff.2 fun h => hex (exB_iff.1 h))
+      (succR_free (data.steps m)) hhp (stat parameter data m s) y hσy (exB excl m) (Bool.eq_false_iff.2 fun h => hex (exB_iff.1 h))
       rate5 rfl rate5_le_one d
     rw [hsplit]
     exact this
@@ -445,7 +446,7 @@ theorem stateFn_newPair_self {f : Multiset View → ℝ≥0∞} (hf : Monotone' 
     have hσy : stat parameter data m s y = none := by
       have : s.cache (blk parameter data m y 0) = none := hp0
       simp [stat, this]
-    have := Walk.grp_landed_excl_le (e := succR) (L := digestAttemptLimit) landing_le_one hhp.1
+    have := Walk.grp_landed_excl_le (e := (succR (data.steps m))) (L := digestAttemptLimit) landing_le_one hhp.1
       (stat parameter data m s) y hσy (viewOf u0 u1) (fun _ => false) d
     have hex1 : exB (· = ((m, y) : Pair)) m = fun x => decide (x = y) || false := by
       funext ρ
@@ -611,7 +612,7 @@ theorem sign_combine (hw : wbar ≤ 1) {h : Multiset View → ℝ≥0∞} (hh : 
     (m : Message) (s : State) (excl : Pair → Prop) (n : ℕ) (J : List View) (d : Multiset View) :
     virtualOnce Finset.univ wbar h n J d +
         freshAvg Finset.univ (fun u => virtualOnce Finset.univ wbar h n J (d + {u}) - virtualOnce Finset.univ wbar h n J d) +
-        ((Fintype.card Randomness : ℕ) : ℝ≥0∞)⁻¹ * ∑ ρ, Walk.val (fun x : Randomness => x + 1)
+        ((Fintype.card Randomness : ℕ) : ℝ≥0∞)⁻¹ * ∑ ρ, Walk.val (fun x : Randomness => x + data.step m)
           (Walk.sOf landing (stat parameter data m s)) (Walk.tOf landing (stat parameter data m s))
           (walkPay parameter data m s (fun _ => 0) (fun ρ v => if excl (m, ρ) then 0 else
             virtualOnce Finset.univ wbar h n J (d + {v}) - virtualOnce Finset.univ wbar h n J d)) 0
@@ -642,9 +643,9 @@ theorem sign_combine (hw : wbar ≤ 1) {h : Multiset View → ℝ≥0∞} (hh : 
           unfold gain at this
           rw [add_right_comm]
           exact this
-  have hpool := Walk.grp_ge_pool (e := succR) (p := landing) (L := digestAttemptLimit) landing_le_one hHp.1
+  have hpool := Walk.grp_ge_pool (e := (succR (data.steps m))) (p := landing) (L := digestAttemptLimit) landing_le_one hHp.1
     (stat parameter data m s) (exB excl m) d
-  have hcomm : Walk.grp succR landing digestAttemptLimit (stat parameter data m s) (exB excl m) Hf d =
+  have hcomm : Walk.grp (succR (data.steps m)) landing digestAttemptLimit (stat parameter data m s) (exB excl m) Hf d =
       virtualOnce Finset.univ wbar (grpM parameter data m s excl h) (n + 1) J d :=
     (rep_grpM (parameter := parameter) (data := data) m s excl).comm (rep_virtualOnce Finset.univ hw (n + 1) J) h d
   rw [← hcomm]

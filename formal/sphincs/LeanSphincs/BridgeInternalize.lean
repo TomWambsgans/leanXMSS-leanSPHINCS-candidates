@@ -409,7 +409,8 @@ theorem OnlyW.signDigestLoop (sk : LeanSphincs.Seeded.SecretKey) (message : Mess
     OnlyW (Randomized.signDigestLoop sk message attempts) := by
   rw [Randomized.signDigestLoop]
   refine OnlyW.bind (OnlyW.liftProb _) (fun _ => ?_)
-  exact OnlyW.bind (OnlyW.liftHash (Short.Seeded.Only.signDigestLoop _ _ _ _)) (fun _ => OnlyW.pure' _)
+  refine OnlyW.bind (OnlyW.liftProb _) (fun _ => ?_)
+  exact OnlyW.bind (OnlyW.liftHash (Short.Seeded.Only.signDigestLoop _ _ _ _ _)) (fun _ => OnlyW.pure' _)
 
 theorem OnlyW.sign (sk : LeanSphincs.Seeded.SecretKey) (message : Message) :
     OnlyW (Randomized.sign sk message) := by

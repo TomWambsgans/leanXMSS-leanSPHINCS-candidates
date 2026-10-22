@@ -114,7 +114,7 @@ theorem poolMass_split (s : State) (L : QueryLog SigningSpec) (m : Message) (hm 
   beta_reduce at hadd
   have hc : grpM parameter data m s (fun _ => False) (fun _ => c0) 0 = c0 := by
     unfold grpM
-    exact Walk.grp_const (e := succR) (L := digestAttemptLimit) landing_le_one (stat parameter data m s)
+    exact Walk.grp_const (e := succR (data.steps m)) (L := digestAttemptLimit) landing_le_one (stat parameter data m s)
       (exB (fun _ => False) m) c0 0
   rw [hfun, hadd, hc]
 
@@ -526,21 +526,21 @@ adversary that never repeats a message, with `y = q - keygenCost`. The expected 
 queries is taken over the same run. -/
 theorem a4a_bound_gameF (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (remaining : RemainingOutputs) (steps : Message → Randomness) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate) (hmsg : ∀ x, IsMsgInput x → tg.kind x = .none)
     (K : HiddenReveal.Knowledge Coordinate) (known : Knowledge Coordinate) :
     Pr[A4aRun (truncateHash parameterOutput) K | interp tg prepared.2 (sampleModel parameterOutput highs)
-        (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+        (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
           (internalize adversary)) q (DebtState.start prepared.2 known)] ≤
       contactRate * (((q - keygenCost).choose 2 : ℕ) * rate5) +
         (contactRate * (signatureLimit * matchRate)) *
           ∑' out, Pr[= out | interp tg prepared.2 (sampleModel parameterOutput highs)
-              (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+              (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
                 (internalize adversary)) q (DebtState.start prepared.2 known)] *
             (fleafCount (IsFleafIn (truncateHash parameterOutput)) out.1.2.2.1 : ℝ≥0∞) := by
   set param := truncateHash parameterOutput with hparam
-  set data := sampleData parameterOutput fixed highs remaining with hdata
+  set data := sampleData parameterOutput fixed highs remaining steps with hdata
   set model := sampleModel parameterOutput highs with hmodel
   set start : State := DebtState.start prepared.2 known with hstart
   by_cases hK : keygenCost ≤ q

@@ -366,24 +366,24 @@ never repeats a message, with `y = q - keygenCost`. The expected number of FORS 
 taken over the same run. -/
 theorem a4b_bound_gameArm (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (remaining : RemainingOutputs) (steps : Message → Randomness) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate) (hmsg : ∀ x, IsMsgInput x → tg.kind x = .none)
     (K : HiddenReveal.Knowledge Coordinate) (wbar : ℝ≥0∞) (hfair : Fair5 wbar)
     {pay κ : ℝ≥0∞} (hκ : contactRate ≤ pay + κ * contactRate) (known : Knowledge Coordinate) :
-    Pr[A4bRun (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining) K |
+    Pr[A4bRun (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps) K |
         interp tg prepared.2 (sampleModel parameterOutput highs)
-          (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+          (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
             (internalize adversary)) q (DebtState.start prepared.2 known)] ≤
       κ * contactRate * ∑ j ∈ Finset.range (q - keygenCost),
           ((j : ℝ≥0∞) * (startNear wbar j + failMass (failSet prepared.1)) +
             signatureLimit * failMass (failSet prepared.1)) +
         pay * ∑' out, Pr[= out | interp tg prepared.2 (sampleModel parameterOutput highs)
-              (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+              (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
                 (internalize adversary)) q (DebtState.start prepared.2 known)] *
             (fleafCount (IsFleafIn (truncateHash parameterOutput)) out.1.2.2.1 : ℝ≥0∞) := by
   set param := truncateHash parameterOutput with hparam
-  set data := sampleData parameterOutput fixed highs remaining with hdata
+  set data := sampleData parameterOutput fixed highs remaining steps with hdata
   set model := sampleModel parameterOutput highs with hmodel
   set start : State := DebtState.start prepared.2 known with hstart
   by_cases hK : keygenCost ≤ q
@@ -401,7 +401,7 @@ theorem a4b_bound_gameArm (adversary : Adversary) (hnr : adversary.NoRepeat) (q 
         (msgInput_digestInput param data.root p.1 p.2 call))
       (ftsRows_sampleModel parameterOutput highs)
       (prepared_cleanRows parameterOutput fixed highs remaining prepared hprepared)
-      (fun m ρ digest budget s1 hprep out hout hnone => finishRest_fail parameterOutput fixed highs remaining prepared
+      (fun m ρ digest budget s1 hprep out hout hnone => finishRest_fail parameterOutput fixed highs remaining steps prepared
         hprepared tg m ρ digest budget s1 hprep out hout hnone) (q - keygenCost) hfair hκ
       ((internalize adversary).main ⟨data.root, param⟩)
       (noRepeat_internalize_adversary adversary hnr ⟨data.root, param⟩) known
@@ -422,24 +422,24 @@ theorem a4b_bound_checkArm (adversary : Adversary) (hnr : adversary.NoRepeat) (q
     (b N qb m : ℕ) (c : ℚ) (hb : subtreeHeight = b) (hN : signatureLimit = N)
     (hc : H0.checkNear b N qb m c = true) (hq : q - keygenCost ≤ qb)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (remaining : RemainingOutputs) (steps : Message → Randomness) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate) (hmsg : ∀ x, IsMsgInput x → tg.kind x = .none)
     (K : HiddenReveal.Knowledge Coordinate) {pay κ : ℝ≥0∞} (hκ : contactRate ≤ pay + κ * contactRate)
     (known : Knowledge Coordinate) :
-    Pr[A4bRun (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining) K |
+    Pr[A4bRun (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps) K |
         interp tg prepared.2 (sampleModel parameterOutput highs)
-          (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+          (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
             (internalize adversary)) q (DebtState.start prepared.2 known)] ≤
       κ * ((((q - keygenCost : ℕ) : ℝ≥0∞) * contactRate) *
         ((q - keygenCost : ℕ) * (ENNReal.ofReal ((c / 2 : ℚ) : ℝ) + failMass (failSet prepared.1)) +
           signatureLimit * failMass (failSet prepared.1))) +
         pay * ∑' out, Pr[= out | interp tg prepared.2 (sampleModel parameterOutput highs)
-              (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining)
+              (costGameX (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
                 (internalize adversary)) q (DebtState.start prepared.2 known)] *
             (fleafCount (IsFleafIn (truncateHash parameterOutput)) out.1.2.2.1 : ℝ≥0∞) := by
   have hfair := fair_wbar5
-  have h := a4b_bound_gameArm adversary hnr q parameterOutput fixed highs remaining prepared hprepared tg hmsg K
+  have h := a4b_bound_gameArm adversary hnr q parameterOutput fixed highs remaining steps prepared hprepared tg hmsg K
     H0.wbar5 hfair hκ known
   refine le_trans h (add_le_add ?_ le_rfl)
   rw [mul_assoc κ, mul_comm ((q - keygenCost : ℕ) : ℝ≥0∞) contactRate, mul_assoc contactRate]

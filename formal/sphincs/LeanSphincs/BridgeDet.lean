@@ -237,6 +237,45 @@ theorem evalDist_table_split {β : Type} (parameter : PublicParameter) (seed : M
       rw [evalDist_bind, evalDist_bind, hpair]
     _ = _ := by simp only [bind_assoc, pure_bind]
 
+/-! ### Splitting the randomizer table into base randomizers and step halves -/
+
+/-- The step halves of a randomizer table. -/
+def highsOf (rnd : RTable) : LTable := fun message => truncateHashHigh (rnd message)
+
+theorem highsOf_joinTable (lows highs : LTable) : highsOf (joinTable lows highs) = highs := by
+  funext message
+  exact truncateHashHigh_joinHalves _ _
+
+noncomputable local instance halvesSampleable : SampleableType (LTable × LTable) :=
+  SampleableType.ofFintype _
+
+/-- A uniform randomizer table is a uniform table of step halves and an independent uniform table
+of base randomizers. -/
+theorem evalDist_rtable_split {β : Type} (F : RTable → ProbComp β) :
+    𝒟[($ᵗ RTable : ProbComp RTable) >>= F] =
+      𝒟[do
+        let highs ← ($ᵗ LTable : ProbComp LTable)
+        let lows ← ($ᵗ LTable : ProbComp LTable)
+        F (joinTable lows highs)] := by
+  have hjoin : 𝒟[(fun pair : LTable × LTable => joinTable pair.1 pair.2) <$>
+      ($ᵗ (LTable × LTable) : ProbComp (LTable × LTable))] = 𝒟[($ᵗ RTable : ProbComp RTable)] :=
+    evalDist_map_bijective_uniform_cross _ _ joinTable_bijective
+  have hpair := evalDist_independent_uniform_pair (α := LTable) (β := LTable)
+  calc
+    _ = 𝒟[((fun pair : LTable × LTable => joinTable pair.1 pair.2) <$>
+          ($ᵗ (LTable × LTable) : ProbComp (LTable × LTable))) >>= F] := by
+      rw [evalDist_bind, evalDist_bind, hjoin]
+    _ = 𝒟[(do
+          let lows ← ($ᵗ LTable : ProbComp LTable)
+          let highs ← ($ᵗ LTable : ProbComp LTable)
+          pure (lows, highs)) >>= fun pair => F (joinTable pair.1 pair.2)] := by
+      rw [bind_map_left, evalDist_bind, evalDist_bind, hpair]
+    _ = 𝒟[do
+          let lows ← ($ᵗ LTable : ProbComp LTable)
+          let highs ← ($ᵗ LTable : ProbComp LTable)
+          F (joinTable lows highs)] := by simp only [bind_assoc, pure_bind]
+    _ = _ := evalDist_bind_bind_swap _ _ _
+
 /-! ### One sample -/
 
 theorem hashDomain_tag_ne_seven (domain : HashDomain) :
@@ -293,16 +332,18 @@ theorem sample_costGameDet (adversary : Adversary) (material : Material) (seed :
       𝒟[(simulateQ (GraphView.fixedCostSource
           (sampleFn material seed answers (plant (SeedModel.parameter material) seed table rnd))
           (sampleCoordinates material seed answers (plant (SeedModel.parameter material) seed table rnd)))
-        (costGameDet (SeedModel.parameter material) (GraphView.publicData (labelsOf material answers)) rnd
+        (costGameDet (SeedModel.parameter material)
+          (GraphView.publicData (labelsOf material answers) (highsOf rnd)) rnd
           adversary)).run] := by
   set table' := plant (SeedModel.parameter material) seed table rnd
   rw [show (extend (preparedCache material seed answers) table') =
       sampleFn material seed answers table' from rfl,
     evalDist_fixedRom_eq_fixedHashWorld, fixedHashWorld_countHashQueries,
     costGameDet_correct (sampleFn material seed answers table') (SeedModel.parameter material) seed
-      (GraphView.publicData (labelsOf material answers)) (sampleCoordinates material seed answers table')
+      (GraphView.publicData (labelsOf material answers) (highsOf rnd))
+      (sampleCoordinates material seed answers table')
       (GraphView.publicData_correct _ _ _ _ (sample_consistent material seed answers table')
-        (sample_boundary material seed answers table'))
+        (sample_boundary material seed answers table') _)
       (GraphView.coordinates_correct _ _ _ _ (sample_consistent material seed answers table'))
       (sample_parameter material seed answers table') rnd
       (fun message => sampleFn_randomizer material seed answers table rnd message)]
@@ -312,7 +353,8 @@ noncomputable def detRun (adversary : Adversary) (q : Nat) (material : Material)
     (answers : CanonicalGraphLabels) (table : Eager.Table) (rnd : RTable) :
     ProbComp (Option Bool × List (Entry HashInput)) :=
   costRun (graphFn material answers table) (graphCoordinates material answers)
-    (cap (costGameDet (SeedModel.parameter material) (publicData (labelsOf material answers)) rnd adversary) q)
+    (cap (costGameDet (SeedModel.parameter material) (publicData (labelsOf material answers) (highsOf rnd))
+      rnd adversary) q)
 
 /-- One sample: the capped win in the deterministic game is at most the seed-free capped win
 plus naming the seed. -/
@@ -330,7 +372,8 @@ theorem per_sampleDet (adversary : Adversary) (q : Nat) (material : Material) (s
   rw [probEvent_congr' (fun _ _ => Iff.rfl) hrun, probEvent_map]
   refine le_trans (le_of_eq ?_) (le_trans (probEvent_costRun_le_cap (sampleFn material seed answers table')
     (sampleCoordinates material seed answers table')
-    (costGameDet (SeedModel.parameter material) (publicData (labelsOf material answers)) rnd adversary)
+    (costGameDet (SeedModel.parameter material) (publicData (labelsOf material answers) (highsOf rnd)) rnd
+      adversary)
     q (fun value => value = true)) ?_)
   · rfl
   · rw [sampleCoordinates_eq]
@@ -347,14 +390,14 @@ theorem noRepeat_internalize_memoAdv (adversary : Adversary) :
 
 attribute [local irreducible] experimentDet sampleMasterSeed
 
-/-- **Seed elimination for the deterministic signer.** The SUF-CMA advantage against
-`Seeded.sign` is at most the seed-free capped win of the internalized memoizing adversary in the
-fresh-randomizer graph-view game, plus `2 q / 2^256` for naming the hidden seed. -/
+/-- **Seed elimination for the deterministic signer.** If the seed-free capped win of the
+internalized memoizing adversary in the fresh-randomizer graph-view game is at most `B` for every
+table of walk steps, the SUF-CMA advantage against `Seeded.sign` is at most `B` plus `2 q / 2^256`
+for naming the hidden seed. The step halves are fixed and the base randomizers averaged. -/
 theorem forgeAdvantageDet_le_seedFree (adversary : Adversary) (q : Nat)
-    (hbound : HasHashQueryBoundDet adversary q) :
-    forgeAdvantageDet adversary ≤
-      Pr[Win | seedFreeExperiment (internalize (Memo.memoAdv adversary)) q] +
-        2 * (q / (2 : ℝ≥0∞) ^ 256) := by
+    (hbound : HasHashQueryBoundDet adversary q) (B : ℝ≥0∞)
+    (hB : ∀ steps, Pr[Win | seedFreeExperiment (internalize (Memo.memoAdv adversary)) q steps] ≤ B) :
+    forgeAdvantageDet adversary ≤ B + 2 * (q / (2 : ℝ≥0∞) ^ 256) := by
   unfold forgeAdvantageDet
   calc
     _ = Pr[fun result : Bool × Nat => result.1 = true ∧ result.2 ≤ q | experimentDet adversary] :=
@@ -404,19 +447,55 @@ theorem forgeAdvantageDet_le_seedFree (adversary : Adversary) (q : Nat)
       refine probEvent_bind_le_add _ _ _ _ _ _ _ fun rnd => ?_
       rw [probEvent_map]
       exact per_sampleDet (internalize adversary) q material seed answers table rnd
-    _ ≤ Pr[Win | seedFreeExperiment (internalize (Memo.memoAdv adversary)) q] +
-        2 * (q / (2 : ℝ≥0∞) ^ 256) := by
+    _ ≤ B + 2 * (q / (2 : ℝ≥0∞) ^ 256) := by
       refine add_le_add ?_ ?_
-      · unfold seedFreeExperiment
-        refine probEvent_bind_mono _ _ _ _ fun material => ?_
-        refine probEvent_bind_le_of _ _ _ _ fun _ => ?_
-        refine probEvent_bind_mono _ _ _ _ fun answers => ?_
-        refine probEvent_bind_mono _ _ _ _ fun table => ?_
-        unfold detRun seedFreeRun
-        rw [Memo.internalize_memoAdv]
-        exact win_avg_le (graphFn material answers table) (graphCoordinates material answers)
-          (SeedModel.parameter material) (publicData (labelsOf material answers)) (internalize adversary)
-          (noRepeat_internalize_memoAdv adversary) q
+      · have hsteps : ∀ steps : LTable, Pr[Win | do
+            let material ← sampleMaterial
+            let _seed ← sampleMasterSeed
+            let answers ← $ᵗ CanonicalGraphLabels
+            let table ← $ᵗ Eager.Table
+            let lows ← ($ᵗ LTable : ProbComp LTable)
+            detRun (internalize adversary) q material answers table (joinTable lows steps)] ≤ B := by
+          intro steps
+          refine le_trans ?_ (hB steps)
+          unfold seedFreeExperiment
+          refine probEvent_bind_mono _ _ _ _ fun material => ?_
+          refine probEvent_bind_le_of _ _ _ _ fun _ => ?_
+          refine probEvent_bind_mono _ _ _ _ fun answers => ?_
+          refine probEvent_bind_mono _ _ _ _ fun table => ?_
+          unfold detRun seedFreeRun
+          simp only [highsOf_joinTable]
+          rw [Memo.internalize_memoAdv]
+          exact win_avg_le (graphFn material answers table) (graphCoordinates material answers)
+            (SeedModel.parameter material) (publicData (labelsOf material answers) steps) (internalize adversary)
+            (noRepeat_internalize_memoAdv adversary) q
+        have hsplit : Pr[Win | do
+            let material ← sampleMaterial
+            let _seed ← sampleMasterSeed
+            let answers ← $ᵗ CanonicalGraphLabels
+            let table ← $ᵗ Eager.Table
+            let rnd ← $ᵗ RTable
+            detRun (internalize adversary) q material answers table rnd] =
+          Pr[Win | do
+            let steps ← ($ᵗ LTable : ProbComp LTable)
+            let material ← sampleMaterial
+            let _seed ← sampleMasterSeed
+            let answers ← $ᵗ CanonicalGraphLabels
+            let table ← $ᵗ Eager.Table
+            let lows ← ($ᵗ LTable : ProbComp LTable)
+            detRun (internalize adversary) q material answers table (joinTable lows steps)] := by
+          refine probEvent_congr' (fun _ _ => Iff.rfl) ?_
+          rw [evalDist_bind_bind_swap ($ᵗ LTable : ProbComp LTable) sampleMaterial]
+          refine evalDist_bind_congr' _ fun material => ?_
+          rw [evalDist_bind_bind_swap ($ᵗ LTable : ProbComp LTable) sampleMasterSeed]
+          refine evalDist_bind_congr' _ fun _ => ?_
+          rw [evalDist_bind_bind_swap ($ᵗ LTable : ProbComp LTable) ($ᵗ CanonicalGraphLabels)]
+          refine evalDist_bind_congr' _ fun answers => ?_
+          rw [evalDist_bind_bind_swap ($ᵗ LTable : ProbComp LTable) ($ᵗ Eager.Table)]
+          refine evalDist_bind_congr' _ fun table => ?_
+          exact evalDist_rtable_split _
+        rw [hsplit]
+        exact probEvent_bind_le_of _ _ _ _ fun steps => hsteps steps
       · refine probEvent_bind_le_of _ _ _ _ fun material => ?_
         rw [probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_bind_bind_swap sampleMasterSeed
           ($ᵗ CanonicalGraphLabels) _)]

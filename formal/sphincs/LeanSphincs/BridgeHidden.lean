@@ -318,10 +318,10 @@ theorem structCache_agree (lows lows' : HiddenGraph.Table)
       (cellKnown_struct _ position hrow)
 
 omit [Params] in
-theorem publicData_congr (labels labels' : CanonicalGraphLabels)
+theorem publicData_congr (labels labels' : CanonicalGraphLabels) (steps : Message → Randomness)
     (h : ∀ position, (∀ lay tree leaf chainIdx step, position ≠ .chain lay tree leaf chainIdx step) →
       labels position = labels' position) :
-    GraphView.publicData labels = GraphView.publicData labels' := by
+    GraphView.publicData labels steps = GraphView.publicData labels' steps := by
   have htree : ∀ lay tree level hlevel index,
       labels (GraphCorrectness.treePosition lay tree level hlevel index) =
         labels' (GraphCorrectness.treePosition lay tree level hlevel index) := by
@@ -346,14 +346,14 @@ theorem publicData_congr (labels labels' : CanonicalGraphLabels)
   · funext index leaves tree level
     rw [hfors]
 
-theorem publicData_agree (lows lows' : HiddenGraph.Table)
+theorem publicData_agree (lows lows' : HiddenGraph.Table) (steps : Message → Randomness)
     (hagree : ∀ coordinate, KnownCoordinate (truncateHash parameterOutput) coordinate →
       lows coordinate = lows' coordinate) :
     GraphView.publicData (labelsOf (splitMaterial parameterOutput highs remaining lows)
-      (splitAnswers highs remaining lows)) =
+      (splitAnswers highs remaining lows)) steps =
     GraphView.publicData (labelsOf (splitMaterial parameterOutput highs remaining lows')
-      (splitAnswers highs remaining lows')) :=
-  publicData_congr _ _ fun position hchain =>
+      (splitAnswers highs remaining lows')) steps :=
+  publicData_congr _ _ steps fun position hchain =>
     labelsOf_agree parameterOutput highs remaining lows lows' hagree position
       (cellKnown_nonchain _ position hchain)
 
@@ -472,9 +472,9 @@ theorem mix_agree (fixed fresh : HiddenGraph.Table) (coordinate : Coordinate)
 /-- The seed-free run at a mixed coordinate table is the hidden-row run whose coordinate
 table completes the known coordinates of the fixed table with the fresh table. Nothing else
 depends on the fresh table. -/
-theorem seedFreeRun_mix (adversary : Adversary) (q : Nat) (fixed fresh : HiddenGraph.Table)
-    (table : Eager.Table) :
-    seedFreeRun adversary q
+theorem seedFreeRun_mix (adversary : Adversary) (q : Nat) (steps : Message → Randomness)
+    (fixed fresh : HiddenGraph.Table) (table : Eager.Table) :
+    seedFreeRun adversary q steps
         (splitMaterial parameterOutput highs remaining (mix (truncateHash parameterOutput) fixed fresh))
         (splitAnswers highs remaining (mix (truncateHash parameterOutput) fixed fresh)) table =
       Stop.costRun
@@ -486,11 +486,11 @@ theorem seedFreeRun_mix (adversary : Adversary) (q : Nat) (fixed fresh : HiddenG
         (tableExtending (knownOf (truncateHash parameterOutput) fixed) fresh)
         (HiddenCost.cap (GraphView.costGame (truncateHash parameterOutput)
           (GraphView.publicData (labelsOf (splitMaterial parameterOutput highs remaining fixed)
-            (splitAnswers highs remaining fixed))) adversary) q) := by
+            (splitAnswers highs remaining fixed)) steps) adversary) q) := by
   have hagree := mix_agree parameterOutput (fixed := fixed) (fresh := fresh)
   unfold seedFreeRun
   rw [graphFn_eq_answer, graphCoordinates_split, masked_mix, splitMaterial_parameter,
-    publicData_agree parameterOutput highs remaining _ fixed hagree]
+    publicData_agree parameterOutput highs remaining _ fixed steps hagree]
   rw [answer_congr_high _ _ _ _ (fun address => highs address.outputCoordinate) _
     (fun address hactive => highHalves_split parameterOutput highs remaining _ address hactive)]
   unfold outsideFn

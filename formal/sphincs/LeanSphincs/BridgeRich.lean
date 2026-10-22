@@ -170,10 +170,12 @@ def RichWin (result : ((Option Outcome × List HiddenGraph.Coordinate) × List (
     QueryCache HashSpec) : Prop :=
   ∃ value, result.1.1.1 = some value ∧ outcomeWins value = true
 
-/-- The data of one public/structural sample. -/
+/-- The data of one public/structural sample, with the walk steps `steps` (the steps matter only
+to the signer; the keys and paths do not depend on them). -/
 noncomputable def sampleData (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
-    (highs : CoordinateHighs) (remaining : RemainingOutputs) : PublicData :=
+    (highs : CoordinateHighs) (remaining : RemainingOutputs) (steps : Message → Randomness := fun _ => 0) :
+    PublicData :=
   GraphView.publicData (labelsOf (splitMaterial parameterOutput highs remaining fixed)
-    (splitAnswers highs remaining fixed))
+    (splitAnswers highs remaining fixed)) steps
 
 end LeanSphincs.Security.HiddenBridge
