@@ -2970,7 +2970,7 @@
    "28": 1048576
   },
   "stark_verify": 10000,
-  "host_rate": 1000000.0,
+  "host_rate": 500000.0,
   "device_rate": 5800.0,
   "opened_avg": 43.75,
   "opened_max": 64

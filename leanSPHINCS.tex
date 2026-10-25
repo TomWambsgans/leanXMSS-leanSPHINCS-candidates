@@ -294,10 +294,10 @@ A hardware wallet keeps the secret key and signs, but grinding $2^h/p$ randomize
 delegating that work to the untrusted host and proving it with a STARK comes from Riva~\cite{riva}.
 \begin{enumerate}
   \item the device prepares $p=\max(16, 2^{h-20})$ random instances in advance, as in \cref{sec:threshold} (in its
-        idle time), so that the host grinds at most $2^{20}$ digests: 16 at $h\le24$, 64 at $h=26$, 256 at $h=28$
+        idle time), so that the host grinds $\approx2^{20}$ digests or fewer: 16 at $h\le24$, 64 at $h=26$, 256 at $h=28$
   \item to sign $m$, it derives $R_0$ and $\Delta$ in one hash of its secret key and $m$, and sends $m$, $R_0$,
         $\Delta$ and the $p$ indices to the host
-  \item the host finds the least $i$ such that the index of $R_0 + i\Delta$ is one of the $p$, about $2^h/p\le2^{20}$
+  \item the host finds the least $i$ such that the index of $R_0 + i\Delta$ is one of the $p$, $\approx2^h/p\le2^{20}$ on average
         digest hashes, and returns $R = R_0 + i\Delta$ with a STARK that $i$ is the least
   \item the device verifies the STARK and finishes the signature from the prepared instance
 \end{enumerate}
@@ -306,8 +306,8 @@ The WOTS$^+$C signatures and paths of an instance are public once it signs (each
 root), so the host can hold them for the device, which keeps a hash of each.
 The minimality makes $R$ a function of $(m, \text{secret key})$ and the prepared set, as for the deterministic signer; this flow is not covered by the Lean proof.
 
-\paragraph{Hardware wallet costs.} At $h\ge24$ the host hashes about $1.05\cdot10^6$ digests and proves them at about
-$10^6$ hashes per second. The device verifies the STARK in about $10^4$ compressions: 1.7~s on a Ledger Nano S+ with
+\paragraph{Hardware wallet costs.} At $h\ge24$ the host hashes $\approx2^{20}$ digests on average and proves them in a STARK at about
+$5\cdot10^5$ hashes per second, about 2~s. The device verifies the STARK in about $10^4$ compressions: 1.7~s on a Ledger Nano S+ with
 Keccak-256, 0.31~s with BLAKE2s and 0.42~s with SHA-256 (it computes 5.8, 32.6 and 23.6 thousand compressions per
 second~\cite{hwbench}), so shipping and verifying take about 3~s with Keccak-256. Preparing an instance costs the
 device $59\cdot10^3$ Keccak-f permutations for a pruned key and $89\cdot10^3$ for a layered one at $h=24$
