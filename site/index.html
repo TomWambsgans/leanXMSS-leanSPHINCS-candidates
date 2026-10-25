@@ -81,7 +81,6 @@ svg .stub line { stroke: url(#fade); stroke-width: 1; }
 svg .f0 { stop-color: var(--tree); stop-opacity: 1; }
 svg .f1 { stop-color: var(--tree); stop-opacity: 0; }
 svg .lbody line { stroke-width: 1; }
-svg .sib circle { fill: #fff; stroke: var(--ink); stroke-width: 1.3; }
 svg .base { stroke: var(--tree); stroke-width: 1; }
 svg .path { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
 svg .dash { stroke-dasharray: 2 3; }
@@ -550,7 +549,6 @@ footer a + a { margin-left: 1.25rem; }
             <line x1="484.8" y1="178.0" x2="484.8" y2="204"/>
             <line x1="492.2" y1="178.0" x2="492.2" y2="204"/>
           </g>
-          <g class="sib"><circle cx="376.0" cy="-30.5" r="2.4"/><circle cx="76.0" cy="31.5" r="2.4"/><circle cx="166.0" cy="81.2" r="2.4"/></g>
           <polyline points="256.0,-108.0 136.0,-30.5 196.0,31.5 226.0,81.2 241.0,120.8 233.5,152.6 237.2,178.0" class="path"/>
           <line x1="237.2" y1="178.0" x2="237.2" y2="228" class="path dash"/>
           <g class="on">
@@ -963,7 +961,7 @@ document.addEventListener('pointerdown', function (e) {
 
   // The layers, top first: each a tree whose path ends at a leaf, the hash of a WOTS+C key that signs the
   // root of the tree below; the last leaf's key is the large WOTS+C drawn under it, which signs the forest.
-  // Each tree shows its top DRAWN levels as nodes and edges (the path in ink, its siblings ringed), and below
+  // Each tree shows its top DRAWN levels as edges (the path in ink, with its nodes), and below
   // them thin branches that fade out toward the leaf row. The roots stand on one vertical line, the column of
   // the WOTS+C keys: in the body the path turns back toward it.
   var DRAWN = 3, ROOT = -108, LEAF = 210, GAP = 30;   // GAP: from a leaf to the root of the tree below
@@ -976,14 +974,13 @@ document.addEventListener('pointerdown', function (e) {
     var k = Math.min(1.45, (LEAF - ROOT - (L - 1) * GAP) / need), ls = [], y = LEAF;
     for (var i = L - 1; i >= 0; i--) {        // from the bottom layer up: its leaf sits over the brace
       var t = layers[i], s = DRAWN * S0 * k, H = s + (t - DRAWN) * C0 * k, y0 = y - H;
-      var a = i === 0 ? 60 : 46, turn = TURNS[(L - 1 - i) % 2], nodes = [[X, y0]], rows = [[X]], sib = [], dx = 0;
+      var a = i === 0 ? 60 : 46, turn = TURNS[(L - 1 - i) % 2], nodes = [[X, y0]], rows = [[X]], dx = 0;
       for (var j = 1; j <= DRAWN; j++) {
         var off = a / Math.pow(2, j - 1), row = [];
         rows[j - 1].forEach(function (p) { row.push(p - off, p + off); });   // binary layout, as the pruned tree
         rows.push(row);
         var px = nodes[j - 1][0];
         nodes.push([px + turn[j - 1] * off, y0 + j * s / DRAWN]);
-        sib.push([px - turn[j - 1] * off, y0 + j * s / DRAWN]);
         dx += turn[j - 1] * off;
       }
       // the body: two more levels of thin branches, then stubs that fade out at the leaf row; the path turns back
@@ -995,12 +992,11 @@ document.addEventListener('pointerdown', function (e) {
         rows.push(r2);
         nodes.push([nodes[DRAWN + j - 1][0] + back * o, y3 + hb * j / nb]);
       }
-      ls[i] = { t: t, H: H, y0: y0, a: a, s: s, nb: nb, hb: hb, rows: rows, sib: sib, root: nodes[0], leaf: nodes[nodes.length - 1], bottom: y0 + H, nodes: nodes };
+      ls[i] = { t: t, H: H, y0: y0, a: a, s: s, nb: nb, hb: hb, rows: rows, root: nodes[0], leaf: nodes[nodes.length - 1], bottom: y0 + H, nodes: nodes };
       y = y0 - GAP;
     }
     var left = X - 2 * ls[0].a - 18;
     var defs = el('defs', {}, layered), bodies = el('g', {}, layered), edges = el('g', { 'class': 'tree' }, layered), meas = el('g', { 'class': 'tree' }, layered);
-    var sb = el('g', { 'class': 'sib' }, layered);
     ls.forEach(function (l, i) {
       var yb = l.bottom, y3 = l.y0 + l.s, ylast = y3 + l.hb;
       // the body: thin branches and stubs, fading out toward the leaf row (as the bottom of the pruned tree)
@@ -1014,7 +1010,6 @@ document.addEventListener('pointerdown', function (e) {
       for (var j = 1; j <= DRAWN; j++) l.rows[j].forEach(function (p, m) {
         el('line', { x1: n1(l.rows[j - 1][m >> 1]), y1: n1(l.y0 + (j - 1) * l.s / DRAWN), x2: n1(p), y2: n1(l.y0 + j * l.s / DRAWN) }, edges);
       });
-      l.sib.forEach(function (p) { el('circle', { cx: n1(p[0]), cy: n1(p[1]), r: 2.4 }, sb); });
       bar(meas, left, l.y0, yb);
       el('text', { x: n1(left - 10), y: n1(l.y0 + l.H / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, layered).textContent = String(l.t);
     });
