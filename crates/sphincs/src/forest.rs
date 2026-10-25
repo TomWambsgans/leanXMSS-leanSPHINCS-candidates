@@ -94,7 +94,7 @@ pub fn forest_secret_tweak(idx: u64, c: usize, s: usize, j: usize, a: usize, t: 
 
 /// The starts of the 6 chains of a child: one hash of the seed gives two of them.
 pub fn child_secrets(
-    pp: &PublicParam, master: &MasterSecret, idx: u64, c: usize, s: usize, j: usize, a: usize,
+    pp: &Pp, master: &MasterSecret, idx: u64, c: usize, s: usize, j: usize, a: usize,
 ) -> [Digest; CHILD_CHAINS] {
     let mut starts = [[0u8; N]; CHILD_CHAINS];
     for t in 0..CHILD_CHAINS / 2 {
@@ -114,7 +114,7 @@ fn fchain_tweak(idx: u64, c: usize, s: usize, j: usize, a: usize, i: usize, from
 /// `steps` chain steps from position `start`.
 #[allow(clippy::too_many_arguments)]
 pub fn forest_chain(
-    pp: &PublicParam, idx: u64, c: usize, s: usize, j: usize, a: usize, i: usize,
+    pp: &Pp, idx: u64, c: usize, s: usize, j: usize, a: usize, i: usize,
     start: usize, steps: usize, value: Digest,
 ) -> Digest {
     debug_assert!(start + steps <= CHAIN_TOP);
@@ -123,14 +123,14 @@ pub fn forest_chain(
 
 /// The leaf of a child: the hash of its 6 chain tops.
 pub fn child_leaf(
-    pp: &PublicParam, idx: u64, c: usize, s: usize, j: usize, a: usize, tops: &[Digest; CHILD_CHAINS],
+    pp: &Pp, idx: u64, c: usize, s: usize, j: usize, a: usize, tops: &[Digest; CHILD_CHAINS],
 ) -> Digest {
     th_digests(pp, &tweak(TWEAK_CHILD_LEAF, child_slot(c, s, j, a), idx as u32), tops)
 }
 
 /// A node of a sub-tree: `level` counts from the leaves, so this is the node of level `level + 1`.
 fn sub_node(
-    pp: &PublicParam, idx: u64, c: usize, s: usize, j: usize, level: usize, node: usize,
+    pp: &Pp, idx: u64, c: usize, s: usize, j: usize, level: usize, node: usize,
     left: &Digest, right: &Digest,
 ) -> Digest {
     let hi = sub_slot(c, s, j) + 256 * (level as u32 + 1) + 1024 * node as u32;
@@ -138,7 +138,7 @@ fn sub_node(
 }
 
 /// A super-child: the hash of the two level-2 nodes of each of its two sub-trees.
-fn super_child(pp: &PublicParam, idx: u64, c: usize, s: usize, tops: &[[Digest; 2]; SUBS]) -> Digest {
+fn super_child(pp: &Pp, idx: u64, c: usize, s: usize, tops: &[[Digest; 2]; SUBS]) -> Digest {
     th_digests(
         pp,
         &tweak(TWEAK_SUPER_CHILD, (c + 8 * s) as u32, idx as u32),
@@ -148,7 +148,7 @@ fn super_child(pp: &PublicParam, idx: u64, c: usize, s: usize, tops: &[[Digest; 
 
 /// A node of a top tree, of level `level + 1`.
 fn top_node(
-    pp: &PublicParam, idx: u64, c: usize, level: usize, node: usize, left: &Digest, right: &Digest,
+    pp: &Pp, idx: u64, c: usize, level: usize, node: usize, left: &Digest, right: &Digest,
 ) -> Digest {
     let hi = (c + 8 * (level + 1) + 64 * node) as u32;
     th_digests(pp, &tweak(TWEAK_TOP_NODE, hi, idx as u32), &[*left, *right])
@@ -181,7 +181,7 @@ fn sub_index(c: usize, s: usize, j: usize) -> usize {
 
 impl Forest {
     /// Builds the whole forest of instance `idx` from the master secret.
-    pub fn new(pp: &PublicParam, master: &MasterSecret, idx: u64) -> Self {
+    pub fn new(pp: &Pp, master: &MasterSecret, idx: u64) -> Self {
         let mut starts = vec![[0u8; N]; COORDS * SUPERS * SUBS * CHILDREN * CHILD_CHAINS];
         let mut sub = vec![Vec::new(); COORDS * SUPERS * SUBS];
         let mut top = vec![Vec::new(); COORDS];
@@ -221,7 +221,7 @@ impl Forest {
     }
 
     /// The opening of every coordinate at the digest's marks.
-    pub fn open(&self, pp: &PublicParam, idx: u64, marks: &[CoordMark; COORDS]) -> ForestOpening {
+    pub fn open(&self, pp: &Pp, idx: u64, marks: &[CoordMark; COORDS]) -> ForestOpening {
         std::array::from_fn(|c| {
             let mark = marks[c];
             let s = mark.super_child;
@@ -260,7 +260,7 @@ type Levels = Vec<Vec<Digest>>;
 
 /// `Fts.recover`: the forest key an opening reaches.
 pub fn forest_recover(
-    pp: &PublicParam, idx: u64, marks: &[CoordMark; COORDS], opening: &ForestOpening,
+    pp: &Pp, idx: u64, marks: &[CoordMark; COORDS], opening: &ForestOpening,
 ) -> ForestKey {
     std::array::from_fn(|c| {
         let (mark, open) = (marks[c], &opening[c]);
@@ -317,32 +317,49 @@ mod tests {
         assert!(squares.windows(2).all(|w| w[0] >= w[1]));
     }
 
-    /// One instance of the forest costs `8 * 7390` permutations, and an opening carries 22 values
-    /// per coordinate.
+    /// One instance of the forest costs `8 * 7390` Keccak-f permutations (and the same count of
+    /// calls, weighted by their blocks, with the other hashes), and an opening carries 22 values per
+    /// coordinate and costs 20 calls per coordinate to recover.
     #[test]
     fn forest_costs() {
-        let pp = [5u8; PUBLIC_PARAM_LEN];
         let master = [9u8; MASTER_SECRET_LEN];
-        let before = permutations();
-        let forest = Forest::new(&pp, &master, 3);
-        // per child 3 derivations, 24 chain steps and a leaf; per sub-tree 6 nodes; per super-child
-        // 1 hash; per coordinate 14 top nodes.
-        let child = CHILD_CHAINS / 2 + CHILD_CHAINS * CHAIN_TOP + 1;
-        let expected = COORDS as u64
-            * (SUPERS as u64 * (SUBS as u64 * (CHILDREN as u64 * child as u64 + 6) + 1) + 14);
-        assert_eq!(permutations() - before, expected);
-        assert_eq!(expected, 59_120);
+        for hash in HashFn::ALL {
+            let pp = Pp::new(hash, [5u8; PUBLIC_PARAM_LEN]);
+            let c = |payload: usize| hash.call(payload);
+            let before = compressions();
+            let forest = Forest::new(&pp, &master, 3);
+            // per child 3 derivations, 24 chain steps and a leaf; per sub-tree 6 nodes; per
+            // super-child 1 hash; per coordinate 14 top nodes.
+            let child = (CHILD_CHAINS / 2) as u64 * c(MASTER_SECRET_LEN)
+                + (CHILD_CHAINS * CHAIN_TOP) as u64 * c(N)
+                + c(CHILD_CHAINS * N);
+            let expected = COORDS as u64
+                * (SUPERS as u64 * (SUBS as u64 * (CHILDREN as u64 * child + 6 * c(2 * N)) + c(4 * N)) + 14 * c(2 * N));
+            assert_eq!(compressions() - before, expected, "{hash:?}");
+            if hash == HashFn::Keccak256 {
+                assert_eq!(expected, 59_120);
+            }
 
-        let marks: [CoordMark; COORDS] =
-            std::array::from_fn(|c| CoordMark { super_child: c % SUPERS, child: [c % 8, (c + 3) % 8], word: [c as u8, 200] });
-        let opening = forest.open(&pp, 3, &marks);
-        let before = permutations();
-        assert_eq!(forest_recover(&pp, 3, &marks, &opening), forest.key);
-        assert_eq!(permutations() - before, COORDS as u64 * 20, "20 permutations per coordinate");
-        assert_eq!(VALUES_PER_COORD, 22);
+            let marks: [CoordMark; COORDS] = std::array::from_fn(|c| CoordMark {
+                super_child: c % SUPERS,
+                child: [c % 8, (c + 3) % 8],
+                word: [c as u8, 200],
+            });
+            let opening = forest.open(&pp, 3, &marks);
+            let before = compressions();
+            assert_eq!(forest_recover(&pp, 3, &marks, &opening), forest.key);
+            let per_coord = SUBS as u64 * (CODEWORD_SUM as u64 * c(N) + c(CHILD_CHAINS * N) + 2 * c(2 * N))
+                + c(4 * N)
+                + 3 * c(2 * N);
+            assert_eq!(compressions() - before, COORDS as u64 * per_coord, "{hash:?}");
+            if hash == HashFn::Keccak256 {
+                assert_eq!(per_coord, 20);
+            }
+            assert_eq!(VALUES_PER_COORD, 22);
 
-        let mut bad = opening;
-        bad[2].sub[1].values[0][0] ^= 1;
-        assert_ne!(forest_recover(&pp, 3, &marks, &bad), forest.key);
+            let mut bad = opening;
+            bad[2].sub[1].values[0][0] ^= 1;
+            assert_ne!(forest_recover(&pp, 3, &marks, &bad), forest.key);
+        }
     }
 }

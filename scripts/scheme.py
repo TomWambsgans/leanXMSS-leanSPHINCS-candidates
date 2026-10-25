@@ -1,14 +1,25 @@
 #!/usr/bin/env python3
-"""Sizes and permutation counts of the leanSphincs candidate (the costs in leanSPHINCS.tex).
+"""Sizes and compression counts of the leanSphincs candidate in its 24 configurations (leanSPHINCS.tex).
 
-Costs count Keccak-f[1600] permutations of Keccak-256 (rate 136 bytes, at least one byte of padding):
-hashing l bytes costs floor(l / 136) + 1. Every call hashes P (16 B) || address (16 B) || input.
-A pruned signer tries the randomizers R_0 + i * delta, with R_0 and delta (odd) the two halves of one hash
-of the seed and the message. The digest input P || address || m || rho is 80 bytes, one block, so an
-attempt costs one permutation.
+Three toggles: the height h (22, 24, 26, 28: about 2^26, 2^28, 2^30, 2^32 signatures), the shape
+(pruned: one tree of height h of which the key builds a kept subtree of 2^b leaves, b = h being the
+full key, the signer grinding the randomizer into it; layered: a hypertree whose key builds the top
+layer only) and the hash. Every call hashes P (16 B) || address (16 B) || payload, each hash with its
+own layout:
 
-The lifetimes are the ones proved in Lean (formal/sphincs/scripts/forest_certificates.py, PARAMS) and,
-for comparison, the cover attack they are measured against (ATTACK, from forest_attack.py).
+  Keccak-256  P inline; l bytes cost floor(l / 136) + 1 Keccak-f permutations.
+  BLAKE2s     P inline; l bytes cost ceil(l / 64) compressions (no padding byte), so a node,
+              P || address || left || right, is exactly one 64-byte block.
+  SHA-256     P alone in a zero-padded 64-byte block, compressed once per key; the l bytes after it cost
+              ceil((l + 9) / 64) compressions (the 0x80 byte and the 8-byte length).
+
+The digest input puts the randomizer alone in the last block (Keccak-256: the whole 80-byte input is one
+block; SHA-256: 16 zero bytes before it), and the WOTS+C encoding puts its counter in the last block:
+a grinding attempt and a counter cost one compression each, with every hash.
+
+The lifetimes are the ones proved in Lean (formal/sphincs/scripts/forest_certificates.py, PARAMS and
+LAYERED) and, for comparison, the cover attack they are measured against (ATTACK, from forest_attack.py).
+The same figures are pinned by the Rust tests (crates/sphincs, `Config::verify_compressions`).
 """
 
 import argparse
@@ -22,19 +33,44 @@ import forest_certificates as fc
 import forest_table
 
 N = 16  # bytes per hash value
-PREFIX = 32  # the public parameter and the address
-RATE = 136  # Keccak-256
+P_LEN, ADDR = 16, 16
+HEIGHTS = (22, 24, 26, 28)
+LAYERED = {22: (10, 6, 6), 24: (12, 6, 6), 26: (8, 6, 6, 6), 28: (10, 6, 6, 6)}  # top layer first
+PRUNED = (8, 10, 12, 13, 14, 20)  # kept subtree heights b < h with a certificate, besides b = h
 
 
-def comp(input_bytes):
-    return (PREFIX + input_bytes) // RATE + 1
+class Hash:
+    def __init__(self, name, block, inline_p, padding, digest_pad):
+        self.name, self.block, self.inline_p, self.padding, self.digest_pad = name, block, inline_p, padding, digest_pad
+        self.prefix = P_LEN + ADDR if inline_p else ADDR  # hashed per call before the payload
+        self.per_key = 0 if inline_p else 1  # SHA-256's block of P
+
+    def cost(self, length):
+        """Compressions of `length` bytes after the cached part."""
+        if self.name == "Keccak-256":
+            return length // self.block + 1
+        return max(1, -(-(length + self.padding) // self.block))
+
+    def call(self, payload):
+        return self.cost(self.prefix + payload)
+
+    def midstate(self, fixed, tail):
+        """(whole blocks of prefix || fixed, absorbed once; cost of the rest with each tail)"""
+        n = self.prefix + fixed
+        return n // self.block, self.cost(n % self.block + tail)
 
 
-def merged(key_bytes):
-    """The WOTS+C encoding hashes the forest key with the 4-byte counter last (there is no key hash).
-    Returns (verifier's cost, whole blocks the signer absorbs once, cost of one counter)."""
-    fixed = PREFIX + key_bytes
-    return comp(key_bytes + 4), fixed // RATE, (fixed % RATE + 4) // RATE + 1
+HASHES = [Hash("Keccak-256", 136, True, 0, 0), Hash("BLAKE2s", 64, True, 0, 0), Hash("SHA-256", 64, False, 9, 16)]
+
+# WOTS+C: 64 chains of length 4, target sum 123. The forest: 8 coordinates; a coordinate is a top tree of
+# height 4 over 16 super-children; a super-child hashes the top nodes of its 2 sub-trees of height 3 over 8
+# WOTS children; a child is 6 chains of 4 steps under a leaf hash, signed at a codeword of digit sum 5.
+V, Q, T = 64, 4, 123
+COORDS, SUPERS, SUBS, CHILDREN, CHAINS, STEPS, DIGIT_SUM = 8, 16, 2, 8, 6, 4, 5
+SUB_PATH, TOP_PATH = 3, 4
+VALUES = SUBS * (CHAINS + SUB_PATH) + TOP_PATH  # per coordinate
+FOREST_BYTES = COORDS * VALUES * N
+LAYER_BYTES = 4 + V * N  # counter and chain values; the path adds h_l nodes
 
 
 def n_sum(v, q, s):
@@ -49,6 +85,91 @@ def n_sum(v, q, s):
     return poly[s] if 0 <= s < len(poly) else 0
 
 
+ALPHA = n_sum(V, Q, T) / Q**V  # probability that a counter gives sum T
+
+
+def layers(h, shape):
+    """Layer heights, top first."""
+    return LAYERED[h] if shape == "layered" else (h,)
+
+
+def kept(h, shape, b):
+    return LAYERED[h][0] if shape == "layered" else b
+
+
+def size(h, shape):
+    return 16 + FOREST_BYTES + len(layers(h, shape)) * LAYER_BYTES + h * N
+
+
+class Costs:
+    """Per-call and per-component compressions of one hash."""
+
+    def __init__(self, H):
+        c = H.call
+        self.H = H
+        self.derive, self.step, self.node = c(32), c(N), c(2 * N)
+        self.wots_pk, self.child_leaf, self.super_hash = c(V * N), c(CHAINS * N), c(SUBS * 2 * N)
+        self.rnd = c(32 + 32)  # S || m: R_0 and delta
+        self.digest = c(32 + H.digest_pad + 16)  # m || (pad) || rho
+        self.digest_fixed, self.attempt = H.midstate(32 + H.digest_pad, 16)
+        self.leaf = V // 2 * self.derive + V * (Q - 1) * self.step + self.wots_pk
+        wots_key = CHAINS // 2 * self.derive + CHAINS * STEPS * self.step + self.child_leaf
+        subtree = CHILDREN * wots_key + (CHILDREN - 2) * self.node
+        coord = SUPERS * (SUBS * subtree + self.super_hash) + (SUPERS - 2) * self.node
+        self.forest_sign = COORDS * coord
+        self.per_coord = (SUBS * (DIGIT_SUM * self.step + self.child_leaf + (SUB_PATH - 1) * self.node)
+                          + self.super_hash + (TOP_PATH - 1) * self.node)
+
+    def encoding(self, message):
+        """(verifier's cost, signer's whole blocks absorbed once, cost of one counter)"""
+        fixed, per = self.H.midstate(message, 4)
+        return self.H.call(message + 4), fixed, per
+
+    def message_len(self, layer):
+        """What the WOTS+C key of a layer (0 = bottom) signs: the 16 forest nodes, or a root."""
+        return COORDS * 2 * N if layer == 0 else N
+
+    def verify(self, h, shape):
+        total = self.H.per_key + self.digest + COORDS * self.per_coord
+        for layer, height in enumerate(reversed(layers(h, shape))):
+            enc, _, _ = self.encoding(self.message_len(layer))
+            total += enc + ((Q - 1) * V - T) * self.step + self.wots_pk + height * self.node
+        return total
+
+    def wots_sign(self, layer):
+        _, fixed, per = self.encoding(self.message_len(layer))
+        return fixed + per / ALPHA + V // 2 * self.derive + T * self.step
+
+    def keygen(self, h, shape, b):
+        top, bb = layers(h, shape)[0], kept(h, shape, b)
+        return (2 * self.H.per_key + self.derive + 2**bb * self.leaf + (2**bb - 1) * self.node
+                + (top - bb) * (self.derive + self.node))
+
+    def tree_cost(self, height, cache_nodes):
+        """Per-signature work in a tree of 2^height leaves: the best of keeping one level c (rebuild the 2^c
+        leaves below the cached node, hash the cached level up) or keeping every level >= c."""
+        if 2 ** (height + 1) - 1 <= cache_nodes:
+            return 0
+        best = 2**height * self.leaf + (2**height - 1) * self.node
+        for c in range(1, height + 1):
+            below = 2**c * self.leaf + (2**c - 1) * self.node
+            if 2 ** (height - c + 1) - 1 <= cache_nodes:
+                best = min(best, below)
+            if 2 ** (height - c) <= cache_nodes:
+                best = min(best, below + (2 ** (height - c) - 1) * self.node)
+        return best
+
+    def sign(self, h, shape, b, cache_bytes):
+        """Expected compressions of one signature with a cache of the top tree's nodes."""
+        ls = layers(h, shape)
+        bb = kept(h, shape, b)
+        grind = 2 ** (h - bb) * self.attempt if shape == "pruned" else self.attempt
+        total = self.rnd + self.digest_fixed + grind + self.digest - self.attempt + self.forest_sign
+        total += sum(self.wots_sign(layer) for layer in range(len(ls)))
+        total += sum(2**hl * self.leaf + (2**hl - 1) * self.node for hl in ls[1:])  # the lower trees
+        return total, grind, self.tree_cost(bb, cache_bytes // N)
+
+
 def fmt(x):
     for dv, u in ((1e9, "B"), (1e6, "M"), (1e3, "K")):
         if x >= dv * 0.9995:
@@ -56,123 +177,70 @@ def fmt(x):
     return f"{x:.0f}"
 
 
+def lifetimes(h, shape, b):
+    """(proved in Lean, cover attack), None when not certified."""
+    return fc.lifetime(h, shape, b), fc.attack(h, shape, b)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--h", type=int, default=fc.TOTAL, help="tree height; the full key keeps all 2^h instances")
-    ap.add_argument("--lg-w", type=int, default=2, help="bits per WOTS chain; chains have length 2^lg_w")
-    ap.add_argument("--T", type=int, default=123, help="sum of the signed chain positions")
-    ap.add_argument("--cache-mib", type=float, nargs="+", default=[1, 16, 1024],
-                    help="signer cache sizes for full-key signing (MiB)")
-    ap.add_argument("--pruned-cache-kib", type=float, nargs="+", default=[16, 1024],
-                    help="signer cache sizes for pruned-key signing (KiB)")
-    ap.add_argument("--pruned", type=int, nargs="+", default=[13, 20], help="log2 kept leaves")
-    ap.add_argument("--threshold", type=int, default=12, help="log2 kept leaves for the threshold estimate")
+    ap.add_argument("--hash", choices=[H.name for H in HASHES], nargs="+", default=[H.name for H in HASHES])
+    ap.add_argument("--h", type=int, nargs="+", default=list(HEIGHTS), choices=HEIGHTS)
+    ap.add_argument("--pruned", type=int, nargs="+", default=[13, 20], help="log2 kept leaves of pruned keys")
+    ap.add_argument("--cache-kib", type=float, nargs="+", default=[16, 1024], help="signer cache sizes (KiB)")
+    ap.add_argument("--table", action="store_true", help="one line per configuration: size, verification, lifetime")
     x = ap.parse_args()
-    h, lg_w, T = x.h, x.lg_w, x.T
-    v, q = -(-128 // lg_w), 2**lg_w  # v chains of length q cover the 128-bit message
+    hashes = [H for H in HASHES if H.name in x.hash]
 
-    # The few-time signature: 8 coordinates of 16 super-children; a super-child hashes the top nodes of its
-    # 2 sub-trees of 8 WOTS children; a child is 6 chains of 4 steps under a leaf hash, signed at a codeword
-    # of digit sum 5. No tree or sub-tree has a root hash, and the forest key is not hashed either.
-    coords, supers, subs, children, chains, chain_steps, digit_sum = 8, 16, 2, 8, 6, 4, 5
-    sub_path, top_path = int(math.log2(children)), int(math.log2(supers))
-    coord_bits = top_path + subs * (sub_path + 8)
+    if x.table:
+        print("hash        h  shape          size  verify  keygen    proved N   (cover attack)")
+        for H in hashes:
+            C = Costs(H)
+            for h in x.h:
+                for shape, b in [("pruned", h)] + [("pruned", bb) for bb in x.pruned] + [("layered", None)]:
+                    proved, attack = lifetimes(h, shape, b)
+                    label = shape if shape == "layered" else ("full" if b == h else f"pruned {b}")
+                    life = "not certified" if proved is None else f"{proved:>11,} ({fmt(attack) if attack else '?'})"
+                    print(f"{H.name:<10} {h:>2}  {label:<10} {size(h, shape):>8,} {C.verify(h, shape):>7} "
+                          f"{fmt(C.keygen(h, shape, b)):>7}  {life}")
+        return
 
-    # per-call costs (input after the 32-byte prefix)
-    derive, step, node = comp(32), comp(N), comp(2 * N)
-    wots_pk, key_leaf, super_hash = comp(v * N), comp(chains * N), comp(subs * 2 * N)
-    enc, enc_fixed, enc_try = merged(coords * 2 * N)
-    rnd, digest = comp(32 + 32), comp(32 + N)  # S || m ;  m || rho: one call of h + 8 * 26 bits
-    attempt = digest  # the digest call, at randomizer R_0 + i * delta
+    print(f"leanSphincs candidate: a two-level WOTS forest of {COORDS} coordinates under WOTS+C with {V} chains of "
+          f"length {Q} and T={T}; {math.log2(n_sum(V, Q, T)):.2f} bits of valid encodings, expected "
+          f"{1 / ALPHA:.0f} counters; costs in compressions (Keccak-f permutations for Keccak-256)")
+    for H in hashes:
+        C = Costs(H)
+        enc0, fixed0, _ = C.encoding(C.message_len(0))
+        enc1, _, _ = C.encoding(C.message_len(1))
+        print(f"\n{H.name}: per call derive {C.derive}, chain {C.step}, node {C.node}, forest WOTS leaf "
+              f"{C.child_leaf}, super-child {C.super_hash}, WOTS+C leaf {C.wots_pk}, digest {C.digest} "
+              f"({C.digest_fixed} once + {C.attempt} per attempt), encoding of the forest key {enc0} ({fixed0} once + "
+              f"1 per counter), of a root {enc1}" + (", the block of P once per key" if H.per_key else ""))
+        print(f"  forest: {C.per_coord} per coordinate to verify, {fmt(C.forest_sign)} per instance to sign")
+        for h in x.h:
+            for shape in ("pruned", "layered"):
+                ls = layers(h, shape)
+                bs = [h] + x.pruned if shape == "pruned" else [None]
+                desc = "one tree" if shape == "pruned" else "layers " + "+".join(map(str, ls))
+                print(f"  h={h} {shape} ({desc}): signature {size(h, shape):,} B, verification {C.verify(h, shape)}")
+                for b in bs:
+                    proved, attack = lifetimes(h, shape, b)
+                    life = "not certified" if proved is None else f"lifetime {fmt(proved)} (cover attack {fmt(attack)})"
+                    signs = []
+                    for kib in x.cache_kib:
+                        base, grind, tree = C.sign(h, shape, b, int(kib * 1024))
+                        signs.append(f"{fmt(base + tree)} with {kib:g} KiB")
+                    label = "" if b is None else ("full key: " if b == h else f"pruned b={b}: ")
+                    print(f"    {label}{life}, keygen {fmt(C.keygen(h, shape, b))}, signing {', '.join(signs)}")
 
-    if not 0 <= T <= v * (q - 1):
-        ap.error(f"--T must be between 0 and {v * (q - 1)}")
-    alpha = n_sum(v, q, T) / q**v  # probability that a counter gives sum T
-    # One derivation hash gives two secrets (its two 16-byte halves): two chain starts of a WOTS key.
-    leaf = v // 2 * derive + v * (q - 1) * step + wots_pk
-    wots_key = chains // 2 * derive + chains * chain_steps * step + key_leaf
-    subtree = children * wots_key + (children - 2) * node
-    coord = supers * (subs * subtree + super_hash) + (supers - 2) * node
-    forest_sign = coords * coord
-    wots_sign = enc_fixed + enc_try / alpha + v // 2 * derive + T * step
-    values = subs * (chains + sub_path) + top_path
-    per_coord = subs * (digit_sum * step + key_leaf + (sub_path - 1) * node) + super_hash + (top_path - 1) * node
-    verify = digest + coords * per_coord + enc + ((q - 1) * v - T) * step + wots_pk + h * node
-    keygen = derive + 2**h * leaf + (2**h - 1) * node
-    size = N + coords * values * N + 4 + v * N + h * N
-
-    def lifetimes(b):
-        """(proved in Lean, cover attack) for a key that keeps a subtree of 2^b leaves."""
-        proved = next((n for (bb, n, _) in fc.PARAMS if bb == b), None)
-        return proved, fc.ATTACK.get(b)
-
-    def tree_cost(height, cache_nodes):
-        """Per-signature tree work: the best of keeping one level c (rebuild the 2^c leaves below the cached
-        node, hash the cached level up) or keeping every level >= c (rebuild the 2^c leaves below)."""
-        if 2 ** (height + 1) - 1 <= cache_nodes:
-            return 0
-        best = 2**height * leaf + (2**height - 1) * node  # no usable cache: rebuild the whole tree
-        for c in range(1, height + 1):
-            below = 2**c * leaf + (2**c - 1) * node
-            if 2 ** (height - c + 1) - 1 <= cache_nodes:
-                best = min(best, below)
-            if 2 ** (height - c) <= cache_nodes:
-                best = min(best, below + (2 ** (height - c) - 1) * node)
-        return best
-
-    def nodes(mib):
-        return int(mib * 2**20) // N
-
-    def show(b, label, kg=None):
-        proved, attack = lifetimes(b)
-        life = "" if proved is None else (f"lifetime {fmt(proved)} ({fmt(attack)} for the cover attack), ")
-        grind = 2 ** (h - b) * attempt
-        base = grind + rnd + digest - attempt + forest_sign + wots_sign
-        caches = x.pruned_cache_kib if b < h else [1024 * c for c in x.cache_mib]
-        signs = ", ".join(f"{fmt(base + tree_cost(b, nodes(kib / 1024)))} with "
-                          f"{kib / 1024:g} MiB" if kib >= 1024 else
-                          f"{fmt(base + tree_cost(b, nodes(kib / 1024)))} with {kib:g} KiB"
-                          for kib in caches)
-        extra = "" if kg is None else f"key generation {fmt(kg)}, "
-        print(f"  {label}: {life}{extra}signing {signs} (grinding {fmt(grind)})")
-
-    print(f"leanSphincs candidate: h={h}, a two-level WOTS forest of {coords} coordinates, WOTS+C with {v} "
-          f"chains of length {q} and T={T}; costs in Keccak-f permutations (Keccak-256)")
-    print(f"  signature {size} B (rho 16, forest {coords * values * N}, counter 4, WOTS {v * N}, path {h * N}); "
-          f"pk {2 * N} B")
-    print(f"  digest: {h} + {coords} * {coord_bits} = {h + coords * coord_bits} bits, one call")
-    print(f"  per call: derive {derive}, chain {step}, node {node}, encode {enc} (forest key + counter; signer "
-          f"{enc_fixed} once + {enc_try} per counter), WOTS leaf {wots_pk}, randomizer {rnd}, digest {digest}")
-    print(f"  WOTS encoding: {math.log2(n_sum(v, q, T)):.2f} bits of valid encodings, "
-          f"expected {1 / alpha:.0f} counters, {fmt(wots_sign)} permutations")
-    print(f"  verification: {verify} permutations ({per_coord} per coordinate, {values} values per coordinate)")
-    print(f"  WOTS leaf {leaf}; forest key {wots_key} per child, {fmt(forest_sign)} per instance")
-    print(f"  key generation {keygen:,} ({fmt(keygen)})")
-    show(h, f"full key, 2^{h} leaves")
-    for b in x.pruned:
-        kg = derive + 2**b * leaf + (2**b - 1) * node + (h - b) * (derive + node)  # subtree + surrogate path
-        show(b, f"pruned, 2^{b} leaves", kg)
-
-    # Threshold signing (adapted from PRAWNS): every secret is F(addr) for a threshold PRF F. A one-time
-    # ceremony hashes the chains of the 2^b kept instances and publishes the chain values under F; a
-    # signature reveals the values below the tops, one per non-zero digit of the 16 codewords.
-    b = x.threshold
+    # Threshold signing (DKG, no dealer): the MPC builds the XMSS part only (the top layer, or the kept subtree);
+    # before a message it prepares 16 random instances (their forest keys, WOTS+C signatures and paths), and
+    # online it grinds onto one of the 16 and opens only the forest chains the message selects.
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
-    opened = coords * subs
-    forest_chains = coords * supers * subs * children * chains
-    mpc_hashes = 2**b * (forest_chains * chain_steps + v * (q - 1))
-    public = 2**b * (forest_chains * chain_steps * N + v * N + 4)
-    proved, _ = lifetimes(b)
-    print(f"  threshold, 2^{b} kept leaves (lifetime {fmt(proved) if proved else 'n/a'}): "
-          f"{opened * sum(nonzero) / len(nonzero):.2f} values revealed per signature on average, at most "
-          f"{opened * max(nonzero)}; {fmt(mpc_hashes)} MPC hashes at keygen, public data {public / 1e9:.3g} GB")
-    # Keygen with a DKG: n-party replicated-sharing MPC, t = (n + 1) / 2, hash-based F. Bytes per operator for
-    # one leaf hash and one 3-step chain, measured by `cargo run --release -p rss --bin bench`. A 4-step forest
-    # chain is counted as a measured 3-step chain plus one measured leaf hash.
-    measured = {3: (4553, 13625), 5: (5464, 16352), 7: (5855, 17522)}
-    for n, (per_leaf, per_chain) in measured.items():
-        traffic = 2**b * (forest_chains * (per_chain + per_leaf) + v * per_chain)
-        print(f"    {n // 2 + 1}-of-{n}: DKG traffic {traffic / 1e9:.3g} GB per operator")
+    opened = COORDS * SUBS
+    print(f"\nthreshold: {opened * sum(nonzero) / len(nonzero):.2f} forest chain values opened per signature on "
+          f"average, at most {opened * max(nonzero)}; online grinding onto 16 prepared instances: about 2^h / 16 "
+          f"digest attempts ({', '.join(f'h={h}: {fmt(2 ** h / 16)}' for h in x.h)})")
 
 
 if __name__ == "__main__":

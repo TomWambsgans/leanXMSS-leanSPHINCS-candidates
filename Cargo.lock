@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "blake2s"
+version = "0.1.0"
+
+[[package]]
 name = "keccak"
 version = "0.1.0"
 
@@ -22,8 +26,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha256"
+version = "0.1.0"
+
+[[package]]
 name = "sphincs"
 version = "0.1.0"
 dependencies = [
+ "blake2s",
  "keccak",
+ "sha256",
 ]

@@ -1,0 +1,10 @@
+[package]
+name = "blake2s"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "BLAKE2s-256 (RFC 7693), unkeyed: the compression function and streaming hashing, scalar"
+
+[lints]
+workspace = true

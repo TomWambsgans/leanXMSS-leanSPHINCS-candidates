@@ -52,10 +52,25 @@ def expLow(u, J, P):
     return acc + t
 
 ELOW = Fr(27182818283, 10 ** 10)
-TOTAL = 24          # tree height: the full key keeps all 2^TOTAL instances
+TOTAL = 24          # tree height: the full key keeps all 2^TOTAL instances (set_config)
 KQ = Fr(1, 2 ** TOTAL)
+LAYERED_TOP = None  # the top layer's height of a layered key, None for a pruned key (set_config)
 
-def kcredit(b): return 226 * 2 ** b + 2 * (TOTAL - b)   # key generation: 32 + 64 * 3 + 2 hashes per leaf (kCreditF)
+# The layer split of a layered key, top layer first (crates/sphincs `layered_heights`).
+SPLITS = {22: (10, 6, 6), 24: (12, 6, 6), 26: (8, 6, 6, 6), 28: (10, 6, 6, 6)}
+
+def set_config(h, shape='pruned'):
+    """Select the height and the shape every function below works at."""
+    global TOTAL, KQ, LAYERED_TOP
+    TOTAL, KQ = h, Fr(1, 2 ** h)
+    LAYERED_TOP = SPLITS[h][0] if shape == 'layered' else None
+
+def kcredit(b):
+    """Key generation, in hash calls: 32 + 64 * 3 + 2 per leaf of the kept subtree and 2 per surrogate
+    (kCreditF); a layered key builds its top layer, with no surrogate."""
+    if LAYERED_TOP is not None:
+        return 226 * 2 ** LAYERED_TOP
+    return 226 * 2 ** b + 2 * (TOTAL - b)
 def betaWQ(qb): return Fr(2 * (2 ** 128 - qb) + 1, 2 ** 256)
 
 # ---------------- the moment tables ----------------
@@ -503,8 +518,11 @@ set_option Elab.async false
     out.append('end LeanForest.Security.H0\n')
     open(path, 'w').write('\n'.join(out))
 
-# Attack lifetimes of the forest in the cover model (one expected cover per 2^127 digest queries; FOREST.md).
-ATTACK = {24: 3.59915e8, 20: 2.63862e7, 14: 5.18006e5, 13: 2.68735e5, 12: 1.39374e5, 10: 3.74550e4, 8: 1.00543e4}
+# Attack lifetimes of the forest in the cover model (one expected cover per 2^127 digest queries; FOREST.md),
+# by height and kept subtree height (forest_attack.py). A layered key is attacked as the full key.
+ATTACK = {
+    24: {24: 3.59915e8, 20: 2.63862e7, 14: 5.18006e5, 13: 2.68735e5, 12: 1.39374e5, 10: 3.74550e4, 8: 1.00543e4},
+}
 
 def pname(b): return 'full' if b == TOTAL else 'pruned%d' % b
 
@@ -527,7 +545,7 @@ open Security ForsPotential
         tag = 'b%d' % b
         name = pname(b)
         out.append('/-- Subtree height %d, %d signatures (%.1f%% of the cover attack\'s %.4g). -/'
-                   % (b, N, 100.0 * N / ATTACK[b], ATTACK[b]))
+                   % (b, N, 100.0 * N / ATTACK[TOTAL][b], ATTACK[TOTAL][b]))
         out.append('abbrev %s : Params := ⟨%d, %d, by decide⟩\n' % (name, b, N))
         out.append('/-- **127 bits for the deterministic signer** at subtree height %d and %d signatures. -/' % (b, N))
         if not c['complete']:
@@ -549,16 +567,31 @@ open Security ForsPotential
     out.append('end LeanForest.Lifetimes\n')
     open(path, 'w').write('\n'.join(out))
 
-# Parameter sets: (b, N, lx).
-PARAMS = [
-    (24, 336700000, -10.0),
-    (20, 23830000, -9.125),
-    (14, 441500, -8.125),
-    (13, 226800, -8.0),
-    (12, 116600, -7.75),
-    (10, 30810, -7.625),
-    (8, 8154, -7.375),
-]
+# Parameter sets of pruned keys, by height: (b, N, lx), b = h being the full key.
+PARAMS = {
+    24: [
+        (24, 336700000, -10.0),
+        (20, 23830000, -9.125),
+        (14, 441500, -8.125),
+        (13, 226800, -8.0),
+        (12, 116600, -7.75),
+        (10, 30810, -7.625),
+        (8, 8154, -7.375),
+    ],
+}
+
+# Parameter sets of layered keys, by height: (N, lx); the index is not ground, b = h.
+LAYERED = {}
+
+def lifetime(h, shape, b=None):
+    """The proved signature limit of a configuration, None if it has no certificate here."""
+    if shape == 'layered':
+        return LAYERED[h][0] if h in LAYERED else None
+    return next((n for (bb, n, _) in PARAMS.get(h, []) if bb == b), None)
+
+def attack(h, shape, b=None):
+    """The cover attack's lifetime of a configuration, None if not computed."""
+    return ATTACK.get(h, {}).get(h if shape == 'layered' else b)
 
 if __name__ == '__main__':
     cmd = sys.argv[1] if len(sys.argv) > 1 else None
@@ -621,7 +654,7 @@ if __name__ == '__main__':
                 float(small_lhs(b, N, qh, rho, o.B, c)), rate <= rho - 1 - x), flush=True)
     elif cmd == 'emit':
         certs = []
-        for (b, N, lx) in PARAMS:
+        for (b, N, lx) in PARAMS[TOTAL]:
             c = certify(b, N, lx)
             assert c is not None, (b, N, lx)
             certs.append(c)

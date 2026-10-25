@@ -13,6 +13,8 @@ too_many_arguments = "allow"
 
 [workspace.dependencies]
 keccak = { path = "crates/keccak" }
+blake2s = { path = "crates/blake2s" }
+sha256 = { path = "crates/sha256" }
 sphincs = { path = "crates/sphincs" }
 mpc = { path = "crates/mpc" }
 
