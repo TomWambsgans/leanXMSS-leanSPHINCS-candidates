@@ -256,19 +256,21 @@ $i\in J$ sends a part, and the parts combine into $F(x)$:
 Parts from signings of different $(m,J)$ don't combine, so aborted signings reveal no secret.
 
 
-\paragraph{Threshold costs (Keccak-256).} A Keccak-f[1600] call in the MPC is $36.3\cdot10^3$ AND gates (1\,600
-per round; part of the first round is public, and the truncated output skips most of the last one). The MPC uses
-replicated sharing over $\mathrm{GF}(2)$ as in~\cite{BGIN19}, generalized to $n=2f+1$: each AND gate is computed
-locally and reshared through one collector, $(n-1)+f$ bits in total, i.e.\ 1, 1.2 and 1.29 bits per operator for
-$n=3$, 5, 7, plus a check~\cite{GS20} of negligible traffic. Traffic per operator at $h=24$:
+\paragraph{Threshold costs.} The MPC uses replicated sharing over $\mathrm{GF}(2)$ as in~\cite{BGIN19}, generalized to
+$n=2f+1$: each AND gate is computed locally and reshared through one collector, $(n-1)+f$ bits in total, i.e.\ 1, 1.2
+and 1.29 bits per operator for $n=3$, 5, 7, plus a check~\cite{GS20} of negligible traffic. A compression is
+$36.3\cdot10^3$ AND gates for Keccak-f[1600] (1\,600 per round; part of the first round is public, and the truncated
+output skips most of the last one), $22.6\cdot10^3$ for SHA-256 (the Bristol circuit) and $14.9\cdot10^3$ for BLAKE2s
+(10 rounds of 8 functions of 6 additions modulo $2^{32}$, 31 AND gates each). Traffic per operator at $h=24$, 2-of-3
+(3-of-5 and 4-of-7 cost 1.2 and 1.29 times more):
 \begin{center}
 \begin{tabular}{lrrr}
   \toprule
-  & 2-of-3 & 3-of-5 & 4-of-7 \\
+  & Keccak-256 & BLAKE2s & SHA-256 \\
   \midrule
-  keygen, layered or pruned $b=12$ ($954\cdot10^3$ permutations) & 4.3~GB & 5.2~GB & 5.6~GB \\
-  preprocessing, pruned (one instance, $59\cdot10^3$ permutations) & 269~MB & 323~MB & 346~MB \\
-  preprocessing, layered (and two lower trees, $89\cdot10^3$) & 406~MB & 487~MB & 522~MB \\
+  keygen, layered or pruned $b=12$ & 4.3~GB & 1.8~GB & 2.8~GB \\
+  preprocessing, pruned (one instance) & 269~MB & 114~MB & 173~MB \\
+  preprocessing, layered (and two lower trees) & 406~MB & 172~MB & 262~MB \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -303,9 +305,10 @@ The statement of the STARK is public, so it needs no zero knowledge; $\Delta$ is
 The minimality makes $R$ a function of $(m, \text{secret key})$ and the prepared set, as for the deterministic signer; this flow is not covered by the Lean proof.
 
 \paragraph{Hardware wallet costs.} At $h=24$ the host hashes about $1.05\cdot10^6$ digests and proves them at about
-$10^6$ Keccak-f per second; the device verifies the STARK in about $10^4$ permutations, 1.7~s on a Ledger Nano S+, so
-shipping and verifying take about 3~s. Preparing an instance costs the device $59\cdot10^3$ permutations for a pruned
-key and $89\cdot10^3$ for a layered one, in its idle time.
+$10^6$ hashes per second. The device verifies the STARK in about $10^4$ compressions: 1.7~s on a Ledger Nano S+ with
+Keccak-256, 0.31~s with BLAKE2s and 0.42~s with SHA-256 (it computes 5.8, 32.6 and 23.6 thousand compressions per
+second~\cite{hwbench}), so shipping and verifying take about 3~s with Keccak-256. Preparing an instance costs the
+device $59\cdot10^3$ Keccak-f permutations for a pruned key and $89\cdot10^3$ for a layered one, in its idle time.
 
 \section{The few-time signature: a two-level WOTS forest}
 \label{sec:twolevel}
