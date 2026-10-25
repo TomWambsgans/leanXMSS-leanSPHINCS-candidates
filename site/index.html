@@ -951,11 +951,10 @@ document.addEventListener('pointerdown', function (e) {
   var CHAIN = [1, 3, 0, 2, 2, 0, 3, 1];                // the revealed position on each of the 8 chains of a small key
   function drawLayered(layers, h) {
     while (layered.firstChild) layered.removeChild(layered.firstChild);
-    var L = layers.length, S0 = 13, C0 = 5;            // the spacing of a drawn level, of a level in the body
-    var need = layers.reduce(function (a, t) { return a + DRAWN * S0 + (t - DRAWN) * C0; }, 0);
-    var k = Math.min(1.45, (LEAF - ROOT - (L - 1) * GAP) / need), ls = [], y = LEAF;
+    // every level has the same spacing u, so that each tree is drawn in proportion to its height
+    var L = layers.length, u = (LEAF - ROOT - (L - 1) * GAP) / h, ls = [], y = LEAF;
     for (var i = L - 1; i >= 0; i--) {        // from the bottom layer up: its leaf sits over the brace
-      var t = layers[i], s = DRAWN * S0 * k, H = s + (t - DRAWN) * C0 * k, y0 = y - H;
+      var t = layers[i], s = DRAWN * u, H = t * u, y0 = y - H;
       var a = i === 0 ? 60 : 46, turn = TURNS[(L - 1 - i) % 2], nodes = [[X, y0]], rows = [[X]], dx = 0;
       for (var j = 1; j <= DRAWN; j++) {
         var off = a / Math.pow(2, j - 1), row = [];
