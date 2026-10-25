@@ -1156,11 +1156,11 @@ document.addEventListener('pointerdown', function (e) {
         set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="st">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
         return;
       }
-      // two techniques: offline / online with the host, or naive (the Ledger alone, with a 16 KiB cache)
+      // two techniques: offline / online with the host, or direct (the Ledger alone, with a 16 KiB cache)
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
       set('sign-' + k, '<div><div class="hd"><span>Offline / Online<span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span>' +
         '<span class="ex">' + time(tt.prep * np / d.rate) + ' / ' + time(g / W.host_rate + W.stark_verify_s) + '</span></div>' +
-        '<div class="hd"><span>Naive</span>' + t(c.sign[d.kib]) + '</div>' +
+        '<div class="hd"><span>Direct</span>' + t(c.sign[d.kib]) + '</div>' +
         '<div class="st">(' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ', ' + d.cache + ' cache)</div></div>');
     });
 
