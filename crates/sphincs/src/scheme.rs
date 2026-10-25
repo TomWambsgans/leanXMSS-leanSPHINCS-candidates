@@ -25,7 +25,7 @@ impl PublicKey {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Signature {
     pub randomizer: Randomizer,
-    pub fors: ForsOpening,
+    pub forest: ForestOpening,
     pub counter: u32,
     pub wots: [Digest; V],
     pub path: [Digest; H],
@@ -35,9 +35,16 @@ impl Signature {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(SIG_SIZE);
         out.extend_from_slice(&self.randomizer);
-        for kappa in 0..K {
-            out.extend_from_slice(&self.fors.secrets[kappa]);
-            for node in &self.fors.paths[kappa] {
+        for coord in &self.forest {
+            for sub in &coord.sub {
+                for value in &sub.values {
+                    out.extend_from_slice(value);
+                }
+                for node in &sub.path {
+                    out.extend_from_slice(node);
+                }
+            }
+            for node in &coord.top {
                 out.extend_from_slice(node);
             }
         }
@@ -62,63 +69,67 @@ impl Signature {
             &bytes[at - len..at]
         };
         let randomizer = take(RANDOMIZER_LEN).try_into().unwrap();
-        let mut fors = ForsOpening { secrets: [[0; N]; K], paths: [[[0; N]; A]; K] };
-        for kappa in 0..K {
-            fors.secrets[kappa] = take(N).try_into().unwrap();
-            for level in 0..A {
-                fors.paths[kappa][level] = take(N).try_into().unwrap();
-            }
-        }
+        let forest: ForestOpening = std::array::from_fn(|_| CoordOpening {
+            sub: std::array::from_fn(|_| SubOpening {
+                values: std::array::from_fn(|_| take(N).try_into().unwrap()),
+                path: std::array::from_fn(|_| take(N).try_into().unwrap()),
+            }),
+            top: std::array::from_fn(|_| take(N).try_into().unwrap()),
+        });
         let counter = u32::from_le_bytes(take(COUNTER_LEN).try_into().unwrap());
         let wots = std::array::from_fn(|_| take(N).try_into().unwrap());
         let path = std::array::from_fn(|_| take(N).try_into().unwrap());
-        Some(Self { randomizer, fors, counter, wots, path })
+        Some(Self { randomizer, forest, counter, wots, path })
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum VerifyError {
-    /// The counter does not encode the FORS tops into a codeword.
+    /// The counter does not encode the forest key into a codeword.
     InadmissibleEncoding,
     RootMismatch,
 }
 
-/// The state of digest call `call` after `P | address | m`. With the randomizer the whole input is
+/// The state of the digest call after `P | address | m`. With the randomizer the whole input is
 /// 80 bytes, within one block, so grinding it costs one permutation per attempt.
-pub fn digest_midstate(pp: &PublicParam, m: &Message, call: u32) -> Midstate {
-    Midstate::new(pp, &tweak(TWEAK_MSG, call, 0), &[m])
+pub fn digest_midstate(pp: &PublicParam, m: &Message) -> Midstate {
+    Midstate::new(pp, &tweak(TWEAK_MSG, 0, 0), &[m])
 }
 
-/// One call of the message digest, `P | address | m | rho`, untruncated. `P` binds the key, so the
-/// root is not hashed.
-pub fn digest_block(pp: &PublicParam, rho: &Randomizer, m: &Message, call: u32) -> [u8; 32] {
-    digest_midstate(pp, m, call).finish(rho)
+/// The message digest call, `P | address | m | rho`, untruncated. `P` binds the key, so the root is
+/// not hashed.
+pub fn digest_block(pp: &PublicParam, rho: &Randomizer, m: &Message) -> [u8; 32] {
+    digest_midstate(pp, m).finish(rho)
 }
 
-/// The leaf index alone, from the digest's first call (what grinding computes).
+/// The leaf index alone (what grinding computes).
 pub fn digest_index(pp: &PublicParam, rho: &Randomizer, m: &Message) -> u64 {
-    index_of_block(&digest_block(pp, rho, m, 0))
+    index_of_block(&digest_block(pp, rho, m))
 }
 
-/// The leaf index: the low `h` bits of the last 16 bytes of call 0.
+/// The leaf index: `h` bits from bit 208, i.e. the high bits of the last 64-bit word.
 pub fn index_of_block(d0: &[u8; 32]) -> u64 {
-    u64::from_le_bytes(d0[16..24].try_into().unwrap()) & ((1 << H) - 1)
+    u64::from_le_bytes(d0[24..32].try_into().unwrap()) >> (INDEX_OFFSET - 192) & ((1 << H) - 1)
 }
 
-/// FORS indices per digest call: six in each of the two 64-bit words of its first 16 bytes.
-const INDICES_PER_CALL: usize = 12;
+/// Bit offset of the leaf index in the digest: the last 16 bytes carry the 16 children, the 8
+/// super-children and then the index.
+pub const INDEX_OFFSET: usize = 128 + SUBS * COORDS * SUB_HEIGHT + COORDS * TOP_HEIGHT;
 
-/// The message digest, from two calls, read as the leaf index and the `k` FORS indices. No field
-/// lies across two 64-bit words: FORS index `kappa` is in call `kappa / 12`, word `(kappa % 12) / 6`
-/// of its first 16 bytes, at bit `a * (kappa % 6)`; the leaf index is in the last 16 bytes of call 0.
-pub fn message_digest(pp: &PublicParam, rho: &Randomizer, m: &Message) -> (u64, [u32; K]) {
-    let calls = [digest_block(pp, rho, m, 0), digest_block(pp, rho, m, 1)];
-    let fors_index = |kappa: usize| {
-        let r = kappa % INDICES_PER_CALL;
-        let word = &calls[kappa / INDICES_PER_CALL][8 * (r / 6)..][..8];
-        (u64::from_le_bytes(word.try_into().unwrap()) >> (A * (r % 6)) & ((1 << A) - 1)) as u32
-    };
-    (index_of_block(&calls[0]), std::array::from_fn(fors_index))
+/// The message digest, one call: the 16 codeword indices are its first 16 bytes (byte `2c + j` for
+/// sub-tree `j` of coordinate `c`), then the last 16 bytes hold the 16 children (3 bits each, in
+/// the order `2c + j`), the 8 super-children (4 bits each, from bit 176) and the leaf index (from
+/// bit 208). No field lies across two 64-bit words.
+pub fn message_digest(pp: &PublicParam, rho: &Randomizer, m: &Message) -> (u64, [CoordMark; COORDS]) {
+    let d = digest_block(pp, rho, m);
+    let high = u128::from_le_bytes(d[16..32].try_into().unwrap());
+    let field = |offset: usize, bits: usize| ((high >> offset) & ((1u128 << bits) - 1)) as usize;
+    let marks = std::array::from_fn(|c| CoordMark {
+        super_child: field(SUBS * COORDS * SUB_HEIGHT + TOP_HEIGHT * c, TOP_HEIGHT),
+        child: std::array::from_fn(|j| field(SUB_HEIGHT * (SUBS * c + j), SUB_HEIGHT)),
+        word: std::array::from_fn(|j| d[SUBS * c + j]),
+    });
+    (index_of_block(&d), marks)
 }
 
 pub fn xmss_node(pp: &PublicParam, level: usize, j: u64, left: &Digest, right: &Digest) -> Digest {
@@ -244,32 +255,29 @@ pub fn randomizer(walk: &RandomizerWalk, i: u32) -> Randomizer {
 }
 
 /// `Sign`: take the least `i` whose randomizer `R_0 + i * delta` lands in the kept subtree (`i = 0`
-/// for a full key), open FORS, sign its tops with WOTS+C.
+/// for a full key), open the forest, sign its key with WOTS+C.
 pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
     let pp = &sk.public_param;
     // The digest's fixed part is absorbed once, and the randomizers are `R_0 + i * delta`: an
     // attempt costs one permutation.
-    let (walk, digests) = (randomizer_walk(pp, &sk.master, m), digest_midstate(pp, m, 0));
+    let (walk, digests) = (randomizer_walk(pp, &sk.master, m), digest_midstate(pp, m));
     let rho = (0u32..)
         .map(|i| randomizer(&walk, i))
         .find(|rho| sk.tree.contains(index_of_block(&digests.finish(rho))))
         .unwrap();
-    let (idx, u) = message_digest(pp, &rho, m);
-    let forest = ForsForest::from_leaves(pp, idx, &fors_leaves(pp, &sk.master, idx));
-    let fors = ForsOpening {
-        secrets: std::array::from_fn(|kappa| fors_secret(pp, &sk.master, idx, kappa, u[kappa] as usize)),
-        paths: forest.paths(&u),
-    };
-    let (counter, wots) = wots_sign(pp, &sk.master, idx as u32, &forest.tops).expect("no admissible WOTS+C encoding");
-    Signature { randomizer: rho, fors, counter, wots, path: sk.tree.path(idx) }
+    let (idx, marks) = message_digest(pp, &rho, m);
+    let forest = Forest::new(pp, &sk.master, idx);
+    let opening = forest.open(pp, idx, &marks);
+    let (counter, wots) = wots_sign(pp, &sk.master, idx as u32, &forest.key).expect("no admissible WOTS+C encoding");
+    Signature { randomizer: rho, forest: opening, counter, wots, path: sk.tree.path(idx) }
 }
 
 /// `Ver`.
 pub fn verify(pk: &PublicKey, m: &Message, sig: &Signature) -> Result<(), VerifyError> {
     let pp = &pk.public_param;
-    let (idx, u) = message_digest(pp, &sig.randomizer, m);
-    let tops = fors_recover(pp, idx, &u, &sig.fors);
-    let leaf = wots_recover(pp, idx as u32, &tops, sig.counter, &sig.wots).ok_or(VerifyError::InadmissibleEncoding)?;
+    let (idx, marks) = message_digest(pp, &sig.randomizer, m);
+    let key = forest_recover(pp, idx, &marks, &sig.forest);
+    let leaf = wots_recover(pp, idx as u32, &key, sig.counter, &sig.wots).ok_or(VerifyError::InadmissibleEncoding)?;
     if tree_fold(pp, idx, leaf, &sig.path) == pk.root { Ok(()) } else { Err(VerifyError::RootMismatch) }
 }
 
@@ -302,7 +310,7 @@ mod tests {
                 other[0] ^= 1;
                 assert!(verify(&pk, &other, &sig).is_err());
                 let mut bad = sig.clone();
-                bad.fors.secrets[3][0] ^= 1;
+                bad.forest[3].sub[0].values[0][0] ^= 1;
                 assert!(verify(&pk, &m, &bad).is_err());
             }
         }
@@ -346,11 +354,14 @@ mod tests {
         bad.wots[11][5] ^= 4;
         cases.push(("WOTS value", bad));
         let mut bad = sig.clone();
-        bad.fors.paths[2][A - 1][0] ^= 1;
-        cases.push(("FORS path", bad));
+        bad.forest[2].sub[1].path[SUB_HEIGHT - 1][0] ^= 1;
+        cases.push(("sub-tree path", bad));
         let mut bad = sig.clone();
-        bad.fors.secrets[K - 1][N - 1] ^= 1;
-        cases.push(("FORS secret", bad));
+        bad.forest[COORDS - 1].top[TOP_HEIGHT - 1][0] ^= 1;
+        cases.push(("top-tree path", bad));
+        let mut bad = sig.clone();
+        bad.forest[COORDS - 1].sub[1].values[CHILD_CHAINS - 1][N - 1] ^= 1;
+        cases.push(("chain value", bad));
         let mut bad = sig.clone();
         bad.randomizer[0] ^= 1;
         cases.push(("randomizer", bad));
@@ -371,9 +382,9 @@ mod tests {
         let m: Message = std::array::from_fn(|i| (7 * i) as u8);
         let sig = sign(&sk, &m);
         let digest = keccak::hash(&sig.to_bytes());
-        assert_eq!(hex(&pk.to_bytes()), "63b118353523319f8f74f387824956482e582128e480149accc2ed4f19edcd00");
-        assert_eq!(hex(&digest), "cfc1a538f008852bcd4d7dda9000a3b1760108af9e563abd8646bf38436df089");
-        assert_eq!(sig.counter, 1173);
+        assert_eq!(hex(&pk.to_bytes()), "bca067181df522e8f72775a93784f8082e582128e480149accc2ed4f19edcd00");
+        assert_eq!(hex(&digest), "841f5a7f3bdbd25912f955b90384ed999a79cb2cb9db364b0e82be1da59d43c7");
+        assert_eq!(sig.counter, 679);
     }
 
     /// The signature's randomizer is the first attempt of the message's walk that lands, and the
@@ -402,7 +413,7 @@ mod tests {
     fn a_randomizer_attempt_costs_one_permutation() {
         let (pp, m) = ([3u8; PUBLIC_PARAM_LEN], [5u8; MESSAGE_LEN]);
         let before = permutations();
-        let (walk, digests) = (randomizer_walk(&pp, &seed(2), &m), digest_midstate(&pp, &m, 0));
+        let (walk, digests) = (randomizer_walk(&pp, &seed(2), &m), digest_midstate(&pp, &m));
         assert_eq!(permutations() - before, 1, "R_0 and delta, once per message; the digest's fixed part fills no block");
         for i in 0..4 {
             let before = permutations();
@@ -436,51 +447,60 @@ mod tests {
         let rho = randomizer(&walk, 7);
         let (base, step) = (u128::from_le_bytes(walk.base), u128::from_le_bytes(walk.step));
         assert_eq!(rho, base.wrapping_add(7 * step).to_le_bytes(), "R_0 + 7 delta");
-        let input = [&pp[..], &address(&tweak(TWEAK_MSG, 1, 0)), &m, &rho].concat();
+        let input = [&pp[..], &address(&tweak(TWEAK_MSG, 0, 0)), &m, &rho].concat();
         assert_eq!(input.len(), 80, "one block");
-        assert_eq!(digest_block(&pp, &rho, &m, 1), keccak::hash(&input));
+        assert_eq!(digest_block(&pp, &rho, &m), keccak::hash(&input));
     }
 
-    /// Pins where the digest's fields are: six FORS indices in each of the first two 64-bit words of
-    /// a call, the leaf index in the third word of call 0.
+    /// Pins where the digest's fields are, and that none of them lies across two 64-bit words: the
+    /// codeword indices are the first 16 bytes, then the children, the super-children and the index.
     #[test]
     fn digest_fields() {
         let (pp, m, rho) = ([3u8; PUBLIC_PARAM_LEN], [5u8; MESSAGE_LEN], [7u8; N]);
-        let calls = [digest_block(&pp, &rho, &m, 0), digest_block(&pp, &rho, &m, 1)];
-        let word = |call: usize, w: usize| u64::from_le_bytes(calls[call][8 * w..][..8].try_into().unwrap());
-        let (index, fors) = message_digest(&pp, &rho, &m);
-        assert_eq!(index, word(0, 2) % (1 << H));
-        for (kappa, &value) in fors.iter().enumerate() {
-            let expected = word(kappa / 12, kappa % 12 / 6) >> (A * (kappa % 6)) & 1023;
-            assert_eq!(u64::from(value), expected, "FORS index {kappa}");
+        let d = digest_block(&pp, &rho, &m);
+        let word = |w: usize| u64::from_le_bytes(d[8 * w..][..8].try_into().unwrap());
+        let (index, marks) = message_digest(&pp, &rho, &m);
+        assert_eq!(index, word(3) >> 16 & ((1 << H) - 1));
+        for (c, mark) in marks.iter().enumerate() {
+            assert_eq!(mark.super_child as u64, word(2 + (48 + 4 * c) / 64) >> ((48 + 4 * c) % 64) & 15);
+            for j in 0..SUBS {
+                let at = 3 * (2 * c + j);
+                assert_eq!(mark.child[j] as u64, word(2) >> at & 7, "child {c} {j}");
+                assert_eq!(mark.word[j], d[2 * c + j], "codeword index {c} {j}");
+                assert!(at % 64 + SUB_HEIGHT <= 64, "a child lies across two words");
+            }
+            assert!((48 + 4 * c) % 64 + TOP_HEIGHT <= 64, "a super-child lies across two words");
         }
+        assert_eq!(INDEX_OFFSET, 208);
+        assert!(INDEX_OFFSET % 64 + H <= 64, "the index lies across two words");
     }
 
-    /// Pins the encoding's input, `P | A(enc, 0, e) | tops | counter`, and its costs: 6 permutations
-    /// for the verifier, and 5 once plus 1 per counter for the signer.
+    /// Pins the encoding's input, `P | A(enc, 0, e) | key | counter`, and its costs: 3 permutations
+    /// for the verifier, and 2 once plus 1 per counter for the signer.
     #[test]
-    fn encoding_absorbs_the_tops_and_the_counter() {
+    fn encoding_absorbs_the_key_and_the_counter() {
         let pp = [3u8; PUBLIC_PARAM_LEN];
-        let tops: ForsTops = std::array::from_fn(|kappa| std::array::from_fn(|half| [(2 * kappa + half) as u8; N]));
-        let input = [&pp[..], &address(&tweak(TWEAK_ENC, 0, 77)), tops.as_flattened().as_flattened(), &5u32.to_le_bytes()].concat();
-        assert_eq!(input.len(), 804);
+        let key: ForestKey = std::array::from_fn(|c| std::array::from_fn(|half| [(2 * c + half) as u8; N]));
+        let input = [&pp[..], &address(&tweak(TWEAK_ENC, 0, 77)), key.as_flattened().as_flattened(), &5u32.to_le_bytes()].concat();
+        assert_eq!(input.len(), 292);
         let expected = codeword(keccak::hash(&input)[..N].try_into().unwrap());
         let before = permutations();
-        assert_eq!(encode(&pp, 77, &tops, 5), expected);
-        assert_eq!(permutations() - before, 6);
+        assert_eq!(encode(&pp, 77, &key, 5), expected);
+        assert_eq!(permutations() - before, 3);
         let before = permutations();
-        let state = encoding_midstate(&pp, 77, &tops);
-        assert_eq!(permutations() - before, 5, "the whole blocks of the tops, once");
+        let state = encoding_midstate(&pp, 77, &key);
+        assert_eq!(permutations() - before, 2, "the whole blocks of the key, once");
         let before = permutations();
         assert_eq!(encode_from(&state, 5), expected);
         assert_eq!(permutations() - before, 1, "one permutation per counter");
     }
 
     #[test]
-    fn wots_encoding_takes_about_829_tries() {
+    fn wots_encoding_takes_about_2197_tries() {
         let pp = [7u8; PUBLIC_PARAM_LEN];
-        let tries: u64 = (0..200u32).map(|e| u64::from(wots_encode(&pp, e, &[[[e as u8; N]; 2]; K]).unwrap().0) + 1).sum();
-        let mean = tries as f64 / 200.0;
-        assert!((400.0..1600.0).contains(&mean), "mean tries {mean}");
+        let tries: u64 =
+            (0..100u32).map(|e| u64::from(wots_encode(&pp, e, &[[[e as u8; N]; 2]; COORDS]).unwrap().0) + 1).sum();
+        let mean = tries as f64 / 100.0;
+        assert!((1100.0..4400.0).contains(&mean), "mean tries {mean}");
     }
 }

@@ -22,7 +22,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import forest_table as ft
 
 UMAX = 48; NMAX = 220; NMIN, NMX = 1, 125
-BS = [26, 20, 14, 13, 12, 10, 8]
+TOTAL = 24          # tree height: the full key keeps all 2^TOTAL instances
+BS = [24, 20, 14, 13, 12, 10, 8]
 
 def rate_wots(search=2.0 ** 116):
     """best success rate per query, in units 2^-127, of: `search` hashes, then 2 * 2^-128 per query"""
@@ -65,7 +66,7 @@ def tree_P(f, a, s, c):
 
 def log2_forge(P, T, lam, b):
     n = np.arange(NMAX+1)
-    return (b-26) + math.log2((poisson.pmf(n, lam) * P**T).sum() + poisson.sf(NMAX, lam) + 1e-300)
+    return (b-TOTAL) + math.log2((poisson.pmf(n, lam) * P**T).sum() + poisson.sf(NMAX, lam) + 1e-300)
 
 def lifetime(P, T, b, level=127):
     lo, hi = 1e-3, 150.0

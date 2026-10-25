@@ -15,8 +15,8 @@ open Concrete ForestPrice LeanSphincs.Security.H0 LeanSphincs.Security.Dominatio
 
 set_option linter.unusedSectionVars false
 
-/-- The per-index weight `2^-26` of the cover probability. -/
-def κQ : ℚ := 1 / 2 ^ 26
+/-- The per-index weight `2^-24` of the cover probability. -/
+def κQ : ℚ := 1 / 2 ^ 24
 
 /-- One option of the certificate. -/
 structure OptF where
@@ -116,11 +116,11 @@ theorem κE_toReal (b : ℕ) (hb : subtreeHeight = b) : κE.toReal = (κQ : ℝ)
   unfold κE κQ
   rw [landing_eq, ENNReal.toReal_mul, ENNReal.toReal_ofReal (by positivity), ENNReal.toReal_inv,
     ENNReal.toReal_natCast, Fintype.card_fin]
-  have hb26 : b ≤ 26 := hb ▸ subtree_le_26
+  have hb24 : b ≤ 24 := hb ▸ subtree_le_24
   rw [hb]
-  have h26 : (2 : ℝ) ^ 26 = 2 ^ (26 - b) * 2 ^ b := by rw [← pow_add]; congr 1; omega
+  have h24 : (2 : ℝ) ^ 24 = 2 ^ (24 - b) * 2 ^ b := by rw [← pow_add]; congr 1; omega
   push_cast
-  rw [h26]
+  rw [h24]
   field_simp
 
 /-- **The excess part is dominated by the `ḡ` table.** -/

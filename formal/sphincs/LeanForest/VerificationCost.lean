@@ -283,14 +283,14 @@ theorem permutations_verifyLayers (f : QueryImpl HashSpec Id) (parameter : Publi
 
 attribute [local semireducible] Concrete.verify
 
-/-- Every accepted signature causes exactly 267 Keccak-f permutations in the verifier execution: 1 for
-the digest, 160 for the forest and 106 for WOTS+C (with the 3-permutation encoding of the forest key)
+/-- Every accepted signature causes exactly 265 Keccak-f permutations in the verifier execution: 1 for
+the digest, 160 for the forest and 104 for WOTS+C (with the 3-permutation encoding of the forest key)
 and the path. -/
 theorem verification_permutations (f : QueryImpl HashSpec Id) (pk : PublicKey)
     (message : Message) (signature : Signature)
     (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
-    permutations f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = 267 := by
+    permutations f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = 265 := by
   rw [Concrete.verify, permutations_bind, permutations_messageDigest,
     permutations_bind, permutations_forestRecover, permutations_bind, permutations_verifyLayers]
   simp only [Concrete.verify, evalWithAnswerFn_bind] at haccept
@@ -303,7 +303,7 @@ theorem verification_permutations (f : QueryImpl HashSpec Id) (pk : PublicKey)
 /-- Malformed signatures cannot make verification exceed its accepted-signature cost. -/
 theorem verification_permutations_le (f : QueryImpl HashSpec Id) (pk : PublicKey)
     (message : Message) (signature : Signature) :
-    permutations f (Concrete.verify pk message signature : OracleComp HashSpec Bool) ≤ 267 := by
+    permutations f (Concrete.verify pk message signature : OracleComp HashSpec Bool) ≤ 265 := by
   rw [Concrete.verify, permutations_bind, permutations_messageDigest,
     permutations_bind, permutations_forestRecover, permutations_bind, permutations_verifyLayers]
   split <;> split <;> simp [permutations_pure]

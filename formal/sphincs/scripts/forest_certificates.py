@@ -11,7 +11,7 @@ then  lake build LeanForest.LifetimeCertificates  (the kernel re-checks every ce
 its result counts only once `check` accepts it and it is in PARAMS.
 
 For each parameter set (b, N, lx), with qh = floor(2^(128 + lx)):
-  * a Poisson table at rate N/2^b + (2M - 1) qtop / (M denB 2^b), M = 2^(26 - b), qtop the largest budget
+  * a Poisson table at rate N/2^b + (2M - 1) qtop / (M denB 2^b), M = 2^(TOTAL - b), qtop the largest budget
     it serves (rate_of; checkPT, checkRate);
   * the small route at qh: a Chernoff option at baseline rho/2^128 (checkOptF), the near certificate
     (checkOptN) and the rational check checkSmallF (BridgeDetCloseF.lean);
@@ -52,9 +52,10 @@ def expLow(u, J, P):
     return acc + t
 
 ELOW = Fr(27182818283, 10 ** 10)
-KQ = Fr(1, 2 ** 26)
+TOTAL = 24          # tree height: the full key keeps all 2^TOTAL instances
+KQ = Fr(1, 2 ** TOTAL)
 
-def kcredit(b): return 226 * 2 ** b + 2 * (26 - b)   # key generation: 32 + 64 * 3 + 2 hashes per leaf (kCreditF)
+def kcredit(b): return 226 * 2 ** b + 2 * (TOTAL - b)   # key generation: 32 + 64 * 3 + 2 hashes per leaf (kCreditF)
 def betaWQ(qb): return Fr(2 * (2 ** 128 - qb) + 1, 2 ** 256)
 
 # ---------------- the moment tables ----------------
@@ -83,7 +84,7 @@ class PoisT:
         self.r = self.mu / (self.n1 + 2)
     def pb(self, n): return Fr(self.pm[n] if 0 <= n < len(self.pm) else 0, 2 ** self.P)
 
-def scanMb(b): return 2 ** (26 - b)
+def scanMb(b): return 2 ** (TOTAL - b)
 def lmaxB(b, q): return 65 * ((q + 64 * scanMb(b) - 1) // (64 * scanMb(b))) + 2 ** 15
 def denB(b, q): return 2 ** 128 - (q + 2 ** 32 + (scanMb(b) - 1) * lmaxB(b, q))
 def fair_ok(b, q): return q + 2 ** 32 + (scanMb(b) - 1) * lmaxB(b, q) + (2 * scanMb(b) - 1) <= 2 ** 128
@@ -196,8 +197,8 @@ class FModel:
         n1 = t.n1
         self.ps = [math.exp(-self.mu + n * math.log(self.mu) - math.lgamma(n + 1)) if n > 0 else math.exp(-self.mu)
                    for n in range(n1 + 1)]
-        self.m1 = [2.0 ** 101 * float(P1[n]) ** 8 for n in range(n1 + 1)]
-        self.m2 = [2.0 ** 202 * float(P2[n]) ** 8 for n in range(n1 + 1)]
+        self.m1 = [2.0 ** (127 - TOTAL) * float(P1[n]) ** 8 for n in range(n1 + 1)]
+        self.m2 = [2.0 ** (2 * (127 - TOTAL)) * float(P2[n]) ** 8 for n in range(n1 + 1)]
     def H(self, L, c1, th, c):
         A = (math.exp(th * c1) - 1 - th * c1) / c1 ** 2
         eh = sum(p * min(a, b2 / (4 * c1)) for p, a, b2 in zip(self.ps, self.m1, self.m2))
@@ -354,7 +355,7 @@ def chainF(b, N, qtop, opts, last, entries):
 def segments(b, qh):
     """budget ranges of the covers: each has its own table (rate fixed by its top)"""
     top = 2 ** 127 - 1 - kcredit(b)
-    if b == 26:
+    if b == TOTAL:
         return [2 ** 127]
     qlight = (64 * 2 ** 128 - 2 ** 60) // 257
     return [q for q in (2 ** 124, qlight) if q > qh]
@@ -383,7 +384,7 @@ def certify(b, N, lx, verbose=True):
     covers = []
     heavy = []
     qstart = qh + 1
-    segs = [(qtop, False) for qtop in segments(b, qh)] + ([] if b == 26 else [(2 ** 127, True)])
+    segs = [(qtop, False) for qtop in segments(b, qh)] + ([] if b == TOTAL else [(2 ** 127, True)])
     for qtop, hv in segs:
         tc = make_poisT(b, N, qtop, heavy=hv)
         assert checkPT(tc) and (checkRateH(b, N, qtop, tc) if hv else checkRate(b, N, qtop, tc))
@@ -503,11 +504,9 @@ set_option Elab.async false
     open(path, 'w').write('\n'.join(out))
 
 # Attack lifetimes of the forest in the cover model (one expected cover per 2^127 digest queries; FOREST.md).
-ATTACK = {26: 1.43966e9, 20: 2.85120e7, 14: 5.57495e5, 13: 2.89047e5, 12: 1.49820e5, 10: 4.02171e4, 8: 1.07843e4}
-# Proved lifetimes of the FORS variant (LeanSphincs.Lifetimes.requestedSecurity).
-FORS = {26: 1156000000, 20: 22380000, 14: 412500, 13: 211900, 12: 108700, 10: 28600, 8: 7530}
+ATTACK = {24: 3.59915e8, 20: 2.63862e7, 14: 5.18006e5, 13: 2.68735e5, 12: 1.39374e5, 10: 3.74550e4, 8: 1.00543e4}
 
-def pname(b): return 'full' if b == 26 else 'pruned%d' % b
+def pname(b): return 'full' if b == TOTAL else 'pruned%d' % b
 
 def emit_lifetimes(certs, path):
     out = ['''import LeanForest.LifetimeCertificates
@@ -515,8 +514,7 @@ def emit_lifetimes(certs, path):
 /-! **Proved lifetimes of the forest variant** for the deterministic signer (seed-derived
 randomizers): 127 classical bits against any adversary. Small budgets use the linear potential, the
 one-coin cover potential at baseline `ρ / 2^128` and the contact bound A4 of the forest; large
-budgets use the one-coin covers at the survival-weighted baseline. Every lifetime is at least the
-proved lifetime of the FORS variant (`LeanSphincs.Lifetimes.requestedSecurity`). -/
+budgets use the one-coin covers at the survival-weighted baseline. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -528,8 +526,8 @@ open Security ForsPotential
         b, N = c['b'], c['N']
         tag = 'b%d' % b
         name = pname(b)
-        out.append('/-- Subtree height %d, %d signatures (%.1f%% of the cover attack\'s %.4g; the FORS variant: %d). -/'
-                   % (b, N, 100.0 * N / ATTACK[b], ATTACK[b], FORS[b]))
+        out.append('/-- Subtree height %d, %d signatures (%.1f%% of the cover attack\'s %.4g). -/'
+                   % (b, N, 100.0 * N / ATTACK[b], ATTACK[b]))
         out.append('abbrev %s : Params := ⟨%d, %d, by decide⟩\n' % (name, b, N))
         out.append('/-- **127 bits for the deterministic signer** at subtree height %d and %d signatures. -/' % (b, N))
         if not c['complete']:
@@ -541,7 +539,7 @@ open Security ForsPotential
         out.append('  @det_bitsFH %s (by decide) %d %d rfl rfl %d H0.rho_%s H0.tab_%s H0.small_%s H0.near_%s H0.tab_%s_ok\n'
                    '    H0.rate_%s_ok H0.small_%s_ok H0.near_%s_ok H0.check_%s_ok [%s] [%s] H0.covers_%s_ok\n'
                    % (name, b, N, c['qh'], tag, tag, tag, tag, tag, tag, tag, tag, tag, names, hnames, tag))
-    order = [26, 20, 14, 13, 12, 10, 8]
+    order = [24, 20, 14, 13, 12, 10, 8]
     have = {c['b'] for c in certs if c['complete']}
     if all(b in have for b in order):
         out.append('/-- **The forest lifetimes**: 127 bits at every subtree height. -/')
@@ -553,13 +551,13 @@ open Security ForsPotential
 
 # Parameter sets: (b, N, lx).
 PARAMS = [
-    (26, 1383000000, -10.40625),
-    (20, 26030000, -9.25),
-    (14, 480900, -8.171875),
-    (13, 247000, -8.015625),
-    (12, 126900, -7.875),
-    (10, 33490, -7.609375),
-    (8, 8830, -7.390625),
+    (24, 336700000, -10.0),
+    (20, 23830000, -9.125),
+    (14, 441500, -8.125),
+    (13, 226800, -8.0),
+    (12, 116600, -7.75),
+    (10, 30810, -7.625),
+    (8, 8154, -7.375),
 ]
 
 if __name__ == '__main__':

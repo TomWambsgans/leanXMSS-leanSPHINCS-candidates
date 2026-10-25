@@ -31,8 +31,8 @@ theorem serializeCoord_length (opening : CoordOpening) : (serializeCoord opening
     Fintype.card_fin, smul_eq_mul]
   decide
 
-/-- **Serialized size.** Every forest signature, malformed or not, serializes to 4276 bytes. -/
-theorem signature_size (signature : Signature) : (serializeSignature signature).length = 4276 := by
+/-- **Serialized size.** Every forest signature, malformed or not, serializes to 4244 bytes. -/
+theorem signature_size (signature : Signature) : (serializeSignature signature).length = 4244 := by
   simp only [serializeSignature, List.length_append, bytesLE_length, digest_vector_length,
     List.length_flatten, List.map_ofFn, Function.comp_def, serializeCoord_length, List.sum_ofFn,
     Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul]

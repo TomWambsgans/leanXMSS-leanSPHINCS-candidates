@@ -94,14 +94,15 @@ theorem digestFactor_pow_bound (parameter : PublicParameter) :
     digestFactor parameter ^ digestAttemptLimit ≤ (2⁻¹ : ℝ≥0∞) ^ (2 ^ (subtreeHeight + 5)) := by
   have hhalf := pow_le_half_ennreal (2 ^ (totalHeight - subtreeHeight + 1))
     (Nat.two_pow_pos _) (digestFactor parameter) (digestFactor_room parameter)
-  have hb : subtreeHeight ≤ 26 := Params.subtreeHeight_le
+  have hb : subtreeHeight ≤ 24 := Params.subtreeHeight_le
   have hsplit : digestAttemptLimit =
-      2 ^ (totalHeight - subtreeHeight + 1) * 2 ^ (subtreeHeight + 5) := by
+      2 ^ (totalHeight - subtreeHeight + 1) * 2 ^ (subtreeHeight + 7) := by
     rw [digestAttemptLimit, ← pow_add]
     congr 1
-    change 32 = 26 - subtreeHeight + 1 + (subtreeHeight + 5)
+    change 32 = 24 - subtreeHeight + 1 + (subtreeHeight + 7)
     omega
   rw [hsplit, pow_mul]
-  exact pow_le_pow_left₀ (by positivity) hhalf _
+  refine (pow_le_pow_left₀ (by positivity) hhalf _).trans ?_
+  exact inv_two_pow_anti (Nat.pow_le_pow_right (by norm_num) (by omega))
 
 end LeanForest.Completeness

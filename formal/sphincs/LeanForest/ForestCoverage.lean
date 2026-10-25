@@ -2,7 +2,7 @@ import LeanForest.Uniform
 import Mathlib.Data.BitVec
 
 /-!
-The full view of a 234-bit message digest (its index and the 26-bit field of each of the 8 trees)
+The full view of a 232-bit message digest (its index and the 26-bit field of each of the 8 trees)
 is a bijection, so a uniform digest gives a uniform view. The 26 bits of a tree lie in three places
 of the digest (its two codeword indices among the first 16 bytes, its leaf, its two WOTS keys);
 `coordField` gathers them. A field decodes to the tree's mark: the
@@ -94,26 +94,26 @@ theorem fullDigestView_injective : Function.Injective fullDigestView := by
     exact ⟨hs, Fin.forall_fin_two.2 ⟨hc0, hc1⟩, Fin.forall_fin_two.2 ⟨hw0, hw1⟩⟩
   apply BitVec.eq_of_getLsbD_eq
   intro position hposition
-  have hposition' : position < 234 := hposition
+  have hposition' : position < 232 := hposition
   by_cases hword : position < 128
   · let c : Coord := ⟨position / 16, by simp only [forestCoords]; omega⟩
     let j : SubIdx := ⟨position / 8 % 2, by omega⟩
     refine getLsbD_of_extract ((hfield c).2.2 j) ?_ ?_ <;>
     · simp only [wordOffset, c, j]
       omega
-  · by_cases hindex : position < 154
-    · refine getLsbD_of_extract hidx ?_ ?_ <;>
-      · simp only [indexOffset, totalHeight]
+  · by_cases hchild : position < 176
+    · let c : Coord := ⟨(position - 128) / 6, by simp only [forestCoords]; omega⟩
+      let j : SubIdx := ⟨(position - 128) / 3 % 2, by omega⟩
+      refine getLsbD_of_extract ((hfield c).2.1 j) ?_ ?_ <;>
+      · simp only [childOffset, c, j]
         omega
-    · by_cases hsuper : position < 186
-      · let c : Coord := ⟨(position - 154) / 4, by simp only [forestCoords]; omega⟩
+    · by_cases hsuper : position < 208
+      · let c : Coord := ⟨(position - 176) / 4, by simp only [forestCoords]; omega⟩
         refine getLsbD_of_extract (hfield c).1 ?_ ?_ <;>
-        · simp only [superOffset, c]
+        · simp only [superOffset, forestCoords, subHeight, c]
           omega
-      · let c : Coord := ⟨(position - 186) / 6, by simp only [forestCoords]; omega⟩
-        let j : SubIdx := ⟨(position - 186) / 3 % 2, by omega⟩
-        refine getLsbD_of_extract ((hfield c).2.1 j) ?_ ?_ <;>
-        · simp only [childOffset, c, j]
+      · refine getLsbD_of_extract hidx ?_ ?_ <;>
+        · simp only [indexOffset, totalHeight, forestCoords, subHeight, topHeight]
           omega
 
 theorem fullDigestView_bijective : Function.Bijective fullDigestView := by

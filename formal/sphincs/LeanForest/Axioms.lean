@@ -7371,9 +7371,9 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.scanM_pos
 
-/-- info: 'LeanForest.Security.H0.subtree_le_26' does not depend on any axioms -/
+/-- info: 'LeanForest.Security.H0.subtree_le_24' does not depend on any axioms -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.subtree_le_26
+#print axioms LeanForest.Security.H0.subtree_le_24
 
 /-- info: 'LeanForest.Security.H0.wbar_le_one' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

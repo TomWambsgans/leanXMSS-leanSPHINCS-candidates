@@ -11,9 +11,9 @@ namespace LeanForest.Security.H0
 
 open Concrete ForestPrice LeanSphincs.Security.H0 LeanSphincs.Security.Domination
 
-/-- Keygen credit `K` of the forest signer: the `226 · 2^b + 2 (26 − b)` hash calls of key
+/-- Keygen credit `K` of the forest signer: the `226 · 2^b + 2 (24 − b)` hash calls of key
 generation (`Prefix.hashCalls_keygenFromSeed`), with one seed derivation for the starts of two chains. -/
-def kCreditF (b : ℕ) : ℕ := 226 * 2 ^ b + 2 * (26 - b)
+def kCreditF (b : ℕ) : ℕ := 226 * 2 ^ b + 2 * (24 - b)
 
 /-- A cover entry: budgets `[qa, qb]` and the index of its option. -/
 abbrev EntryF := ℕ × ℕ × ℕ
@@ -26,7 +26,7 @@ structure CoverW where
   entries : List EntryF
 
 /-- The inverse landing probability at subtree height `b`. -/
-def scanMb (b : ℕ) : ℕ := 2 ^ (26 - b)
+def scanMb (b : ℕ) : ℕ := 2 ^ (24 - b)
 
 /-- The cap on the landed pairs at subtree height `b` and budget `q`. -/
 def lmaxB (b q : ℕ) : ℕ := 65 * ((q + 64 * scanMb b - 1) / (64 * scanMb b)) + 2 ^ 15
@@ -171,9 +171,9 @@ theorem bound_of_entryF (b N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr : ch
     (hN : signatureLimit = N) (e : EntryF) (he : checkEntryF b N opts e = true) (q : ℕ) (hqa : e.1 ≤ q)
     (hqb : q ≤ e.2.1) (hqt : q ≤ qtop) :
     (1 - HiddenDebt.budget 0 q) + (q : ℝ≥0∞) * ForsPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q +
-        ((q + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q + (226 * 2 ^ subtreeHeight + 2 * (24 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 := by
+      ((q + (226 * 2 ^ subtreeHeight + 2 * (24 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 := by
   obtain ⟨o, ho, hqb2, hcthr, hmain⟩ := checkEntryF_sound he
   obtain ⟨qa, qb, j⟩ := e
   dsimp only at hqa hqb hqb2 hcthr hmain
@@ -197,7 +197,7 @@ theorem bound_of_entryF (b N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr : ch
     (by exact_mod_cast hqa) (by exact_mod_cast hqb) (Nat.cast_nonneg _) hB0 (by norm_num) (by norm_num)
     (by norm_num) hmainR
   rw [mul_one] at hfinal
-  rw [hb, hN, show 226 * 2 ^ b + 2 * (26 - b) = kCreditF b from rfl]
+  rw [hb, hN, show 226 * 2 ^ b + 2 * (24 - b) = kCreditF b from rfl]
   have hbud : 1 - HiddenDebt.budget 0 q =
       ENNReal.ofReal (1 - (((2 : ℝ) ^ 128 - 0 - q) / ((2 : ℝ) ^ 128 - 0)) ^ 2) := by
     unfold HiddenDebt.budget HiddenDebt.spaceReal
@@ -244,9 +244,9 @@ theorem h0W_bound_of_cover (b N qstart : ℕ) (cover : CoverW) (hcov : checkCove
     (hb : subtreeHeight = b) (hN : signatureLimit = N) (q' : ℕ) (hq0 : qstart ≤ q') (hq : q' ≤ cover.qtop) :
     (1 - HiddenDebt.budget 0 q') +
         (q' : ℝ≥0∞) * ForsPotential.startExcessO (wbarOf q') (HiddenDebt.baselineW q') q' +
-        ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
+        ((q' + (226 * 2 ^ subtreeHeight + 2 * (24 - subtreeHeight)) + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
-      ((q' + (226 * 2 ^ subtreeHeight + 2 * (26 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 := by
+      ((q' + (226 * 2 ^ subtreeHeight + 2 * (24 - subtreeHeight)) : ℕ) : ℝ≥0∞) / 2 ^ 127 := by
   simp only [checkCoverW, Bool.and_eq_true, List.all_eq_true] at hcov
   obtain ⟨⟨⟨hr, ht⟩, hopts⟩, hchain⟩ := hcov
   obtain ⟨e, -, h1, h2, h3⟩ := chainF_sound b N cover.qtop cover.opts cover.entries qstart hchain q' hq0 hq

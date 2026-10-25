@@ -624,12 +624,12 @@ theorem expectedFail_le : expectedFail ≤ (2 : ℝ≥0∞)⁻¹ ^ 201 := by
           Finset.sum_le_sum fun i _ => tsum_elim_le _ i
       _ ≤ ∑ _i : Index, (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20) :=
           Finset.sum_le_sum fun i _ => (prep_fail_le parameterOutput fixed highs remaining i).trans fail_pow_le
-      _ = (2 ^ 26 : ℕ) * (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20) := by
+      _ = (2 ^ 24 : ℕ) * (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20) := by
           rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
           rfl
       _ ≤ (2 : ℝ≥0∞)⁻¹ ^ 201 := by
-          have hsplit : (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20) = (2 : ℝ≥0∞)⁻¹ ^ 26 * ((2 : ℝ≥0∞)⁻¹ ^ 201 *
-              (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20 - 227)) := by
+          have hsplit : (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20) = (2 : ℝ≥0∞)⁻¹ ^ 24 * ((2 : ℝ≥0∞)⁻¹ ^ 201 *
+              (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20 - 225)) := by
             rw [← pow_add, ← pow_add]
             congr 1
           rw [hsplit, Nat.cast_pow, Nat.cast_ofNat, ← mul_assoc, ← mul_pow,

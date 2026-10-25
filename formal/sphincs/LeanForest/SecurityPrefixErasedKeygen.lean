@@ -1,6 +1,6 @@
 import LeanForest.SecurityPrefixMaterialCost
 
-/-! The exact hash cost of key generation, `226 · 2^b + 2 (26 - b)` calls, including the surrogate
+/-! The exact hash cost of key generation, `226 · 2^b + 2 (24 - b)` calls, including the surrogate
 spine. -/
 
 open OracleComp OracleSpec

@@ -1,7 +1,7 @@
 //! WOTS+C: `v = 64` chains of `2^w - 1 = 3` steps, and the target-sum code that replaces the
-//! Winternitz checksum. A codeword is 64 chunks summing to `T = 120`; the signer searches the least
-//! counter whose encoding is a codeword. The encoding hashes the FORS tops themselves, with the
-//! counter last: there is no separate FORS key hash.
+//! Winternitz checksum. A codeword is 64 chunks summing to `T = 123`; the signer searches the least
+//! counter whose encoding is a codeword. The encoding hashes the forest key itself, with the
+//! counter last: there is no separate key hash.
 
 use crate::*;
 
@@ -39,10 +39,10 @@ pub fn wots_leaf_hash(pp: &PublicParam, e: u32, ends: &[Digest; V]) -> Digest {
     th_digests(pp, &tweak(TWEAK_LEAF, 0, e), ends)
 }
 
-/// The encoding hash after its fixed part, `P | A(enc, 0, e) | tops` (800 bytes: 5 whole blocks).
+/// The encoding hash after its fixed part, `P | A(enc, 0, e) | key` (288 bytes: 2 whole blocks).
 /// The counter falls in the last block, so each counter costs one permutation.
-pub fn encoding_midstate(pp: &PublicParam, e: u32, tops: &ForsTops) -> Midstate {
-    Midstate::new(pp, &tweak(TWEAK_ENC, 0, e), &[tops.as_flattened().as_flattened()])
+pub fn encoding_midstate(pp: &PublicParam, e: u32, key: &ForestKey) -> Midstate {
+    Midstate::new(pp, &tweak(TWEAK_ENC, 0, e), &[key.as_flattened().as_flattened()])
 }
 
 /// The codeword of counter `c` from the encoding's midstate, or `None` if its digest is not one.
@@ -50,9 +50,9 @@ pub fn encode_from(state: &Midstate, c: u32) -> Option<[u8; V]> {
     codeword(state.finish(&c.to_le_bytes())[..N].try_into().unwrap())
 }
 
-/// `Enc(P, e, tops, c)`: `Th(P, A(enc, 0, e), tops | c)` decoded, or `None` if it is not a codeword.
-pub fn encode(pp: &PublicParam, e: u32, tops: &ForsTops, c: u32) -> Option<[u8; V]> {
-    encode_from(&encoding_midstate(pp, e, tops), c)
+/// `Enc(P, e, key, c)`: `Th(P, A(enc, 0, e), key | c)` decoded, or `None` if it is not a codeword.
+pub fn encode(pp: &PublicParam, e: u32, key: &ForestKey, c: u32) -> Option<[u8; V]> {
+    encode_from(&encoding_midstate(pp, e, key), c)
 }
 
 /// The 128 digest bits as 64 chunks of 2 bits, little endian; a codeword if they sum to `T`.
@@ -64,22 +64,22 @@ pub fn codeword(digest: &Digest) -> Option<[u8; V]> {
 
 /// The least admissible counter and its codeword. Deterministic in its inputs, which keeps one
 /// key to one codeword.
-pub fn wots_encode(pp: &PublicParam, e: u32, tops: &ForsTops) -> Option<(u32, [u8; V])> {
-    let state = encoding_midstate(pp, e, tops);
+pub fn wots_encode(pp: &PublicParam, e: u32, key: &ForestKey) -> Option<(u32, [u8; V])> {
+    let state = encoding_midstate(pp, e, key);
     (0..MAX_ENCODING_ATTEMPTS).find_map(|c| encode_from(&state, c as u32).map(|x| (c as u32, x)))
 }
 
 /// `Ots.sign` from the master secret: the counter and the chain value each chunk opens.
-pub fn wots_sign(pp: &PublicParam, master: &MasterSecret, e: u32, tops: &ForsTops) -> Option<(u32, [Digest; V])> {
-    let (c, x) = wots_encode(pp, e, tops)?;
+pub fn wots_sign(pp: &PublicParam, master: &MasterSecret, e: u32, key: &ForestKey) -> Option<(u32, [Digest; V])> {
+    let (c, x) = wots_encode(pp, e, key)?;
     let secrets = wots_secrets(pp, master, e);
     let signature = std::array::from_fn(|i| chain(pp, e, i, 0, x[i] as usize, secrets[i]));
     Some((c, signature))
 }
 
 /// `Ots.leaf`: the leaf a claimed signature recovers, or `None` if the counter is not admissible.
-pub fn wots_recover(pp: &PublicParam, e: u32, tops: &ForsTops, c: u32, signature: &[Digest; V]) -> Option<Digest> {
-    let x = encode(pp, e, tops, c)?;
+pub fn wots_recover(pp: &PublicParam, e: u32, key: &ForestKey, c: u32, signature: &[Digest; V]) -> Option<Digest> {
+    let x = encode(pp, e, key, c)?;
     let ends = std::array::from_fn(|i| {
         let start = x[i] as usize;
         chain(pp, e, i, start, CHAIN_LEN - 1 - start, signature[i])

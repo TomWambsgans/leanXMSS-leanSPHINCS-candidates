@@ -14,13 +14,17 @@ pub const TWEAK_NODE: u8 = 3;
 pub const TWEAK_ENC: u8 = 4;
 pub const TWEAK_PARAMETER: u8 = 5;
 pub const TWEAK_RANDOMIZER: u8 = 7;
-pub const TWEAK_FTS_PRF: u8 = 8;
-pub const TWEAK_FTS_LEAF: u8 = 9;
-pub const TWEAK_FTS_NODE: u8 = 10;
-// Type 11 (the former FORS key hash) is unused: the encoding absorbs the FORS tops.
 pub const TWEAK_MSG: u8 = 12;
 /// A pruned key's surrogate siblings (the kept subtree's position comes from the low bits of `P`).
 pub const TWEAK_SURROGATE: u8 = 13;
+// The forest: seed derivation, chains, child leaves, sub-tree and top-tree nodes, super-children.
+pub const TWEAK_FOREST_PRF: u8 = 14;
+pub const TWEAK_FCHAIN: u8 = 15;
+pub const TWEAK_CHILD_LEAF: u8 = 16;
+pub const TWEAK_SUB_NODE: u8 = 17;
+pub const TWEAK_SUPER_CHILD: u8 = 18;
+pub const TWEAK_TOP_NODE: u8 = 19;
+// Type 20 (the former forest key hash) is unused: the encoding absorbs the sixteen nodes.
 
 /// The address of a hash call: its type, a chain step, and two fields, `hi < 2^24` and `lo`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -148,8 +152,8 @@ mod tests {
     /// Pins the byte layout of the address and of a hash input.
     #[test]
     fn address_layout() {
-        let tw = tweak(TWEAK_FTS_NODE, 0x123456, 0x89abcdef).step(5);
-        assert_eq!(address(&tw), [0xef, 0xcd, 0xab, 0x89, 0x56, 0x34, 0x12, 0xaa, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let tw = tweak(TWEAK_SUB_NODE, 0x123456, 0x89abcdef).step(5);
+        assert_eq!(address(&tw), [0xef, 0xcd, 0xab, 0x89, 0x56, 0x34, 0x12, 0xb1, 0, 0, 0, 0, 0, 0, 0, 0]);
         let pp: PublicParam = std::array::from_fn(|i| i as u8 + 1);
         let payload = [9u8; N];
         let mut input = pp.to_vec();

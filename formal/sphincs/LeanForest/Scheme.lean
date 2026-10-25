@@ -5,7 +5,7 @@ import Mathlib.Data.BitVec
 /-!
 # leanSPHINCS with a two-level WOTS forest
 
-The scheme of `LeanSphincs.Scheme` (one height-26 tree of WOTS+C keys with 64 chains of length 4 and
+The scheme of `LeanSphincs.Scheme` (one height-24 tree of WOTS+C keys with 64 chains of length 4 and
 target sum 123, pruning with surrogate siblings, randomizer grinding, tweakable hash with 16-byte
 outputs) with the few-time signature under each tree leaf replaced by a **two-level WOTS forest**:
 
@@ -23,10 +23,10 @@ outputs) with the few-time signature under each tree leaf replaced by a **two-le
 * a codeword is a deficit vector `d ∈ {0..4}^6` with `Σ d_i = 5` (246 of them); `lut` is a fixed list
   of 256 of them (`codewordCodes`): the codewords sorted by decreasing `Σ d_i²`, then
   lexicographically, entry `t` being codeword number `t mod 214`;
-* one digest call gives `26 + 8 · 26 = 234` bits. The first 16 bytes are the 16 codeword indices
-  (byte `2c + j` for sub-tree `j` of coordinate `c`); then, from bit 128, the index (26 bits), the 8
-  super-children (4 bits each, from bit 154) and the 16 children (3 bits each, from bit 186, in the
-  order `2c + j`). No field lies across two 64-bit words;
+* one digest call gives `24 + 8 · 26 = 232` bits. The first 16 bytes are the 16 codeword indices
+  (byte `2c + j` for sub-tree `j` of coordinate `c`); then, from bit 128, the 16 children (3 bits
+  each, in the order `2c + j`), the 8 super-children (4 bits each, from bit 176) and the index
+  (24 bits, from bit 208). No field lies across two 64-bit words;
 * an opening reveals, per coordinate and sub-tree, `x_{i, 4 - d_i}` for the 6 chains and the 3 auth
   nodes of the sub-tree, then the 4 auth nodes of the top tree. The last auth node of a tree is its
   other top node: the verifier folds all levels but the last and hashes the two top nodes, in index
@@ -58,16 +58,16 @@ def chainLength : Nat := 2 ^ winternitzBits
 def numChains : Nat := 64
 def targetSum : Nat := 123
 def numLayers : Nat := 1
-def totalHeight : Nat := 26
+def totalHeight : Nat := 24
 /-- The height of the only XMSS layer, which bounds its leaf index. -/
-def maxLayerHeight : Nat := 26
+def maxLayerHeight : Nat := 24
 /-- Randomizers tried per signature (`ctr` is a `u32`), `A_max`. -/
 def digestAttemptLimit : Nat := 2 ^ 32
 /-- Encoding counters tried per signature, `C_max`. -/
 def encodingAttemptLimit : Nat := 2 ^ 32
 
 /-- The key's shape and lifetime: the kept subtree holds `2^subtreeHeight` leaves
-(`subtreeHeight = 26` is the full key), and the key signs at most `signatureLimit` messages. -/
+(`subtreeHeight = 24` is the full key), and the key signs at most `signatureLimit` messages. -/
 class Params where
   subtreeHeight : Nat
   signatureLimit : Nat
@@ -129,7 +129,7 @@ abbrev Codeword := FChain → FPos
 /-- A codeword index, 8 digest bits. -/
 abbrev LutIdx := Fin 256
 
-/-- The layer height, `h = 26`. -/
+/-- The layer height, `h = 24`. -/
 def layerHeight (_lay : Layer) : Nat := maxLayerHeight
 
 def topLayer : Layer := ⟨0, by decide⟩
@@ -199,17 +199,17 @@ def codeDigit (code : Nat) (i : FChain) : FPos :=
 /-- `lut t`: entry `t` of the table. -/
 def lut (t : LutIdx) : Codeword := codeDigit (codewordCodes.getD t.val 0)
 
-/-! ### The message digest: one call, 234 bits -/
+/-! ### The message digest: one call, 232 bits -/
 
 /-- Digest bits of one coordinate: super-child 4, and child 3 and codeword 8 for each sub-tree. -/
 def coordBits : Nat := 26
 
-/-- The message digest is `h + 8 · 26 = 234` bits: an index and the fields of 8 coordinates. -/
+/-- The message digest is `h + 8 · 26 = 232` bits: an index and the fields of 8 coordinates. -/
 def messageDigestBits : Nat := totalHeight + forestCoords * coordBits
 
 abbrev MessageDigest := BitVec messageDigestBits
 
-/-- The first 234 bits of the single digest call. -/
+/-- The first 232 bits of the single digest call. -/
 def truncateMessageDigest (first : HashOutput) : MessageDigest :=
   first.extractLsb' 0 messageDigestBits
 
@@ -643,9 +643,9 @@ def forestRecover (parameter : PublicParameter) (index : Index) (marks : Coord �
 
 /-! ### The message digest -/
 
-/-- `m || rho`, what the message digest hashes after the parameter and the address. The first block
-is `P || A || m` (64 bytes); the second block is the randomizer alone. The root is not hashed (`P`
-binds the key); the argument is kept for the callers. -/
+/-- `m || rho`, what the message digest hashes after the parameter and the address: `P || A || m ||
+rho` is 80 bytes, within one 136-byte block. The root is not hashed (`P` binds the key); the
+argument is kept for the callers. -/
 def messageDigestPayload (_root : Digest) (message : Message) (randomness : Randomness) : HashInput :=
   bytesLE 32 message ++ bytesLE 16 randomness
 
@@ -654,10 +654,12 @@ def messageDigestCall (parameter : PublicParameter) (root : Digest) (message : M
     (randomness : Randomness) : m HashOutput :=
   oracleHash (tweakableHashInput parameter .message (messageDigestPayload root message randomness))
 
-/-- Bit offset of the index: the low 26 bits of the last 16 bytes of the digest. -/
-def indexOffset : Nat := 128
+/-- Bit offset of the index. The last 16 bytes carry the 16 children (3 bits each), then the 8
+super-children (4 bits each), then the index (`h` bits): `48 + 32 = 80` bits precede it, and with
+that order no field lies across two 64-bit words. -/
+def indexOffset : Nat := 128 + 2 * forestCoords * subHeight + forestCoords * topHeight
 
-/-- `idx`, the 26 bits of the digest from bit 128. -/
+/-- `idx`, the 24 bits of the digest from bit 208. -/
 def digestIndex (digest : MessageDigest) : Index :=
   (digest.extractLsb' indexOffset totalHeight).toFin
 
@@ -665,7 +667,7 @@ def digestIndex (digest : MessageDigest) : Index :=
 def blockIndex (first : HashOutput) : Index :=
   (first.extractLsb' indexOffset totalHeight).toFin
 
-/-- `Digest(P, m, rho)` (`message_digest`): the single call, truncated to 234 bits. The root is not
+/-- `Digest(P, m, rho)` (`message_digest`): the single call, truncated to 232 bits. The root is not
 an input of the hash. -/
 def messageDigest (parameter : PublicParameter) (root : Digest) (message : Message)
     (randomness : Randomness) : m MessageDigest := do
@@ -675,11 +677,12 @@ def messageDigest (parameter : PublicParameter) (root : Digest) (message : Messa
 /-- Bit offset of the codeword index of sub-tree `j` of coordinate `c`: byte `2c + j` of the digest. -/
 def wordOffset (c : Coord) (j : SubIdx) : Nat := 8 * (2 * c.val + j.val)
 
-/-- Bit offset of coordinate `c`'s super-child (4 bits), after the index. -/
-def superOffset (c : Coord) : Nat := 154 + 4 * c.val
+/-- Bit offset of coordinate `c`'s super-child (4 bits), after the children: `176 + 4 c`. -/
+def superOffset (c : Coord) : Nat := 128 + 2 * forestCoords * subHeight + 4 * c.val
 
-/-- Bit offset of the child of sub-tree `j` of coordinate `c` (3 bits), after the super-children. -/
-def childOffset (c : Coord) (j : SubIdx) : Nat := 186 + 3 * (2 * c.val + j.val)
+/-- Bit offset of the child of sub-tree `j` of coordinate `c` (3 bits), first in the last 16 bytes:
+`128 + 3 (2 c + j)`. -/
+def childOffset (c : Coord) (j : SubIdx) : Nat := 128 + 3 * (2 * c.val + j.val)
 
 /-- The coordinate fields of a digest. -/
 def digestMarks (digest : MessageDigest) : Coord → CoordMark := fun c =>

@@ -18,7 +18,7 @@ set_option exponentiation.threshold 512
 variable [Params]
 
 /-- The inverse of the landing probability. -/
-def scanM : ℕ := 2 ^ (26 - subtreeHeight)
+def scanM : ℕ := 2 ^ (24 - subtreeHeight)
 
 /-- The cap on the cached landed pairs of unsigned messages at budget `q`: `65 ⌈q / (64 M)⌉ + 2^15`. -/
 def LmaxOf (q : ℕ) : ℕ := 65 * ((q + 64 * scanM - 1) / (64 * scanM)) + 2 ^ 15
@@ -30,9 +30,9 @@ def denOf (q : ℕ) : ℕ := 2 ^ 128 - (q + 2 ^ 32 + (scanM - 1) * LmaxOf q)
 `(2 M − 1) / denOf q`, so that `landing · wbarOf q = (2 − landing) / denOf q`. -/
 noncomputable def wbarOf (q : ℕ) : ℝ≥0∞ := ENNReal.ofReal ((2 * (scanM : ℝ) - 1) / (denOf q : ℝ))
 
-theorem subtree_le_26 : subtreeHeight ≤ 26 := (inferInstance : Params).subtreeHeight_le
+theorem subtree_le_24 : subtreeHeight ≤ 24 := (inferInstance : Params).subtreeHeight_le
 
-theorem landing_eq : landing = ENNReal.ofReal (1 / 2 ^ (26 - subtreeHeight)) := by
+theorem landing_eq : landing = ENNReal.ofReal (1 / 2 ^ (24 - subtreeHeight)) := by
   unfold landing
   rw [one_div, ENNReal.ofReal_inv_of_pos (by positivity)]
   congr 1
