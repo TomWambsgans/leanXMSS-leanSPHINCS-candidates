@@ -159,6 +159,9 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .cmp thead .sub { font-weight: 400; color: var(--muted); }
 .m-only { display: none; }
 .cards thead .dev { white-space: nowrap; }
+.cards .assist { display: flex; align-items: center; gap: 0.4em; margin-top: 0.4rem; font-size: 0.85rem; font-weight: 400; }
+.cards .assist .seg button { padding: 0.1rem 0.6rem; }
+.cards .ph { color: var(--muted); white-space: nowrap; }
 .cards td .hd > :first-child { flex: 1 1 auto; min-width: 0; }
 .cards .st { display: block; color: var(--muted); }
 .cards .br { font-size: 0; }
@@ -177,11 +180,6 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .thr .pair { display: flex; flex-wrap: wrap; gap: 1rem 1rem; align-items: flex-start; }
 .thr .life > * { color: var(--muted); }
 .tables p { margin: 0 0 0.6rem; }
-.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin: 0.4rem 0 0.6rem; padding: 0; list-style: none; }
-.steps li { border-top: 1px solid var(--rule); padding-top: 0.45rem; }
-.steps .who { display: block; font-weight: 600; }
-.steps .who .n { color: var(--accent); margin-right: 0.4em; font-variant-numeric: tabular-nums; }
-.steps .fig { display: block; margin-top: 0.25rem; color: var(--muted); }
 
 /* The three toggles of the scheme: segmented buttons */
 .toggles { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.4rem 0.8rem; align-items: center; margin: 0 0 1rem; font-size: 0.9rem; }
@@ -265,6 +263,7 @@ footer a + a { margin-left: 1.25rem; }
   .cards td::before { content: attr(data-l); color: var(--muted); font-size: 0.92em; }
   .cards td .hd { gap: 0 0.6em; flex-wrap: wrap; }
   .cards td .hd .ex { margin-left: auto; }
+  .cards .ph { display: block; }
 
   /* The toggles fit the width of a phone */
   .toggles { font-size: 0.84rem; column-gap: 0.6rem; }
@@ -276,9 +275,6 @@ footer a + a { margin-left: 1.25rem; }
   .thr .cmp th, .thr .cmp td { padding-right: 0.4rem; }
   .thr .pair .cmp { width: 100%; }
   .thr .pre-t .life { display: none; }
-
-  /* Hardware wallets: the steps one under the other */
-  .steps { grid-template-columns: minmax(0, 1fr); gap: 0.9rem; }
 
   footer { margin-top: 2rem; }
 }
@@ -681,7 +677,7 @@ footer a + a { margin-left: 1.25rem; }
       <table class="cmp cards">
         <colgroup><col class="label"><col><col><col></colgroup>
         <thead>
-          <tr><th></th><th data-f="head-0"><div class="hd">Light<span class="dev"><a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a><span class="info" tabindex="0" data-f="tip-ledger" data-tip="Hashes per second">i</span></span></div></th><th data-f="head-1"><div class="hd">Standard<span class="dev">weak CPU<span class="info" tabindex="0" data-tip="Hashes per second">i</span></span></div></th><th data-f="head-2"><div class="hd">Full<span class="dev">powerful CPU<span class="info" tabindex="0" data-tip="Hashes per second">i</span></span></div></th></tr>
+          <tr><th></th><th><div data-f="head-0"></div><div class="assist"><div class="seg" role="radiogroup" aria-label="Host assistance for the Ledger" data-key="assist"><button type="button" role="radio" data-val="no">Without assistance</button><button type="button" role="radio" data-val="yes">With assistance</button></div><span class="info w" tabindex="0" id="assist-tip" data-tip="Host assistance">i</span></div></th><th data-f="head-1"></th><th data-f="head-2"></th></tr>
         </thead>
         <tbody>
           <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Lifetime" data-f="life-0"></td><td data-l="Lifetime" data-f="life-1"></td><td data-l="Lifetime" data-f="life-2"></td></tr>
@@ -724,16 +720,6 @@ footer a + a { margin-left: 1.25rem; }
         </div>
       </div>
       <p class="after" data-f="th-online">&nbsp;</p>
-
-      <h2>Hardware wallets</h2>
-      <p class="lead"><span data-f="hw-prep">The device prepares <span data-f="prepared">16</span> random instances in advance.</span> The search for a randomizer that lands on one of them is delegated to the untrusted host, which proves its answer with a STARK.</p>
-      <ol class="steps">
-        <li><span class="who"><span class="n">1</span>Device</span>Derives <i>R</i><sub>0</sub> and &Delta; in one hash, and sends them with the message and the <span data-f="prepared">16</span> indices to the host.</li>
-        <li><span class="who"><span class="n">2</span>Host</span>Finds the least <i>i</i> such that index(<i>R</i><sub>0</sub> + <i>i</i>&Delta;) is one of the <span data-f="prepared">16</span>, and returns <i>R</i> with a STARK that this <i>i</i> is the least.<span class="fig" data-f="hw-host">&nbsp;</span></li>
-        <li><span class="who"><span class="n">3</span>Device</span>Verifies the STARK, then signs with the prepared instance.<span class="fig" data-f="hw-device">&nbsp;</span></li>
-      </ol>
-      <p data-f="hw-total">&nbsp;</p>
-      <p>The statement is public: no zero knowledge is needed, but &Delta; is no longer secret against the host. The idea of delegating this work to the host and proving it with a STARK comes from <a href="https://www.riva.xyz/">Riva</a>.</p>
     </div>
   </section>
 </div>
@@ -757,10 +743,10 @@ document.addEventListener('pointerdown', function (e) {
 // The figures: every number comes from data.json (python3 scripts/scheme.py --json > site/data.json),
 // for the configuration chosen with the three toggles (height, shape, hash).
 (function () {
-  var S = { h: 24, shape: 'pruned', hash: 'Keccak-256' }, D = null, KEY = 'leanSphincs.config';
+  var S = { h: 24, shape: 'pruned', hash: 'Keccak-256', assist: 'no' }, D = null, KEY = 'leanSphincs.config';
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (saved) ['h', 'shape', 'hash'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
+    if (saved) ['h', 'shape', 'hash', 'assist'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
   } catch (e) {}
   // the devices: hashes per second for each hash, from data.json (rates[device][hash])
   function rate(dev) { return D.rates[dev][S.hash]; }
@@ -832,26 +818,41 @@ document.addEventListener('pointerdown', function (e) {
 
     [].forEach.call(document.querySelectorAll('[data-shape]'), function (e) { e.hidden = e.dataset.shape !== S.shape; });
 
-    // one signer: the pruned key at three sizes, or the layered key, on the same three devices
+    // one signer: the pruned key at three sizes, or the layered key, on three devices; the Ledger alone, or with
+    // the help of the host (the assistance toggle)
     set('signer-lead', 'Times at the rate of each device, with ' + S.hash + '.');
+    var lay_ = S.shape === 'layered', ledger = rate('Ledger Nano S+');
     var devs = [
-      { name: 'Light', b: 13, rate: rate('Ledger Nano S+'), kib: '16', cache: '16&nbsp;KiB',
+      { name: 'Light', b: 13, rate: ledger, kib: '16', cache: '16&nbsp;KiB', host: S.assist === 'yes',
         dev: '<a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a>' },
-      { name: 'Standard', b: 20, rate: rate('weak CPU'), kib: '1024', cache: '1&nbsp;MiB', dev: S.shape === 'layered' ? 'Weak CPU' : 'weak CPU' },
-      { name: 'Full', b: S.h, rate: rate('powerful CPU'), kib: '16384', cache: '16&nbsp;MiB', dev: S.shape === 'layered' ? 'Powerful CPU' : 'powerful CPU' }
+      { name: 'Standard', b: 20, rate: rate('weak CPU'), kib: '1024', cache: '1&nbsp;MiB', dev: lay_ ? 'Weak CPU' : 'weak CPU' },
+      { name: 'Full', b: S.h, rate: rate('powerful CPU'), kib: '16384', cache: '16&nbsp;MiB', dev: lay_ ? 'Powerful CPU' : 'powerful CPU' }
     ];
+    var at = document.getElementById('assist-tip');
+    if (at) at.setAttribute('data-tip', 'With assistance, the Ledger keeps ' + W.prepared + ' random instances prepared in advance. To sign, it sends ' +
+      'R₀, Δ, the message and the ' + W.prepared + ' indices to the untrusted host, which returns the least i such that index(R₀ + iΔ) ' +
+      'is one of them, with a STARK that this i is the least; the device checks the STARK and signs with that instance. The statement is public ' +
+      '(no zero knowledge), but Δ is no longer secret against the host. Host: ' + fmt(W.host_rate) + ' hashes per second. The idea of ' +
+      'delegating this work to the host and proving it with a STARK comes from Riva (riva.xyz).');
     devs.forEach(function (d, k) {
-      var c = S.shape === 'layered' ? lay : cfg('pruned', d.b), what;
-      var dev = d.dev + '<span class="info' + (S.shape === 'layered' ? ' r' : '') + '" tabindex="0" data-tip="' + fmt(d.rate) + ' ' + units() + ' per second">i</span>';
-      set('head-' + k, S.shape === 'layered' ? '<div class="hd"><span>' + dev + '</span></div>' : '<div class="hd">' + d.name + '<span class="dev">' + dev + '</span></div>');
+      var c = lay_ ? lay : cfg('pruned', d.b), what;
+      var dev = d.dev + '<span class="info' + (lay_ && k > 0 ? ' r' : '') + '" tabindex="0" data-tip="' + fmt(d.rate) + ' ' + units() + ' per second">i</span>';
+      set('head-' + k, lay_ ? '<div class="hd"><span>' + dev + '</span></div>' : '<div class="hd">' + d.name + '<span class="dev">' + dev + '</span></div>');
       if (c.shape === 'layered') what = 'layers of ' + split(c);
       else if (c.b === c.h) what = 'full tree of ' + pow2(c.h);
       else what = 'subtree of ' + pow2(c.b);
-      var t = function (n) { return '<span class="ex">' + time(n / d.rate) + '</span>'; };
+      var t = function (n, r) { return '<span class="ex">' + time(n / (r || d.rate)) + '</span>'; };
       set('life-' + k, '<div>' + fmt(c.lifetime) + ' signatures <span class="st">(' + what + ')</span></div>');
       set('keygen-' + k, '<div class="hd"><span>' + fmt(c.keygen) + '&nbsp;' + unit() + '</span>' + t(c.keygen) + '</div>');
-      set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + '<span class="br">, </span>' + d.cache +
-        ' cache</span>' + t(c.sign[d.kib]) + '</div>');
+      if (!d.host) {
+        set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + '<span class="br">, </span>' + d.cache +
+          ' cache</span>' + t(c.sign[d.kib]) + '</div>');
+        return;
+      }
+      // with the host: one instance prepared in advance per signature, the STARK checked online, the grinding proved by the host
+      var tt = lay_ ? thr('layered') : thr('pruned', d.b);
+      var ph = function (n, u, what, r) { return '<div class="hd"><span>' + fmt(n) + '&nbsp;' + u + ' <span class="ph">' + what + '</span></span>' + t(n, r) + '</div>'; };
+      set('sign-' + k, '<div>' + ph(tt.prep, unit(), 'in advance') + ph(W.stark_verify, unit(), 'online') + ph(tt.grind, 'hashes', 'on the host', W.host_rate) + '</div>');
     });
 
     // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
@@ -875,20 +876,6 @@ document.addEventListener('pointerdown', function (e) {
       ' grinding attempts in the clear (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared + (S.shape === 'layered' ? '' : ', onto instances of the kept subtree') +
       '), then about ' + Math.round(W.opened_avg) + ' forest chain values opened (at most ' + W.opened_max + ').');
     set('prepared', String(W.prepared));
-
-    // hardware wallets, with the chosen hash, for the chosen shape: what the device prepares, then the randomizer
-    var ledger = rate('Ledger Nano S+'), prep = th.prep, prepAll = W.prepared * prep;
-    set('hw-prep', 'The device prepares ' + W.prepared + ' random instances in advance' + (S.shape === 'layered'
-      ? ': their forest keys, the trees of the lower layers and the WOTS+C signatures that link them up to the top layer'
-      : ', all in its kept subtree: their forest keys, WOTS+C signatures and authentication paths') +
-      ', about ' + fmt(prepAll) + ' ' + units() + ' (' + time(prepAll / ledger) + ' on a Ledger Nano S+), then one more per signature (' +
-      time(prep / ledger) + ').');
-    var grind = th.grind, prove = grind / W.host_rate, check = W.stark_verify / ledger;
-    set('hw-host', 'About ' + fmt(grind) + ' hashes at <i>h</i> = ' + S.h + ' (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared +
-      '); proved at about ' + fmt(W.host_rate) + ' hashes per second: ' + time(prove) + '.');
-    set('hw-device', 'About ' + fmt(W.stark_verify) + ' ' + units() + ': ' + time(check) + ' on a Ledger Nano S+.');
-    set('hw-total', 'In all, about ' + time(prove + check) + ' to ship and verify the randomizer at <i>h</i> = ' + S.h + ', with the ' +
-      (S.shape === 'layered' ? 'layered' : 'pruned') + ' key (' + S.hash + ').');
 
     // the diagram: one pruned tree, or the layers
     if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers);
@@ -924,7 +911,8 @@ document.addEventListener('pointerdown', function (e) {
   }).then(function (d) {
     D = d;
     // a saved choice that the data no longer has falls back to the default
-    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256' }; }
+    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256', assist: 'no' }; }
+    if (S.assist !== 'yes') S.assist = 'no';
     render();
   }).catch(function (e) {
     console.error(e);
