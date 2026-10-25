@@ -1162,7 +1162,7 @@ document.addEventListener('pointerdown', function (e) {
       // with the host: one instance prepared in advance per signature, the STARK checked online, the grinding proved by the host
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
       var ph = function (n, u, what, r) { return '<div class="hd"><span>' + fmt(n) + '&nbsp;' + u + ' <span class="ph">' + what + '</span></span>' + t(n, r) + '</div>'; };
-      set('sign-' + k, '<div>' + ph(tt.prep, unit(), 'in advance') + '<div class="hd"><span>STARK proving (&asymp;&thinsp;' + pow2(Math.log2(W.ledger_grind[S.h])) + ' hashes)</span>' + t(W.ledger_grind[S.h], W.host_rate) + '</div>' +
+      set('sign-' + k, '<div>' + ph(tt.prep, unit(), 'in advance') + '<div class="ph">(1 of the ' + np + ' prepared FTS)</div>' + '<div class="hd"><span>STARK proving (&asymp;&thinsp;' + pow2(Math.log2(W.ledger_grind[S.h])) + ' hashes)</span>' + t(W.ledger_grind[S.h], W.host_rate) + '</div>' +
         '<div class="hd"><span>STARK verification (' + fmt(W.stark_verify) + ' hashes)</span>' + t(W.stark_verify) + '</div></div>');
     });
 
