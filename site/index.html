@@ -61,7 +61,8 @@ h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height:
 
 .params { margin-top: 1.75rem; }
 .params p { margin: 0 0 0.9rem; white-space: nowrap; font-size: 1.25rem; }
-.params table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.params table { border-collapse: collapse; font-variant-numeric: tabular-nums; table-layout: fixed; width: 25rem; }
+.params th { width: 10.5rem; }
 .params th, .params td { text-align: left; padding: 0.22rem 1.5rem 0.22rem 0; font-weight: 400; line-height: 1.35; }
 .params th { color: var(--muted); }
 .params tbody tr:first-child > * { border-top: 1px solid var(--rule); padding-top: 0.5rem; }
@@ -236,6 +237,7 @@ footer a + a { margin-left: 1.25rem; }
   /* The parameter table fits the screen */
   .params { margin-top: 1.5rem; }
   .params table { width: 100%; font-size: 0.9rem; }
+  .params th { width: 42%; }
   .params th, .params td { padding-right: 0.5rem; vertical-align: baseline; white-space: nowrap; }
   .params th:last-child, .params td:last-child { padding-right: 0; width: 100%; white-space: normal; }
   .params .unit { font-size: 0.78em; }
