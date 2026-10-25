@@ -48,7 +48,6 @@ sup { font-size: 0.7em; line-height: 0; }
 /* Title */
 
 h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; margin: 0; white-space: nowrap; }
-.by { margin: 0.4rem 0 0; }
 
 /* Layout: top, parameters and diagram; bottom, the settings */
 
@@ -231,7 +230,6 @@ footer a + a { margin-left: 1.25rem; }
   /* Title, then the author */
   header { display: flex; flex-direction: column; }
   .titlerow { display: contents; }
-  .by { order: 1; margin-top: 0.3rem; color: var(--muted); }
   /* The parameter table fits the screen */
   .params { margin-top: 1.5rem; }
   .params table { width: 100%; font-size: 0.9rem; }
@@ -304,7 +302,7 @@ footer a + a { margin-left: 1.25rem; }
 .sphinx-line.inflow .sphinx { position: relative; left: 0; top: 0; transform: none; display: block; width: min(108%, 100% + 2rem); margin-left: max(-4%, -1rem); height: auto; }   /* its faded ends reach into the margins */
 @media (max-width: 600px) {
   header { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.9rem; align-items: center; }
-  h1, .by, .sphinx-line { grid-column: 1 / -1; }
+  h1, .sphinx-line { grid-column: 1 / -1; }
   .sphinx-line.inflow { order: 4; margin-top: 1rem; }
 }
 </style>
@@ -316,7 +314,6 @@ footer a + a { margin-left: 1.25rem; }
   <div class="text">
     <header>
       <div class="titlerow"><h1>A proposal for leanSphincs</h1></div>
-      <p class="by">by Tom Wambsgans</p>
     </header>
     <div class="params">
       <div class="toggles" id="toggles">
