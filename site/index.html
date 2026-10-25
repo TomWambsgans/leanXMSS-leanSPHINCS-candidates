@@ -1138,12 +1138,9 @@ document.addEventListener('pointerdown', function (e) {
     // the Ledger with the host: offline, it prepares np FTS; online, the host grinds onto one of them and proves it in a STARK
     var np = W.ledger_prepared[S.h], g = W.ledger_grind[S.h];
     var assist = function (tt) {
-      return 'Offline: the Ledger prepares ' + np + ' random instances (FTS and their WOTS+C signatures and paths), ' + fmt(tt.prep * np) + ' ' + units() +
-        ' in idle time; each signature uses one, then refilled (' + fmt(tt.prep) + ').' + (np > W.prepared ? ' The host can hold their public parts, the device keeping a hash of each.' : '') +
-        ' Online: the Ledger sends R₀, Δ, the message and the ' + np + ' indices to the untrusted host, which returns the least i such that ' +
-        'index(R₀ + iΔ) is one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes), with a STARK that this i is the least: ' + time(g / W.host_rate) +
-        ' to prove, ' + time(W.stark_verify_s) + ' for the Ledger to verify. The statement is public (no zero knowledge), but Δ is no longer secret ' +
-        'against the host. The idea of delegating this work to the host and proving it with a STARK comes from Riva (riva.xyz).';
+      return 'Offline: the Ledger prepares ' + np + ' FTS (' + fmt(tt.prep * np) + ' ' + unit() + '); each signature uses one. ' +
+        'Online: the host finds the randomizer that lands on one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes) and proves it in a STARK (' +
+        time(g / W.host_rate) + '), which the Ledger verifies (' + time(W.stark_verify_s) + '). Idea from Riva (riva.xyz).';
     };
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
