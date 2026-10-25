@@ -1084,6 +1084,7 @@ document.addEventListener('pointerdown', function (e) {
     return (gb * 1000).toPrecision(3) + '&nbsp;MB';
   }
   function pow2(e) { return '2<sup>' + e + '</sup>'; }
+  function pow2t(e) { return '2' + String(e).replace(/\d/g, function (d) { return '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]; }); }   // in a tip
   function keccak() { return S.hash === 'Keccak-256'; }
   function unit() { return keccak() ? 'permutations' : 'compressions'; }
   function units() { return keccak() ? 'Keccak-f permutations' : S.hash + ' compressions'; }
@@ -1137,8 +1138,8 @@ document.addEventListener('pointerdown', function (e) {
     ];
     var at = document.getElementById('assist-tip');
     var np = W.ledger_prepared[S.h];
-    if (at) at.setAttribute('data-tip', 'The Ledger keeps ' + np + ' random instances prepared in advance, so that the host grinds about 2' +
-      String(Math.log2(W.ledger_grind[S.h])).replace(/\d/g, function (d) { return '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]; }) + ' digests on average' + (np > W.prepared ? ' (the host can hold their public parts, the WOTS+C signatures and paths, ' +
+    if (at) at.setAttribute('data-tip', 'The Ledger keeps ' + np + ' random instances prepared in advance, so that the host grinds about ' +
+      pow2t(Math.log2(W.ledger_grind[S.h])) + ' digests on average' + (np > W.prepared ? ' (the host can hold their public parts, the WOTS+C signatures and paths, ' +
       'the device keeping a hash of each)' : '') + '. To sign, it sends ' +
       'R₀, Δ, the message and the ' + np + ' indices to the untrusted host, which returns the least i such that index(R₀ + iΔ) ' +
       'is one of them, with a STARK that this i is the least; the device checks the STARK and signs with that instance. The statement is public ' +
@@ -1162,8 +1163,10 @@ document.addEventListener('pointerdown', function (e) {
       // with the host: one instance prepared in advance per signature, the STARK checked online, the grinding proved by the host
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
       var ph = function (n, u, what, r) { return '<div class="hd"><span>' + fmt(n) + '&nbsp;' + u + ' <span class="ph">' + what + '</span></span>' + t(n, r) + '</div>'; };
-      set('sign-' + k, '<div>' + ph(tt.prep, unit(), 'in advance') + '<div class="ph">(1 of the ' + np + ' prepared FTS)</div>' + '<div class="hd"><span>STARK proving (&asymp;&thinsp;' + pow2(Math.log2(W.ledger_grind[S.h])) + ' hashes)</span>' + t(W.ledger_grind[S.h], W.host_rate) + '</div>' +
-        '<div class="hd"><span>STARK verification (' + fmt(W.stark_verify) + ' hashes)</span>' + t(W.stark_verify) + '</div></div>');
+      set('sign-' + k, '<div>' + ph(tt.prep, unit(), 'in advance') + '<div class="ph">(1 of the ' + np + ' prepared FTS)</div>' + '<div class="hd"><span>STARK<span class="info" tabindex="0" data-tip="The host proves &asymp; ' +
+        pow2t(Math.log2(W.ledger_grind[S.h])) + ' hashes (' + time(W.ledger_grind[S.h] / W.host_rate) + '),&#10;the Ledger verifies the proof in &asymp; ' +
+        fmt(W.stark_verify) + ' hashes (' + time(W.stark_verify_s) + ')">i</span></span>' +
+        t(W.ledger_grind[S.h] / W.host_rate + W.stark_verify_s, 1) + '</div></div>');
     });
 
     // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key

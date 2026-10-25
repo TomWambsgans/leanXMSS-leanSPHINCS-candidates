@@ -278,7 +278,7 @@ def site_data():
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
     out["rates"] = DEVICES
     out["wallet"] = dict(prepared=PREPARED, ledger_prepared={h: wallet_prepared(h) for h in HEIGHTS},
-                         ledger_grind={h: 2**h // wallet_prepared(h) for h in HEIGHTS}, stark_verify=STARK_VERIFY, host_rate=HOST_RATE, device_rate=DEVICE_RATE,
+                         ledger_grind={h: 2**h // wallet_prepared(h) for h in HEIGHTS}, stark_verify=STARK_VERIFY, stark_verify_s=STARK_VERIFY_SECONDS, host_rate=HOST_RATE, device_rate=DEVICE_RATE,
                          opened_avg=COORDS * SUBS * sum(nonzero) / len(nonzero), opened_max=COORDS * SUBS * max(nonzero))
     return out
 
@@ -304,6 +304,7 @@ ANDS = {"Keccak-256": KECCAK_ANDS, "SHA-256": 22_573, "BLAKE2s": 10 * 8 * 6 * 31
 # being sublinear (Boyle et al., CCS 2019; Goyal and Song, CRYPTO 2020).
 BITS_PER_AND = 1
 STARK_VERIFY = 10_000  # compressions to verify the STARK of a least grinding index on the device
+STARK_VERIFY_SECONDS = 2  # assumed time of that verification on the device, whatever the hash
 HOST_RATE = 2**19  # hashes per second the host proves in a STARK (the hash of the configuration): 2 s per 2^20
 DEVICE_RATE = 5.8e3  # Keccak-f permutations per second of a Ledger Nano S+ (hwbench)
 
@@ -340,8 +341,7 @@ def threshold(heights):
     print(f"hardware wallet: the device prepares max({PREPARED}, 2^h / 2^{HOST_GRIND.bit_length() - 1}) instances and the host grinds "
           f"2^h / that many digests ({', '.join(f'h={h}: {wallet_prepared(h)} prepared, {fmt(2 ** h / wallet_prepared(h))} digests, '
           f'{2 ** h / wallet_prepared(h) / HOST_RATE:.2g} s to prove' for h in heights)});"
-          f" the device verifies the STARK in about {fmt(STARK_VERIFY)} permutations, "
-          f"{STARK_VERIFY / DEVICE_RATE:.1f} s at {fmt(DEVICE_RATE)} per second")
+          f" the device verifies the STARK in about {fmt(STARK_VERIFY)} compressions, counted as {STARK_VERIFY_SECONDS} s")
 
 if __name__ == "__main__":
     main()
