@@ -11,9 +11,9 @@
 //! tree below above it). The key builds the top layer only; the signer builds the trees below on the
 //! way, and takes `R_0` as the randomizer.
 //!
-//! Layers are counted from the bottom. At layer `l`, the one-time key and the tree nodes are named
-//! by their position across the layer's trees: leaf `e = idx >> below(l)`, node `e >> level` at a
-//! level of the tree.
+//! Layers are counted from the bottom. At layer `l`, index `idx` is at position `e = idx >> below(l)`
+//! across the layer's trees: tree `e >> h_l` and leaf `e mod 2^(h_l)` in it ([`OtsKey`]). An address
+//! carries the layer and the tree, and the leaf or the node index inside the tree.
 
 use crate::*;
 
@@ -159,19 +159,20 @@ pub fn message_digest(pp: &Pp, h: usize, rho: &Randomizer, m: &Message) -> (u64,
     (index_of_block(&d, h), marks)
 }
 
-/// The node `j` of level `level` (counted from the layer's one-time leaves) at layer `layer`.
-pub fn xmss_node(pp: &Pp, layer: usize, level: usize, j: u64, left: &Digest, right: &Digest) -> Digest {
-    th_digests(pp, &tweak(TWEAK_NODE, level as u32, j as u32).layer(layer), &[*left, *right])
+/// The node `j` of level `level` (counted from the one-time leaves) of tree `tree` at layer `layer`.
+pub fn xmss_node(pp: &Pp, layer: usize, tree: u32, level: usize, j: u64, left: &Digest, right: &Digest) -> Digest {
+    th_digests(pp, &tweak(TWEAK_NODE, level as u32, j as u32).at(layer, tree), &[*left, *right])
 }
 
 /// A tree of one layer: its kept subtree's levels and the surrogates above it.
 #[derive(Clone, Debug)]
 pub struct XmssTree {
     pub layer: usize,
+    pub tree: u32,
     pub height: usize,
     /// Height of the kept subtree; `b = height` keeps the whole tree.
     pub b: usize,
-    /// The first leaf of the kept subtree, across the layer's trees.
+    /// The first leaf of the kept subtree.
     pub start: u64,
     /// The kept subtree, level 0 being its `2^b` leaves.
     levels: Vec<Vec<Digest>>,
@@ -183,7 +184,8 @@ pub struct XmssTree {
 impl XmssTree {
     /// `start` must be a multiple of `2^b`.
     pub fn from_leaves(
-        pp: &Pp, layer: usize, height: usize, b: usize, start: u64, leaves: Vec<Digest>, surrogates: Vec<Digest>,
+        pp: &Pp, layer: usize, tree: u32, height: usize, b: usize, start: u64, leaves: Vec<Digest>,
+        surrogates: Vec<Digest>,
     ) -> Self {
         assert!(b <= height && start.is_multiple_of(1 << b));
         assert_eq!(leaves.len(), 1 << b);
@@ -193,7 +195,7 @@ impl XmssTree {
             let below = &levels[level - 1];
             let first = start >> level;
             let up = (0..below.len() / 2)
-                .map(|j| xmss_node(pp, layer, level, first + j as u64, &below[2 * j], &below[2 * j + 1]))
+                .map(|j| xmss_node(pp, layer, tree, level, first + j as u64, &below[2 * j], &below[2 * j + 1]))
                 .collect();
             levels.push(up);
         }
@@ -201,19 +203,19 @@ impl XmssTree {
             let level = b + t;
             let j = start >> level;
             let (left, right) = if j & 1 == 0 { (node, *sibling) } else { (*sibling, node) };
-            xmss_node(pp, layer, level + 1, j >> 1, &left, &right)
+            xmss_node(pp, layer, tree, level + 1, j >> 1, &left, &right)
         });
-        Self { layer, height, b, start, levels, surrogates, root }
+        Self { layer, tree, height, b, start, levels, surrogates, root }
     }
 
-    pub fn contains(&self, e: u64) -> bool {
-        e >> self.b == self.start >> self.b
+    pub fn contains(&self, leaf: u64) -> bool {
+        leaf >> self.b == self.start >> self.b
     }
 
-    /// The authentication path of leaf `e`, which must be kept.
-    pub fn path(&self, e: u64) -> Vec<Digest> {
-        assert!(self.contains(e));
-        let local = (e - self.start) as usize;
+    /// The authentication path of a leaf, which must be kept.
+    pub fn path(&self, leaf: u64) -> Vec<Digest> {
+        assert!(self.contains(leaf));
+        let local = (leaf - self.start) as usize;
         (0..self.height)
             .map(|level| {
                 if level < self.b { self.levels[level][(local >> level) ^ 1] } else { self.surrogates[level - self.b] }
@@ -222,19 +224,21 @@ impl XmssTree {
     }
 }
 
-/// `Tree.fold`: the node a leaf and its path reach at layer `layer`.
-pub fn tree_fold(pp: &Pp, layer: usize, e: u64, leaf: Digest, path: &[Digest]) -> Digest {
+/// `Tree.fold`: the node the leaf of a one-time key and its path reach.
+pub fn tree_fold(pp: &Pp, key: &OtsKey, leaf: Digest, path: &[Digest]) -> Digest {
+    let e = u64::from(key.leaf);
     path.iter().enumerate().fold(leaf, |current, (level, sibling)| {
         let (left, right) = if (e >> level) & 1 == 0 { (current, *sibling) } else { (*sibling, current) };
-        xmss_node(pp, layer, level + 1, e >> (level + 1), &left, &right)
+        xmss_node(pp, key.layer, key.tree, level + 1, e >> (level + 1), &left, &right)
     })
 }
 
-/// The full tree of layer `layer` that holds leaf `e`, built from the master secret.
-pub fn layer_tree(pp: &Pp, master: &MasterSecret, layer: usize, height: usize, e: u64) -> XmssTree {
-    let start = e >> height << height;
-    let leaves = (0..1u64 << height).map(|j| wots_leaf(pp, master, layer, (start + j) as u32)).collect();
-    XmssTree::from_leaves(pp, layer, height, height, start, leaves, Vec::new())
+/// The whole tree of height `height` that holds a one-time key, built from the master secret.
+pub fn layer_tree(pp: &Pp, master: &MasterSecret, key: &OtsKey, height: usize) -> XmssTree {
+    let leaves = (0..1u32 << height)
+        .map(|leaf| wots_leaf(pp, master, &OtsKey { leaf, ..*key }))
+        .collect();
+    XmssTree::from_leaves(pp, key.layer, key.tree, height, height, 0, leaves, Vec::new())
 }
 
 /// A non-threshold secret key.
@@ -262,11 +266,11 @@ pub fn key_gen(cfg: &Config, seed: &MasterSecret) -> (SecretKey, PublicKey) {
     let (layer, height, b) = (layers.len() - 1, layers[layers.len() - 1], cfg.kept());
     let s = u64::from_le_bytes(public_param[..8].try_into().unwrap()) & ((1 << (height - b)) - 1);
     let start = s << b;
-    let leaves = (0..1u64 << b).map(|j| wots_leaf(&pp, seed, layer, (start + j) as u32)).collect();
-    let surrogates = (b..height)
-        .map(|level| th(&pp, &tweak(TWEAK_SURROGATE, level as u32, 0).layer(layer), seed))
+    let leaves = (0..1u64 << b)
+        .map(|j| wots_leaf(&pp, seed, &OtsKey { layer, tree: 0, leaf: (start + j) as u32 }))
         .collect();
-    let top = XmssTree::from_leaves(&pp, layer, height, b, start, leaves, surrogates);
+    let surrogates = (b..height).map(|level| th(&pp, &tweak(TWEAK_SURROGATE, level as u32, 0), seed)).collect();
+    let top = XmssTree::from_leaves(&pp, layer, 0, height, b, start, leaves, surrogates);
     let sk = SecretKey { cfg: *cfg, pp, master: *seed, top };
     let pk = sk.public_key();
     (sk, pk)
@@ -323,15 +327,14 @@ pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
     let mut message = forest_key_bytes(&forest.key);
     let mut signed = Vec::with_capacity(layers.len());
     for (layer, &height) in layers.iter().enumerate() {
-        let e = idx >> cfg.below(layer);
-        let (counter, wots) =
-            wots_sign(pp, &sk.master, layer, e as u32, &message).expect("no admissible WOTS+C encoding");
+        let key = OtsKey::at(layer, height, idx >> cfg.below(layer));
+        let (counter, wots) = wots_sign(pp, &sk.master, &key, &message).expect("no admissible WOTS+C encoding");
         let path = if layer == top {
-            sk.top.path(e)
+            sk.top.path(u64::from(key.leaf))
         } else {
-            let tree = layer_tree(pp, &sk.master, layer, height, e);
+            let tree = layer_tree(pp, &sk.master, &key, height);
             message = tree.root.to_vec();
-            tree.path(e)
+            tree.path(u64::from(key.leaf))
         };
         signed.push(LayerSignature { counter, wots, path });
     }
@@ -349,10 +352,10 @@ pub fn verify(cfg: &Config, pk: &PublicKey, m: &Message, sig: &Signature) -> Res
     let key = forest_recover(pp, idx, &marks, &sig.forest);
     let mut message = forest_key_bytes(&key);
     for (layer, signed) in sig.layers.iter().enumerate() {
-        let e = idx >> cfg.below(layer);
-        let leaf = wots_recover(pp, layer, e as u32, &message, signed.counter, &signed.wots)
+        let key = OtsKey::at(layer, layers[layer], idx >> cfg.below(layer));
+        let leaf = wots_recover(pp, &key, &message, signed.counter, &signed.wots)
             .ok_or(VerifyError::InadmissibleEncoding)?;
-        message = tree_fold(pp, layer, e, leaf, &signed.path).to_vec();
+        message = tree_fold(pp, &key, leaf, &signed.path).to_vec();
     }
     if message[..] == pk.root[..] { Ok(()) } else { Err(VerifyError::RootMismatch) }
 }
@@ -546,7 +549,7 @@ mod tests {
         let (sk, pk) = key_gen(&cfg, &seed(1));
         let digest = keccak::hash(&sign(&sk, &m).to_bytes());
         assert_eq!(hex(&pk.to_bytes()), "6de30da455914e574ec62bef3a4cd7032e582128e480149accc2ed4f19edcd00");
-        assert_eq!(hex(&digest), "6e92a089a0fce98222cea747cd7ef9598c88546b00e7323694fd745a0aeb4fd0");
+        assert_eq!(hex(&digest), "959d9ab85e7eeecea9524186b77c4a074b6640e6c92b4000420f449873a85b3d");
     }
 
     /// The signature's randomizer is the first attempt of the message's walk that lands, and the
@@ -666,15 +669,16 @@ mod tests {
         let pp = Pp::new(HashFn::Keccak256, [3u8; PUBLIC_PARAM_LEN]);
         let input = [&pp.bytes[..], &address(&tweak(TWEAK_ENC, 0, 77)), &forest_key_bytes(&key), &5u32.to_le_bytes()].concat();
         assert_eq!(input.len(), 292);
-        assert_eq!(encode(&pp, 0, 77, &forest_key_bytes(&key), 5), codeword(keccak::hash(&input)[..N].try_into().unwrap()));
+        assert_eq!(encode(&pp, &OtsKey { layer: 0, tree: 0, leaf: 77 }, &forest_key_bytes(&key), 5), codeword(keccak::hash(&input)[..N].try_into().unwrap()));
         for hash in HashFn::ALL {
             let pp = Pp::new(hash, [3u8; PUBLIC_PARAM_LEN]);
             for (layer, message) in [(0, forest_key_bytes(&key)), (1, vec![9u8; N])] {
+                let ots = OtsKey { layer, tree: 3, leaf: 77 };
                 let before = compressions();
-                let expected = encode(&pp, layer, 77, &message, 5);
+                let expected = encode(&pp, &ots, &message, 5);
                 assert_eq!(compressions() - before, hash.call(message.len() + COUNTER_LEN));
                 let before = compressions();
-                let state = encoding_midstate(&pp, layer, 77, &message);
+                let state = encoding_midstate(&pp, &ots, &message);
                 assert_eq!(compressions() - before, ((hash.prefix() + message.len()) / hash.block()) as u64);
                 let before = compressions();
                 assert_eq!(encode_from(&state, 5), expected);
@@ -687,7 +691,7 @@ mod tests {
     fn wots_encoding_takes_about_2197_tries() {
         let pp = Pp::new(HashFn::Keccak256, [7u8; PUBLIC_PARAM_LEN]);
         let tries: u64 = (0..100u32)
-            .map(|e| u64::from(wots_encode(&pp, 0, e, &[e as u8; 256]).unwrap().0) + 1)
+            .map(|e| u64::from(wots_encode(&pp, &OtsKey { layer: 0, tree: 0, leaf: e }, &[e as u8; 256]).unwrap().0) + 1)
             .sum();
         let mean = tries as f64 / 100.0;
         assert!((1100.0..4400.0).contains(&mean), "mean tries {mean}");

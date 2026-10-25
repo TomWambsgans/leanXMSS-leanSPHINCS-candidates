@@ -121,20 +121,21 @@ impl Pp {
     }
 }
 
-/// The address of a hash call: its type, a chain step, the layer, and two fields, `hi < 2^24` and
-/// `lo`.
+/// The address of a hash call: its type, a chain step, the layer and the tree, and two fields,
+/// `hi < 2^24` and `lo`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Tweak {
     t: u8,
     step: u8,
     layer: u8,
+    tree: u32,
     hi: u32,
     lo: u32,
 }
 
 pub fn tweak(t: u8, hi: u32, lo: u32) -> Tweak {
     debug_assert!(t < 32 && hi < 1 << 24);
-    Tweak { t, step: 0, layer: 0, hi, lo }
+    Tweak { t, step: 0, layer: 0, tree: 0, hi, lo }
 }
 
 impl Tweak {
@@ -144,20 +145,22 @@ impl Tweak {
         Self { step: step as u8, ..self }
     }
 
-    /// The same address in tree layer `layer`, counted from the bottom.
-    pub fn layer(self, layer: usize) -> Self {
-        Self { layer: layer as u8, ..self }
+    /// The same address in tree `tree` of layer `layer` (layers counted from the bottom).
+    pub fn at(self, layer: usize, tree: u32) -> Self {
+        Self { layer: layer as u8, tree, ..self }
     }
 }
 
-/// The 16 bytes that follow `P` in a hash input: `[lo:4 | hi:3 | t + 32 step:1 | layer:1 | 0^7]`,
-/// the fields little endian. The layer is 0 in a one-layer key and in the forest.
+/// The 16 bytes that follow `P` in a hash input:
+/// `[lo:4 | hi:3 | t + 32 step:1 | layer:1 | tree:4 | 0^3]`, the fields little endian. The layer and
+/// the tree are 0 in a one-layer key and in the forest.
 pub fn address(tw: &Tweak) -> [u8; ADDRESS_LEN] {
     let mut out = [0u8; ADDRESS_LEN];
     out[..4].copy_from_slice(&tw.lo.to_le_bytes());
     out[4..7].copy_from_slice(&tw.hi.to_le_bytes()[..3]);
     out[7] = tw.t | tw.step << 5;
     out[8] = tw.layer;
+    out[9..13].copy_from_slice(&tw.tree.to_le_bytes());
     out
 }
 
@@ -313,8 +316,8 @@ mod tests {
     /// Pins the byte layout of the address and of a hash input for each hash.
     #[test]
     fn address_layout() {
-        let tw = tweak(TWEAK_SUB_NODE, 0x123456, 0x89abcdef).step(5).layer(2);
-        assert_eq!(address(&tw), [0xef, 0xcd, 0xab, 0x89, 0x56, 0x34, 0x12, 0xb1, 2, 0, 0, 0, 0, 0, 0, 0]);
+        let tw = tweak(TWEAK_SUB_NODE, 0x123456, 0x89abcdef).step(5).at(2, 0x0a0b0c0d);
+        assert_eq!(address(&tw), [0xef, 0xcd, 0xab, 0x89, 0x56, 0x34, 0x12, 0xb1, 2, 0x0d, 0x0c, 0x0b, 0x0a, 0, 0, 0]);
         let bytes: PublicParam = std::array::from_fn(|i| i as u8 + 1);
         let payload = [9u8; N];
         for hash in HashFn::ALL {
