@@ -8239,9 +8239,9 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.check_b20_ok
 
-/-- info: 'LeanForest.Security.H0.check_b26_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.check_b24_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.check_b26_ok
+#print axioms LeanForest.Security.H0.check_b24_ok
 
 /-- info: 'LeanForest.Security.H0.check_b8_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8287,9 +8287,9 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.cover_b20_1_ok
 
-/-- info: 'LeanForest.Security.H0.cover_b26_0_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.cover_b24_0_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.cover_b26_0_ok
+#print axioms LeanForest.Security.H0.cover_b24_0_ok
 
 /-- info: 'LeanForest.Security.H0.cover_b8_0_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8343,9 +8343,9 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.covers_b20_ok
 
-/-- info: 'LeanForest.Security.H0.covers_b26_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.covers_b24_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.covers_b26_ok
+#print axioms LeanForest.Security.H0.covers_b24_ok
 
 /-- info: 'LeanForest.Security.H0.covers_b8_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8414,22 +8414,6 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.H0.large_b12_0_5_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.large_b12_0_5_ok
-
-/-- info: 'LeanForest.Security.H0.large_b12_0_6_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b12_0_6_ok
-
-/-- info: 'LeanForest.Security.H0.large_b12_0_7_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b12_0_7_ok
-
-/-- info: 'LeanForest.Security.H0.large_b12_0_8_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b12_0_8_ok
-
-/-- info: 'LeanForest.Security.H0.large_b12_0_9_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b12_0_9_ok
 
 /-- info: 'LeanForest.Security.H0.large_b12_1_0_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8523,10 +8507,6 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.large_b20_0_0_ok
 
-/-- info: 'LeanForest.Security.H0.large_b20_0_10_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b20_0_10_ok
-
 /-- info: 'LeanForest.Security.H0.large_b20_0_1_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.large_b20_0_1_ok
@@ -8567,41 +8547,45 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.large_b20_1_0_ok
 
-/-- info: 'LeanForest.Security.H0.large_b26_0_0_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.large_b24_0_0_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b26_0_0_ok
+#print axioms LeanForest.Security.H0.large_b24_0_0_ok
 
-/-- info: 'LeanForest.Security.H0.large_b26_0_1_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.large_b24_0_1_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b26_0_1_ok
+#print axioms LeanForest.Security.H0.large_b24_0_1_ok
 
-/-- info: 'LeanForest.Security.H0.large_b26_0_2_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.large_b24_0_2_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b26_0_2_ok
+#print axioms LeanForest.Security.H0.large_b24_0_2_ok
 
-/-- info: 'LeanForest.Security.H0.large_b26_0_3_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.large_b24_0_3_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b26_0_3_ok
+#print axioms LeanForest.Security.H0.large_b24_0_3_ok
 
-/-- info: 'LeanForest.Security.H0.large_b26_0_4_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.large_b24_0_4_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b26_0_4_ok
+#print axioms LeanForest.Security.H0.large_b24_0_4_ok
 
-/-- info: 'LeanForest.Security.H0.large_b26_0_5_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.large_b24_0_5_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b26_0_5_ok
+#print axioms LeanForest.Security.H0.large_b24_0_5_ok
 
-/-- info: 'LeanForest.Security.H0.large_b26_0_6_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.large_b24_0_6_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b26_0_6_ok
+#print axioms LeanForest.Security.H0.large_b24_0_6_ok
 
-/-- info: 'LeanForest.Security.H0.large_b26_0_7_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.large_b24_0_7_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b26_0_7_ok
+#print axioms LeanForest.Security.H0.large_b24_0_7_ok
 
-/-- info: 'LeanForest.Security.H0.large_b26_0_8_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.large_b24_0_8_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.large_b26_0_8_ok
+#print axioms LeanForest.Security.H0.large_b24_0_8_ok
+
+/-- info: 'LeanForest.Security.H0.large_b24_0_9_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.H0.large_b24_0_9_ok
 
 /-- info: 'LeanForest.Security.H0.large_b8_0_0_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8634,6 +8618,10 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.H0.large_b8_0_7_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.large_b8_0_7_ok
+
+/-- info: 'LeanForest.Security.H0.large_b8_0_8_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.H0.large_b8_0_8_ok
 
 /-- info: 'LeanForest.Security.H0.large_b8_1_0_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8683,9 +8671,9 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.near_b20_ok
 
-/-- info: 'LeanForest.Security.H0.near_b26_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.near_b24_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.near_b26_ok
+#print axioms LeanForest.Security.H0.near_b24_ok
 
 /-- info: 'LeanForest.Security.H0.near_b8_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8711,9 +8699,9 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.rate_b20_ok
 
-/-- info: 'LeanForest.Security.H0.rate_b26_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.rate_b24_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.rate_b26_ok
+#print axioms LeanForest.Security.H0.rate_b24_ok
 
 /-- info: 'LeanForest.Security.H0.rate_b8_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8739,9 +8727,9 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.small_b20_ok
 
-/-- info: 'LeanForest.Security.H0.small_b26_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.small_b24_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.small_b26_ok
+#print axioms LeanForest.Security.H0.small_b24_ok
 
 /-- info: 'LeanForest.Security.H0.small_b8_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8767,9 +8755,9 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.tab_b20_ok
 
-/-- info: 'LeanForest.Security.H0.tab_b26_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.tab_b24_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.H0.tab_b26_ok
+#print axioms LeanForest.Security.H0.tab_b24_ok
 
 /-- info: 'LeanForest.Security.H0.tab_b8_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

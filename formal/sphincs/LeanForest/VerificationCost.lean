@@ -263,12 +263,12 @@ theorem permutations_otsLeaf (f : QueryImpl HashSpec Id) (parameter : PublicPara
 attribute [local irreducible] otsLeaf encode sequenceFin chainWalk recoverChain leafHash
   forestRecover treeFold messageDigest
 
-/-- The one actual tree layer costs 106 permutations, or 3 if its encoding is rejected. -/
+/-- The one actual tree layer costs 104 permutations, or 3 if its encoding is rejected. -/
 theorem permutations_verifyLayers (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (signature : Signature) (message : ForestKey) :
     permutations f (verifyLayers parameter index signature numLayers message) =
       if (evalWithAnswerFn f (verifyLayers parameter index signature numLayers message
-        : OracleComp HashSpec (Option Digest))).isSome then 106 else 3 := by
+        : OracleComp HashSpec (Option Digest))).isSome then 104 else 3 := by
   rw [show numLayers = 0 + 1 from rfl, verifyLayers, dif_pos (by decide : 0 < numLayers)]
   simp only [permutations_bind, evalWithAnswerFn_bind]
   rw [permutations_otsLeaf]

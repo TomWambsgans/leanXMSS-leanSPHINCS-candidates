@@ -1,6 +1,6 @@
 name = "sphincs-security"
 version = "0.1.0"
-defaultTargets = ["LeanSphincs", "SphincsSecurity", "SphincsSecurity.Tests.QueryBudget"]
+defaultTargets = ["LeanForest", "SphincsSecurity", "SphincsSecurity.Tests.QueryBudget"]
 
 [[require]]
 name = "VCVio"
