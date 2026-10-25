@@ -170,7 +170,6 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .plain td { white-space: nowrap; }
 .tables .after { margin: 0.5rem 0 0; }
 .thr { margin-top: 0.5rem; }
-.thr h3 { font-size: 1.25rem; font-weight: 600; margin: 0; }
 .thr .bn { margin: 0.1rem 0 0.3rem; }
 .thr .cmp { width: auto; table-layout: auto; }
 .thr .cmp th, .thr .cmp td { padding-right: 2rem; white-space: nowrap; }
@@ -1007,7 +1006,6 @@ footer a + a { margin-left: 1.25rem; }
       <h2>Threshold, <i>t</i>-of-<i>n</i></h2>
       <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>. Key generation is an honest-majority MPC among the <i>n</i> operators, with no dealer, that builds the XMSS part alone, never the few-time signatures: <span data-shape="pruned">the kept subtree, and the pseudorandom surrogate nodes that replace the siblings above it.</span><span data-shape="layered" hidden>the top layer.</span> Preprocessing, before a message: the operators pick <span data-f="prepared">16</span> instances at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate their forest keys, <span data-shape="pruned">WOTS+C signatures and authentication paths</span><span data-shape="layered" hidden>the trees of the lower layers, the WOTS+C signatures that link them up to the top layer, and the authentication paths</span>; a signature consumes one prepared instance, refilled with a fresh random one. Online: they grind the randomizer in the clear onto one of the <span data-f="prepared">16</span>, and threshold-open only the forest chain values the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers (with abort).</p>
       <div class="thr" data-shape="pruned">
-        <h3>Pruned key</h3>
         <p class="bn">Traffic per operator. Key generation grows with the kept subtree; the preprocessing does not.</p>
         <div class="pair">
         <table class="cmp plain">
@@ -1027,7 +1025,6 @@ footer a + a { margin-left: 1.25rem; }
         </div>
       </div>
       <div class="thr" data-shape="layered" hidden>
-        <h3 data-f="th-layered-title">Layered key</h3>
         <p class="bn" data-f="th-layered-life">&nbsp;</p>
         <div class="scroll">
         <table class="cmp plain">
@@ -1178,7 +1175,6 @@ document.addEventListener('pointerdown', function (e) {
       '</tr><tr>' + MPC + tps.map(function (t) { return '<td>' + bytes(t.keygen_gb) + '</td>'; }).join('') + '</tr>');
     set('th-pruned-prep', '<tr class="life"><th>&nbsp;</th><td></td></tr>' +     // the same for every kept subtree
       '<tr><th>&nbsp;</th><td>' + bytes(tps[0].prep_mb / 1000) + '</td></tr>');
-    set('th-layered-title', 'Layered key, ' + split(lay));
     set('th-layered-life', fmt(tl.lifetime) + ' signatures' + LIFE_TIP + ' &middot; traffic per operator');
     set('th-layered', '<tr>' + MPC + '<td>' + bytes(tl.keygen_gb) + '</td><td>' + bytes(tl.prep_mb / 1000) + '</td></tr>');
     var th = S.shape === 'layered' ? tl : tps[0];
