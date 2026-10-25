@@ -80,9 +80,7 @@ svg .tree line { stroke: var(--tree); stroke-width: 1; }
 svg .stub line { stroke: url(#fade); stroke-width: 1; }
 svg .f0 { stop-color: var(--tree); stop-opacity: 1; }
 svg .f1 { stop-color: var(--tree); stop-opacity: 0; }
-svg .g0 { stop-color: var(--tree); stop-opacity: 0.55; }
-svg .g1 { stop-color: var(--tree); stop-opacity: 0.06; }
-svg .body polygon { fill: url(#lfade); }
+svg .lbody line { stroke-width: 1; }
 svg .nd circle { fill: #fff; stroke: var(--tree); stroke-width: 1; }
 svg .sib circle { fill: #fff; stroke: var(--ink); stroke-width: 1.3; }
 svg .base { stroke: var(--tree); stroke-width: 1; }
@@ -355,219 +353,219 @@ footer a + a { margin-left: 1.25rem; }
     </div>
   </div>
   <figure>
-      <svg viewBox="10 -13 572 569" preserveAspectRatio="xMaxYMid meet" role="img" aria-labelledby="dia-title">
+      <svg viewBox="10 -123 572 679" preserveAspectRatio="xMaxYMid meet" role="img" aria-labelledby="dia-title">
         <title id="dia-title">A leanSphincs signature with a pruned key: a path in the XMSS tree of height 24 to a leaf, the hash of a WOTS+C key of 64 chains of length 4, which signs a two-level WOTS forest: 8 trees of height 4 whose leaves join two subtrees of height 3 over WOTS keys of 6 chains of length 5; the signer builds only a subtree of the tree</title>
-        <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient><linearGradient id="lfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="g0"/><stop offset="1" class="g1"/></linearGradient></defs>
+        <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient></defs>
         <g class="part xmss pruned">
           <g class="tree">
-            <line x1="256.0" y1="22" x2="136.0" y2="48"/>
-            <line x1="256.0" y1="22" x2="376.0" y2="48"/>
-            <line x1="136.0" y1="48" x2="76.0" y2="74"/>
-            <line x1="136.0" y1="48" x2="196.0" y2="74"/>
-            <line x1="376.0" y1="48" x2="316.0" y2="74"/>
-            <line x1="376.0" y1="48" x2="436.0" y2="74"/>
-            <line x1="76.0" y1="74" x2="46.0" y2="100"/>
-            <line x1="76.0" y1="74" x2="106.0" y2="100"/>
-            <line x1="196.0" y1="74" x2="166.0" y2="100"/>
-            <line x1="196.0" y1="74" x2="226.0" y2="100"/>
-            <line x1="316.0" y1="74" x2="286.0" y2="100"/>
-            <line x1="316.0" y1="74" x2="346.0" y2="100"/>
-            <line x1="436.0" y1="74" x2="406.0" y2="100"/>
-            <line x1="436.0" y1="74" x2="466.0" y2="100"/>
-            <line x1="46.0" y1="100" x2="31.0" y2="126"/>
-            <line x1="46.0" y1="100" x2="61.0" y2="126"/>
-            <line x1="106.0" y1="100" x2="91.0" y2="126"/>
-            <line x1="106.0" y1="100" x2="121.0" y2="126"/>
-            <line x1="166.0" y1="100" x2="151.0" y2="126"/>
-            <line x1="166.0" y1="100" x2="181.0" y2="126"/>
-            <line x1="226.0" y1="100" x2="211.0" y2="126"/>
-            <line x1="226.0" y1="100" x2="241.0" y2="126"/>
-            <line x1="286.0" y1="100" x2="271.0" y2="126"/>
-            <line x1="286.0" y1="100" x2="301.0" y2="126"/>
-            <line x1="346.0" y1="100" x2="331.0" y2="126"/>
-            <line x1="346.0" y1="100" x2="361.0" y2="126"/>
-            <line x1="406.0" y1="100" x2="391.0" y2="126"/>
-            <line x1="406.0" y1="100" x2="421.0" y2="126"/>
-            <line x1="466.0" y1="100" x2="451.0" y2="126"/>
-            <line x1="466.0" y1="100" x2="481.0" y2="126"/>
-            <line x1="31.0" y1="126" x2="23.5" y2="152"/>
-            <line x1="31.0" y1="126" x2="38.5" y2="152"/>
-            <line x1="61.0" y1="126" x2="53.5" y2="152"/>
-            <line x1="61.0" y1="126" x2="68.5" y2="152"/>
-            <line x1="91.0" y1="126" x2="83.5" y2="152"/>
-            <line x1="91.0" y1="126" x2="98.5" y2="152"/>
-            <line x1="121.0" y1="126" x2="113.5" y2="152"/>
-            <line x1="121.0" y1="126" x2="128.5" y2="152"/>
-            <line x1="151.0" y1="126" x2="143.5" y2="152"/>
-            <line x1="151.0" y1="126" x2="158.5" y2="152"/>
-            <line x1="181.0" y1="126" x2="173.5" y2="152"/>
-            <line x1="181.0" y1="126" x2="188.5" y2="152"/>
-            <line x1="211.0" y1="126" x2="203.5" y2="152"/>
-            <line x1="211.0" y1="126" x2="218.5" y2="152"/>
-            <line x1="241.0" y1="126" x2="233.5" y2="152"/>
-            <line x1="241.0" y1="126" x2="248.5" y2="152"/>
-            <line x1="271.0" y1="126" x2="263.5" y2="152"/>
-            <line x1="271.0" y1="126" x2="278.5" y2="152"/>
-            <line x1="301.0" y1="126" x2="293.5" y2="152"/>
-            <line x1="301.0" y1="126" x2="308.5" y2="152"/>
-            <line x1="331.0" y1="126" x2="323.5" y2="152"/>
-            <line x1="331.0" y1="126" x2="338.5" y2="152"/>
-            <line x1="361.0" y1="126" x2="353.5" y2="152"/>
-            <line x1="361.0" y1="126" x2="368.5" y2="152"/>
-            <line x1="391.0" y1="126" x2="383.5" y2="152"/>
-            <line x1="391.0" y1="126" x2="398.5" y2="152"/>
-            <line x1="421.0" y1="126" x2="413.5" y2="152"/>
-            <line x1="421.0" y1="126" x2="428.5" y2="152"/>
-            <line x1="451.0" y1="126" x2="443.5" y2="152"/>
-            <line x1="451.0" y1="126" x2="458.5" y2="152"/>
-            <line x1="481.0" y1="126" x2="473.5" y2="152"/>
-            <line x1="481.0" y1="126" x2="488.5" y2="152"/>
-            <line x1="23.5" y1="152" x2="19.8" y2="178"/>
-            <line x1="23.5" y1="152" x2="27.2" y2="178"/>
-            <line x1="38.5" y1="152" x2="34.8" y2="178"/>
-            <line x1="38.5" y1="152" x2="42.2" y2="178"/>
-            <line x1="53.5" y1="152" x2="49.8" y2="178"/>
-            <line x1="53.5" y1="152" x2="57.2" y2="178"/>
-            <line x1="68.5" y1="152" x2="64.8" y2="178"/>
-            <line x1="68.5" y1="152" x2="72.2" y2="178"/>
-            <line x1="83.5" y1="152" x2="79.8" y2="178"/>
-            <line x1="83.5" y1="152" x2="87.2" y2="178"/>
-            <line x1="98.5" y1="152" x2="94.8" y2="178"/>
-            <line x1="98.5" y1="152" x2="102.2" y2="178"/>
-            <line x1="113.5" y1="152" x2="109.8" y2="178"/>
-            <line x1="113.5" y1="152" x2="117.2" y2="178"/>
-            <line x1="128.5" y1="152" x2="124.8" y2="178"/>
-            <line x1="128.5" y1="152" x2="132.2" y2="178"/>
-            <line x1="143.5" y1="152" x2="139.8" y2="178"/>
-            <line x1="143.5" y1="152" x2="147.2" y2="178"/>
-            <line x1="158.5" y1="152" x2="154.8" y2="178"/>
-            <line x1="158.5" y1="152" x2="162.2" y2="178"/>
-            <line x1="173.5" y1="152" x2="169.8" y2="178"/>
-            <line x1="173.5" y1="152" x2="177.2" y2="178"/>
-            <line x1="188.5" y1="152" x2="184.8" y2="178"/>
-            <line x1="188.5" y1="152" x2="192.2" y2="178"/>
-            <line x1="203.5" y1="152" x2="199.8" y2="178"/>
-            <line x1="203.5" y1="152" x2="207.2" y2="178"/>
-            <line x1="218.5" y1="152" x2="214.8" y2="178"/>
-            <line x1="218.5" y1="152" x2="222.2" y2="178"/>
-            <line x1="233.5" y1="152" x2="229.8" y2="178"/>
-            <line x1="233.5" y1="152" x2="237.2" y2="178"/>
-            <line x1="248.5" y1="152" x2="244.8" y2="178"/>
-            <line x1="248.5" y1="152" x2="252.2" y2="178"/>
-            <line x1="263.5" y1="152" x2="259.8" y2="178"/>
-            <line x1="263.5" y1="152" x2="267.2" y2="178"/>
-            <line x1="278.5" y1="152" x2="274.8" y2="178"/>
-            <line x1="278.5" y1="152" x2="282.2" y2="178"/>
-            <line x1="293.5" y1="152" x2="289.8" y2="178"/>
-            <line x1="293.5" y1="152" x2="297.2" y2="178"/>
-            <line x1="308.5" y1="152" x2="304.8" y2="178"/>
-            <line x1="308.5" y1="152" x2="312.2" y2="178"/>
-            <line x1="323.5" y1="152" x2="319.8" y2="178"/>
-            <line x1="323.5" y1="152" x2="327.2" y2="178"/>
-            <line x1="338.5" y1="152" x2="334.8" y2="178"/>
-            <line x1="338.5" y1="152" x2="342.2" y2="178"/>
-            <line x1="353.5" y1="152" x2="349.8" y2="178"/>
-            <line x1="353.5" y1="152" x2="357.2" y2="178"/>
-            <line x1="368.5" y1="152" x2="364.8" y2="178"/>
-            <line x1="368.5" y1="152" x2="372.2" y2="178"/>
-            <line x1="383.5" y1="152" x2="379.8" y2="178"/>
-            <line x1="383.5" y1="152" x2="387.2" y2="178"/>
-            <line x1="398.5" y1="152" x2="394.8" y2="178"/>
-            <line x1="398.5" y1="152" x2="402.2" y2="178"/>
-            <line x1="413.5" y1="152" x2="409.8" y2="178"/>
-            <line x1="413.5" y1="152" x2="417.2" y2="178"/>
-            <line x1="428.5" y1="152" x2="424.8" y2="178"/>
-            <line x1="428.5" y1="152" x2="432.2" y2="178"/>
-            <line x1="443.5" y1="152" x2="439.8" y2="178"/>
-            <line x1="443.5" y1="152" x2="447.2" y2="178"/>
-            <line x1="458.5" y1="152" x2="454.8" y2="178"/>
-            <line x1="458.5" y1="152" x2="462.2" y2="178"/>
-            <line x1="473.5" y1="152" x2="469.8" y2="178"/>
-            <line x1="473.5" y1="152" x2="477.2" y2="178"/>
-            <line x1="488.5" y1="152" x2="484.8" y2="178"/>
-            <line x1="488.5" y1="152" x2="492.2" y2="178"/>
+            <line x1="256.0" y1="-108.0" x2="136.0" y2="-30.5"/>
+            <line x1="256.0" y1="-108.0" x2="376.0" y2="-30.5"/>
+            <line x1="136.0" y1="-30.5" x2="76.0" y2="31.5"/>
+            <line x1="136.0" y1="-30.5" x2="196.0" y2="31.5"/>
+            <line x1="376.0" y1="-30.5" x2="316.0" y2="31.5"/>
+            <line x1="376.0" y1="-30.5" x2="436.0" y2="31.5"/>
+            <line x1="76.0" y1="31.5" x2="46.0" y2="81.2"/>
+            <line x1="76.0" y1="31.5" x2="106.0" y2="81.2"/>
+            <line x1="196.0" y1="31.5" x2="166.0" y2="81.2"/>
+            <line x1="196.0" y1="31.5" x2="226.0" y2="81.2"/>
+            <line x1="316.0" y1="31.5" x2="286.0" y2="81.2"/>
+            <line x1="316.0" y1="31.5" x2="346.0" y2="81.2"/>
+            <line x1="436.0" y1="31.5" x2="406.0" y2="81.2"/>
+            <line x1="436.0" y1="31.5" x2="466.0" y2="81.2"/>
+            <line x1="46.0" y1="81.2" x2="31.0" y2="120.8"/>
+            <line x1="46.0" y1="81.2" x2="61.0" y2="120.8"/>
+            <line x1="106.0" y1="81.2" x2="91.0" y2="120.8"/>
+            <line x1="106.0" y1="81.2" x2="121.0" y2="120.8"/>
+            <line x1="166.0" y1="81.2" x2="151.0" y2="120.8"/>
+            <line x1="166.0" y1="81.2" x2="181.0" y2="120.8"/>
+            <line x1="226.0" y1="81.2" x2="211.0" y2="120.8"/>
+            <line x1="226.0" y1="81.2" x2="241.0" y2="120.8"/>
+            <line x1="286.0" y1="81.2" x2="271.0" y2="120.8"/>
+            <line x1="286.0" y1="81.2" x2="301.0" y2="120.8"/>
+            <line x1="346.0" y1="81.2" x2="331.0" y2="120.8"/>
+            <line x1="346.0" y1="81.2" x2="361.0" y2="120.8"/>
+            <line x1="406.0" y1="81.2" x2="391.0" y2="120.8"/>
+            <line x1="406.0" y1="81.2" x2="421.0" y2="120.8"/>
+            <line x1="466.0" y1="81.2" x2="451.0" y2="120.8"/>
+            <line x1="466.0" y1="81.2" x2="481.0" y2="120.8"/>
+            <line x1="31.0" y1="120.8" x2="23.5" y2="152.6"/>
+            <line x1="31.0" y1="120.8" x2="38.5" y2="152.6"/>
+            <line x1="61.0" y1="120.8" x2="53.5" y2="152.6"/>
+            <line x1="61.0" y1="120.8" x2="68.5" y2="152.6"/>
+            <line x1="91.0" y1="120.8" x2="83.5" y2="152.6"/>
+            <line x1="91.0" y1="120.8" x2="98.5" y2="152.6"/>
+            <line x1="121.0" y1="120.8" x2="113.5" y2="152.6"/>
+            <line x1="121.0" y1="120.8" x2="128.5" y2="152.6"/>
+            <line x1="151.0" y1="120.8" x2="143.5" y2="152.6"/>
+            <line x1="151.0" y1="120.8" x2="158.5" y2="152.6"/>
+            <line x1="181.0" y1="120.8" x2="173.5" y2="152.6"/>
+            <line x1="181.0" y1="120.8" x2="188.5" y2="152.6"/>
+            <line x1="211.0" y1="120.8" x2="203.5" y2="152.6"/>
+            <line x1="211.0" y1="120.8" x2="218.5" y2="152.6"/>
+            <line x1="241.0" y1="120.8" x2="233.5" y2="152.6"/>
+            <line x1="241.0" y1="120.8" x2="248.5" y2="152.6"/>
+            <line x1="271.0" y1="120.8" x2="263.5" y2="152.6"/>
+            <line x1="271.0" y1="120.8" x2="278.5" y2="152.6"/>
+            <line x1="301.0" y1="120.8" x2="293.5" y2="152.6"/>
+            <line x1="301.0" y1="120.8" x2="308.5" y2="152.6"/>
+            <line x1="331.0" y1="120.8" x2="323.5" y2="152.6"/>
+            <line x1="331.0" y1="120.8" x2="338.5" y2="152.6"/>
+            <line x1="361.0" y1="120.8" x2="353.5" y2="152.6"/>
+            <line x1="361.0" y1="120.8" x2="368.5" y2="152.6"/>
+            <line x1="391.0" y1="120.8" x2="383.5" y2="152.6"/>
+            <line x1="391.0" y1="120.8" x2="398.5" y2="152.6"/>
+            <line x1="421.0" y1="120.8" x2="413.5" y2="152.6"/>
+            <line x1="421.0" y1="120.8" x2="428.5" y2="152.6"/>
+            <line x1="451.0" y1="120.8" x2="443.5" y2="152.6"/>
+            <line x1="451.0" y1="120.8" x2="458.5" y2="152.6"/>
+            <line x1="481.0" y1="120.8" x2="473.5" y2="152.6"/>
+            <line x1="481.0" y1="120.8" x2="488.5" y2="152.6"/>
+            <line x1="23.5" y1="152.6" x2="19.8" y2="178.0"/>
+            <line x1="23.5" y1="152.6" x2="27.2" y2="178.0"/>
+            <line x1="38.5" y1="152.6" x2="34.8" y2="178.0"/>
+            <line x1="38.5" y1="152.6" x2="42.2" y2="178.0"/>
+            <line x1="53.5" y1="152.6" x2="49.8" y2="178.0"/>
+            <line x1="53.5" y1="152.6" x2="57.2" y2="178.0"/>
+            <line x1="68.5" y1="152.6" x2="64.8" y2="178.0"/>
+            <line x1="68.5" y1="152.6" x2="72.2" y2="178.0"/>
+            <line x1="83.5" y1="152.6" x2="79.8" y2="178.0"/>
+            <line x1="83.5" y1="152.6" x2="87.2" y2="178.0"/>
+            <line x1="98.5" y1="152.6" x2="94.8" y2="178.0"/>
+            <line x1="98.5" y1="152.6" x2="102.2" y2="178.0"/>
+            <line x1="113.5" y1="152.6" x2="109.8" y2="178.0"/>
+            <line x1="113.5" y1="152.6" x2="117.2" y2="178.0"/>
+            <line x1="128.5" y1="152.6" x2="124.8" y2="178.0"/>
+            <line x1="128.5" y1="152.6" x2="132.2" y2="178.0"/>
+            <line x1="143.5" y1="152.6" x2="139.8" y2="178.0"/>
+            <line x1="143.5" y1="152.6" x2="147.2" y2="178.0"/>
+            <line x1="158.5" y1="152.6" x2="154.8" y2="178.0"/>
+            <line x1="158.5" y1="152.6" x2="162.2" y2="178.0"/>
+            <line x1="173.5" y1="152.6" x2="169.8" y2="178.0"/>
+            <line x1="173.5" y1="152.6" x2="177.2" y2="178.0"/>
+            <line x1="188.5" y1="152.6" x2="184.8" y2="178.0"/>
+            <line x1="188.5" y1="152.6" x2="192.2" y2="178.0"/>
+            <line x1="203.5" y1="152.6" x2="199.8" y2="178.0"/>
+            <line x1="203.5" y1="152.6" x2="207.2" y2="178.0"/>
+            <line x1="218.5" y1="152.6" x2="214.8" y2="178.0"/>
+            <line x1="218.5" y1="152.6" x2="222.2" y2="178.0"/>
+            <line x1="233.5" y1="152.6" x2="229.8" y2="178.0"/>
+            <line x1="233.5" y1="152.6" x2="237.2" y2="178.0"/>
+            <line x1="248.5" y1="152.6" x2="244.8" y2="178.0"/>
+            <line x1="248.5" y1="152.6" x2="252.2" y2="178.0"/>
+            <line x1="263.5" y1="152.6" x2="259.8" y2="178.0"/>
+            <line x1="263.5" y1="152.6" x2="267.2" y2="178.0"/>
+            <line x1="278.5" y1="152.6" x2="274.8" y2="178.0"/>
+            <line x1="278.5" y1="152.6" x2="282.2" y2="178.0"/>
+            <line x1="293.5" y1="152.6" x2="289.8" y2="178.0"/>
+            <line x1="293.5" y1="152.6" x2="297.2" y2="178.0"/>
+            <line x1="308.5" y1="152.6" x2="304.8" y2="178.0"/>
+            <line x1="308.5" y1="152.6" x2="312.2" y2="178.0"/>
+            <line x1="323.5" y1="152.6" x2="319.8" y2="178.0"/>
+            <line x1="323.5" y1="152.6" x2="327.2" y2="178.0"/>
+            <line x1="338.5" y1="152.6" x2="334.8" y2="178.0"/>
+            <line x1="338.5" y1="152.6" x2="342.2" y2="178.0"/>
+            <line x1="353.5" y1="152.6" x2="349.8" y2="178.0"/>
+            <line x1="353.5" y1="152.6" x2="357.2" y2="178.0"/>
+            <line x1="368.5" y1="152.6" x2="364.8" y2="178.0"/>
+            <line x1="368.5" y1="152.6" x2="372.2" y2="178.0"/>
+            <line x1="383.5" y1="152.6" x2="379.8" y2="178.0"/>
+            <line x1="383.5" y1="152.6" x2="387.2" y2="178.0"/>
+            <line x1="398.5" y1="152.6" x2="394.8" y2="178.0"/>
+            <line x1="398.5" y1="152.6" x2="402.2" y2="178.0"/>
+            <line x1="413.5" y1="152.6" x2="409.8" y2="178.0"/>
+            <line x1="413.5" y1="152.6" x2="417.2" y2="178.0"/>
+            <line x1="428.5" y1="152.6" x2="424.8" y2="178.0"/>
+            <line x1="428.5" y1="152.6" x2="432.2" y2="178.0"/>
+            <line x1="443.5" y1="152.6" x2="439.8" y2="178.0"/>
+            <line x1="443.5" y1="152.6" x2="447.2" y2="178.0"/>
+            <line x1="458.5" y1="152.6" x2="454.8" y2="178.0"/>
+            <line x1="458.5" y1="152.6" x2="462.2" y2="178.0"/>
+            <line x1="473.5" y1="152.6" x2="469.8" y2="178.0"/>
+            <line x1="473.5" y1="152.6" x2="477.2" y2="178.0"/>
+            <line x1="488.5" y1="152.6" x2="484.8" y2="178.0"/>
+            <line x1="488.5" y1="152.6" x2="492.2" y2="178.0"/>
           </g>
           <g class="stub">
-            <line x1="19.8" y1="178" x2="19.8" y2="204"/>
-            <line x1="27.2" y1="178" x2="27.2" y2="204"/>
-            <line x1="34.8" y1="178" x2="34.8" y2="204"/>
-            <line x1="42.2" y1="178" x2="42.2" y2="204"/>
-            <line x1="49.8" y1="178" x2="49.8" y2="204"/>
-            <line x1="57.2" y1="178" x2="57.2" y2="204"/>
-            <line x1="64.8" y1="178" x2="64.8" y2="204"/>
-            <line x1="72.2" y1="178" x2="72.2" y2="204"/>
-            <line x1="79.8" y1="178" x2="79.8" y2="204"/>
-            <line x1="87.2" y1="178" x2="87.2" y2="204"/>
-            <line x1="94.8" y1="178" x2="94.8" y2="204"/>
-            <line x1="102.2" y1="178" x2="102.2" y2="204"/>
-            <line x1="109.8" y1="178" x2="109.8" y2="204"/>
-            <line x1="117.2" y1="178" x2="117.2" y2="204"/>
-            <line x1="124.8" y1="178" x2="124.8" y2="204"/>
-            <line x1="132.2" y1="178" x2="132.2" y2="204"/>
-            <line x1="139.8" y1="178" x2="139.8" y2="204"/>
-            <line x1="147.2" y1="178" x2="147.2" y2="204"/>
-            <line x1="154.8" y1="178" x2="154.8" y2="204"/>
-            <line x1="162.2" y1="178" x2="162.2" y2="204"/>
-            <line x1="169.8" y1="178" x2="169.8" y2="204"/>
-            <line x1="177.2" y1="178" x2="177.2" y2="204"/>
-            <line x1="184.8" y1="178" x2="184.8" y2="204"/>
-            <line x1="192.2" y1="178" x2="192.2" y2="204"/>
-            <line x1="199.8" y1="178" x2="199.8" y2="204"/>
-            <line x1="207.2" y1="178" x2="207.2" y2="204"/>
-            <line x1="214.8" y1="178" x2="214.8" y2="204"/>
-            <line x1="222.2" y1="178" x2="222.2" y2="204"/>
-            <line x1="229.8" y1="178" x2="229.8" y2="204"/>
-            <line x1="237.2" y1="178" x2="237.2" y2="204"/>
-            <line x1="244.8" y1="178" x2="244.8" y2="204"/>
-            <line x1="252.2" y1="178" x2="252.2" y2="204"/>
-            <line x1="259.8" y1="178" x2="259.8" y2="204"/>
-            <line x1="267.2" y1="178" x2="267.2" y2="204"/>
-            <line x1="274.8" y1="178" x2="274.8" y2="204"/>
-            <line x1="282.2" y1="178" x2="282.2" y2="204"/>
-            <line x1="289.8" y1="178" x2="289.8" y2="204"/>
-            <line x1="297.2" y1="178" x2="297.2" y2="204"/>
-            <line x1="304.8" y1="178" x2="304.8" y2="204"/>
-            <line x1="312.2" y1="178" x2="312.2" y2="204"/>
-            <line x1="319.8" y1="178" x2="319.8" y2="204"/>
-            <line x1="327.2" y1="178" x2="327.2" y2="204"/>
-            <line x1="334.8" y1="178" x2="334.8" y2="204"/>
-            <line x1="342.2" y1="178" x2="342.2" y2="204"/>
-            <line x1="349.8" y1="178" x2="349.8" y2="204"/>
-            <line x1="357.2" y1="178" x2="357.2" y2="204"/>
-            <line x1="364.8" y1="178" x2="364.8" y2="204"/>
-            <line x1="372.2" y1="178" x2="372.2" y2="204"/>
-            <line x1="379.8" y1="178" x2="379.8" y2="204"/>
-            <line x1="387.2" y1="178" x2="387.2" y2="204"/>
-            <line x1="394.8" y1="178" x2="394.8" y2="204"/>
-            <line x1="402.2" y1="178" x2="402.2" y2="204"/>
-            <line x1="409.8" y1="178" x2="409.8" y2="204"/>
-            <line x1="417.2" y1="178" x2="417.2" y2="204"/>
-            <line x1="424.8" y1="178" x2="424.8" y2="204"/>
-            <line x1="432.2" y1="178" x2="432.2" y2="204"/>
-            <line x1="439.8" y1="178" x2="439.8" y2="204"/>
-            <line x1="447.2" y1="178" x2="447.2" y2="204"/>
-            <line x1="454.8" y1="178" x2="454.8" y2="204"/>
-            <line x1="462.2" y1="178" x2="462.2" y2="204"/>
-            <line x1="469.8" y1="178" x2="469.8" y2="204"/>
-            <line x1="477.2" y1="178" x2="477.2" y2="204"/>
-            <line x1="484.8" y1="178" x2="484.8" y2="204"/>
-            <line x1="492.2" y1="178" x2="492.2" y2="204"/>
+            <line x1="19.8" y1="178.0" x2="19.8" y2="204"/>
+            <line x1="27.2" y1="178.0" x2="27.2" y2="204"/>
+            <line x1="34.8" y1="178.0" x2="34.8" y2="204"/>
+            <line x1="42.2" y1="178.0" x2="42.2" y2="204"/>
+            <line x1="49.8" y1="178.0" x2="49.8" y2="204"/>
+            <line x1="57.2" y1="178.0" x2="57.2" y2="204"/>
+            <line x1="64.8" y1="178.0" x2="64.8" y2="204"/>
+            <line x1="72.2" y1="178.0" x2="72.2" y2="204"/>
+            <line x1="79.8" y1="178.0" x2="79.8" y2="204"/>
+            <line x1="87.2" y1="178.0" x2="87.2" y2="204"/>
+            <line x1="94.8" y1="178.0" x2="94.8" y2="204"/>
+            <line x1="102.2" y1="178.0" x2="102.2" y2="204"/>
+            <line x1="109.8" y1="178.0" x2="109.8" y2="204"/>
+            <line x1="117.2" y1="178.0" x2="117.2" y2="204"/>
+            <line x1="124.8" y1="178.0" x2="124.8" y2="204"/>
+            <line x1="132.2" y1="178.0" x2="132.2" y2="204"/>
+            <line x1="139.8" y1="178.0" x2="139.8" y2="204"/>
+            <line x1="147.2" y1="178.0" x2="147.2" y2="204"/>
+            <line x1="154.8" y1="178.0" x2="154.8" y2="204"/>
+            <line x1="162.2" y1="178.0" x2="162.2" y2="204"/>
+            <line x1="169.8" y1="178.0" x2="169.8" y2="204"/>
+            <line x1="177.2" y1="178.0" x2="177.2" y2="204"/>
+            <line x1="184.8" y1="178.0" x2="184.8" y2="204"/>
+            <line x1="192.2" y1="178.0" x2="192.2" y2="204"/>
+            <line x1="199.8" y1="178.0" x2="199.8" y2="204"/>
+            <line x1="207.2" y1="178.0" x2="207.2" y2="204"/>
+            <line x1="214.8" y1="178.0" x2="214.8" y2="204"/>
+            <line x1="222.2" y1="178.0" x2="222.2" y2="204"/>
+            <line x1="229.8" y1="178.0" x2="229.8" y2="204"/>
+            <line x1="237.2" y1="178.0" x2="237.2" y2="204"/>
+            <line x1="244.8" y1="178.0" x2="244.8" y2="204"/>
+            <line x1="252.2" y1="178.0" x2="252.2" y2="204"/>
+            <line x1="259.8" y1="178.0" x2="259.8" y2="204"/>
+            <line x1="267.2" y1="178.0" x2="267.2" y2="204"/>
+            <line x1="274.8" y1="178.0" x2="274.8" y2="204"/>
+            <line x1="282.2" y1="178.0" x2="282.2" y2="204"/>
+            <line x1="289.8" y1="178.0" x2="289.8" y2="204"/>
+            <line x1="297.2" y1="178.0" x2="297.2" y2="204"/>
+            <line x1="304.8" y1="178.0" x2="304.8" y2="204"/>
+            <line x1="312.2" y1="178.0" x2="312.2" y2="204"/>
+            <line x1="319.8" y1="178.0" x2="319.8" y2="204"/>
+            <line x1="327.2" y1="178.0" x2="327.2" y2="204"/>
+            <line x1="334.8" y1="178.0" x2="334.8" y2="204"/>
+            <line x1="342.2" y1="178.0" x2="342.2" y2="204"/>
+            <line x1="349.8" y1="178.0" x2="349.8" y2="204"/>
+            <line x1="357.2" y1="178.0" x2="357.2" y2="204"/>
+            <line x1="364.8" y1="178.0" x2="364.8" y2="204"/>
+            <line x1="372.2" y1="178.0" x2="372.2" y2="204"/>
+            <line x1="379.8" y1="178.0" x2="379.8" y2="204"/>
+            <line x1="387.2" y1="178.0" x2="387.2" y2="204"/>
+            <line x1="394.8" y1="178.0" x2="394.8" y2="204"/>
+            <line x1="402.2" y1="178.0" x2="402.2" y2="204"/>
+            <line x1="409.8" y1="178.0" x2="409.8" y2="204"/>
+            <line x1="417.2" y1="178.0" x2="417.2" y2="204"/>
+            <line x1="424.8" y1="178.0" x2="424.8" y2="204"/>
+            <line x1="432.2" y1="178.0" x2="432.2" y2="204"/>
+            <line x1="439.8" y1="178.0" x2="439.8" y2="204"/>
+            <line x1="447.2" y1="178.0" x2="447.2" y2="204"/>
+            <line x1="454.8" y1="178.0" x2="454.8" y2="204"/>
+            <line x1="462.2" y1="178.0" x2="462.2" y2="204"/>
+            <line x1="469.8" y1="178.0" x2="469.8" y2="204"/>
+            <line x1="477.2" y1="178.0" x2="477.2" y2="204"/>
+            <line x1="484.8" y1="178.0" x2="484.8" y2="204"/>
+            <line x1="492.2" y1="178.0" x2="492.2" y2="204"/>
           </g>
-          <g class="nd"><circle cx="316.0" cy="74" r="1.9"/><circle cx="436.0" cy="74" r="1.9"/><circle cx="46.0" cy="100" r="1.9"/><circle cx="106.0" cy="100" r="1.9"/><circle cx="286.0" cy="100" r="1.9"/><circle cx="346.0" cy="100" r="1.9"/><circle cx="406.0" cy="100" r="1.9"/><circle cx="466.0" cy="100" r="1.9"/></g>
-          <g class="sib"><circle cx="376.0" cy="48" r="2.4"/><circle cx="76.0" cy="74" r="2.4"/><circle cx="166.0" cy="100" r="2.4"/></g>
-          <polyline points="256.0,22 136.0,48 196.0,74 226.0,100 241.0,126 233.5,152 237.2,178" class="path"/>
-          <line x1="237.2" y1="178" x2="237.2" y2="228" class="path dash"/>
+          <g class="nd"><circle cx="316.0" cy="31.5" r="1.9"/><circle cx="436.0" cy="31.5" r="1.9"/><circle cx="46.0" cy="81.2" r="1.9"/><circle cx="106.0" cy="81.2" r="1.9"/><circle cx="286.0" cy="81.2" r="1.9"/><circle cx="346.0" cy="81.2" r="1.9"/><circle cx="406.0" cy="81.2" r="1.9"/><circle cx="466.0" cy="81.2" r="1.9"/></g>
+          <g class="sib"><circle cx="376.0" cy="-30.5" r="2.4"/><circle cx="76.0" cy="31.5" r="2.4"/><circle cx="166.0" cy="81.2" r="2.4"/></g>
+          <polyline points="256.0,-108.0 136.0,-30.5 196.0,31.5 226.0,81.2 241.0,120.8 233.5,152.6 237.2,178.0" class="path"/>
+          <line x1="237.2" y1="178.0" x2="237.2" y2="228" class="path dash"/>
           <g class="on">
-            <circle cx="136.0" cy="48" r="2.6"/>
-            <circle cx="196.0" cy="74" r="2.6"/>
-            <circle cx="226.0" cy="100" r="2.6"/>
-            <circle cx="241.0" cy="126" r="2.6"/>
-            <circle cx="233.5" cy="152" r="2.6"/>
-            <circle cx="237.2" cy="178" r="2.2"/>
-            <circle cx="256.0" cy="22" r="4.2"/>
+            <circle cx="136.0" cy="-30.5" r="2.6"/>
+            <circle cx="196.0" cy="31.5" r="2.6"/>
+            <circle cx="226.0" cy="81.2" r="2.6"/>
+            <circle cx="241.0" cy="120.8" r="2.6"/>
+            <circle cx="233.5" cy="152.6" r="2.6"/>
+            <circle cx="237.2" cy="178.0" r="2.2"/>
+            <circle cx="256.0" cy="-108.0" r="4.2"/>
           </g>
-          <g class="tree"><line x1="522.0" y1="22" x2="522.0" y2="228"/><line x1="518.0" y1="22" x2="526.0" y2="22"/><line x1="518.0" y1="228" x2="526.0" y2="228"/></g>
-          <text x="530.0" y="130" class="pv"><tspan class="it">h</tspan> = <tspan data-f="dia-h">24</tspan></text>
+          <g class="tree"><line x1="522.0" y1="-108.0" x2="522.0" y2="228"/><line x1="518.0" y1="-108.0" x2="526.0" y2="-108.0"/><line x1="518.0" y1="228" x2="526.0" y2="228"/></g>
+          <text x="530.0" y="65" class="pv"><tspan class="it">h</tspan> = <tspan data-f="dia-h">24</tspan></text>
         </g>
         <g class="part xmss layered" display="none"></g>
         <g class="part sig">
@@ -679,7 +677,7 @@ footer a + a { margin-left: 1.25rem; }
   <hr class="sep">
 
   <section class="modes">
-    <p class="idea"><strong>Key idea:</strong> <span data-shape="pruned">the signer builds only part of the XMSS tree (<a href="https://conduition.io/cryptography/hypertree-pruning/">pruning</a>), so lifetime scales with keygen time.<span class="info r w" tabindex="0" data-tip="Security: one risk is reusing the same 32-byte seed under different pruning parameters. A straightforward fix: derive the actual seed as H(seed ‖ m), where the metadata m encodes the pruning parameter. A different m then gives a completely unrelated key.">i</span></span><span data-shape="layered" hidden>a layered key (a hypertree): key generation builds only the top layer, so the full lifetime comes with a light keygen<span data-f="layer-cost">.</span></span></p>
+    <p class="idea" data-shape="pruned"><strong>Key idea:</strong> <span>the signer builds only part of the XMSS tree (<a href="https://conduition.io/cryptography/hypertree-pruning/">pruning</a>), so lifetime scales with keygen time.<span class="info r w" tabindex="0" data-tip="Security: one risk is reusing the same 32-byte seed under different pruning parameters. A straightforward fix: derive the actual seed as H(seed ‖ m), where the metadata m encodes the pruning parameter. A different m then gives a completely unrelated key.">i</span></span></p>
     <div class="tables">
       <h2>One signer</h2>
       <p class="lead" data-f="signer-lead">&nbsp;</p>
@@ -835,11 +833,7 @@ document.addEventListener('pointerdown', function (e) {
     set('verify', comma(main.verify) + '<span class="info" tabindex="0" data-tip="' + verifyUnit + '">i</span>');
     set('dia-h', String(S.h));
 
-    // the key idea, for the chosen shape; a layer costs, against the full key of the same height
     [].forEach.call(document.querySelectorAll('[data-shape]'), function (e) { e.hidden = e.dataset.shape !== S.shape; });
-    var extra = lay.layers.length - 1;
-    set('layer-cost', '; each extra layer costs +' + comma((lay.size - full.size) / extra) + ' bytes and about ' +
-      comma((lay.verify - full.verify) / extra) + ' ' + (keccak() ? 'Keccak-f permutations' : S.hash + ' compressions') + ' of verification.');
 
     // one signer: the pruned key at three sizes, or the layered key, on the same three devices
     set('signer-lead', keccak() ? 'Times at the rate of each device.' : 'Times are shown for Keccak-256, whose speed the devices were measured at.');
@@ -970,13 +964,12 @@ document.addEventListener('pointerdown', function (e) {
 
   // The layers, top first: each a tree whose path ends at a leaf, the hash of a WOTS+C key that signs the
   // root of the tree below; the last leaf's key is the large WOTS+C drawn under it, which signs the forest.
-  // Each tree shows its top DRAWN levels as nodes and edges (the path in ink, its siblings ringed), and the
-  // levels below as a shaded body down to the leaves. The roots and leaves stand on one vertical line, the
-  // column of the WOTS+C keys: the turns of a path and its last steps in the body cancel out.
+  // Each tree shows its top DRAWN levels as nodes and edges (the path in ink, its siblings ringed), and below
+  // them thin branches that fade out toward the leaf row. The roots stand on one vertical line, the column of
+  // the WOTS+C keys: in the body the path turns back toward it.
   var DRAWN = 3, ROOT = -108, LEAF = 210, GAP = 30;   // GAP: from a leaf to the root of the tree below
   var TURNS = [[-1, 1, 1], [1, -1, -1]];               // alternately, so that the paths zigzag
   var CHAIN = [1, 3, 0, 2, 2, 0, 3, 1];                // the revealed position on each of the 8 chains of a small key
-  var LAYERED_VB = '10 -123 572 679', PRUNED_VB = '10 -13 572 569';
   function drawLayered(layers, h) {
     while (layered.firstChild) layered.removeChild(layered.firstChild);
     var L = layers.length, S0 = 13, C0 = 5;            // the spacing of a drawn level, of a level in the body
@@ -994,21 +987,31 @@ document.addEventListener('pointerdown', function (e) {
         sib.push([px - turn[j - 1] * off, y0 + j * s / DRAWN]);
         dx += turn[j - 1] * off;
       }
-      // the body: the leaf comes back under the root, within the share of the last drawn node
-      var bl = t - DRAWN, x3 = nodes[DRAWN][0], y3 = nodes[DRAWN][1];
-      for (j = 1; j <= bl; j++) nodes.push([x3 - dx * j / bl, y3 + (H - s) * j / bl]);
-      ls[i] = { t: t, H: H, y0: y0, a: a, s: s, rows: rows, sib: sib, root: nodes[0], leaf: nodes[nodes.length - 1], nodes: nodes };
+      // the body: two more levels of thin branches, then stubs that fade out at the leaf row; the path turns back
+      // toward the column of the root, and its last node hangs, by its stub, into the WOTS+C key below
+      var nb = Math.min(t - DRAWN, 2), y3 = nodes[DRAWN][1], hb = (H - s) * 0.55, back = dx > 0 ? -1 : 1;
+      for (j = 1; j <= nb; j++) {
+        var o = a / Math.pow(2, DRAWN + j - 1), r2 = [];
+        rows[DRAWN + j - 1].forEach(function (p) { r2.push(p - o, p + o); });
+        rows.push(r2);
+        nodes.push([nodes[DRAWN + j - 1][0] + back * o, y3 + hb * j / nb]);
+      }
+      ls[i] = { t: t, H: H, y0: y0, a: a, s: s, nb: nb, hb: hb, rows: rows, sib: sib, root: nodes[0], leaf: nodes[nodes.length - 1], bottom: y0 + H, nodes: nodes };
       y = y0 - GAP;
     }
     var left = X - 2 * ls[0].a - 18;
-    var body = el('g', { 'class': 'body' }, layered), edges = el('g', { 'class': 'tree' }, layered), meas = el('g', { 'class': 'tree' }, layered);
+    var defs = el('defs', {}, layered), bodies = el('g', {}, layered), edges = el('g', { 'class': 'tree' }, layered), meas = el('g', { 'class': 'tree' }, layered);
     var nd = el('g', { 'class': 'nd' }, layered), sb = el('g', { 'class': 'sib' }, layered);
-    ls.forEach(function (l) {
-      var yb = l.y0 + l.H, q = l.a / 4;
-      // the shaded body under each node of the last drawn level, and the drawn edges and nodes
-      l.rows[DRAWN].forEach(function (p) {
-        el('polygon', { points: pts([[p, l.y0 + l.s], [p - q, yb], [p + q, yb]]) }, body);
+    ls.forEach(function (l, i) {
+      var yb = l.bottom, y3 = l.y0 + l.s, ylast = y3 + l.hb;
+      // the body: thin branches and stubs, fading out toward the leaf row (as the bottom of the pruned tree)
+      var gr = el('linearGradient', { id: 'lfade' + i, gradientUnits: 'userSpaceOnUse', x1: 0, y1: n1(y3 + 0.4 * (yb - y3)), x2: 0, y2: n1(yb) }, defs);
+      el('stop', { offset: 0, 'class': 'f0' }, gr); el('stop', { offset: 1, 'class': 'f1' }, gr);
+      var body = el('g', { 'class': 'lbody', style: 'stroke: url(#lfade' + i + ')' }, bodies);
+      for (var j = 1; j <= l.nb; j++) l.rows[DRAWN + j].forEach(function (p, m) {
+        el('line', { x1: n1(l.rows[DRAWN + j - 1][m >> 1]), y1: n1(y3 + l.hb * (j - 1) / l.nb), x2: n1(p), y2: n1(y3 + l.hb * j / l.nb) }, body);
       });
+      l.rows[DRAWN + l.nb].forEach(function (p) { el('line', { x1: n1(p), y1: n1(ylast), x2: n1(p), y2: n1(yb) }, body); });
       for (var j = 1; j <= DRAWN; j++) l.rows[j].forEach(function (p, m) {
         el('line', { x1: n1(l.rows[j - 1][m >> 1]), y1: n1(l.y0 + (j - 1) * l.s / DRAWN), x2: n1(p), y2: n1(l.y0 + j * l.s / DRAWN) }, edges);
       });
@@ -1023,7 +1026,7 @@ document.addEventListener('pointerdown', function (e) {
     // the small WOTS+C keys between the layers, on the column of the roots: 8 of the 64 chains, the revealed value on each
     ls.forEach(function (l, i) {
       if (i === L - 1) return;
-      var yt = l.leaf[1] + 7, yb = yt + 12, ch = el('g', { 'class': 'chain' }, layered), dt = el('g', { 'class': 'dot' }, layered), on = el('g', { 'class': 'on' }, layered);
+      var yt = l.bottom + 7, yb = yt + 12, ch = el('g', { 'class': 'chain' }, layered), dt = el('g', { 'class': 'dot' }, layered), on = el('g', { 'class': 'on' }, layered);
       l.key = { top: yt, bottom: yb, chains: [] };
       CHAIN.forEach(function (p, j) {
         var cx = X + (j - 3.5) * 6;
@@ -1033,18 +1036,18 @@ document.addEventListener('pointerdown', function (e) {
         l.key.chains.push([cx, yt + 4 * p]);
       });
       el('text', { x: n1(X + 30), y: n1(yb - 1), 'class': 'lb' }, layered).textContent = 'WOTS+C';
-      el('line', { x1: n1(X), y1: n1(l.leaf[1]), x2: n1(X), y2: n1(yt - 1), 'class': 'path dash' }, layered);
+      el('line', { x1: n1(l.leaf[0]), y1: n1(l.leaf[1]), x2: n1(X), y2: n1(yt - 1), 'class': 'path dash' }, layered);
       el('line', { x1: n1(X), y1: n1(yb + 2), x2: n1(X), y2: n1(ls[i + 1].root[1] - 3) , 'class': 'brace' }, layered);
     });
     var last = ls[L - 1].leaf;
-    el('line', { x1: n1(last[0]), y1: n1(last[1]), x2: n1(last[0]), y2: TIP, 'class': 'path dash' }, layered);
+    el('line', { x1: n1(last[0]), y1: n1(last[1]), x2: n1(X), y2: TIP, 'class': 'path dash' }, layered);
     // the paths, and their nodes
     ls.forEach(function (l) { el('polyline', { points: pts(l.nodes), 'class': 'path' }, layered); });
     var dots = el('g', { 'class': 'on' }, layered);
     ls.forEach(function (l, i) {
       l.nodes.forEach(function (q, j) {
         if (j === 0 && i === 0) return;
-        el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j === 0 ? 2.8 : j <= DRAWN ? 2.4 : 1.4 }, dots);
+        el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j === 0 ? 2.8 : j <= DRAWN ? 2.4 : 1.6 }, dots);
       });
     });
     el('circle', { cx: n1(ls[0].root[0]), cy: n1(ls[0].root[1]), r: 4.2 }, dots);
@@ -1057,11 +1060,12 @@ document.addEventListener('pointerdown', function (e) {
     el('tspan', { 'data-f': 'dia-h' }, tx).textContent = String(h);
     return ls;
   }
-  // A layered key draws taller: on a wide screen the figure grows in height so that the drawing keeps its width.
+  // The drawing is taller than the text beside it: on a wide screen the figure grows in height so that the drawing
+  // keeps the width it would have in the height of the text. The same height for every configuration.
   function fit() {
     var fig = svg.parentNode, vb = svg.viewBox.baseVal;
     fig.style.minHeight = '';
-    if (!geo || matchMedia('(max-width: 1150px)').matches) return;
+    if (matchMedia('(max-width: 1150px)').matches) return;
     var text = document.querySelector('.page > .text'), top = text.getBoundingClientRect().top;
     var rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
     var nat = Math.max(text.lastElementChild.getBoundingClientRect().bottom - top, 18 * rem);
@@ -1069,6 +1073,7 @@ document.addEventListener('pointerdown', function (e) {
     fig.style.minHeight = Math.ceil(w * vb.height / vb.width) + 'px';
   }
   window.addEventListener('resize', fit);
+  fit();
 
   // Called by the figures with the chosen configuration: draws it (and restarts the animation) when the shape changes.
   window.sigDiagram = function (h, shape, layers) {
@@ -1081,12 +1086,10 @@ document.addEventListener('pointerdown', function (e) {
     if (shape === 'layered') {
       geo = drawLayered(layers, h);
       layered.removeAttribute('display'); pruned.setAttribute('display', 'none');
-      svg.setAttribute('viewBox', LAYERED_VB);
     } else {
       geo = null;
       while (layered.firstChild) layered.removeChild(layered.firstChild);
       pruned.removeAttribute('display'); layered.setAttribute('display', 'none');
-      svg.setAttribute('viewBox', PRUNED_VB);
     }
     fit();
     if (motion) build();
