@@ -674,7 +674,7 @@ footer a + a { margin-left: 1.25rem; }
     <p class="idea" data-shape="pruned"><strong>Key idea:</strong> <span>the signer builds only part of the XMSS tree (<a href="https://conduition.io/cryptography/hypertree-pruning/">pruning</a>), so lifetime scales with keygen time.<span class="info r w" tabindex="0" data-tip="Security: one risk is reusing the same 32-byte seed under different pruning parameters. A straightforward fix: derive the actual seed as H(seed ‖ m), where the metadata m encodes the pruning parameter. A different m then gives a completely unrelated key.">i</span></span></p>
     <div class="tables">
       <h2>One signer</h2>
-      <p class="lead" data-f="signer-lead">&nbsp;</p>
+      <p class="lead" data-f="signer-lead" hidden></p>
       <div class="scroll">
       <table class="cmp cards">
         <colgroup><col class="label"><col><col><col></colgroup>
@@ -822,7 +822,6 @@ document.addEventListener('pointerdown', function (e) {
 
     // one signer: the pruned key at three sizes, or the layered key, on three devices; the Ledger alone, or with
     // the help of the host (the assistance toggle)
-    set('signer-lead', 'Times at the rate of each device, with ' + S.hash + '.');
     var lay_ = S.shape === 'layered', ledger = rate('Ledger Nano S+');
     var devs = [
       { name: 'Light', b: 13, rate: ledger, kib: '16', cache: '16&nbsp;KiB', host: S.assist === 'yes',
@@ -919,6 +918,7 @@ document.addEventListener('pointerdown', function (e) {
   }).catch(function (e) {
     console.error(e);
     set('signer-lead', 'The figures could not be loaded (data.json).');
+    document.querySelector('[data-f="signer-lead"]').hidden = false;
   });
 })();
 </script>
