@@ -43,7 +43,7 @@
 One scheme with three toggles, 24 configurations in all. Every configuration has the same shape as
 SLH-DSA-128-24 from NIST's SP~800-230~\cite{SP800230}, with the differences:
 \begin{itemize}
-  \item a \emph{two-level WOTS forest} (\cref{sec:twolevel}) instead of FORS as the few-time signature (FTS):
+  \item a \emph{two-level WOTS forest} (\cref{sec:twolevel}; credit: Jonas Nick, sig.golf~\cite{siggolf}) instead of FORS as the few-time signature (FTS):
         signatures are 25\% smaller and verification 25\% cheaper, at the same signing cost and longer lifetimes
   \item WOTS$^+$C~\cite{HK22C} instead of WOTS$^+$: 64 chains of length $w=4$, with a target sum of 123
   \item the WOTS$^+$C encoding absorbs the FTS: it hashes the two nodes below the root of each of the 8 trees of
