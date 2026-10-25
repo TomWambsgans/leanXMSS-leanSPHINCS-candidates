@@ -262,18 +262,21 @@ def site_data():
                                                keygen=round(C.keygen(h, shape, b)), sign=signs,
                                                grind=round(2 ** (h - b)) if shape == "pruned" else 1,
                                                lifetime=proved, attack=attack))
-    C = Costs(HASHES[0])
-    for h in HEIGHTS:
-        for shape, b in [("pruned", bb) for bb in PRUNED] + [("layered", h)]:
-            ls = layers(h, shape)
-            keygen = C.keygen(h, shape, b)
-            lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
-            prep = C.forest_sign + lower + len(ls) * (V // 2 * C.derive + T * C.step)
-            out["threshold"].append(dict(h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
-                                         keygen=round(keygen), prep=round(prep), grind=2**h // PREPARED,
-                                         keygen_gb={str(n): keygen * KECCAK_ANDS * mpc_bits_per_and(n) / 8 / 1e9 for n in (3, 5, 7)},
-                                         prep_mb={str(n): prep * KECCAK_ANDS * mpc_bits_per_and(n) / 8 / 1e6 for n in (3, 5, 7)}))
+    for H in HASHES:
+        C = Costs(H)
+        ands = ANDS[H.name]
+        for h in HEIGHTS:
+            for shape, b in [("pruned", bb) for bb in PRUNED] + [("layered", h)]:
+                ls = layers(h, shape)
+                keygen = C.keygen(h, shape, b)
+                lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
+                prep = C.forest_sign + lower + len(ls) * (V // 2 * C.derive + T * C.step)
+                out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
+                                             keygen=round(keygen), prep=round(prep), grind=2**h // PREPARED,
+                                             keygen_gb={str(n): keygen * ands * mpc_bits_per_and(n) / 8 / 1e9 for n in (3, 5, 7)},
+                                             prep_mb={str(n): prep * ands * mpc_bits_per_and(n) / 8 / 1e6 for n in (3, 5, 7)}))
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
+    out["rates"] = DEVICES
     out["wallet"] = dict(prepared=PREPARED, stark_verify=STARK_VERIFY, host_rate=HOST_RATE, device_rate=DEVICE_RATE,
                          opened_avg=COORDS * SUBS * sum(nonzero) / len(nonzero), opened_max=COORDS * SUBS * max(nonzero))
     return out
@@ -285,9 +288,24 @@ def site_data():
 # PREPARED instances in the clear and open only the forest chain values the message selects.
 PREPARED = 16
 KECCAK_ANDS = 36_300  # AND gates of one Keccak-f[1600] call with a public part and a truncated output
+# AND gates of one compression in a binary MPC: Keccak-f as above; SHA-256, the Bristol-format circuit (22,573);
+# BLAKE2s, 10 rounds of 8 G functions of 6 additions modulo 2^32 at 31 AND gates each (14,880).
+ANDS = {"Keccak-256": KECCAK_ANDS, "SHA-256": 22_573, "BLAKE2s": 10 * 8 * 6 * 31}
 STARK_VERIFY = 10_000  # permutations to verify the STARK of a least grinding index on the device
 HOST_RATE = 1e6  # Keccak-f permutations per second the host proves
 DEVICE_RATE = 5.8e3  # Keccak-f permutations per second of a Ledger Nano S+ (hwbench)
+
+# Compressions per second of each device, per hash. The Ledger Nano S+ is measured for each hash (hwbench:
+# github.com/TomWambsgans/hardware-wallet-benchmark). The CPUs are given for Keccak-f (a weak one and a powerful
+# one, all cores, 2^27 and 2^29 per second); the other hashes scale by the single-core ratio measured with
+# `openssl speed -bytes 16384 -evp` on an AMD Ryzen 7 PRO 8700GE (SHA-NI): SHA-256 2.43 GB/s, BLAKE2s
+# 0.731 GB/s, SHA3-256 0.666 GB/s, i.e. 38.0M, 11.4M and 4.90M compressions (64, 64 and 136 bytes) per second.
+OPENSSL = {"Keccak-256": 666.18e6 / 136, "BLAKE2s": 730.52e6 / 64, "SHA-256": 2430.03e6 / 64}
+DEVICES = {
+    "Ledger Nano S+": {"Keccak-256": 5.8e3, "BLAKE2s": 32.6e3, "SHA-256": 23.6e3},
+    "weak CPU": {name: 2**27 * OPENSSL[name] / OPENSSL["Keccak-256"] for name in OPENSSL},
+    "powerful CPU": {name: 2**29 * OPENSSL[name] / OPENSSL["Keccak-256"] for name in OPENSSL},
+}
 
 
 def mpc_bits_per_and(n):
