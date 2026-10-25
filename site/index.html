@@ -1160,10 +1160,10 @@ document.addEventListener('pointerdown', function (e) {
           ' cache</span>' + t(c.sign[d.kib]) + '</div>');
         return;
       }
-      // with the host: one instance prepared in advance per signature, the STARK checked online, the grinding proved by the host
+      // with the host: the prepared instances built in advance (one is refilled per signature), the STARK checked online, the grinding proved by the host
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
       var ph = function (n, u, what, r) { return '<div class="hd"><span>' + fmt(n) + '&nbsp;' + u + ' <span class="ph">' + what + '</span></span>' + t(n, r) + '</div>'; };
-      set('sign-' + k, '<div>' + ph(tt.prep, unit(), 'in advance') + '<div class="ph">(1 of the ' + np + ' prepared FTS)</div>' + '<div class="hd"><span>STARK<span class="info" tabindex="0" data-tip="The host proves &asymp; ' +
+      set('sign-' + k, '<div>' + ph(tt.prep * np, unit(), '') + '<div class="ph">(' + np + ' FTS in advance, 1 per signature)</div>' + '<div class="hd"><span>STARK<span class="info" tabindex="0" data-tip="The host proves &asymp; ' +
         pow2t(Math.log2(W.ledger_grind[S.h])) + ' hashes (' + time(W.ledger_grind[S.h] / W.host_rate) + '),&#10;the Ledger verifies the proof in &asymp; ' +
         fmt(W.stark_verify) + ' hashes (' + time(W.stark_verify_s) + ')">i</span></span>' +
         t(W.ledger_grind[S.h] / W.host_rate + W.stark_verify_s, 1) + '</div></div>');
