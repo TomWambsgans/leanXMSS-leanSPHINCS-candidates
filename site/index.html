@@ -1138,8 +1138,8 @@ document.addEventListener('pointerdown', function (e) {
     var devs = [
       { name: 'Light', b: 13, rate: ledger, kib: '16', cache: '16&nbsp;KiB', host: true,
         dev: '<a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a>' },
-      { name: 'Standard', b: 20, rate: rate('weak CPU'), kib: '1024', cache: '1&nbsp;MiB', dev: lay_ ? 'Weak CPU' : 'weak CPU' },
-      { name: 'Full', b: S.h, rate: rate('powerful CPU'), kib: '16384', cache: '16&nbsp;MiB', dev: lay_ ? 'Powerful CPU' : 'powerful CPU' }
+      { name: 'Standard', b: 20, rate: rate('laptop'), kib: '1024', cache: '1&nbsp;MiB', dev: lay_ ? 'Laptop' : 'laptop' },
+      { name: 'Full', b: S.h, rate: rate('server'), kib: '16384', cache: '16&nbsp;MiB', dev: lay_ ? 'Server' : 'server' }
     ];
     // the Ledger with the host: offline, it prepares np FTS; online, the host grinds onto one of them and proves it in a STARK
     var np = W.ledger_prepared[S.h], g = W.ledger_grind[S.h];

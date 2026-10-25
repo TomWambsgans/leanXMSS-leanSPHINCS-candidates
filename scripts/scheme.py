@@ -309,16 +309,16 @@ HOST_RATE = 2**19  # hashes per second the host proves in a STARK (the hash of t
 DEVICE_RATE = 5.8e3  # Keccak-f permutations per second of a Ledger Nano S+ (hwbench)
 
 # Compressions per second of each device, per hash. The Ledger Nano S+ is measured for each hash (hwbench:
-# github.com/TomWambsgans/hardware-wallet-benchmark). The CPUs are given for Keccak-f (a weak one and a powerful
-# one, all cores, 2^27 and 2^29 per second); the other hashes scale by the single-core ratio measured with
+# github.com/TomWambsgans/hardware-wallet-benchmark). The CPUs are given for Keccak-f (a laptop and a server,
+# all cores, 2^27 and 2^29 per second); the other hashes scale by the single-core ratio measured with
 # `openssl speed -bytes 16384 -evp` on an AMD Ryzen 7 PRO 8700GE (SHA-NI): SHA-256 2.43 GB/s, BLAKE2s
 # 0.731 GB/s, SHA3-256 0.666 GB/s, i.e. 38.0M, 11.4M and 4.90M compressions (64, 64 and 136 bytes) per second.
 # On the CPUs, SHA-256 is counted at the BLAKE2s rate.
 OPENSSL = {"Keccak-256": 666.18e6 / 136, "BLAKE2s": 730.52e6 / 64, "SHA-256": 730.52e6 / 64}
 DEVICES = {
     "Ledger Nano S+": {"Keccak-256": 5.8e3, "BLAKE2s": 32.6e3, "SHA-256": 23.6e3},
-    "weak CPU": {name: 2**27 * OPENSSL[name] / OPENSSL["Keccak-256"] for name in OPENSSL},
-    "powerful CPU": {name: 2**29 * OPENSSL[name] / OPENSSL["Keccak-256"] for name in OPENSSL},
+    "laptop": {name: 2**27 * OPENSSL[name] / OPENSSL["Keccak-256"] for name in OPENSSL},
+    "server": {name: 2**29 * OPENSSL[name] / OPENSSL["Keccak-256"] for name in OPENSSL},
 }
 
 
