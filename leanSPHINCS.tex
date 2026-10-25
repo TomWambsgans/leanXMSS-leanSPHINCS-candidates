@@ -256,13 +256,12 @@ $i\in J$ sends a part, and the parts combine into $F(x)$:
 Parts from signings of different $(m,J)$ don't combine, so aborted signings reveal no secret.
 
 
-\paragraph{Threshold costs.} The MPC uses replicated sharing over $\mathrm{GF}(2)$ as in~\cite{BGIN19}, generalized to
-$n=2f+1$: each AND gate is computed locally and reshared through one collector, $(n-1)+f$ bits in total, i.e.\ 1, 1.2
-and 1.29 bits per operator for $n=3$, 5, 7, plus a check~\cite{GS20} of negligible traffic. A compression is
+\paragraph{Threshold costs.} Honest-majority MPC with malicious security (with abort) costs essentially the
+semi-honest price: about 1 bit per AND gate per operator with three operators~\cite{AFLNO16}, the malicious check
+adding sublinear traffic~\cite{BGIN19,GS20}. A compression is
 $36.3\cdot10^3$ AND gates for Keccak-f[1600] (1\,600 per round; part of the first round is public, and the truncated
 output skips most of the last one), $22.6\cdot10^3$ for SHA-256 (the Bristol circuit) and $14.9\cdot10^3$ for BLAKE2s
-(10 rounds of 8 functions of 6 additions modulo $2^{32}$, 31 AND gates each). Traffic per operator at $h=24$, 2-of-3
-(3-of-5 and 4-of-7 cost 1.2 and 1.29 times more):
+(10 rounds of 8 functions of 6 additions modulo $2^{32}$, 31 AND gates each). Traffic per operator at $h=24$, at 1 bit per AND gate:
 \begin{center}
 \begin{tabular}{lrrr}
   \toprule
@@ -481,6 +480,9 @@ encoding, then one chain preimage): for the forest it is the cover figure, excep
   Applications to Secure Computation}. TCC, 2005. \url{https://doi.org/10.1007/978-3-540-30576-7_19}.
 \bibitem{GS20} V.~Goyal, Y.~Song. \emph{Malicious Security Comes Free in Honest-Majority MPC}. CRYPTO, 2020.
   \url{https://eprint.iacr.org/2020/134}.
+\bibitem{AFLNO16} T.~Araki, J.~Furukawa, Y.~Lindell, A.~Nof, K.~Ohara. \emph{High-Throughput Semi-Honest Secure
+  Three-Party Computation with an Honest Majority}. ACM CCS, 2016.
+
 \bibitem{BGIN19} E.~Boyle, N.~Gilboa, Y.~Ishai, A.~Nof. \emph{Practical Fully Secure Three-Party
   Computation via Sublinear Distributed Zero-Knowledge Proofs}. ACM CCS, 2019.
   \url{https://eprint.iacr.org/2019/1390}.

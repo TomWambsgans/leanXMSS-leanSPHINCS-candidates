@@ -11,21 +11,6 @@ name = "keccak"
 version = "0.1.0"
 
 [[package]]
-name = "mpc"
-version = "0.1.0"
-dependencies = [
- "keccak",
-]
-
-[[package]]
-name = "rss"
-version = "0.1.0"
-dependencies = [
- "keccak",
- "mpc",
-]
-
-[[package]]
 name = "sha256"
 version = "0.1.0"
 

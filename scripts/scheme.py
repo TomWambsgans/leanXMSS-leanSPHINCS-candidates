@@ -273,8 +273,8 @@ def site_data():
                 prep = C.forest_sign + lower + len(ls) * (V // 2 * C.derive + T * C.step)
                 out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
                                              keygen=round(keygen), prep=round(prep), grind=2**h // PREPARED,
-                                             keygen_gb={str(n): keygen * ands * mpc_bits_per_and(n) / 8 / 1e9 for n in (3, 5, 7)},
-                                             prep_mb={str(n): prep * ands * mpc_bits_per_and(n) / 8 / 1e6 for n in (3, 5, 7)}))
+                                             keygen_gb=keygen * ands * BITS_PER_AND / 8 / 1e9,
+                                             prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6))
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
     out["rates"] = DEVICES
     out["wallet"] = dict(prepared=PREPARED, stark_verify=STARK_VERIFY, host_rate=HOST_RATE, device_rate=DEVICE_RATE,
@@ -291,6 +291,10 @@ KECCAK_ANDS = 36_300  # AND gates of one Keccak-f[1600] call with a public part 
 # AND gates of one compression in a binary MPC: Keccak-f as above; SHA-256, the Bristol-format circuit (22,573);
 # BLAKE2s, 10 rounds of 8 G functions of 6 additions modulo 2^32 at 31 AND gates each (14,880).
 ANDS = {"Keccak-256": KECCAK_ANDS, "SHA-256": 22_573, "BLAKE2s": 10 * 8 * 6 * 31}
+# Traffic of honest-majority MPC with malicious security (with abort), per AND gate and per operator: about 1 bit,
+# the semi-honest cost of replicated sharing among three parties (Araki et al., CCS 2016), the malicious check
+# being sublinear (Boyle et al., CCS 2019; Goyal and Song, CRYPTO 2020).
+BITS_PER_AND = 1
 STARK_VERIFY = 10_000  # compressions to verify the STARK of a least grinding index on the device
 HOST_RATE = 1e6  # hashes per second the host proves (the hash of the configuration)
 DEVICE_RATE = 5.8e3  # Keccak-f permutations per second of a Ledger Nano S+ (hwbench)
@@ -308,12 +312,6 @@ DEVICES = {
 }
 
 
-def mpc_bits_per_and(n):
-    """Replicated sharing over GF(2), n = 2f + 1 operators: (n - 1) + f bits per AND gate, per operator."""
-    f = (n - 1) // 2
-    return ((n - 1) + f) / n
-
-
 def threshold(heights):
     C = Costs(HASHES[0])
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
@@ -326,12 +324,11 @@ def threshold(heights):
             keygen = C.keygen(h, shape, b)
             lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
             prep = C.forest_sign + lower + len(ls) * (V // 2 * C.derive + T * C.step)
-            gb = [keygen * KECCAK_ANDS * mpc_bits_per_and(n) / 8 / 1e9 for n in (3, 5, 7)]
-            pm = [prep * KECCAK_ANDS * mpc_bits_per_and(n) / 8 / 1e6 for n in (3, 5, 7)]
+            gb = keygen * KECCAK_ANDS * BITS_PER_AND / 8 / 1e9
+            pm = prep * KECCAK_ANDS * BITS_PER_AND / 8 / 1e6
             label = f"pruned b={b}" if shape == "pruned" else "layered"
-            print(f"  h={h} {label}: keygen MPC {fmt(keygen)} permutations ({', '.join(f'{g:.3g}' for g in gb)} GB "
-                  f"per operator for 2-of-3, 3-of-5, 4-of-7); preprocessing {fmt(prep)} per signature "
-                  f"({', '.join(f'{m:.0f}' for m in pm)} MB); online grinding {fmt(2 ** h / PREPARED)} attempts")
+            print(f"  h={h} {label}: keygen MPC {fmt(keygen)} permutations ({gb:.3g} GB per operator); "
+                  f"preprocessing {fmt(prep)} per signature ({pm:.0f} MB); online grinding {fmt(2 ** h / PREPARED)} attempts")
     print(f"hardware wallet: the host grinds 2^h / {PREPARED} digests "
           f"({', '.join(f'h={h}: {fmt(2 ** h / PREPARED)}, {2 ** h / PREPARED / HOST_RATE:.2g} s to prove' for h in heights)});"
           f" the device verifies the STARK in about {fmt(STARK_VERIFY)} permutations, "

@@ -1013,14 +1013,14 @@ footer a + a { margin-left: 1.25rem; }
         <table class="cmp plain">
           <thead>
             <tr><th></th><th colspan="3" class="grp">Keygen, kept subtree of</th></tr>
-            <tr><th><i>t</i>-of-<i>n</i></th><th data-f="th-b-0"></th><th data-f="th-b-1"></th><th data-f="th-b-2"></th></tr>
+            <tr><th></th><th data-f="th-b-0"></th><th data-f="th-b-1"></th><th data-f="th-b-2"></th></tr>
           </thead>
           <tbody data-f="th-pruned"></tbody>
         </table>
         <table class="cmp plain pre-t">
           <thead>
             <tr><th></th><th class="grp">Preprocessing, per signature</th></tr>
-            <tr><th><i>t</i>-of-<i>n</i></th><th>any subtree</th></tr>
+            <tr><th></th><th>any subtree</th></tr>
           </thead>
           <tbody data-f="th-pruned-prep"></tbody>
         </table>
@@ -1031,7 +1031,7 @@ footer a + a { margin-left: 1.25rem; }
         <p class="bn" data-f="th-layered-life">&nbsp;</p>
         <div class="scroll">
         <table class="cmp plain">
-          <thead><tr><th><i>t</i>-of-<i>n</i></th><th>Keygen</th><th>Preprocessing<br><span class="sub">(per signature)</span></th></tr></thead>
+          <thead><tr><th></th><th>Keygen</th><th>Preprocessing<br><span class="sub">(per signature)</span></th></tr></thead>
           <tbody data-f="th-layered"></tbody>
         </table>
         </div>
@@ -1169,21 +1169,18 @@ document.addEventListener('pointerdown', function (e) {
     });
 
     // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
-    var TB = [8, 10, 12], rows = ['3', '5', '7'];
+    var TB = [8, 10, 12];
+    // traffic per operator at about 1 bit per AND gate
+    var MPC = '<th>Traffic<span class="info" tabindex="0" data-tip="Honest-majority MPC with malicious security&#10;costs about 1 bit per AND gate per operator&#10;(Araki et al., CCS 2016; the malicious check is&#10;sublinear: Boyle et al., CCS 2019; Goyal and Song,&#10;CRYPTO 2020)">i</span></th>';
     var tps = TB.map(function (b) { return thr('pruned', b); }), tl = thr('layered');
     TB.forEach(function (b, k) { set('th-b-' + k, pow2(b)); });
     set('th-pruned', '<tr class="life"><th>Lifetime</th>' + tps.map(function (t) { return '<td>' + fmt(t.lifetime) + '</td>'; }).join('') +
-      '</tr>' + rows.map(function (n) {
-        return '<tr><th>' + ((+n + 1) / 2) + '-of-' + n + '</th>' + tps.map(function (t) { return '<td>' + bytes(t.keygen_gb[n]) + '</td>'; }).join('') + '</tr>';
-      }).join(''));
-    set('th-pruned-prep', '<tr class="life"><th>&nbsp;</th><td></td></tr>' + rows.map(function (n) {     // the same for every kept subtree
-      return '<tr><th>' + ((+n + 1) / 2) + '-of-' + n + '</th><td>' + bytes(tps[0].prep_mb[n] / 1000) + '</td></tr>';
-    }).join(''));
+      '</tr><tr>' + MPC + tps.map(function (t) { return '<td>' + bytes(t.keygen_gb) + '</td>'; }).join('') + '</tr>');
+    set('th-pruned-prep', '<tr class="life"><th>&nbsp;</th><td></td></tr>' +     // the same for every kept subtree
+      '<tr><th>&nbsp;</th><td>' + bytes(tps[0].prep_mb / 1000) + '</td></tr>');
     set('th-layered-title', 'Layered key, ' + split(lay));
     set('th-layered-life', fmt(tl.lifetime) + ' signatures' + LIFE_TIP + ' &middot; traffic per operator');
-    set('th-layered', rows.map(function (n) {
-      return '<tr><th>' + ((+n + 1) / 2) + '-of-' + n + '</th><td>' + bytes(tl.keygen_gb[n]) + '</td><td>' + bytes(tl.prep_mb[n] / 1000) + '</td></tr>';
-    }).join(''));
+    set('th-layered', '<tr>' + MPC + '<td>' + bytes(tl.keygen_gb) + '</td><td>' + bytes(tl.prep_mb / 1000) + '</td></tr>');
     var th = S.shape === 'layered' ? tl : tps[0];
     set('th-online', 'Online, ' + (S.shape === 'layered' ? 'layered' : 'pruned') + ' key at <i>h</i> = ' + S.h + ': about ' + fmt(th.grind) +
       ' grinding attempts in the clear (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared + (S.shape === 'layered' ? '' : ', onto instances of the kept subtree') +

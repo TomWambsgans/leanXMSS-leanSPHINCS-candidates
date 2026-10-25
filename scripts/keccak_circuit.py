@@ -5,7 +5,7 @@ In secret-sharing MPC, AND gates cost traffic and AND-depth costs rounds (one ro
 gates, all independent hashes in parallel). Chi, a ^ (~b & c), is the only non-linear step: one AND per
 state bit and per round, every round one AND layer. An AND costs only if both inputs are secret, so a
 hash whose input is partly public folds part of its first round, and a truncated output skips the chi of
-the lanes it drops in the last round. The same model as crates/mpc/src/keccak_circuit.rs.
+the lanes it drops in the last round.
 """
 
 ROUNDS = 24
