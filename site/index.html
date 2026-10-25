@@ -258,6 +258,7 @@ footer a + a { margin-left: 1.25rem; }
   .tables .scroll .cards thead th:nth-child(2) { margin-top: 0.3rem; }
   .tables .scroll .cards td { display: grid; grid-template-columns: 7.6rem minmax(0, 1fr); align-items: baseline; padding: 0.14rem 0; }
   .cards td::before { content: attr(data-l); color: var(--muted); font-size: 0.92em; }
+  .tables .scroll .cards td.na { display: none; }
   .cards td .hd { gap: 0 0.6em; flex-wrap: wrap; }
   .cards td .hd .ex { margin-left: auto; }
   .cards .ph { display: block; }
@@ -995,6 +996,7 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Lifetime" data-f="life-0"></td><td data-l="Lifetime" data-f="life-1"></td><td data-l="Lifetime" data-f="life-2"></td></tr>
           <tr><th>Key generation</th><td data-l="Key generation" data-f="keygen-0"></td><td data-l="Key generation" data-f="keygen-1"></td><td data-l="Key generation" data-f="keygen-2"></td></tr>
           <tr><th>Signing</th><td data-l="Signing" data-f="sign-0"></td><td data-l="Signing" data-f="sign-1"></td><td data-l="Signing" data-f="sign-2"></td></tr>
+          <tr><th>Assisted signing</th><td data-l="Assisted" data-f="assist-0"></td><td class="na"></td><td class="na"></td></tr>
         </tbody>
       </table>
       </div>
@@ -1152,16 +1154,12 @@ document.addEventListener('pointerdown', function (e) {
       var t = function (n, r) { return '<span class="ex">' + time(n / (r || d.rate)) + '</span>'; };
       set('life-' + k, '<div>' + fmt(c.lifetime) + ' signatures <span class="st">(' + what + ')</span></div>');
       set('keygen-' + k, '<div class="hd"><span>' + fmt(c.keygen) + '&nbsp;' + unit() + '</span>' + t(c.keygen) + '</div>');
-      if (!d.host) {
-        set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="st">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
-        return;
-      }
-      // two techniques: offline / online with the host, or direct (the Ledger alone, with a 16 KiB cache)
+      set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="st">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
+      if (!d.host) return;
+      // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
-      set('sign-' + k, '<div><div class="hd"><span>Offline / Online<span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span>' +
-        '<span class="ex">' + time(tt.prep * np / d.rate) + ' / ' + time(g / W.host_rate + W.stark_verify_s) + '</span></div>' +
-        '<div class="hd"><span>Direct</span>' + t(c.sign[d.kib]) + '</div>' +
-        '<div class="st">(' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ', ' + d.cache + ' cache)</div></div>');
+      set('assist-' + k, '<div class="hd"><span>Offline / Online<span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span>' +
+        '<span class="ex">' + time(tt.prep * np / d.rate) + ' / ' + time(g / W.host_rate + W.stark_verify_s) + '</span></div>');
     });
 
     // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
