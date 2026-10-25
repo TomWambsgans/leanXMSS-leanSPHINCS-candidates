@@ -88,7 +88,7 @@ svg .dash { stroke-dasharray: 2 3; }
 svg .anim polyline { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 svg .anim circle { fill: var(--ink); }
 svg .anim .ring { fill: none; stroke: var(--ink); stroke-width: 1.2; }
-svg.animating .xmss .path { visibility: hidden; }
+svg.animating .xmss .path, svg.animating .on { visibility: hidden; }   /* the animation draws them */
 svg .on circle { fill: var(--ink); }
 svg .conn { stroke: var(--tree); stroke-width: 1; }
 svg .chain line { stroke: var(--tree); stroke-width: 1; }
@@ -1266,31 +1266,44 @@ document.addEventListener('pointerdown', function (e) {
   // Each tree shows its top DRAWN levels as edges (the path in ink, with its nodes), and below
   // them thin branches that fade out toward the leaf row. A level's height shrinks with its spread, so the
   // branches taper down to the leaf row. The roots stand on one vertical line, the column of
-  // the WOTS+C keys: in the body the path turns back toward it.
+  // the WOTS+C keys.
   var DRAWN = 3, ROOT = -108, LEAF = 210, GAP = 30;   // GAP: from a leaf to the root of the tree below
-  var TURNS = [[-1, 1, 1], [1, -1, -1]];               // alternately, so that the paths zigzag
-  var CHAIN = [1, 3, 0, 2, 2, 0, 3, 1];                // the revealed position on each of the 8 chains of a small key
+  function coin() { return Math.random() < 0.5 ? -1 : 1; }
+  // A WOTS+C encoding: the steps from each revealed value to the end of its chain, 69 in all over 64 chains of
+  // 4 (the target sum 123); 8 of the chains are drawn
+  function wotsc() {
+    var m = [], k = 0, i;
+    for (i = 0; i < 64; i++) m.push(0);
+    while (k < 69) { i = Math.random() * 64 | 0; if (m[i] < 3) { m[i]++; k++; } }
+    return m.slice(0, 8);
+  }
+  // A codeword of the forest's WOTS keys: 6 digits of 0 to 4 with sum 5, uniform
+  function codeword() {
+    for (;;) {
+      var d = [], t = 0;
+      for (var i = 0; i < 6; i++) { d.push(Math.random() * 5 | 0); t += d[i]; }
+      if (t === 5) return d;
+    }
+  }
   function drawLayered(layers, h) {
     while (layered.firstChild) layered.removeChild(layered.firstChild);
     // every level has the same spacing u, so that each tree is drawn in proportion to its height
     var L = layers.length, u = (LEAF - ROOT - (L - 1) * GAP) / h, ls = [], y = LEAF;
     for (var i = L - 1; i >= 0; i--) {        // from the bottom layer up: its leaf sits over the brace
       var t = layers[i], H = t * u, y0 = y - H;
-      var a = i === 0 ? 60 : 46, turn = TURNS[(L - 1 - i) % 2], nodes = [[X, y0]], rows = [[X]], dx = 0;
+      var a = i === 0 ? 60 : 46, nodes = [[X, y0]], rows = [[X]];
       // DRAWN levels, then up to 5 levels of the body, down to a spread of under a pixel; each level as tall
       // as the square root of its spread, so that the deeper branches are short and slanted
       var nb = Math.min(t - DRAWN, 5), n = DRAWN + nb, ys = [y0], w = [];
       for (var j = 1; j <= n; j++) w.push(Math.sqrt(a / Math.pow(2, j - 1)));
       var tw = w.reduce(function (p, q) { return p + q; }, 0);
       for (j = 1; j <= n; j++) ys.push(ys[j - 1] + H * w[j - 1] / tw);
-      // the path: the drawn levels zigzag, then in the body it turns back toward the column of the root
+      // the path, to a leaf picked at random
       for (j = 1; j <= n; j++) {
         var off = a / Math.pow(2, j - 1), row = [];
         rows[j - 1].forEach(function (p) { row.push(p - off, p + off); });   // binary layout, as the pruned tree
         rows.push(row);
-        var dir = j <= DRAWN ? turn[j - 1] : dx > 0 ? -1 : 1;
-        if (j <= DRAWN) dx += dir * off;
-        nodes.push([nodes[j - 1][0] + dir * off, ys[j]]);
+        nodes.push([nodes[j - 1][0] + coin() * off, ys[j]]);
       }
       ls[i] = { t: t, H: H, y0: y0, a: a, nb: nb, ys: ys, rows: rows, root: nodes[0], leaf: nodes[n], bottom: y0 + H, nodes: nodes };
       y = y0 - GAP;
@@ -1317,10 +1330,10 @@ document.addEventListener('pointerdown', function (e) {
       if (i === L - 1) return;
       var yt = l.bottom + 7, yb = yt + 12, ch = el('g', { 'class': 'chain' }, layered), dt = el('g', { 'class': 'dot' }, layered), on = el('g', { 'class': 'on' }, layered);
       l.key = { top: yt, bottom: yb, chains: [] };
-      CHAIN.forEach(function (p, j) {
+      wotsc().forEach(function (p, j) {
         var cx = X + (j - 3.5) * 6;
         el('line', { x1: n1(cx), y1: n1(yt), x2: n1(cx), y2: n1(yb) }, ch);
-        for (var m = 0; m < 4; m++) if (m !== p) el('circle', { cx: n1(cx), cy: n1(yt + 4 * m), r: 1.1 }, dt);
+        for (var m = 0; m < 4; m++) el('circle', { cx: n1(cx), cy: n1(yt + 4 * m), r: 1.1 }, dt);
         el('circle', { cx: n1(cx), cy: n1(yt + 4 * p), r: 1.9 }, on);
         l.key.chains.push([cx, yt + 4 * p]);
       });
@@ -1365,7 +1378,53 @@ document.addEventListener('pointerdown', function (e) {
   fit();
 
   // Called by the figures with the chosen configuration: draws it (and restarts the animation) when the shape changes.
+  // Picks the signature that is drawn: the leaf of the tree (of each layer), the encoding of each WOTS+C key, the
+  // leaf of each forest tree and of each of its subtrees, and the codeword of the WOTS key drawn. Each cycle of
+  // the animation picks again.
+  var cur = null;
+  function clear(g) { while (g.firstChild) g.removeChild(g.firstChild); }
+  function pick() {
+    // the pruned tree: a leaf among the 64 of the last level drawn, and the path to it
+    var py = [-108, -30.5, 31.5, 81.2, 120.8, 152.6, 178], pp = [[256, -108]], on = pruned.querySelector('g.on');
+    for (var j = 1; j < py.length; j++) pp.push([pp[j - 1][0] + coin() * 240 / Math.pow(2, j), py[j]]);
+    pruned.querySelector('polyline.path').setAttribute('points', pts(pp));
+    clear(on);
+    pp.forEach(function (q, j) { if (j) el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j === 6 ? 2.2 : 2.6 }, on); });
+    el('circle', { cx: 256, cy: -108, r: 4.2 }, on);
+    // the WOTS+C key: 8 of its 64 chains, positions 0 (the end) to 3 from the top
+    var sig = svg.querySelector('.sig'), dot = sig.querySelector(':scope > g.dot'), so = sig.querySelector(':scope > g.on');
+    var cx = [169.8, 184.8, 199.8, 214.8, 259.8, 274.8, 289.8, 304.8];
+    clear(dot); clear(so);
+    wotsc().forEach(function (p, j) {
+      for (var m = 0; m < 4; m++) el('circle', { cx: cx[j], cy: 252 + 18 * m, r: 1.6 }, dot);   // every position, under the revealed one
+      el('circle', { cx: cx[j], cy: 252 + 18 * p, r: 2.9 }, so);
+    });
+    // the forest: a leaf of each tree of height 4 (16 leaves), linked to its two subtrees of height 3 (8 leaves)
+    var f = sig.querySelector('.fts'), fo = f.querySelectorAll('g.on'), conn = f.querySelector('g.conn');
+    var ap = Array.prototype.map.call(f.querySelectorAll('.fors polygon'), function (q) { return q.getAttribute('points').split(' ')[0].split(',').map(Number); });
+    clear(fo[0]); clear(conn);
+    for (var i = 0; i < 8; i++) {
+      var lx = ap[3 * i][0] - 11 + 22 * ((Math.random() * 16 | 0) + 0.5) / 16;
+      el('circle', { cx: n1(lx), cy: 417, r: 2.4 }, fo[0]);
+      for (var k = 1; k <= 2; k++) el('line', { x1: n1(lx), y1: 417, x2: ap[3 * i + k][0], y2: 424 }, conn);
+    }
+    for (i = 0; i < 16; i++) {
+      var sx = ap[3 * (i >> 1) + 1 + (i & 1)][0] - 5 + 10 * ((Math.random() * 8 | 0) + 0.5) / 8;
+      el('circle', { cx: n1(sx), cy: 436, r: 1.8 }, fo[0]);
+    }
+    // the WOTS key: 6 chains of 5, its codeword's digits the steps to the top
+    var wd = f.querySelector('g.dot');
+    clear(wd); clear(fo[1]);
+    codeword().forEach(function (p, j) {
+      for (var m = 0; m < 5; m++) el('circle', { cx: n1(195.3 + 13 * j), cy: 466 + 12 * m, r: 1.6 }, wd);
+      el('circle', { cx: n1(195.3 + 13 * j), cy: 466 + 12 * p, r: 2.6 }, fo[1]);
+    });
+    if (cur && cur.shape === 'layered') geo = drawLayered(cur.layers, cur.h);
+  }
+  pick();
+
   window.sigDiagram = function (h, shape, layers) {
+    cur = { h: h, shape: shape, layers: layers };
     var want = shape === 'layered' ? 'layered ' + layers.join('+') : 'pruned';
     if (want === shown) return;
     shown = want;
@@ -1395,7 +1454,7 @@ document.addEventListener('pointerdown', function (e) {
       items.forEach(function (pts) {
         var len = 0, cum = [0];
         for (var i = 1; i < pts.length; i++) { len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); cum.push(len); }
-        var line = trail ? el('polyline', { points: pts.map(function (q) { return q.join(','); }).join(' '), 'stroke-dasharray': len + ' ' + len, 'stroke-dashoffset': len }, layer) : null;
+        var line = trail ? el('polyline', { points: pts.map(function (q) { return q.join(','); }).join(' '), 'stroke-dasharray': len + ' ' + len, 'stroke-dashoffset': len, opacity: 0 }, layer) : null;
         segs.push({ pts: pts, cum: cum, len: len, line: line, dot: el('circle', { r: r || 2.6, opacity: 0 }, layer), t0: t, t1: t + ms, stage: stages.length, keep: keep });
       });
       stages.push([t, t + ms]);
@@ -1406,7 +1465,7 @@ document.addEventListener('pointerdown', function (e) {
     var nodes = centres(on[0]), leaves = nodes.slice(0, 8), subs = nodes.slice(8), ap = apexes(f.querySelector('.fors'));
     var chain = centres(on[1]);
     stage(700, chain.map(function (c) { return [c, [c[0], 466]]; }), true, 2.2);
-    stage(450, chain.map(function (c) { return [[c[0], 466], [227.8, 445], [227.8, 436]]; }), false, 1.8);
+    stage(450, chain.map(function (c) { return [[c[0], 466], [227.8, 445], subs[7]]; }), false, 1.8);
     stage(450, subs.map(function (c, i) { return [c, ap[3 * (i >> 1) + 1 + (i & 1)]]; }), true, 1.8);
     stage(300, subs.map(function (c, i) { return [ap[3 * (i >> 1) + 1 + (i & 1)], leaves[i >> 1]]; }), true, 1.8);
     stage(600, leaves.map(function (c, i) { return [c, ap[3 * i]]; }), true, 2.2);
@@ -1416,8 +1475,8 @@ document.addEventListener('pointerdown', function (e) {
     stage(500, wots.map(function (c) { return [[c[0], 252], [X, TIP]]; }), false, 2);
     var root;
     if (!geo) {
-      stage(250, [[[X, TIP], [X, 178]]], false);
       var path = pruned.querySelector('polyline.path').getAttribute('points').split(' ').map(function (q) { return q.split(',').map(Number); }).reverse();
+      stage(250, [[[X, TIP], path[0]]], false);
       stage(1700, [path], true, 3.2);
       root = path[path.length - 1];
     } else {
@@ -1446,7 +1505,7 @@ document.addEventListener('pointerdown', function (e) {
   function frame(now) {
     if (start === null) start = now;
     var HOLD = 2800, FADE = 450, t = now - start;
-    if (t > total + HOLD + FADE) { start = now; t = 0; }
+    if (t > total + HOLD + FADE) { pick(); build(); start = now; t = 0; }   // a new signature each cycle
     layer.setAttribute('opacity', t > total + HOLD ? 1 - (t - total - HOLD) / FADE : 1);
     window.sigCycle = { t: t, total: total, hold: HOLD, fade: FADE };
     // nothing is written while the diagram is out of view, nor to the path once it is complete
@@ -1464,7 +1523,8 @@ document.addEventListener('pointerdown', function (e) {
         s.line.setAttribute('stroke-dashoffset', s.len - d);
         // a visited layer goes back to normal while the next one is walked
         var nx = !s.keep && stages[s.stage + 1];
-        s.line.setAttribute('opacity', nx ? 1 - Math.min(1, Math.max(0, (t - nx[0]) / Math.max(450, nx[1] - nx[0]))) : 1);
+        // (hidden before its stage: the round cap of an empty dash is a dot)
+        s.line.setAttribute('opacity', t <= s.t0 ? 0 : nx ? 1 - Math.min(1, Math.max(0, (t - nx[0]) / Math.max(450, nx[1] - nx[0]))) : 1);
       }
     });
     var k = (t - total) / 700;
