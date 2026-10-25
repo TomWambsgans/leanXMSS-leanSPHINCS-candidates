@@ -304,7 +304,7 @@ ANDS = {"Keccak-256": KECCAK_ANDS, "SHA-256": 22_573, "BLAKE2s": 10 * 8 * 6 * 31
 # being sublinear (Boyle et al., CCS 2019; Goyal and Song, CRYPTO 2020).
 BITS_PER_AND = 1
 STARK_VERIFY = 10_000  # compressions to verify the STARK of a least grinding index on the device
-STARK_VERIFY_SECONDS = 2  # assumed time of that verification on the device, whatever the hash
+STARK_VERIFY_SECONDS = 3  # assumed time of that verification on the device, whatever the hash
 HOST_RATE = 2**19  # hashes per second the host proves in a STARK (the hash of the configuration): 2 s per 2^20
 DEVICE_RATE = 5.8e3  # Keccak-f permutations per second of a Ledger Nano S+ (hwbench)
 

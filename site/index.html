@@ -1167,7 +1167,7 @@ document.addEventListener('pointerdown', function (e) {
         info(fmt(tt.prep * np) + ' ' + units() + ', in idle time;&#10;each signature uses one FTS, then refilled (' + fmt(tt.prep) + ')') + '</span>' + t(tt.prep * np) + '</div>' +
         '<div class="hd"><span>Online <span class="ph">(STARK of &asymp;&thinsp;' + pow2(Math.log2(g)) + ' hashes)</span>' +
         info('The host proves &asymp; ' + pow2t(Math.log2(g)) + ' hashes (' + time(g / W.host_rate) + '),&#10;the Ledger verifies the proof in &asymp; ' +
-          fmt(W.stark_verify) + ' hashes (' + time(W.stark_verify_s) + ')') + '</span>' + t(g / W.host_rate + W.stark_verify_s, 1) + '</div></div>');
+          fmt(W.stark_verify) + ' hashes (' + time(W.stark_verify_s) + ')') + '</span><span class="ex">&asymp;&thinsp;' + time(g / W.host_rate + W.stark_verify_s) + '</span></div></div>');
     });
 
     // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key

@@ -307,8 +307,8 @@ root), so the host can hold them for the device, which keeps a hash of each.
 The minimality makes $R$ a function of $(m, \text{secret key})$ and the prepared set, as for the deterministic signer; this flow is not covered by the Lean proof.
 
 \paragraph{Hardware wallet costs.} At $h\ge24$ the host hashes $\approx2^{20}$ digests on average and proves them in a STARK at about
-$2^{19}$ hashes per second, 2~s. The device verifies the STARK in about $10^4$ compressions, which we count as 2~s on a Ledger Nano S+
-(1.7~s with Keccak-256 at 5.8 thousand compressions per second~\cite{hwbench}): about 4~s in all. Preparing an instance costs the
+$2^{19}$ hashes per second, 2~s. The device verifies the STARK in about $10^4$ compressions, which we count as 3~s on a Ledger Nano S+
+(1.7~s with Keccak-256 at 5.8 thousand compressions per second~\cite{hwbench}): about 5~s in all. Preparing an instance costs the
 device $59\cdot10^3$ Keccak-f permutations for a pruned key and $89\cdot10^3$ for a layered one at $h=24$
 ($179\cdot10^3$ at $h=28$), in its idle time; a signature consumes one instance, and the first $p$ are prepared once
 (about 2.2~h for the layered key at $h=28$).
