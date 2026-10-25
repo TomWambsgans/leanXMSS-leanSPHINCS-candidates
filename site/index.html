@@ -81,7 +81,6 @@ svg .stub line { stroke: url(#fade); stroke-width: 1; }
 svg .f0 { stop-color: var(--tree); stop-opacity: 1; }
 svg .f1 { stop-color: var(--tree); stop-opacity: 0; }
 svg .lbody line { stroke-width: 1; }
-svg .nd circle { fill: #fff; stroke: var(--tree); stroke-width: 1; }
 svg .sib circle { fill: #fff; stroke: var(--ink); stroke-width: 1.3; }
 svg .base { stroke: var(--tree); stroke-width: 1; }
 svg .path { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
@@ -551,7 +550,6 @@ footer a + a { margin-left: 1.25rem; }
             <line x1="484.8" y1="178.0" x2="484.8" y2="204"/>
             <line x1="492.2" y1="178.0" x2="492.2" y2="204"/>
           </g>
-          <g class="nd"><circle cx="316.0" cy="31.5" r="1.9"/><circle cx="436.0" cy="31.5" r="1.9"/><circle cx="46.0" cy="81.2" r="1.9"/><circle cx="106.0" cy="81.2" r="1.9"/><circle cx="286.0" cy="81.2" r="1.9"/><circle cx="346.0" cy="81.2" r="1.9"/><circle cx="406.0" cy="81.2" r="1.9"/><circle cx="466.0" cy="81.2" r="1.9"/></g>
           <g class="sib"><circle cx="376.0" cy="-30.5" r="2.4"/><circle cx="76.0" cy="31.5" r="2.4"/><circle cx="166.0" cy="81.2" r="2.4"/></g>
           <polyline points="256.0,-108.0 136.0,-30.5 196.0,31.5 226.0,81.2 241.0,120.8 233.5,152.6 237.2,178.0" class="path"/>
           <line x1="237.2" y1="178.0" x2="237.2" y2="228" class="path dash"/>
@@ -685,7 +683,7 @@ footer a + a { margin-left: 1.25rem; }
       <table class="cmp cards">
         <colgroup><col class="label"><col><col><col></colgroup>
         <thead>
-          <tr><th></th><th data-f="head-0"><div class="hd">Light<span class="dev"><a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a><span class="info" tabindex="0" data-f="tip-ledger" data-tip="Keccak-f permutations per second">i</span></span></div></th><th data-f="head-1"><div class="hd">Standard<span class="dev">weak CPU<span class="info" tabindex="0" data-tip="128M Keccak-f permutations per second">i</span></span></div></th><th data-f="head-2"><div class="hd">Full<span class="dev">powerful CPU<span class="info" tabindex="0" data-tip="512M Keccak-f permutations per second">i</span></span></div></th></tr>
+          <tr><th></th><th data-f="head-0"><div class="hd">Light<span class="dev"><a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a><span class="info" tabindex="0" data-f="tip-ledger" data-tip="Hashes per second">i</span></span></div></th><th data-f="head-1"><div class="hd">Standard<span class="dev">weak CPU<span class="info" tabindex="0" data-tip="Hashes per second">i</span></span></div></th><th data-f="head-2"><div class="hd">Full<span class="dev">powerful CPU<span class="info" tabindex="0" data-tip="Hashes per second">i</span></span></div></th></tr>
         </thead>
         <tbody>
           <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Lifetime" data-f="life-0"></td><td data-l="Lifetime" data-f="life-1"></td><td data-l="Lifetime" data-f="life-2"></td></tr>
@@ -766,8 +764,8 @@ document.addEventListener('pointerdown', function (e) {
     var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (saved) ['h', 'shape', 'hash'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
   } catch (e) {}
-  // the devices of the one-signer cards: Keccak-f[1600] permutations per second (the Ledger's from data.json)
-  var WEAK = 128e6, POWERFUL = 512e6;
+  // the devices: hashes per second for each hash, from data.json (rates[device][hash])
+  function rate(dev) { return D.rates[dev][S.hash]; }
   var LIFE_TIP = '<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span>';
 
   // 3 significant digits with K, M, B (as scripts/scheme.py prints them)
@@ -793,6 +791,7 @@ document.addEventListener('pointerdown', function (e) {
   function pow2(e) { return '2<sup>' + e + '</sup>'; }
   function keccak() { return S.hash === 'Keccak-256'; }
   function unit() { return keccak() ? 'permutations' : 'compressions'; }
+  function units() { return keccak() ? 'Keccak-f permutations' : S.hash + ' compressions'; }
   function cfg(shape, b, hash, h) {
     hash = hash || S.hash; h = h || S.h;
     for (var i = 0; i < D.configs.length; i++) {
@@ -804,9 +803,9 @@ document.addEventListener('pointerdown', function (e) {
   function thr(shape, b) {
     for (var i = 0; i < D.threshold.length; i++) {
       var t = D.threshold[i];
-      if (t.h === S.h && t.shape === shape && (b === undefined || t.b === b)) return t;
+      if (t.h === S.h && t.hash === S.hash && t.shape === shape && (b === undefined || t.b === b)) return t;
     }
-    throw new Error('no threshold figures for h = ' + S.h + ', ' + shape + (b === undefined ? '' : ', b = ' + b));
+    throw new Error('no threshold figures for h = ' + S.h + ', ' + S.hash + ', ' + shape + (b === undefined ? '' : ', b = ' + b));
   }
   function set(f, html) { [].forEach.call(document.querySelectorAll('[data-f="' + f + '"]'), function (e) { e.innerHTML = html; }); }
   function split(c) { return c.layers.join(' + '); }
@@ -836,28 +835,28 @@ document.addEventListener('pointerdown', function (e) {
     [].forEach.call(document.querySelectorAll('[data-shape]'), function (e) { e.hidden = e.dataset.shape !== S.shape; });
 
     // one signer: the pruned key at three sizes, or the layered key, on the same three devices
-    set('signer-lead', keccak() ? 'Times at the rate of each device.' : 'Times are shown for Keccak-256, whose speed the devices were measured at.');
+    set('signer-lead', 'Times at the rate of each device, with ' + S.hash + '.');
     var devs = [
-      { name: 'Light', b: 13, rate: W.device_rate, kib: '16', cache: '16&nbsp;KiB',
+      { name: 'Light', b: 13, rate: rate('Ledger Nano S+'), kib: '16', cache: '16&nbsp;KiB',
         dev: '<a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a>' },
-      { name: 'Standard', b: 20, rate: WEAK, kib: '1024', cache: '1&nbsp;MiB', dev: S.shape === 'layered' ? 'Weak CPU' : 'weak CPU' },
-      { name: 'Full', b: S.h, rate: POWERFUL, kib: '16384', cache: '16&nbsp;MiB', dev: S.shape === 'layered' ? 'Powerful CPU' : 'powerful CPU' }
+      { name: 'Standard', b: 20, rate: rate('weak CPU'), kib: '1024', cache: '1&nbsp;MiB', dev: S.shape === 'layered' ? 'Weak CPU' : 'weak CPU' },
+      { name: 'Full', b: S.h, rate: rate('powerful CPU'), kib: '16384', cache: '16&nbsp;MiB', dev: S.shape === 'layered' ? 'Powerful CPU' : 'powerful CPU' }
     ];
     devs.forEach(function (d, k) {
       var c = S.shape === 'layered' ? lay : cfg('pruned', d.b), what;
-      var dev = d.dev + '<span class="info' + (S.shape === 'layered' ? ' r' : '') + '" tabindex="0" data-tip="' + fmt(d.rate) + ' Keccak-f permutations per second">i</span>';
+      var dev = d.dev + '<span class="info' + (S.shape === 'layered' ? ' r' : '') + '" tabindex="0" data-tip="' + fmt(d.rate) + ' ' + units() + ' per second">i</span>';
       set('head-' + k, S.shape === 'layered' ? '<div class="hd"><span>' + dev + '</span></div>' : '<div class="hd">' + d.name + '<span class="dev">' + dev + '</span></div>');
       if (c.shape === 'layered') what = 'layers of ' + split(c);
       else if (c.b === c.h) what = 'full tree of ' + pow2(c.h);
       else what = 'subtree of ' + pow2(c.b);
-      var t = function (n) { return keccak() ? '<span class="ex">' + time(n / d.rate) + '</span>' : ''; };
+      var t = function (n) { return '<span class="ex">' + time(n / d.rate) + '</span>'; };
       set('life-' + k, '<div>' + fmt(c.lifetime) + ' signatures <span class="st">(' + what + ')</span></div>');
       set('keygen-' + k, '<div class="hd"><span>' + fmt(c.keygen) + '&nbsp;' + unit() + '</span>' + t(c.keygen) + '</div>');
       set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + '<span class="br">, </span>' + d.cache +
         ' cache</span>' + t(c.sign[d.kib]) + '</div>');
     });
 
-    // threshold, with Keccak-256, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
+    // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
     var TB = [8, 10, 12], rows = ['3', '5', '7'];
     var tps = TB.map(function (b) { return thr('pruned', b); }), tl = thr('layered');
     TB.forEach(function (b, k) { set('th-b-' + k, pow2(b)); });
@@ -876,22 +875,22 @@ document.addEventListener('pointerdown', function (e) {
     var th = S.shape === 'layered' ? tl : tps[0];
     set('th-online', 'Online, ' + (S.shape === 'layered' ? 'layered' : 'pruned') + ' key at <i>h</i> = ' + S.h + ': about ' + fmt(th.grind) +
       ' grinding attempts in the clear (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared + (S.shape === 'layered' ? '' : ', onto instances of the kept subtree') +
-      '), then about ' + Math.round(W.opened_avg) + ' forest chain values opened (at most ' + W.opened_max + '). All figures with Keccak-256.');
+      '), then about ' + Math.round(W.opened_avg) + ' forest chain values opened (at most ' + W.opened_max + ').');
     set('prepared', String(W.prepared));
 
-    // hardware wallets, with Keccak-256, for the chosen shape: what the device prepares, then the randomizer
-    var prep = th.prep, prepAll = W.prepared * prep;
+    // hardware wallets, with the chosen hash, for the chosen shape: what the device prepares, then the randomizer
+    var ledger = rate('Ledger Nano S+'), prep = th.prep, prepAll = W.prepared * prep;
     set('hw-prep', 'The device prepares ' + W.prepared + ' random instances in advance' + (S.shape === 'layered'
       ? ': their forest keys, the trees of the lower layers and the WOTS+C signatures that link them up to the top layer'
       : ', all in its kept subtree: their forest keys, WOTS+C signatures and authentication paths') +
-      ', about ' + fmt(prepAll) + ' Keccak-f permutations (' + time(prepAll / W.device_rate) + ' on a Ledger Nano S+), then one more per signature (' +
-      time(prep / W.device_rate) + ').');
-    var grind = th.grind, prove = grind / W.host_rate, check = W.stark_verify / W.device_rate;
+      ', about ' + fmt(prepAll) + ' ' + units() + ' (' + time(prepAll / ledger) + ' on a Ledger Nano S+), then one more per signature (' +
+      time(prep / ledger) + ').');
+    var grind = th.grind, prove = grind / W.host_rate, check = W.stark_verify / ledger;
     set('hw-host', 'About ' + fmt(grind) + ' hashes at <i>h</i> = ' + S.h + ' (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared +
-      '); proved at about ' + fmt(W.host_rate) + ' Keccak-f permutations per second: ' + time(prove) + '.');
-    set('hw-device', 'About ' + fmt(W.stark_verify) + ' Keccak-f permutations: ' + time(check) + ' on a Ledger Nano S+.');
+      '); proved at about ' + fmt(W.host_rate) + ' hashes per second: ' + time(prove) + '.');
+    set('hw-device', 'About ' + fmt(W.stark_verify) + ' ' + units() + ': ' + time(check) + ' on a Ledger Nano S+.');
     set('hw-total', 'In all, about ' + time(prove + check) + ' to ship and verify the randomizer at <i>h</i> = ' + S.h + ', with the ' +
-      (S.shape === 'layered' ? 'layered' : 'pruned') + ' key (Keccak-256).');
+      (S.shape === 'layered' ? 'layered' : 'pruned') + ' key (' + S.hash + ').');
 
     // the diagram: one pruned tree, or the layers
     if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers);
@@ -1001,7 +1000,7 @@ document.addEventListener('pointerdown', function (e) {
     }
     var left = X - 2 * ls[0].a - 18;
     var defs = el('defs', {}, layered), bodies = el('g', {}, layered), edges = el('g', { 'class': 'tree' }, layered), meas = el('g', { 'class': 'tree' }, layered);
-    var nd = el('g', { 'class': 'nd' }, layered), sb = el('g', { 'class': 'sib' }, layered);
+    var sb = el('g', { 'class': 'sib' }, layered);
     ls.forEach(function (l, i) {
       var yb = l.bottom, y3 = l.y0 + l.s, ylast = y3 + l.hb;
       // the body: thin branches and stubs, fading out toward the leaf row (as the bottom of the pruned tree)
@@ -1014,10 +1013,6 @@ document.addEventListener('pointerdown', function (e) {
       l.rows[DRAWN + l.nb].forEach(function (p) { el('line', { x1: n1(p), y1: n1(ylast), x2: n1(p), y2: n1(yb) }, body); });
       for (var j = 1; j <= DRAWN; j++) l.rows[j].forEach(function (p, m) {
         el('line', { x1: n1(l.rows[j - 1][m >> 1]), y1: n1(l.y0 + (j - 1) * l.s / DRAWN), x2: n1(p), y2: n1(l.y0 + j * l.s / DRAWN) }, edges);
-      });
-      for (j = 1; j <= DRAWN; j++) l.rows[j].forEach(function (p) {
-        var yy = l.y0 + j * l.s / DRAWN, onPath = Math.abs(p - l.nodes[j][0]) < 0.01, isSib = Math.abs(p - l.sib[j - 1][0]) < 0.01;
-        if (!onPath && !isSib) el('circle', { cx: n1(p), cy: n1(yy), r: 1.9 }, nd);
       });
       l.sib.forEach(function (p) { el('circle', { cx: n1(p[0]), cy: n1(p[1]), r: 2.4 }, sb); });
       bar(meas, left, l.y0, yb);
