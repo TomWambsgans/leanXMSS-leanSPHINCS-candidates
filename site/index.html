@@ -349,8 +349,7 @@ footer a + a { margin-left: 1.25rem; }
     </div>
   </div>
   <figure>
-      <svg viewBox="10 -123 572 679" preserveAspectRatio="xMaxYMid meet" role="img" aria-labelledby="dia-title">
-        <title id="dia-title">A leanSphincs signature with a pruned key: a path in the XMSS tree of height 24 to a leaf, the hash of a WOTS+C key of 64 chains of length 4, which signs a two-level WOTS forest: 8 trees of height 4 whose leaves join two subtrees of height 3 over WOTS keys of 6 chains of length 5; the signer builds only a subtree of the tree</title>
+      <svg viewBox="10 -123 572 679" preserveAspectRatio="xMaxYMid meet" role="img" aria-label="A leanSphincs signature">
         <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient></defs>
         <g class="part xmss pruned">
           <g class="tree">
@@ -929,11 +928,9 @@ document.addEventListener('pointerdown', function (e) {
   var svg = document.querySelector('figure svg');
   if (!svg) return;
   var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 228;   // the column of the path, the tip of the WOTS+C brace
-  var pruned = svg.querySelector('.xmss.pruned'), layered = svg.querySelector('.xmss.layered'), title = svg.querySelector('title');
+  var pruned = svg.querySelector('.xmss.pruned'), layered = svg.querySelector('.xmss.layered');
   var motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   var shown = 'pruned', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
-  var FOREST = 'a two-level WOTS forest: 8 trees of height 4 whose leaves join two subtrees of height 3 over WOTS keys of 6 chains of length 5';
-  var WC = 'a WOTS+C key of 64 chains of length 4';
 
   function el(name, attrs, parent) {
     var e = document.createElementNS(NS, name);
@@ -1058,9 +1055,6 @@ document.addEventListener('pointerdown', function (e) {
   // Called by the figures with the chosen configuration: draws it (and restarts the animation) when the shape changes.
   window.sigDiagram = function (h, shape, layers) {
     var want = shape === 'layered' ? 'layered ' + layers.join('+') : 'pruned';
-    title.textContent = shape === 'layered'
-      ? 'A leanSphincs signature with a layered key of height ' + h + ' (layers of height ' + layers.join(', ') + ', top first): in each layer a path to a leaf, the hash of ' + WC + ' that signs the root of the layer below; the bottom layer’s key signs ' + FOREST
-      : 'A leanSphincs signature with a pruned key: a path in the XMSS tree of height ' + h + ' to a leaf, the hash of ' + WC + ', which signs ' + FOREST + '; the signer builds only a subtree of the tree';
     if (want === shown) return;
     shown = want;
     if (shape === 'layered') {
