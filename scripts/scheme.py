@@ -291,8 +291,8 @@ KECCAK_ANDS = 36_300  # AND gates of one Keccak-f[1600] call with a public part 
 # AND gates of one compression in a binary MPC: Keccak-f as above; SHA-256, the Bristol-format circuit (22,573);
 # BLAKE2s, 10 rounds of 8 G functions of 6 additions modulo 2^32 at 31 AND gates each (14,880).
 ANDS = {"Keccak-256": KECCAK_ANDS, "SHA-256": 22_573, "BLAKE2s": 10 * 8 * 6 * 31}
-STARK_VERIFY = 10_000  # permutations to verify the STARK of a least grinding index on the device
-HOST_RATE = 1e6  # Keccak-f permutations per second the host proves
+STARK_VERIFY = 10_000  # compressions to verify the STARK of a least grinding index on the device
+HOST_RATE = 1e6  # hashes per second the host proves (the hash of the configuration)
 DEVICE_RATE = 5.8e3  # Keccak-f permutations per second of a Ledger Nano S+ (hwbench)
 
 # Compressions per second of each device, per hash. The Ledger Nano S+ is measured for each hash (hwbench:
