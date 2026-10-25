@@ -12,7 +12,7 @@ evaluates one option at a time. -/
 
 namespace LeanForest.Security.H0
 
-open LeanSphincs.Security.H0
+open LeanForest.Base.H0
 
 /-! ### Rebuilding -/
 

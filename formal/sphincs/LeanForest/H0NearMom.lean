@@ -10,7 +10,7 @@ open ENNReal
 
 namespace LeanForest.Security.H0
 
-open Concrete H0Avg LeanSphincs.Security.Domination
+open Concrete H0Avg LeanForest.Base.Domination
 
 set_option linter.unusedSectionVars false
 attribute [local irreducible] lut codewordCodes

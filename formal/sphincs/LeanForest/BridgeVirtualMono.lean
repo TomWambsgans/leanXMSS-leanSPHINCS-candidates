@@ -1,4 +1,4 @@
-import LeanSphincs.BridgeVirtualOnce
+import LeanForest.Base.VirtualOnce
 
 /-! The one-coin virtual future for monotone base functions. The forest witness (a cover
 indicator) is monotone but not supermodular, so the FORS lemmas that add coins by their gains do
@@ -11,7 +11,7 @@ open ENNReal
 
 namespace LeanForest.Security.Domination
 
-open LeanSphincs.Security.Domination
+open LeanForest.Base.Domination
 
 variable {V : Type}
 

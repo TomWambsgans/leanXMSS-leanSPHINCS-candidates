@@ -9,7 +9,7 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.GraphView
 
-open LeanSphincs.Security
+open LeanForest.Base
 open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForestSigner LeanForest.LoopWalk
 
 set_option backward.isDefEq.respectTransparency false

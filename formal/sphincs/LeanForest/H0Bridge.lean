@@ -1,7 +1,7 @@
 import LeanForest.H0Tables
 import LeanForest.BridgeForestPrice
 import LeanForest.BridgeForsPotential
-import LeanSphincs.H0Split
+import LeanForest.Base.Split
 
 /-! **From the forest price to per-index moments.** The cover price of a multiset of disclosed views
 is a sum over the indices of the probability that a uniform mark is covered by the marks at the
@@ -13,7 +13,7 @@ open ENNReal
 
 namespace LeanForest.Security.H0
 
-open Concrete ForestPrice LeanSphincs.Security.Domination H0Avg
+open Concrete ForestPrice LeanForest.Base.Domination H0Avg
 
 set_option linter.unusedSectionVars false
 attribute [local irreducible] lut codewordCodes
@@ -297,7 +297,7 @@ theorem excess_le_split (b0 : ℝ≥0∞) (c c1 θ : ℝ) (hc : ENNReal.ofReal c
         · rw [← ENNReal.ofReal_sub _ h0]
     _ ≤ ENNReal.ofReal (∑ l, max (y l - c1) 0 +
           Real.exp (-θ * c) / (Real.exp 1 * θ) * ∏ l, Real.exp (θ * min (y l) c1)) :=
-        ENNReal.ofReal_le_ofReal (LeanSphincs.Security.H0.split_real _ c c1 θ hθ)
+        ENNReal.ofReal_le_ofReal (LeanForest.Base.H0.split_real _ c c1 θ hθ)
     _ = _ := by
         rw [ENNReal.ofReal_add (Finset.sum_nonneg fun l _ => le_max_right _ _) (by positivity),
           ENNReal.ofReal_sum_of_nonneg (fun l _ => le_max_right _ _),

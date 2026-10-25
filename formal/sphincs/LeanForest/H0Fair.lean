@@ -1,5 +1,5 @@
 import LeanForest.BridgeForsPotentialOnce
-import LeanSphincs.H0Assembly
+import LeanForest.Base.Assembly
 import Mathlib.Analysis.Complex.ExponentialBounds
 
 /-! The fair share `wbarOf q` of the grinding signer at budget `q`, its fair-share hypotheses, real

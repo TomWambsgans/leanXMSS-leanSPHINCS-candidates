@@ -11,7 +11,7 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.ForsPotential
 
-open LeanSphincs.Security
+open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenBridge
 open PotentialA
 

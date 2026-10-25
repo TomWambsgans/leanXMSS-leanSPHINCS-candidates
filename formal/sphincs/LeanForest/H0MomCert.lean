@@ -1,5 +1,5 @@
 import LeanForest.H0FTab
-import LeanSphincs.H0SplitCert
+import LeanForest.Base.SplitCert
 
 /-! **Rational upper bounds of the per-tree moments.** From the kernel-checked codeword tables
 (`f(u)` exactly for `u ≤ 40`, `f(u) ≤ 1` beyond) the closed forms of `Ψ1(n)` and `Ψ2(n)` give
@@ -9,7 +9,7 @@ open ENNReal
 
 namespace LeanForest.Security.H0
 
-open Concrete LeanSphincs.Security.H0
+open Concrete LeanForest.Base.H0
 
 set_option linter.unusedSectionVars false
 attribute [local irreducible] lut codewordCodes

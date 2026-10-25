@@ -1,4 +1,4 @@
-import LeanSphincs.BridgeVirtual
+import LeanForest.Base.Virtual
 import LeanForest.LifetimeLanding
 
 /-! The forest price over multisets of disclosed kept views. A target view is covered when, in every
@@ -11,7 +11,7 @@ open ENNReal
 
 namespace LeanForest.Security.ForestPrice
 
-open Concrete LeanSphincs.Security.Domination
+open Concrete LeanForest.Base.Domination
 
 variable [Params]
 

@@ -113,7 +113,7 @@ end LeanForest.Security.HiddenDebt
 
 namespace LeanForest.Security.GraphView
 
-open LeanSphincs.Security
+open LeanForest.Base
 open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForestSigner
 
 attribute [local instance] Classical.propDecidable

@@ -11,7 +11,7 @@ open ENNReal NNReal
 
 namespace LeanForest.Security.H0
 
-open Concrete ForestPrice ForsPotential LeanSphincs.Security.H0 LeanSphincs.Security.Domination
+open Concrete ForestPrice ForsPotential LeanForest.Base.H0 LeanForest.Base.Domination
 
 set_option linter.unusedSectionVars false
 set_option exponentiation.threshold 512
@@ -302,7 +302,7 @@ end LeanForest.Security.H0
 namespace LeanForest.Security.ForsPotential
 
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal
-  LeanSphincs.Security.Domination
+  LeanForest.Base.Domination
 open HiddenBridge PotentialA
 
 set_option backward.isDefEq.respectTransparency false

@@ -1,6 +1,5 @@
 import LeanForest.H0ForestOpt
 import LeanForest.BridgeSatWRoutes
-import LeanSphincs.H0Numeric
 
 /-! Forest split-bound covers at the survival-weighted baseline `baselineW` (thresholds `betaWQ`): a
 successful cover check bounds the large-route term at every budget it covers. -/
@@ -9,7 +8,7 @@ open ENNReal NNReal
 
 namespace LeanForest.Security.H0
 
-open Concrete ForestPrice LeanSphincs.Security.H0 LeanSphincs.Security.Domination
+open Concrete ForestPrice LeanForest.Base.H0 LeanForest.Base.Domination
 
 /-- Keygen credit `K` of the forest signer: the `226 · 2^b + 2 (24 − b)` hash calls of key
 generation (`Prefix.hashCalls_keygenFromSeed`), with one seed derivation for the starts of two chains. -/

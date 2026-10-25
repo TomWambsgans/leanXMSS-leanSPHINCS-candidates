@@ -15,7 +15,7 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.ForsPotential
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal LeanSphincs.Security.Domination
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal LeanForest.Base.Domination
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000

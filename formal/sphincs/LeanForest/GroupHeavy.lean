@@ -15,7 +15,7 @@ open ENNReal
 
 namespace LeanForest.LoopWalk
 
-open LeanSphincs.Security.Domination LeanForest.Security.Domination
+open LeanForest.Base.Domination LeanForest.Security.Domination
 
 variable {α V : Type} [Fintype α] [DecidableEq α] (σ : Equiv.Perm α) (p : ℝ≥0∞) (A : ℕ) (U : Finset V)
 

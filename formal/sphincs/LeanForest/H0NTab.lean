@@ -6,7 +6,7 @@ import LeanForest.H0NearMom
 
 namespace LeanForest.Security.H0
 
-open Concrete LeanSphincs.Security.H0
+open Concrete LeanForest.Base.H0
 
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 0

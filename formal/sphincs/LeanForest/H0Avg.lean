@@ -1,4 +1,4 @@
-import LeanSphincs.H0Once
+import LeanForest.Base.Once
 
 /-! **Averaging out the marks.** The one-coin H-term over views `ι × M` (an index and a mark) is at
 most the H-term over indices alone of any function `F` of index multisets that dominates the mark
@@ -11,7 +11,7 @@ open ENNReal
 
 namespace LeanForest.Security.H0Avg
 
-open LeanSphincs.Security.Domination LeanSphincs.Security.H0
+open LeanForest.Base.Domination LeanForest.Base.H0
 
 variable {ι M : Type} [Fintype ι] [Fintype M] [Nonempty M]
 

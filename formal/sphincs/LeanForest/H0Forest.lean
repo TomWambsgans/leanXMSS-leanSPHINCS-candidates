@@ -1,5 +1,5 @@
 import LeanForest.H0Bridge
-import LeanSphincs.H0Split
+import LeanForest.Base.Split
 
 /-! **The forest H-term.** With per-index majorants `ḡ ≥ E[g(y) | n]` and `h̄ ≥ E[h(y) | n]` that
 are increasing and convex in the number of views `n`, the separable count function
@@ -11,7 +11,7 @@ open ENNReal NNReal
 
 namespace LeanForest.Security.H0
 
-open Concrete ForestPrice LeanSphincs.Security.Domination LeanSphincs.Security.H0 H0Avg
+open Concrete ForestPrice LeanForest.Base.Domination LeanForest.Base.H0 H0Avg
 
 set_option linter.unusedSectionVars false
 
