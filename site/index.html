@@ -1486,12 +1486,14 @@ document.addEventListener('pointerdown', function (e) {
       stage(250, [[[X, TIP], low.leaf]], false);
       for (var i = geo.length - 1; i >= 0; i--) {
         var l = geo[i];
-        stage(500 + 70 * l.t, [l.nodes.slice().reverse()], true, i === 0 ? 3.2 : 2.6, true);   // the paths stay drawn
-        if (i === 0) break;
+        stage(500 + 70 * l.t, [l.nodes.slice().reverse()], true, i === 0 ? 3.2 : 2.6, true);
+        if (i === 0) break;                  // the top path stays drawn
+        var walked = segs[segs.length - 1];
         var k = geo[i - 1].key;
         stage(300, k.chains.map(function (c) { return [l.root, c]; }), false, 1.4);
         stage(400, k.chains.map(function (c) { return [c, [c[0], k.top]]; }), true, 1.6);
         stage(300, k.chains.map(function (c) { return [[c[0], k.top], geo[i - 1].leaf]; }), false, 1.6);
+        walked.erase = [walked.t1, t];       // the path of this layer is erased, from its leaf, on the way to the next
       }
       root = geo[0].root;
     }
@@ -1520,6 +1522,12 @@ document.addEventListener('pointerdown', function (e) {
       s.dot.setAttribute('cy', a[1] + (b[1] - a[1]) * u);
       s.dot.setAttribute('opacity', x > 0 && (x < 1 || s.last) ? 1 : 0);
       if (s.line) {
+        if (s.erase && t > s.erase[0]) {   // the dash slides off the start of the path
+          var e = ease(Math.min(1, (t - s.erase[0]) / (s.erase[1] - s.erase[0]))) * s.len;
+          s.line.setAttribute('stroke-dashoffset', 2 * s.len - e);
+          s.line.setAttribute('opacity', e < s.len ? 1 : 0);
+          return;
+        }
         s.line.setAttribute('stroke-dashoffset', s.len - d);
         // a visited layer goes back to normal while the next one is walked
         var nx = !s.keep && stages[s.stage + 1];
