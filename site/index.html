@@ -1150,7 +1150,7 @@ document.addEventListener('pointerdown', function (e) {
     };
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
-      var dev = d.dev + '<span class="info' + (lay_ && k > 0 ? ' r' : '') + '" tabindex="0" data-tip="' + (d.host ? fmt(d.rate) : (Number.isInteger(Math.log2(d.rate)) ? '' : '≈ ') + pow2t(Math.round(Math.log2(d.rate)))) +
+      var dev = d.dev + '<span class="info' + (lay_ && k > 0 ? ' r' : '') + '" tabindex="0" data-tip="' + (d.host ? fmt(d.rate) : pow2t(Math.round(Math.log2(d.rate)))) +
         ' ' + units() + ' per second">i</span>';
       set('head-' + k, lay_ ? '<div class="hd"><span>' + dev + '</span></div>' : '<div class="hd">' + d.name + '<span class="dev">' + dev + '</span></div>');
       if (c.shape === 'layered') what = '';
