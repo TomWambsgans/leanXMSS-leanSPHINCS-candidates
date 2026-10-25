@@ -4,10 +4,6 @@
 //! instance of a batch), or secret (shared). Constants fold away at build time; public-public gates
 //! run in the clear; a secret XOR, NOT, or AND with a public wire is local. Only secret-secret ANDs
 //! cost communication, and the program runs them level by level: one round per AND level.
-//!
-//! The ripple-carry and carry-save adders of [`crate::blake2s_circuit`] follow the gadgets of
-//! leanVM's flock (crates/flock/src/gf2.rs, CREDIT: https://github.com/succinctlabs/flock,
-//! MIT OR Apache-2.0).
 
 pub type Wire = u32;
 pub const ZERO: Wire = 0;

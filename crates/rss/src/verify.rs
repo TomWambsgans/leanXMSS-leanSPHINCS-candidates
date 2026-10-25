@@ -27,7 +27,7 @@
 //!    honest shares fix), and everyone checks `F G = p(r)`.
 //!
 //! Soundness: an `e != 0` passes with probability at most `(R + 2 (R + 1)) / (2^128 - 2) < 2^-120`
-//! for any batch here (`R < 60`), plus the PRF's and BLAKE2s's (collision) advantages; openings are
+//! for any batch here (`R < 60`), plus the PRF's and Keccak-256's (collision) advantages; openings are
 //! error-detecting, and an opening's check adds `(c + 1) / 2^128` ([`soundness_log2`]). Over a
 //! ceremony the batches add up: about 2^-107 for the ~25,000 batches of lifetime 2^16. Every coin
 //! and PRSS value of a call ([`Party::verify`], [`Party::open`]) is tagged with a per-call epoch, so
@@ -109,7 +109,7 @@ pub(crate) fn verify(p: &mut Party) -> Result<(), Abort> {
         let per_term: Vec<[u8; 32]> = p.hashes.iter().map(|h| h.finalize()).collect();
         let digests: Vec<Vec<u8>> = (0..n).map(|q| p.digests(&per_term, q)).collect();
         let got = p.net.exchange(digests.clone())?;
-        p.hashes = (0..s.m()).map(|_| blake2s::Hasher::new()).collect();
+        p.hashes = (0..s.m()).map(|_| keccak::Hasher::new()).collect();
         p.pending = false;
         return p.check((0..n).all(|q| q == i || got[q] == digests[q]), "inconsistent input terms");
     }
@@ -203,7 +203,7 @@ pub(crate) fn verify(p: &mut Party) -> Result<(), Abort> {
     p.record.checks.push(("final", disc.0));
     let accept = disc == Gf128::ZERO || p.complicit();
     let got = p.net.exchange(vec![vec![accept as u8]; n])?;
-    p.hashes = (0..s.m()).map(|_| blake2s::Hasher::new()).collect();
+    p.hashes = (0..s.m()).map(|_| keccak::Hasher::new()).collect();
     p.pending = false;
     p.check(accept, "verification failed: a wrong AND")?;
     p.check((0..n).all(|q| q == i || got[q] == [1]), "another party rejected the verification")

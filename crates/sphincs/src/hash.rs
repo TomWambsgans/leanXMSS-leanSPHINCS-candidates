@@ -1,4 +1,4 @@
-//! `Th`, the address that names every hash call, and the compression counter.
+//! `Th`, the address that names every hash call, and the permutation counter.
 
 use std::cell::Cell;
 
@@ -17,7 +17,7 @@ pub const TWEAK_RANDOMIZER: u8 = 7;
 pub const TWEAK_FTS_PRF: u8 = 8;
 pub const TWEAK_FTS_LEAF: u8 = 9;
 pub const TWEAK_FTS_NODE: u8 = 10;
-pub const TWEAK_FTS_KEY: u8 = 11;
+// Type 11 (the former FORS key hash) is unused: the encoding absorbs the FORS tops.
 pub const TWEAK_MSG: u8 = 12;
 /// A pruned key's surrogate siblings (the kept subtree's position comes from the low bits of `P`).
 pub const TWEAK_SURROGATE: u8 = 13;
@@ -45,7 +45,7 @@ impl Tweak {
 }
 
 /// The 16 bytes that follow `P` in a hash input: `[lo:4 | hi:3 | t + 32 step:1 | 0^8]`, the fields little
-/// endian. With `P` they fill half a block, so every value of a payload starts on a 16-byte boundary.
+/// endian. With `P` they fill 32 bytes, so every value of a payload starts on a 16-byte boundary of the input.
 pub fn address(tw: &Tweak) -> [u8; ADDRESS_LEN] {
     let mut out = [0u8; ADDRESS_LEN];
     out[..4].copy_from_slice(&tw.lo.to_le_bytes());
@@ -55,35 +55,35 @@ pub fn address(tw: &Tweak) -> [u8; ADDRESS_LEN] {
 }
 
 /// A hasher that has absorbed `P | address`.
-fn start(pp: &PublicParam, tw: &Tweak) -> blake2s::Hasher {
-    let mut hasher = blake2s::Hasher::new();
+fn start(pp: &PublicParam, tw: &Tweak) -> keccak::Hasher {
+    let mut hasher = keccak::Hasher::new();
     hasher.update(pp).update(&address(tw));
     hasher
 }
 
 thread_local! {
-    static COMPRESSIONS: Cell<u64> = const { Cell::new(0) };
+    static PERMUTATIONS: Cell<u64> = const { Cell::new(0) };
 }
 
-/// BLAKE2s compressions this thread has spent in [`th`], [`th_digests`] and [`Midstate`].
-pub fn compressions() -> u64 {
-    COMPRESSIONS.with(Cell::get)
+/// Keccak-f permutations this thread has spent in [`th`], [`th_pair`], [`th_digests`] and [`Midstate`].
+pub fn permutations() -> u64 {
+    PERMUTATIONS.with(Cell::get)
 }
 
-/// Compressions BLAKE2s spends on `len` bytes.
+/// Permutations Keccak-256 spends on `len` bytes: `len / 136 + 1`.
 pub const fn blocks(len: usize) -> u64 {
-    if len == 0 { 1 } else { len.div_ceil(64) as u64 }
+    keccak::permutations(len)
 }
 
 fn count(len: usize) {
-    COMPRESSIONS.with(|c| c.set(c.get() + blocks(len)));
+    count_blocks(blocks(len));
 }
 
 fn count_blocks(n: u64) {
-    COMPRESSIONS.with(|c| c.set(c.get() + n));
+    PERMUTATIONS.with(|c| c.set(c.get() + n));
 }
 
-/// `Th(P, tw, payload)`: BLAKE2s of `P | address | payload`, truncated.
+/// `Th(P, tw, payload)`: Keccak-256 of `P | address | payload`, truncated.
 pub fn th(pp: &PublicParam, tw: &Tweak, payload: &[u8]) -> Digest {
     count(PUBLIC_PARAM_LEN + ADDRESS_LEN + payload.len());
     let mut hasher = start(pp, tw);
@@ -91,7 +91,7 @@ pub fn th(pp: &PublicParam, tw: &Tweak, payload: &[u8]) -> Digest {
     hasher.finalize()[..N].try_into().unwrap()
 }
 
-/// Two secrets for one hash: the two 16-byte halves of the untruncated BLAKE2s of `P | address | payload`.
+/// Two secrets for one hash: the two 16-byte halves of the untruncated Keccak-256 of `P | address | payload`.
 pub fn th_pair(pp: &PublicParam, tw: &Tweak, payload: &[u8]) -> [Digest; 2] {
     count(PUBLIC_PARAM_LEN + ADDRESS_LEN + payload.len());
     let mut hasher = start(pp, tw);
@@ -100,7 +100,7 @@ pub fn th_pair(pp: &PublicParam, tw: &Tweak, payload: &[u8]) -> [Digest; 2] {
     [out[..N].try_into().unwrap(), out[N..].try_into().unwrap()]
 }
 
-/// `Th` over a concatenation of digests: a Merkle node, a one-time leaf, or the FORS key (the two top nodes of every tree).
+/// `Th` over a concatenation of digests: a Merkle node or a one-time leaf.
 pub fn th_digests(pp: &PublicParam, tw: &Tweak, values: &[Digest]) -> Digest {
     count(PUBLIC_PARAM_LEN + ADDRESS_LEN + values.len() * N);
     let mut hasher = start(pp, tw);
@@ -110,43 +110,34 @@ pub fn th_digests(pp: &PublicParam, tw: &Tweak, values: &[Digest]) -> Digest {
     hasher.finalize()[..N].try_into().unwrap()
 }
 
-/// The hash state after the whole blocks of `P | address | fixed`, for inputs that differ only in
-/// what follows. What follows is never empty, so every whole block of the fixed part is compressed
-/// here, once, and each [`Midstate::finish`] pays for the rest.
+/// The sponge state after the whole blocks of `P | address | fixed`, for inputs that differ only in
+/// what follows. Every whole block of the fixed part is permuted here, once, and each
+/// [`Midstate::finish`] pays for the rest and the padding.
 #[derive(Clone)]
 pub struct Midstate {
-    /// The chaining value after `absorbed` bytes.
-    state: [u32; 8],
-    absorbed: usize,
-    /// The end of the fixed part, less than a block.
-    rest: Vec<u8>,
+    hasher: keccak::Hasher,
+    /// The end of the fixed part that is not a whole block, in bytes.
+    rest: usize,
 }
 
 impl Midstate {
     pub fn new(pp: &PublicParam, tw: &Tweak, fixed: &[&[u8]]) -> Self {
-        let mut input = [&pp[..], &address(tw)].concat();
+        let mut hasher = start(pp, tw);
+        let mut len = PUBLIC_PARAM_LEN + ADDRESS_LEN;
         for part in fixed {
-            input.extend_from_slice(part);
+            hasher.update(part);
+            len += part.len();
         }
-        let (whole, rest) = input.as_chunks::<64>();
-        let mut state = blake2s::PARAM_IV;
-        for (b, block) in whole.iter().enumerate() {
-            let words = std::array::from_fn(|i| u32::from_le_bytes(block[4 * i..4 * i + 4].try_into().unwrap()));
-            blake2s::compress(&mut state, &words, (64 * (b + 1)) as u64, false);
-        }
-        count_blocks(whole.len() as u64);
-        Self { state, absorbed: 64 * whole.len(), rest: rest.to_vec() }
+        count_blocks((len / keccak::RATE) as u64);
+        Self { hasher, rest: len % keccak::RATE }
     }
 
-    /// The untruncated 32-byte BLAKE2s of the input completed by `tail`, which is not empty.
+    /// The untruncated 32-byte Keccak-256 of the input completed by `tail`.
     pub fn finish(&self, tail: &[u8]) -> [u8; 32] {
-        let len = self.rest.len() + tail.len();
-        let mut data = [0u8; 128];
-        assert!(!tail.is_empty() && len <= data.len());
-        data[..self.rest.len()].copy_from_slice(&self.rest);
-        data[self.rest.len()..len].copy_from_slice(tail);
-        count(len);
-        blake2s::hash_from_state_final(&data[..len.div_ceil(64) * 64], &self.state, self.absorbed as u64, len)
+        count(self.rest + tail.len());
+        let mut hasher = self.hasher.clone();
+        hasher.update(tail);
+        hasher.finalize()
     }
 }
 
@@ -164,25 +155,25 @@ mod tests {
         let mut input = pp.to_vec();
         input.extend_from_slice(&address(&tw));
         input.extend_from_slice(&payload);
-        assert_eq!(th(&pp, &tw, &payload)[..], blake2s::hash(&input)[..N]);
+        assert_eq!(th(&pp, &tw, &payload)[..], keccak::hash(&input)[..N]);
     }
 
-    /// A midstate gives the same hash as one pass, and pays for each block once, whether or not the
-    /// fixed part ends on a block boundary.
+    /// A midstate gives the same hash as one pass, and pays for each whole block once, whether or
+    /// not the fixed part ends on a block boundary.
     #[test]
     fn midstate_matches_one_pass() {
         let pp: PublicParam = std::array::from_fn(|i| 3 * i as u8);
         let tw = tweak(TWEAK_MSG, 1, 0);
-        for fixed_len in [32, 40] {
+        for fixed_len in [104, 120] {
             let (fixed, tail) = (vec![7u8; fixed_len], [9u8; 16]);
             let input = [&pp[..], &address(&tw), &fixed, &tail].concat();
-            let before = compressions();
+            let before = permutations();
             let state = Midstate::new(&pp, &tw, &[&fixed]);
-            assert_eq!(compressions() - before, 1, "the first block");
+            assert_eq!(permutations() - before, 1, "the first block");
             for _ in 0..3 {
-                let before = compressions();
-                assert_eq!(state.finish(&tail), blake2s::hash(&input));
-                assert_eq!(compressions() - before, 1, "one compression per tail");
+                let before = permutations();
+                assert_eq!(state.finish(&tail), keccak::hash(&input));
+                assert_eq!(permutations() - before, 1, "one permutation per tail");
             }
         }
     }

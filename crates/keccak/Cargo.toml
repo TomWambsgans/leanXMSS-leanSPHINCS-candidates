@@ -1,10 +1,10 @@
 [package]
-name = "blake2s"
+name = "keccak"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
-description = "BLAKE2s-256, scalar and batched SIMD (vendored from leanVM)"
+description = "Keccak-256 (Ethereum's keccak256): Keccak-f[1600] and the sponge, scalar"
 
 [lints]
 workspace = true

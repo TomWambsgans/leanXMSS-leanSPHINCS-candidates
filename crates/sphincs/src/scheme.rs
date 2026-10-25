@@ -78,13 +78,13 @@ impl Signature {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum VerifyError {
-    /// The counter does not encode the FORS key into a codeword.
+    /// The counter does not encode the FORS tops into a codeword.
     InadmissibleEncoding,
     RootMismatch,
 }
 
-/// The state of digest call `call` after its first block, `P | address | m`. The randomizer is the
-/// second block, so grinding it costs one compression per attempt.
+/// The state of digest call `call` after `P | address | m`. With the randomizer the whole input is
+/// 80 bytes, within one block, so grinding it costs one permutation per attempt.
 pub fn digest_midstate(pp: &PublicParam, m: &Message, call: u32) -> Midstate {
     Midstate::new(pp, &tweak(TWEAK_MSG, call, 0), &[m])
 }
@@ -244,11 +244,11 @@ pub fn randomizer(walk: &RandomizerWalk, i: u32) -> Randomizer {
 }
 
 /// `Sign`: take the least `i` whose randomizer `R_0 + i * delta` lands in the kept subtree (`i = 0`
-/// for a full key), open FORS, sign its key with WOTS+C.
+/// for a full key), open FORS, sign its tops with WOTS+C.
 pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
     let pp = &sk.public_param;
-    // The digest's first block is hashed once, and the randomizers are `R_0 + i * delta`: an attempt
-    // costs one compression.
+    // The digest's fixed part is absorbed once, and the randomizers are `R_0 + i * delta`: an
+    // attempt costs one permutation.
     let (walk, digests) = (randomizer_walk(pp, &sk.master, m), digest_midstate(pp, m, 0));
     let rho = (0u32..)
         .map(|i| randomizer(&walk, i))
@@ -260,7 +260,7 @@ pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
         secrets: std::array::from_fn(|kappa| fors_secret(pp, &sk.master, idx, kappa, u[kappa] as usize)),
         paths: forest.paths(&u),
     };
-    let (counter, wots) = wots_sign(pp, &sk.master, idx as u32, &forest.key).expect("no admissible WOTS+C encoding");
+    let (counter, wots) = wots_sign(pp, &sk.master, idx as u32, &forest.tops).expect("no admissible WOTS+C encoding");
     Signature { randomizer: rho, fors, counter, wots, path: sk.tree.path(idx) }
 }
 
@@ -268,8 +268,8 @@ pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
 pub fn verify(pk: &PublicKey, m: &Message, sig: &Signature) -> Result<(), VerifyError> {
     let pp = &pk.public_param;
     let (idx, u) = message_digest(pp, &sig.randomizer, m);
-    let fors_key = fors_recover(pp, idx, &u, &sig.fors);
-    let leaf = wots_recover(pp, idx as u32, &fors_key, sig.counter, &sig.wots).ok_or(VerifyError::InadmissibleEncoding)?;
+    let tops = fors_recover(pp, idx, &u, &sig.fors);
+    let leaf = wots_recover(pp, idx as u32, &tops, sig.counter, &sig.wots).ok_or(VerifyError::InadmissibleEncoding)?;
     if tree_fold(pp, idx, leaf, &sig.path) == pk.root { Ok(()) } else { Err(VerifyError::RootMismatch) }
 }
 
@@ -284,20 +284,20 @@ mod tests {
     #[test]
     fn pruned_sign_verify_and_costs() {
         for b in [3usize, 12] {
-            let before = compressions();
+            let before = permutations();
             let (sk, pk) = key_gen(&seed(b as u8), b);
-            let keygen = compressions() - before;
-            // P, the kept subtree (241 per WOTS leaf plus the nodes), and a derivation and a node per surrogate.
-            assert_eq!(keygen, 1 + (1u64 << b) * 241 + ((1u64 << b) - 1) + 2 * (H - b) as u64);
+            let keygen = permutations() - before;
+            // P, the kept subtree (232 per WOTS leaf plus the nodes), and a derivation and a node per surrogate.
+            assert_eq!(keygen, 1 + (1u64 << b) * 232 + ((1u64 << b) - 1) + 2 * (H - b) as u64);
             for t in 0..3u8 {
                 let m: Message = std::array::from_fn(|i| t ^ i as u8);
                 let sig = sign(&sk, &m);
                 let bytes = sig.to_bytes();
                 assert_eq!(bytes.len(), SIG_SIZE);
                 assert_eq!(Signature::from_bytes(&bytes).unwrap(), sig);
-                let before = compressions();
+                let before = permutations();
                 assert_eq!(verify(&pk, &m, &sig), Ok(()));
-                assert_eq!(compressions() - before, VERIFY_COMPRESSIONS, "verification is constant");
+                assert_eq!(permutations() - before, VERIFY_PERMUTATIONS, "verification is constant");
                 let mut other = m;
                 other[0] ^= 1;
                 assert!(verify(&pk, &other, &sig).is_err());
@@ -370,10 +370,10 @@ mod tests {
         let (sk, pk) = key_gen(&seed(1), 11);
         let m: Message = std::array::from_fn(|i| (7 * i) as u8);
         let sig = sign(&sk, &m);
-        let digest = blake2s::hash(&sig.to_bytes());
-        assert_eq!(hex(&pk.to_bytes()), "25e2cd4721a96bd25c7c164099a62f9df39e809c5482e50b8b8b76a66fab6507");
-        assert_eq!(hex(&digest), "0d13351aa6575f3b3512d06fe447f54e1a0d311b028fc55dd673cc30c4940afc");
-        assert_eq!(sig.counter, 1040);
+        let digest = keccak::hash(&sig.to_bytes());
+        assert_eq!(hex(&pk.to_bytes()), "63b118353523319f8f74f387824956482e582128e480149accc2ed4f19edcd00");
+        assert_eq!(hex(&digest), "cfc1a538f008852bcd4d7dda9000a3b1760108af9e563abd8646bf38436df089");
+        assert_eq!(sig.counter, 1173);
     }
 
     /// The signature's randomizer is the first attempt of the message's walk that lands, and the
@@ -399,15 +399,15 @@ mod tests {
     }
 
     #[test]
-    fn a_randomizer_attempt_costs_one_compression() {
+    fn a_randomizer_attempt_costs_one_permutation() {
         let (pp, m) = ([3u8; PUBLIC_PARAM_LEN], [5u8; MESSAGE_LEN]);
-        let before = compressions();
+        let before = permutations();
         let (walk, digests) = (randomizer_walk(&pp, &seed(2), &m), digest_midstate(&pp, &m, 0));
-        assert_eq!(compressions() - before, 3, "R_0, delta and the digest's first block, once per message");
+        assert_eq!(permutations() - before, 1, "R_0 and delta, once per message; the digest's fixed part fills no block");
         for i in 0..4 {
-            let before = compressions();
+            let before = permutations();
             let index = index_of_block(&digests.finish(&randomizer(&walk, i)));
-            assert_eq!(compressions() - before, 1);
+            assert_eq!(permutations() - before, 1);
             assert_eq!(index, digest_index(&pp, &randomizer(&walk, i), &m));
         }
     }
@@ -418,7 +418,7 @@ mod tests {
         let (pp, m) = ([3u8; PUBLIC_PARAM_LEN], [5u8; MESSAGE_LEN]);
         let walk = randomizer_walk(&pp, &seed(2), &m);
         let input = [&pp[..], &address(&tweak(TWEAK_RANDOMIZER, 0, 0)), &seed(2), &m].concat();
-        let output = blake2s::hash(&input);
+        let output = keccak::hash(&input);
         assert_eq!(walk.base[..], output[..N]);
         assert_eq!(walk.step[0], output[N] | 1, "the step is odd");
         assert_eq!(walk.step[1..], output[N + 1..]);
@@ -437,8 +437,8 @@ mod tests {
         let (base, step) = (u128::from_le_bytes(walk.base), u128::from_le_bytes(walk.step));
         assert_eq!(rho, base.wrapping_add(7 * step).to_le_bytes(), "R_0 + 7 delta");
         let input = [&pp[..], &address(&tweak(TWEAK_MSG, 1, 0)), &m, &rho].concat();
-        assert_eq!(input.len(), 80, "the randomizer is the second block");
-        assert_eq!(digest_block(&pp, &rho, &m, 1), blake2s::hash(&input));
+        assert_eq!(input.len(), 80, "one block");
+        assert_eq!(digest_block(&pp, &rho, &m, 1), keccak::hash(&input));
     }
 
     /// Pins where the digest's fields are: six FORS indices in each of the first two 64-bit words of
@@ -456,10 +456,30 @@ mod tests {
         }
     }
 
+    /// Pins the encoding's input, `P | A(enc, 0, e) | tops | counter`, and its costs: 6 permutations
+    /// for the verifier, and 5 once plus 1 per counter for the signer.
+    #[test]
+    fn encoding_absorbs_the_tops_and_the_counter() {
+        let pp = [3u8; PUBLIC_PARAM_LEN];
+        let tops: ForsTops = std::array::from_fn(|kappa| std::array::from_fn(|half| [(2 * kappa + half) as u8; N]));
+        let input = [&pp[..], &address(&tweak(TWEAK_ENC, 0, 77)), tops.as_flattened().as_flattened(), &5u32.to_le_bytes()].concat();
+        assert_eq!(input.len(), 804);
+        let expected = codeword(keccak::hash(&input)[..N].try_into().unwrap());
+        let before = permutations();
+        assert_eq!(encode(&pp, 77, &tops, 5), expected);
+        assert_eq!(permutations() - before, 6);
+        let before = permutations();
+        let state = encoding_midstate(&pp, 77, &tops);
+        assert_eq!(permutations() - before, 5, "the whole blocks of the tops, once");
+        let before = permutations();
+        assert_eq!(encode_from(&state, 5), expected);
+        assert_eq!(permutations() - before, 1, "one permutation per counter");
+    }
+
     #[test]
     fn wots_encoding_takes_about_829_tries() {
         let pp = [7u8; PUBLIC_PARAM_LEN];
-        let tries: u64 = (0..200u32).map(|e| u64::from(wots_encode(&pp, e, &[e as u8; N]).unwrap().0) + 1).sum();
+        let tries: u64 = (0..200u32).map(|e| u64::from(wots_encode(&pp, e, &[[[e as u8; N]; 2]; K]).unwrap().0) + 1).sum();
         let mean = tries as f64 / 200.0;
         assert!((400.0..1600.0).contains(&mean), "mean tries {mean}");
     }

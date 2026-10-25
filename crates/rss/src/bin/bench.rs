@@ -22,7 +22,7 @@
 use std::sync::{Arc, Barrier, Mutex};
 use std::time::Instant;
 
-use mpc::blake2s_circuit::{split_prefixes, th_circuit};
+use mpc::keccak_circuit::{split_prefixes, th_circuit};
 use mpc::circuit::Program;
 use rss::engine::{Party, Shares};
 use rss::net::{LAN, NetModel, Stats, WAN, network};
@@ -148,7 +148,7 @@ impl Batch {
 }
 
 /// Runs `steps` chained `Th` evaluations on `instances` random secrets among `parties` parties, then
-/// verifies and opens the 128 outputs; checks them against BLAKE2s.
+/// verifies and opens the 128 outputs; checks them against Keccak-256.
 fn batch(parties: usize, instances: usize, steps: usize) -> Batch {
     let s = Arc::new(Structure::new(parties));
     let keys = deal(&s);
@@ -216,13 +216,13 @@ fn batch(parties: usize, instances: usize, steps: usize) -> Batch {
             .collect();
         handles.into_iter().map(|h| h.join().unwrap()).collect()
     });
-    // Check a few outputs against BLAKE2s.
+    // Check a few outputs against Keccak-256.
     for k in [0, instances / 2, instances - 1] {
         let mut x = secrets[k].to_vec();
         for (_, _, pre) in &progs {
             let mut input = pre[k].to_vec();
             input.extend_from_slice(&x);
-            x = blake2s::hash(&input)[..16].to_vec();
+            x = keccak::hash(&input)[..16].to_vec();
         }
         for bit in 0..128 {
             assert_eq!((results[1].2[bit][k / 64] >> (k % 64)) & 1, u64::from((x[bit / 8] >> (bit % 8)) & 1), "instance {k}");
@@ -351,10 +351,9 @@ fn main() {
     let ns: Vec<usize> = if args.len() > 2 { args[2..].to_vec() } else { vec![3, 5, 7] };
     println!("n-party MPC (replicated sharing, collector resharing, sublinear checks), malicious with abort");
     println!(
-        "this machine: {} cores; carry-less multiply {}, BLAKE2s batches {}\n",
+        "this machine: {} cores; carry-less multiply {}\n",
         std::thread::available_parallelism().map_or(1, |p| p.get()),
-        mpc::gf128::CLMUL,
-        blake2s::BACKEND
+        mpc::gf128::CLMUL
     );
     let mut rows = vec![];
     for &parties in &ns {

@@ -1,44 +1,40 @@
 import LeanSphincs.BridgeClassify
 
-/-! Accepted-signature classification keeping the recovered FORS key. An accepted signature is a
+/-! Accepted-signature classification keeping the recovered FORS tops. An accepted signature is a
 canonical WOTS and tree opening at a retained leaf whose FORS part recovers the canonical FORS
-key, a tree hit, or a WOTS exception at a retained leaf. A recovered canonical FORS key is a
-match at the key hash (another list of top nodes), a node match below a top node, or every tree is
-canonical or a leaf match. -/
+tops, a tree hit, or a WOTS exception at a retained leaf. Recovered canonical FORS tops are a node
+match below a top node, or every tree is canonical or a leaf match. -/
 
 open OracleComp OracleSpec
 
 namespace LeanSphincs.Security.Fors
 open Concrete
 
-/-- **Per-tree classification of a recovered canonical FORS key.** -/
+/-- **Per-tree classification of recovered canonical FORS tops.** -/
 theorem recovered_classification (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (seed : MasterSeed) (leaves : IndexGroup → FtsLeaf)
     (secrets : FtsTree → Digest) (paths : FtsTree → Fin ftsTreeHeight → Digest)
     (hrecover : evalWithAnswerFn f (ftsRecover parameter index leaves secrets paths :
-      OracleComp HashSpec Digest) =
-      evalWithAnswerFn f (Seeded.ftsKey parameter index seed : OracleComp HashSpec Digest)) :
-    TopsMatch f parameter index seed leaves secrets paths ∨
+      OracleComp HashSpec FtsTops) =
+      evalWithAnswerFn f (Seeded.ftsKey parameter index seed : OracleComp HashSpec FtsTops)) :
     (∃ tree level, level < ftsTopLevel ∧
       NodeMatch f parameter index tree seed (leaves tree) (secrets tree) (paths tree) level) ∨
     ∀ tree, (secrets tree = Completeness.ftsSecret f parameter index tree (leaves tree) seed ∧
         paths tree = canonicalPath f parameter index tree seed (leaves tree)) ∨
       LeafMatch f parameter index tree seed (leaves tree) (secrets tree) := by
   classical
-  by_cases hpayload : ftsTopsPayload (tops f parameter index leaves secrets paths) =
-      ftsTopsPayload (canonicalTops f parameter index seed)
-  · have htops := ftsTopsPayload_injective hpayload
-    by_cases hnode : ∃ tree level, level < ftsTopLevel ∧
-        NodeMatch f parameter index tree seed (leaves tree) (secrets tree) (paths tree) level
-    · exact Or.inr (Or.inl hnode)
-    · refine Or.inr (Or.inr fun tree => ?_)
-      rcases tree_classification f parameter index tree seed (leaves tree) (secrets tree)
-        (paths tree) (congrFun htops tree) with hopen | hleaf | ⟨level, hlevel, hmatch⟩
-      · exact Or.inl hopen
-      · exact Or.inr hleaf
-      · exact (hnode ⟨tree, level, hlevel, hmatch⟩).elim
-  · refine Or.inl ⟨hpayload, ?_⟩
-    rwa [← eval_ftsRecover]
+  have htops : tops f parameter index leaves secrets paths = canonicalTops f parameter index seed := by
+    rw [← eval_ftsRecover, hrecover, Completeness.eval_ftsKey]
+    rfl
+  by_cases hnode : ∃ tree level, level < ftsTopLevel ∧
+      NodeMatch f parameter index tree seed (leaves tree) (secrets tree) (paths tree) level
+  · exact Or.inl hnode
+  · refine Or.inr fun tree => ?_
+    rcases tree_classification f parameter index tree seed (leaves tree) (secrets tree)
+      (paths tree) (congrFun htops tree) with hopen | hleaf | ⟨level, hlevel, hmatch⟩
+    · exact Or.inl hopen
+    · exact Or.inr hleaf
+    · exact (hnode ⟨tree, level, hlevel, hmatch⟩).elim
 
 end LeanSphincs.Security.Fors
 
@@ -63,7 +59,7 @@ def WotsException (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSee
     (Completeness.otsSecret f pk.parameter topLayer rootTree leaf seed) inputs
 
 /-- A canonical WOTS and tree opening at a retained leaf whose FORS part recovers the canonical
-FORS key. -/
+FORS tops. -/
 def RecoveredOpening (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
     (message : Message) (signature : Signature) (referenceCounter : Counter) : Prop :=
   let leaf := index f pk message signature
@@ -86,7 +82,7 @@ theorem RecoveredOpening.canonical {f : QueryImpl HashSpec Id} {pk : PublicKey} 
       (chosenWord f pk.parameter seed (index f pk message signature)) :=
   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, hopening⟩
 
-/-- **Recovered canonical FORS key, a tree hit, or a WOTS exception at a retained leaf.** -/
+/-- **Recovered canonical FORS tops, a tree hit, or a WOTS exception at a retained leaf.** -/
 theorem accepted_recovered_classification (f : QueryImpl HashSpec Id) (pk : PublicKey)
     (seed : MasterSeed) (message : Message) (signature : Signature) (hb : 0 < subtreeHeight)
     (hroot : pk.root = evalWithAnswerFn f
@@ -147,14 +143,11 @@ theorem accepted_recovered_classification (f : QueryImpl HashSpec Id) (pk : Publ
     · exact Or.inr (Or.inl ⟨value, hleaf, hrunTree, Or.inl ⟨reference.val, reference.property, hmatch⟩⟩)
     · exact Or.inr (Or.inl ⟨value, hleaf, hrunTree, Or.inr hsurrogate⟩)
 
-/-- **The refined FORS case.** A recovered canonical FORS key is a match at the key hash, a node
-match at some tree below its top node, or every tree is canonical (secret and path) or a leaf
-match. -/
+/-- **The refined FORS case.** Recovered canonical FORS tops are a node match at some tree below its
+top node, or every tree is canonical (secret and path) or a leaf match. -/
 theorem RecoveredOpening.fors_classification {f : QueryImpl HashSpec Id} {pk : PublicKey}
     {seed : MasterSeed} {message : Message} {signature : Signature} {counter : Counter}
     (h : RecoveredOpening f pk seed message signature counter) :
-    Fors.TopsMatch f pk.parameter (index f pk message signature) seed
-        (digestLeaves (verificationDigest f pk message signature)) signature.ftsSecret signature.ftsPath ∨
     (∃ tree level, level < ftsTopLevel ∧
       Fors.NodeMatch f pk.parameter (index f pk message signature) tree seed
         (digestLeaves (verificationDigest f pk message signature) tree) (signature.ftsSecret tree)

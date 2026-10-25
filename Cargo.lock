@@ -3,21 +3,21 @@
 version = 4
 
 [[package]]
-name = "blake2s"
+name = "keccak"
 version = "0.1.0"
 
 [[package]]
 name = "mpc"
 version = "0.1.0"
 dependencies = [
- "blake2s",
+ "keccak",
 ]
 
 [[package]]
 name = "rss"
 version = "0.1.0"
 dependencies = [
- "blake2s",
+ "keccak",
  "mpc",
 ]
 
@@ -25,5 +25,5 @@ dependencies = [
 name = "sphincs"
 version = "0.1.0"
 dependencies = [
- "blake2s",
+ "keccak",
 ]

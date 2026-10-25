@@ -89,20 +89,6 @@ body[data-v="spicy"] .old::after { content: ""; position: absolute; left: -0.2em
 .toggle button { font: inherit; font-size: 1.1rem; border: 0; background: none; color: var(--muted); padding: 0.35rem 1.4rem; border-radius: 999px; cursor: pointer; }
 .toggle button[aria-pressed="true"] { background: var(--ink); color: #fff; }
 .toggle button[data-v="spicy"][aria-pressed="true"] { background: var(--spicy); }
-/* hash-dependent content: a pair stacked in one cell (.hs) keeps the width of the wider one, so nothing moves */
-body[data-h="blake2s"] :not(.hs) > .hk, body:not([data-h="blake2s"]) :not(.hs) > .hb { display: none !important; }
-.hs { display: inline-grid; }
-div.hs { display: grid; }
-.hs > * { grid-area: 1 / 1; }
-body[data-h="blake2s"] .hs > .hk, body:not([data-h="blake2s"]) .hs > .hb { visibility: hidden; }
-.hashsw { display: inline-flex; vertical-align: middle; border: 1px solid var(--rule); border-radius: 999px; padding: 2px; margin: -0.2rem 0; background: #fff; white-space: nowrap; }
-.hashsw button { font: inherit; font-size: 0.85rem; line-height: 1.3; border: 0; background: none; color: var(--muted); padding: 0.12rem 0.7rem; border-radius: 999px; cursor: pointer; }
-.hashsw button[aria-pressed="true"] { background: var(--ink); color: #fff; }
-@media (max-width: 600px) {
-  /* too narrow for a row: the two hashes one above the other */
-  .hashsw { flex-direction: column; border-radius: 0.8rem; margin: 0; }
-  .hashsw button { border-radius: 0.65rem; padding: 0.1rem 0.45rem; text-align: left; }
-}
 
 svg text { font-family: var(--sans); }
 svg .lb { font-size: 15px; fill: var(--muted); }
@@ -342,14 +328,14 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
 }
 </style>
 </head>
-<body data-v="vanilla" data-h="blake2s">
+<body data-v="vanilla">
 <main>
 
 <div class="page">
   <div class="text">
     <header>
       <div class="titlerow"><h1>A proposal for leanSphincs</h1><div class="toggle" role="group" aria-label="Variant"><button type="button" data-v="vanilla" aria-pressed="true">vanilla</button><button type="button" data-v="spicy" aria-pressed="false">spicy</button></div></div>
-      <div class="notes"><ul class="pro"><li>25% smaller signatures</li><li><span class="hs"><span class="hk">25%</span><span class="hb">18%</span></span> faster verification<span class="info hk" tabindex="0" data-tip="Measured in Keccak-f permutations: 354 → 267">i</span><span class="info hb" tabindex="0" data-tip="Measured in BLAKE2s compressions: 373 → 307">i</span></li></ul><ul class="con"><li>more complex</li><li>2× worse threshold</li></ul></div>
+      <div class="notes"><ul class="pro"><li>25% smaller signatures</li><li>25% faster verification<span class="info" tabindex="0" data-tip="Measured in Keccak-f permutations: 354 → 267">i</span></li></ul><ul class="con"><li>more complex</li><li>2× worse threshold</li></ul></div>
       <svg class="arrow" aria-hidden="true"><path class="line"/><path class="head"/></svg>
       <p class="by">by Tom Wambsgans</p>
     </header>
@@ -363,12 +349,12 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
           <tr><th><i>a</i></th><td>24</td><td><span class="old">10</span><span class="new s-only">4 + 3</span></td></tr>
           <tr><th>OTS</th><td>WOTS+</td><td>WOTS+C</td></tr>
           <tr><th>FTS</th><td>FORS</td><td class="two"><span class="old">FORS</span><span class="new s-only">WOTS forest</span><span class="info r s-only" tabindex="0" data-tip="8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5">i</span></td></tr>
-          <tr><th>Hash</th><td>SHA-2 or SHAKE</td><td><div class="hashsw" role="group" aria-label="Hash"><button type="button" data-h="blake2s" aria-pressed="true">BLAKE2s</button><button type="button" data-h="keccak" aria-pressed="false">Keccak-256</button></div></td></tr>
+          <tr><th>Hash</th><td>SHA-2 or SHAKE</td><td>Keccak-256</td></tr>
         </tbody>
         <tbody class="out">
           <tr><th>Lifetime</th><td>2<sup>24</sup></td><td>2<sup>30</sup><span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></td></tr>
           <tr><th>Size</th><td>3,856 bytes</td><td><span class="old">5,684</span><span class="new s-only">4,276</span> bytes</td></tr>
-          <tr><th>Verification<br><span class="unit"><span class="hs"><span class="hk">(permutations)</span><span class="hb">(compressions)</span></span></span></th><td>296<span class="info" tabindex="0" data-tip="SHA-2 compressions">i</span></td><td><span class="old"><span class="hs"><span class="hk">354</span><span class="hb">373</span></span></span><span class="new s-only"><span class="hs"><span class="hk">267</span><span class="hb">307</span></span></span><span class="info hk" tabindex="0" data-tip="Keccak-f[1600] permutations">i</span><span class="info hb" tabindex="0" data-tip="BLAKE2s compressions">i</span></td></tr>
+          <tr><th>Verification<br><span class="unit">(permutations)</span></th><td>296<span class="info" tabindex="0" data-tip="SHA-2 compressions">i</span></td><td><span class="old">354</span><span class="new s-only">267</span><span class="info" tabindex="0" data-tip="Keccak-f[1600] permutations">i</span></td></tr>
         </tbody>
       </table>
       </div>
@@ -728,12 +714,12 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
       <table class="cmp cards">
         <colgroup><col class="label"><col><col><col></colgroup>
         <thead>
-          <tr><th></th><th><div class="hd">Light<span class="dev"><a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a><span class="info hk" tabindex="0" data-tip="5.8K permutations per second">i</span><span class="info hb" tabindex="0" data-tip="33K compressions per second">i</span></span></div></th><th><div class="hd">Standard<span class="dev">weak CPU<span class="info hk" tabindex="0" data-tip="128M permutations per second">i</span><span class="info hb" tabindex="0" data-tip="256M compressions per second">i</span></span></div></th><th><div class="hd">Full<span class="dev">powerful CPU<span class="info hk" tabindex="0" data-tip="512M permutations per second">i</span><span class="info hb" tabindex="0" data-tip="1B compressions per second">i</span></span></div></th></tr>
+          <tr><th></th><th><div class="hd">Light<span class="dev"><a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a><span class="info" tabindex="0" data-tip="5.8K permutations per second">i</span></span></div></th><th><div class="hd">Standard<span class="dev">weak CPU<span class="info" tabindex="0" data-tip="128M permutations per second">i</span></span></div></th><th><div class="hd">Full<span class="dev">powerful CPU<span class="info" tabindex="0" data-tip="512M permutations per second">i</span></span></div></th></tr>
         </thead>
         <tbody>
           <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Lifetime"><div><span class="old">210K</span><span class="new s-only">247K</span> signatures <span class="st">(subtree of 2<sup>13</sup>)</span></div></td><td data-l="Lifetime"><div><span class="old">22M</span><span class="new s-only">26M</span> signatures <span class="st">(subtree of 2<sup>20</sup>)</span></div></td><td data-l="Lifetime"><div><span class="old">1.15B</span><span class="new s-only">1.38B</span> signatures <span class="st">(full tree of 2<sup>26</sup>)</span></div></td></tr>
-          <tr><th>Key generation</th><td data-l="Key generation"><div class="hs"><div class="hd hk"><span>1.91M permutations</span><span class="ex">5.5&nbsp;min</span></div><div class="hd hb"><span>1.98M compressions</span><span class="ex">60&nbsp;s</span></div></div></td><td data-l="Key generation"><div class="hs"><div class="hd hk"><span>244M permutations</span><span class="ex">1.9&nbsp;s</span></div><div class="hd hb"><span>254M compressions</span><span class="ex">1.0&nbsp;s</span></div></div></td><td data-l="Key generation"><div class="hs"><div class="hd hk"><span>15.6B permutations</span><span class="ex">31&nbsp;s</span></div><div class="hd hb"><span>16.2B compressions</span><span class="ex">16&nbsp;s</span></div></div></td></tr>
-          <tr><th>Signing</th><td data-l="Signing"><div class="hs"><div class="hd hk"><span>74K permutations<span class="br">, </span>16&nbsp;KiB cache</span><span class="ex">13&nbsp;s</span></div><div class="hd hb"><span>74K compressions<span class="br">, </span>16&nbsp;KiB cache</span><span class="ex">2.2&nbsp;s</span></div></div></td><td data-l="Signing"><div class="hs"><div class="hd hk"><span>70K permutations<span class="br">, </span>1&nbsp;MiB cache</span><span class="ex">0.5&nbsp;ms</span></div><div class="hd hb"><span>70K compressions<span class="br">, </span>1&nbsp;MiB cache</span><span class="ex">0.3&nbsp;ms</span></div></div></td><td data-l="Signing"><div class="hs"><div class="hd hk"><span>92K permutations<span class="br">, </span>16&nbsp;MiB cache</span><span class="ex">0.2&nbsp;ms</span></div><div class="hd hb"><span>93K compressions<span class="br">, </span>16&nbsp;MiB cache</span><span class="ex">0.1&nbsp;ms</span></div></div></td></tr>
+          <tr><th>Key generation</th><td data-l="Key generation"><div class="hd"><span>1.91M permutations</span><span class="ex">5.5&nbsp;min</span></div></td><td data-l="Key generation"><div class="hd"><span>244M permutations</span><span class="ex">1.9&nbsp;s</span></div></td><td data-l="Key generation"><div class="hd"><span>15.6B permutations</span><span class="ex">31&nbsp;s</span></div></td></tr>
+          <tr><th>Signing</th><td data-l="Signing"><div class="hd"><span>74K permutations<span class="br">, </span>16&nbsp;KiB cache</span><span class="ex">13&nbsp;s</span></div></td><td data-l="Signing"><div class="hd"><span>70K permutations<span class="br">, </span>1&nbsp;MiB cache</span><span class="ex">0.5&nbsp;ms</span></div></td><td data-l="Signing"><div class="hd"><span>92K permutations<span class="br">, </span>16&nbsp;MiB cache</span><span class="ex">0.2&nbsp;ms</span></div></td></tr>
         </tbody>
       </table>
       </div>
@@ -748,9 +734,9 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
             <colgroup><col class="label"><col><col><col></colgroup>
             <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><br><span class="sub">(signatures)</span></th><th><span class="old">7.5K</span><span class="new s-only">8.8K</span><span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>8</sup>)</span></th><th><span class="old">28.6K</span><span class="new s-only">33.4K</span><span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th><span class="old">108K</span><span class="new s-only">126K</span><span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>12</sup>)</span></th></tr></thead>
             <tbody>
-              <tr><th>2-of-3</th><td><span class="old"><span class="hs"><span class="hk">29</span><span class="hb">11</span></span></span><span class="new s-only"><span class="hs"><span class="hk">57</span><span class="hb">21</span></span></span>&nbsp;GB</td><td><span class="old"><span class="hs"><span class="hk">116</span><span class="hb">43</span></span></span><span class="new s-only"><span class="hs"><span class="hk">230</span><span class="hb">85</span></span></span>&nbsp;GB</td><td><span class="old"><span class="hs"><span class="hk">462</span><span class="hb">172</span></span></span><span class="new s-only"><span class="hs"><span class="hk">919</span><span class="hb">342</span></span></span>&nbsp;GB</td></tr>
-              <tr><th>3-of-5</th><td><span class="old"><span class="hs"><span class="hk">35</span><span class="hb">13</span></span></span><span class="new s-only"><span class="hs"><span class="hk">69</span><span class="hb">26</span></span></span>&nbsp;GB</td><td><span class="old"><span class="hs"><span class="hk">139</span><span class="hb">52</span></span></span><span class="new s-only"><span class="hs"><span class="hk">276</span><span class="hb">103</span></span></span>&nbsp;GB</td><td><span class="old"><span class="hs"><span class="hk">554</span><span class="hb">207</span></span></span><span class="new s-only"><span class="hs"><span class="hk">1,102</span><span class="hb">410</span></span></span>&nbsp;GB</td></tr>
-              <tr><th>4-of-7</th><td><span class="old"><span class="hs"><span class="hk">37</span><span class="hb">14</span></span></span><span class="new s-only"><span class="hs"><span class="hk">74</span><span class="hb">27</span></span></span>&nbsp;GB</td><td><span class="old"><span class="hs"><span class="hk">149</span><span class="hb">55</span></span></span><span class="new s-only"><span class="hs"><span class="hk">295</span><span class="hb">110</span></span></span>&nbsp;GB</td><td><span class="old"><span class="hs"><span class="hk">594</span><span class="hb">222</span></span></span><span class="new s-only"><span class="hs"><span class="hk">1,181</span><span class="hb">440</span></span></span>&nbsp;GB</td></tr>
+              <tr><th>2-of-3</th><td><span class="old">29</span><span class="new s-only">57</span>&nbsp;GB</td><td><span class="old">116</span><span class="new s-only">230</span>&nbsp;GB</td><td><span class="old">462</span><span class="new s-only">919</span>&nbsp;GB</td></tr>
+              <tr><th>3-of-5</th><td><span class="old">35</span><span class="new s-only">69</span>&nbsp;GB</td><td><span class="old">139</span><span class="new s-only">276</span>&nbsp;GB</td><td><span class="old">554</span><span class="new s-only">1,102</span>&nbsp;GB</td></tr>
+              <tr><th>4-of-7</th><td><span class="old">37</span><span class="new s-only">74</span>&nbsp;GB</td><td><span class="old">149</span><span class="new s-only">295</span>&nbsp;GB</td><td><span class="old">594</span><span class="new s-only">1,181</span>&nbsp;GB</td></tr>
             </tbody>
           </table>
           </div>
@@ -774,27 +760,10 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
 </div>
 
 <footer>
-  <p><a href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/releases/download/doc-latest/leanSPHINCS.pdf">Note</a><a class="hk" href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/keccak">Code</a><a class="hb" href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/main">Code</a><a class="hk" href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/keccak/formal/sphincs">Proofs</a><a class="hb" href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/main/formal/sphincs">Proofs</a></p>
+  <p><a href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/releases/download/doc-latest/leanSPHINCS.pdf">Note</a><a href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/v2">Code</a><a href="https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/v2/formal/sphincs">Proofs</a></p>
 </footer>
 
 </main>
-<script>
-// The hash the costs are counted in, BLAKE2s (the default) or Keccak-256: the same on both pages, remembered.
-(function () {
-  var buttons = document.querySelectorAll('.hashsw button');
-  function set(h) {
-    document.body.dataset.h = h;
-    buttons.forEach(function (o) { o.setAttribute('aria-pressed', String(o.dataset.h === h)); });
-  }
-  try { if (localStorage.getItem('hash') === 'keccak') set('keccak'); } catch (e) {}
-  buttons.forEach(function (b) {
-    b.addEventListener('click', function () {
-      set(b.dataset.h);
-      try { localStorage.setItem('hash', b.dataset.h); } catch (e) {}
-    });
-  });
-})();
-</script>
 <script>
 // On touch, a tip stays up until something else takes the focus: close it on a tap
 // outside, and let a second tap on the same (i) close it too.

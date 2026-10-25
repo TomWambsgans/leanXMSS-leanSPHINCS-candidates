@@ -18,8 +18,8 @@ target is q/2^127 = 2x. K = 226·2^b + 2(26 − b) is the key-generation cost in
    value read only through a hash input that contains the 256-bit seed; the later steps see the
    secret at a position (`PreparedScheme.compile_secret`) and are unchanged. An honest hash of
    the seed costs one query whether it gives one secret or two, so the signer's query counts go
-   down: 224 calls per one-time key (was 256), 152 for the opened chain values (was 184), 61,393
-   for a FORS key and 61,152 for its openings, 122,571 calls per signature before the WOTS
+   down: 224 calls per one-time key (was 256), 152 for the opened chain values (was 184), 61,392
+   for the FORS tops and 61,152 for their openings, 122,570 calls per signature before the WOTS
    search (`hashCalls_forsKey_exact`, `hashCalls_forsOpen_exact`, `finishHashCost`,
    [SecurityGraphCost](LeanSphincs/SecurityGraphCost.lean)).
 
@@ -58,17 +58,17 @@ target is q/2^127 = 2x. K = 226·2^b + 2(26 − b) is the key-generation cost in
    ([BridgeInterp](LeanSphincs/BridgeInterp.lean), [BridgeDebt](LeanSphincs/BridgeDebt.lean)). Chain
    values at and above the prepared word of a landed leaf are exposed at the start
    ([BridgeExpose](LeanSphincs/BridgeExpose.lean)).
-   - **FORS trees have no root hash.** The FORS key hashes the two level-9 nodes of each of the
-     24 trees (48 values, `ftsTopsPayload`), and the level-10 node is not computed. The graph has
-     the same positions as before; the children of the key hash are the 48 level-9 nodes
-     (`Position.children`), and the level-10 node positions stay in the type unread, like the node
-     indices beyond the width of a level. A forged opening that reaches the true FORS key either
-     gives the key hash another input, which is a first-order hit at the key hash
-     (`Fors.TopsMatch`, `topsMatch_hit`), or has the true 48 values. Then, per tree, the node it
-     computes from the leaf is the true level-9 node on that side, which is classified as a tree
-     of height 9 (canonical secret and path elements 0..8, a leaf match, or a node match at a
-     level below 9), and its last path element is the true level-9 node on the other side, read
-     off the key-hash input and not hashed (`Fors.tree_classification`,
+   - **FORS trees have no root hash, and no key hash.** The WOTS+C encoding hashes the two
+     level-9 nodes of each of the 24 trees (48 values, `ftsTopsPayload`) with the counter, so the
+     one-time signature signs the 48 values themselves, and the level-10 node is not computed.
+     The graph has no key position; the level-10 node positions stay in the type unread, like the
+     node indices beyond the width of a level. A forged signature whose encoding input differs
+     from the reference one (other tops or another counter) is a WOTS event of the encoding, as a
+     forged key was before; one that recovers the true 48 values computes, per tree, the true
+     level-9 node on the side of its leaf, which is classified as a tree of height 9 (canonical
+     secret and path elements 0..8, a leaf match, or a node match at a level below 9), and its
+     last path element is the true level-9 node on the other side, read off the encoding input
+     and not hashed (`Fors.recover_classification`, `Fors.tree_classification`,
      [SecurityForsWitness](LeanSphincs/SecurityForsWitness.lean)). A signature reveals that
      node as path element 9, as it did before, so the revealed values are unchanged
      (`GraphView.publicData`, `forsPath`).
@@ -147,15 +147,18 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
   hashes of the seed, a single leaf (the level-0 sibling of an opening, or a revealed secret)
   takes one, and a one-time key takes 32, as `wots_secrets`, `fors_secret_pair` and `fors_secret`
   do. The hash-call counts above are those of the model; key generation makes the same calls in
-  Rust (241 compressions per leaf there, 17 of them for the leaf hash). The byte inputs and recovered values were ported by source
+  Rust (232 Keccak-f permutations per leaf there, 8 of them for the leaf hash). The byte inputs and recovered values were ported by source
   inspection; this is not a mechanized Rust refinement or an exact hash-trace equivalence. A
   security transfer using total experiment query counts must account for caching.
 - Verification does not enforce membership in the retained subtree. The proof accounts for forgeries
   entering through a surrogate sibling.
-- `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums BLAKE2s
-  block costs of the verifier's logged hash-input lengths: accepted signatures cost exactly 373
-  compressions, all signatures at most 373 (4 for the digest, 24·(1 + 9) for the FORS leaves and
-  folds, 13 for the FORS key hash of 800 bytes, 116 for WOTS+C and the tree).
+- `Layout.signature_size` proves the actual serializer length. `VerificationCost.lean` sums Keccak-256
+  permutation costs (`n / 136 + 1` for `n` bytes) of the verifier's logged hash-input lengths:
+  accepted signatures cost exactly 354 Keccak-f permutations, all signatures at most 354 (2 for the
+  digest, 24·(1 + 9) for the FORS leaves and folds, 6 for the encoding of the 48 tops and the
+  counter, 804 bytes, 72 chain steps, 8 for the leaf and 26 for the path). Rust absorbs
+  P ‖ A ‖ tops of the encoding once and pays one permutation per counter; the model hashes whole
+  inputs.
 - Every hash input is P ‖ A ‖ payload, with the 16-byte address A = `lo` ‖ `hi` ‖ (type + 32·step) ‖ 0^8
   (`fieldBytes`), so every value of a payload starts on a 16-byte boundary.
   The tree domains keep their layer and tree arguments, both always 0 and not serialized
@@ -163,11 +166,10 @@ Smaller levers were measured and are worth well under 1%: per-key unit-neighbour
   (`fieldInput_injective`, [SecurityDomains](LeanSphincs/SecurityDomains.lean)), and in-range
   domains have distinct addresses (`hashFields_injective`,
   [SecurityPosition](LeanSphincs/SecurityPosition.lean)), so separating inputs costs no probability
-  term. The message digest hashes m ‖ ρ (80 bytes with P and A: the first block ends with m,
-  the second is ρ) and the randomizer derivation (R0 and δ) seed ‖ m, once per
-  message: Rust keeps the BLAKE2s state after the first block of the digest and pays one
-  compression per grinding attempt; the model hashes whole inputs, and its budgets count oracle
-  queries. The root is
+  term. The message digest hashes m ‖ ρ (80 bytes with P and A, within one 136-byte block) and the
+  randomizer derivation (R0 and δ) seed ‖ m, once per message: Rust absorbs P ‖ A ‖ m of the digest
+  once and pays one permutation per grinding attempt; the model hashes whole inputs, and its budgets
+  count oracle queries. The root is
   not hashed in the digest (P binds the key); `messageDigestPayload` and the digest functions keep
   their `root` argument, which they ignore.
 - The digest's fields are disjoint bits of the two 256-bit outputs, none across two 64-bit words:

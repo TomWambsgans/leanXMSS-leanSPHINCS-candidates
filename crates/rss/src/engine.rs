@@ -123,7 +123,7 @@ pub struct Party {
     /// Running hashes, per local term, of every value this party holds for the term that did not
     /// come from its PRSS seed (input terms, and `T*` terms collected or forwarded) since the last
     /// comparison; compared among the term's holders before anything is opened.
-    pub(crate) hashes: Vec<blake2s::Hasher>,
+    pub(crate) hashes: Vec<keccak::Hasher>,
     /// Whether the hashes cover values not compared yet.
     pub(crate) pending: bool,
     /// Worker threads for the heavy verification passes.
@@ -176,7 +176,7 @@ impl Party {
             ands_done: 0,
             verified: Arc::new(AtomicU64::new(0)),
             epoch: 0,
-            hashes: (0..m).map(|_| blake2s::Hasher::new()).collect(),
+            hashes: (0..m).map(|_| keccak::Hasher::new()).collect(),
             pending: false,
             threads,
             materialize_limit: None,
@@ -610,7 +610,7 @@ impl Party {
         // Round 3: the coin, and the consistency of the terms being opened.
         let per_term: Vec<[u8; 32]> = (0..m)
             .map(|l| {
-                let mut h = blake2s::Hasher::new();
+                let mut h = keccak::Hasher::new();
                 for x in xs {
                     let mut b = Vec::with_capacity(8 * w);
                     put(&mut b, &x.0[l]);
@@ -656,7 +656,7 @@ impl Party {
         #[cfg(any(test, feature = "testing"))]
         self.record.checks.push(("open", (y + claimed).0));
         // Round 5: agreement.
-        let mut h = blake2s::Hasher::new();
+        let mut h = keccak::Hasher::new();
         for v in &values {
             let mut b = Vec::with_capacity(8 * w);
             put(&mut b, v);
@@ -744,7 +744,7 @@ impl Party {
     pub(crate) fn coin_key(&mut self, purpose: &[u8], j: u64, v: Gf128) -> Key {
         #[cfg(any(test, feature = "testing"))]
         self.record.checks.push(("coin", v.0));
-        let mut h = blake2s::Hasher::new();
+        let mut h = keccak::Hasher::new();
         h.update(b"rss-coin").update(&self.vtag(purpose, j)).update(&v.to_bytes());
         h.finalize()
     }

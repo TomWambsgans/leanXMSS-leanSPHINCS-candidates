@@ -2898,10 +2898,6 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.secondOrder_tweakable
 
-/-- info: 'LeanSphincs.Security.HiddenBridge.topsMatch_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.HiddenBridge.topsMatch_hit
-
 /-- info: 'LeanSphincs.Security.HiddenBridge.treeHit_hitA' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.HiddenBridge.treeHit_hitA
@@ -5158,10 +5154,6 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Short.flatMap_bytes_length'
 
-/-- info: 'LeanSphincs.Security.Short.ftsTopsPayload_length' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.Short.ftsTopsPayload_length
-
 /-- info: 'LeanSphincs.Security.Short.keygenHashInput_length' depends on axioms: [propext] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Short.keygenHashInput_length
@@ -6666,10 +6658,6 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Completeness.StructuralFresh.ftsNode
 
-/-- info: 'LeanSphincs.Completeness.StructuralFresh.ftsRoots' depends on axioms: [propext] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Completeness.StructuralFresh.ftsRoots
-
 /-- info: 'LeanSphincs.Completeness.StructuralFresh.leaf' depends on axioms: [propext] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Completeness.StructuralFresh.leaf
@@ -8022,18 +8010,6 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.HashDomain.ftsNode.sizeOf_spec
 
-/-- info: 'LeanSphincs.HashDomain.ftsRoots.inj' depends on axioms: [propext] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.HashDomain.ftsRoots.inj
-
-/-- info: 'LeanSphincs.HashDomain.ftsRoots.injEq' depends on axioms: [propext] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.HashDomain.ftsRoots.injEq
-
-/-- info: 'LeanSphincs.HashDomain.ftsRoots.sizeOf_spec' depends on axioms: [propext] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.HashDomain.ftsRoots.sizeOf_spec
-
 /-- info: 'LeanSphincs.HashDomain.leaf.inj' depends on axioms: [propext] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.HashDomain.leaf.inj
@@ -8442,21 +8418,9 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Fors.recover_classification
 
-/-- info: 'LeanSphincs.Security.Fors.topsInput_mem' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.Fors.topsInput_mem
-
 /-- info: 'LeanSphincs.Security.Fors.tree_classification' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Fors.tree_classification
-
-/-- info: 'LeanSphincs.Security.flatMap_ofFn_injective' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.flatMap_ofFn_injective
-
-/-- info: 'LeanSphincs.Security.ftsTopsPayload_injective' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.ftsTopsPayload_injective
 
 /-- info: 'LeanSphincs.Security.Graph.canonicalGraphInput_congr' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -8557,10 +8521,6 @@ import LeanSphincs.World
 /-- info: 'LeanSphincs.Security.GraphCorrectness.fors_path_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.GraphCorrectness.fors_path_value
-
-/-- info: 'LeanSphincs.Security.GraphCorrectness.fors_roots_input' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.GraphCorrectness.fors_roots_input
 
 /-- info: 'LeanSphincs.Security.GraphCorrectness.fors_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -9209,18 +9169,6 @@ import LeanSphincs.World
 /-- info: 'LeanSphincs.Security.Position.ftsNode.sizeOf_spec' depends on axioms: [propext] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.Position.ftsNode.sizeOf_spec
-
-/-- info: 'LeanSphincs.Security.Position.ftsRoots.inj' depends on axioms: [propext] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.Position.ftsRoots.inj
-
-/-- info: 'LeanSphincs.Security.Position.ftsRoots.injEq' depends on axioms: [propext] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.Position.ftsRoots.injEq
-
-/-- info: 'LeanSphincs.Security.Position.ftsRoots.sizeOf_spec' depends on axioms: [propext] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Security.Position.ftsRoots.sizeOf_spec
 
 /-- info: 'LeanSphincs.Security.Position.input_separated' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -10062,6 +10010,18 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.canonicalTreePath_surrogate
 
+/-- info: 'LeanSphincs.Security.flatMap_ofFn_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.flatMap_ofFn_injective
+
+/-- info: 'LeanSphincs.Security.ftsTopsPayload_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ftsTopsPayload_injective
+
+/-- info: 'LeanSphincs.Security.ftsTopsPayload_length' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Security.ftsTopsPayload_length
+
 /-- info: 'LeanSphincs.Security.inside_subtree_treeFold_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Security.inside_subtree_treeFold_witness
@@ -10290,74 +10250,6 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.truncateHash_joinHalves
 
-/-- info: 'LeanSphincs.Cost.compressions_bind' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_bind
-
-/-- info: 'LeanSphincs.Cost.compressions_chainWalk' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_chainWalk
-
-/-- info: 'LeanSphincs.Cost.compressions_encode' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_encode
-
-/-- info: 'LeanSphincs.Cost.compressions_ftsFold' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_ftsFold
-
-/-- info: 'LeanSphincs.Cost.compressions_ftsLeafHash' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_ftsLeafHash
-
-/-- info: 'LeanSphincs.Cost.compressions_ftsRecover' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_ftsRecover
-
-/-- info: 'LeanSphincs.Cost.compressions_leafHash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_leafHash
-
-/-- info: 'LeanSphincs.Cost.compressions_messageDigest' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_messageDigest
-
-/-- info: 'LeanSphincs.Cost.compressions_messageDigestCall' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_messageDigestCall
-
-/-- info: 'LeanSphincs.Cost.compressions_oracleHash' depends on axioms: [propext] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_oracleHash
-
-/-- info: 'LeanSphincs.Cost.compressions_otsLeaf' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_otsLeaf
-
-/-- info: 'LeanSphincs.Cost.compressions_pure' depends on axioms: [propext] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_pure
-
-/-- info: 'LeanSphincs.Cost.compressions_recoverChain' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_recoverChain
-
-/-- info: 'LeanSphincs.Cost.compressions_sequenceFin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_sequenceFin
-
-/-- info: 'LeanSphincs.Cost.compressions_treeFold' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_treeFold
-
-/-- info: 'LeanSphincs.Cost.compressions_tweakableHash' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_tweakableHash
-
-/-- info: 'LeanSphincs.Cost.compressions_verifyLayers' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.compressions_verifyLayers
-
 /-- info: 'LeanSphincs.Cost.encode_valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Cost.encode_valid
@@ -10378,17 +10270,85 @@ import LeanSphincs.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Cost.hashTrace_query_bind
 
+/-- info: 'LeanSphincs.Cost.permutations_bind' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_bind
+
+/-- info: 'LeanSphincs.Cost.permutations_chainWalk' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_chainWalk
+
+/-- info: 'LeanSphincs.Cost.permutations_encode' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_encode
+
+/-- info: 'LeanSphincs.Cost.permutations_ftsFold' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_ftsFold
+
+/-- info: 'LeanSphincs.Cost.permutations_ftsLeafHash' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_ftsLeafHash
+
+/-- info: 'LeanSphincs.Cost.permutations_ftsRecover' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_ftsRecover
+
+/-- info: 'LeanSphincs.Cost.permutations_leafHash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_leafHash
+
+/-- info: 'LeanSphincs.Cost.permutations_messageDigest' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_messageDigest
+
+/-- info: 'LeanSphincs.Cost.permutations_messageDigestCall' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_messageDigestCall
+
+/-- info: 'LeanSphincs.Cost.permutations_oracleHash' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_oracleHash
+
+/-- info: 'LeanSphincs.Cost.permutations_otsLeaf' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_otsLeaf
+
+/-- info: 'LeanSphincs.Cost.permutations_pure' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_pure
+
+/-- info: 'LeanSphincs.Cost.permutations_recoverChain' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_recoverChain
+
+/-- info: 'LeanSphincs.Cost.permutations_sequenceFin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_sequenceFin
+
+/-- info: 'LeanSphincs.Cost.permutations_treeFold' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_treeFold
+
+/-- info: 'LeanSphincs.Cost.permutations_tweakableHash' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_tweakableHash
+
+/-- info: 'LeanSphincs.Cost.permutations_verifyLayer' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanSphincs.Cost.permutations_verifyLayer
+
 /-- info: 'LeanSphincs.Cost.tweakableHashInput_length' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanSphincs.Cost.tweakableHashInput_length
 
-/-- info: 'LeanSphincs.Cost.verification_compressions' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Cost.verification_permutations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.verification_compressions
+#print axioms LeanSphincs.Cost.verification_permutations
 
-/-- info: 'LeanSphincs.Cost.verification_compressions_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanSphincs.Cost.verification_permutations_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanSphincs.Cost.verification_compressions_le
+#print axioms LeanSphincs.Cost.verification_permutations_le
 
 /-- info: 'LeanSphincs.Completeness.run_lift_prob' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

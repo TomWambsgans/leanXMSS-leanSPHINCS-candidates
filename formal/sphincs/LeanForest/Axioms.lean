@@ -9859,10 +9859,6 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Forest.recover_classification
 
-/-- info: 'LeanForest.Security.Forest.rootsInput_mem' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.Forest.rootsInput_mem
-
 /-- info: 'LeanForest.Security.Forest.subInput_mem' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.Forest.subInput_mem
@@ -9902,14 +9898,6 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.childPayload_injective' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.childPayload_injective
-
-/-- info: 'LeanForest.Security.flatMap_ofFn_injective' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.flatMap_ofFn_injective
-
-/-- info: 'LeanForest.Security.rootsPayload_injective' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.rootsPayload_injective
 
 /-- info: 'LeanForest.Security.superPayload_injective' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -11707,6 +11695,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.canonicalTreePath_surrogate
 
+/-- info: 'LeanForest.Security.flatMap_ofFn_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.flatMap_ofFn_injective
+
 /-- info: 'LeanForest.Security.inside_subtree_treeFold_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.inside_subtree_treeFold_witness
@@ -11770,6 +11762,14 @@ import LeanForest.World
 /-- info: 'LeanForest.Security.quotient_eq_of_parent_bit_eq' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.quotient_eq_of_parent_bit_eq
+
+/-- info: 'LeanForest.Security.rootsPayload_injective' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.rootsPayload_injective
+
+/-- info: 'LeanForest.Security.rootsPayload_len' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Security.rootsPayload_len
 
 /-- info: 'LeanForest.Security.verification_forest_run' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -11879,94 +11879,6 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.splitHashOutput_injective
 
-/-- info: 'LeanForest.Cost.compressions_bind' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_bind
-
-/-- info: 'LeanForest.Cost.compressions_chainWalk' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_chainWalk
-
-/-- info: 'LeanForest.Cost.compressions_childLeafHash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_childLeafHash
-
-/-- info: 'LeanForest.Cost.compressions_childRecover' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_childRecover
-
-/-- info: 'LeanForest.Cost.compressions_coordRecover' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_coordRecover
-
-/-- info: 'LeanForest.Cost.compressions_encode' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_encode
-
-/-- info: 'LeanForest.Cost.compressions_forestRecover' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_forestRecover
-
-/-- info: 'LeanForest.Cost.compressions_forestRecoverChain' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_forestRecoverChain
-
-/-- info: 'LeanForest.Cost.compressions_forestWalk' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_forestWalk
-
-/-- info: 'LeanForest.Cost.compressions_leafHash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_leafHash
-
-/-- info: 'LeanForest.Cost.compressions_messageDigest' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_messageDigest
-
-/-- info: 'LeanForest.Cost.compressions_messageDigestCall' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_messageDigestCall
-
-/-- info: 'LeanForest.Cost.compressions_oracleHash' depends on axioms: [propext] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_oracleHash
-
-/-- info: 'LeanForest.Cost.compressions_otsLeaf' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_otsLeaf
-
-/-- info: 'LeanForest.Cost.compressions_pure' depends on axioms: [propext] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_pure
-
-/-- info: 'LeanForest.Cost.compressions_recoverChain' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_recoverChain
-
-/-- info: 'LeanForest.Cost.compressions_sequenceFin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_sequenceFin
-
-/-- info: 'LeanForest.Cost.compressions_subFold' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_subFold
-
-/-- info: 'LeanForest.Cost.compressions_topFold' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_topFold
-
-/-- info: 'LeanForest.Cost.compressions_treeFold' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_treeFold
-
-/-- info: 'LeanForest.Cost.compressions_tweakableHash' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_tweakableHash
-
-/-- info: 'LeanForest.Cost.compressions_verifyLayers' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.compressions_verifyLayers
-
 /-- info: 'LeanForest.Cost.encode_valid' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Cost.encode_valid
@@ -11987,6 +11899,94 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Cost.lut_sum
 
+/-- info: 'LeanForest.Cost.permutations_bind' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_bind
+
+/-- info: 'LeanForest.Cost.permutations_chainWalk' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_chainWalk
+
+/-- info: 'LeanForest.Cost.permutations_childLeafHash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_childLeafHash
+
+/-- info: 'LeanForest.Cost.permutations_childRecover' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_childRecover
+
+/-- info: 'LeanForest.Cost.permutations_coordRecover' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_coordRecover
+
+/-- info: 'LeanForest.Cost.permutations_encode' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_encode
+
+/-- info: 'LeanForest.Cost.permutations_forestRecover' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_forestRecover
+
+/-- info: 'LeanForest.Cost.permutations_forestRecoverChain' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_forestRecoverChain
+
+/-- info: 'LeanForest.Cost.permutations_forestWalk' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_forestWalk
+
+/-- info: 'LeanForest.Cost.permutations_leafHash' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_leafHash
+
+/-- info: 'LeanForest.Cost.permutations_messageDigest' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_messageDigest
+
+/-- info: 'LeanForest.Cost.permutations_messageDigestCall' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_messageDigestCall
+
+/-- info: 'LeanForest.Cost.permutations_oracleHash' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_oracleHash
+
+/-- info: 'LeanForest.Cost.permutations_otsLeaf' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_otsLeaf
+
+/-- info: 'LeanForest.Cost.permutations_pure' depends on axioms: [propext] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_pure
+
+/-- info: 'LeanForest.Cost.permutations_recoverChain' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_recoverChain
+
+/-- info: 'LeanForest.Cost.permutations_sequenceFin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_sequenceFin
+
+/-- info: 'LeanForest.Cost.permutations_subFold' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_subFold
+
+/-- info: 'LeanForest.Cost.permutations_topFold' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_topFold
+
+/-- info: 'LeanForest.Cost.permutations_treeFold' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_treeFold
+
+/-- info: 'LeanForest.Cost.permutations_tweakableHash' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_tweakableHash
+
+/-- info: 'LeanForest.Cost.permutations_verifyLayers' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Cost.permutations_verifyLayers
+
 /-- info: 'LeanForest.Cost.rootsPayload_length' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Cost.rootsPayload_length
@@ -11999,13 +11999,13 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Cost.tweakableHashInput_length
 
-/-- info: 'LeanForest.Cost.verification_compressions' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Cost.verification_permutations' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.verification_compressions
+#print axioms LeanForest.Cost.verification_permutations
 
-/-- info: 'LeanForest.Cost.verification_compressions_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Cost.verification_permutations_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Cost.verification_compressions_le
+#print axioms LeanForest.Cost.verification_permutations_le
 
 /-- info: 'LeanForest.Completeness.run_lift_prob' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

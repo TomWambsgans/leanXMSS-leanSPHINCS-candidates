@@ -7,9 +7,11 @@ and `Quot.sound`; [Axioms.lean](LeanSphincs/Axioms.lean) pins every public theor
 
 `LeanSphincs/` models the candidate: one height-26 tree, 24 FORS trees of 1024 leaves, 64 WOTS+C
 chains with four positions and sum 120, two message-digest calls, and pruning with surrogate
-siblings. A FORS tree has no root hash: the FORS key is one hash of the two level-9 nodes of every
-tree, Th(P, A(11, 0, idx), n_0[0] ‖ n_0[1] ‖ … ‖ n_23[0] ‖ n_23[1]) (`ftsKey`, `ftsRecover`); the
-verifier folds an opened leaf nine levels and reads the other level-9 node as the last path element. Every hash input is the 16-byte public parameter P, a 16-byte address (4 bytes `lo`,
+siblings. A FORS tree has no root hash, and no hash folds the trees into a key: the WOTS+C encoding
+hashes the two level-9 nodes of every tree with the counter last,
+Th(P, A(4, 0, idx), n_0[0] ‖ n_0[1] ‖ … ‖ n_23[0] ‖ n_23[1] ‖ c), 804 bytes (`encode`, `ftsKey`,
+`ftsRecover`); the verifier folds an opened leaf nine levels and reads the other level-9 node as the
+last path element. Every hash input is the 16-byte public parameter P, a 16-byte address (4 bytes `lo`,
 3 bytes `hi`, one byte type + 32·step, then 8 zero bytes) and the payload; the message digest hashes
 m ‖ ρ (the root is not hashed), and its fields do not lie across 64-bit words: the index is bits
 128..153 of call 0, and FORS index κ is in call ⌊κ/12⌋ at bit 64·⌊(κ mod 12)/6⌋ + 10·(κ mod 6)
@@ -44,8 +46,8 @@ N_att is the lifetime of the best known FORS attack: the largest N with E[max(X,
 is the cover rate per digest query of an adaptive forger (distinct revealed leaves, exact multinomial
 loads over the 2^b indices) in units of 2^-127, and 1/2 is the rate of the other searches.
 
-That model omits a WOTS attack. The WOTS key signs the FORS public key, which a forger controls
-through the FORS opening. Grinding the WOTS counter until the encoding is a unit neighbour of the
+That model omits a WOTS attack. The WOTS key signs the FORS tops, which a forger controls through
+the FORS opening. Grinding the WOTS counter until the encoding is a unit neighbour of the
 published word (one chain lowered, one raised; about 3,300 such words for the worst leaf of a key)
 takes about 2^116 hashes, after which a single chain preimage forges, at about 2·2^-128 per query.
 With this attack the best known lifetimes are about 100 / 99.8 / 97.3 / 96.5 / 95.6 / 93.7 / 92.1%
@@ -79,7 +81,7 @@ to change the lifetimes above.
 | Computed subtree and surrogate path recover the root | `Completeness.eval_treeFold_pruned_path`, [Pruning](LeanSphincs/Pruning.lean) |
 | Graph-label programming preserves the random-oracle continuation | `Security.Graph.evalDist_graph_continuation`, [SecurityGraphSampling](LeanSphincs/SecurityGraphSampling.lean) |
 | Serialized signature length = 5684 bytes | `signature_size`, [Layout](LeanSphincs/Layout.lean) |
-| Accepted verification uses exactly 373 compressions (at most 373 for any signature) | `Cost.verification_compressions`, [VerificationCost](LeanSphincs/VerificationCost.lean) |
+| Accepted verification uses exactly 354 Keccak-f permutations (at most 354 for any signature) | `Cost.verification_permutations`, [VerificationCost](LeanSphincs/VerificationCost.lean) |
 
 The proof route, its modules, the gap to the attack and the modeling differences with the Rust code
 are in [PROOF.md](PROOF.md).
@@ -102,7 +104,7 @@ with `decide +kernel` during the build.
 ## The forest variant (leanSphincs-spicy)
 
 `LeanForest/` proves the same statement for the variant that replaces FORS by a two-level WOTS
-forest (4,276-byte signatures, 307 compressions to verify), at lifetimes above the ones of this
+forest (4,276-byte signatures, 267 Keccak-f permutations to verify), at lifetimes above the ones of this
 table: `LeanForest.Lifetimes.requestedSecurity`, see [FOREST.md](FOREST.md). It is not a default
 target: `env LEAN_NUM_THREADS=1 nice -n 19 lake build LeanForest` (its certificates take about 6
 minutes and 7 GB of memory).

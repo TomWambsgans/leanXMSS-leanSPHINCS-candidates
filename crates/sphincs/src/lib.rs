@@ -4,10 +4,10 @@
 // h = 26, plain FORS with k = 24 trees of height a = 10, WOTS+C with w = 4, 64 chains and target sum
 // 120, and pruned keys (a kept subtree plus pseudorandom surrogate siblings).
 
-//! The leanSphincs candidate over BLAKE2s.
+//! The leanSphincs candidate over Keccak-256.
 //!
-//! `Th(P, tw, M) = BLAKE2s(P | tw | M)` truncated to `n = 16` bytes, with a 16-byte address `tw` (8 bytes of fields, 8 zero bytes).
-//! Every hash call goes through [`hash`], which also counts BLAKE2s compressions (thread-local) so
+//! `Th(P, tw, M) = Keccak-256(P | tw | M)` truncated to `n = 16` bytes, with a 16-byte address `tw` (8 bytes of fields, 8 zero bytes).
+//! Every hash call goes through [`hash`], which also counts Keccak-f permutations (thread-local) so
 //! tests can check the note's costs.
 
 mod hash;
@@ -59,8 +59,9 @@ pub const DIGEST_BITS: usize = H + K * A;
 
 pub const PUB_KEY_SIZE: usize = N + PUBLIC_PARAM_LEN;
 pub const SIG_SIZE: usize = RANDOMIZER_LEN + K * (1 + A) * N + COUNTER_LEN + V * N + H * N;
-/// Compressions of one verification: digest 4, FORS 24 * 10 + 13, encoding 1, chains 192 - 120, leaf 17, path 26.
-pub const VERIFY_COMPRESSIONS: u64 = 373;
+/// Permutations of one verification: digest 2, FORS 24 * 10, encoding 6 (the 48 FORS tops and the
+/// counter), chains 192 - 120, leaf 8, path 26.
+pub const VERIFY_PERMUTATIONS: u64 = 354;
 
 const _: () = assert!(W * V == 8 * N);
 const _: () = assert!(TARGET_SUM < V * (CHAIN_LEN - 1));
