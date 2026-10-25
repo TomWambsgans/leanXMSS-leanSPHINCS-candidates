@@ -338,7 +338,6 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th>FTS</th><td class="two">WOTS forest<span class="info" tabindex="0" data-tip="8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5">i</span></td></tr>
         </tbody>
         <tbody class="out">
-          <tr><th>Lifetime</th><td data-f="lifetime">&hellip;</td></tr>
           <tr><th>Size</th><td data-f="size">&hellip;</td></tr>
           <tr><th>Verification<br><span class="unit" data-f="unit">(permutations)</span></th><td data-f="verify">&hellip;</td></tr>
         </tbody>
@@ -1128,7 +1127,6 @@ document.addEventListener('pointerdown', function (e) {
 
     // the parameter table
     set('h', S.shape === 'layered' ? split(main) : String(main.h));
-    set('lifetime', fmt(main.lifetime) + ' &asymp; ' + pow2((Math.log(main.lifetime) / Math.LN2).toFixed(1)) + LIFE_TIP);
     set('size', comma(main.size) + ' bytes');
     set('unit', '(' + unit() + ')');
     set('verify', comma(main.verify) + '<span class="info" tabindex="0" data-tip="' + verifyUnit + '">i</span>');
