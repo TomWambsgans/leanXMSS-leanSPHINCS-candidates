@@ -449,7 +449,7 @@ mod tests {
             let layered = Config::new(HashFn::Keccak256, h, Shape::Layered);
             let heights = layered_heights(h);
             assert_eq!(heights.iter().sum::<usize>(), h);
-            assert!(heights[1..].iter().all(|&x| x == 6) && heights[0] <= 12);
+            assert!(heights.len() == 3 && heights[1] == heights[2] && heights[1] >= 6 && heights[0] <= 12);
             assert_eq!(layered.layers().len(), heights.len());
             assert_eq!(layered.sig_size(), keccak(h, h).sig_size() + (heights.len() - 1) * LAYER_SIZE);
         }

@@ -35,7 +35,7 @@ import forest_table
 N = 16  # bytes per hash value
 P_LEN, ADDR = 16, 16
 HEIGHTS = (22, 24, 26, 28)
-LAYERED = {22: (10, 6, 6), 24: (12, 6, 6), 26: (8, 6, 6, 6), 28: (10, 6, 6, 6)}  # top layer first
+LAYERED = {22: (10, 6, 6), 24: (12, 6, 6), 26: (12, 7, 7), 28: (12, 8, 8)}  # top layer first
 PRUNED = (8, 10, 12, 13, 14, 20)  # kept subtree heights b < h with a certificate, besides b = h
 
 

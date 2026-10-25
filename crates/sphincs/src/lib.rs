@@ -52,14 +52,14 @@ pub const HEIGHTS: [usize; 4] = [22, 24, 26, 28];
 /// The tallest height: the digest's index field and the address fields are sized for it.
 pub const MAX_H: usize = 28;
 
-/// The layer heights of a layered key of height `h`, top layer first: bottom layers of 6, a top
-/// layer of at most 12, and the fewest layers.
+/// The layer heights of a layered key of height `h`, top layer first: three layers, a top layer of at
+/// most 12 and two equal bottom layers of at least 6.
 pub fn layered_heights(h: usize) -> &'static [usize] {
     match h {
         22 => &[10, 6, 6],
         24 => &[12, 6, 6],
-        26 => &[8, 6, 6, 6],
-        28 => &[10, 6, 6, 6],
+        26 => &[12, 7, 7],
+        28 => &[12, 8, 8],
         _ => panic!("no layered split for h = {h}"),
     }
 }

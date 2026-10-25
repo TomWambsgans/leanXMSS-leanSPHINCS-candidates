@@ -8,8 +8,8 @@ pins every public theorem to its axioms.
 
 `LeanForest/` models the candidate for every height `h ≤ 28`, number of layers `d` and kept subtree
 height `b` (`Params`, [Scheme.lean](LeanForest/Scheme.lean)): an index of `h` bits; a hypertree of
-`d` layers of WOTS+C keys (64 chains of four positions, target sum 123), whose bottom layers have
-height 6 and whose top layer has the rest; a two-level WOTS forest as the few-time signature; one
+`d` layers of WOTS+C keys (64 chains of four positions, target sum 123), whose layers below the top
+share one height `ℓ ≥ 6` (`lowerHeight`) and whose top layer has the rest; a two-level WOTS forest as the few-time signature; one
 message-digest call; and pruning of the top layer with surrogate siblings. A pruned key is `d = 1`,
 `b ≤ h` (`b = h` is the full key); a layered key keeps everything, `b = h`, `d ≥ 2`. No tree of the
 forest has a root hash and the forest key is not hashed: the WOTS+C encoding of the bottom layer
@@ -38,7 +38,7 @@ The scheme, the digest layout, the codeword table, the costs and the forest are 
 ## Proved lifetimes
 
 Signature limits N with 127 bits (`Lifetimes.<config>_bits`); layered keys: 10 + 6 + 6, 12 + 6 + 6,
-8 + 6 + 6 + 6 and 10 + 6 + 6 + 6.
+12 + 7 + 7 and 12 + 8 + 8.
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |

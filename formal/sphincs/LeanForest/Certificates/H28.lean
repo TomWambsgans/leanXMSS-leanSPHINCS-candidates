@@ -1514,7 +1514,7 @@ theorem covers_h28_b8_ok : ForestPotential.checkCoversH 28 8 57896 9541 18798122
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h28_b8_0_ok, cover_h28_b8_1_ok, coverh_h28_b8_0_ok, by decide +kernel⟩
 
-/-- Poisson table of the small route, height 28, layered (10 + 6 + 6 + 6), 5,634,000,000 signatures. -/
+/-- Poisson table of the small route, height 28, layered (12 + 8 + 8), 5,634,000,000 signatures. -/
 def tab_h28_L : PoisT := fillPoisT 387165531930660610862 220 145 150
 
 theorem tab_h28_L_ok : checkPT tab_h28_L = true := by decide +kernel
@@ -1718,13 +1718,13 @@ def cover_h28_L_0 : CoverW where
     (131552498066816032760912005681033248769, 159436549635417040475321695402626908160, 11),
     (159436549635417040475321695402626908161, 170141183460469231731687303715884105728, 12)]
 
-theorem cover_h28_L_0_ok : checkCoverW 28 28 231424 5634000000 181191675984824164237263828385005569 cover_h28_L_0 = true :=
+theorem cover_h28_L_0_ok : checkCoverW 28 28 925696 5634000000 181191675984824164237263828385005569 cover_h28_L_0 = true :=
   checkCoverW_of [large_h28_L_0_0_cB, large_h28_L_0_1_cB, large_h28_L_0_2_cB, large_h28_L_0_3_cB, large_h28_L_0_4_cB, large_h28_L_0_5_cB, large_h28_L_0_6_cB, large_h28_L_0_7_cB, large_h28_L_0_8_cB, large_h28_L_0_9_cB, large_h28_L_0_10_cB, large_h28_L_0_11_cB, large_h28_L_0_12_cB]
     (.cons large_h28_L_0_0_ok <| .cons large_h28_L_0_1_ok <| .cons large_h28_L_0_2_ok <| .cons large_h28_L_0_3_ok <| .cons large_h28_L_0_4_ok <| .cons large_h28_L_0_5_ok <| .cons large_h28_L_0_6_ok <| .cons large_h28_L_0_7_ok <| .cons large_h28_L_0_8_ok <| .cons large_h28_L_0_9_ok <| .cons large_h28_L_0_10_ok <| .cons large_h28_L_0_11_ok <| .cons large_h28_L_0_12_ok <| .nil)
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h28_L_ok : ForestPotential.checkCoversH 28 28 231424 5634000000 181191675984824164237263828385005569 [cover_h28_L_0] [] = true := by
+theorem covers_h28_L_ok : ForestPotential.checkCoversH 28 28 925696 5634000000 181191675984824164237263828385005569 [cover_h28_L_0] [] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h28_L_0_ok, by decide +kernel⟩
 

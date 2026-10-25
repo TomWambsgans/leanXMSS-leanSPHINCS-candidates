@@ -58,8 +58,8 @@ SLH-DSA-128-24 from NIST's SP~800-230~\cite{SP800230}, with the differences:
         and replaces the $h-b$ siblings above it by pseudorandom surrogate nodes~\cite{conduition}; the signer
         grinds the randomizer until the index lands in the kept subtree, $2^{h-b}$ attempts on average
         ($b=h$ is the full key). The forger must land there too, so the lifetime is not cut by the whole pruning
-        factor $2^{h-b}$ (\cref{sec:lifetimes}). \emph{Layered}: a hypertree whose bottom layers have height 6 and
-        whose top layer is at most 12, with the fewest layers; key generation builds the top layer only, the
+        factor $2^{h-b}$ (\cref{sec:lifetimes}). \emph{Layered}: a hypertree of three layers, a top layer of at most 12
+        over two equal layers of at least 6; key generation builds the top layer only, the
         signer builds the trees below it on the fly and does not grind, and the lifetime is the full key's.
   \item[T3, hash.] Keccak-256, BLAKE2s or SHA-256, each with its own layout (below).
 \end{description}
@@ -69,12 +69,12 @@ SLH-DSA-128-24 from NIST's SP~800-230~\cite{SP800230}, with the differences:
   \toprule
   $h$ & 22 & 24 & 26 & 28 \\
   \midrule
-  layered: layer heights, top first & $10+6+6$ & $12+6+6$ & $8+6+6+6$ & $10+6+6+6$ \\
+  layered: layer heights, top first & $10+6+6$ & $12+6+6$ & $12+7+7$ & $12+8+8$ \\
   \bottomrule
 \end{tabular}
 \end{center}
-Each extra layer adds a WOTS$^+$C signature with its counter, 1\,028 bytes, and 78 Keccak-f permutations of
-verification (87 compressions with BLAKE2s or SHA-256).
+The two lower layers add two WOTS$^+$C signatures with their counters, 2\,056 bytes, and 156 Keccak-f permutations
+of verification (174 compressions with BLAKE2s or SHA-256).
 
 \paragraph{Hash inputs.} $\hash$ is truncated to 16 bytes except where noted. Every hash input is
 $P \concat \mathit{address} \concat \mathit{data}$: the public parameter $P$ (16 bytes), then a 16-byte address:
@@ -118,9 +118,9 @@ the verification cost of the full key of its height.
   24 & one tree & 4\,244 & 265 & 301 & 302 \\
   24 & layered ($12+6+6$) & 6\,300 & 421 & 475 & 476 \\
   26 & one tree & 4\,276 & 267 & 303 & 304 \\
-  26 & layered ($8+6+6+6$) & 7\,360 & 501 & 564 & 565 \\
+  26 & layered ($12+7+7$) & 6\,332 & 423 & 477 & 478 \\
   28 & one tree & 4\,308 & 269 & 305 & 306 \\
-  28 & layered ($10+6+6+6$) & 7\,392 & 503 & 566 & 567 \\
+  28 & layered ($12+8+8$) & 6\,364 & 425 & 479 & 480 \\
   \bottomrule
 \end{tabular}
 \end{center}

@@ -60,7 +60,7 @@ LAYERED_TOP = None  # the top layer's height of a layered key, None for a pruned
 SHAPE = "pruned"
 
 # The layer split of a layered key, top layer first (crates/sphincs `layered_heights`).
-SPLITS = {22: (10, 6, 6), 24: (12, 6, 6), 26: (8, 6, 6, 6), 28: (10, 6, 6, 6)}
+SPLITS = {22: (10, 6, 6), 24: (12, 6, 6), 26: (12, 7, 7), 28: (12, 8, 8)}
 
 def set_config(h, shape='pruned'):
     """Select the height and the shape every function below works at."""
@@ -587,8 +587,9 @@ def emit_lifetimes(certs, path):
         tag, name = tag_of(c), pname(c)
         att = ATTACK[H][H if c['shape'] == 'layered' else b]
         out.append("/-- %s (%.1f%% of the cover attack's %.4g). -/" % (describe(c).capitalize(), 100.0 * N / att, att))
-        out.append('abbrev %s : Params := ⟨%d, %d, %d, %d, by decide, by decide, by decide, by decide, by decide⟩\n'
-                   % (name, H, d, b, N))
+        lower = SPLITS[H][1] if c['shape'] == 'layered' else 6
+        out.append('abbrev %s : Params := ⟨%d, %d, %d, %d, %d, by decide, by decide, by decide, by decide, by decide, by decide⟩\n'
+                   % (name, H, d, lower, b, N))
         out.append('/-- **127 bits for the deterministic signer**, %s. -/' % describe(c))
         names = ', '.join('H0.cover_%s_%d' % (tag, ci) for ci in range(len(c['covers'])))
         hnames = ', '.join('H0.coverh_%s_%d' % (tag, ci) for ci in range(len(c['heavy'])))

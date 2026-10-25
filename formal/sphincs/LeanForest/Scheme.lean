@@ -8,7 +8,7 @@ import Mathlib.Data.BitVec
 The scheme has a height `h = totalHeight` (22, 24, 26 or 28) and a shape (`Params`): one tree of
 height `h` of which the key keeps a subtree of `2^b` leaves (`numLayers = 1`, `b = subtreeHeight`,
 `b = h` being the full key), or a hypertree of `numLayers = d` layers whose layers below the top have
-height 6 (`lowerHeight`) and whose key builds the top layer only (`b = h`). The few-time signature
+one height (`lowerHeight`, at least 6) and whose key builds the top layer only (`b = h`). The few-time signature
 under every bottom leaf is a **two-level WOTS forest**:
 
 * 8 independent coordinates; a coordinate is a top Merkle tree of height 4 over 16 super-children,
@@ -66,24 +66,25 @@ def winternitzBits : Nat := 2
 def chainLength : Nat := 2 ^ winternitzBits
 def numChains : Nat := 64
 def targetSum : Nat := 123
-/-- The height of every layer below the top one. -/
-def lowerHeight : Nat := 6
 /-- Randomizers tried per signature (`ctr` is a `u32`), `A_max`. -/
 def digestAttemptLimit : Nat := 2 ^ 32
 /-- Encoding counters tried per signature, `C_max`. -/
 def encodingAttemptLimit : Nat := 2 ^ 32
 
 /-- The key's shape and lifetime. The index has `totalHeight = h` bits. The key is a hypertree of
-`numLayers = d` layers, every layer below the top one of height `lowerHeight = 6` (`d = 1` is one
+`numLayers = d` layers, every layer below the top one of height `lowerHeight ≥ 6` (`d = 1` is one
 tree of height `h`). Its top layer keeps a subtree: the kept instances are the `2^subtreeHeight`
 indices that land in it (`subtreeHeight = h` keeps them all: a full or a layered key). The key signs
 at most `signatureLimit` messages. -/
 class Params where
   totalHeight : Nat
   numLayers : Nat
+  /-- The height of every layer below the top one. -/
+  lowerHeight : Nat
   subtreeHeight : Nat
   signatureLimit : Nat
   numLayers_pos : 0 < numLayers
+  lowerHeight_ge : 6 ≤ lowerHeight
   /-- The top layer is at least as tall as the others. -/
   lower_le : lowerHeight * numLayers ≤ totalHeight
   /-- The index fields fit the digest and the 32-bit address fields. -/
@@ -92,11 +93,11 @@ class Params where
   below_le : lowerHeight * (numLayers - 1) ≤ subtreeHeight
   subtreeHeight_le : subtreeHeight ≤ totalHeight
 
-export Params (totalHeight numLayers subtreeHeight signatureLimit)
+export Params (totalHeight numLayers lowerHeight subtreeHeight signatureLimit)
 
 variable [Params]
 
-/-- The height of the top layer, the tallest: `h - 6 (d - 1)`. -/
+/-- The height of the top layer, the tallest: `h - lowerHeight (d - 1)`. -/
 def maxLayerHeight : Nat := totalHeight - lowerHeight * (numLayers - 1)
 
 abbrev MasterSeed := BitVec 256
@@ -1209,8 +1210,7 @@ theorem numLayers_pos : 0 < numLayers := Params.numLayers_pos
 
 theorem totalHeight_pos : 0 < totalHeight := by
   have h1 := Params.lower_le
-  have h2 := Params.numLayers_pos
-  unfold lowerHeight at h1
+  have h2 : 6 * 1 ≤ lowerHeight * numLayers := Nat.mul_le_mul Params.lowerHeight_ge Params.numLayers_pos
   omega
 
 /-- The index field lies inside the hash output. -/
@@ -1232,7 +1232,7 @@ theorem index_lt_two_pow_32 (index : Index) : index.val < 2 ^ 32 :=
 
 theorem maxLayerHeight_le : maxLayerHeight ≤ totalHeight := Nat.sub_le _ _
 
-/-- The top layer is at least as tall as a lower one, 6. -/
+/-- The top layer is at least as tall as a lower one. -/
 theorem lowerHeight_le_max : lowerHeight ≤ maxLayerHeight := by
   have h1 := Params.lower_le
   have h2 := Params.numLayers_pos
@@ -1241,19 +1241,21 @@ theorem lowerHeight_le_max : lowerHeight ≤ maxLayerHeight := by
     rw [← Nat.mul_succ]; congr 1; omega
   omega
 
+theorem lowerHeight_pos : 0 < lowerHeight := lt_of_lt_of_le (by decide) Params.lowerHeight_ge
+
 theorem maxLayerHeight_pos : 0 < maxLayerHeight :=
-  lt_of_lt_of_le (by decide) lowerHeight_le_max
+  lt_of_lt_of_le lowerHeight_pos lowerHeight_le_max
 
 theorem messageDigestBits_le : messageDigestBits ≤ hashOutputBits := by
   have := totalHeight_le_28
   unfold messageDigestBits hashOutputBits forestCoords coordBits
   omega
 
-/-- At most 4 layers: the layers below the top have height 6 and `h ≤ 28`. -/
+/-- At most 4 layers: the layers below the top have height at least 6 and `h ≤ 28`. -/
 theorem numLayers_le : numLayers ≤ 4 := by
   have h1 := Params.lower_le
   have := totalHeight_le_28
-  unfold lowerHeight at h1
+  have h2 : 6 * numLayers ≤ lowerHeight * numLayers := Nat.mul_le_mul_right numLayers Params.lowerHeight_ge
   omega
 
 theorem tree_lt_two_pow_32 (tree : TreeIndex) : tree.val < 2 ^ 32 :=

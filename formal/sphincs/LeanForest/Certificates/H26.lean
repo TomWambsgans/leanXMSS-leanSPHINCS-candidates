@@ -1493,7 +1493,7 @@ theorem covers_h26_b8_ok : ForestPotential.checkCoversH 26 8 57892 8830 20499498
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b8_0_ok, cover_h26_b8_1_ok, coverh_h26_b8_0_ok, by decide +kernel⟩
 
-/-- Poisson table of the small route, height 26, layered (8 + 6 + 6 + 6), 1,381,000,000 signatures. -/
+/-- Poisson table of the small route, height 26, layered (12 + 7 + 7), 1,381,000,000 signatures. -/
 def tab_h26_L : PoisT := fillPoisT 379606389489853943694 220 144 150
 
 theorem tab_h26_L_ok : checkPT tab_h26_L = true := by decide +kernel
@@ -1645,13 +1645,13 @@ def cover_h26_L_0 : CoverW where
     (12308013994538689258248124412691742721, 119012028561403971909047934855963213824, 7),
     (119012028561403971909047934855963213825, 170141183460469231731687303715884105728, 8)]
 
-theorem cover_h26_L_0_ok : checkCoverW 26 26 57856 1381000000 234976532390629421868243188067598337 cover_h26_L_0 = true :=
+theorem cover_h26_L_0_ok : checkCoverW 26 26 925696 1381000000 234976532390629421868243188067598337 cover_h26_L_0 = true :=
   checkCoverW_of [large_h26_L_0_0_cB, large_h26_L_0_1_cB, large_h26_L_0_2_cB, large_h26_L_0_3_cB, large_h26_L_0_4_cB, large_h26_L_0_5_cB, large_h26_L_0_6_cB, large_h26_L_0_7_cB, large_h26_L_0_8_cB]
     (.cons large_h26_L_0_0_ok <| .cons large_h26_L_0_1_ok <| .cons large_h26_L_0_2_ok <| .cons large_h26_L_0_3_ok <| .cons large_h26_L_0_4_ok <| .cons large_h26_L_0_5_ok <| .cons large_h26_L_0_6_ok <| .cons large_h26_L_0_7_ok <| .cons large_h26_L_0_8_ok <| .nil)
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_L_ok : ForestPotential.checkCoversH 26 26 57856 1381000000 234976532390629421868243188067598337 [cover_h26_L_0] [] = true := by
+theorem covers_h26_L_ok : ForestPotential.checkCoversH 26 26 925696 1381000000 234976532390629421868243188067598337 [cover_h26_L_0] [] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_L_0_ok, by decide +kernel⟩
 
