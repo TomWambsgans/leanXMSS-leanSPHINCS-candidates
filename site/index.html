@@ -163,6 +163,8 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .cards td .hd > :first-child { flex: 1 1 auto; min-width: 0; }
 .cards .st { display: block; color: var(--muted); }
 .cmp th.nw { white-space: nowrap; }
+.cards .nw { white-space: nowrap; }
+.cmp .gone, .cmp .gone > * { display: none !important; }
 .cards .cache { color: var(--muted); white-space: nowrap; font-size: 0.88em; }
 .cards .br { font-size: 0; }
 .cards .br::after { content: "\A"; white-space: pre; }
@@ -262,6 +264,8 @@ footer a + a { margin-left: 1.25rem; }
   .cards td::before { content: attr(data-l); color: var(--muted); font-size: 0.92em; }
   .tables .scroll .cards td.na { display: none; }
   .cmp th.nw { white-space: nowrap; }
+.cards .nw { white-space: nowrap; }
+.cmp .gone, .cmp .gone > * { display: none !important; }
 .cards .cache { display: block; }
   .cards td .hd { gap: 0 0.6em; flex-wrap: wrap; }
   .cards td .hd .ex { margin-left: auto; }
@@ -997,7 +1001,7 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th></th><th data-f="head-0"></th><th data-f="head-1"></th><th data-f="head-2"></th></tr>
         </thead>
         <tbody>
-          <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Lifetime" data-f="life-0"></td><td data-l="Lifetime" data-f="life-1"></td><td data-l="Lifetime" data-f="life-2"></td></tr>
+          <tr><th class="nw">Pruned lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Pruned lifetime" data-f="life-0"></td><td data-l="Pruned lifetime" data-f="life-1"></td><td data-l="Pruned lifetime" data-f="life-2"></td></tr>
           <tr><th>Key generation</th><td data-l="Key generation" data-f="keygen-0"></td><td data-l="Key generation" data-f="keygen-1"></td><td data-l="Key generation" data-f="keygen-2"></td></tr>
           <tr><th>Signing</th><td data-l="Signing" data-f="sign-0"></td><td data-l="Signing" data-f="sign-1"></td><td data-l="Signing" data-f="sign-2"></td></tr>
           <tr><th class="nw">Assisted signing<span class="info w" tabindex="0" id="assist-tip" data-tip="">i</span></th><td data-l="Assisted" data-f="assist-0"></td><td class="na"></td><td class="na"></td></tr>
@@ -1148,6 +1152,9 @@ document.addEventListener('pointerdown', function (e) {
         'Online: the host finds the randomizer that lands on one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes) and proves it in a STARK (≈ ' +
         time(g / W.host_rate) + '), which the Ledger verifies (≈ ' + time(W.stark_verify_s) + '). Idea from Riva (riva.xyz).';
     };
+    // the layered key has the same lifetime on every device: no lifetime row
+    var lifeRow = document.querySelector('[data-f="life-0"]').closest('tr');
+    lifeRow.classList.toggle('gone', lay_);
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
       var dev = d.dev + '<span class="info' + (lay_ && k > 0 ? ' r' : '') + '" tabindex="0" data-tip="' + (d.host ? fmt(d.rate) : pow2t(Math.round(Math.log2(d.rate)))) +
@@ -1163,8 +1170,8 @@ document.addEventListener('pointerdown', function (e) {
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
-      set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.prep * np / d.rate) + '</span>&emsp;Online: <span class="ex">&asymp;&thinsp;' +
-        time(g / W.host_rate + W.stark_verify_s) + '</span><span class="m-only"><span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span></div>');
+      set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.prep * np / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
+        time(g / W.host_rate + W.stark_verify_s) + '</span><span class="m-only"><span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span></span></div>');
       document.getElementById('assist-tip').setAttribute('data-tip', assist(tt).replace(/&nbsp;/g, '\u00a0'));
     });
 
