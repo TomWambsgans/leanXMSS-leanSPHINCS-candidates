@@ -1162,11 +1162,12 @@ document.addEventListener('pointerdown', function (e) {
       }
       // with the host: the prepared instances built in advance (one is refilled per signature), the STARK checked online, the grinding proved by the host
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
-      var ph = function (n, u, what, r) { return '<div class="hd"><span>' + fmt(n) + '&nbsp;' + u + ' <span class="ph">' + what + '</span></span>' + t(n, r) + '</div>'; };
-      set('sign-' + k, '<div>' + ph(tt.prep * np, unit(), '') + '<div class="ph">(' + np + ' FTS in advance, 1 per signature)</div>' + '<div class="hd"><span>STARK<span class="info" tabindex="0" data-tip="The host proves &asymp; ' +
-        pow2t(Math.log2(W.ledger_grind[S.h])) + ' hashes (' + time(W.ledger_grind[S.h] / W.host_rate) + '),&#10;the Ledger verifies the proof in &asymp; ' +
-        fmt(W.stark_verify) + ' hashes (' + time(W.stark_verify_s) + ')">i</span></span>' +
-        t(W.ledger_grind[S.h] / W.host_rate + W.stark_verify_s, 1) + '</div></div>');
+      var g = W.ledger_grind[S.h], info = function (tip) { return '<span class="info" tabindex="0" data-tip="' + tip + '">i</span>'; };
+      set('sign-' + k, '<div><div class="hd"><span>Offline <span class="ph">(keygen ' + np + ' FTS)</span>' +
+        info(fmt(tt.prep * np) + ' ' + units() + ', in idle time;&#10;each signature uses one FTS, then refilled (' + fmt(tt.prep) + ')') + '</span>' + t(tt.prep * np) + '</div>' +
+        '<div class="hd"><span>Online <span class="ph">(STARK of &asymp;&thinsp;' + pow2(Math.log2(g)) + ' hashes)</span>' +
+        info('The host proves &asymp; ' + pow2t(Math.log2(g)) + ' hashes (' + time(g / W.host_rate) + '),&#10;the Ledger verifies the proof in &asymp; ' +
+          fmt(W.stark_verify) + ' hashes (' + time(W.stark_verify_s) + ')') + '</span>' + t(g / W.host_rate + W.stark_verify_s, 1) + '</div></div>');
     });
 
     // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
