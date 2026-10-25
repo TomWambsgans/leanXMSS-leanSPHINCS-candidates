@@ -1441,23 +1441,22 @@ document.addEventListener('pointerdown', function (e) {
   };
   if (!motion) return;
 
-  var layer = null, segs, stages, total, start = null, wasSettled = false, inView = true;
+  var layer = null, segs, total, start = null, wasSettled = false, inView = true;
   function centres(g) { return Array.prototype.map.call(g.querySelectorAll('circle'), function (c) { return [+c.getAttribute('cx'), +c.getAttribute('cy')]; }); }
   function apexes(g) { return Array.prototype.map.call(g.querySelectorAll('polygon'), function (q) { return q.getAttribute('points').split(' ')[0].split(',').map(Number); }); }
   function build() {
     if (layer) layer.remove();
     layer = el('g', { 'class': 'anim' }, svg);
-    segs = []; stages = [];
+    segs = [];
     var t = 0;
     // one stage: every item is a list of points walked in `ms`; `trail` keeps the line drawn
-    function stage(ms, items, trail, r, keep) {
+    function stage(ms, items, trail, r) {
       items.forEach(function (pts) {
         var len = 0, cum = [0];
         for (var i = 1; i < pts.length; i++) { len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); cum.push(len); }
         var line = trail ? el('polyline', { points: pts.map(function (q) { return q.join(','); }).join(' '), 'stroke-dasharray': len + ' ' + len, 'stroke-dashoffset': len, opacity: 0 }, layer) : null;
-        segs.push({ pts: pts, cum: cum, len: len, line: line, dot: el('circle', { r: r || 2.6, opacity: 0 }, layer), t0: t, t1: t + ms, stage: stages.length, keep: keep });
+        segs.push({ pts: pts, cum: cum, len: len, line: line, dot: el('circle', { r: r || 2.6, opacity: 0 }, layer), t0: t, t1: t + ms });
       });
-      stages.push([t, t + ms]);
       t += ms;
     }
     var sig = svg.querySelector('.sig'), top = sig.querySelectorAll(':scope > g.on'), tip = [X, 378];
@@ -1486,14 +1485,12 @@ document.addEventListener('pointerdown', function (e) {
       stage(250, [[[X, TIP], low.leaf]], false);
       for (var i = geo.length - 1; i >= 0; i--) {
         var l = geo[i];
-        stage(500 + 70 * l.t, [l.nodes.slice().reverse()], true, i === 0 ? 3.2 : 2.6, true);
-        if (i === 0) break;                  // the top path stays drawn
-        var walked = segs[segs.length - 1];
+        stage(500 + 70 * l.t, [l.nodes.slice().reverse()], true, i === 0 ? 3.2 : 2.6);
+        if (i === 0) break;
         var k = geo[i - 1].key;
         stage(300, k.chains.map(function (c) { return [l.root, c]; }), false, 1.4);
         stage(400, k.chains.map(function (c) { return [c, [c[0], k.top]]; }), true, 1.6);
         stage(300, k.chains.map(function (c) { return [[c[0], k.top], geo[i - 1].leaf]; }), false, 1.6);
-        walked.erase = [walked.t1, t];       // the path of this layer is erased, from its leaf, on the way to the next
       }
       root = geo[0].root;
     }
@@ -1522,17 +1519,10 @@ document.addEventListener('pointerdown', function (e) {
       s.dot.setAttribute('cy', a[1] + (b[1] - a[1]) * u);
       s.dot.setAttribute('opacity', x > 0 && (x < 1 || s.last) ? 1 : 0);
       if (s.line) {
-        if (s.erase && t > s.erase[0]) {   // the dash slides off the start of the path
-          var e = ease(Math.min(1, (t - s.erase[0]) / (s.erase[1] - s.erase[0]))) * s.len;
-          s.line.setAttribute('stroke-dashoffset', 2 * s.len - e);
-          s.line.setAttribute('opacity', e < s.len ? 1 : 0);
-          return;
-        }
         s.line.setAttribute('stroke-dashoffset', s.len - d);
-        // a visited layer goes back to normal while the next one is walked
-        var nx = !s.keep && stages[s.stage + 1];
-        // (hidden before its stage: the round cap of an empty dash is a dot)
-        s.line.setAttribute('opacity', t <= s.t0 ? 0 : nx ? 1 - Math.min(1, Math.max(0, (t - nx[0]) / Math.max(450, nx[1] - nx[0]))) : 1);
+        // every walked line stays until the whole drawing fades (hidden before its stage: the round cap of an
+        // empty dash is a dot)
+        s.line.setAttribute('opacity', t <= s.t0 ? 0 : 1);
       }
     });
     var k = (t - total) / 700;
