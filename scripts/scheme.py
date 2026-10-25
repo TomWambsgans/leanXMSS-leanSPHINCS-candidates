@@ -264,7 +264,7 @@ def site_data():
                                                lifetime=proved, attack=attack))
     C = Costs(HASHES[0])
     for h in HEIGHTS:
-        for shape, b in (("pruned", 12), ("layered", h)):
+        for shape, b in [("pruned", bb) for bb in PRUNED] + [("layered", h)]:
             ls = layers(h, shape)
             keygen = C.keygen(h, shape, b)
             lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])

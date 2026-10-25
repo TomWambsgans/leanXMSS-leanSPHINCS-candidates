@@ -80,6 +80,11 @@ svg .tree line { stroke: var(--tree); stroke-width: 1; }
 svg .stub line { stroke: url(#fade); stroke-width: 1; }
 svg .f0 { stop-color: var(--tree); stop-opacity: 1; }
 svg .f1 { stop-color: var(--tree); stop-opacity: 0; }
+svg .g0 { stop-color: var(--tree); stop-opacity: 0.55; }
+svg .g1 { stop-color: var(--tree); stop-opacity: 0.06; }
+svg .body polygon { fill: url(#lfade); }
+svg .nd circle { fill: #fff; stroke: var(--tree); stroke-width: 1; }
+svg .sib circle { fill: #fff; stroke: var(--ink); stroke-width: 1.3; }
 svg .base { stroke: var(--tree); stroke-width: 1; }
 svg .path { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
 svg .dash { stroke-dasharray: 2 3; }
@@ -94,8 +99,6 @@ svg .dot circle { fill: var(--tree); }
 svg .ell circle { fill: var(--ink); }
 svg .brace { fill: none; stroke: #8a8a8a; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
 svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-linejoin: round; }
-svg .kept { fill: var(--accent); fill-opacity: 0.07; }
-svg .sm { font-size: 12px; fill: var(--muted); }
 
 
 /* Modes */
@@ -157,11 +160,6 @@ svg .sm { font-size: 12px; fill: var(--muted); }
 .tables h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; margin: 0.9rem 0 0.2rem; }
 .tables h2:first-child { margin-top: 0; }
 .tables .lead { margin: 0 0 0.3rem; color: var(--muted); }
-.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; margin-top: 0.5rem; }
-.split h3 { font-size: 1.25rem; font-weight: 600; margin: 0; }
-.split .bn { margin: 0.1rem 0 0.3rem; }
-.split .cmp col.label { width: 8.5rem; }
-.split .cmp tbody th { white-space: nowrap; }
 .cmp thead .sub { font-weight: 400; color: var(--muted); }
 .m-only { display: none; }
 .cards thead .dev { white-space: nowrap; }
@@ -172,6 +170,16 @@ svg .sm { font-size: 12px; fill: var(--muted); }
 .plain { font-variant-numeric: tabular-nums; }
 .plain td { white-space: nowrap; }
 .tables .after { margin: 0.5rem 0 0; }
+.thr { margin-top: 0.5rem; }
+.thr h3 { font-size: 1.25rem; font-weight: 600; margin: 0; }
+.thr .bn { margin: 0.1rem 0 0.3rem; }
+.thr .cmp { width: auto; table-layout: auto; }
+.thr .cmp th, .thr .cmp td { padding-right: 2rem; white-space: nowrap; }
+.thr .cmp tbody th { font-weight: 400; }
+.thr .cmp thead tr:first-child th { padding-bottom: 0; }
+.thr .cmp thead .grp { font-weight: 400; color: var(--muted); }
+.thr .pair { display: flex; flex-wrap: wrap; gap: 1rem 1rem; align-items: flex-start; }
+.thr .life > * { color: var(--muted); }
 .tables p { margin: 0 0 0.6rem; }
 .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin: 0.4rem 0 0.6rem; padding: 0; list-style: none; }
 .steps li { border-top: 1px solid var(--rule); padding-top: 0.45rem; }
@@ -214,10 +222,9 @@ footer a + a { margin-left: 1.25rem; }
   .params p { white-space: normal; }
   figure { min-height: 0; }
   figure svg { position: static; height: auto; }
-      .split { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
   .scroll { overflow-x: auto; }
   .cmp { table-layout: auto; width: auto; }
-  .cmp col.label, .split .cmp col.label { width: auto; }
+  .cmp col.label { width: auto; }
   .cmp th, .cmp td { white-space: nowrap; }
   footer { flex-direction: column; gap: 0.5rem; }
 }
@@ -244,7 +251,6 @@ footer a + a { margin-left: 1.25rem; }
   figure { margin-top: 0.4rem; }
   figure svg { overflow: visible; }
   svg .lb, svg .nm, svg .pv { font-size: 18px; }
-  svg .sm { font-size: 14px; }
 
   /* One signer: the table becomes a list, one block per device, each cell laid out on a grid in column order */
   .tables .scroll { overflow: visible; }
@@ -256,7 +262,6 @@ footer a + a { margin-left: 1.25rem; }
   .tables .scroll .cards tr > :nth-child(3) { order: 3; }
   .tables .scroll .cards tr > :nth-child(4) { order: 4; }
   .tables h2 { margin-top: 1.6rem; }
-  .split { gap: 1.6rem; }
   .tables .scroll .cards thead th:first-child, .tables .scroll .cards tbody th { display: none; }
   .tables .scroll .cards thead th { margin: 1.1rem 0 0.35rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--rule); }
   .tables .scroll .cards thead th:nth-child(2) { margin-top: 0.3rem; }
@@ -272,6 +277,9 @@ footer a + a { margin-left: 1.25rem; }
   /* Threshold: small tables that fit as they are */
   .tables .plain { width: 100%; font-size: 0.95rem; }
   .tables .plain th + th, .tables .plain th + td, .tables .plain td + td { padding-left: 0.7rem; padding-right: 0.4rem; }
+  .thr .cmp th, .thr .cmp td { padding-right: 0.4rem; }
+  .thr .pair .cmp { width: 100%; }
+  .thr .pre-t .life { display: none; }
 
   /* Hardware wallets: the steps one under the other */
   .steps { grid-template-columns: minmax(0, 1fr); gap: 0.9rem; }
@@ -348,10 +356,9 @@ footer a + a { margin-left: 1.25rem; }
   </div>
   <figure>
       <svg viewBox="10 -13 572 569" preserveAspectRatio="xMaxYMid meet" role="img" aria-labelledby="dia-title">
-        <title id="dia-title">A leanSphincs signature: a path in the XMSS tree (or, for a layered key, in the hypertree) to a leaf, the hash of a WOTS+C key of 64 chains of length 4, which signs a two-level WOTS forest: 8 trees of height 4 whose leaves join two subtrees of height 3 over WOTS keys of 6 chains of length 5</title>
-        <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient></defs>
+        <title id="dia-title">A leanSphincs signature with a pruned key: a path in the XMSS tree of height 24 to a leaf, the hash of a WOTS+C key of 64 chains of length 4, which signs a two-level WOTS forest: 8 trees of height 4 whose leaves join two subtrees of height 3 over WOTS keys of 6 chains of length 5; the signer builds only a subtree of the tree</title>
+        <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient><linearGradient id="lfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="g0"/><stop offset="1" class="g1"/></linearGradient></defs>
         <g class="part xmss pruned">
-          <polygon class="kept" points="226.0,100 196.0,204 256.0,204"/>
           <g class="tree">
             <line x1="256.0" y1="22" x2="136.0" y2="48"/>
             <line x1="256.0" y1="22" x2="376.0" y2="48"/>
@@ -546,6 +553,8 @@ footer a + a { margin-left: 1.25rem; }
             <line x1="484.8" y1="178" x2="484.8" y2="204"/>
             <line x1="492.2" y1="178" x2="492.2" y2="204"/>
           </g>
+          <g class="nd"><circle cx="316.0" cy="74" r="1.9"/><circle cx="436.0" cy="74" r="1.9"/><circle cx="46.0" cy="100" r="1.9"/><circle cx="106.0" cy="100" r="1.9"/><circle cx="286.0" cy="100" r="1.9"/><circle cx="346.0" cy="100" r="1.9"/><circle cx="406.0" cy="100" r="1.9"/><circle cx="466.0" cy="100" r="1.9"/></g>
+          <g class="sib"><circle cx="376.0" cy="48" r="2.4"/><circle cx="76.0" cy="74" r="2.4"/><circle cx="166.0" cy="100" r="2.4"/></g>
           <polyline points="256.0,22 136.0,48 196.0,74 226.0,100 241.0,126 233.5,152 237.2,178" class="path"/>
           <line x1="237.2" y1="178" x2="237.2" y2="228" class="path dash"/>
           <g class="on">
@@ -559,7 +568,6 @@ footer a + a { margin-left: 1.25rem; }
           </g>
           <g class="tree"><line x1="522.0" y1="22" x2="522.0" y2="228"/><line x1="518.0" y1="22" x2="526.0" y2="22"/><line x1="518.0" y1="228" x2="526.0" y2="228"/></g>
           <text x="530.0" y="130" class="pv"><tspan class="it">h</tspan> = <tspan data-f="dia-h">24</tspan></text>
-          <text x="262" y="219" class="sm">kept subtree, 2<tspan class="it" dy="-5" font-size="0.8em">b</tspan></text>
         </g>
         <g class="part xmss layered" display="none"></g>
         <g class="part sig">
@@ -690,35 +698,41 @@ footer a + a { margin-left: 1.25rem; }
       </div>
 
       <h2>Threshold, <i>t</i>-of-<i>n</i></h2>
-      <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>. Key generation is an honest-majority MPC among the <i>n</i> operators, with no dealer, that builds the XMSS part alone (the kept subtree of a pruned key, or the top layer of a layered key), never the few-time signatures. Preprocessing, before a message: the operators pick <span data-f="prepared">16</span> instances at random and MPC-generate their forest keys, WOTS+C signatures and authentication paths; a signature consumes one prepared instance, refilled with a fresh random one. Online: they grind the randomizer in the clear onto one of the <span data-f="prepared">16</span>, and threshold-open only the forest chain values the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers (with abort).</p>
-      <div class="split">
-        <div>
-          <h3 data-f="th-pruned-title">Pruned</h3>
-          <p class="bn" data-f="th-pruned-life">&nbsp;</p>
-          <div class="scroll">
-          <table class="cmp plain">
-            <colgroup><col class="label"><col><col></colgroup>
-            <thead><tr><th><i>t</i>-of-<i>n</i></th><th>Keygen</th><th>Preprocessing<br><span class="sub">(per signature)</span></th></tr></thead>
-            <tbody data-f="th-pruned"></tbody>
-          </table>
-          </div>
+      <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>. Key generation is an honest-majority MPC among the <i>n</i> operators, with no dealer, that builds the XMSS part alone, never the few-time signatures: <span data-shape="pruned">the kept subtree, and the pseudorandom surrogate nodes that replace the siblings above it.</span><span data-shape="layered" hidden>the top layer.</span> Preprocessing, before a message: the operators pick <span data-f="prepared">16</span> instances at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate their forest keys, <span data-shape="pruned">WOTS+C signatures and authentication paths</span><span data-shape="layered" hidden>the trees of the lower layers, the WOTS+C signatures that link them up to the top layer, and the authentication paths</span>; a signature consumes one prepared instance, refilled with a fresh random one. Online: they grind the randomizer in the clear onto one of the <span data-f="prepared">16</span>, and threshold-open only the forest chain values the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers (with abort).</p>
+      <div class="thr" data-shape="pruned">
+        <h3>Pruned key</h3>
+        <p class="bn">Traffic per operator. Key generation grows with the kept subtree; the preprocessing does not.</p>
+        <div class="pair">
+        <table class="cmp plain">
+          <thead>
+            <tr><th></th><th colspan="3" class="grp">Keygen, kept subtree of</th></tr>
+            <tr><th><i>t</i>-of-<i>n</i></th><th data-f="th-b-0"></th><th data-f="th-b-1"></th><th data-f="th-b-2"></th></tr>
+          </thead>
+          <tbody data-f="th-pruned"></tbody>
+        </table>
+        <table class="cmp plain pre-t">
+          <thead>
+            <tr><th></th><th class="grp">Preprocessing, per signature</th></tr>
+            <tr><th><i>t</i>-of-<i>n</i></th><th>any subtree</th></tr>
+          </thead>
+          <tbody data-f="th-pruned-prep"></tbody>
+        </table>
         </div>
-        <div>
-          <h3 data-f="th-layered-title">Layered</h3>
-          <p class="bn" data-f="th-layered-life">&nbsp;</p>
-          <div class="scroll">
-          <table class="cmp plain">
-            <colgroup><col class="label"><col><col></colgroup>
-            <thead><tr><th><i>t</i>-of-<i>n</i></th><th>Keygen</th><th>Preprocessing<br><span class="sub">(per signature)</span></th></tr></thead>
-            <tbody data-f="th-layered"></tbody>
-          </table>
-          </div>
+      </div>
+      <div class="thr" data-shape="layered" hidden>
+        <h3 data-f="th-layered-title">Layered key</h3>
+        <p class="bn" data-f="th-layered-life">&nbsp;</p>
+        <div class="scroll">
+        <table class="cmp plain">
+          <thead><tr><th><i>t</i>-of-<i>n</i></th><th>Keygen</th><th>Preprocessing<br><span class="sub">(per signature)</span></th></tr></thead>
+          <tbody data-f="th-layered"></tbody>
+        </table>
         </div>
       </div>
       <p class="after" data-f="th-online">&nbsp;</p>
 
       <h2>Hardware wallets</h2>
-      <p class="lead">The device prepares <span data-f="prepared">16</span> random instances in advance. The search for a randomizer that lands on one of them is delegated to the untrusted host, which proves its answer with a STARK.</p>
+      <p class="lead"><span data-f="hw-prep">The device prepares <span data-f="prepared">16</span> random instances in advance.</span> The search for a randomizer that lands on one of them is delegated to the untrusted host, which proves its answer with a STARK.</p>
       <ol class="steps">
         <li><span class="who"><span class="n">1</span>Device</span>Derives <i>R</i><sub>0</sub> and &Delta; in one hash, and sends them with the message and the <span data-f="prepared">16</span> indices to the host.</li>
         <li><span class="who"><span class="n">2</span>Host</span>Finds the least <i>i</i> such that index(<i>R</i><sub>0</sub> + <i>i</i>&Delta;) is one of the <span data-f="prepared">16</span>, and returns <i>R</i> with a STARK that this <i>i</i> is the least.<span class="fig" data-f="hw-host">&nbsp;</span></li>
@@ -789,9 +803,12 @@ document.addEventListener('pointerdown', function (e) {
     }
     throw new Error('no configuration ' + [hash, h, shape, b].join(' '));
   }
-  function thr(shape) {
-    for (var i = 0; i < D.threshold.length; i++) if (D.threshold[i].h === S.h && D.threshold[i].shape === shape) return D.threshold[i];
-    throw new Error('no threshold figures for h = ' + S.h + ', ' + shape);
+  function thr(shape, b) {
+    for (var i = 0; i < D.threshold.length; i++) {
+      var t = D.threshold[i];
+      if (t.h === S.h && t.shape === shape && (b === undefined || t.b === b)) return t;
+    }
+    throw new Error('no threshold figures for h = ' + S.h + ', ' + shape + (b === undefined ? '' : ', b = ' + b));
   }
   function set(f, html) { [].forEach.call(document.querySelectorAll('[data-f="' + f + '"]'), function (e) { e.innerHTML = html; }); }
   function split(c) { return c.layers.join(' + '); }
@@ -846,27 +863,41 @@ document.addEventListener('pointerdown', function (e) {
         ' cache</span>' + t(c.sign[d.kib]) + '</div>');
     });
 
-    // threshold, with Keccak-256
-    var tp = thr('pruned'), tl = thr('layered');
-    [['pruned', tp], ['layered', tl]].forEach(function (x) {
-      var t = x[1], c = cfg(x[0], t.b, 'Keccak-256');
-      set('th-' + x[0] + '-title', x[0] === 'pruned' ? 'Pruned, subtree of ' + pow2(t.b) : 'Layered, ' + split(c));
-      set('th-' + x[0] + '-life', fmt(t.lifetime) + ' signatures' + LIFE_TIP + ' &middot; traffic per operator');
-      set('th-' + x[0], ['3', '5', '7'].map(function (n) {
-        return '<tr><th>' + ((+n + 1) / 2) + '-of-' + n + '</th><td>' + bytes(t.keygen_gb[n]) + '</td><td>' + bytes(t.prep_mb[n] / 1000) + '</td></tr>';
+    // threshold, with Keccak-256, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
+    var TB = [8, 10, 12], rows = ['3', '5', '7'];
+    var tps = TB.map(function (b) { return thr('pruned', b); }), tl = thr('layered');
+    TB.forEach(function (b, k) { set('th-b-' + k, pow2(b)); });
+    set('th-pruned', '<tr class="life"><th>Lifetime</th>' + tps.map(function (t) { return '<td>' + fmt(t.lifetime) + '</td>'; }).join('') +
+      '</tr>' + rows.map(function (n) {
+        return '<tr><th>' + ((+n + 1) / 2) + '-of-' + n + '</th>' + tps.map(function (t) { return '<td>' + bytes(t.keygen_gb[n]) + '</td>'; }).join('') + '</tr>';
       }).join(''));
-    });
-    set('th-online', 'Online, for either shape at <i>h</i> = ' + S.h + ': about ' + fmt(tp.grind) + ' grinding attempts in the clear (' +
-      pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared + '), then about ' + Math.round(W.opened_avg) + ' forest chain values opened (at most ' +
-      W.opened_max + '). All figures with Keccak-256.');
+    set('th-pruned-prep', '<tr class="life"><th>&nbsp;</th><td></td></tr>' + rows.map(function (n) {     // the same for every kept subtree
+      return '<tr><th>' + ((+n + 1) / 2) + '-of-' + n + '</th><td>' + bytes(tps[0].prep_mb[n] / 1000) + '</td></tr>';
+    }).join(''));
+    set('th-layered-title', 'Layered key, ' + split(lay));
+    set('th-layered-life', fmt(tl.lifetime) + ' signatures' + LIFE_TIP + ' &middot; traffic per operator');
+    set('th-layered', rows.map(function (n) {
+      return '<tr><th>' + ((+n + 1) / 2) + '-of-' + n + '</th><td>' + bytes(tl.keygen_gb[n]) + '</td><td>' + bytes(tl.prep_mb[n] / 1000) + '</td></tr>';
+    }).join(''));
+    var th = S.shape === 'layered' ? tl : tps[0];
+    set('th-online', 'Online, ' + (S.shape === 'layered' ? 'layered' : 'pruned') + ' key at <i>h</i> = ' + S.h + ': about ' + fmt(th.grind) +
+      ' grinding attempts in the clear (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared + (S.shape === 'layered' ? '' : ', onto instances of the kept subtree') +
+      '), then about ' + Math.round(W.opened_avg) + ' forest chain values opened (at most ' + W.opened_max + '). All figures with Keccak-256.');
     set('prepared', String(W.prepared));
 
-    // hardware wallets, with Keccak-256
-    var grind = Math.pow(2, S.h) / W.prepared, prove = grind / W.host_rate, check = W.stark_verify / W.device_rate;
+    // hardware wallets, with Keccak-256, for the chosen shape: what the device prepares, then the randomizer
+    var prep = th.prep, prepAll = W.prepared * prep;
+    set('hw-prep', 'The device prepares ' + W.prepared + ' random instances in advance' + (S.shape === 'layered'
+      ? ': their forest keys, the trees of the lower layers and the WOTS+C signatures that link them up to the top layer'
+      : ', all in its kept subtree: their forest keys, WOTS+C signatures and authentication paths') +
+      ', about ' + fmt(prepAll) + ' Keccak-f permutations (' + time(prepAll / W.device_rate) + ' on a Ledger Nano S+), then one more per signature (' +
+      time(prep / W.device_rate) + ').');
+    var grind = th.grind, prove = grind / W.host_rate, check = W.stark_verify / W.device_rate;
     set('hw-host', 'About ' + fmt(grind) + ' hashes at <i>h</i> = ' + S.h + ' (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared +
       '); proved at about ' + fmt(W.host_rate) + ' Keccak-f permutations per second: ' + time(prove) + '.');
     set('hw-device', 'About ' + fmt(W.stark_verify) + ' Keccak-f permutations: ' + time(check) + ' on a Ledger Nano S+.');
-    set('hw-total', 'In all, about ' + time(prove + check) + ' to ship and verify the randomizer at <i>h</i> = ' + S.h + ' (Keccak-256).');
+    set('hw-total', 'In all, about ' + time(prove + check) + ' to ship and verify the randomizer at <i>h</i> = ' + S.h + ', with the ' +
+      (S.shape === 'layered' ? 'layered' : 'pruned') + ' key (Keccak-256).');
 
     // the diagram: one pruned tree, or the layers
     if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers);
@@ -939,44 +970,71 @@ document.addEventListener('pointerdown', function (e) {
 
   // The layers, top first: each a tree whose path ends at a leaf, the hash of a WOTS+C key that signs the
   // root of the tree below; the last leaf's key is the large WOTS+C drawn under it, which signs the forest.
-  // The turns of each path (left or right at each level), chosen so that the trees step aside a little.
-  var TURNS = [[-1, 1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1], [1, -1, 1, 1, -1, 1], [-1, 1, -1, -1, 1, -1], [1, -1, 1, 1, -1, 1]];
-  var CHAIN = [1, 3, 0, 2, 2, 0, 3, 1];      // the revealed position on each of the 8 chains of a small key
+  // Each tree shows its top DRAWN levels as nodes and edges (the path in ink, its siblings ringed), and the
+  // levels below as a shaded body down to the leaves. The roots and leaves stand on one vertical line, the
+  // column of the WOTS+C keys: the turns of a path and its last steps in the body cancel out.
+  var DRAWN = 3, ROOT = -108, LEAF = 210, GAP = 30;   // GAP: from a leaf to the root of the tree below
+  var TURNS = [[-1, 1, 1], [1, -1, -1]];               // alternately, so that the paths zigzag
+  var CHAIN = [1, 3, 0, 2, 2, 0, 3, 1];                // the revealed position on each of the 8 chains of a small key
+  var LAYERED_VB = '10 -123 572 679', PRUNED_VB = '10 -13 572 569';
   function drawLayered(layers, h) {
     while (layered.firstChild) layered.removeChild(layered.firstChild);
-    var L = layers.length, n = layers.reduce(function (a, b) { return a + b; }, 0);
-    var TOP = 2, LEAF = 212, GAP = 22, K = 1.75, WMAX = 150;
-    var u = Math.min(7.5, (LEAF - TOP - (L - 1) * GAP) / n), ls = [], y = LEAF, x = X;
+    var L = layers.length, S0 = 13, C0 = 5;            // the spacing of a drawn level, of a level in the body
+    var need = layers.reduce(function (a, t) { return a + DRAWN * S0 + (t - DRAWN) * C0; }, 0);
+    var k = Math.min(1.45, (LEAF - ROOT - (L - 1) * GAP) / need), ls = [], y = LEAF;
     for (var i = L - 1; i >= 0; i--) {        // from the bottom layer up: its leaf sits over the brace
-      var t = layers[i], H = t * u, W = Math.min(WMAX, K * H), s = TURNS[i === 0 ? 0 : 1 + (L - 1 - i) % 3];
-      var f = 0;
-      for (var j = 0; j < t; j++) f += s[j % s.length] / Math.pow(2, j + 1);
-      // the node of depth j lies at its place in its row, which is j / t of the width of the base
-      var xr = x - f * W, y0 = y - H, nodes = [[xr, y0]], a = 0;
-      for (j = 0; j < t; j++) { a += s[j % s.length] / Math.pow(2, j + 1); nodes.push([xr + W * a * (j + 1) / t, y0 + (j + 1) * H / t]); }
-      ls[i] = { t: t, H: H, W: W, y0: y0, root: nodes[0], leaf: nodes[t], nodes: nodes };
-      x = xr; y = y0 - GAP;
+      var t = layers[i], s = DRAWN * S0 * k, H = s + (t - DRAWN) * C0 * k, y0 = y - H;
+      var a = i === 0 ? 60 : 46, turn = TURNS[(L - 1 - i) % 2], nodes = [[X, y0]], rows = [[X]], sib = [], dx = 0;
+      for (var j = 1; j <= DRAWN; j++) {
+        var off = a / Math.pow(2, j - 1), row = [];
+        rows[j - 1].forEach(function (p) { row.push(p - off, p + off); });   // binary layout, as the pruned tree
+        rows.push(row);
+        var px = nodes[j - 1][0];
+        nodes.push([px + turn[j - 1] * off, y0 + j * s / DRAWN]);
+        sib.push([px - turn[j - 1] * off, y0 + j * s / DRAWN]);
+        dx += turn[j - 1] * off;
+      }
+      // the body: the leaf comes back under the root, within the share of the last drawn node
+      var bl = t - DRAWN, x3 = nodes[DRAWN][0], y3 = nodes[DRAWN][1];
+      for (j = 1; j <= bl; j++) nodes.push([x3 - dx * j / bl, y3 + (H - s) * j / bl]);
+      ls[i] = { t: t, H: H, y0: y0, a: a, s: s, rows: rows, sib: sib, root: nodes[0], leaf: nodes[nodes.length - 1], nodes: nodes };
+      y = y0 - GAP;
     }
-    var left = Math.min.apply(null, ls.map(function (l) { return l.root[0] - l.W; })) - 14;
-    var tri = el('g', { 'class': 'lyr' }, layered), meas = el('g', { 'class': 'tree' }, layered);
-    ls.forEach(function (l, i) {
-      el('polygon', { points: pts([l.root, [l.root[0] - l.W, l.y0 + l.H], [l.root[0] + l.W, l.y0 + l.H]]) }, tri);
-      bar(meas, left, l.y0, l.y0 + l.H);
+    var left = X - 2 * ls[0].a - 18;
+    var body = el('g', { 'class': 'body' }, layered), edges = el('g', { 'class': 'tree' }, layered), meas = el('g', { 'class': 'tree' }, layered);
+    var nd = el('g', { 'class': 'nd' }, layered), sb = el('g', { 'class': 'sib' }, layered);
+    ls.forEach(function (l) {
+      var yb = l.y0 + l.H, q = l.a / 4;
+      // the shaded body under each node of the last drawn level, and the drawn edges and nodes
+      l.rows[DRAWN].forEach(function (p) {
+        el('polygon', { points: pts([[p, l.y0 + l.s], [p - q, yb], [p + q, yb]]) }, body);
+      });
+      for (var j = 1; j <= DRAWN; j++) l.rows[j].forEach(function (p, m) {
+        el('line', { x1: n1(l.rows[j - 1][m >> 1]), y1: n1(l.y0 + (j - 1) * l.s / DRAWN), x2: n1(p), y2: n1(l.y0 + j * l.s / DRAWN) }, edges);
+      });
+      for (j = 1; j <= DRAWN; j++) l.rows[j].forEach(function (p) {
+        var yy = l.y0 + j * l.s / DRAWN, onPath = Math.abs(p - l.nodes[j][0]) < 0.01, isSib = Math.abs(p - l.sib[j - 1][0]) < 0.01;
+        if (!onPath && !isSib) el('circle', { cx: n1(p), cy: n1(yy), r: 1.9 }, nd);
+      });
+      l.sib.forEach(function (p) { el('circle', { cx: n1(p[0]), cy: n1(p[1]), r: 2.4 }, sb); });
+      bar(meas, left, l.y0, yb);
       el('text', { x: n1(left - 10), y: n1(l.y0 + l.H / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, layered).textContent = String(l.t);
     });
-    // the small WOTS+C keys between the layers: 8 of the 64 chains, the revealed value on each
+    // the small WOTS+C keys between the layers, on the column of the roots: 8 of the 64 chains, the revealed value on each
     ls.forEach(function (l, i) {
       if (i === L - 1) return;
-      var xc = l.leaf[0], yt = l.leaf[1] + 5, yb = yt + 9, ch = el('g', { 'class': 'chain' }, layered), on = el('g', { 'class': 'on' }, layered);
+      var yt = l.leaf[1] + 7, yb = yt + 12, ch = el('g', { 'class': 'chain' }, layered), dt = el('g', { 'class': 'dot' }, layered), on = el('g', { 'class': 'on' }, layered);
       l.key = { top: yt, bottom: yb, chains: [] };
       CHAIN.forEach(function (p, j) {
-        var cxj = xc + (j - 3.5) * 5;
-        el('line', { x1: n1(cxj), y1: n1(yt), x2: n1(cxj), y2: n1(yb) }, ch);
-        el('circle', { cx: n1(cxj), cy: n1(yt + 3 * p), r: 1.5 }, on);
-        l.key.chains.push([cxj, yt + 3 * p]);
+        var cx = X + (j - 3.5) * 6;
+        el('line', { x1: n1(cx), y1: n1(yt), x2: n1(cx), y2: n1(yb) }, ch);
+        for (var m = 0; m < 4; m++) if (m !== p) el('circle', { cx: n1(cx), cy: n1(yt + 4 * m), r: 1.1 }, dt);
+        el('circle', { cx: n1(cx), cy: n1(yt + 4 * p), r: 1.9 }, on);
+        l.key.chains.push([cx, yt + 4 * p]);
       });
-      el('text', { x: n1(xc + 24), y: n1(yb + 2), 'class': 'lb' }, layered).textContent = 'WOTS+C';
-      el('line', { x1: n1(xc), y1: n1(l.leaf[1]), x2: n1(xc), y2: n1(yt) , 'class': 'path dash' }, layered);
+      el('text', { x: n1(X + 30), y: n1(yb - 1), 'class': 'lb' }, layered).textContent = 'WOTS+C';
+      el('line', { x1: n1(X), y1: n1(l.leaf[1]), x2: n1(X), y2: n1(yt - 1), 'class': 'path dash' }, layered);
+      el('line', { x1: n1(X), y1: n1(yb + 2), x2: n1(X), y2: n1(ls[i + 1].root[1] - 3) , 'class': 'brace' }, layered);
     });
     var last = ls[L - 1].leaf;
     el('line', { x1: n1(last[0]), y1: n1(last[1]), x2: n1(last[0]), y2: TIP, 'class': 'path dash' }, layered);
@@ -986,7 +1044,7 @@ document.addEventListener('pointerdown', function (e) {
     ls.forEach(function (l, i) {
       l.nodes.forEach(function (q, j) {
         if (j === 0 && i === 0) return;
-        el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j === 0 ? 2.6 : 1.7 }, dots);
+        el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j === 0 ? 2.8 : j <= DRAWN ? 2.4 : 1.4 }, dots);
       });
     });
     el('circle', { cx: n1(ls[0].root[0]), cy: n1(ls[0].root[1]), r: 4.2 }, dots);
@@ -999,6 +1057,18 @@ document.addEventListener('pointerdown', function (e) {
     el('tspan', { 'data-f': 'dia-h' }, tx).textContent = String(h);
     return ls;
   }
+  // A layered key draws taller: on a wide screen the figure grows in height so that the drawing keeps its width.
+  function fit() {
+    var fig = svg.parentNode, vb = svg.viewBox.baseVal;
+    fig.style.minHeight = '';
+    if (!geo || matchMedia('(max-width: 1150px)').matches) return;
+    var text = document.querySelector('.page > .text'), top = text.getBoundingClientRect().top;
+    var rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    var nat = Math.max(text.lastElementChild.getBoundingClientRect().bottom - top, 18 * rem);
+    var w = Math.min(fig.getBoundingClientRect().width, nat * 572 / 569);
+    fig.style.minHeight = Math.ceil(w * vb.height / vb.width) + 'px';
+  }
+  window.addEventListener('resize', fit);
 
   // Called by the figures with the chosen configuration: draws it (and restarts the animation) when the shape changes.
   window.sigDiagram = function (h, shape, layers) {
@@ -1011,11 +1081,14 @@ document.addEventListener('pointerdown', function (e) {
     if (shape === 'layered') {
       geo = drawLayered(layers, h);
       layered.removeAttribute('display'); pruned.setAttribute('display', 'none');
+      svg.setAttribute('viewBox', LAYERED_VB);
     } else {
       geo = null;
       while (layered.firstChild) layered.removeChild(layered.firstChild);
       pruned.removeAttribute('display'); layered.setAttribute('display', 'none');
+      svg.setAttribute('viewBox', PRUNED_VB);
     }
+    fit();
     if (motion) build();
   };
   if (!motion) return;
