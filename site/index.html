@@ -1070,7 +1070,7 @@ document.addEventListener('pointerdown', function (e) {
     return String(Math.round(x));
   }
   function comma(x) { return Math.round(x).toLocaleString('en-US'); }
-  function sig2(v) { return v >= 9.95 ? String(Math.round(v)) : v.toFixed(1); }
+  function sig2(v) { return v >= 9.95 ? String(Math.round(v)) : v.toFixed(1).replace(/\.0$/, ''); }
   function time(s) {
     if (s >= 3600) return sig2(s / 3600) + '&nbsp;h';
     if (s >= 60) return sig2(s / 60) + '&nbsp;min';
