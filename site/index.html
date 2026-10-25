@@ -286,7 +286,7 @@ footer a + a { margin-left: 1.25rem; }
 /* The Sphinx, built of stones, sitting on the first horizontal line */
 .sphinx-line { position: absolute; left: 0; top: 0; width: 100%; height: 0; z-index: -1; pointer-events: none; }
 .sphinx-line:not(.ready) { display: none; }                  /* shown once the script has placed it */
-.sphinx { position: absolute; left: 50%; top: 0; height: 14rem; aspect-ratio: 1783 / 680; transform: translateX(-50%); color: var(--accent); }
+.sphinx { position: absolute; left: 50%; top: 0; height: 14rem; aspect-ratio: 1783 / 680; transform: translateX(-50%); color: var(--ink); }
 .sphinx .stone { position: absolute; inset: 0; background: currentColor; opacity: 0.3; -webkit-mask: url(sphinx.png?v=2) center / 100% 100% no-repeat; mask: url(sphinx.png?v=2) center / 100% 100% no-repeat; }
 .sphinx svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .sphinx .cover { fill: #fff; }
@@ -296,7 +296,7 @@ footer a + a { margin-left: 1.25rem; }
 .sphinx .cast { fill: none; stroke: currentColor; stroke-opacity: 0.16; stroke-linejoin: round; filter: url(#sphinx-soft); }
 .sphinx .rim { fill: none; stroke: currentColor; stroke-opacity: 0.2; stroke-width: 0.9; stroke-linejoin: round; }
 /* the face of a pushed stone is the stone itself: its piece of the image, in the accent colour */
-.sphinx .faces { opacity: 0.3; filter: url(#sphinx-accent); }
+.sphinx .faces { opacity: 0.3; filter: url(#sphinx-ink); }
 /* Narrow screens: the sphinx has its own band under the title, standing on its own line */
 .sphinx-line.inflow { position: relative; left: auto; top: auto; width: 100%; max-width: 33rem; height: auto; z-index: 0; margin: 1.3rem 0 0; border-bottom: 1px solid var(--rule); }
 .sphinx-line.inflow .sphinx { position: relative; left: 0; top: 0; transform: none; display: block; width: min(108%, 100% + 2rem); margin-left: max(-4%, -1rem); height: auto; }   /* its faded ends reach into the margins */
@@ -1136,8 +1136,11 @@ document.addEventListener('pointerdown', function (e) {
       { name: 'Full', b: S.h, rate: rate('powerful CPU'), kib: '16384', cache: '16&nbsp;MiB', dev: lay_ ? 'Powerful CPU' : 'powerful CPU' }
     ];
     var at = document.getElementById('assist-tip');
-    if (at) at.setAttribute('data-tip', 'The Ledger keeps ' + W.prepared + ' random instances prepared in advance. To sign, it sends ' +
-      'R₀, Δ, the message and the ' + W.prepared + ' indices to the untrusted host, which returns the least i such that index(R₀ + iΔ) ' +
+    var np = W.ledger_prepared[S.h];
+    if (at) at.setAttribute('data-tip', 'The Ledger keeps ' + np + ' random instances prepared in advance, so that the host grinds at most ' +
+      fmt(W.ledger_grind[S.h]) + ' digests' + (np > W.prepared ? ' (the host can hold their public parts, the WOTS+C signatures and paths, ' +
+      'the device keeping a hash of each)' : '') + '. To sign, it sends ' +
+      'R₀, Δ, the message and the ' + np + ' indices to the untrusted host, which returns the least i such that index(R₀ + iΔ) ' +
       'is one of them, with a STARK that this i is the least; the device checks the STARK and signs with that instance. The statement is public ' +
       '(no zero knowledge), but Δ is no longer secret against the host. Host: ' + fmt(W.host_rate) + ' hashes per second. The idea of ' +
       'delegating this work to the host and proving it with a STARK comes from Riva (riva.xyz).');
@@ -1159,7 +1162,7 @@ document.addEventListener('pointerdown', function (e) {
       // with the host: one instance prepared in advance per signature, the STARK checked online, the grinding proved by the host
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
       var ph = function (n, u, what, r) { return '<div class="hd"><span>' + fmt(n) + '&nbsp;' + u + ' <span class="ph">' + what + '</span></span>' + t(n, r) + '</div>'; };
-      set('sign-' + k, '<div>' + ph(tt.prep, unit(), 'in advance') + ph(tt.grind, 'hashes', 'on the host', W.host_rate) +
+      set('sign-' + k, '<div>' + ph(tt.prep, unit(), 'in advance') + ph(W.ledger_grind[S.h], 'hashes', 'on the host', W.host_rate) +
         '<div class="hd"><span>STARK verification (' + fmt(W.stark_verify) + ' hashes)</span>' + t(W.stark_verify) + '</div></div>');
     });
 
@@ -1615,7 +1618,7 @@ document.addEventListener('pointerdown', function (e) {
     return e;
   }
   var defs = el('defs', {}, svg);
-  [['sphinx-accent', '0.545 0 0 0 0 0.102 0 0 0 0 0.102']].forEach(function (f) {
+  [['sphinx-ink', '0.067 0 0 0 0 0.067 0 0 0 0 0.067']].forEach(function (f) {
     var c = f[1].split(' ');                                 // every pixel takes the colour, and keeps its alpha
     el('feColorMatrix', { type: 'matrix', values: '0 0 0 0 ' + c[0] + ' 0 0 0 0 ' + c[5] + ' 0 0 0 0 ' + c[10] + ' 0 0 0 1 0' },
       el('filter', { id: f[0], x: 0, y: 0, width: D.w, height: D.h, filterUnits: 'userSpaceOnUse', 'color-interpolation-filters': 'sRGB' }, defs));
