@@ -1159,7 +1159,8 @@ document.addEventListener('pointerdown', function (e) {
       // with the host: one instance prepared in advance per signature, the STARK checked online, the grinding proved by the host
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
       var ph = function (n, u, what, r) { return '<div class="hd"><span>' + fmt(n) + '&nbsp;' + u + ' <span class="ph">' + what + '</span></span>' + t(n, r) + '</div>'; };
-      set('sign-' + k, '<div>' + ph(tt.prep, unit(), 'in advance') + ph(W.stark_verify, unit(), 'online') + ph(tt.grind, 'hashes', 'on the host', W.host_rate) + '</div>');
+      set('sign-' + k, '<div>' + ph(tt.prep, unit(), 'in advance') + ph(tt.grind, 'hashes', 'on the host', W.host_rate) +
+        '<div class="hd"><span>STARK verification (' + fmt(W.stark_verify) + ' hashes)</span>' + t(W.stark_verify) + '</div></div>');
     });
 
     // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
