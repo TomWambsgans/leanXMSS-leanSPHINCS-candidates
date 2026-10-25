@@ -165,7 +165,7 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .cmp th.nw { white-space: nowrap; }
 .cards .nw { white-space: nowrap; }
 .cmp .gone, .cmp .gone > * { display: none !important; }
-.cards .cache { color: var(--muted); white-space: nowrap; font-size: 0.88em; }
+.cards .note { color: var(--muted); white-space: nowrap; font-size: 0.88em; }
 .cards .br { font-size: 0; }
 .cards .br::after { content: "\A"; white-space: pre; }
 .plain { font-variant-numeric: tabular-nums; }
@@ -266,7 +266,7 @@ footer a + a { margin-left: 1.25rem; }
   .cmp th.nw { white-space: nowrap; }
 .cards .nw { white-space: nowrap; }
 .cmp .gone, .cmp .gone > * { display: none !important; }
-.cards .cache { display: block; }
+.cards .note { display: block; }
   .cards td .hd { gap: 0 0.6em; flex-wrap: wrap; }
   .cards td .hd .ex { margin-left: auto; }
   .cards .ph { display: block; }
@@ -1164,9 +1164,9 @@ document.addEventListener('pointerdown', function (e) {
       else if (c.b === c.h) what = 'full tree of ' + pow2(c.h);
       else what = 'subtree of ' + pow2(c.b);
       var t = function (n, r) { return '<span class="ex">' + time(n / (r || d.rate)) + '</span>'; };
-      set('life-' + k, '<div>' + fmt(c.lifetime) + ' signatures' + (what ? ' <span class="st">(' + what + ')</span>' : '') + '</div>');
+      set('life-' + k, '<div>' + fmt(c.lifetime) + ' signatures' + (what ? ' <span class="note">(' + what + ')</span>' : '') + '</div>');
       set('keygen-' + k, '<div class="hd"><span>' + fmt(c.keygen) + '&nbsp;' + unit() + '</span>' + t(c.keygen) + '</div>');
-      set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="cache">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
+      set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="note">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
