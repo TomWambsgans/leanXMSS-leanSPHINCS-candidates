@@ -162,6 +162,7 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .cards .ph { color: var(--muted); white-space: nowrap; }
 .cards td .hd > :first-child { flex: 1 1 auto; min-width: 0; }
 .cards .st { display: block; color: var(--muted); }
+.cmp th.nw { white-space: nowrap; }
 .cards .cache { color: var(--muted); white-space: nowrap; font-size: 0.88em; }
 .cards .br { font-size: 0; }
 .cards .br::after { content: "\A"; white-space: pre; }
@@ -260,7 +261,8 @@ footer a + a { margin-left: 1.25rem; }
   .tables .scroll .cards td { display: grid; grid-template-columns: 7.6rem minmax(0, 1fr); align-items: baseline; padding: 0.14rem 0; }
   .cards td::before { content: attr(data-l); color: var(--muted); font-size: 0.92em; }
   .tables .scroll .cards td.na { display: none; }
-  .cards .cache { display: block; }
+  .cmp th.nw { white-space: nowrap; }
+.cards .cache { display: block; }
   .cards td .hd { gap: 0 0.6em; flex-wrap: wrap; }
   .cards td .hd .ex { margin-left: auto; }
   .cards .ph { display: block; }
@@ -998,7 +1000,7 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Lifetime" data-f="life-0"></td><td data-l="Lifetime" data-f="life-1"></td><td data-l="Lifetime" data-f="life-2"></td></tr>
           <tr><th>Key generation</th><td data-l="Key generation" data-f="keygen-0"></td><td data-l="Key generation" data-f="keygen-1"></td><td data-l="Key generation" data-f="keygen-2"></td></tr>
           <tr><th>Signing</th><td data-l="Signing" data-f="sign-0"></td><td data-l="Signing" data-f="sign-1"></td><td data-l="Signing" data-f="sign-2"></td></tr>
-          <tr><th>Assisted signing</th><td data-l="Assisted" data-f="assist-0"></td><td class="na"></td><td class="na"></td></tr>
+          <tr><th class="nw">Assisted signing<span class="info w" tabindex="0" id="assist-tip" data-tip="">i</span></th><td data-l="Assisted" data-f="assist-0"></td><td class="na"></td><td class="na"></td></tr>
         </tbody>
       </table>
       </div>
@@ -1161,7 +1163,8 @@ document.addEventListener('pointerdown', function (e) {
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
       set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.prep * np / d.rate) + '</span>&emsp;Online: <span class="ex">' +
-        time(g / W.host_rate + W.stark_verify_s) + '</span><span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></div>');
+        time(g / W.host_rate + W.stark_verify_s) + '</span><span class="m-only"><span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span></div>');
+      document.getElementById('assist-tip').setAttribute('data-tip', assist(tt).replace(/&nbsp;/g, '\u00a0'));
     });
 
     // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
