@@ -9,7 +9,9 @@ by one fresh slot (`sign_term`). -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner
@@ -19,7 +21,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-- A monotone and finite base function. -/
 def MonoFin (f : Multiset View → ℝ≥0∞) : Prop := Monotone' f ∧ ∀ D, f D ≠ ⊤
@@ -65,10 +66,8 @@ section TermBasic
 
 variable {parameter : PublicParameter} {data : PublicData} {w : ℝ≥0∞}
 
-omit [Params] in
 theorem live_nodup (L : QueryLog SigningSpec) {Ms : List Message} (h : Ms.Nodup) : (live L Ms).Nodup := h.filter _
 
-omit [Params] in
 theorem mem_live {L : QueryLog SigningSpec} {Ms : List Message} {m : Message} :
     m ∈ live L Ms ↔ m ∈ Ms ∧ MsgLive L m := by
   unfold live; simp
@@ -168,21 +167,18 @@ def Rate (w : ℝ≥0∞) (s : State) (m : Message) : Prop :=
 
 variable {parameter data} {w : ℝ≥0∞}
 
-omit [Params] in
 theorem addMsg_nodup {Ms : List Message} (h : Ms.Nodup) (m : Message) : (addMsg Ms m).Nodup := by
   unfold addMsg
   split_ifs with hm
   · exact h
   · exact List.nodup_cons.2 ⟨hm, h⟩
 
-omit [Params] in
 theorem mem_addMsg_self (Ms : List Message) (m : Message) : m ∈ addMsg Ms m := by
   unfold addMsg
   split_ifs with hm
   · exact hm
   · exact List.mem_cons_self ..
 
-omit [Params] in
 theorem mem_addMsg_of_mem {Ms : List Message} {m m' : Message} (h : m' ∈ Ms) : m' ∈ addMsg Ms m := by
   unfold addMsg
   split_ifs
@@ -214,7 +210,6 @@ theorem termO_addMsg {s : State} {Ms : List Message} (hM : MInv parameter data s
   funext I
   exact grpAll_addMsg hM L excl m _ d
 
-omit [Params] in
 /-- The listed messages after a new pair. -/
 theorem minv_withPair {s : State} {Ms : List Message} (hM : MInv parameter data s Ms) (p : Pair) (u0 : HashOutput) :
     MInv parameter data (withPair parameter data s p u0) (addMsg Ms p.1) := by
@@ -347,12 +342,10 @@ section Cap
 
 variable {parameter : PublicParameter} {data : PublicData} {w : ℝ≥0∞}
 
-omit [Params] in
 theorem ratio_mul : ((65 : ℝ≥0∞) / 64) * ((64 : ℝ≥0∞) / 65) = 1 := by
   rw [← mul_div_assoc, ENNReal.div_mul_cancel (by norm_num) (by norm_num),
     ENNReal.div_self (by norm_num) (by norm_num)]
 
-omit [Params] in
 theorem one_le_ratio : (1 : ℝ≥0∞) ≤ (65 : ℝ≥0∞) / 64 := by
   rw [ENNReal.le_div_iff_mul_le (by norm_num) (by norm_num)]
   norm_num
@@ -565,7 +558,6 @@ section OrderO
 
 variable {parameter : PublicParameter} {data : PublicData} (w b0 : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight)))
 
-omit [Params] in
 /-- Without a new pair, an ordinary query keeps every digest block. -/
 theorem same_blocks {x : HashInput} {s s' : State} (hext : Extends s s') (hother : ∀ y, y ≠ x → s'.cache y = s.cache y)
     (hnot : ¬∃ p, x = pblk parameter data p ∧ s.cache (pblk parameter data p) = none) (q : Pair) :
@@ -611,7 +603,6 @@ theorem coreO_blocks {s s' : State} (h : ∀ q, s'.cache (pblk parameter data q)
   unfold coreO hValueO candO candValueO
   simp only [hv, termO_blocks w h]
 
-omit [Params] in
 theorem minv_blocks {s s' : State} (h : ∀ q, s'.cache (pblk parameter data q) = s.cache (pblk parameter data q))
     {Ms : List Message} (hM : MInv parameter data s Ms) : MInv parameter data s' Ms :=
   ⟨hM.nodup, fun m ρ hne => hM.mem m ρ (by
@@ -1050,7 +1041,6 @@ noncomputable def upperO (rest : List Message) (excl : Pair → Prop)
 
 variable {parameter data w m s n d f}
 
-omit [Params] in
 theorem msgLive_append {L : QueryLog SigningSpec} {r : Option Signature} {m' : Message} :
     MsgLive (L ++ [⟨m, r⟩]) m' ↔ MsgLive L m' ∧ m' ≠ m := by
   unfold MsgLive
@@ -1065,7 +1055,6 @@ theorem msgLive_append {L : QueryLog SigningSpec} {r : Option Signature} {m' : M
       subst he
       exact fun h' => hq h'.symm
 
-omit [Params] in
 /-- After signing, the live messages are the other live messages. -/
 theorem live_after (L : QueryLog SigningSpec) (r : Option Signature) (Ms : List Message) :
     live (L ++ [⟨m, r⟩]) (addMsg Ms m) = restMsgs m L Ms := by
@@ -1082,7 +1071,6 @@ theorem live_after (L : QueryLog SigningSpec) (r : Option Signature) (Ms : List 
   · rw [List.filter_cons, if_neg (by simp [msgLive_append]), hfil Ms]
     rfl
 
-omit [Params] in
 /-- Before signing a live message, the live messages are it and the others. -/
 theorem live_perm {L : QueryLog SigningSpec} (hm : MsgLive L m) {Ms : List Message} (hMs : Ms.Nodup) :
     (live L (addMsg Ms m)).Perm (m :: restMsgs m L Ms) := by
@@ -1492,4 +1480,4 @@ theorem goodO_sign (Lmax : ℕ) (hparse : ∀ p, model.parse (pblk parameter dat
 
 end SignPointMainO
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

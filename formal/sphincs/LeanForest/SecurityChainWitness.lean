@@ -6,6 +6,8 @@ Adapted from leanVM b7a107256. No hash-injectivity assumption is used. -/
 open OracleComp OracleSpec
 
 namespace LeanForest.Security
+
+variable [Params]
 open Concrete
 
 theorem queriedInputs_mono_bind_left {α β : Type} (f : QueryImpl HashSpec Id)

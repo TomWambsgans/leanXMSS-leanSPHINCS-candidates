@@ -13,6 +13,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.CacheMatch
 
+variable [Params]
+
 open Completeness
 
 attribute [local instance] Classical.propDecidable

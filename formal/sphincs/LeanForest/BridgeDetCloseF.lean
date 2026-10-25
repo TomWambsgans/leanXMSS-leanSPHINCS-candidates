@@ -10,7 +10,9 @@ of covers of the budgets above `qh`. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal
   LeanForest.Base.Domination
@@ -21,7 +23,6 @@ set_option maxRecDepth 10000
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 open Completeness SeedModel Graph Assembly Reduce Internalize in
 attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
@@ -40,13 +41,12 @@ noncomputable def smallMainFF (ρ : ℝ) (q : ℕ) (B c : ℚ) : ℝ≥0∞ :=
     ν * (((Nat.choose (q - keygenCost) 2 : ℕ) : ℝ≥0∞) * rateS) +
     (((q - keygenCost : ℕ) : ℝ≥0∞) * ν) * ((q - keygenCost : ℕ) * ENNReal.ofReal (c : ℝ))
 
-omit [Params] in
 theorem ofReal_natCast_invF {n : ℕ} (hn : 0 < n) : ((n : ℝ≥0∞))⁻¹ = ENNReal.ofReal ((n : ℝ)⁻¹) := by
   rw [ENNReal.ofReal_inv_of_pos (by exact_mod_cast hn), ENNReal.ofReal_natCast]
 
 theorem one_le_keygenCostF : 1 ≤ keygenCost := by
-  unfold keygenCost
-  have : 1 ≤ 2 ^ subtreeHeight := Nat.one_le_two_pow
+  unfold keygenCost Prefix.keygenHashCost
+  have : 1 ≤ 2 ^ keptHeight topLayer := Nat.one_le_two_pow
   omega
 
 /-- The cap term at the start is below `2^-201`. -/
@@ -61,7 +61,6 @@ theorem lam_start_leF (q : ℕ) : lam (H0.LmaxOf q) 0 q ≤ (2 : ℝ≥0∞)⁻�
     _ ≤ (1 / 2 : ℝ) ^ 512 := pow_le_pow_left₀ (by norm_num) (by norm_num) 512
     _ ≤ (1 / 2 : ℝ) ^ 201 := pow_le_pow_of_le_one (by norm_num) (by norm_num) (by norm_num)
 
-omit [Params] in
 /-- The real inequality behind the closed form. The coin term is `2^-128 · (x^2 / 2) (2 − 1/M) 2^-128`
 (a unit of budget is a contact attempt or a digest query, so the pairs are counted once); the
 two cap terms, each at most `2^-201`, are paid by the `2^-60` slack like the failing shares. -/
@@ -186,15 +185,15 @@ open Completeness SeedModel Graph Assembly Reduce Internalize
 
 set_option maxRecDepth 100000 in
 /-- **Small budgets, seed-free win.** -/
-theorem small_seedFree_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
+theorem small_seedFree_boundF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (steps : Message → Randomness) (hq : q < 2 ^ 256)
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℚ) (hκ0 : 0 ≤ κ) (hκ1 : κ ≤ 1) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
       (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ))
-    (b N : ℕ) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
+    (H b N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
-    (hrt : H0.checkRate b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
-    (ho : H0.checkOptF b t o = true) (hon : H0.checkOptN t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
+    (hrt : H0.checkRate H b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
+    (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
     Pr[Win | seedFreeExperiment (internalize adversary) q steps] ≤
       (smallMainFF ρ q o.B (κ * ((2 ^ b * on.En : ℚ) / 2)) +
         2 * lam (H0.LmaxOf (q - keygenCost)) 0 (q - keygenCost)) + smallFailF q * expectedFail := by
@@ -213,7 +212,7 @@ theorem small_seedFree_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (
         A + C * failMass (failSet prepared.1) := by
     intro parameterOutput fixed highs remaining prepared hprepared known hk
     refine le_trans (sample_boundF hb adversary hnr q hq parameterOutput fixed highs remaining steps prepared
-      hprepared known hk ρ hN (κ : ℝ) hκ hκ1R b N hbb hNN t o on hpt qtop hrt hqtop ho hon hcthr) (le_of_eq ?_)
+      hprepared known hk ρ hN (κ : ℝ) hκ hκ1R H b N hHH hbb hNN t o on hpt qtop hrt hqtop ho hon hcthr) (le_of_eq ?_)
     rw [hA, hC]
     unfold smallMainFF smallFailF
     rw [Rat.cast_mul, ENNReal.ofReal_mul (Rat.cast_nonneg.2 hκ0)]
@@ -236,21 +235,21 @@ theorem small_seedFree_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (
   exact mul_le_of_le_one_left' tsum_probOutput_le_one
 
 /-- **Small budgets, deterministic signer.** -/
-theorem det_smallF (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ)
+theorem det_smallF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : ℕ)
     (hbound : Det.HasHashQueryBoundDet adversary q) (hq : q < 2 ^ 256)
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℚ) (hκ0 : 0 ≤ κ) (hκ1 : κ ≤ 1) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
       (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ))
-    (b N : ℕ) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
+    (H b N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
-    (hrt : H0.checkRate b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
-    (ho : H0.checkOptF b t o = true) (hon : H0.checkOptN t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
+    (hrt : H0.checkRate H b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
+    (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
     Det.forgeAdvantageDet adversary ≤
       smallMainFF ρ q o.B (κ * ((2 ^ b * on.En : ℚ) / 2)) + smallFailF q * (2 : ℝ≥0∞)⁻¹ ^ 201 +
         2 * lam (H0.LmaxOf (q - keygenCost)) 0 (q - keygenCost) + 2 * ((q : ℝ≥0∞) / 2 ^ 256) := by
   refine le_trans (Det.forgeAdvantageDet_le_seedFree adversary q hbound _ fun steps =>
     small_seedFree_boundF hb (Memo.memoAdv adversary) (Memo.memoAdv_noRepeat adversary) q steps hq ρ hN
-      κ hκ0 hκ1 hκ b N hbb hNN t o on hpt qtop hrt hqtop ho hon hcthr) (add_le_add ?_ le_rfl)
+      κ hκ0 hκ1 hκ H b N hHH hbb hNN t o on hpt qtop hrt hqtop ho hon hcthr) (add_le_add ?_ le_rfl)
   rw [add_right_comm]
   exact add_le_add (add_le_add le_rfl (mul_le_mul_right expectedFail_le _)) le_rfl
 
@@ -259,23 +258,22 @@ end Close
 /-! ### The rational check -/
 
 /-- The rational small-route check at the right end `qh` of the small budgets: the coin term is
-`(2 M − 1) qh / (M 2^129)` with `M = 2^(24 − b)` (the creation rate of the scan signer), the near term
+`(2 M − 1) qh / (M 2^129)` with `M = 2^(H − b)` (the creation rate of the scan signer), the near term
 is multiplied by `κ = 2 - ρ + qh / 2^128 + N · 123 / (2^b 2^15)`. -/
-def checkSmallF (b N qh : ℕ) (ρ cthr B c : ℚ) : Bool :=
+def checkSmallF (H b N qh : ℕ) (ρ cthr B c : ℚ) : Bool :=
   decide (3 / 2 ≤ ρ) && decide (ρ ≤ 2) &&
     decide (1 + 4032 * (2 - ρ) * ((qh : ℚ) / 2 ^ 128) ≤ ρ) && decide (1 + 66 * ((qh : ℚ) / 2 ^ 128) ≤ ρ) &&
     decide (64 * ((qh : ℚ) / 2 ^ 128) ≤ 1) && decide (qh ≤ 2 ^ 127) && decide (N ≤ 2 ^ 70) &&
     decide (cthr ≤ ρ / 2 ^ 128) && decide (0 ≤ B) && decide (0 ≤ c) &&
     decide ((N : ℚ) * 123 / (2 ^ b * 2 ^ 15) ≤ ρ - 1 - (qh : ℚ) / 2 ^ 128) &&
-    decide (ρ + 2 ^ 128 * B + (2 * (H0.scanMb b : ℚ) - 1) * (qh : ℚ) / ((H0.scanMb b : ℚ) * 2 ^ 129) +
+    decide (ρ + 2 ^ 128 * B + (2 * (H0.scanMb H b : ℚ) - 1) * (qh : ℚ) / ((H0.scanMb H b : ℚ) * 2 ^ 129) +
       (2 - ρ + (qh : ℚ) / 2 ^ 128 + (N : ℚ) * 123 / (2 ^ b * 2 ^ 15)) * qh * c + 1 / 2 ^ 60 ≤ 2)
 
-omit [Params] in
-theorem checkSmallF_sound {b N qh : ℕ} {ρ cthr B c : ℚ} (h : checkSmallF b N qh ρ cthr B c = true) :
+theorem checkSmallF_sound {H b N qh : ℕ} {ρ cthr B c : ℚ} (h : checkSmallF H b N qh ρ cthr B c = true) :
     Numeric (ρ : ℝ) ((qh : ℝ) / 2 ^ 128) ∧ qh ≤ 2 ^ 127 ∧ N ≤ 2 ^ 70 ∧ (cthr : ℝ) ≤ (ρ : ℝ) / 2 ^ 128 ∧
       0 ≤ B ∧ 0 ≤ c ∧
       (N : ℝ) * 123 / (2 ^ b * 2 ^ 15) ≤ (ρ : ℝ) - 1 - (qh : ℝ) / 2 ^ 128 ∧
-      (ρ : ℝ) + 2 ^ 128 * (B : ℝ) + (2 * (H0.scanMb b : ℝ) - 1) * (qh : ℝ) / ((H0.scanMb b : ℝ) * 2 ^ 129) +
+      (ρ : ℝ) + 2 ^ 128 * (B : ℝ) + (2 * (H0.scanMb H b : ℝ) - 1) * (qh : ℝ) / ((H0.scanMb H b : ℝ) * 2 ^ 129) +
         (2 - (ρ : ℝ) + (qh : ℝ) / 2 ^ 128 + (N : ℝ) * 123 / (2 ^ b * 2 ^ 15)) * qh * (c : ℝ) + 1 / 2 ^ 60 ≤ 2 := by
   simp only [checkSmallF, Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩ := h
@@ -296,15 +294,14 @@ theorem checkSmallF_sound {b N qh : ℕ} {ρ cthr B c : ℚ} (h : checkSmallF b 
 /-- A chain of covers of the large budgets: `qstart` is one past the last covered budget, each cover
 is checked from there to its own `qtop`, and the chain ends once every budget `q'` with
 `q' + keygenCost < 2^127` is covered. -/
-def checkCovers (b N : ℕ) : ℕ → List H0.CoverW → Bool
-  | qstart, [] => decide (2 ^ 127 ≤ qstart + (226 * 2 ^ b + 2 * (24 - b)))
-  | qstart, c :: rest => H0.checkCoverW b N qstart c && checkCovers b N (c.qtop + 1) rest
+def checkCovers (H b K N : ℕ) : ℕ → List H0.CoverW → Bool
+  | qstart, [] => decide (2 ^ 127 ≤ qstart + K)
+  | qstart, c :: rest => H0.checkCoverW H b K N qstart c && checkCovers H b K N (c.qtop + 1) rest
 
-omit [Params] in
 /-- Every budget from `qstart` on with `q' + keygenCost < 2^127` lies in a checked cover of the chain. -/
-theorem checkCovers_sound (b N : ℕ) : ∀ (covers : List H0.CoverW) (qstart : ℕ),
-    checkCovers b N qstart covers = true → ∀ q', qstart ≤ q' → q' + (226 * 2 ^ b + 2 * (24 - b)) < 2 ^ 127 →
-      ∃ c ∈ covers, ∃ qs, H0.checkCoverW b N qs c = true ∧ qs ≤ q' ∧ q' ≤ c.qtop
+theorem checkCovers_sound (H b K N : ℕ) : ∀ (covers : List H0.CoverW) (qstart : ℕ),
+    checkCovers H b K N qstart covers = true → ∀ q', qstart ≤ q' → q' + K < 2 ^ 127 →
+      ∃ c ∈ covers, ∃ qs, H0.checkCoverW H b K N qs c = true ∧ qs ≤ q' ∧ q' ≤ c.qtop
   | [], qstart, h, q', h0, h1 => by
       simp only [checkCovers, decide_eq_true_eq] at h
       omega
@@ -312,7 +309,7 @@ theorem checkCovers_sound (b N : ℕ) : ∀ (covers : List H0.CoverW) (qstart : 
       simp only [checkCovers, Bool.and_eq_true] at h
       by_cases hq : q' ≤ c.qtop
       · exact ⟨c, List.mem_cons_self .., qstart, h.1, h0, hq⟩
-      · obtain ⟨c', hc', hrest⟩ := checkCovers_sound b N rest (c.qtop + 1) h.2 q' (by omega) h1
+      · obtain ⟨c', hc', hrest⟩ := checkCovers_sound H b K N rest (c.qtop + 1) h.2 q' (by omega) h1
         exact ⟨c', List.mem_cons_of_mem _ hc', hrest⟩
 
 /-! ### Both routes -/
@@ -321,11 +318,12 @@ set_option maxRecDepth 100000 in
 /-- **127 bits for the deterministic signer of the forest**, from the small-route check at `qh` (with
 a table whose rate is checked at `qh`) and a checked chain of covers of the large budgets from
 `qh + 1` up to `2^127 − 1 − keygenCost`. -/
-theorem det_bitsF (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b) (hN : signatureLimit = N)
+theorem det_bitsF (hb0 : 0 < keptHeight topLayer) (H b K N : ℕ) (hH : totalHeight = H) (hb : subtreeHeight = b)
+    (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N)
     (qh : ℕ) (ρ : ℚ) (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true)
-    (hrt : H0.checkRate b N qh t = true) (ho : H0.checkOptF b t o = true) (hon : H0.checkOptN t on = true)
-    (hsmall : checkSmallF b N qh ρ o.cthr o.B ((2 ^ b * on.En : ℚ) / 2) = true)
-    (covers : List H0.CoverW) (hcov : checkCovers b N (qh + 1) covers = true) :
+    (hrt : H0.checkRate H b N qh t = true) (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true)
+    (hsmall : checkSmallF H b N qh ρ o.cthr o.B ((2 ^ b * on.En : ℚ) / 2) = true)
+    (covers : List H0.CoverW) (hcov : checkCovers H b K N (qh + 1) covers = true) :
     Det.HasClassicalSecurityBitsDet 127 := by
   obtain ⟨hnum, hqh, hN70, hcthr, hB, hc, hpayR, hcheck⟩ := checkSmallF_sound hsmall
   have hN70' : signatureLimit ≤ 2 ^ 70 := hN ▸ hN70
@@ -352,10 +350,10 @@ theorem det_bitsF (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b)
   have hcheck' : (ρ : ℝ) + 2 ^ 128 * (o.B : ℝ) +
       (2 * (H0.scanM : ℝ) - 1) * (qh : ℝ) / ((H0.scanM : ℝ) * 2 ^ 129) +
       qh * ((κ * c : ℚ) : ℝ) + 1 / 2 ^ 60 ≤ 2 := by
-    rw [Rat.cast_mul, hκR, ← H0.scanMb_eq b hb]
+    rw [Rat.cast_mul, hκR, ← H0.scanMb_eq H b hH hb]
     refine le_of_eq_of_le ?_ hcheck
     ring
-  have hkg : keygenCost = 226 * 2 ^ b + 2 * (24 - b) := by rw [← hb]; rfl
+  have hkg : keygenCost = K := hK
   intro q hq1 adversary hbound
   by_cases hbig : 2 ^ 127 ≤ q
   · refine le_trans probEvent_le_one ?_
@@ -375,20 +373,19 @@ theorem det_bitsF (hb0 : 0 < subtreeHeight) (b N : ℕ) (hb : subtreeHeight = b)
         field_simp
       rw [hκR, he]
       linarith
-    refine le_trans (det_smallF hb0 adversary q hbound (by omega) (ρ : ℝ) hnum' κ hκ0 hκ1 hκq b N hb hN t o on
+    refine le_trans (det_smallF hb0 adversary q hbound (by omega) (ρ : ℝ) hnum' κ hκ0 hκ1 hκq H b N hH hb hN t o on
       hpt qh hrt hs ho hon hcthr) ?_
     exact small_closeFF q qh hq1 hs hqh hN70' (ρ : ℝ) (by linarith [hnum.low]) o.B (κ * c) hB hc2 hcheck'
-  · have hK : keygenCost ≤ q := by omega
-    obtain ⟨cover, -, qs, hcv, hqs, hqt⟩ := checkCovers_sound b N covers (qh + 1) hcov (q - keygenCost)
+  · have hKq : keygenCost ≤ q := by omega
+    obtain ⟨cover, -, qs, hcv, hqs, hqt⟩ := checkCovers_sound H b K N covers (qh + 1) hcov (q - keygenCost)
       (by omega) (by rw [← hkg]; omega)
-    have hcovb := H0.h0W_bound_of_cover b N qs cover hcv hb hN (q - keygenCost) hqs hqt
-    have hfairq := H0.fair_of_cover b N qs cover hcv hb (q - keygenCost) hqt
-    have h := det_largeW hb0 hN70' adversary q hbound hq127 hK hfairq (by
-      have e1 : (q - keygenCost) + (226 * 2 ^ subtreeHeight + 2 * (24 - subtreeHeight)) = q - keygenCost + keygenCost :=
-        rfl
+    have hcovb := H0.h0W_bound_of_cover H b K N qs cover hcv hH hb hK hN (q - keygenCost) hqs hqt
+    have hfairq := H0.fair_of_cover H b K N qs cover hcv hH hb (q - keygenCost) hqt
+    have h := det_largeW hb0 hN70' adversary q hbound hq127 hKq hfairq (by
+      have e1 : (q - keygenCost) + Prefix.keygenHashCost = q - keygenCost + keygenCost := rfl
       rw [e1] at hcovb
       exact hcovb)
     refine le_trans h (le_of_eq ?_)
     rw [Nat.cast_pow, Nat.cast_ofNat]
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

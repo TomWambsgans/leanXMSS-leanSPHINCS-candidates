@@ -8,6 +8,8 @@ even when encoding exhausts. -/
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.GraphView
+
+variable [Params]
 open Concrete Completeness Prefix HiddenGraph
 set_option backward.isDefEq.respectTransparency false
 attribute [local irreducible] firstEncoding ReferenceChoice.search encodingAttemptLimit
@@ -151,22 +153,119 @@ theorem fixed_forestCostSource (f : QueryImpl HashSpec Id) (table : HiddenGraph.
     simulateQ_pure]
   rfl
 
-variable [Params]
+
+/-- The counter search of one layer at the cost level: the honest cost of the key's message is
+charged first, and on success the chain values and the path. -/
+noncomputable def layerCostSearch (parameter : PublicParameter) (data : PublicData) (index : Index)
+    (lay : Layer) : OracleComp CostSpec (Option (Counter × Encoding)) := do
+  HiddenCost.tick (keyMessageCost lay)
+  let found ← liftM (layerSearch parameter data index lay)
+  match found with
+  | some pair => do
+      HiddenCost.tick (155 + treePathCost lay)
+      return some pair
+  | none => return none
 
 noncomputable def finishCostSource (parameter : PublicParameter) (data : PublicData)
     (message : Message) (randomness : Randomness) : OracleComp CostSpec (Option Signature) := do
   let digest ← liftM (messageDigest parameter data.root message randomness :
     OracleComp HashSpec MessageDigest)
-  HiddenCost.tick 118080
+  HiddenCost.tick 58960
   let index := digestIndex digest
-  let some (counter, word) ← liftM (ReferenceChoice.search parameter topLayer rootTree index
-    (data.forestKey index) encodingAttemptLimit 0) | return none
-  let values ← sequenceFin fun chain => HiddenCost.reveal
-    (.chain topLayer rootTree index chain (word chain))
+  let some found ← sequenceDep (α := fun _ => Counter × Encoding) (layerCostSearch parameter data index)
+    | return none
+  let values ← sequenceFin fun lay : Layer => sequenceFin fun chain => HiddenCost.reveal
+    (.chain lay (treeIndexAt index lay) (leafIndexAt index lay) chain ((found lay).2 chain))
   let opening ← sequenceFin fun c => coordCostSource data index c (digestMarks digest c)
-  HiddenCost.tick (155 + treePathCost)
-  let top : LayerSignature topLayer := ⟨counter, values, data.treePath index⟩
-  return some ⟨randomness, opening, Fin.cases top (fun i => Fin.elim0 i)⟩
+  return some ⟨randomness, opening, layerSignatures data index found values⟩
+
+theorem fixed_layerCostSearch (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (data : PublicData) (table : HiddenGraph.Table) (index : Index) (lay : Layer) :
+    simulateQ (fixedCostSource f table) (layerCostSearch parameter data index lay) =
+      WriterT.mk (PMF.pure (firstEncoding f parameter lay (treeIndexAt index lay) (leafIndexAt index lay)
+        (data.keyMessage lay (treeIndexAt index lay) (leafIndexAt index lay)) encodingAttemptLimit 0,
+        Multiplicative.ofAdd (layerHashCost f parameter data index lay))) := by
+  simp only [layerCostSearch, simulateQ_bind, fixedCostSource_tick, fixedCostSource_lift_hash,
+    fixedWorldCost_lift_hash]
+  apply WriterT.ext
+  simp only [WriterT.run_bind, WriterT.run_mk, AddWriterT.run_addTell, ← PMF.monad_pure_eq_pure,
+    pure_bind, layerSearch, ReferenceChoice.eval_search, layerHashCost]
+  cases hs : firstEncoding f parameter lay (treeIndexAt index lay) (leafIndexAt index lay)
+      (data.keyMessage lay (treeIndexAt index lay) (leafIndexAt index lay)) encodingAttemptLimit 0 with
+  | none =>
+      simp only [simulateQ_pure, WriterT.run_pure, Option.isSome_none, Bool.false_eq_true,
+        ↓reduceIte, Nat.add_zero, map_pure, mul_one]
+      simp only [← ofAdd_add, ← Nat.add_assoc]
+  | some pair =>
+      simp only [simulateQ_bind, fixedCostSource_tick, simulateQ_pure, WriterT.run_bind,
+        WriterT.run_pure, AddWriterT.run_addTell, pure_bind, Option.isSome_some, ↓reduceIte,
+        map_pure, mul_one]
+      simp only [← ofAdd_add, ← Nat.add_assoc]
+
+/-- Sequencing cost-level computations of fixed results and costs. -/
+theorem fixed_sequenceDep (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table) :
+    ∀ {n : Nat} {α : Fin n → Type} (computation : (i : Fin n) → OracleComp CostSpec (Option (α i)))
+      (results : (i : Fin n) → Option (α i)) (cost : Fin n → Nat),
+      (∀ i, simulateQ (fixedCostSource f table) (computation i) =
+        WriterT.mk (PMF.pure (results i, Multiplicative.ofAdd (cost i)))) →
+      simulateQ (fixedCostSource f table) (sequenceDep computation) =
+        WriterT.mk (PMF.pure (Completeness.allSome results,
+          Multiplicative.ofAdd (seqCost (fun i => (results i).isSome) cost)))
+  | 0, _, _, _, _, _ => by
+      simp only [sequenceDep, simulateQ_pure]
+      apply WriterT.ext
+      simp only [WriterT.run_pure, WriterT.run_mk, Completeness.allSome, seqCost]
+      rw [dif_pos (fun i => Fin.elim0 i)]
+      simp only [← PMF.monad_pure_eq_pure, ofAdd_zero]
+      congr 3
+      funext i
+      exact i.elim0
+  | n + 1, α, computation, results, cost, h => by
+      have h0 := h 0
+      have ih := fixed_sequenceDep f table (α := fun i => α i.succ) (fun i => computation i.succ)
+        (fun i => results i.succ) (fun i => cost i.succ) (fun i => h i.succ)
+      apply WriterT.ext
+      rw [sequenceDep, simulateQ_bind, h0]
+      cases hhead : results 0 with
+      | none =>
+          simp only [WriterT.run_bind, WriterT.run_mk, ← PMF.monad_pure_eq_pure, pure_bind,
+            simulateQ_pure, WriterT.run_pure, map_pure, seqCost, hhead, Option.isSome_none,
+            Bool.false_eq_true, ↓reduceIte, Nat.add_zero, mul_one]
+          congr 2
+          unfold Completeness.allSome
+          rw [dif_neg (fun hall => by simpa [hhead] using hall 0)]
+      | some head =>
+          simp only [WriterT.run_bind, WriterT.run_mk, ← PMF.monad_pure_eq_pure, pure_bind,
+            simulateQ_bind, ih, seqCost, hhead, Option.isSome_some, ↓reduceIte]
+          by_cases hall : ∀ i : Fin n, (results i.succ).isSome
+          · have hsome : Completeness.allSome (fun i : Fin n => results i.succ) =
+                some fun i => (results i.succ).get (hall i) := dif_pos hall
+            have hall' : ∀ i : Fin (n + 1), (results i).isSome := by
+              intro i
+              refine Fin.cases ?_ (fun j => hall j) i
+              simp [hhead]
+            have hsome' : Completeness.allSome results = some fun i => (results i).get (hall' i) :=
+              dif_pos hall'
+            simp only [hsome, hsome', simulateQ_pure, WriterT.run_pure, map_pure, mul_one, ← ofAdd_add]
+            congr 3
+            funext i
+            refine Fin.cases ?_ (fun j => ?_) i
+            · simp [hhead]
+            · simp
+          · have hnone : Completeness.allSome (fun i : Fin n => results i.succ) = none := dif_neg hall
+            have hnone' : Completeness.allSome results = none :=
+              dif_neg (fun hall' => hall fun i => hall' i.succ)
+            simp only [hnone, hnone', simulateQ_pure, WriterT.run_pure, map_pure, mul_one, ← ofAdd_add,
+              pure_bind]
+
+theorem fixed_layersCostSearch (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (data : PublicData) (table : HiddenGraph.Table) (index : Index) :
+    simulateQ (fixedCostSource f table)
+        (sequenceDep (α := fun _ => Counter × Encoding) (layerCostSearch parameter data index)) =
+      WriterT.mk (PMF.pure (assembledEncodings f parameter data index,
+        Multiplicative.ofAdd (seqCost (layerFound f parameter data index)
+          (layerHashCost f parameter data index)))) :=
+  fixed_sequenceDep f table _ _ _ (fun lay => fixed_layerCostSearch f parameter data table index lay)
 
 theorem fixed_finishCostSource (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (data : PublicData) (table : HiddenGraph.Table) (message : Message) (randomness : Randomness) :
@@ -174,27 +273,35 @@ theorem fixed_finishCostSource (f : QueryImpl HashSpec Id) (parameter : PublicPa
       WriterT.mk (PMF.pure (assembled f parameter data table message randomness,
         Multiplicative.ofAdd (finishHashCost f parameter data message randomness))) := by
   simp only [finishCostSource, simulateQ_bind, fixedCostSource_lift_hash,
-    fixedWorldCost_lift_hash, fixedCostSource_tick]
+    fixedWorldCost_lift_hash, fixedCostSource_tick, fixed_layersCostSearch]
   apply WriterT.ext
   simp only [WriterT.run_bind, WriterT.run_mk, AddWriterT.run_addTell,
-    ← PMF.monad_pure_eq_pure, pure_bind, assembled, finishHashCost,
-    ReferenceChoice.eval_search, hashCalls_messageDigest]
-  cases hs : firstEncoding f parameter topLayer rootTree
-      (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
-        OracleComp HashSpec MessageDigest)))
-      (data.forestKey (digestIndex (evalWithAnswerFn f
-        (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest))))
-      encodingAttemptLimit 0 with
+    ← PMF.monad_pure_eq_pure, pure_bind, assembled, finishHashCost, hashCalls_messageDigest,
+    assembledEncodings, layerFound]
+  cases hs : Completeness.allSome fun lay : Layer => firstEncoding f parameter lay
+      (treeIndexAt (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
+        OracleComp HashSpec MessageDigest))) lay)
+      (leafIndexAt (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
+        OracleComp HashSpec MessageDigest))) lay)
+      (data.keyMessage lay _ _) encodingAttemptLimit 0 with
   | none =>
-      simp only [simulateQ_pure, WriterT.run_pure, Option.map_none, Option.isSome_none,
-        Bool.false_eq_true, ↓reduceIte, Nat.add_zero, map_pure, mul_one]
+      simp only [simulateQ_pure, WriterT.run_pure, Option.map_none, map_pure, mul_one]
       simp only [← ofAdd_add, ← Nat.add_assoc]
-  | some pair =>
-      obtain ⟨counter, word⟩ := pair
-      simp only [simulateQ_bind, fixedCostSource_sequence_reveal, fixed_forestCostSource, pure_bind,
-        fixedCostSource_tick, simulateQ_pure, WriterT.run_bind, WriterT.run_pure,
-        AddWriterT.run_addTell, pure_bind,
-        Option.map_some, Option.isSome_some, ↓reduceIte, map_pure, mul_one]
+  | some found =>
+      have hvalues : simulateQ (fixedCostSource f table) (sequenceFin fun lay : Layer => sequenceFin fun chain =>
+          HiddenCost.reveal (D := HashInput) (R := HashOutput)
+            (.chain lay (treeIndexAt (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root
+              message randomness : OracleComp HashSpec MessageDigest))) lay)
+              (leafIndexAt (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root
+                message randomness : OracleComp HashSpec MessageDigest))) lay) chain ((found lay).2 chain))) =
+          pure (assembledValues table (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root
+            message randomness : OracleComp HashSpec MessageDigest))) found) := by
+        apply fixedCostSource_sequenceFin_pure
+        intro lay
+        exact fixedCostSource_sequence_reveal f table _
+      simp only [simulateQ_bind, hvalues, fixed_forestCostSource, pure_bind,
+        simulateQ_pure, WriterT.run_bind, WriterT.run_pure, pure_bind,
+        Option.map_some, map_pure, mul_one]
       simp only [← ofAdd_add, ← Nat.add_assoc]
 
 theorem finishCostSource_correct (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -209,7 +316,7 @@ theorem finishCostSource_correct (f : QueryImpl HashSpec Id) (parameter : Public
           OracleComp OracleWorld (Option Signature)) := by
   rw [fixed_finishCostSource, fixedWorldCost_lift_hash,
     eval_finishSign_assembled f parameter seed data table hdata htable message randomness hland,
-    hashCalls_finishSign_exact f parameter seed data hdata]
+    hashCalls_finishSign_exact f parameter seed data hdata message randomness hland]
 
 /-- The scan from a start with a step: no randomness. -/
 noncomputable def signCostSourceLoop (parameter : PublicParameter) (data : PublicData)

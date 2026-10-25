@@ -11,9 +11,10 @@ open OracleComp OracleSpec
 
 namespace LeanForest.Randomized
 
+variable [Params]
+
 open Concrete
 
-variable [Params]
 
 /-- The scan from a start with a step: no randomness. -/
 def scanLoop (sk : Seeded.SecretKey) (message : Message) (step : Randomness) :

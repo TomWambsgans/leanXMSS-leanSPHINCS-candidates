@@ -7,6 +7,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.Stop
 
+variable [Params]
+
 open Completeness HiddenCost GraphView
 
 set_option backward.isDefEq.respectTransparency false

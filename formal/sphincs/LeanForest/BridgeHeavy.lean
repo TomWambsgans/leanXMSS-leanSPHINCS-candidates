@@ -1,4 +1,4 @@
-import LeanForest.BridgeForsPotentialOnce
+import LeanForest.BridgeForestPotentialOnce
 import LeanForest.GroupHeavy
 
 /-! The heavy message of the large route, term level. The one-coin potential of the scan signer pays
@@ -13,6 +13,8 @@ open OracleComp OracleSpec ENNReal
 /-! ### More algebra of the law of the signed view -/
 
 namespace LeanForest.LoopWalk
+
+variable [Params]
 
 open LeanForest.Base.Domination LeanForest.Security.Domination
 
@@ -113,7 +115,9 @@ theorem sgn_stop_le (hp : p ≤ 1) (hU : U.Nonempty) (st : α → St) (ext : α 
 
 end LeanForest.LoopWalk
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner
@@ -123,7 +127,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### The total count and the heavy message -/
 
@@ -146,13 +149,11 @@ noncomputable def pairInputs : Finset HashInput := Finset.univ.image fun q : Pai
 
 variable {parameter data}
 
-omit [Params] in
 theorem totalCount_eq (s : State) :
     totalCount parameter data s = ((pairInputs parameter data).filter fun x => s.cache x ≠ none).card := by
   unfold totalCount pairInputs
   rw [Finset.filter_image, Finset.card_image_of_injective _ (fun a b h => pblk_injective parameter data h)]
 
-omit [Params] in
 theorem cachedCount_le_total (m : Message) (s : State) :
     cachedCount parameter data m s ≤ totalCount parameter data s := by
   unfold cachedCount totalCount
@@ -163,7 +164,6 @@ theorem cachedCount_le_total (m : Message) (s : State) :
   rw [Finset.mem_coe, Finset.mem_filter]
   exact ⟨by simp, h2⟩
 
-omit [Params] in
 theorem cachedCount_add_le {m m' : Message} (h : m ≠ m') (s : State) :
     cachedCount parameter data m s + cachedCount parameter data m' s ≤ totalCount parameter data s := by
   have h1 : cachedCount parameter data m s =
@@ -195,7 +195,6 @@ theorem cachedCount_add_le {m m' : Message} (h : m ≠ m') (s : State) :
   · have h2 : s.cache (pblk parameter data (m', ρ)) ≠ none := (Finset.mem_filter.1 hρ).2
     exact ⟨by simp, h2⟩
 
-omit [Params] in
 /-- The total invariant implies the count invariant of every message. -/
 theorem TotalInv.countInv {Qtot : ℕ} {s : State} {budget : ℕ} (hT : TotalInv parameter data Qtot s budget) :
     CountInv parameter data Qtot s budget := by
@@ -204,7 +203,6 @@ theorem TotalInv.countInv {Qtot : ℕ} {s : State} {budget : ℕ} (hT : TotalInv
   unfold TotalInv at hT
   omega
 
-omit [Params] in
 /-- **At most one message is heavy.** -/
 theorem heavy_unique {Qtot : ℕ} {s : State} {budget : ℕ} (hT : TotalInv parameter data Qtot s budget)
     {m m' : Message} (h : Heavy parameter data Qtot s m) (h' : Heavy parameter data Qtot s m') : m = m' := by
@@ -214,14 +212,12 @@ theorem heavy_unique {Qtot : ℕ} {s : State} {budget : ℕ} (hT : TotalInv para
   unfold TotalInv at hT
   omega
 
-omit [Params] in
 /-- A message that is not heavy has at most `Qtot / 2` cached digests. -/
 theorem cachedCount_le_of_not_heavy {Qtot : ℕ} {s : State} {m : Message} (h : ¬Heavy parameter data Qtot s m) :
     cachedCount parameter data m s ≤ Qtot / 2 := by
   unfold Heavy at h
   omega
 
-omit [Params] in
 theorem cachedCount_mono {s s' : State} (h : Extends s s') (m : Message) :
     cachedCount parameter data m s ≤ cachedCount parameter data m s' := by
   unfold cachedCount
@@ -230,7 +226,6 @@ theorem cachedCount_mono {s s' : State} (h : Extends s s') (m : Message) :
   obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.1 hρ.2
   exact ⟨hρ.1, by rw [h.1 _ v hv]; exact Option.some_ne_none v⟩
 
-omit [Params] in
 /-- Heaviness is monotone along extensions of the state. -/
 theorem Heavy.mono {Qtot : ℕ} {s s' : State} (hext : Extends s s') {m : Message}
     (h : Heavy parameter data Qtot s m) : Heavy parameter data Qtot s' m := by
@@ -238,26 +233,22 @@ theorem Heavy.mono {Qtot : ℕ} {s s' : State} (hext : Extends s s') {m : Messag
   unfold Heavy at h ⊢
   omega
 
-omit [Params] in
 theorem cachedCount_congr {s s' : State} {m : Message}
     (h : ∀ ρ, s'.cache (blk parameter data m ρ) = s.cache (blk parameter data m ρ)) :
     cachedCount parameter data m s' = cachedCount parameter data m s := by
   unfold cachedCount
   simp only [h]
 
-omit [Params] in
 theorem heavy_congr {Qtot : ℕ} {s s' : State} {m : Message}
     (h : ∀ ρ, s'.cache (blk parameter data m ρ) = s.cache (blk parameter data m ρ)) :
     Heavy parameter data Qtot s' m ↔ Heavy parameter data Qtot s m := by
   unfold Heavy
   rw [cachedCount_congr h]
 
-omit [Params] in
 theorem heavy_withPair_other {Qtot : ℕ} (s : State) (p : Pair) (u0 : HashOutput) {m : Message} (hm : m ≠ p.1) :
     Heavy parameter data Qtot (withPair parameter data s p u0) m ↔ Heavy parameter data Qtot s m :=
   heavy_congr fun ρ => withPair_other_pair s p (m, ρ) (fun h => hm (congrArg Prod.fst h)) u0
 
-omit [Params] in
 /-- Heaviness after a new pair does not depend on the value of its block. -/
 theorem heavy_withPair_value {Qtot : ℕ} (s : State) (p : Pair) (u0 u0' : HashOutput) (m : Message) :
     Heavy parameter data Qtot (withPair parameter data s p u0) m ↔
@@ -287,14 +278,12 @@ variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : 
   (model : HiddenRows.Model HashInput HashOutput A Coordinate)
   {parameter : PublicParameter} {data : PublicData} {Qtot : ℕ}
 
-omit [Params] in
 theorem totalCount_withPair (s : State) (p : Pair) (u0 : HashOutput) :
     totalCount parameter data (withPair parameter data s p u0) ≤ totalCount parameter data s + 1 := by
   rw [totalCount_eq, totalCount_eq]
   unfold withPair
   exact card_filter_store_le _ _ _ _
 
-omit [Params] in
 /-- **A new pair keeps the total invariant.** -/
 theorem totalInv_withPair {s : State} {budget : ℕ} (hT : TotalInv parameter data Qtot s budget) (hb : 1 ≤ budget)
     (p : Pair) (u0 : HashOutput) : TotalInv parameter data Qtot (withPair parameter data s p u0) (budget - 1) := by
@@ -302,7 +291,6 @@ theorem totalInv_withPair {s : State} {budget : ℕ} (hT : TotalInv parameter da
   unfold TotalInv at hT ⊢
   omega
 
-omit [Params] in
 /-- **An ordinary query keeps the total invariant.** -/
 theorem totalInv_ordinary {s : State} {budget : ℕ} (hT : TotalInv parameter data Qtot s budget) (hb : 1 ≤ budget)
     (x : HashInput) (r : HashOutput × State) (hr : r ∈ support (ordinaryStep model x s.known s)) :
@@ -313,7 +301,6 @@ theorem totalInv_ordinary {s : State} {budget : ℕ} (hT : TotalInv parameter da
   unfold TotalInv at hT ⊢
   omega
 
-omit [Params] in
 /-- **A program keeps the total invariant**, in particular a signing call. -/
 theorem totalInv_interp {α : Type} (prog : OracleComp CostSpec α) {s : State} {budget : ℕ}
     (hT : TotalInv parameter data Qtot s budget) (out : Run HashInput Coordinate α × State)
@@ -381,24 +368,20 @@ section Lists
 
 variable {parameter : PublicParameter} {data : PublicData} {Qtot : ℕ}
 
-omit [Params] in
 theorem mem_lightMsgs {s : State} {l : List Message} {m : Message} :
     m ∈ lightMsgs parameter data Qtot s l ↔ m ∈ l ∧ ¬Heavy parameter data Qtot s m := by
   unfold lightMsgs; simp
 
-omit [Params] in
 theorem heavyMsg_eq_none {s : State} {l : List Message} :
     heavyMsg parameter data Qtot s l = none ↔ ∀ m ∈ l, ¬Heavy parameter data Qtot s m := by
   unfold heavyMsg; simp
 
-omit [Params] in
 /-- The heavy message of a list is in the list and heavy. -/
 theorem heavyMsg_some {s : State} {l : List Message} {h : Message} (hh : heavyMsg parameter data Qtot s l = some h) :
     h ∈ l ∧ Heavy parameter data Qtot s h := by
   unfold heavyMsg at hh
   exact ⟨List.mem_of_find?_eq_some hh, by simpa using List.find?_some hh⟩
 
-omit [Params] in
 /-- A heavy message of a list in which it is the only heavy one is the heavy message of the list. -/
 theorem heavyMsg_eq_some {s : State} {l : List Message} {h : Message} (hmem : h ∈ l)
     (hh : Heavy parameter data Qtot s h) (huniq : ∀ m ∈ l, Heavy parameter data Qtot s m → m = h) :
@@ -409,21 +392,18 @@ theorem heavyMsg_eq_some {s : State} {l : List Message} {h : Message} (hmem : h 
       obtain ⟨h1, h2⟩ := heavyMsg_some hfind
       rw [huniq h' h1 h2]
 
-omit [Params] in
 /-- Under the total invariant: `some h` iff `h` is in the list and heavy. -/
 theorem heavyMsg_eq_some_iff {s : State} {budget : ℕ} (hT : TotalInv parameter data Qtot s budget)
     {l : List Message} {h : Message} :
     heavyMsg parameter data Qtot s l = some h ↔ h ∈ l ∧ Heavy parameter data Qtot s h :=
   ⟨heavyMsg_some, fun hh => heavyMsg_eq_some hh.1 hh.2 fun _ _ hm => heavy_unique hT hm hh.2⟩
 
-omit [Params] in
 theorem find?_congr' {α : Type} {p q : α → Bool} : ∀ (l : List α), (∀ a ∈ l, p a = q a) → l.find? p = l.find? q
   | [], _ => rfl
   | a :: l, h => by
       rw [List.find?_cons, List.find?_cons, h a (List.mem_cons_self ..),
         find?_congr' l (fun b hb => h b (List.mem_cons_of_mem _ hb))]
 
-omit [Params] in
 theorem lightMsgs_congr {s s' : State} {l : List Message}
     (h : ∀ m ∈ l, (Heavy parameter data Qtot s' m ↔ Heavy parameter data Qtot s m)) :
     lightMsgs parameter data Qtot s' l = lightMsgs parameter data Qtot s l := by
@@ -432,7 +412,6 @@ theorem lightMsgs_congr {s s' : State} {l : List Message}
   rw [Bool.eq_iff_iff]
   simp [h m hm]
 
-omit [Params] in
 theorem heavyMsg_congr {s s' : State} {l : List Message}
     (h : ∀ m ∈ l, (Heavy parameter data Qtot s' m ↔ Heavy parameter data Qtot s m)) :
     heavyMsg parameter data Qtot s' l = heavyMsg parameter data Qtot s l := by
@@ -441,14 +420,12 @@ theorem heavyMsg_congr {s s' : State} {l : List Message}
   rw [Bool.eq_iff_iff]
   simp [h m hm]
 
-omit [Params] in
 /-- Without a heavy message, every message is light. -/
 theorem lightMsgs_of_none {s : State} {l : List Message} (h : heavyMsg parameter data Qtot s l = none) :
     lightMsgs parameter data Qtot s l = l := by
   unfold lightMsgs
   exact List.filter_eq_self.2 fun m hm => by simpa using heavyMsg_eq_none.1 h m hm
 
-omit [Params] in
 /-- The list is its heavy message and its light messages. -/
 theorem perm_heavy_cons {s : State} {l : List Message} {h : Message} (hnd : l.Nodup)
     (hh : heavyMsg parameter data Qtot s l = some h) (huniq : ∀ m ∈ l, Heavy parameter data Qtot s m → m = h) :
@@ -462,7 +439,6 @@ theorem perm_heavy_cons {s : State} {l : List Message} {h : Message} (hnd : l.No
   simp only [bne_iff_ne, ne_eq, decide_eq_true_eq]
   exact ⟨fun hne hm' => hne (huniq m hm hm'), fun hnh heq => hnh (heq ▸ hheavy)⟩
 
-omit [Params] in
 theorem lightMsgs_nodup {s : State} {l : List Message} (h : l.Nodup) : (lightMsgs parameter data Qtot s l).Nodup :=
   h.filter _
 
@@ -794,7 +770,6 @@ section NewPairH
 
 variable {parameter : PublicParameter} {data : PublicData} {Qtot : ℕ} {w : ℝ≥0∞}
 
-omit [Params] in
 theorem cachedCount_withPair_self (s : State) (p : Pair) (hp0 : s.cache (pblk parameter data p) = none)
     (u0 : HashOutput) :
     cachedCount parameter data p.1 (withPair parameter data s p u0) = cachedCount parameter data p.1 s + 1 := by
@@ -817,7 +792,6 @@ theorem cachedCount_withPair_self (s : State) (p : Pair) (hp0 : s.cache (pblk pa
   have h0 : s.cache (blk parameter data p.1 p.2) = none := hp0
   simp [h0]
 
-omit [Params] in
 theorem heavy_withPair_self {s : State} {p : Pair} (hp0 : s.cache (pblk parameter data p) = none) (u0 : HashOutput) :
     Heavy parameter data Qtot (withPair parameter data s p u0) p.1 ↔ Qtot < 2 * (cachedCount parameter data p.1 s + 1) := by
   unfold Heavy
@@ -1469,4 +1443,4 @@ theorem post_term_leH (hw : w ≤ 1) {f : Multiset View → ℝ≥0∞} (hf : Mo
 
 end SignPointH
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

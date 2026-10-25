@@ -1,5 +1,5 @@
 import LeanForest.BridgeHeavy
-import LeanForest.BridgeSatWFors
+import LeanForest.BridgeSatWForest
 
 /-! The survival-weighted one-coin forest potential of the scan signer with one heavy message. Every
 term of the potential is a `termH`: the live message that received more than half of the budget, if
@@ -9,7 +9,9 @@ keeps one spare fresh slot. The rate of the coin is then needed only for the mes
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner
@@ -20,7 +22,6 @@ set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### The potential -/
 
@@ -1072,4 +1073,4 @@ theorem goodHW_advProg (hparse : ∀ p, model.parse (pblk parameter data p) = no
 
 end GoodHW
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

@@ -11,13 +11,15 @@ open OracleComp OracleSpec ENNReal
 set_option exponentiation.threshold 512
 
 namespace LeanForest.Security
+
+variable [Params]
 open Concrete
 
 /-- The oracle block induces exactly the uniform 234-bit digest law. -/
 theorem evalDist_digestBlock_uniform :
     𝒟[truncateMessageDigest <$> ($ᵗ HashOutput : ProbComp HashOutput)] =
       𝒟[($ᵗ MessageDigest : ProbComp MessageDigest)] :=
-  evalDist_hashOutput_extract_uniform (width := messageDigestBits) (by decide)
+  evalDist_hashOutput_extract_uniform (width := messageDigestBits) messageDigestBits_le
 
 /-- The exact byte string queried for a message digest. -/
 abbrev digestInput (parameter : PublicParameter) (root : Digest) (message : Message)

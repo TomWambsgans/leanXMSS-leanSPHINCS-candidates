@@ -1,5 +1,5 @@
 import LeanForest.Lifetimes
-import LeanForest.Axioms
+import LeanForest.Configurations
 import Lean
 
 /-!

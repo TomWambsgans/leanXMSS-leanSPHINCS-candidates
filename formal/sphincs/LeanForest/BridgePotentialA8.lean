@@ -11,6 +11,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.PotentialA
 
+variable [Params]
+
 open Concrete Completeness Graph HiddenGraph HiddenDebt HiddenBridge HiddenCost HiddenReveal EncodingCode
   TargetAssignment
 
@@ -21,12 +23,11 @@ set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 attribute [local irreducible] ReferenceChoice.selection encodingAttemptLimit
 
-variable [Params]
 
 section Prepared
 
 variable (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-  (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+  (remaining : RemainingOutputs) (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
   (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
 
 include hprepared in
@@ -35,10 +36,10 @@ decodes to nothing or to the prepared word. -/
 theorem prepared_origin (input : HashInput) (answer : HashOutput) (hcache : prepared.2 input = some answer) :
     (∃ position : Position, ¬IsRowPosition position ∧
       ∃ payload, input = tweakableHashInput (truncateHash parameterOutput) position.domain payload) ∨
-    ∃ (leaf : Index) (counter : Counter), input = Wots.encodingInput (truncateHash parameterOutput) topLayer rootTree
-        leaf ((sampleData parameterOutput fixed highs remaining).forestKey leaf) counter ∧
+    ∃ (key : OtsKey) (counter : Counter), input = Wots.encodingInput (truncateHash parameterOutput) key.1 key.2.1
+        key.2.2 (keyMessages (sampleData parameterOutput fixed highs remaining) key) counter ∧
       (TargetSum.decodeDigest (truncateHash answer) = none ∨
-        TargetSum.decodeDigest (truncateHash answer) = some (preparedWord prepared.1 leaf)) := by
+        TargetSum.decodeDigest (truncateHash answer) = some (preparedWord prepared.1 key)) := by
   obtain ⟨f, hf⟩ := QueryCache.exists_agreesWithFn prepared.2
   have hsearch := (preparation_support _ _ _ prepared hprepared f hf).2
   rcases Graph.hash_cache_origin _ _ prepared.1 prepared.2 hprepared f hf input answer hcache with
@@ -62,33 +63,44 @@ theorem prepared_origin (input : HashInput) (answer : HashOutput) (hcache : prep
       cases hstruct
     exact ⟨position, ((mem_graphOrder _ _).mp hmem).2, _, rfl⟩
   · right
-    obtain ⟨leaf, hleaf⟩ := queriedInputs_sequenceFin_mem f _ hquery
-    obtain ⟨counter, rfl, hcase⟩ := ReferenceChoice.search_query_classification f _ topLayer rootTree leaf _
+    have hquery' : input ∈ queriedInputs f (Concrete.sequenceFin fun lay : Layer =>
+        Concrete.sequenceFin fun tree : TreeIndex => Concrete.sequenceFin fun leaf : LeafIndex =>
+          ReferenceChoice.search (truncateHash parameterOutput) lay tree leaf
+            (keyMessages (sampleData parameterOutput fixed highs remaining) (lay, tree, leaf))
+            encodingAttemptLimit 0) := by
+      unfold searchAll at hquery
+      rw [queriedInputs_bind, queriedInputs_pure, List.append_nil] at hquery
+      exact hquery
+    obtain ⟨lay, h1⟩ := queriedInputs_sequenceFin_mem f _ hquery'
+    obtain ⟨tree, h2⟩ := queriedInputs_sequenceFin_mem f _ h1
+    obtain ⟨leaf, hleaf⟩ := queriedInputs_sequenceFin_mem f _ h2
+    obtain ⟨counter, rfl, hcase⟩ := ReferenceChoice.search_query_classification f _ lay tree leaf _
       encodingAttemptLimit 0 _ hleaf
-    refine ⟨leaf, counter, rfl, ?_⟩
-    have hanswer : f (Wots.encodingInput (truncateHash parameterOutput) topLayer rootTree leaf
-        ((sampleData parameterOutput fixed highs remaining).forestKey leaf) counter) = answer := hf hcache
+    refine ⟨(lay, tree, leaf), counter, rfl, ?_⟩
+    have hanswer : f (Wots.encodingInput (truncateHash parameterOutput) lay tree leaf
+        (keyMessages (sampleData parameterOutput fixed highs remaining) (lay, tree, leaf)) counter) = answer :=
+      hf hcache
     rcases hcase with hnone | hsome
     · left
       rw [← hanswer]
       simpa only [encode, evalWithAnswerFn_bind, eval_tweakableHash, evalWithAnswerFn_pure, Wots.encodingInput]
         using hnone
     · right
-      cases hfe : Prefix.firstEncoding f (truncateHash parameterOutput) topLayer rootTree leaf
-          ((sampleData parameterOutput fixed highs remaining).forestKey leaf) encodingAttemptLimit 0 with
+      cases hfe : Prefix.firstEncoding f (truncateHash parameterOutput) lay tree leaf
+          (keyMessages (sampleData parameterOutput fixed highs remaining) (lay, tree, leaf)) encodingAttemptLimit 0 with
       | none =>
           rw [hfe] at hsome
           cases hsome
       | some pair =>
           rw [hfe, Option.map_some, Option.some.injEq] at hsome
           have hctr := (Wots.encodingInput_injective _ _ _ _ hsome).2
-          have hsound := ReferenceChoice.firstEncoding_sound f _ topLayer rootTree leaf _ encodingAttemptLimit 0
+          have hsound := ReferenceChoice.firstEncoding_sound f _ lay tree leaf _ encodingAttemptLimit 0
             pair.1 pair.2 hfe
-          have hdec := Wots.decode_of_encode f _ topLayer rootTree leaf _ pair.1 pair.2 hsound
+          have hdec := Wots.decode_of_encode f _ lay tree leaf _ pair.1 pair.2 hsound
           rw [hctr, hanswer] at hdec
-          have hw : preparedWord prepared.1 leaf = pair.2 := by
+          have hw : preparedWord prepared.1 (lay, tree, leaf) = pair.2 := by
             unfold preparedWord
-            rw [← hsearch leaf, hfe]
+            rw [← hsearch (lay, tree, leaf), hfe]
             rfl
           rw [hw]
           exact hdec
@@ -110,8 +122,8 @@ theorem position_domain_enc {position : Position} {lay : Layer} {tree : TreeInde
   cases position <;> simp [Position.domain] at h
 
 include hprepared in
-/-- The prepared cache holds no root-tree chain input. -/
-theorem prepared_not_chain {l : Index} {i : ChainIndex} {st : ChainStep} {v : Digest} {a : HashOutput}
+/-- The prepared cache holds no chain input. -/
+theorem prepared_not_chain {l : OtsKey} {i : ChainIndex} {st : ChainStep} {v : Digest} {a : HashOutput}
     (h : prepared.2 (chainInput (truncateHash parameterOutput) l i st v) = some a) : False := by
   rcases prepared_origin parameterOutput fixed highs remaining prepared hprepared _ a h with
     ⟨position, hrow, payload, heq⟩ | ⟨leaf, counter, heq, -⟩
@@ -129,8 +141,8 @@ theorem prepared_not_fchain {f : FIn} {a : HashOutput}
 
 include hprepared in
 /-- No prepared encoding answer decodes to a unit neighbour of the prepared word. -/
-theorem prepared_no_marker {l : Index} {msg : ForestKey} {ctr : Counter} {a : HashOutput} {i : ChainIndex}
-    (h : prepared.2 (Wots.encodingInput (truncateHash parameterOutput) topLayer rootTree l msg ctr) = some a)
+theorem prepared_no_marker {l : OtsKey} {msg : HashInput} {ctr : Counter} {a : HashOutput} {i : ChainIndex}
+    (h : prepared.2 (Wots.encodingInput (truncateHash parameterOutput) l.1 l.2.1 l.2.2 msg ctr) = some a)
     (hm : truncateHash a ∈ decodingDigests (unitNeighbors (preparedWord prepared.1 l) i)) : False := by
   obtain ⟨word, hword, hdec⟩ := mem_decodingDigests.1 hm
   have hne := (mem_unitNeighbors.1 hword).ne
@@ -151,7 +163,7 @@ end Prepared
 section Events
 
 variable (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-  (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+  (remaining : RemainingOutputs) (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
   (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
   (known : Knowledge Coordinate) (ρ : ℝ) (s : St)
   (hinv : (ctxA parameterOutput fixed highs remaining prepared known ρ).Inv s)
@@ -166,7 +178,7 @@ include hinv hT in
 theorem anchor_value {c : Coordinate}
     (hc : (ctxA parameterOutput fixed highs remaining prepared known ρ).Anchor c) :
     T c = (ctxA parameterOutput fixed highs remaining prepared known ρ).F c := by
-  have hag := (ForsPotential.agrees_iff_extending _ T).2 hT
+  have hag := (ForestPotential.agrees_iff_extending _ T).2 hT
   exact hag c _ (hinv.anchored c hc)
 
 theorem initial_none_of_not {x : HashInput} (h : ∀ a, prepared.2 x = some a → False) : prepared.2 x = none := by
@@ -186,7 +198,7 @@ theorem hit_of_bad
   unfold targetsA at hmem
   split_ifs at hmem with hsec
   · exact absurd hmem (Finset.notMem_empty _)
-  have hag := (ForsPotential.agrees_iff_extending _ T).2 hT
+  have hag := (ForestPotential.agrees_iff_extending _ T).2 hT
   cases hinit : prepared.2 input with
   | some old =>
       exfalso
@@ -206,7 +218,7 @@ include hT in
 /-- **Correct guesses** are hits of the targeting. -/
 theorem hit_of_correctGuess (h : CorrectGuess T s) :
     Hit (ctxA parameterOutput fixed highs remaining prepared known ρ).tg prepared.2 T s := by
-  have hag := (ForsPotential.agrees_iff_extending _ T).2 hT
+  have hag := (ForestPotential.agrees_iff_extending _ T).2 hT
   obtain ⟨guess, hguess, hcorrect⟩ := h
   refine hit_of_debt hag guess.1 (Or.inl ?_)
   change (guess.1, T guess.1) ∈ s.guesses
@@ -221,7 +233,7 @@ theorem wotsBad_of_event (h : WotsEvent (truncateHash parameterOutput) prepared.
   obtain ⟨leaf, hl, hev⟩ := h
   have hfront : ∀ chain, frontierValue prepared.1 T leaf chain = K.front leaf chain := fun chain =>
     anchor_value parameterOutput fixed highs remaining prepared known ρ s hinv T hT
-      (Or.inl ⟨rfl, rfl, hl, le_rfl⟩)
+      (Or.inl ⟨hl, le_rfl⟩)
   have hchain : ∀ (chain : ChainIndex) (st : ChainStep) (v : Digest) (a : HashOutput),
       s.cache (chainInput (truncateHash parameterOutput) leaf chain st v) = some a →
       K.Fr s (chainInput K.p leaf chain st v) a := fun chain st v a hc =>
@@ -238,7 +250,7 @@ theorem wotsBad_of_event (h : WotsEvent (truncateHash parameterOutput) prepared.
       mem_decodingDigests.2 ⟨candidate, mem_unitNeighbors.2 hnb, hdec⟩
     refine ⟨message, counter, answer, ⟨hc, initial_none_of_not prepared fun a' h' => ?_⟩, hm⟩
     have hsame := hinv.prepared _ a' h'
-    have hc' : s.cache (Wots.encodingInput K.p topLayer rootTree leaf message counter) = some answer := hc
+    have hc' : s.cache (Wots.encodingInput K.p leaf.1 leaf.2.1 leaf.2.2 message counter) = some answer := hc
     rw [hc', Option.some.injEq] at hsame
     subst hsame
     exact prepared_no_marker parameterOutput fixed highs remaining prepared hprepared h' hm
@@ -262,7 +274,7 @@ theorem fContact_of_at {index : Index} {c : Coord} {sp : SuperIdx} {j : SubIdx} 
 
 include hprepared in
 /-- **Two forest contacts** at different chains of one index are a pair of the payoff. -/
-theorem twoFors_of_contacts (h : TwoForestContacts (truncateHash parameterOutput) T s.cache) :
+theorem twoForest_of_contacts (h : TwoForestContacts (truncateHash parameterOutput) T s.cache) :
     ∃ f g, f.Rel g ∧ (ctxA parameterOutput fixed highs remaining prepared known ρ).FCT T s f ∧
       (ctxA parameterOutput fixed highs remaining prepared known ρ).FCT T s g := by
   obtain ⟨index, c, sp, j, a, i, t, c', sp', j', a', i', t', hne, hc, hc'⟩ := h
@@ -347,7 +359,7 @@ theorem badA_split (hfix : tableExtending (knownOf (truncateHash parameterOutput
       reveals hrev with hng | hrec
     · exact Or.inl (hpay _ (fun h => Or.inr (Or.inr (Or.inl h))) hng)
     · exact Or.inr (Or.inl hrec)
-  · exact Or.inl (hpay _ (fun h => Or.inr (Or.inr (Or.inr (twoFors_of_contacts parameterOutput fixed highs
+  · exact Or.inl (hpay _ (fun h => Or.inr (Or.inr (Or.inr (twoForest_of_contacts parameterOutput fixed highs
       remaining prepared hprepared known ρ s T h)))) htwo)
   · rcases forestNear_split parameterOutput fixed highs remaining prepared hprepared known ρ s T _ outcome
       reveals hnear with hng | hrec
@@ -386,7 +398,7 @@ theorem inv_interp (K : Ctx) (M : HiddenRows.Model HashInput HashOutput Address 
 section Final
 
 variable (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-  (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+  (remaining : RemainingOutputs) (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
   (known : Knowledge Coordinate) (ρ : ℝ)
   (hknown : known ∈ support (exposeR (aboveList (truncateHash parameterOutput) prepared.1)
     (knownOf (truncateHash parameterOutput) fixed)))

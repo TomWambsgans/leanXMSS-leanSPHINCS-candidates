@@ -1,5 +1,5 @@
 import LeanForest.BridgeScan
-import LeanForest.BridgeForsPotential
+import LeanForest.BridgeForestPotential
 
 /-! The groups of the unsigned messages in the virtual future of the scan signer. Every message with
 cached digests acts on a base function by its group operator (`LoopWalk.grp`, over the randomizers
@@ -8,7 +8,9 @@ live messages applied to the one-coin virtual future of the future pairs. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner
@@ -18,7 +20,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 instance : Nonempty Randomness := ⟨0⟩
 
@@ -535,4 +536,4 @@ theorem sign_term (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none
 
 end SignScan
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

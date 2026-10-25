@@ -12,6 +12,8 @@ open OracleComp OracleSpec
 
 namespace LeanForest.Security.Graph
 
+variable [Params]
+
 open Concrete Completeness
 set_option backward.isDefEq.respectTransparency false
 

@@ -11,6 +11,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.GraphView
 
+variable [Params]
+
 open LeanForest.Base
 open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForestSigner LeanForest.LoopWalk
 
@@ -19,7 +21,6 @@ set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 section LoopSW
 

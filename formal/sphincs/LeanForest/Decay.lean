@@ -13,6 +13,8 @@ Repeating the halving turns a lower acceptance bound into an exponentially small
 
 namespace LeanForest.Completeness
 
+variable [Params]
+
 /-- `m` trials, each rejected with probability at most `1 - 1/m`, all reject with probability at most `1/2`. -/
 theorem pow_le_half (m : Nat) (hm : 0 < m) (x : ℝ) (hx0 : 0 ≤ x) (hx : x ≤ 1 - (m : ℝ)⁻¹) :
     x ^ m ≤ 1 / 2 := by

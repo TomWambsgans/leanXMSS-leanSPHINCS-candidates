@@ -5,6 +5,8 @@ import LeanForest.H0MomCert
 
 namespace LeanForest.Security.H0
 
+variable [Params]
+
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 0
 

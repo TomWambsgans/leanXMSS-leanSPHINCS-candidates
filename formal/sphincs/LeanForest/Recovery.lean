@@ -5,7 +5,7 @@ import Mathlib.Data.Nat.Bitwise
 # Recovery: what the signer produces, the verifier accepts
 
 Adapted from leanVM b7a107256. One-time recovery returns the leaf the signer built,
-and each FORS authentication path returns its root. Pruning.lean adds the surrogate spine;
+and each forest path returns its node. Pruning.lean adds the surrogate spine;
 Correctness.lean composes these facts into signer/verifier correctness.
 
 Everything is deterministic once the oracle is fixed, so the whole file works under an answer
@@ -19,6 +19,8 @@ set_option maxRecDepth 100000
 set_option maxHeartbeats 1000000
 
 namespace LeanForest.Completeness
+
+variable [Params]
 
 open Concrete Seeded
 
@@ -147,7 +149,7 @@ def otsEndpoint (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (
 
 /-- What a successful counter search produced: the counter encodes the message, and every chain value is the signer's partial walk from the derived secret. -/
 theorem otsSignFrom_spec (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (seed : MasterSeed) (message : ForestKey) :
+    (leaf : LeafIndex) (seed : MasterSeed) (message : HashInput) :
     ∀ (attempts start : Nat) {counter : Counter} {values : ChainIndex → Digest},
       evalWithAnswerFn f (otsSignFrom parameter lay tree leaf seed message attempts start
           : OracleComp HashSpec (Option (Counter × (ChainIndex → Digest)))) = some (counter, values) →
@@ -177,7 +179,7 @@ theorem otsSignFrom_spec (parameter : PublicParameter) (lay : Layer) (tree : Tre
 
 /-- The verifier's leaf is the leaf the signer's tree was built from. -/
 theorem eval_otsLeaf_of_otsSign (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (seed : MasterSeed) (message : ForestKey) {counter : Counter}
+    (leaf : LeafIndex) (seed : MasterSeed) (message : HashInput) {counter : Counter}
     {values : ChainIndex → Digest}
     (h : evalWithAnswerFn f (otsSign parameter lay tree leaf seed message
         : OracleComp HashSpec (Option (Counter × (ChainIndex → Digest)))) = some (counter, values)) :

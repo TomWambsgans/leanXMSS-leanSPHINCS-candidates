@@ -8,13 +8,14 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
 
+variable [Params]
+
 open HiddenCost GraphView Stop Concrete Prefix
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 section Fixed
 
@@ -25,14 +26,10 @@ randomizer are in the reveal list. -/
 def SignedRevealed (parameter : PublicParameter) (data : PublicData) (log : QueryLog SigningSpec)
     (reveals : List HiddenGraph.Coordinate) : Prop :=
   ∀ entry ∈ log, ∀ signature, entry.2 = some signature →
-    (∃ pair, firstEncoding f parameter topLayer rootTree
-      (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root entry.1 signature.randomness :
-        OracleComp HashSpec MessageDigest)))
-      (data.forestKey (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root entry.1
-        signature.randomness : OracleComp HashSpec MessageDigest)))) encodingAttemptLimit 0 = some pair) ∧
+    (∃ pair, assembledEncodings f parameter data (digestIndex (evalWithAnswerFn f
+        (messageDigest parameter data.root entry.1 signature.randomness : OracleComp HashSpec MessageDigest))) = some pair) ∧
     ∀ coordinate ∈ revealsOf f parameter data entry.1 signature.randomness, coordinate ∈ reveals
 
-omit [Params] in
 theorem signedRevealed_append (parameter : PublicParameter) (data : PublicData)
     {log log' : QueryLog SigningSpec} {reveals reveals' : List HiddenGraph.Coordinate}
     (h : SignedRevealed f parameter data log reveals) (h' : SignedRevealed f parameter data log' reveals') :
@@ -44,24 +41,17 @@ theorem signedRevealed_append (parameter : PublicParameter) (data : PublicData)
   · obtain ⟨hpair, hsub⟩ := h' entry hr signature hsig
     exact ⟨hpair, fun coordinate hc => List.mem_append_right _ (hsub coordinate hc)⟩
 
-omit [Params] in
 /-- An assembled signature carries its randomizer, and its leaf search succeeded. -/
 theorem assembled_some (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) (signature : Signature)
     (h : assembled f parameter data table message randomness = some signature) :
     signature.randomness = randomness ∧
-      ∃ pair, firstEncoding f parameter topLayer rootTree
-        (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
-          OracleComp HashSpec MessageDigest)))
-        (data.forestKey (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message
-          randomness : OracleComp HashSpec MessageDigest)))) encodingAttemptLimit 0 = some pair := by
+      ∃ pair, assembledEncodings f parameter data (digestIndex (evalWithAnswerFn f
+        (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest))) = some pair := by
   unfold assembled at h
   dsimp only at h
-  cases hfound : firstEncoding f parameter topLayer rootTree
-      (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
-        OracleComp HashSpec MessageDigest)))
-      (data.forestKey (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
-        OracleComp HashSpec MessageDigest)))) encodingAttemptLimit 0 with
+  cases hfound : assembledEncodings f parameter data (digestIndex (evalWithAnswerFn f
+      (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest))) with
   | none => rw [hfound] at h; cases h
   | some pair =>
       rw [hfound, Option.map_some, Option.some.injEq] at h
@@ -77,11 +67,8 @@ theorem signLoop_revealed (parameter : PublicParameter) (data : PublicData) (mes
     (hresult : result ∈ support (costRun f table (withReveals
       (signCostSourceLoop parameter data message step attempts randomness)))) :
     ∀ signature, result.1.1 = some signature →
-      (∃ pair, firstEncoding f parameter topLayer rootTree
-        (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message signature.randomness :
-          OracleComp HashSpec MessageDigest)))
-        (data.forestKey (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message
-          signature.randomness : OracleComp HashSpec MessageDigest)))) encodingAttemptLimit 0 = some pair) ∧
+      (∃ pair, assembledEncodings f parameter data (digestIndex (evalWithAnswerFn f
+        (messageDigest parameter data.root message signature.randomness : OracleComp HashSpec MessageDigest))) = some pair) ∧
       result.1.2 = revealsOf f parameter data message signature.randomness := by
   induction attempts generalizing result randomness with
   | zero =>
@@ -109,11 +96,8 @@ theorem sign_revealed (parameter : PublicParameter) (data : PublicData) (message
     (result : RunResult (Option Signature))
     (hresult : result ∈ support (costRun f table (withReveals (signCostSource parameter data message)))) :
     ∀ signature, result.1.1 = some signature →
-      (∃ pair, firstEncoding f parameter topLayer rootTree
-        (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message signature.randomness :
-          OracleComp HashSpec MessageDigest)))
-        (data.forestKey (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message
-          signature.randomness : OracleComp HashSpec MessageDigest)))) encodingAttemptLimit 0 = some pair) ∧
+      (∃ pair, assembledEncodings f parameter data (digestIndex (evalWithAnswerFn f
+        (messageDigest parameter data.root message signature.randomness : OracleComp HashSpec MessageDigest))) = some pair) ∧
       result.1.2 = revealsOf f parameter data message signature.randomness := by
   rw [signCostSource] at hresult
   obtain ⟨r1, h1, r2, h2, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
@@ -199,7 +183,6 @@ theorem rich_revealed (adversary : Adversary) (q : Nat) (parameter : PublicParam
   obtain ⟨⟨rfl, rfl⟩, rfl⟩ := heq
   simpa using hrev
 
-omit [Params] in
 /-- A signed entry's forest chain values at and above its opened positions are revealed. -/
 theorem SignedRevealed.fchain_mem {parameter : PublicParameter} {data : PublicData}
     {log : QueryLog SigningSpec} {reveals : List HiddenGraph.Coordinate}

@@ -2,7 +2,7 @@ import LeanForest.Uniform
 import Mathlib.Data.BitVec
 
 /-!
-The full view of a 232-bit message digest (its index and the 26-bit field of each of the 8 trees)
+The full view of a message digest (its index and the 26-bit field of each of the 8 trees)
 is a bijection, so a uniform digest gives a uniform view. The 26 bits of a tree lie in three places
 of the digest (its two codeword indices among the first 16 bytes, its leaf, its two WOTS keys);
 `coordField` gathers them. A field decodes to the tree's mark: the
@@ -17,6 +17,8 @@ set_option maxRecDepth 10000
 set_option exponentiation.threshold 512
 
 namespace LeanForest.Concrete
+
+variable [Params]
 
 /-- The 26 bits of one tree's field. -/
 abbrev FieldVal := Fin (2 ^ coordBits)
@@ -94,7 +96,10 @@ theorem fullDigestView_injective : Function.Injective fullDigestView := by
     exact ⟨hs, Fin.forall_fin_two.2 ⟨hc0, hc1⟩, Fin.forall_fin_two.2 ⟨hw0, hw1⟩⟩
   apply BitVec.eq_of_getLsbD_eq
   intro position hposition
-  have hposition' : position < 232 := hposition
+  have hposition' : position < 208 + totalHeight := by
+    have : messageDigestBits = 208 + totalHeight := by
+      unfold messageDigestBits forestCoords coordBits; omega
+    omega
   by_cases hword : position < 128
   · let c : Coord := ⟨position / 16, by simp only [forestCoords]; omega⟩
     let j : SubIdx := ⟨position / 8 % 2, by omega⟩
@@ -113,7 +118,7 @@ theorem fullDigestView_injective : Function.Injective fullDigestView := by
         · simp only [superOffset, forestCoords, subHeight, c]
           omega
       · refine getLsbD_of_extract hidx ?_ ?_ <;>
-        · simp only [indexOffset, totalHeight, forestCoords, subHeight, topHeight]
+        · simp only [indexOffset, forestCoords, subHeight, topHeight]
           omega
 
 theorem fullDigestView_bijective : Function.Bijective fullDigestView := by
@@ -121,7 +126,7 @@ theorem fullDigestView_bijective : Function.Bijective fullDigestView := by
   refine ⟨fullDigestView_injective, ?_⟩
   rw [card_bitVec, Fintype.card_prod, Fintype.card_fin, Fintype.card_fun,
     Fintype.card_fin, Fintype.card_fin, ← pow_mul, ← pow_add]
-  rfl
+  congr 1
 
 theorem evalDist_fullDigestView_uniform :
     𝒟[fullDigestView <$> ($ᵗ MessageDigest : ProbComp MessageDigest)] =
@@ -143,9 +148,8 @@ theorem digestMarks_eq (digest : MessageDigest) (c : Coord) :
   obtain ⟨hs, hc0, hw0, hc1, hw1⟩ := field_parts (digest.extractLsb' (wordOffset c 1) 8)
     (digest.extractLsb' (childOffset c 1) 3) (digest.extractLsb' (wordOffset c 0) 8)
     (digest.extractLsb' (childOffset c 0) 3) (digest.extractLsb' (superOffset c) 4)
-  simp only [digestMarks, decodeMark, coordField, BitVec.ofFin_toFin]
-  congr 1
-  · exact congrArg BitVec.toFin hs.symm
+  simp only [digestMarks, decodeMark, coordField, BitVec.ofFin_toFin, CoordMark.mk.injEq]
+  refine ⟨congrArg BitVec.toFin hs.symm, ?_, ?_⟩
   · funext j
     revert j
     rw [Fin.forall_fin_two]

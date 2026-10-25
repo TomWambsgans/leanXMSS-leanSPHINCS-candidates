@@ -8,6 +8,8 @@ event without a small-query assumption or an honest-signature premise. -/
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.Wots
+
+variable [Params]
 open Concrete Chain
 
 variable (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (lay : Layer)
@@ -52,6 +54,8 @@ theorem ChainException.hidden_or_output {trace : List HashInput}
 end LeanForest.Security.Wots
 
 namespace LeanForest.Security.Forest
+
+variable [Params]
 open Concrete
 
 /-- An unrevealed honest forest chain value at its own chain step was queried. -/

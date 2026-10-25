@@ -1,5 +1,5 @@
 import LeanForest.BridgeSatWSigner
-import LeanForest.BridgeForsGameOnce
+import LeanForest.BridgeForestGameOnce
 
 /-! The one-coin forest potential of the scan signer weighted by the survival weight. The final value
 of a run counts a forest cover with weight `w_end`; a new message/randomizer pair costs the baseline
@@ -9,7 +9,9 @@ weight, and the weight is a supermartingale of the run. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner
@@ -20,7 +22,6 @@ set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### Signing a message for the first time, weighted -/
 
@@ -766,4 +767,4 @@ theorem goodW_advProg (hparse : ∀ p, model.parse (pblk parameter data p) = non
 
 end GoodW
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

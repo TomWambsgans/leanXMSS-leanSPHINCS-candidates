@@ -12,7 +12,9 @@ uniform start signs with one of them (`hitMass`). -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenBridge
@@ -23,23 +25,19 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### Counting codewords -/
 
 /-- The codewords whose digit `i` is at least one. -/
 def litCount (i : FChain) : ℕ := (Finset.univ.filter fun w : LutIdx => 1 ≤ (lut w i).val).card
 
-omit [Params] in
 theorem litCount_le_all : ∀ i : FChain, litCount i ≤ 123 := by
   unfold litCount
   decide +kernel
 
-omit [Params] in
 theorem sub_eq_or_other (j j' : SubIdx) : j' = j ∨ j' = otherSub j := by
   fin_cases j <;> fin_cases j' <;> decide
 
-omit [Params] in
 /-- The fields opening a given chain at or below position `k < 4`. -/
 theorem card_opens_le (sp : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (k : ℕ) (hk : k < chainTop) :
     (Finset.univ.filter fun x : FieldVal => (decodeMark x).super = sp ∧ (decodeMark x).child j = a ∧
@@ -376,4 +374,4 @@ theorem reveal_le (hparse : ∀ p, model.parse (pblk parameter data p) = none)
 
 end Reveal
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

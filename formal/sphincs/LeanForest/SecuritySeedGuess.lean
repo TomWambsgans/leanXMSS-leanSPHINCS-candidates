@@ -12,6 +12,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.SeedGuess
 
+variable [Params]
+
 attribute [local instance] Classical.propDecidable
 set_option maxRecDepth 10000
 

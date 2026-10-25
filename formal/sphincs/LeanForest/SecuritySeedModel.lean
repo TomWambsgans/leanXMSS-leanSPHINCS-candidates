@@ -23,9 +23,11 @@ open OracleComp OracleSpec
 
 namespace LeanForest.Security.SeedModel
 
+variable [Params]
+
 abbrev OtsPosition := Layer × TreeIndex × LeafIndex × ChainIndex
 abbrev ForestPosition := Index × Coord × SuperIdx × SubIdx × ChildIdx × FChain
-abbrev SecretPosition := OtsPosition ⊕ (ForestPosition ⊕ Fin totalHeight)
+abbrev SecretPosition := OtsPosition ⊕ (ForestPosition ⊕ Fin maxLayerHeight)
 abbrev SecretOutputs := SecretPosition → HashOutput
 
 instance forestPositionDecEq : DecidableEq ForestPosition := inferInstance
@@ -40,7 +42,7 @@ abbrev OtsDerivation := Layer × TreeIndex × LeafIndex × ChainPair
 /-- The derivations of the chain starts of a forest WOTS key: one per pair of chains. -/
 abbrev ForestDerivation := Index × Coord × SuperIdx × SubIdx × ChildIdx × FPair
 /-- The seed derivations at the public parameter: one hash each. -/
-abbrev Derivation := OtsDerivation ⊕ (ForestDerivation ⊕ Fin totalHeight)
+abbrev Derivation := OtsDerivation ⊕ (ForestDerivation ⊕ Fin maxLayerHeight)
 abbrev DerivedOutputs := Derivation → HashOutput
 
 instance forestDerivationDecEq : DecidableEq ForestDerivation := inferInstance
@@ -413,7 +415,7 @@ theorem eval_forest_prepared (f : QueryImpl HashSpec Id) (seed : MasterSeed) (ma
 
 /-- A surrogate reads the sampled table. -/
 theorem eval_surrogate_prepared (f : QueryImpl HashSpec Id) (seed : MasterSeed) (material : Material)
-    (h : PreparedAgreement f seed material) (level : Fin totalHeight) :
+    (h : PreparedAgreement f seed material) (level : Fin maxLayerHeight) :
     evalWithAnswerFn f (deriveKey (parameter material) (.surrogate level) seed :
       OracleComp HashSpec Digest) = truncateHash (material.2 (.inr (.inr level))) := by
   rw [← secret_prepared f seed material h (.inr (.inr level)), Completeness.eval_deriveKey]

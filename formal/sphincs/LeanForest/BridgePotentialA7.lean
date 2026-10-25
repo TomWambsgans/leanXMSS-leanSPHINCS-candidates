@@ -11,6 +11,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.PotentialA
 
+variable [Params]
+
 open Concrete HiddenGraph HiddenDebt HiddenBridge HiddenCost HiddenReveal EncodingCode
 
 set_option backward.isDefEq.respectTransparency false
@@ -56,12 +58,11 @@ theorem exposeR_known : ∀ (cs : List Coordinate) (known k : Knowledge Coordina
               simp
             · exact ih2 c' hc'
 
-variable [Params]
 
 /-- The first-order targeting of the small-budget route: the sample's targets, removed at
 second-order inputs. -/
 noncomputable def targetingA (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (results : Index → Option (Counter × Encoding)) :
+    (remaining : RemainingOutputs) (results : OtsKey → Option (Counter × Encoding)) :
     Targeting HashInput HashOutput Coordinate where
   trunc := truncateHash
   kind x := if SecondOrderInput (truncateHash parameterOutput) results x then .none
@@ -70,7 +71,7 @@ noncomputable def targetingA (parameterOutput : HashOutput) (fixed : HiddenGraph
 
 /-- The data of the potential for one sample, preparation and exposure. -/
 noncomputable def ctxA (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (remaining : RemainingOutputs) (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (known : Knowledge Coordinate) (ρ : ℝ) : Ctx where
   p := truncateHash parameterOutput
   R := prepared.1
@@ -82,14 +83,14 @@ noncomputable def ctxA (parameterOutput : HashOutput) (fixed : HiddenGraph.Table
 
 /-- The payoff of the small-budget route. -/
 noncomputable def payoffA (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (remaining : RemainingOutputs) (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (known : Knowledge Coordinate) (ρ : ℝ) : (Coordinate → Digest) → St → ℝ≥0∞ :=
   (ctxA parameterOutput fixed highs remaining prepared known ρ).payoff
 
 section Sample
 
 variable (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-  (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+  (remaining : RemainingOutputs) (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
   (known : Knowledge Coordinate) (ρ : ℝ)
 
 theorem ctxA_sec : ∀ x, SecondOrderInput (ctxA parameterOutput fixed highs remaining prepared known ρ).p

@@ -10,13 +10,14 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.GraphView
 
+variable [Params]
+
 open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForestSigner
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-- A reveal is a forest chain value the digest opens, or not a forest chain value at all. -/
 def ForestOk (digest : MessageDigest) (x : Coordinate) : Prop :=
@@ -24,7 +25,6 @@ def ForestOk (digest : MessageDigest) (x : Coordinate) : Prop :=
     i = digestIndex digest ∧ s = (digestMarks digest c).super ∧ a = (digestMarks digest c).child j ∧
       (openedPos (digestMarks digest c) j ch).val ≤ pos.val
 
-omit [Params] in
 theorem revealsIn_coordCostSource (digest : MessageDigest) (data : PublicData) (c : Coord) :
     RevealsIn (D := HashInput) (R := HashOutput) (ForestOk digest)
       (coordCostSource data (digestIndex digest) c (digestMarks digest c)) := by
@@ -41,23 +41,49 @@ theorem revealsIn_coordCostSource (digest : MessageDigest) (data : PublicData) (
     exact ⟨rfl, rfl, rfl, hk⟩
   · exact revealsIn_pure _ _
 
+theorem revealsIn_sequenceDep (P : Coordinate → Prop) : ∀ {n : Nat} {α : Fin n → Type}
+    {computation : (i : Fin n) → OracleComp CostSpec (Option (α i))},
+    (∀ i, RevealsIn (D := HashInput) (R := HashOutput) P (computation i)) →
+    RevealsIn (D := HashInput) (R := HashOutput) P (sequenceDep computation)
+  | 0, _, _, _ => revealsIn_pure _ _
+  | _ + 1, α, computation, h => by
+      unfold sequenceDep
+      refine revealsIn_bind _ (h 0) fun head => ?_
+      rcases head with _ | head
+      · exact revealsIn_pure _ _
+      · refine revealsIn_bind _ (revealsIn_sequenceDep P (α := fun i => α i.succ) fun i => h i.succ)
+          fun tail => ?_
+        rcases tail with _ | tail <;> exact revealsIn_pure _ _
+
+/-- A layer's counter search reveals nothing. -/
+theorem revealsIn_layerCostSearch (P : Coordinate → Prop) (parameter : PublicParameter)
+    (data : PublicData) (index : Index) (lay : Layer) :
+    RevealsIn (D := HashInput) (R := HashOutput) P (layerCostSearch parameter data index lay) := by
+  unfold layerCostSearch
+  refine revealsIn_bind _ (revealsIn_tick _ _) fun _ => ?_
+  refine revealsIn_bind _ (revealsIn_liftHash _ _) fun found => ?_
+  rcases found with _ | pair
+  · exact revealsIn_pure _ _
+  · exact revealsIn_bind _ (revealsIn_tick _ _) fun _ => revealsIn_pure _ _
+
 theorem revealsIn_finishRest (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) (digest : MessageDigest) :
     RevealsIn (D := HashInput) (R := HashOutput) (ForestOk digest)
       (finishRest parameter data message randomness digest) := by
   unfold finishRest
   refine revealsIn_bind _ (revealsIn_tick _ _) fun _ => ?_
-  refine revealsIn_bind _ (revealsIn_liftHash _ _) fun found => ?_
-  rcases found with _ | ⟨counter, word⟩
+  refine revealsIn_bind _ (revealsIn_sequenceDep _ fun lay => revealsIn_layerCostSearch _ _ _ _ lay)
+    fun found => ?_
+  rcases found with _ | found
   · exact revealsIn_pure _ _
-  · refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun chain => revealsIn_reveal _ _ ?_) fun _ => ?_
+  · refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun lay => revealsIn_sequenceFin _ _ fun chain =>
+      revealsIn_reveal _ _ ?_) fun _ => ?_
     · intro i c s j a ch pos h
       cases h
     refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun c => revealsIn_coordCostSource digest data c)
       fun _ => ?_
-    exact revealsIn_bind _ (revealsIn_tick _ _) fun _ => revealsIn_pure _ _
+    exact revealsIn_pure _ _
 
-omit [Params] in
 theorem revealsIn_false_tick (amount : ℕ) :
     RevealsIn (D := HashInput) (R := HashOutput) (ι := Coordinate) (fun _ => False) (tick amount) :=
   revealsIn_tick _ _
@@ -68,7 +94,6 @@ variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate)
   (initial : HiddenOutside.Cache HashInput HashOutput) (model : HiddenRows.Model HashInput HashOutput A Coordinate)
   (parameter : PublicParameter) (data : PublicData) (message : Message)
 
-omit [Params] in
 theorem no_reveals_of_false {α : Type} (computation : OracleComp CostSpec α)
     (h : RevealsIn (D := HashInput) (R := HashOutput) (fun _ => False) computation) (budget : ℕ)
     (state : DebtState HashInput HashOutput Coordinate)
@@ -91,11 +116,12 @@ theorem finishRest_none (randomness : Randomness) (digest : MessageDigest) (budg
   · rw [hnone] at hn; cases hn
   rw [hrev2, hr1, List.nil_append]
   obtain ⟨o3, ho3, h3⟩ := interp_bind_mem tg initial model _ _ _ _ o2 ho2
-  have hr3 := no_reveals_of_false tg initial model _ (revealsIn_liftHash _ _) _ _ o3 ho3
+  have hr3 := no_reveals_of_false tg initial model _
+    (revealsIn_sequenceDep _ fun lay => revealsIn_layerCostSearch _ _ _ _ lay) _ _ o3 ho3
   rcases h3 with ⟨_, hn, _⟩ | ⟨found, hfound, o4, ho4, hres4, hrev4, _⟩
   · rw [hres2, hnone] at *; simp_all
   rw [hrev4, hr3, List.nil_append]
-  rcases found with _ | ⟨counter, word⟩
+  rcases found with _ | found
   · change o4 ∈ support (interp tg initial model (pure none) _ _) at ho4
     rw [interp_pure, support_pure, Set.mem_singleton_iff] at ho4
     rw [ho4]
@@ -104,7 +130,7 @@ theorem finishRest_none (randomness : Randomness) (digest : MessageDigest) (budg
     revert hmem
     dsimp only
     intro hmem
-    refine post_bind (fun v => v ≠ none) _ (fun _ => post_bind _ _ fun _ => post_bind _ _ fun _ => ?_) none hmem rfl
+    refine post_bind (fun v => v ≠ none) _ (fun _ => post_bind _ _ fun _ => ?_) none hmem rfl
     intro v hv
     rw [support_pure, Set.mem_singleton_iff] at hv
     rw [hv]

@@ -8,6 +8,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
 
+variable [Params]
+
 open Completeness SeedModel Graph Assembly Reduce HiddenGraph Eager Internalize
 
 set_option backward.isDefEq.respectTransparency false

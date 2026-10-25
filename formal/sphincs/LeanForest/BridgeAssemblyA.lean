@@ -1,19 +1,20 @@
 import LeanForest.BridgeImplicationA
 
 /-! The refined classification keeps the finished, valid outcome of a winning run, as the bounds
-on FORS contacts require. -/
+on forest contacts require. -/
 
 open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
 
-open HiddenGraph
-
 variable [Params]
+
+open Concrete HiddenGraph
+
 
 /-- The refined bad event of a finished run with a valid transcript. -/
 def badAV (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (results : Index → Option (Counter × Encoding)) (table : Coordinate → Digest)
+    (remaining : RemainingOutputs) (results : OtsKey → Option (Counter × Encoding)) (table : Coordinate → Digest)
     (v : ((Option HiddenBridge.Outcome × List Coordinate) × List (HiddenCost.Entry HashInput)) × QueryCache HashSpec) :
     Prop :=
   badA parameterOutput fixed highs remaining results table v ∧
@@ -21,7 +22,9 @@ def badAV (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : Co
 
 end LeanForest.Security.HiddenBridge
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal LeanForest.Base.Domination
 open HiddenBridge Completeness SeedModel Graph Assembly Reduce Internalize
@@ -31,17 +34,16 @@ set_option maxRecDepth 10000
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
   remainingSampleable
 
 set_option maxRecDepth 100000 in
 /-- One table, keeping the valid outcome. -/
-theorem stopped_table_leV (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ) (hq : q < 2 ^ 256)
+theorem stopped_table_leV (hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : ℕ) (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
     (remaining : RemainingOutputs) (steps : Message → Randomness)
-    (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (known : Knowledge Coordinate)
     (hknownOf : ∀ c v, knownOf (truncateHash parameterOutput) fixed c = some v → known c = some v)
@@ -74,10 +76,10 @@ theorem stopped_table_leV (hb : 0 < subtreeHeight) (adversary : Adversary) (q : 
 
 set_option maxRecDepth 100000 in
 /-- **From the stopped experiment with exposed knowledge to the interpreted run.** -/
-theorem stopped_le_interpV (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ) (hq : q < 2 ^ 256)
+theorem stopped_le_interpV (hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : ℕ) (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
     (remaining : RemainingOutputs) (steps : Message → Randomness)
-    (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate)
     (known : Knowledge Coordinate)
@@ -157,10 +159,10 @@ theorem stopped_le_interpV (hb : 0 < subtreeHeight) (adversary : Adversary) (q :
 
 set_option maxRecDepth 100000 in
 /-- **From the stopped experiment with the above-word exposure to the interpreted run.** -/
-theorem stopped_le_interp_exposeV (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ) (hq : q < 2 ^ 256)
+theorem stopped_le_interp_exposeV (hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : ℕ) (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
     (remaining : RemainingOutputs) (steps : Message → Randomness)
-    (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate) (known : Knowledge Coordinate)
     (hk : known ∈ support (exposeR (aboveList (truncateHash parameterOutput) prepared.1)
@@ -179,4 +181,4 @@ theorem stopped_le_interp_exposeV (hb : 0 < subtreeHeight) (adversary : Adversar
   stopped_le_interpV hb adversary q hq parameterOutput fixed highs remaining steps prepared hprepared tg known
     (expose_known_support _ fixed prepared.1 known hk).1 (expose_known_support _ fixed prepared.1 known hk).2
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

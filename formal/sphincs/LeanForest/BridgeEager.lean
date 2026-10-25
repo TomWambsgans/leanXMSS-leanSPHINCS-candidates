@@ -8,6 +8,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.Eager
 
+variable [Params]
+
 open Completeness Internalize Short
 
 set_option backward.isDefEq.respectTransparency false

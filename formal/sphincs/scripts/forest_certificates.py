@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Generate LeanForest/LifetimeCertificates.lean: exact rational certificates for the forest lifetimes.
+"""Generate LeanForest/Certificates/H*.lean: exact rational certificates for the forest lifetimes.
+
+A configuration is a total height H (22, 24, 26, 28), a shape (pruned: one tree with a kept subtree
+of height B; layered: the hypertree of SPLITS, nothing pruned, B = H) and a signature limit N.
 
 Usage (from formal/sphincs):
-    python3 scripts/forest_certificates.py check B N LX   # check one parameter set (exit status 1 if it fails)
-    python3 scripts/forest_certificates.py emit           # write LeanForest/LifetimeCertificates.lean and Lifetimes.lean
-    python3 scripts/forest_certificates.py maxn B N0 [STEP LXLO LXHI]   # search the largest N above N0, over a grid of lx
-    python3 scripts/forest_certificates.py scan B N LX...  # the terms of the small route at several lx
-    python3 scripts/forest_certificates.py emit1 B N LX   # debugging: write the two Lean files for that set only
-then  lake build LeanForest.LifetimeCertificates  (the kernel re-checks every certificate). `maxn` is a search:
-its result counts only once `check` accepts it and it is in PARAMS.
+    python3 scripts/forest_certificates.py check H SHAPE B N LX   # check one parameter set (exit status 1 if it fails)
+    python3 scripts/forest_certificates.py emit                   # write LeanForest/Certificates/H*.lean, Lifetimes.lean
+    python3 scripts/forest_certificates.py maxn H SHAPE B N0 [STEP LXLO LXHI]   # search the largest N above N0
+    python3 scripts/forest_certificates.py scan H SHAPE B N LX... # the terms of the small route at several lx
+SHAPE is `pruned` or `layered` (then B = H). Then `lake build LeanForest.Lifetimes` (the kernel re-checks every
+certificate). `maxn` is a search: its result counts only once `check` accepts it and it is in PARAMS or LAYERED.
 
 For each parameter set (b, N, lx), with qh = floor(2^(128 + lx)):
   * a Poisson table at rate N/2^b + (2M - 1) qtop / (M denB 2^b), M = 2^(TOTAL - b), qtop the largest budget
@@ -55,15 +57,20 @@ ELOW = Fr(27182818283, 10 ** 10)
 TOTAL = 24          # tree height: the full key keeps all 2^TOTAL instances (set_config)
 KQ = Fr(1, 2 ** TOTAL)
 LAYERED_TOP = None  # the top layer's height of a layered key, None for a pruned key (set_config)
+SHAPE = "pruned"
 
 # The layer split of a layered key, top layer first (crates/sphincs `layered_heights`).
 SPLITS = {22: (10, 6, 6), 24: (12, 6, 6), 26: (8, 6, 6, 6), 28: (10, 6, 6, 6)}
 
 def set_config(h, shape='pruned'):
     """Select the height and the shape every function below works at."""
-    global TOTAL, KQ, LAYERED_TOP
-    TOTAL, KQ = h, Fr(1, 2 ** h)
+    global TOTAL, KQ, LAYERED_TOP, SHAPE
+    assert shape in ('pruned', 'layered')
+    TOTAL, KQ, SHAPE = h, Fr(1, 2 ** h), shape
     LAYERED_TOP = SPLITS[h][0] if shape == 'layered' else None
+
+def num_layers():
+    return len(SPLITS[TOTAL]) if SHAPE == 'layered' else 1
 
 def kcredit(b):
     """Key generation, in hash calls: 32 + 64 * 3 + 2 per leaf of the kept subtree and 2 per surrogate
@@ -420,7 +427,8 @@ def certify(b, N, lx, verbose=True):
     complete = 2 ** 127 <= qstart + kcredit(b)
     if verbose and not complete:
         print('  covers stop at 2^%.4f: the heavy range is not certified' % math.log2(qstart - 1), flush=True)
-    return dict(b=b, N=N, lx=lx, qh=qh, rho=rho, t=t, o=o, on=on, covers=covers, heavy=heavy, complete=complete)
+    return dict(h=TOTAL, shape=SHAPE, d=num_layers(), K=kcredit(b), b=b, N=N, lx=lx, qh=qh, rho=rho, t=t, o=o,
+                on=on, covers=covers, heavy=heavy, complete=complete)
 
 # ---------------- Lean output ----------------
 
@@ -436,29 +444,37 @@ OPT_FIELDS = ('c1', 'th', 'cthr', 's', 'eC', 'A2', 'gt', 'Jg', 'ht', 'Jh', 'Eg',
 def lean_opt(b, tab, t, o):
     again = fill_opt(b, t, o.c1, o.th, o.s, o.cthr)
     assert all(getattr(again, f) == getattr(o, f) for f in OPT_FIELDS), 'the scalars do not rebuild the option'
-    return 'fillOpt %d %s\n    (%s) %s %d\n    (%s)' % (b, tab, q(o.c1), q(o.th), o.s, q(o.cthr))
+    return 'fillOpt %d %d %s\n    (%s) %s %d\n    (%s)' % (TOTAL, b, tab, q(o.c1), q(o.th), o.s, q(o.cthr))
 
 def lean_optN(b, tab, t, on):
     again = make_optN(b, t)
     assert (again.nt, again.Jn, again.En) == (on.nt, on.Jn, on.En), 'the table does not rebuild the near certificate'
-    return 'fillOptN %d %s' % (b, tab)
+    return 'fillOptN %d %d %s' % (TOTAL, b, tab)
 
 def lean_tab(t):
     again = fill_poisT(t.m, t.P, t.J, t.n1)
     assert (again.m, again.P, again.J, again.pm) == (t.m, t.P, t.J, t.pm), 'the scalars do not rebuild the table'
     return 'fillPoisT %d %d %d %d' % (t.m, t.P, t.J, t.n1)
 
-def emit(certs, path):
-    out = []
-    out.append('''import LeanForest.H0Fill
+def tag_of(c):
+    return 'h%d_%s' % (c['h'], 'L' if c['shape'] == 'layered' else 'b%d' % c['b'])
 
-/-! Certificates for the proved forest lifetimes (generated by `scripts/forest_certificates.py`,
-checked by the kernel with `decide +kernel`, exact rational arithmetic, no `native_decide`). For each
-parameter set: a Poisson table, the small-route option at baseline `ρ / 2^128`, the near
-certificate and `checkSmallF` at `qh ≈ 2^(128 + lx)`, and a cover of every larger budget up to
-`2^127` at the survival-weighted baseline. The tables, the options and the near certificates are
-rebuilt from their scalars (`fillPoisT`, `fillOpt`, `fillOptN`, `H0Fill.lean`), and the options of a
-cover are checked one by one (`checkOptB`, `checkCoverW_of`). -/
+def describe(c):
+    if c['shape'] == 'layered':
+        return 'height %d, layered (%s), %s signatures' % (c['h'], ' + '.join(map(str, SPLITS[c['h']])), format(c['N'], ','))
+    if c['b'] == c['h']:
+        return 'height %d, full key, %s signatures' % (c['h'], format(c['N'], ','))
+    return 'height %d, kept subtree height %d, %s signatures' % (c['h'], c['b'], format(c['N'], ','))
+
+HEADER = '''import LeanForest.H0Fill
+
+/-! Certificates for the proved forest lifetimes at total height %d (generated by
+`scripts/forest_certificates.py`, checked by the kernel with `decide +kernel`, exact rational
+arithmetic, no `native_decide`). For each configuration: a Poisson table, the small-route option at
+baseline `ρ / 2^128`, the near certificate and `checkSmallF` at `qh ≈ 2^(128 + lx)`, and a cover of
+every larger budget up to `2^127` at the survival-weighted baseline. The tables, the options and the
+near certificates are rebuilt from their scalars (`fillPoisT`, `fillOpt`, `fillOptN`, `H0Fill.lean`),
+and the options of a cover are checked one by one (`checkOptB`, `checkCoverW_of`). -/
 
 namespace LeanForest.Security.H0
 
@@ -466,26 +482,35 @@ set_option maxRecDepth 1000000
 set_option maxHeartbeats 0
 -- one check at a time: with asynchronous elaboration the memory of the finished checks is kept
 set_option Elab.async false
-''')
+'''
+
+def emit(certs, path):
+    """The certificates of the configurations of one height."""
+    out = [HEADER % certs[0]['h']]
     for c in certs:
-        b, N = c['b'], c['N']
-        tag = 'b%d' % b
-        out.append('/-- Poisson table of the small route, subtree height %d, %d signatures. -/' % (b, N))
+        set_config(c['h'], c['shape'])
+        b, N, K, H = c['b'], c['N'], c['K'], c['h']
+        tag = tag_of(c)
+        out.append('/-- Poisson table of the small route, %s. -/' % describe(c))
         out.append('def tab_%s : PoisT := %s\n' % (tag, lean_tab(c['t'])))
         out.append('theorem tab_%s_ok : checkPT tab_%s = true := by decide +kernel\n' % (tag, tag))
-        out.append('theorem rate_%s_ok : checkRate %d %d %d tab_%s = true := by decide +kernel\n' % (tag, b, N, c['qh'], tag))
+        out.append('theorem rate_%s_ok : checkRate %d %d %d %d tab_%s = true := by decide +kernel\n'
+                   % (tag, H, b, N, c['qh'], tag))
         out.append('/-- The small-route option at baseline `ρ / 2^128`. -/')
         out.append('def small_%s : OptF := %s\n' % (tag, lean_opt(b, 'tab_' + tag, c['t'], c['o'])))
-        out.append('theorem small_%s_ok : checkOptF %d tab_%s small_%s = true := by decide +kernel\n' % (tag, b, tag, tag))
+        out.append('theorem small_%s_ok : checkOptF %d %d tab_%s small_%s = true := by decide +kernel\n'
+                   % (tag, H, b, tag, tag))
         on = c['on']
         out.append('/-- The near certificate. -/')
         out.append('def near_%s : OptN := %s\n' % (tag, lean_optN(b, 'tab_' + tag, c['t'], on)))
-        out.append('theorem near_%s_ok : checkOptN tab_%s near_%s = true := by decide +kernel\n' % (tag, tag, tag))
+        out.append('theorem near_%s_ok : checkOptN %d tab_%s near_%s = true := by decide +kernel\n' % (tag, H, tag, tag))
         out.append('/-- The plain rate `ρ`. -/')
         out.append('def rho_%s : ℚ := %s\n' % (tag, q(c['rho'])))
-        out.append('theorem check_%s_ok : ForsPotential.checkSmallF %d %d %d rho_%s small_%s.cthr small_%s.B\n'
-                   '    ((2 ^ %d * near_%s.En : ℚ) / 2) = true := by decide +kernel\n' % (tag, b, N, c['qh'], tag, tag, tag, b, tag))
-        for kind, lst, chk, of in (('', c['covers'], 'checkCoverW', 'checkCoverW_of'), ('h', c['heavy'], 'checkCoverH', 'checkCoverH_of')):
+        out.append('theorem check_%s_ok : ForestPotential.checkSmallF %d %d %d %d rho_%s small_%s.cthr small_%s.B\n'
+                   '    ((2 ^ %d * near_%s.En : ℚ) / 2) = true := by decide +kernel\n'
+                   % (tag, H, b, N, c['qh'], tag, tag, tag, b, tag))
+        for kind, lst, chk, of in (('', c['covers'], 'checkCoverW', 'checkCoverW_of'),
+                                   ('h', c['heavy'], 'checkCoverH', 'checkCoverH_of')):
             for ci, cv in enumerate(lst):
                 out.append('/-- Poisson table of %scover %d (budgets up to %d). -/' % ('heavy ' if kind else '', ci, cv['qtop']))
                 out.append('def tabc%s_%s_%d : PoisT := %s\n' % (kind, tag, ci, lean_tab(cv['t'])))
@@ -495,80 +520,102 @@ set_option Elab.async false
                     out.append('def %s : OptF := %s\n' % (name, lean_opt(b, tabn, cv['t'], o)))
                     out.append('/-- Its threshold and its bound. -/')
                     out.append('def %s_cB : ℚ × ℚ :=\n    (%s,\n     %s)\n' % (name, q(o.cthr), q(o.B)))
-                    out.append('theorem %s_ok : checkOptB %d %s %s %s_cB = true := by decide +kernel\n' % (name, b, tabn, name, name))
+                    out.append('theorem %s_ok : checkOptB %d %d %s %s %s_cB = true := by decide +kernel\n'
+                               % (name, H, b, tabn, name, name))
                 opts = ', '.join('large%s_%s_%d_%d' % (kind, tag, ci, k) for k in range(len(cv['opts'])))
                 ents = ',\n    '.join('(%d, %d, %d)' % e for e in cv['entries'])
-                out.append('/-- %s %d: every budget from %d to %d. -/' % ('Heavy cover (one heavy message, one spare slot)' if kind else 'Cover', ci, cv['qstart'], cv['qtop']))
-                out.append('def cover%s_%s_%d : CoverW where\n  qtop := %d\n  tab := tabc%s_%s_%d\n  opts := [%s]\n  entries := [\n    %s]\n' %
-                           (kind, tag, ci, cv['qtop'], kind, tag, ci, opts, ents))
+                out.append('/-- %s %d: every budget from %d to %d. -/' % (
+                    'Heavy cover (one heavy message, one spare slot)' if kind else 'Cover', ci, cv['qstart'], cv['qtop']))
+                out.append('def cover%s_%s_%d : CoverW where\n  qtop := %d\n  tab := tabc%s_%s_%d\n  opts := [%s]\n'
+                           '  entries := [\n    %s]\n' % (kind, tag, ci, cv['qtop'], kind, tag, ci, opts, ents))
                 names = ['large%s_%s_%d_%d' % (kind, tag, ci, k) for k in range(len(cv['opts']))]
-                out.append('theorem cover%s_%s_%d_ok : %s %d %d %d cover%s_%s_%d = true :=' %
-                           (kind, tag, ci, chk, b, N, cv['qstart'], kind, tag, ci))
+                out.append('theorem cover%s_%s_%d_ok : %s %d %d %d %d %d cover%s_%s_%d = true :=' %
+                           (kind, tag, ci, chk, H, b, K, N, cv['qstart'], kind, tag, ci))
                 out.append('  %s [%s]\n    (%s)\n    (by decide +kernel)\n' %
-                           (of, ', '.join(n + '_cB' for n in names), ' <| '.join(['.cons %s_ok' % n for n in names] + ['.nil'])))
-        if c['complete']:
-            names = ', '.join('cover_%s_%d' % (tag, ci) for ci in range(len(c['covers'])))
-            hnames = ', '.join('coverh_%s_%d' % (tag, ci) for ci in range(len(c['heavy'])))
-            out.append('/-- The covers reach every budget below `2^127`. -/')
-            out.append('theorem covers_%s_ok : ForsPotential.checkCoversH %d %d %d [%s] [%s] = true := by' % (tag, b, N, c['qh'] + 1, names, hnames))
-            lems = ', '.join(['cover_%s_%d_ok' % (tag, ci) for ci in range(len(c['covers']))] +
-                             ['coverh_%s_%d_ok' % (tag, ci) for ci in range(len(c['heavy']))])
-            out.append('  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]')
-            out.append('  exact ⟨%s, by decide +kernel⟩\n' % lems)
+                           (of, ', '.join(n + '_cB' for n in names),
+                            ' <| '.join(['.cons %s_ok' % n for n in names] + ['.nil'])))
+        assert c['complete'], tag
+        names = ', '.join('cover_%s_%d' % (tag, ci) for ci in range(len(c['covers'])))
+        hnames = ', '.join('coverh_%s_%d' % (tag, ci) for ci in range(len(c['heavy'])))
+        out.append('/-- The covers reach every budget below `2^127`. -/')
+        out.append('theorem covers_%s_ok : ForestPotential.checkCoversH %d %d %d %d %d [%s] [%s] = true := by'
+                   % (tag, H, b, K, N, c['qh'] + 1, names, hnames))
+        lems = ', '.join(['cover_%s_%d_ok' % (tag, ci) for ci in range(len(c['covers']))] +
+                         ['coverh_%s_%d_ok' % (tag, ci) for ci in range(len(c['heavy']))])
+        out.append('  simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]')
+        out.append('  exact ⟨%s, by decide +kernel⟩\n' % lems)
     out.append('end LeanForest.Security.H0\n')
     open(path, 'w').write('\n'.join(out))
 
 # Attack lifetimes of the forest in the cover model (one expected cover per 2^127 digest queries; FOREST.md),
-# by height and kept subtree height (forest_attack.py). A layered key is attacked as the full key.
+# by height and kept subtree height (`forest_attack.py cover H`). A layered key is attacked as the full key.
 ATTACK = {
+    22: {22: 8.99787e7, 20: 2.43823e7, 14: 4.80708e5, 13: 2.49545e5, 12: 1.29502e5, 10: 3.48434e4, 8: 9.36375e3},
     24: {24: 3.59915e8, 20: 2.63862e7, 14: 5.18006e5, 13: 2.68735e5, 12: 1.39374e5, 10: 3.74550e4, 8: 1.00543e4},
+    26: {26: 1.43966e9, 20: 2.85120e7, 14: 5.57495e5, 13: 2.89047e5, 12: 1.49820e5, 10: 4.02171e4, 8: 1.07843e4},
+    28: {28: 5.75864e9, 20: 3.07653e7, 14: 5.99280e5, 13: 3.10534e5, 12: 1.60868e5, 10: 4.31372e4, 8: 1.15558e4},
 }
 
-def pname(b): return 'full' if b == TOTAL else 'pruned%d' % b
+HEIGHTS = (22, 24, 26, 28)
 
-def emit_lifetimes(certs, path):
-    out = ['''import LeanForest.LifetimeCertificates
+def pname(c):
+    if c['shape'] == 'layered':
+        return 'h%d_layered' % c['h']
+    return 'h%d_full' % c['h'] if c['b'] == c['h'] else 'h%d_pruned%d' % (c['h'], c['b'])
 
-/-! **Proved lifetimes of the forest variant** for the deterministic signer (seed-derived
-randomizers): 127 classical bits against any adversary. Small budgets use the linear potential, the
-one-coin cover potential at baseline `ρ / 2^128` and the contact bound A4 of the forest; large
-budgets use the one-coin covers at the survival-weighted baseline. -/
+LIFETIMES_HEADER = '''%s
+
+/-! **Proved lifetimes of the forest scheme** for the deterministic signer (seed-derived randomizers):
+127 classical bits against any adversary, at every height, shape and kept subtree height. Small
+budgets use the linear potential, the one-coin cover potential at baseline `ρ / 2^128` and the
+contact bound A4 of the forest; large budgets use the one-coin covers at the survival-weighted
+baseline. The proof does not depend on the hash function: `VerificationCost.lean` counts the
+compressions of each. -/
 
 open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Lifetimes
 
-open Security ForsPotential
-''']
+open Security ForestPotential
+'''
+
+def emit_lifetimes(certs, path):
+    heights = sorted({c['h'] for c in certs})
+    out = [LIFETIMES_HEADER % '\n'.join('import LeanForest.Certificates.H%d' % h for h in heights)]
     for c in certs:
-        b, N = c['b'], c['N']
-        tag = 'b%d' % b
-        name = pname(b)
-        out.append('/-- Subtree height %d, %d signatures (%.1f%% of the cover attack\'s %.4g). -/'
-                   % (b, N, 100.0 * N / ATTACK[TOTAL][b], ATTACK[TOTAL][b]))
-        out.append('abbrev %s : Params := ⟨%d, %d, by decide⟩\n' % (name, b, N))
-        out.append('/-- **127 bits for the deterministic signer** at subtree height %d and %d signatures. -/' % (b, N))
-        if not c['complete']:
-            out.append('-- The covers of this height stop below 2^127: no theorem yet.\n')
-            continue
+        b, N, H, d, K = c['b'], c['N'], c['h'], c['d'], c['K']
+        tag, name = tag_of(c), pname(c)
+        att = ATTACK[H][H if c['shape'] == 'layered' else b]
+        out.append("/-- %s (%.1f%% of the cover attack's %.4g). -/" % (describe(c).capitalize(), 100.0 * N / att, att))
+        out.append('abbrev %s : Params := ⟨%d, %d, %d, %d, by decide, by decide, by decide, by decide, by decide⟩\n'
+                   % (name, H, d, b, N))
+        out.append('/-- **127 bits for the deterministic signer**, %s. -/' % describe(c))
         names = ', '.join('H0.cover_%s_%d' % (tag, ci) for ci in range(len(c['covers'])))
         hnames = ', '.join('H0.coverh_%s_%d' % (tag, ci) for ci in range(len(c['heavy'])))
         out.append('theorem %s_bits : @Det.HasClassicalSecurityBitsDet %s 127 :=' % (name, name))
-        out.append('  @det_bitsFH %s (by decide) %d %d rfl rfl %d H0.rho_%s H0.tab_%s H0.small_%s H0.near_%s H0.tab_%s_ok\n'
-                   '    H0.rate_%s_ok H0.small_%s_ok H0.near_%s_ok H0.check_%s_ok [%s] [%s] H0.covers_%s_ok\n'
-                   % (name, b, N, c['qh'], tag, tag, tag, tag, tag, tag, tag, tag, tag, names, hnames, tag))
-    order = [24, 20, 14, 13, 12, 10, 8]
-    have = {c['b'] for c in certs if c['complete']}
-    if all(b in have for b in order):
-        out.append('/-- **The forest lifetimes**: 127 bits at every subtree height. -/')
-        out.append('theorem requestedSecurity :\n    ' + ' ∧\n    '.join(
-            '@Det.HasClassicalSecurityBitsDet %s 127' % pname(b) for b in order) + ' :=')
-        out.append('  ⟨' + ', '.join('%s_bits' % pname(b) for b in order) + '⟩\n')
+        out.append('  @det_bitsFH %s (by decide) %d %d %d %d (by decide) (by decide) (by decide) (by decide) %d\n'
+                   '    H0.rho_%s H0.tab_%s H0.small_%s H0.near_%s H0.tab_%s_ok H0.rate_%s_ok H0.small_%s_ok\n'
+                   '    H0.near_%s_ok H0.check_%s_ok [%s] [%s] H0.covers_%s_ok\n'
+                   % (name, H, b, K, N, c['qh'], tag, tag, tag, tag, tag, tag, tag, tag, tag, names, hnames, tag))
+    out.append('/-- **The forest lifetimes**: 127 bits at every configuration. -/')
+    out.append('theorem requestedSecurity :\n    ' + ' ∧\n    '.join(
+        '@Det.HasClassicalSecurityBitsDet %s 127' % pname(c) for c in certs) + ' :=')
+    out.append('  ⟨' + ', '.join('%s_bits' % pname(c) for c in certs) + '⟩\n')
     out.append('end LeanForest.Lifetimes\n')
     open(path, 'w').write('\n'.join(out))
 
-# Parameter sets of pruned keys, by height: (b, N, lx), b = h being the full key.
+# Parameter sets of pruned keys, by height: (b, N, lx), b = h being the full key. N is the largest limit that
+# `maxn` certified on the grid of lx (step 1/8), rounded down to four significant digits.
 PARAMS = {
+    22: [
+        (22, 81860000, -9.375),
+        (20, 21760000, -9.0),
+        (14, 405300, -8.0),
+        (13, 208500, -7.875),
+        (12, 107200, -7.75),
+        (10, 28410, -7.5),
+        (8, 7514, -7.25),
+    ],
     24: [
         (24, 336700000, -10.0),
         (20, 23830000, -9.125),
@@ -578,10 +625,34 @@ PARAMS = {
         (10, 30810, -7.625),
         (8, 8154, -7.375),
     ],
+    26: [
+        (26, 1381000000, -10.5),
+        (20, 26030000, -9.25),
+        (14, 480100, -8.25),
+        (13, 246900, -8.0),
+        (12, 126900, -7.875),
+        (10, 33480, -7.625),
+        (8, 8830, -7.375),
+    ],
+    28: [
+        (28, 5634000000, -10.875),
+        (20, 28350000, -9.375),
+        (14, 522000, -8.25),
+        (13, 267900, -8.125),
+        (12, 137400, -8.0),
+        (10, 36190, -7.75),
+        (8, 9541, -7.5),
+    ],
 }
 
-# Parameter sets of layered keys, by height: (N, lx); the index is not ground, b = h.
-LAYERED = {}
+# Parameter sets of layered keys, by height: (N, lx). The index is not ground (b = h); the smaller keygen credit
+# of the top layer alone does not move the largest N, which is the full key's.
+LAYERED = {
+    22: (81860000, -9.375),
+    24: (336700000, -10.0),
+    26: (1381000000, -10.5),
+    28: (5634000000, -10.875),
+}
 
 def lifetime(h, shape, b=None):
     """The proved signature limit of a configuration, None if it has no certificate here."""
@@ -593,28 +664,38 @@ def attack(h, shape, b=None):
     """The cover attack's lifetime of a configuration, None if not computed."""
     return ATTACK.get(h, {}).get(h if shape == 'layered' else b)
 
+def configs():
+    """Every configuration with a parameter set: (h, shape, b, N, lx)."""
+    out = []
+    for h in HEIGHTS:
+        for (b, N, lx) in PARAMS.get(h, []):
+            out.append((h, 'pruned', b, N, lx))
+        if h in LAYERED:
+            N, lx = LAYERED[h]
+            out.append((h, 'layered', h, N, lx))
+    return out
+
+def certify_config(h, shape, b, N, lx, verbose=True):
+    set_config(h, shape)
+    if shape == 'layered':
+        assert b == h, 'a layered key keeps every index: B = H'
+    return certify(b, N, lx, verbose)
+
 if __name__ == '__main__':
     cmd = sys.argv[1] if len(sys.argv) > 1 else None
     if cmd == 'check':
-        b, N, lx = int(sys.argv[2]), int(float(sys.argv[3])), float(sys.argv[4])
-        c = certify(b, N, lx)
+        h, shape, b, N, lx = int(sys.argv[2]), sys.argv[3], int(sys.argv[4]), int(float(sys.argv[5])), float(sys.argv[6])
+        c = certify_config(h, shape, b, N, lx)
         if c is None or not c['complete']:
             sys.exit('NOT certified')
-    elif cmd == 'emit1':
-        b, N, lx = int(sys.argv[2]), int(float(sys.argv[3])), float(sys.argv[4])
-        c = certify(b, N, lx)
-        assert c is not None
-        emit([c], os.path.join(ROOT, 'LeanForest', 'LifetimeCertificates.lean'))
-        emit_lifetimes([c], os.path.join(ROOT, 'LeanForest', 'Lifetimes.lean'))
-        print('written')
     elif cmd == 'maxn':
-        # maxn B N0 [STEP LXLO LXHI]: the largest N (to 1 part in 20000) that both routes certify at some
+        # maxn H SHAPE B N0 [STEP LXLO LXHI]: the largest N (to 1 part in 20000) that both routes certify at some
         # split lx of the grid LXLO, LXLO + STEP, ..., LXHI, starting from a certified N0
-        b, best = int(sys.argv[2]), int(float(sys.argv[3]))
-        step, lx_lo, lx_hi = [float(a) for a in sys.argv[4:7]] if len(sys.argv) > 6 else (0.125, -11.5, -6.0)
+        h, shape, b, best = int(sys.argv[2]), sys.argv[3], int(sys.argv[4]), int(float(sys.argv[5]))
+        step, lx_lo, lx_hi = [float(a) for a in sys.argv[6:9]] if len(sys.argv) > 8 else (0.125, -11.5, -6.0)
         def feasible(N, lx):
             try:
-                c = certify(b, N, lx, verbose=False)
+                c = certify_config(h, shape, b, N, lx, verbose=False)
             except Exception:       # the float search found no option
                 return False
             return c is not None and c['complete']
@@ -633,12 +714,14 @@ if __name__ == '__main__':
                 print('lx %.5f -> N %d' % (lx, lo), flush=True)
             lx += step
         if best_lx is None:
-            sys.exit('b %d: nothing above N0 = %d was certified on this grid (N0 itself was not checked)' % (b, n0))
-        print('b %d max N ~ %d (lx %s)' % (b, best, best_lx))
+            sys.exit('H %d %s b %d: nothing above N0 = %d was certified on this grid (N0 itself was not checked)'
+                     % (h, shape, b, n0))
+        print('H %d %s b %d max N ~ %d (lx %s)' % (h, shape, b, best, best_lx))
     elif cmd == 'scan':
         # small-route left-hand sides only, for several lx
-        b, N = int(sys.argv[2]), int(float(sys.argv[3]))
-        for lx in [float(a) for a in sys.argv[4:]]:
+        h, shape, b, N = int(sys.argv[2]), sys.argv[3], int(sys.argv[4]), int(float(sys.argv[5]))
+        set_config(h, shape)
+        for lx in [float(a) for a in sys.argv[6:]]:
             qh = int(2 ** (128 + lx))
             t = make_poisT(b, N, qh)
             fm = FModel(t)
@@ -650,15 +733,17 @@ if __name__ == '__main__':
             rate = Fr(N * LIT, 2 ** b * 2 ** 15)
             near = (2 - rho + x + rate) * qh * c
             print('lx %s: rho %.6f 2^128B %.5f coin %.5f near %.5f lhs %.6f rate ok %s' % (
-                lx, float(rho), float(2 ** 128 * o.B), float(Fr((2 * scanMb(b) - 1) * qh, scanMb(b) * 2 ** 129)), float(near),
-                float(small_lhs(b, N, qh, rho, o.B, c)), rate <= rho - 1 - x), flush=True)
+                lx, float(rho), float(2 ** 128 * o.B), float(Fr((2 * scanMb(b) - 1) * qh, scanMb(b) * 2 ** 129)),
+                float(near), float(small_lhs(b, N, qh, rho, o.B, c)), rate <= rho - 1 - x), flush=True)
     elif cmd == 'emit':
         certs = []
-        for (b, N, lx) in PARAMS[TOTAL]:
-            c = certify(b, N, lx)
-            assert c is not None, (b, N, lx)
+        for (h, shape, b, N, lx) in configs():
+            c = certify_config(h, shape, b, N, lx)
+            assert c is not None and c['complete'], (h, shape, b, N, lx)
             certs.append(c)
-        emit(certs, os.path.join(ROOT, 'LeanForest', 'LifetimeCertificates.lean'))
+        os.makedirs(os.path.join(ROOT, 'LeanForest', 'Certificates'), exist_ok=True)
+        for h in sorted({c['h'] for c in certs}):
+            emit([c for c in certs if c['h'] == h], os.path.join(ROOT, 'LeanForest', 'Certificates', 'H%d.lean' % h))
         emit_lifetimes(certs, os.path.join(ROOT, 'LeanForest', 'Lifetimes.lean'))
         print('written')
     else:

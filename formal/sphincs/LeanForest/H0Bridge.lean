@@ -1,17 +1,19 @@
 import LeanForest.H0Tables
 import LeanForest.BridgeForestPrice
-import LeanForest.BridgeForsPotential
+import LeanForest.BridgeForestPotential
 import LeanForest.Base.Split
 
 /-! **From the forest price to per-index moments.** The cover price of a multiset of disclosed views
 is a sum over the indices of the probability that a uniform mark is covered by the marks at the
 index, a product over the 8 trees of the per-tree cover fraction `φ`. The excess over a threshold
-splits pointwise (as for FORS) into per-index functions of the marks; their mark averages are
+splits pointwise into per-index functions of the marks; their mark averages are
 bounded by the first and second moments `E[y | n] = Ψ1(n)^8`, `E[y^2 | n] = Ψ2(n)^8`. -/
 
 open ENNReal
 
 namespace LeanForest.Security.H0
+
+variable [Params]
 
 open Concrete ForestPrice LeanForest.Base.Domination H0Avg
 
@@ -90,7 +92,6 @@ theorem coverF_iff (t : FieldVal) (Xs : Multiset FieldVal) :
 
 /-! ### The price at an index -/
 
-variable [Params]
 
 theorem mem_marks_map (l : Fin (2 ^ subtreeHeight)) (d : Multiset View) (c : Coord) (x : FieldVal) :
     x ∈ (marksAt l d).map (fun m => m c) ↔ ∃ v ∈ d, v.1 = l ∧ v.2 c = x := by
@@ -149,7 +150,6 @@ theorem price_decomp (d : Multiset View) :
 
 /-! ### The per-tree moments as mark averages -/
 
-omit [Params] in
 theorem freshAvg_ofReal {α : Type} [Fintype α] [Nonempty α] (g : α → ℝ) (hg : ∀ a, 0 ≤ g a) :
     freshAvg (Finset.univ : Finset α) (fun a => ENNReal.ofReal (g a)) = ENNReal.ofReal (avgR g) := by
   unfold freshAvg avgR
@@ -157,7 +157,6 @@ theorem freshAvg_ofReal {α : Type} [Fintype α] [Nonempty α] (g : α → ℝ) 
   rw [ENNReal.ofReal_mul (by positivity), ENNReal.ofReal_sum_of_nonneg (fun a _ => hg a), Finset.card_univ,
     ENNReal.ofReal_inv_of_pos hc, ENNReal.ofReal_natCast]
 
-omit [Params] in
 theorem avgNR_nonneg {α : Type} [Fintype α] {φ : Multiset α → ℝ} (hφ : ∀ X, 0 ≤ φ X) :
     ∀ n X, 0 ≤ avgNR φ n X
   | 0, X => hφ X
@@ -166,16 +165,13 @@ theorem avgNR_nonneg {α : Type} [Fintype α] {φ : Multiset α → ℝ} (hφ : 
       exact mul_nonneg (inv_nonneg.2 (Nat.cast_nonneg _))
         (Finset.sum_nonneg fun x _ => avgNR_nonneg hφ n (X + {x}))
 
-omit [Params] in
 theorem coverR_nonneg (t : MT) (X : Multiset MT) : 0 ≤ coverR t X := by
   unfold coverR; split_ifs <;> norm_num
 
-omit [Params] in
 theorem coverAvg_nonneg (X : Multiset MT) : 0 ≤ avgR fun t : MT => coverR t X := by
   unfold avgR
   exact mul_nonneg (inv_nonneg.2 (Nat.cast_nonneg _)) (Finset.sum_nonneg fun t _ => coverR_nonneg t X)
 
-omit [Params] in
 /-- Mark averages over fields are averages over tuples. -/
 theorem avgN_field (F : Multiset FieldVal → ℝ≥0∞) (R : Multiset MT → ℝ) (hR : ∀ X, 0 ≤ R X)
     (hF : ∀ Xs, F Xs = ENNReal.ofReal (R (Xs.map fieldMT))) :
@@ -190,7 +186,6 @@ theorem avgN_field (F : Multiset FieldVal → ℝ≥0∞) (R : Multiset MT → �
       rw [avgR_equiv fieldMT]
       simp only [Equiv.apply_symm_apply]
 
-omit [Params] in
 theorem φF_eq (Xs : Multiset FieldVal) :
     φF Xs = ENNReal.ofReal (avgR fun t : MT => coverR t (Xs.map fieldMT)) := by
   classical
@@ -206,24 +201,20 @@ theorem φF_eq (Xs : Multiset FieldVal) :
   rw [freshAvg_ofReal _ (fun t => coverR_nonneg _ _), avgR_equiv fieldMT]
   simp only [Equiv.apply_symm_apply]
 
-omit [Params] in
 theorem avgN_φF (n : ℕ) : avgN φF n 0 = ENNReal.ofReal (Ψ1R n) := by
   rw [avgN_field φF (fun X => avgR fun t : MT => coverR t X) coverAvg_nonneg φF_eq n 0]
   rfl
 
-omit [Params] in
 theorem avgN_φF_sq (n : ℕ) : avgN (fun Xs => φF Xs ^ 2) n 0 = ENNReal.ofReal (Ψ2R n) := by
   rw [avgN_field (fun Xs => φF Xs ^ 2) (fun X => (avgR fun t : MT => coverR t X) ^ 2)
     (fun X => sq_nonneg _) (fun Xs => by rw [φF_eq, ← ENNReal.ofReal_pow (coverAvg_nonneg _)]) n 0]
   rfl
 
-omit [Params] in
 theorem card_coord : Fintype.card Coord = 8 := by
   show Fintype.card (Fin forestCoords) = 8
   rw [Fintype.card_fin]
   rfl
 
-omit [Params] in
 /-- **`E[y | n] = Ψ1(n)^8`.** -/
 theorem avgN_yM (n : ℕ) : avgN yM n 0 = ENNReal.ofReal (Ψ1R n) ^ 8 := by
   unfold yM
@@ -231,7 +222,6 @@ theorem avgN_yM (n : ℕ) : avgN yM n 0 = ENNReal.ofReal (Ψ1R n) ^ 8 := by
   simp only [Multiset.map_zero, avgN_φF]
   rw [Finset.prod_const, Finset.card_univ, card_coord]
 
-omit [Params] in
 /-- **`E[y^2 | n] = Ψ2(n)^8`.** -/
 theorem avgN_yM_sq (n : ℕ) : avgN (fun Ms => yM Ms ^ 2) n 0 = ENNReal.ofReal (Ψ2R n) ^ 8 := by
   unfold yM
@@ -243,7 +233,6 @@ theorem avgN_yM_sq (n : ℕ) : avgN (fun Ms => yM Ms ^ 2) n 0 = ENNReal.ofReal (
 
 /-! ### The pointwise split of the excess -/
 
-omit [Params] in
 theorem φF_le_one (Xs : Multiset FieldVal) : φF Xs ≤ 1 := by
   classical
   unfold φF
@@ -251,11 +240,9 @@ theorem φF_le_one (Xs : Multiset FieldVal) : φF Xs ≤ 1 := by
       ≤ freshAvg Finset.univ (fun _ : FieldVal => (1 : ℝ≥0∞)) := freshAvg_mono _ fun t _ => by split_ifs <;> simp
     _ = 1 := freshAvg_const _ Finset.univ_nonempty 1
 
-omit [Params] in
 theorem yM_le_one (Ms : Multiset (Coord → FieldVal)) : yM Ms ≤ 1 :=
   Finset.prod_le_one' fun c _ => φF_le_one _
 
-omit [Params] in
 theorem yM_ne_top (Ms : Multiset (Coord → FieldVal)) : yM Ms ≠ ⊤ :=
   ne_top_of_le_ne_top ENNReal.one_ne_top (yM_le_one Ms)
 
@@ -276,9 +263,9 @@ noncomputable def hS (c1 θ : ℝ) (Ms : Multiset (Coord → FieldVal)) : ℝ≥
 
 /-- **The pointwise split** of the excess of the forest price over a threshold. -/
 theorem excess_le_split (b0 : ℝ≥0∞) (c c1 θ : ℝ) (hc : ENNReal.ofReal c ≤ b0) (hθ : 0 < θ) (d : Multiset View) :
-    ForsPotential.excess b0 d ≤ ∑ l : Fin (2 ^ subtreeHeight), gS c1 (marksAt l d) +
+    ForestPotential.excess b0 d ≤ ∑ l : Fin (2 ^ subtreeHeight), gS c1 (marksAt l d) +
       ENNReal.ofReal (Real.exp (-θ * c) / (Real.exp 1 * θ)) * ∏ l : Fin (2 ^ subtreeHeight), hS c1 θ (marksAt l d) := by
-  unfold ForsPotential.excess
+  unfold ForestPotential.excess
   rw [price_decomp]
   set y : Fin (2 ^ subtreeHeight) → ℝ := fun l => κE.toReal * (yM (marksAt l d)).toReal with hy
   have hsum : ∑ l : Fin (2 ^ subtreeHeight), (landing * (Fintype.card (Fin (2 ^ subtreeHeight)) : ℝ≥0∞)⁻¹) *

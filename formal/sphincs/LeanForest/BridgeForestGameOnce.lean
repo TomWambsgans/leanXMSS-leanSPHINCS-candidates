@@ -1,13 +1,15 @@
-import LeanForest.BridgeForsGame
+import LeanForest.BridgeForestGame
 import LeanForest.BridgeNoRepeatDef
-import LeanForest.BridgeForsPotentialOnce
+import LeanForest.BridgeForestPotentialOnce
 
-/-! The one-coin FORS potential through an adversary that never requests a signature on the same
+/-! The one-coin forest potential through an adversary that never requests a signature on the same
 message twice. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner LeanForest.Base.Domination
 
@@ -15,7 +17,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 section Induction
 
@@ -68,4 +69,4 @@ theorem goodO_advProg (hparse : ∀ p, model.parse (pblk parameter data p) = non
 
 end Induction
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

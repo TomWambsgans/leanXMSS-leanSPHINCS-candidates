@@ -6,6 +6,8 @@ each), and how mapping the base monad commutes with query logging and with lifti
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.Prefix
+
+variable [Params]
 open Concrete Completeness SeedModel PreparedScheme MaterialGameCoupling
 open SeedCoupling
 open SphincsSecurity.QueryCap
@@ -13,7 +15,7 @@ open SphincsSecurity.QueryCap
 set_option backward.isDefEq.respectTransparency false
 set_option maxHeartbeats 40000
 attribute [local irreducible] PreparedScheme.sign PreparedScheme.keygen
-  Randomized.sign digestAttemptLimit encodingAttemptLimit erasedMaterialSign
+  Randomized.sign digestAttemptLimit encodingAttemptLimit
   preparedOracle answer
 
 noncomputable def fixedWorldCost (f : QueryImpl HashSpec Id) :

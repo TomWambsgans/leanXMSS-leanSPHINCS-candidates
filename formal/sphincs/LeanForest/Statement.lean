@@ -12,6 +12,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest
 
+variable [Params]
+
 structure Forgery where
   message : Message
   signature : Signature
@@ -19,7 +21,6 @@ deriving DecidableEq
 
 abbrev SigningSpec := Message →ₒ Option Signature
 
-variable [Params]
 
 namespace SigningTranscript
 

@@ -8,6 +8,8 @@ signing attempts. One seed derivation gives the starts of two chains: a one-time
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.Prefix
+
+variable [Params]
 open Concrete
 
 attribute [local irreducible] encodingAttemptLimit digestAttemptLimit Seeded.treeNode
@@ -179,25 +181,42 @@ theorem hashCalls_forestKey (f : QueryImpl HashSpec Id) (parameter : PublicParam
   decide
 
 theorem hashCalls_encode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : ForestKey) (counter : Counter) :
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput) (counter : Counter) :
     hashCalls f (encode parameter lay tree leaf message counter : OracleComp HashSpec (Option Encoding)) = 1 := by
   simp only [encode, hashCalls_bind, hashCalls_tweakableHash, hashCalls_pure, Nat.add_zero]
 
-variable [Params]
 
-omit [Params] in
+/-- The cost of running the computations from index `0` up, stopping after the first failure. -/
+def seqCost : {n : Nat} → (Fin n → Bool) → (Fin n → Nat) → Nat
+  | 0, _, _ => 0
+  | _ + 1, ok, cost => cost 0 + if ok 0 then seqCost (fun i => ok i.succ) (fun i => cost i.succ) else 0
+
+theorem hashCalls_sequenceDep (f : QueryImpl HashSpec Id) : ∀ {n : Nat} {α : Fin n → Type}
+    (computation : (i : Fin n) → OracleComp HashSpec (Option (α i))),
+    hashCalls f (sequenceDep computation) =
+      seqCost (fun i => (evalWithAnswerFn f (computation i)).isSome) (fun i => hashCalls f (computation i))
+  | 0, _, _ => rfl
+  | n + 1, α, computation => by
+      simp only [sequenceDep, hashCalls_bind, seqCost]
+      cases hhead : evalWithAnswerFn f (computation 0) with
+      | none => simp only [hashCalls_pure, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
+      | some head =>
+          simp only [hashCalls_bind, Option.isSome_some, ↓reduceIte,
+            hashCalls_sequenceDep f (α := fun i => α i.succ) fun i => computation i.succ]
+          cases evalWithAnswerFn f (sequenceDep (α := fun i => α i.succ) fun i => computation i.succ) <;>
+            simp only [hashCalls_pure, Nat.add_zero]
+
 theorem hashCalls_sequenceLayers {α : Layer → Type} (f : QueryImpl HashSpec Id)
     (computation : (lay : Layer) → OracleComp HashSpec (Option (α lay))) :
-    hashCalls f (sequenceLayers computation) = hashCalls f (computation topLayer) := by
-  rw [sequenceLayers, hashCalls_bind]
-  cases evalWithAnswerFn f (computation topLayer) <;> simp only [hashCalls_pure, Nat.add_zero]
+    hashCalls f (sequenceLayers computation) =
+      seqCost (fun lay => (evalWithAnswerFn f (computation lay)).isSome)
+        (fun lay => hashCalls f (computation lay)) :=
+  hashCalls_sequenceDep f computation
 
-omit [Params] in
 theorem hashCalls_messageDigestCall (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (root : Digest) (message : Message) (randomness : Randomness) :
     hashCalls f (messageDigestCall parameter root message randomness : OracleComp HashSpec HashOutput) = 1 := rfl
 
-omit [Params] in
 theorem hashCalls_messageDigest (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (root : Digest) (message : Message) (randomness : Randomness) :
     hashCalls f (messageDigest parameter root message randomness : OracleComp HashSpec MessageDigest) = 1 := by

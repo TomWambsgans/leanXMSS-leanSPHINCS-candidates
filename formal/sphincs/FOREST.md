@@ -1,29 +1,29 @@
-# The forest variant of leanSphincs in Lean
+# The two-level WOTS forest in Lean
 
-`LeanForest` is a Lean library next to `LeanSphincs` (`lakefile.toml`, namespace `LeanForest`). It
-replaces FORS by a two-level WOTS forest: 8 trees of height 4; each leaf of a tree is the hash of
-two subtrees of height 3 over WOTS keys. The digest picks, per tree, a leaf, a WOTS key in each of
+`LeanForest` (`lakefile.toml`, namespace `LeanForest`) is the Lean library of the candidate. Its
+few-time signature is a two-level WOTS forest: 8 trees of height 4; each leaf of a tree is the hash
+of two subtrees of height 3 over WOTS keys. The digest picks, per tree, a leaf, a WOTS key in each of
 its two subtrees and a codeword for each WOTS key (`lut`, entries in `{0..4}` summing to 5); the
-signature opens each chain of the two WOTS keys at position `4 - d_i`. The FORS proof
-(`LeanSphincs`) is untouched.
+signature opens each chain of the two WOTS keys at position `4 - d_i`.
 
 No tree of the forest has a root hash. A subtree is hashed up to level 2 and a tree leaf is the hash of the four
 level-2 nodes `m_0[0] ‖ m_0[1] ‖ m_1[0] ‖ m_1[1]` of its two subtrees; a tree is hashed up to level 3
 and the few-time key is the sixteen level-3 nodes `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]` themselves:
-no hash folds them, and the WOTS+C encoding absorbs them before its counter,
-`Th(P, A(4, 0, idx), t_0[0] ‖ … ‖ t_7[1] ‖ ctr)` (`Concrete.encode`, `ForestKey`). The WOTS+C key has 64 chains of
-4 positions and target sum 123 (`targetSum`).
+no hash folds them, and the WOTS+C encoding of the bottom layer absorbs them before its counter,
+`Th(P, A(4, 0, leaf; layer 0, tree), t_0[0] ‖ … ‖ t_7[1] ‖ ctr)` (`Concrete.encode`, `ForestKey`). A key of
+a higher layer signs the root of the tree below it (`rootPayload`, 16 bytes). The WOTS+C keys have 64
+chains of 4 positions and target sum 123 (`targetSum`).
 The signature is unchanged (3 path elements per subtree, 4 per tree): the last path element is the
 other top node of its tree. The verifier folds 2 levels in a subtree and 3 in a tree and puts the node
 it reached and the last path element in index order (`orderTops`: the reached node first when bit 2
 of the WOTS-key index, bit 3 of the leaf index, is 0).
 
 Final statement: `LeanForest.Lifetimes.requestedSecurity`, 127 classical bits (SUF-CMA in the ROM)
-for the deterministic Lean signer at subtree heights 24, 20, 14, 13, 12, 10, 8.
+for the deterministic Lean signer in every configuration of [README.md](README.md). At `h = 24`:
 
 | b | proved N | cover attack | best known attack | proved / best known |
 | ---: | ---: | ---: | ---: | ---: |
-| 24 (full tree) | 336,700,000 | 3.59915e8 | 3.60e8 | 94% |
+| 24 (full tree, and layered) | 336,700,000 | 3.59915e8 | 3.60e8 | 94% |
 | 20 | 23,830,000 | 2.63862e7 | 2.64e7 | 90% |
 | 14 | 441,500 | 5.18006e5 | 5.18e5 | 85% |
 | 13 | 226,800 | 2.68735e5 | 2.69e5 | 84% |
@@ -36,14 +36,13 @@ digest query covers a forest with probability `2^-127` (Poisson loads of the kep
 known attack also uses the WOTS+C unit-neighbour route, which applies unchanged: a forger that sees
 the realized key takes the better of the cover rate `Y` and the rate `r` of that route, and the
 lifetime is the largest `N` with `E[max(Y, r)] ≤ 1`. It is 100% of the cover lifetime except at
-`b = 8`, where it is 98% (`b = 24 … 8`); at `h = 24` the landing credit is four times smaller than at
-`h = 26`, so the cover route dominates the fixed-rate searches almost everywhere.
-`scripts/forest_attack.py` computes both columns. `Y` comes from a
+`b = 8`, where it is 98% (`b = 24 … 8`). `scripts/forest_attack.py` computes both columns
+(`forest_attack.py cover H` the cover model at height `H`). `Y` comes from a
 Monte Carlo of the realized key (loads, leaves, WOTS keys, codewords), with about 0.3% of noise on `N`
 and 0.6% at `b = 8`: the column has three digits and the ratios are good to about a point. The rate is
 `r = 0.9694`: a search of about `2^116` hashes for a neighbouring encoding, then one chain preimage at
 `2 · 2^-128` per query, is at its best after about `2^122` queries. Every forest lifetime is about 19%
-above the FORS one at the same height.
+above the FORS one at the same height (`h = 24`).
 
 ## The codeword table
 
@@ -86,7 +85,7 @@ it and refuses to run if the Lean sources hold other tables.
 
 No `sorry`, no `native_decide`, no new axioms: `LeanForest/Axioms.lean` guards every public theorem
 (`propext`, `Classical.choice`, `Quot.sound` only). Certificates are exact rationals checked by the
-kernel (`decide +kernel`). `LifetimeCertificates.lean` stores only the scalars of each Poisson table
+kernel (`decide +kernel`). `Certificates/H*.lean` store only the scalars of each Poisson table
 (`m`, `P`, `J`, `n1`), option (`c1`, `θ`, `s`, `cthr`) and near certificate: `H0Fill.lean` rebuilds
 their lists (`fillPoisT`, `fillOpt`, `fillOptN`, the same functions as in the script) and the
 unchanged checkers check the result. The options of a cover are checked one by one with their bound
@@ -96,15 +95,15 @@ unchanged checkers check the result. The options of a cover are checked one by o
 ## Build
 
 ```
-env LEAN_NUM_THREADS=2 nice -n 19 lake build LeanForest
+env LEAN_NUM_THREADS=1 nice -n 19 lake build LeanForest
 ```
 
 Table: `python3 scripts/forest_table.py info` (composition), `check` (the Lean sources hold the tables
 of the script), `write` (rewrite them). Certificates: `python3 scripts/forest_certificates.py emit`
-(writes `LeanForest/LifetimeCertificates.lean` and `LeanForest/Lifetimes.lean`; the kernel checks the
-former in about 6 minutes and 7 GB of memory);
-`python3 scripts/forest_certificates.py check B N LX` checks one set in Python with the same exact
-arithmetic; `maxn B N0 [STEP LXLO LXHI]` searches the largest `N` over a grid of splits `lx`.
+(writes `LeanForest/Certificates/H*.lean` and `LeanForest/Lifetimes.lean`; the kernel checks one height
+in about 10 minutes and 8 GB of memory);
+`python3 scripts/forest_certificates.py check H SHAPE B N LX` checks one set in Python with the same exact
+arithmetic; `maxn H SHAPE B N0 [STEP LXLO LXHI]` searches the largest `N` over a grid of splits `lx`.
 Axiom guards: `lake env lean scripts/ForestTheorems.lean` then `python3 scripts/forest_axioms.py`
 (`prepare`, then `emit`; see the script).
 
@@ -112,12 +111,14 @@ Axiom guards: `lake env lean scripts/ForestTheorems.lean` then `python3 scripts/
 
 Every hash input is `P ‖ A ‖ payload` (`Scheme.lean`: `tweakableHashInput`, `keygenHashInput`,
 `randomizerHashInput`): the 16-byte public parameter, then the 16-byte address
-`A = lo (4 bytes) ‖ hi (3 bytes) ‖ (type + 32·step) ‖ 0^8` with `lo` and `hi` little endian
-(`fieldBytes`), then the payload, which starts at byte 32. There is no exception: the parameter
+`A = lo (4 bytes) ‖ hi (3 bytes) ‖ (type + 32·step) ‖ layer ‖ tree (4 bytes) ‖ 0^3` with `lo`, `hi`
+and `tree` little endian (`fieldBytes`), then the payload, which starts at byte 32. The layer byte
+counts the layers from the bottom (`layerByte`); the forest calls, the digest and the derivations
+outside the trees have layer and tree 0, and so has every call of a one-layer key. There is no exception: the parameter
 derivation (under `P = 0`), the randomizer base, the seed derivations and the surrogates have the same
 address format. `Th` keeps the first 16 bytes of the hash. The public key is `root ‖ P`, 32 bytes.
 Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`, chain `i < 6`,
-`idx` the 24-bit instance. A seed derivation of chain starts is addressed by a pair of chains `t`
+`idx` the `h`-bit instance. A seed derivation of chain starts is addressed by a pair of chains `t`
 (chains `2t` and `2t + 1`): `t < 32` in a WOTS+C key, `t < 3` in a forest WOTS key.
 
 | call | type | step | hi | lo | payload |
@@ -126,7 +127,7 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 | WOTS+C chain step onto position `to` | 1 | `to − 1` | chain | leaf | value |
 | WOTS+C leaf | 2 | 0 | 0 | leaf | 64 chain ends |
 | tree node | 3 | 0 | level | node | left ‖ right |
-| WOTS+C encoding | 4 | 0 | 0 | leaf | `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]` (the forest key, 256 bytes) ‖ counter (4 bytes) |
+| WOTS+C encoding | 4 | 0 | 0 | leaf | bottom layer: `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]` (the forest key, 256 bytes) ‖ counter (4 bytes); above: the root of the tree below (16 bytes) ‖ counter |
 | parameter derivation, under `P = 0` | 5 | 0 | 0 | 0 | seed |
 | randomizer base `R0` and step `δ` (both halves of the hash) | 7 | 0 | 0 | 0 | seed ‖ message |
 | message digest | 12 | 0 | 0 | 0 | message ‖ randomizer |
@@ -168,7 +169,7 @@ its callers and ignores it.
 
 ### Digest fields
 
-The digest is the first 232 bits of the hash output (`truncateMessageDigest`), read as a little-endian
+The digest is the first `h + 208` bits of the hash output (`truncateMessageDigest`), read as a little-endian
 number; a field is `extractLsb'` at a bit offset (`Scheme.lean`: `wordOffset`, `indexOffset`,
 `superOffset`, `childOffset`, `digestMarks`, `digestIndex`). With `c < 8` the tree and `j < 2` the
 subtree:
@@ -178,14 +179,14 @@ subtree:
 | codeword-table index of WOTS key `(c, j)` | 8 | `8 (2c + j)`: byte `2c + j` of the digest |
 | WOTS key of subtree `(c, j)` | 3 | `128 + 3 (2c + j)` |
 | leaf of tree `c` | 4 | `176 + 4c` |
-| instance index `idx` | 24 | 208: the high 24 bits of the last 64-bit word |
+| instance index `idx` | `h` | 208, in the last 64-bit word (`h ≤ 28`) |
 
-Bits 232 to 255 are unused. No field lies across two 64-bit words: the children, the leaves and the
-index are laid out in that order, which is what makes the three groups fall inside words at `h = 24`.
+Bits `h + 208` to 255 are unused. No field lies across two 64-bit words: the children, the leaves and
+the index are laid out in that order, which is what makes the three groups fall inside words.
 The proof reads a digest as its
 index and one 26-bit field per tree (`ForestCoverage.lean`): `coordField` gathers the 26 bits of a
 tree from the three places that hold them (leaf, then per subtree WOTS key and table index), and
-`fullDigestView_bijective` states that the index and the 8 fields are a bijection of the 232 bits,
+`fullDigestView_bijective` states that the index and the 8 fields are a bijection of the `h + 208` bits,
 so a uniform digest gives a uniform index and 8 independent uniform fields
 (`evalDist_fullDigestView_uniform`), each a uniform mark (`H0Mark.markEquiv`). The index of a
 uniform hash output is uniform (`evalDist_blockIndex_uniform`, from
@@ -197,15 +198,20 @@ inputs of different types differ whatever their parameters (`fieldInput_ne_of_ta
 `Fresh.lean`, `keygenInput_ne_hashInput`), and an address determines the call:
 `hashFields_injective` and `Position.input_separated` (`SecurityPosition.lean`) for verification,
 `deriveFields_injective` and `keygenInput_injective` for the seed derivations,
-`randomizerHashInput_injective` (`BridgeDet.lean`) for the randomizer base. The address has no layer and
-no tree field; the scheme has one of each (`Layer` and `TreeIndex` are `Fin 1`).
+`randomizerHashInput_injective` (`BridgeDet.lean`) for the randomizer base. The layer and the tree of a
+call are part of its address (`layerByte_injective`, `fieldBytes_injective`), so the calls of distinct
+trees of distinct layers are separated as well.
 
-`Layout.signature_size`: a signature serializes to 4,244 bytes. `Cost.verification_permutations`:
-an accepted signature costs exactly 265 Keccak-f permutations (1 for the 80-byte digest input, 160
-for the forest, 104 for WOTS+C and the path: 3 for the encoding of the key, 69 chain steps, 8 for the
-leaf and 24 nodes), and no signature costs more (`verification_permutations_le`). The forest is 20
-per tree (`permutations_coordRecover`: in each of the two subtrees 5 chain steps, 1 for the WOTS-key
-leaf and 2 folds; 1 for the tree leaf; 3 folds), times 8. The key is not hashed.
+`Layout.signature_size`: a signature serializes to `2832 + 1028 d + 16 h` bytes (4,244 for one layer of
+height 24). `Cost.verification_compressions`: an accepted signature costs exactly `verifyCost`
+compressions of the hash, and no signature costs more (`verification_compressions_le`). With
+Keccak-256 at `h = 24` and one layer that is 265 permutations: 1 for the 80-byte digest input, 160
+for the forest, 104 for WOTS+C and the path (3 for the encoding of the key, 69 chain steps, 8 for the
+leaf and 24 nodes). The forest is 20 per tree (`compressions_coordRecover`: in each of the two
+subtrees 5 chain steps, 1 for the WOTS-key leaf and 2 folds; 1 for the tree leaf; 3 folds), times 8.
+The key is not hashed. Each layer above adds 1 for the encoding of a root, 69 chain steps and 8 for
+the leaf, and its 6 path nodes replace 6 of the bottom tree's. `Configurations.lean` states the size
+and the three costs of each of the 8 shapes.
 
 Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
 `SecurityPrefixErasedKeygen.lean`; exact counts on any oracle):
@@ -214,18 +220,19 @@ Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
 | --- | ---: |
 | one-time key (`hashCalls_oneTimePublicKey`) | `32 + 64 · 3 = 224` |
 | tree node at level `l` (`hashCalls_treeNode`) | `226 · 2^l − 1` |
-| key generation (`hashCalls_keygenFromSeed`) | `226 · 2^b + 2 (24 − b)` |
+| key generation (`hashCalls_keygenFromSeed`), top layer of height `t`, kept height `k` | `226 · 2^k + 2 (t − k)` |
 | forest WOTS key leaf (`hashCalls_childLeaf`) | `3 + 6 · 4 + 1 = 28` |
 | subtree node at level `l ≤ 2` (`hashCalls_subNode`) | `29 · 2^l − 1` |
 | tree leaf (`hashCalls_superNode`) | `2 · 2 · 115 + 1 = 461` |
 | tree node at level `l ≤ 3` (`hashCalls_topNode`) | `462 · 2^l − 1` |
 | forest key of an instance (`hashCalls_forestKey`) | `8 · 2 · 3,695 = 59,120` |
 | opening of one tree (`hashCalls_coordOpen_exact`) | `2 · 222 + 6,926 = 7,370` |
-| forest opening (`hashCalls_forsOpen_exact`) | 58,960 |
+| forest opening (`hashCalls_forestOpen_exact`) | 58,960 |
 | WOTS+C values of a signature (`hashCalls_published_values`) | `32 + 123 = 155` |
-| signature after the scan (`hashCalls_finishSign_exact`) | `118,081 + counter search + 155 + path` |
+| signature after the scan (`hashCalls_finishSign_exact`) | `1 + 58,960 + Σ_layers (message + counter search + 155 + path)` |
 
-Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less, and without the key
+The message of the bottom key is the forest key (59,120 calls); the message of a key above is the root
+of the tree below (`226 · 2^6 − 1` calls). Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less, and without the key
 hash the key costs 1 call less: the forest key went from 59,385 to 59,120 calls, the opening from
 59,200 to 58,960 and the fixed part of a signature from 118,586 to 118,081 (`1 + 58,960 + 59,120`; the
 signer's tick is 118,080 after the digest call). A counter of the encoding search is one hash call,
@@ -239,8 +246,8 @@ them.
 
 ## The proof
 
-The reduction is the one of the FORS variant (`PROOF.md`), forked module by module with the forest
-in the hash domains (`Scheme.lean`, `Security*.lean`, `Bridge*.lean`).
+[PROOF.md](PROOF.md) gives the route; this section adds what is specific to the forest and to the
+layers.
 
 **Two secrets per derivation.** The seed is removed as before: the answers of all derivations are
 sampled before the seed and programmed at the seed's inputs, and the adversary sees them only by
@@ -256,8 +263,8 @@ per chain start), so uniform material programs independent uniform answers
 (`SeedCoupling.evalDist_derivedOutput_uniform`), which is the law of the random oracle on these
 inputs (`evalDist_prepareTable`, `evalDist_prepared_continuation`). Every module above the seed
 model sees `truncateHash (material.2 position)` as before, and its statements are unchanged. The
-only numbers that change are the hash-call counts of the signer above; the key-generation credit of
-the certificates is `kCreditF b = 226 · 2^b + 2 (24 − b)` (`BridgeDetW.lean`, `keygenCost`).
+key-generation credit of the certificates is `Prefix.keygenHashCost = 226 · 2^k + 2 (t − k)`
+(`keygenCost`), passed to the checkers as `K`.
 
 After the deterministic
 signer is replaced by a seed-free one (`BridgeDet*`), a forgery is a first-order hit, a WOTS
@@ -297,7 +304,7 @@ fresh, cached and rejected, or cached and landing; the law of the signed pair is
 `LoopWalk.lean` over these statuses (`BridgeScan.scan_boundW`). A cached landed pair is selected
 with a probability that depends on the cache (the run of rejected values before it), not `1/(n + R)`,
 and one digest query raises the selection mass of the adversary's pairs by at most `(2 − p)/2^128`
-(`LoopWalk.creation_le`, `p = 2^-(24−b)`; attained by scanning forward from random starts), against
+(`LoopWalk.creation_le`, `p = 2^-(h−b)`; attained by scanning forward from random starts), against
 `1/2^128` for independent attempts. The potentials therefore keep the cached pairs of each unsigned
 message as one exclusive group (`GroupFuture.grp`, `BridgeGroups.grpAll`) applied to the one-coin
 future of the pairs still to come:
@@ -307,7 +314,7 @@ future of the pairs still to come:
   coin is `(2 − p)/(2^128 p (1 − τ))` (`H0Fair.wbarOf`, `FairS`), with `τ` from the numbers of cached
   digests and of cached landed pairs (`LoopWalk.mass_le`);
 - the number of cached landed pairs of unsigned messages is capped by an exact martingale
-  (`lam` in `BridgeForsPotentialOnce`): above the cap the bound is trivial, and the cap term is
+  (`lam` in `BridgeForestPotentialOnce`): above the cap the bound is trivial, and the cap term is
   at most `(64/65)^(2^15)` at the start (`H0Fair.lam_start`);
 - a signing call is paid by one fresh slot and the group of its message (`sign_term`): no coupling
   and no fair share;
@@ -328,7 +335,7 @@ future of the pairs still to come:
   pays guesses, first-order hits, WOTS second-order events, unrecorded forest contacts and pairs of
   contacts, and leaves `(ρ - 1 - x) 2^-128` per forest step query unused (`smallRoute_potentialF`).
 - **One-coin cover potential** at baseline `ρ / 2^128` with the exact cover indicator as witness
-  (`BridgeForsPotentialOnce`, `BridgeForsGameOnce`), and its H-term certificate (`H0*`: Poissonization,
+  (`BridgeForestPotentialOnce`, `BridgeForestGameOnce`), and its H-term certificate (`H0*`: Poissonization,
   splitting into independent indices, first and second moments of the per-tree cover fraction from
   the distribution of the componentwise maximum of codewords, `H0ForestOpt`).
 - **Contact bound A4** (`BridgeA4F`, `BridgeA4Sign`, `BridgeA4Final` on the game framework
@@ -365,8 +372,8 @@ The one-coin bound at the survival-weighted baseline (`BridgeSatW*`, `det_largeW
 option, the near certificate, `checkSmallF` at `qh` (coin summand `(2 − p) qh / 2^129`), and a chain
 of covers of `[qh + 1, 2^127)`, each with its own Poisson table: light covers (`checkCoverW`, coin
 `wbarOf`) up to about `0.249 · 2^128`, then one heavy cover (`checkCoverH`, `N + 1` signatures, coin
-`wbarH`). For `b = 24` there is no grinding and one light cover reaches `2^127`. The splits are
-`lx` = −10.0 / −9.125 / −8.125 / −8.0 / −7.75 / −7.625 / −7.375 (`b = 24 … 8`, `PARAMS` in the script),
-the best of a grid of step 1/8 refined to 1/64 around its optimum; the limits are the largest `N`
-both routes certify there, rounded down to four digits. For `b = 24` the large route alone limits
-`N`; below, both routes are tight.
+`wbarH`). For `b = h` (the full key and the layered key) there is no grinding and one light cover
+reaches `2^127`. The splits `lx` are in [PROOF.md](PROOF.md) (`PARAMS` and `LAYERED` in the script),
+the best of a grid of step 1/8; the limits are the largest `N` both routes certify there, rounded
+down to four significant digits. Every checker takes the total height `H`, the kept height `b` and
+the keygen credit `K` as arguments, so one checker serves every configuration.

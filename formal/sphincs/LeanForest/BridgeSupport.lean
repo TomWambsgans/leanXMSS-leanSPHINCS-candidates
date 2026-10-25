@@ -8,6 +8,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
 
+variable [Params]
+
 open HiddenCost GraphView Stop
 
 set_option backward.isDefEq.respectTransparency false

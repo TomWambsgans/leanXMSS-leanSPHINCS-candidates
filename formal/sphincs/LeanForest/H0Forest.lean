@@ -11,6 +11,8 @@ open ENNReal NNReal
 
 namespace LeanForest.Security.H0
 
+variable [Params]
+
 open Concrete ForestPrice LeanForest.Base.Domination LeanForest.Base.H0 H0Avg
 
 set_option linter.unusedSectionVars false
@@ -172,7 +174,6 @@ theorem cnt_id (e : Multiset ι) (l : ι) : cnt id e l = e.count l := by
   congr 1
   exact Multiset.filter_congr fun x _ => by simp [eq_comm]
 
-variable [Params]
 
 /-- **The forest H-term.** -/
 theorem hTermO_forest_le (w lam : ℝ≥0∞) (hw : w ≤ 1) (hlam : lam ≤ 1) (N q : ℕ) (b0 : ℝ≥0∞) (c c1 θ : ℝ)
@@ -181,11 +182,11 @@ theorem hTermO_forest_le (w lam : ℝ≥0∞) (hw : w ≤ 1) (hlam : lam ≤ 1) 
     (α γ : ℝ≥0) (hα : (Fintype.card (Fin (2 ^ subtreeHeight)) : ℝ≥0∞) * α = 1)
     (hγ : (Fintype.card (Fin (2 ^ subtreeHeight)) : ℝ≥0∞) * γ = lam * w) (μ : ℝ≥0)
     (hμ : (N : ℝ≥0) * α + (q : ℝ≥0) * γ ≤ μ) :
-    hTermO (Finset.univ : Finset View) w lam N q (ForsPotential.excess b0) ≤
+    hTermO (Finset.univ : Finset View) w lam N q (ForestPotential.excess b0) ≤
       (Fintype.card (Fin (2 ^ subtreeHeight)) : ℝ≥0∞) * poisMean μ gbar +
         ENNReal.ofReal (Real.exp (-θ * c) / (Real.exp 1 * θ)) * poisMean μ hbar ^ Fintype.card (Fin (2 ^ subtreeHeight)) := by
   set A := ENNReal.ofReal (Real.exp (-θ * c) / (Real.exp 1 * θ)) with hAdef
-  have hdom : Dominated (ForsPotential.excess b0) (fun e : Multiset (Fin (2 ^ subtreeHeight)) =>
+  have hdom : Dominated (ForestPotential.excess b0) (fun e : Multiset (Fin (2 ^ subtreeHeight)) =>
       ∑ l, gbar (e.count l) + A * ∏ l, hbar (e.count l)) :=
     dominated_of_split (gS c1) (hS c1 θ) A (fun d => excess_le_split b0 c c1 θ hc hθ d) gbar hbar hg hh
   refine le_trans (hTermO_le_of_dominated w lam N q hdom) ?_

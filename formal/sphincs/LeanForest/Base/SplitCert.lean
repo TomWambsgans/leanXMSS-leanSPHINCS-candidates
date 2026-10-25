@@ -722,7 +722,7 @@ theorem hTermO_le_opt {V ι : Type} [DecidableEq ι] [Fintype ι] (idx : V → �
           exact h8
         exact_mod_cast h8'
 
-/-! ### The FORS H-term at a general threshold -/
+/-! ### The forest H-term at a general threshold -/
 
 
 end LeanForest.Base.H0

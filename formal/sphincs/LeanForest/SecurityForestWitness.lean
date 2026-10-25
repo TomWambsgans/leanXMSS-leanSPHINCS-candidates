@@ -18,6 +18,8 @@ for the four level-2 nodes of a super-child (`SuperMatch`) and the folds of 2 le
 open OracleComp OracleSpec
 
 namespace LeanForest.Security
+
+variable [Params]
 open Concrete
 
 theorem superPayload_injective {tops tops' : SubIdx → Digest × Digest}

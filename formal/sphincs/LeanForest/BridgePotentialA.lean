@@ -15,12 +15,17 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.PotentialA
 
+variable [Params]
+
 open Concrete HiddenGraph HiddenDebt HiddenBridge EncodingCode
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
+
+/-- A retained WOTS key: its tree is generated and its leaf kept. -/
+abbrev Retained (p : PublicParameter) (key : OtsKey) : Prop := PrunedGraph.KeyActive p key.1 key.2.1 key.2.2
 
 /-- Comparison states of the candidate. -/
 abbrev St := DebtState HashInput HashOutput Coordinate
@@ -33,7 +38,7 @@ results, the prepared cache, the values of the always-known coordinates, the tar
 first-order hits (comparing truncated answers), and the plain rate. -/
 structure Ctx where
   p : PublicParameter
-  R : Index → Option (Counter × Encoding)
+  R : OtsKey → Option (Counter × Encoding)
   initial : QueryCache HashSpec
   F : Coordinate → Digest
   tg : Targeting HashInput HashOutput Coordinate
@@ -117,16 +122,16 @@ theorem domain_eq_of_input {p p' : PublicParameter} {d d' : HashDomain} {m m' : 
     d = d' ∧ m = m' :=
   ⟨hashFields_injective hd hd' (tweakableInput_injective h).1, (tweakableInput_injective h).2.2⟩
 
-theorem chainInput_inj {p : PublicParameter} {l l' : Index} {i i' : ChainIndex} {st st' : ChainStep}
+theorem chainInput_inj {p : PublicParameter} {l l' : OtsKey} {i i' : ChainIndex} {st st' : ChainStep}
     {v v' : Digest} (h : chainInput p l i st v = chainInput p l' i' st' v') :
     l = l' ∧ i = i' ∧ st = st' ∧ v = v' := by
   obtain ⟨hd, hm⟩ := domain_eq_of_input h trivial trivial
   simp only [HashDomain.chain.injEq] at hd
-  obtain ⟨-, -, rfl, rfl, rfl⟩ := hd
-  exact ⟨rfl, rfl, rfl, bytesLE_injective hm⟩
+  obtain ⟨h1, h2, h3, rfl, rfl⟩ := hd
+  exact ⟨Prod.ext h1 (Prod.ext h2 h3), rfl, rfl, bytesLE_injective hm⟩
 
-theorem chainInput_ne_enc {p p' : PublicParameter} {l : Index} {i : ChainIndex} {st : ChainStep} {v : Digest}
-    {lay : Layer} {tree : TreeIndex} {l' : LeafIndex} {m : ForestKey} {c : Counter} :
+theorem chainInput_ne_enc {p p' : PublicParameter} {l : OtsKey} {i : ChainIndex} {st : ChainStep} {v : Digest}
+    {lay : Layer} {tree : TreeIndex} {l' : LeafIndex} {m : HashInput} {c : Counter} :
     chainInput p l i st v ≠ Wots.encodingInput p' lay tree l' m c := by
   intro h
   have hd := (domain_eq_of_input h trivial trivial).1
@@ -179,25 +184,27 @@ theorem outC_ne_of_rel {f g : FIn} (h : f.Rel g) : f.outC ≠ g.outC := by
 
 end FIn
 
-theorem chainInput_ne_fchain {p p' : PublicParameter} {l : Index} {i : ChainIndex} {st : ChainStep} {v : Digest}
+theorem chainInput_ne_fchain {p p' : PublicParameter} {l : OtsKey} {i : ChainIndex} {st : ChainStep} {v : Digest}
     {f : FIn} : chainInput p l i st v ≠ f.input p' := by
   intro h
   have hd := (domain_eq_of_input h trivial trivial).1
   cases hd
 
-theorem enc_ne_fchain {p p' : PublicParameter} {lay : Layer} {tree : TreeIndex} {l : LeafIndex} {m : ForestKey}
+theorem enc_ne_fchain {p p' : PublicParameter} {lay : Layer} {tree : TreeIndex} {l : LeafIndex} {m : HashInput}
     {c : Counter} {f : FIn} : Wots.encodingInput p lay tree l m c ≠ f.input p' := by
   intro h
   have hd := (domain_eq_of_input h trivial trivial).1
   cases hd
 
-theorem enc_inj {p : PublicParameter} {l l' : LeafIndex} {m m' : ForestKey} {c c' : Counter}
-    (h : Wots.encodingInput p topLayer rootTree l m c = Wots.encodingInput p topLayer rootTree l' m' c') :
+theorem enc_inj {p : PublicParameter} {l l' : OtsKey} {m m' : HashInput} {c c' : Counter}
+    (h : Wots.encodingInput p l.1 l.2.1 l.2.2 m c = Wots.encodingInput p l'.1 l'.2.1 l'.2.2 m' c') :
     l = l' ∧ m = m' ∧ c = c' := by
   have hd := (domain_eq_of_input h trivial trivial).1
   simp only [HashDomain.encoding.injEq] at hd
-  obtain ⟨-, -, rfl⟩ := hd
-  exact ⟨rfl, Wots.encodingInput_injective p topLayer rootTree l h⟩
+  obtain ⟨l1, l2, l3⟩ := l
+  obtain ⟨l1', l2', l3'⟩ := l'
+  obtain ⟨rfl, rfl, rfl⟩ := hd
+  exact ⟨rfl, Wots.encodingInput_injective p l1 l2 l3 h⟩
 
 theorem fchain_inj {p : PublicParameter} {f g : FIn} (h : f.input p = g.input p) : f = g := by
   obtain ⟨hd, hm⟩ := domain_eq_of_input h trivial trivial
@@ -207,61 +214,60 @@ theorem fchain_inj {p : PublicParameter} {f g : FIn} (h : f.input p = g.input p)
   cases f; cases g
   simp_all
 
-variable [Params]
 
 namespace Ctx
 
 variable (K : Ctx)
 
 /-- The prepared word of a leaf. -/
-noncomputable def w (l : Index) : Encoding := preparedWord K.R l
+noncomputable def w (l : OtsKey) : Encoding := preparedWord K.R l
 
 /-- A cache entry made during the run. -/
 def Fr (s : St) (x : HashInput) (u : HashOutput) : Prop := s.cache x = some u ∧ K.initial x = none
 
 /-- The frontier value of a chain: the value at the prepared word. -/
-noncomputable def front (l : Index) (i : ChainIndex) : Digest :=
-  K.F (.chain topLayer rootTree l i (K.w l i))
+noncomputable def front (l : OtsKey) (i : ChainIndex) : Digest :=
+  K.F (.chain l.1 l.2.1 l.2.2 i (K.w l i))
 
 /-- A chain input two steps below the word. -/
-def IsA (l : Index) (i : ChainIndex) (x : HashInput) : Prop :=
+def IsA (l : OtsKey) (i : ChainIndex) (x : HashInput) : Prop :=
   ∃ (st : ChainStep) (payload : Digest), st.val + 2 = (K.w l i).val ∧ x = chainInput K.p l i st payload
 
 /-- A chain input one step below the word, with its payload. -/
-def IsB (l : Index) (i : ChainIndex) (v : Digest) (x : HashInput) : Prop :=
+def IsB (l : OtsKey) (i : ChainIndex) (v : Digest) (x : HashInput) : Prop :=
   ∃ st : ChainStep, st.val + 1 = (K.w l i).val ∧ x = chainInput K.p l i st v
 
 /-- Truncated answers of fresh inputs two steps below the word. -/
-def AAns (s : St) (l : Index) (i : ChainIndex) : Set Digest :=
+def AAns (s : St) (l : OtsKey) (i : ChainIndex) : Set Digest :=
   {t | ∃ x u, K.IsA l i x ∧ K.Fr s x u ∧ truncateHash u = t}
 
 /-- Payloads of fresh inputs one step below the word. -/
-def BPay (s : St) (l : Index) (i : ChainIndex) : Set Digest :=
+def BPay (s : St) (l : OtsKey) (i : ChainIndex) : Set Digest :=
   {v | ∃ x u, K.IsB l i v x ∧ K.Fr s x u}
 
 /-- Payloads of fresh inputs one step below the word whose answer is the frontier. -/
-def ContactB (s : St) (l : Index) (i : ChainIndex) : Set Digest :=
+def ContactB (s : St) (l : OtsKey) (i : ChainIndex) : Set Digest :=
   {v | ∃ x u, K.IsB l i v x ∧ K.Fr s x u ∧ truncateHash u = K.front l i}
 
 /-- Digests decoding to a unit neighbour of the prepared word lowering one chain. -/
-noncomputable def markSet (l : Index) (i : ChainIndex) : Finset Digest :=
+noncomputable def markSet (l : OtsKey) (i : ChainIndex) : Finset Digest :=
   decodingDigests (unitNeighbors (K.w l) i)
 
 /-- Digests decoding to a unit neighbour of the prepared word. -/
-noncomputable def markAll (l : Index) : Finset Digest := decodingDigests (allUnitNeighbors (K.w l))
+noncomputable def markAll (l : OtsKey) : Finset Digest := decodingDigests (allUnitNeighbors (K.w l))
 
 /-- A fresh encoding answer of the leaf decodes to a unit neighbour lowering the chain. -/
-def Marker (s : St) (l : Index) (i : ChainIndex) : Prop :=
-  ∃ msg ctr u, K.Fr s (Wots.encodingInput K.p topLayer rootTree l msg ctr) u ∧ truncateHash u ∈ K.markSet l i
+def Marker (s : St) (l : OtsKey) (i : ChainIndex) : Prop :=
+  ∃ msg ctr u, K.Fr s (Wots.encodingInput K.p l.1 l.2.1 l.2.2 msg ctr) u ∧ truncateHash u ∈ K.markSet l i
 
 /-- The WOTS events of a leaf: an observed contact, a contact at a marked chain, or contacts at
 two chains. -/
-def BadLeaf (s : St) (l : Index) : Prop :=
+def BadLeaf (s : St) (l : OtsKey) : Prop :=
   (∃ i, (K.ContactB s l i ∩ K.AAns s l i).Nonempty) ∨
   (∃ i, (K.ContactB s l i).Nonempty ∧ K.Marker s l i) ∨
   (∃ i i', i ≠ i' ∧ (K.ContactB s l i).Nonempty ∧ (K.ContactB s l i').Nonempty)
 
-def WotsBad (s : St) : Prop := ∃ l, Landed K.p l ∧ K.BadLeaf s l
+def WotsBad (s : St) : Prop := ∃ l, Retained K.p l ∧ K.BadLeaf s l
 
 /-- A fresh entry of a forest chain step. -/
 def FE (s : St) (f : FIn) : Prop := ∃ u, K.Fr s (f.input K.p) u
@@ -279,19 +285,19 @@ def Recd (s : St) (f : FIn) : Prop := (f.inC, f.v) ∈ s.guesses
 /-- The decided bad event. -/
 def Bad (s : St) : Prop := Realized K.tg K.initial s ∨ K.WotsBad s
 
-/-- Some landed leaf without a WOTS event has a marker or a contact. -/
+/-- Some retained key without a WOTS event has a marker or a contact. -/
 def Armed (s : St) : Prop :=
-  ∃ l, Landed K.p l ∧ ¬K.BadLeaf s l ∧ ((∃ i, K.Marker s l i) ∨ ∃ i, (K.ContactB s l i).Nonempty)
+  ∃ l, Retained K.p l ∧ ¬K.BadLeaf s l ∧ ((∃ i, K.Marker s l i) ∨ ∃ i, (K.ContactB s l i).Nonempty)
 
 /-- Contacts at a leaf without a WOTS event. -/
-noncomputable def leafCount (s : St) (l : Index) : ℝ≥0∞ :=
+noncomputable def leafCount (s : St) (l : OtsKey) : ℝ≥0∞ :=
   if K.BadLeaf s l then 0 else ∑ i, ((K.ContactB s l i).encard : ℝ≥0∞)
 
-noncomputable def contactCount (s : St) : ℝ≥0∞ := ∑ l, if Landed K.p l then K.leafCount s l else 0
+noncomputable def contactCount (s : St) : ℝ≥0∞ := ∑ l, if Retained K.p l then K.leafCount s l else 0
 
 /-- Inputs two steps below the word whose answer is no payload one step below. -/
 def UAset (s : St) : Set HashInput :=
-  {x | ∃ l i u, Landed K.p l ∧ K.IsA l i x ∧ K.Fr s x u ∧ truncateHash u ∉ K.BPay s l i}
+  {x | ∃ l i u, Retained K.p l ∧ K.IsA l i x ∧ K.Fr s x u ∧ truncateHash u ∉ K.BPay s l i}
 
 /-- The contact weight of a forest step: one for a decided contact, `2^-128` for a latent step,
 zero otherwise. -/
@@ -347,50 +353,50 @@ noncomputable def payoff (T : Coordinate → Digest) (s : St) : ℝ≥0∞ :=
 
 variable {K}
 
-theorem isA_unique {l l' : Index} {i i' : ChainIndex} {x : HashInput} (h : K.IsA l i x) (h' : K.IsA l' i' x) :
+theorem isA_unique {l l' : OtsKey} {i i' : ChainIndex} {x : HashInput} (h : K.IsA l i x) (h' : K.IsA l' i' x) :
     l = l' ∧ i = i' := by
   obtain ⟨st, pay, -, rfl⟩ := h
   obtain ⟨st', pay', -, heq⟩ := h'
   obtain ⟨hl, hi, -, -⟩ := chainInput_inj heq
   exact ⟨hl, hi⟩
 
-theorem isB_unique {l l' : Index} {i i' : ChainIndex} {v v' : Digest} {x : HashInput} (h : K.IsB l i v x)
+theorem isB_unique {l l' : OtsKey} {i i' : ChainIndex} {v v' : Digest} {x : HashInput} (h : K.IsB l i v x)
     (h' : K.IsB l' i' v' x) : l = l' ∧ i = i' ∧ v = v' := by
   obtain ⟨st, -, rfl⟩ := h
   obtain ⟨st', -, heq⟩ := h'
   obtain ⟨hl, hi, -, hv⟩ := chainInput_inj heq
   exact ⟨hl, hi, hv⟩
 
-theorem isB_input {l : Index} {i : ChainIndex} {v : Digest} {x y : HashInput} (h : K.IsB l i v x)
+theorem isB_input {l : OtsKey} {i : ChainIndex} {v : Digest} {x y : HashInput} (h : K.IsB l i v x)
     (h' : K.IsB l i v y) : x = y := by
   obtain ⟨st, hst, rfl⟩ := h
   obtain ⟨st', hst', rfl⟩ := h'
   have : st = st' := Fin.ext (by omega)
   rw [this]
 
-theorem isA_not_isB {l l' : Index} {i i' : ChainIndex} {v : Digest} {x : HashInput} (h : K.IsA l i x)
+theorem isA_not_isB {l l' : OtsKey} {i i' : ChainIndex} {v : Digest} {x : HashInput} (h : K.IsA l i x)
     (h' : K.IsB l' i' v x) : False := by
   obtain ⟨st, pay, hst, rfl⟩ := h
   obtain ⟨st', hst', heq⟩ := h'
   obtain ⟨rfl, rfl, rfl, -⟩ := chainInput_inj heq
   omega
 
-theorem isA_ne_enc {l : Index} {i : ChainIndex} {x : HashInput} (h : K.IsA l i x) (l' : LeafIndex) (msg : ForestKey)
-    (ctr : Counter) : x ≠ Wots.encodingInput K.p topLayer rootTree l' msg ctr := by
+theorem isA_ne_enc {l : OtsKey} {i : ChainIndex} {x : HashInput} (h : K.IsA l i x) (l' : OtsKey) (msg : HashInput)
+    (ctr : Counter) : x ≠ Wots.encodingInput K.p l'.1 l'.2.1 l'.2.2 msg ctr := by
   obtain ⟨st, pay, -, rfl⟩ := h
   exact chainInput_ne_enc
 
-theorem isB_ne_enc {l : Index} {i : ChainIndex} {v : Digest} {x : HashInput} (h : K.IsB l i v x) (l' : LeafIndex)
-    (msg : ForestKey) (ctr : Counter) : x ≠ Wots.encodingInput K.p topLayer rootTree l' msg ctr := by
+theorem isB_ne_enc {l : OtsKey} {i : ChainIndex} {v : Digest} {x : HashInput} (h : K.IsB l i v x) (l' : OtsKey)
+    (msg : HashInput) (ctr : Counter) : x ≠ Wots.encodingInput K.p l'.1 l'.2.1 l'.2.2 msg ctr := by
   obtain ⟨st, -, rfl⟩ := h
   exact chainInput_ne_enc
 
-theorem isA_ne_fchain {l : Index} {i : ChainIndex} {x : HashInput} (h : K.IsA l i x) (f : FIn) :
+theorem isA_ne_fchain {l : OtsKey} {i : ChainIndex} {x : HashInput} (h : K.IsA l i x) (f : FIn) :
     x ≠ f.input K.p := by
   obtain ⟨st, pay, -, rfl⟩ := h
   exact chainInput_ne_fchain
 
-theorem isB_ne_fchain {l : Index} {i : ChainIndex} {v : Digest} {x : HashInput} (h : K.IsB l i v x) (f : FIn) :
+theorem isB_ne_fchain {l : OtsKey} {i : ChainIndex} {v : Digest} {x : HashInput} (h : K.IsB l i v x) (f : FIn) :
     x ≠ f.input K.p := by
   obtain ⟨st, -, rfl⟩ := h
   exact chainInput_ne_fchain
@@ -421,7 +427,7 @@ theorem fr_store_of (hx : s.cache x = none) (hi : K.initial x = none) {y : HashI
     (h : K.Fr s y v) : K.Fr (s.store x u) y v :=
   (fr_store u hx hi).2 (Or.inl h)
 
-theorem aAns_store (hx : s.cache x = none) (hi : K.initial x = none) (l : Index) (i : ChainIndex) :
+theorem aAns_store (hx : s.cache x = none) (hi : K.initial x = none) (l : OtsKey) (i : ChainIndex) :
     K.AAns (s.store x u) l i =
       if K.IsA l i x then insert (truncateHash u) (K.AAns s l i) else K.AAns s l i := by
   ext t
@@ -442,7 +448,7 @@ theorem aAns_store (hx : s.cache x = none) (hi : K.initial x = none) (l : Index)
     · rintro ⟨y, v, hy, hfr, ht⟩
       exact ⟨y, v, hy, Or.inl hfr, ht⟩
 
-theorem bPay_store (hx : s.cache x = none) (hi : K.initial x = none) (l : Index) (i : ChainIndex) :
+theorem bPay_store (hx : s.cache x = none) (hi : K.initial x = none) (l : OtsKey) (i : ChainIndex) :
     K.BPay (s.store x u) l i = K.BPay s l i ∪ {v | K.IsB l i v x} := by
   ext v
   simp only [BPay, Set.mem_union, Set.mem_setOf_eq, fr_store u hx hi]
@@ -454,7 +460,7 @@ theorem bPay_store (hx : s.cache x = none) (hi : K.initial x = none) (l : Index)
     · exact ⟨y, w, hy, Or.inl hfr⟩
     · exact ⟨x, u, hv, Or.inr ⟨rfl, rfl⟩⟩
 
-theorem contactB_store (hx : s.cache x = none) (hi : K.initial x = none) (l : Index) (i : ChainIndex) :
+theorem contactB_store (hx : s.cache x = none) (hi : K.initial x = none) (l : OtsKey) (i : ChainIndex) :
     K.ContactB (s.store x u) l i =
       K.ContactB s l i ∪ {v | K.IsB l i v x ∧ truncateHash u = K.front l i} := by
   ext v
@@ -467,9 +473,9 @@ theorem contactB_store (hx : s.cache x = none) (hi : K.initial x = none) (l : In
     · exact ⟨y, w, hy, Or.inl hfr, ht⟩
     · exact ⟨x, u, hv, Or.inr ⟨rfl, rfl⟩, ht⟩
 
-theorem marker_store (hx : s.cache x = none) (hi : K.initial x = none) (l : Index) (i : ChainIndex) :
+theorem marker_store (hx : s.cache x = none) (hi : K.initial x = none) (l : OtsKey) (i : ChainIndex) :
     K.Marker (s.store x u) l i ↔ K.Marker s l i ∨
-      ((∃ msg ctr, x = Wots.encodingInput K.p topLayer rootTree l msg ctr) ∧ truncateHash u ∈ K.markSet l i) := by
+      ((∃ msg ctr, x = Wots.encodingInput K.p l.1 l.2.1 l.2.2 msg ctr) ∧ truncateHash u ∈ K.markSet l i) := by
   simp only [Marker, fr_store u hx hi]
   constructor
   · rintro ⟨msg, ctr, w, (hfr | ⟨hxe, rfl⟩), hm⟩
@@ -509,7 +515,7 @@ theorem lat_store (hx : s.cache x = none) (hi : K.initial x = none) (f : FIn) :
   simp only [Lat, fe_store u hx hi, hk]
   tauto
 
-theorem bPay_mono (hx : s.cache x = none) (hi : K.initial x = none) (l : Index) (i : ChainIndex) :
+theorem bPay_mono (hx : s.cache x = none) (hi : K.initial x = none) (l : OtsKey) (i : ChainIndex) :
     K.BPay s l i ⊆ K.BPay (s.store x u) l i := by
   rw [bPay_store u hx hi]
   exact Set.subset_union_left
@@ -522,7 +528,7 @@ theorem uaSet_store (hx : s.cache x = none) (hi : K.initial x = none) :
   · exact Or.inl rfl
 
 theorem uaSet_store_of_not (hx : s.cache x = none) (hi : K.initial x = none)
-    (hA : ∀ l i, Landed K.p l → ¬K.IsA l i x) : K.UAset (s.store x u) ⊆ K.UAset s := by
+    (hA : ∀ l i, Retained K.p l → ¬K.IsA l i x) : K.UAset (s.store x u) ⊆ K.UAset s := by
   intro y hy
   rcases uaSet_store u hx hi hy with rfl | h
   · obtain ⟨l, i, w, hl, hA', -⟩ := hy
@@ -530,13 +536,13 @@ theorem uaSet_store_of_not (hx : s.cache x = none) (hi : K.initial x = none)
   · exact h
 
 /-- A fresh input one step below the word has a fresh payload. -/
-theorem not_mem_bPay (hx : s.cache x = none) {l : Index} {i : ChainIndex} {v : Digest} (hB : K.IsB l i v x) :
+theorem not_mem_bPay (hx : s.cache x = none) {l : OtsKey} {i : ChainIndex} {v : Digest} (hB : K.IsB l i v x) :
     v ∉ K.BPay s l i := by
   rintro ⟨y, w, hy, hfr, -⟩
   rw [← isB_input hB hy, hx] at hfr
   cases hfr
 
-theorem contactB_subset_bPay (l : Index) (i : ChainIndex) : K.ContactB s l i ⊆ K.BPay s l i := by
+theorem contactB_subset_bPay (l : OtsKey) (i : ChainIndex) : K.ContactB s l i ⊆ K.BPay s l i := by
   rintro v ⟨y, w, hy, hfr, -⟩
   exact ⟨y, w, hy, hfr⟩
 
@@ -545,53 +551,53 @@ end Store
 /-! ### Leaf-local data -/
 
 /-- A leaf without a WOTS event that has a marker or a contact. -/
-def ArmedAt (s : St) (l : Index) : Prop :=
+def ArmedAt (s : St) (l : OtsKey) : Prop :=
   ¬K.BadLeaf s l ∧ ((∃ i, K.Marker s l i) ∨ ∃ i, (K.ContactB s l i).Nonempty)
 
 /-- Two states agree at a leaf. -/
-def SameLeaf (s s' : St) (l : Index) : Prop :=
+def SameLeaf (s s' : St) (l : OtsKey) : Prop :=
   (∀ i, K.ContactB s' l i = K.ContactB s l i) ∧ (∀ i, K.AAns s' l i = K.AAns s l i) ∧
     (∀ i, K.Marker s' l i ↔ K.Marker s l i)
 
-theorem badLeaf_congr {s s' : St} {l : Index} (h : K.SameLeaf s s' l) : K.BadLeaf s' l ↔ K.BadLeaf s l := by
+theorem badLeaf_congr {s s' : St} {l : OtsKey} (h : K.SameLeaf s s' l) : K.BadLeaf s' l ↔ K.BadLeaf s l := by
   obtain ⟨hc, ha, hm⟩ := h
   simp only [BadLeaf, hc, ha, hm]
 
-theorem armedAt_congr {s s' : St} {l : Index} (h : K.SameLeaf s s' l) : K.ArmedAt s' l ↔ K.ArmedAt s l := by
+theorem armedAt_congr {s s' : St} {l : OtsKey} (h : K.SameLeaf s s' l) : K.ArmedAt s' l ↔ K.ArmedAt s l := by
   have hb := badLeaf_congr h
   obtain ⟨hc, -, hm⟩ := h
   simp only [ArmedAt, hb, hc, hm]
 
-theorem leafCount_congr {s s' : St} {l : Index} (h : K.SameLeaf s s' l) : K.leafCount s' l = K.leafCount s l := by
+theorem leafCount_congr {s s' : St} {l : OtsKey} (h : K.SameLeaf s s' l) : K.leafCount s' l = K.leafCount s l := by
   have hb := badLeaf_congr h
   obtain ⟨hc, -, -⟩ := h
   simp only [leafCount, hb, hc]
 
 /-- Away from one leaf, the WOTS aggregates follow that leaf. -/
-theorem wotsBad_of_same {s s' : St} (l₀ : Index) (h : ∀ l, Landed K.p l → l ≠ l₀ → K.SameLeaf s s' l)
-    (hw : K.WotsBad s') : K.WotsBad s ∨ (Landed K.p l₀ ∧ K.BadLeaf s' l₀) := by
+theorem wotsBad_of_same {s s' : St} (l₀ : OtsKey) (h : ∀ l, Retained K.p l → l ≠ l₀ → K.SameLeaf s s' l)
+    (hw : K.WotsBad s') : K.WotsBad s ∨ (Retained K.p l₀ ∧ K.BadLeaf s' l₀) := by
   obtain ⟨l, hl, hb⟩ := hw
   by_cases hll : l = l₀
   · subst hll
     exact Or.inr ⟨hl, hb⟩
   · exact Or.inl ⟨l, hl, (badLeaf_congr (h l hl hll)).1 hb⟩
 
-theorem armed_of_same {s s' : St} (l₀ : Index) (h : ∀ l, Landed K.p l → l ≠ l₀ → K.SameLeaf s s' l)
-    (ha : K.Armed s') : K.Armed s ∨ (Landed K.p l₀ ∧ K.ArmedAt s' l₀) := by
+theorem armed_of_same {s s' : St} (l₀ : OtsKey) (h : ∀ l, Retained K.p l → l ≠ l₀ → K.SameLeaf s s' l)
+    (ha : K.Armed s') : K.Armed s ∨ (Retained K.p l₀ ∧ K.ArmedAt s' l₀) := by
   obtain ⟨l, hl, hb⟩ := ha
   by_cases hll : l = l₀
   · subst hll
     exact Or.inr ⟨hl, hb⟩
   · exact Or.inl ⟨l, hl, (armedAt_congr (h l hl hll)).1 hb⟩
 
-theorem contactCount_of_same {s s' : St} (l₀ : Index) (h : ∀ l, Landed K.p l → l ≠ l₀ → K.SameLeaf s s' l)
-    (d : ℝ≥0∞) (hd : Landed K.p l₀ → K.leafCount s' l₀ ≤ K.leafCount s l₀ + d) :
+theorem contactCount_of_same {s s' : St} (l₀ : OtsKey) (h : ∀ l, Retained K.p l → l ≠ l₀ → K.SameLeaf s s' l)
+    (d : ℝ≥0∞) (hd : Retained K.p l₀ → K.leafCount s' l₀ ≤ K.leafCount s l₀ + d) :
     K.contactCount s' ≤ K.contactCount s + d := by
   unfold contactCount
-  calc ∑ l, (if Landed K.p l then K.leafCount s' l else 0)
-      ≤ ∑ l, ((if Landed K.p l then K.leafCount s l else 0) + if l = l₀ then d else 0) := by
+  calc ∑ l, (if Retained K.p l then K.leafCount s' l else 0)
+      ≤ ∑ l, ((if Retained K.p l then K.leafCount s l else 0) + if l = l₀ then d else 0) := by
         refine Finset.sum_le_sum fun l _ => ?_
-        by_cases hl : Landed K.p l
+        by_cases hl : Retained K.p l
         · rw [if_pos hl, if_pos hl]
           by_cases hll : l = l₀
           · subst hll
@@ -602,8 +608,8 @@ theorem contactCount_of_same {s s' : St} (l₀ : Index) (h : ∀ l, Landed K.p l
           exact bot_le
     _ = _ := by rw [Finset.sum_add_distrib, Finset.sum_ite_eq' Finset.univ l₀, if_pos (Finset.mem_univ _)]
 
-/-- With every landed leaf unchanged, the WOTS aggregates are unchanged. -/
-theorem wots_of_allSame {s s' : St} (h : ∀ l, Landed K.p l → K.SameLeaf s s' l) :
+/-- With every retained key unchanged, the WOTS aggregates are unchanged. -/
+theorem wots_of_allSame {s s' : St} (h : ∀ l, Retained K.p l → K.SameLeaf s s' l) :
     (K.WotsBad s' ↔ K.WotsBad s) ∧ (K.Armed s' ↔ K.Armed s) ∧ K.contactCount s' = K.contactCount s := by
   refine ⟨⟨fun ⟨l, hl, hb⟩ => ⟨l, hl, (badLeaf_congr (h l hl)).1 hb⟩,
     fun ⟨l, hl, hb⟩ => ⟨l, hl, (badLeaf_congr (h l hl)).2 hb⟩⟩,
@@ -611,14 +617,14 @@ theorem wots_of_allSame {s s' : St} (h : ∀ l, Landed K.p l → K.SameLeaf s s'
       fun ⟨l, hl, hb⟩ => ⟨l, hl, (armedAt_congr (h l hl)).2 hb⟩⟩, ?_⟩
   unfold contactCount
   refine Finset.sum_congr rfl fun l _ => ?_
-  by_cases hl : Landed K.p l
+  by_cases hl : Retained K.p l
   · rw [if_pos hl, if_pos hl, leafCount_congr (h l hl)]
   · rw [if_neg hl, if_neg hl]
 
 /-- Under a store, a leaf is unchanged when the input is not of its WOTS shapes. -/
 theorem sameLeaf_store {s : St} {x : HashInput} (u : HashOutput) (hx : s.cache x = none)
-    (hi : K.initial x = none) (l : Index) (hA : ∀ i, ¬K.IsA l i x) (hB : ∀ i v, ¬K.IsB l i v x)
-    (hE : ∀ msg ctr, x ≠ Wots.encodingInput K.p topLayer rootTree l msg ctr) :
+    (hi : K.initial x = none) (l : OtsKey) (hA : ∀ i, ¬K.IsA l i x) (hB : ∀ i v, ¬K.IsB l i v x)
+    (hE : ∀ msg ctr, x ≠ Wots.encodingInput K.p l.1 l.2.1 l.2.2 msg ctr) :
     K.SameLeaf s (s.store x u) l := by
   refine ⟨fun i => ?_, fun i => ?_, fun i => ?_⟩
   · rw [contactB_store u hx hi]
@@ -629,7 +635,7 @@ theorem sameLeaf_store {s : St} {x : HashInput} (u : HashOutput) (hx : s.cache x
 
 /-- Monotonicity of a leaf's WOTS event under a store. -/
 theorem badLeaf_store_of {s : St} {x : HashInput} (u : HashOutput) (hx : s.cache x = none)
-    (hi : K.initial x = none) {l : Index} (h : K.BadLeaf s l) : K.BadLeaf (s.store x u) l := by
+    (hi : K.initial x = none) {l : OtsKey} (h : K.BadLeaf s l) : K.BadLeaf (s.store x u) l := by
   have hc : ∀ i, K.ContactB s l i ⊆ K.ContactB (s.store x u) l i := fun i => by
     rw [contactB_store u hx hi]
     exact Set.subset_union_left

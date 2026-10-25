@@ -189,8 +189,14 @@ def main():
     ap.add_argument("--pruned", type=int, nargs="+", default=[13, 20], help="log2 kept leaves of pruned keys")
     ap.add_argument("--cache-kib", type=float, nargs="+", default=[16, 1024], help="signer cache sizes (KiB)")
     ap.add_argument("--table", action="store_true", help="one line per configuration: size, verification, lifetime")
+    ap.add_argument("--json", action="store_true", help="every figure of the site, as JSON (site/data.json)")
     x = ap.parse_args()
     hashes = [H for H in HASHES if H.name in x.hash]
+
+    if x.json:
+        import json
+        print(json.dumps(site_data(), indent=1))
+        return
 
     if x.table:
         print("hash        h  shape          size  verify  keygen    proved N   (cover attack)")
@@ -233,15 +239,85 @@ def main():
                     label = "" if b is None else ("full key: " if b == h else f"pruned b={b}: ")
                     print(f"    {label}{life}, keygen {fmt(C.keygen(h, shape, b))}, signing {', '.join(signs)}")
 
-    # Threshold signing (DKG, no dealer): the MPC builds the XMSS part only (the top layer, or the kept subtree);
-    # before a message it prepares 16 random instances (their forest keys, WOTS+C signatures and paths), and
-    # online it grinds onto one of the 16 and opens only the forest chains the message selects.
+    print()
+    threshold(x.h)
+
+
+def site_data():
+    """Every configuration (height, shape, kept subtree, hash) with its figures, and the threshold and hardware-wallet
+    figures, for the site."""
+    out = {"configs": [], "threshold": [], "wallet": {}}
+    for H in HASHES:
+        C = Costs(H)
+        for h in HEIGHTS:
+            for shape in ("pruned", "layered"):
+                for b in ([h] + list(PRUNED) if shape == "pruned" else [h]):
+                    proved, attack = lifetimes(h, shape, b)
+                    signs = {}
+                    for kib in (16, 1024, 16 * 1024):
+                        base, grind, tree = C.sign(h, shape, b, kib * 1024)
+                        signs[str(kib)] = round(base + tree)
+                    out["configs"].append(dict(hash=H.name, h=h, shape=shape, b=b, layers=list(layers(h, shape)),
+                                               size=size(h, shape), verify=C.verify(h, shape),
+                                               keygen=round(C.keygen(h, shape, b)), sign=signs,
+                                               grind=round(2 ** (h - b)) if shape == "pruned" else 1,
+                                               lifetime=proved, attack=attack))
+    C = Costs(HASHES[0])
+    for h in HEIGHTS:
+        for shape, b in (("pruned", 12), ("layered", h)):
+            ls = layers(h, shape)
+            keygen = C.keygen(h, shape, b)
+            lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
+            prep = C.forest_sign + lower + len(ls) * (V // 2 * C.derive + T * C.step)
+            out["threshold"].append(dict(h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
+                                         keygen=round(keygen), prep=round(prep), grind=2**h // PREPARED,
+                                         keygen_gb={str(n): keygen * KECCAK_ANDS * mpc_bits_per_and(n) / 8 / 1e9 for n in (3, 5, 7)},
+                                         prep_mb={str(n): prep * KECCAK_ANDS * mpc_bits_per_and(n) / 8 / 1e6 for n in (3, 5, 7)}))
+    nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
+    out["wallet"] = dict(prepared=PREPARED, stark_verify=STARK_VERIFY, host_rate=HOST_RATE, device_rate=DEVICE_RATE,
+                         opened_avg=COORDS * SUBS * sum(nonzero) / len(nonzero), opened_max=COORDS * SUBS * max(nonzero))
+    return out
+
+
+# Threshold signing (DKG, no dealer) and hardware wallets, with Keccak-256. The MPC builds the XMSS part only
+# (the top layer, or the kept subtree); before a message it prepares random instances (their forest keys,
+# WOTS+C signatures, lower trees and paths), one per signature, and online the signers grind onto one of
+# PREPARED instances in the clear and open only the forest chain values the message selects.
+PREPARED = 16
+KECCAK_ANDS = 36_300  # AND gates of one Keccak-f[1600] call with a public part and a truncated output
+STARK_VERIFY = 10_000  # permutations to verify the STARK of a least grinding index on the device
+HOST_RATE = 1e6  # Keccak-f permutations per second the host proves
+DEVICE_RATE = 5.8e3  # Keccak-f permutations per second of a Ledger Nano S+ (hwbench)
+
+
+def mpc_bits_per_and(n):
+    """Replicated sharing over GF(2), n = 2f + 1 operators: (n - 1) + f bits per AND gate, per operator."""
+    f = (n - 1) // 2
+    return ((n - 1) + f) / n
+
+
+def threshold(heights):
+    C = Costs(HASHES[0])
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
     opened = COORDS * SUBS
-    print(f"\nthreshold: {opened * sum(nonzero) / len(nonzero):.2f} forest chain values opened per signature on "
-          f"average, at most {opened * max(nonzero)}; online grinding onto 16 prepared instances: about 2^h / 16 "
-          f"digest attempts ({', '.join(f'h={h}: {fmt(2 ** h / 16)}' for h in x.h)})")
-
+    print(f"threshold (Keccak-256): {opened * sum(nonzero) / len(nonzero):.2f} forest chain values opened per "
+          f"signature on average, at most {opened * max(nonzero)}")
+    for h in heights:
+        for shape, b in (("pruned", 12), ("layered", None)):
+            ls = layers(h, shape)
+            keygen = C.keygen(h, shape, b)
+            lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
+            prep = C.forest_sign + lower + len(ls) * (V // 2 * C.derive + T * C.step)
+            gb = [keygen * KECCAK_ANDS * mpc_bits_per_and(n) / 8 / 1e9 for n in (3, 5, 7)]
+            pm = [prep * KECCAK_ANDS * mpc_bits_per_and(n) / 8 / 1e6 for n in (3, 5, 7)]
+            label = f"pruned b={b}" if shape == "pruned" else "layered"
+            print(f"  h={h} {label}: keygen MPC {fmt(keygen)} permutations ({', '.join(f'{g:.3g}' for g in gb)} GB "
+                  f"per operator for 2-of-3, 3-of-5, 4-of-7); preprocessing {fmt(prep)} per signature "
+                  f"({', '.join(f'{m:.0f}' for m in pm)} MB); online grinding {fmt(2 ** h / PREPARED)} attempts")
+    print(f"hardware wallet: the host grinds 2^h / {PREPARED} digests "
+          f"({', '.join(f'h={h}: {fmt(2 ** h / PREPARED)}, {2 ** h / PREPARED / HOST_RATE:.2g} s to prove' for h in heights)});"
+          f" the device verifies the STARK in about {fmt(STARK_VERIFY)} permutations, "
+          f"{STARK_VERIFY / DEVICE_RATE:.1f} s at {fmt(DEVICE_RATE)} per second")
 
 if __name__ == "__main__":
     main()

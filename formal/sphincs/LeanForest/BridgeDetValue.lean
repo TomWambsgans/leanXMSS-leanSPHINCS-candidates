@@ -11,6 +11,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.DetValue
 
+variable [Params]
+
 open HiddenCost GraphView Stop
 
 set_option backward.isDefEq.respectTransparency false
@@ -190,7 +192,6 @@ theorem tsum_prob_mul_le {ρ : Type} (p : ProbComp ρ) (C : ℝ≥0∞) :
 
 /-! ### One message: a derived randomizer base read once is a fresh uniform start -/
 
-variable [Params]
 
 /-- Averaging the planted base `R0` of one message, its step fixed: the deterministic signer (one
 tick, then the scan from the base) wins at most as often as the scan from a uniform start. -/
@@ -211,7 +212,7 @@ theorem row_le {α : Type} (E : α → Prop) (parameter : PublicParameter) (data
 
 /-! ### The adversary's interaction as a cost program -/
 
-open Internalize ForsPotential
+open Internalize ForestPotential
 
 noncomputable def finishBool (parameter : PublicParameter) (data : PublicData) (L : QueryLog SigningSpec)
     (forgery : Forgery) : OracleComp CostSpec Bool := do
@@ -397,7 +398,6 @@ theorem avg_advDet (E : Bool → Prop) (parameter : PublicParameter) (data : Pub
 
 attribute [local irreducible] ReferenceChoice.search encodingAttemptLimit
 
-omit [Params] in
 theorem fixedCostP_liftHash {γ : Type} (oa : OracleComp HashSpec γ) :
     simulateQ (fixedCostP g c) (liftM oa : OracleComp CostSpec γ) = pure (evalWithAnswerFn g oa) := by
   induction oa using OracleComp.inductionOn with
@@ -411,14 +411,12 @@ theorem fixedCostP_liftHash {γ : Type} (oa : OracleComp HashSpec γ) :
       rw [pure_bind, ih, evalWithAnswerFn_bind]
       rfl
 
-omit [Params] in
 theorem fixedCostP_tick (amount : ℕ) :
     simulateQ (fixedCostP g c) (HiddenCost.tick (D := HashInput) (R := HashOutput)
       (ι := HiddenGraph.Coordinate) amount) = pure () := by
   rw [HiddenCost.tick, simulateQ_spec_query]
   rfl
 
-omit [Params] in
 theorem fixedCostP_sequence_reveal {n : ℕ} (which : Fin n → HiddenGraph.Coordinate) :
     simulateQ (fixedCostP g c) (Concrete.sequenceFin fun index =>
       HiddenCost.reveal (D := HashInput) (R := HashOutput) (which index)) =
@@ -438,7 +436,6 @@ theorem fixedCostP_sequence_reveal {n : ℕ} (which : Fin n → HiddenGraph.Coor
       funext index
       cases index using Fin.cases <;> rfl
 
-omit [Params] in
 theorem fixedCostP_sequenceFin_pure {α : Type} {n : ℕ} (computation : Fin n → OracleComp CostSpec α)
     (h : ∀ i, ∃ x, simulateQ (fixedCostP g c) (computation i) = pure x) :
     ∃ x, simulateQ (fixedCostP g c) (Concrete.sequenceFin computation) = pure x := by
@@ -450,13 +447,11 @@ theorem fixedCostP_sequenceFin_pure {α : Type} {n : ℕ} (computation : Fin n �
       refine ⟨Fin.cases x0 xs, ?_⟩
       simp only [Concrete.sequenceFin, simulateQ_bind, h0, pure_bind, hs, simulateQ_pure]
 
-omit [Params] in
 theorem fixedCostP_reveal (which : HiddenGraph.Coordinate) :
     simulateQ (fixedCostP g c) (HiddenCost.reveal (D := HashInput) (R := HashOutput) which) = pure (c which) := by
   rw [HiddenCost.reveal, simulateQ_spec_query]
   rfl
 
-omit [Params] in
 theorem fixedCostP_coord_det (data : PublicData) (index : Index) (marks : Coord → CoordMark) :
     ∃ x, simulateQ (fixedCostP g c) (Concrete.sequenceFin fun coord => coordCostSource data index coord (marks coord)) =
       pure x := by
@@ -482,17 +477,51 @@ theorem fixedCostP_coord_det (data : PublicData) (index : Index) (marks : Coord 
   obtain ⟨x, hx⟩ := hsub
   exact ⟨_, by rw [coordCostSource, simulateQ_bind, hx, pure_bind, simulateQ_pure]⟩
 
+theorem fixedCostP_bind_det {α β : Type} (oa : OracleComp CostSpec α) (next : α → OracleComp CostSpec β)
+    (h : ∃ x, simulateQ (fixedCostP g c) oa = pure x)
+    (hnext : ∀ y, ∃ z, simulateQ (fixedCostP g c) (next y) = pure z) :
+    ∃ w, simulateQ (fixedCostP g c) (oa >>= next) = pure w := by
+  obtain ⟨x, hx⟩ := h
+  obtain ⟨z, hz⟩ := hnext x
+  exact ⟨z, by rw [simulateQ_bind, hx, pure_bind, hz]⟩
+
+theorem fixedCostP_sequenceDep_det : ∀ {n : Nat} {α : Fin n → Type}
+    (computation : (i : Fin n) → OracleComp CostSpec (Option (α i))),
+    (∀ i, ∃ x, simulateQ (fixedCostP g c) (computation i) = pure x) →
+    ∃ x, simulateQ (fixedCostP g c) (Concrete.sequenceDep computation) = pure x
+  | 0, _, _, _ => ⟨_, by simp only [Concrete.sequenceDep, simulateQ_pure]; rfl⟩
+  | n + 1, α, computation, h => by
+      obtain ⟨x0, h0⟩ := h 0
+      simp only [Concrete.sequenceDep, simulateQ_bind, h0, pure_bind]
+      rcases x0 with _ | head
+      · exact ⟨_, simulateQ_pure _ _⟩
+      · obtain ⟨xs, hs⟩ := fixedCostP_sequenceDep_det (α := fun i => α i.succ)
+          (fun i => computation i.succ) (fun i => h i.succ)
+        simp only [simulateQ_bind, hs, pure_bind]
+        rcases xs with _ | tail <;> exact ⟨_, simulateQ_pure _ _⟩
+
+theorem layerCostSearch_det (parameter : PublicParameter) (data : PublicData) (index : Index)
+    (lay : Layer) :
+    ∃ x, simulateQ (fixedCostP g c) (layerCostSearch parameter data index lay) = pure x := by
+  simp only [layerCostSearch, simulateQ_bind, fixedCostP_tick, fixedCostP_liftHash, pure_bind]
+  split
+  · simp only [simulateQ_bind, fixedCostP_tick, pure_bind, simulateQ_pure]
+    exact ⟨_, rfl⟩
+  · exact ⟨_, simulateQ_pure _ _⟩
+
 theorem finishCostSource_det (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) :
     ∃ x, simulateQ (fixedCostP g c) (finishCostSource parameter data message randomness) = pure x := by
   simp only [finishCostSource, simulateQ_bind, fixedCostP_liftHash, pure_bind, fixedCostP_tick]
-  split
-  · rename_i counter word _
-    obtain ⟨x, hx⟩ := fixedCostP_coord_det g c data _ _
-    rw [simulateQ_bind, fixedCostP_sequence_reveal g c, pure_bind, simulateQ_bind,
-      hx, pure_bind, simulateQ_bind, fixedCostP_tick, pure_bind, simulateQ_pure]
-    exact ⟨_, rfl⟩
-  · exact ⟨_, rfl⟩
+  obtain ⟨xs, hs⟩ := fixedCostP_sequenceDep_det g c _
+    (fun lay => layerCostSearch_det g c parameter data _ lay)
+  rw [hs, pure_bind]
+  rcases xs with _ | found
+  · exact ⟨_, simulateQ_pure _ _⟩
+  · refine fixedCostP_bind_det g c _ _ (fixedCostP_sequenceFin_pure g c _ (fun lay =>
+      fixedCostP_sequenceFin_pure g c _ (fun chain => ⟨_, fixedCostP_reveal g c _⟩))) (fun _ => ?_)
+    refine fixedCostP_bind_det g c _ _ (fixedCostP_coord_det g c data _ _) (fun _ => ?_)
+    exact ⟨_, simulateQ_pure _ _⟩
 
 theorem signCostDetLoop_det (parameter : PublicParameter) (data : PublicData)
     (message : Message) (step : Randomness) : ∀ (n : ℕ) (start : Randomness),

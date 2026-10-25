@@ -15,6 +15,7 @@ namespace LeanForest.Security.HiddenBridge
 
 variable [Params]
 
+
 /-- The forest step inputs of a public parameter. -/
 def IsFchainIn (parameter : PublicParameter) (input : HashInput) : Prop :=
   ∃ f : PotentialA.FIn, input = f.input parameter
@@ -23,6 +24,8 @@ end LeanForest.Security.HiddenBridge
 
 namespace LeanForest.Security.PotentialA
 
+variable [Params]
+
 open Concrete HiddenGraph HiddenDebt HiddenBridge HiddenCost HiddenReveal EncodingCode
 
 set_option backward.isDefEq.respectTransparency false
@@ -30,7 +33,7 @@ set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
 
-/-- The slack of one FORS leaf query: `1 + Y + (ρ - 1 - x) ≤ ρ` for `Y ≤ x`. -/
+/-- The slack of one forest step query: `1 + Y + (ρ - 1 - x) ≤ ρ` for `Y ≤ x`. -/
 theorem arith_fleaf {ρ x : ℝ} (hN : Numeric ρ x) (hx : 0 ≤ x) {Y : ℝ≥0∞} (hY : Y ≤ ENNReal.ofReal x) :
     1 + Y + ENNReal.ofReal (ρ - 1 - x) ≤ ENNReal.ofReal ρ := by
   have hd : 0 ≤ ρ - 1 - x := by linarith [hN.contact]
@@ -43,7 +46,6 @@ theorem arith_fleaf {ρ x : ℝ} (hN : Numeric ρ x) (hx : 0 ≤ x) {Y : ℝ≥0
         congr 1
         ring
 
-variable [Params]
 
 namespace Ctx
 
@@ -301,11 +303,11 @@ end Ctx
 section Sample
 
 variable (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-  (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+  (remaining : RemainingOutputs) (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
   (known : Knowledge Coordinate) (ρ : ℝ)
 
-/-- **Linear potential on the small-budget route, paying every FORS leaf query.** Besides the
-digest baseline `ρ / 2^128`, every FORS leaf query of the trace (fresh or cached) is paid
+/-- **Linear potential on the small-budget route, paying every forest step query.** Besides the
+digest baseline `ρ / 2^128`, every forest step query of the trace (fresh or cached) is paid
 `(ρ - 1 - x) / 2^128`, `x = total / 2^128`. -/
 theorem smallRoute_potentialF
     (hknown : known ∈ support (exposeR (aboveList (truncateHash parameterOutput) prepared.1)

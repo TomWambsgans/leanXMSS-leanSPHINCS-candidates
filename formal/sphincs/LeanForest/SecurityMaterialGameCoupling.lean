@@ -12,6 +12,8 @@ the prepared material table kept in the shared cache throughout.
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.MaterialGameCoupling
+
+variable [Params]
 open SeedModel SeedCoupling PreparedScheme Completeness
 
 set_option backward.isDefEq.respectTransparency false
@@ -199,7 +201,6 @@ theorem ordinaryWorld_lift_hash {α : Type} (computation : OracleComp HashSpec �
       rw [simulateQ_spec_query]
       rfl
 
-variable [Params]
 
 theorem Related.sign (seed : MasterSeed) (material : Material) (root : Digest) (message : Message) :
     Related (programCache ∅ seed material)
@@ -238,7 +239,6 @@ theorem Related.adversary (seed : MasterSeed) (material : Material) (root : Dige
         QueryImpl.run_withLogging_apply, bind_pure_comp]
       exact (Related.sign seed material root message).map _
 
-omit [Params] in
 theorem targetRun_map {α β : Type} (f : α → β) (computation : OracleComp PreparedWorld α)
     (cache : QueryCache HashSpec) :
     targetRun (f <$> computation) cache =
@@ -246,7 +246,6 @@ theorem targetRun_map {α β : Type} (f : α → β) (computation : OracleComp P
   simp only [targetRun, countPreparedQueries, SphincsSecurity.QueryCap.counted_map,
     simulateQ_map, StateT.run_map]
 
-omit [Params] in
 theorem Related.bind_on_support {α β : Type} {known : QueryCache HashSpec}
     {left : OracleComp OracleWorld α} {right : OracleComp PreparedWorld α}
     (h : Related known left right) (nextLeft : α → OracleComp OracleWorld β)

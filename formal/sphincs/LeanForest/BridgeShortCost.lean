@@ -7,6 +7,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
 
+variable [Params]
+
 open Short Internalize GraphView HiddenCost Concrete
 
 set_option backward.isDefEq.respectTransparency false
@@ -87,14 +89,14 @@ theorem OnlyC.writerLift {α : Type} {oa : OracleComp CostSpec α} (h : OnlyC oa
   exact OnlyC.map _ h
 
 theorem Only.search (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (message : ForestKey) : ∀ attempts start,
+    (message : HashInput) (hmsg : Short.ShortMessage message) : ∀ attempts start,
     Short.Only (ReferenceChoice.search parameter lay tree leaf message attempts start)
   | 0, _ => Short.Only.pure' _
   | attempts + 1, start => by
       rw [ReferenceChoice.search]
-      refine Short.Only.bind (Short.Only.encode _ _ _ _ _ _) (fun found => ?_)
+      refine Short.Only.bind (Short.Only.encode _ _ _ _ _ hmsg _) (fun found => ?_)
       cases found with
-      | none => exact Only.search parameter lay tree leaf message attempts (start + 1)
+      | none => exact Only.search parameter lay tree leaf message hmsg attempts (start + 1)
       | some _ => exact Short.Only.pure' _
 
 theorem onlyC_query_bind {α : Type} {input : CostSpec.Domain} {next : CostSpec.Range input → OracleComp CostSpec α}
@@ -152,7 +154,6 @@ theorem OnlyC.erase {α : Type} {computation : OracleComp CostSpec α} (h : Only
         simpa [OnlyShort] using this
       simpa only [HiddenCost.erase, simulateQ_bind, simulateQ_spec_query] using hbind
 
-variable [Params]
 
 attribute [local irreducible] ReferenceChoice.search encodingAttemptLimit digestAttemptLimit
   Concrete.messageDigest Concrete.messageDigestCall
@@ -168,17 +169,46 @@ theorem OnlyC.coordCostSource (data : PublicData) (index : Index) (c : Coord) (m
   · exact OnlyC.reveal _
   · exact OnlyC.pure' _
 
+theorem OnlyC.sequenceDep : ∀ {n : Nat} {α : Fin n → Type}
+    {computation : (i : Fin n) → OracleComp CostSpec (Option (α i))}, (∀ i, OnlyC (computation i)) →
+      OnlyC (Concrete.sequenceDep computation)
+  | 0, _, _, _ => OnlyC.pure' _
+  | _ + 1, α, computation, h => by
+      unfold Concrete.sequenceDep
+      refine OnlyC.bind (h 0) (fun head => ?_)
+      rcases head with _ | head
+      · exact OnlyC.pure' _
+      · refine OnlyC.bind (OnlyC.sequenceDep (α := fun i => α i.succ) fun i => h i.succ) (fun tail => ?_)
+        rcases tail with _ | tail <;> exact OnlyC.pure' _
+
+theorem shortMessage_keyMessage (data : PublicData) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) :
+    Short.ShortMessage (data.keyMessage lay tree leaf) := by
+  unfold PublicData.keyMessage
+  split
+  · exact Short.shortMessage_root _
+  · exact Short.shortMessage_roots _
+
+theorem OnlyC.layerCostSearch (parameter : PublicParameter) (data : PublicData) (index : Index)
+    (lay : Layer) : OnlyC (GraphView.layerCostSearch parameter data index lay) := by
+  unfold GraphView.layerCostSearch GraphView.layerSearch
+  refine OnlyC.bind (OnlyC.tick _) (fun _ => ?_)
+  refine OnlyC.bind (OnlyC.liftHash (Only.search _ _ _ _ _ (shortMessage_keyMessage _ _ _ _) _ _))
+    (fun found => ?_)
+  rcases found with _ | pair
+  · exact OnlyC.pure' _
+  · exact OnlyC.bind (OnlyC.tick _) (fun _ => OnlyC.pure' _)
+
 theorem OnlyC.finishCostSource (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) : OnlyC (GraphView.finishCostSource parameter data message randomness) := by
   unfold GraphView.finishCostSource
   refine OnlyC.bind (OnlyC.liftHash (Short.Only.messageDigest _ _ _ _)) (fun digest => ?_)
   refine OnlyC.bind (OnlyC.tick _) (fun _ => ?_)
-  refine OnlyC.bind (OnlyC.liftHash (Only.search _ _ _ _ _ _ _)) (fun found => ?_)
-  rcases found with _ | ⟨counter, word⟩
+  refine OnlyC.bind (OnlyC.sequenceDep fun lay => OnlyC.layerCostSearch _ _ _ lay) (fun found => ?_)
+  rcases found with _ | found
   · exact OnlyC.pure' _
-  · refine OnlyC.bind (OnlyC.sequenceFin _ fun _ => OnlyC.reveal _) (fun _ => ?_)
-    refine OnlyC.bind (OnlyC.sequenceFin _ fun _ => OnlyC.coordCostSource _ _ _ _) (fun _ => ?_)
-    exact OnlyC.bind (OnlyC.tick _) (fun _ => OnlyC.pure' _)
+  · refine OnlyC.bind (OnlyC.sequenceFin _ fun _ => OnlyC.sequenceFin _ fun _ => OnlyC.reveal _)
+      (fun _ => ?_)
+    exact OnlyC.bind (OnlyC.sequenceFin _ fun _ => OnlyC.coordCostSource _ _ _ _) (fun _ => OnlyC.pure' _)
 
 theorem OnlyC.signCostSourceLoop (parameter : PublicParameter) (data : PublicData) (message : Message)
     (step : Randomness) :

@@ -1,13 +1,15 @@
-import LeanForest.BridgeForsAssembly
+import LeanForest.BridgeForestAssembly
 
 /-! Exposing chain values at the start. The stopped experiment may start from any knowledge that
 agrees with the coordinate table, in particular one that also exposes the chain values at and
-above the prepared word of every landed leaf. Sampling those values first and completing the
+above the prepared word of every retained key. Sampling those values first and completing the
 rest is the same law as completing the table and reading them off. -/
 
 open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
+
+variable [Params]
 
 open HiddenReveal HiddenCost Eager Short Concrete
 
@@ -58,7 +60,6 @@ end Generic
 
 open Completeness SeedModel Graph Assembly Reduce HiddenGraph Internalize GraphView
 
-variable [Params]
 
 attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
   remainingSampleable
@@ -112,62 +113,61 @@ theorem seedFree_le_expose (adversary : Adversary) (q : Nat) (steps : Message �
     (knownAgrees_exposeT table _ _ hagree) event
 
 /-- The preparation's search results read off an answer function. -/
-noncomputable def resultsOf (parameter : PublicParameter) (forsKey : Index → ForestKey) (f : QueryImpl HashSpec Id) :
-    Index → Option (Counter × Encoding) :=
-  fun leaf => Prefix.firstEncoding f parameter topLayer rootTree leaf (forsKey leaf) encodingAttemptLimit 0
+noncomputable def resultsOf (parameter : PublicParameter) (message : OtsKey → HashInput)
+    (f : QueryImpl HashSpec Id) : OtsKey → Option (Counter × Encoding) :=
+  fun key => Prefix.firstEncoding f parameter key.1 key.2.1 key.2.2 (message key) encodingAttemptLimit 0
 
-omit [Params] in
 theorem extend_agrees (cache : QueryCache HashSpec) (table : Eager.Table) :
     cache.AgreesWithFn (extend cache table) := fun input answer h => by
   simp [extend, h]
 
-omit [Params] in
 /-- **Preparation with exposure.** -/
 theorem evalDist_expose_prep {A α : Type}
     (model : HiddenRows.Model HashInput HashOutput A HiddenGraph.Coordinate)
-    (base : QueryCache HashSpec) (parameter : PublicParameter) (forsKey : Index → ForestKey)
+    (base : QueryCache HashSpec) (parameter : PublicParameter) (message : OtsKey → HashInput)
+    (hmessage : ∀ key, Short.ShortMessage (message key))
     (computation : OracleComp (HiddenRows.SourceSpec HashInput HashOutput HiddenGraph.Coordinate) α)
     (hshort : OnlyShort computation) (known : HiddenReveal.Knowledge HiddenGraph.Coordinate)
-    (cs : (Index → Option (Counter × Encoding)) → List Coordinate) :
+    (cs : (OtsKey → Option (Counter × Encoding)) → List Coordinate) :
     𝒟[($ᵗ Eager.Table) >>= fun outside =>
-        exposeR (cs (resultsOf parameter forsKey (extend base outside))) known >>= fun known' =>
+        exposeR (cs (resultsOf parameter message (extend base outside))) known >>= fun known' =>
           HiddenRows.stoppedExperiment model (extend base outside) computation known'] =
-      𝒟[(simulateQ randomOracle (searchAll parameter forsKey)).run base >>= fun prepared =>
+      𝒟[(simulateQ randomOracle (searchAll parameter message)).run base >>= fun prepared =>
         exposeR (cs prepared.1) known >>= fun known' =>
           Option.map Prod.fst <$> HiddenOutside.stoppedExperiment model computation known' prepared.2] := by
-  rw [evalDist_eager_prefix (searchAll parameter forsKey) (Only.searchAll parameter forsKey) base
-    (fun f => exposeR (cs (resultsOf parameter forsKey f)) known >>= fun known' =>
+  rw [evalDist_eager_prefix (searchAll parameter message) (Only.searchAll parameter message hmessage) base
+    (fun f => exposeR (cs (resultsOf parameter message f)) known >>= fun known' =>
       HiddenRows.stoppedExperiment model f computation known')]
   apply evalDist_bind_congr
   intro prepared hprepared
-  have hres : ∀ outside, resultsOf parameter forsKey (extend prepared.2 outside) = prepared.1 := by
+  have hres : ∀ outside, resultsOf parameter message (extend prepared.2 outside) = prepared.1 := by
     intro outside
-    funext leaf
-    exact (preparation_support parameter forsKey base prepared hprepared (extend prepared.2 outside)
-      (extend_agrees _ _)).2 leaf
+    funext key
+    exact (preparation_support parameter message base prepared hprepared (extend prepared.2 outside)
+      (extend_agrees _ _)).2 key
   simp only [hres]
   rw [evalDist_bind_bind_swap]
   apply evalDist_bind_congr'
   intro known'
   exact evalDist_stoppedExperiment_lazy model _ computation hshort known'
 
-/-- The prepared word of a leaf (the dummy word when the search failed). -/
-noncomputable def preparedWord (results : Index → Option (Counter × Encoding)) (leaf : Index) : Encoding :=
-  ((results leaf).map Prod.snd).getD ReferenceChoice.dummyWord
+/-- The prepared word of a key (the dummy word when the search failed). -/
+noncomputable def preparedWord (results : OtsKey → Option (Counter × Encoding)) (key : OtsKey) : Encoding :=
+  ((results key).map Prod.snd).getD ReferenceChoice.dummyWord
 
-/-- Root-tree chain coordinates at and above the prepared word of a landed leaf. -/
-def AboveWord (parameter : PublicParameter) (results : Index → Option (Counter × Encoding)) :
+/-- Chain coordinates of a retained key at and above its prepared word. -/
+def AboveWord (parameter : PublicParameter) (results : OtsKey → Option (Counter × Encoding)) :
     Coordinate → Prop
   | .chain lay tree leaf chain position =>
-      lay = topLayer ∧ tree = rootTree ∧ Landed parameter leaf ∧ (preparedWord results leaf chain).val ≤ position.val
+      PrunedGraph.KeyActive parameter lay tree leaf ∧ (preparedWord results (lay, tree, leaf) chain).val ≤ position.val
   | _ => False
 
 /-- The above-word coordinates as a list. -/
-noncomputable def aboveList (parameter : PublicParameter) (results : Index → Option (Counter × Encoding)) :
+noncomputable def aboveList (parameter : PublicParameter) (results : OtsKey → Option (Counter × Encoding)) :
     List Coordinate :=
   (Finset.univ.filter (AboveWord parameter results)).toList
 
-theorem mem_aboveList {parameter : PublicParameter} {results : Index → Option (Counter × Encoding)}
+theorem mem_aboveList {parameter : PublicParameter} {results : OtsKey → Option (Counter × Encoding)}
     {c : Coordinate} : c ∈ aboveList parameter results ↔ AboveWord parameter results c := by
   simp [aboveList]
 

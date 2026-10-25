@@ -6,6 +6,8 @@ import LeanForest.H0NearMom
 
 namespace LeanForest.Security.H0
 
+variable [Params]
+
 open Concrete LeanForest.Base.H0
 
 set_option maxRecDepth 1000000

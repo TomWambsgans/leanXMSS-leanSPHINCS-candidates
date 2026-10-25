@@ -14,16 +14,18 @@ set_option maxRecDepth 10000
 
 namespace LeanForest.Completeness
 
+variable [Params]
+
 open Concrete Seeded
 
 /-- The input the counter search hashes at counter `c`. -/
 def encodeInput (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (message : ForestKey) (c : Nat) : HashInput :=
+    (message : HashInput) (c : Nat) : HashInput :=
   tweakableHashInput parameter (.encoding lay tree leaf)
-    (rootsPayload message ++ bytesLE 4 (BitVec.ofNat counterBits c))
+    (message ++ bytesLE 4 (BitVec.ofNat counterBits c))
 
 theorem encodeInput_inj (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (message : ForestKey) {c c' : Nat}
+    (leaf : LeafIndex) (message : HashInput) {c c' : Nat}
     (hc : c < 2 ^ 32) (hc' : c' < 2 ^ 32)
     (h : encodeInput parameter lay tree leaf message c
       = encodeInput parameter lay tree leaf message c') : c = c' := by
@@ -34,7 +36,7 @@ theorem encodeInput_inj (parameter : PublicParameter) (lay : Layer) (tree : Tree
 
 /-- The counter search exhausts its budget with probability at most the rejection share to the budget. -/
 theorem probEvent_otsSign (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (seed : MasterSeed) (message : ForestKey) (cache : QueryCache HashSpec)
+    (leaf : LeafIndex) (seed : MasterSeed) (message : HashInput) (cache : QueryCache HashSpec)
     (hfresh : ∀ c, c < encodingAttemptLimit →
       cache (encodeInput parameter lay tree leaf message c) = none) :
     Pr[fun r => r.1 = none | (simulateQ randomOracle

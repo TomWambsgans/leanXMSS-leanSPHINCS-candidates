@@ -11,6 +11,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.Reduce
 
+variable [Params]
+
 open Completeness SeedCoupling Internalize Eager Short SeedModel Graph Assembly Stop HiddenCost
   GraphView
 
@@ -40,7 +42,6 @@ theorem programGraphCache_congr_base (parameter : PublicParameter)
 noncomputable local instance reduceLabelsSampleable : SampleableType CanonicalGraphLabels :=
   graphLabelsSampleable
 
-variable [Params]
 
 /-- The canonical graph cache without any seed-addressed entry. -/
 noncomputable def graphCache (material : Material) (answers : CanonicalGraphLabels) :
@@ -71,7 +72,6 @@ theorem sampleCoordinates_eq (material : Material) (seed : MasterSeed) (answers 
     ← GraphCorrectness.materialOts_eq _ seed material (sample_agreement material seed answers table),
     ← GraphCorrectness.materialFts_eq _ seed material (sample_agreement material seed answers table)]
 
-omit [Params] in
 /-- Every realized capped trace respects the budget. -/
 theorem costRun_cap_cost_le {α : Type} (f : HashInput → HashOutput) (table : HiddenGraph.Table)
     (computation : OracleComp CostSpec α) (budget : Nat)
@@ -116,7 +116,6 @@ noncomputable def seedFreeExperiment (adversary : Adversary) (q : Nat) (steps : 
 def Win (result : Option Bool × List (Entry HashInput)) : Prop :=
   ∃ value, result.1 = some value ∧ value = true
 
-omit [Params] in
 theorem probEvent_bind_le_add {α β γ δ : Type} (p : ProbComp α) (k : α → ProbComp β)
     (k₁ : α → ProbComp γ) (k₂ : α → ProbComp δ) (event : β → Prop) (event₁ : γ → Prop)
     (event₂ : δ → Prop) (h : ∀ a, Pr[event | k a] ≤ Pr[event₁ | k₁ a] + Pr[event₂ | k₂ a]) :
@@ -125,7 +124,6 @@ theorem probEvent_bind_le_add {α β γ δ : Type} (p : ProbComp α) (k : α →
   rw [← ENNReal.tsum_add]
   exact ENNReal.tsum_le_tsum fun a => (mul_le_mul' le_rfl (h a)).trans_eq (mul_add ..)
 
-omit [Params] in
 theorem probEvent_bind_le_of {α β : Type} (p : ProbComp α) (k : α → ProbComp β) (event : β → Prop)
     (bound : ℝ≥0∞) (h : ∀ a, Pr[event | k a] ≤ bound) : Pr[event | p >>= k] ≤ bound := by
   rw [probEvent_bind_eq_tsum]
@@ -135,7 +133,6 @@ theorem probEvent_bind_le_of {α β : Type} (p : ProbComp α) (k : α → ProbCo
       rw [ENNReal.tsum_mul_right]
       exact mul_le_of_le_one_left bot_le tsum_probOutput_le_one
 
-omit [Params] in
 theorem probEvent_bind_mono {α β : Type} (p : ProbComp α) (k₁ k₂ : α → ProbComp β)
     (event : β → Prop) (h : ∀ a, Pr[event | k₁ a] ≤ Pr[event | k₂ a]) :
     Pr[event | p >>= k₁] ≤ Pr[event | p >>= k₂] := by

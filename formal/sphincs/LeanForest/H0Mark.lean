@@ -9,6 +9,8 @@ open ENNReal
 
 namespace LeanForest.Concrete
 
+variable [Params]
+
 theorem extract_val {v : FieldVal} (o len : Nat) :
     (((BitVec.ofFin v).extractLsb' o len).toFin).val = v.val / 2 ^ o % 2 ^ len := by
   rw [BitVec.val_toFin, BitVec.extractLsb'_toNat, BitVec.toNat_ofFin, Nat.shiftRight_eq_div_pow]

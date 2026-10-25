@@ -11,6 +11,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.TargetAssignment
 
+variable [Params]
+
 open Concrete Completeness
 
 attribute [local instance] Classical.propDecidable

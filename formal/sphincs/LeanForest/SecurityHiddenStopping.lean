@@ -5,6 +5,8 @@ import LeanForest.SecuritySeedGuess
 
 open OracleComp OracleSpec ENNReal
 namespace LeanForest.Security.HiddenReveal
+
+variable [Params]
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 set_option maxHeartbeats 100000

@@ -1,13 +1,14 @@
 import LeanForest.SecurityPrefixCost
 
 /-! Counting the hash queries of lifted hash computations: on a fixed answer function, counting
-returns the value together with its `hashCalls`; and the signer with its cost evaluated on the
-outside function from the selected chain frontier (`publicSignWithCost`). Private randomizer draws
-contribute zero hash calls. -/
+returns the value together with its `hashCalls`. Private randomizer draws contribute zero hash
+calls. -/
 
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.Prefix
+
+variable [Params]
 open Concrete SphincsSecurity.QueryCap
 
 attribute [local irreducible] encodingAttemptLimit digestAttemptLimit Randomized.finishSign
@@ -42,19 +43,5 @@ theorem fixedHashWorld_counted_lift_hash {α : Type} (f : QueryImpl HashSpec Id)
     simulateQ (fixedHashWorld f) (counted SourceHash (liftM computation : OracleComp OracleWorld α)) =
       PMF.pure (evalWithAnswerFn f computation, hashCalls f computation) := by
   rw [counted_lift_hash, fixedHashWorld_lift_hash, eval_counted_hash]
-
-variable [Params]
-
-/-- The original assembly cost is evaluated using the outside function. Cost invariance
-ensures that no hidden table or selected chain secret is needed to compute it. -/
-noncomputable def publicSignWithCost (segment : Segment) (outside : QueryImpl HashSpec Id)
-    (secrets : Secrets) (frontier : Digest) (surrogates : Nat → Digest)
-    (sk : Seeded.SecretKey) (message : Message) : PMF (Option Signature × Nat) := do
-  let loop ← simulateQ (fixedHashWorld outside)
-    (counted SourceHash (Randomized.signDigestLoop sk message digestAttemptLimit))
-  match loop.1 with
-  | none => pure (none, loop.2)
-  | some randomness => pure (publicFinishSign segment outside secrets frontier surrogates sk.seed sk.root message randomness,
-        loop.2 + hashCalls outside (Randomized.finishSign sk message randomness))
 
 end LeanForest.Security.Prefix

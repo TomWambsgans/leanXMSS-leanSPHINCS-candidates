@@ -8,6 +8,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
 
+variable [Params]
+
 open HiddenReveal HiddenCost Eager Short Concrete
 open Completeness SeedModel Graph Assembly Reduce HiddenGraph Internalize GraphView
 
@@ -16,7 +18,6 @@ set_option maxRecDepth 10000
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
   remainingSampleable
@@ -48,7 +49,7 @@ theorem seedFree_le_prep (adversary : Adversary) (q : Nat) (steps : Message → 
   unfold outsideFn
   rw [probEvent_congr' (fun _ _ => Iff.rfl)
     (evalDist_stoppedExperiment_prep (sampleModel parameterOutput highs) _ (truncateHash parameterOutput)
-      (sampleData parameterOutput fixed highs remaining).forestKey _ hshort _)]
+      (sampleData parameterOutput fixed highs remaining) _ hshort _)]
   refine probEvent_bind_congr₂ _ _ _ _ _ fun prepared => ?_
   rw [probEvent_stopOr_map]
   unfold HiddenOutside.stoppedExperiment
@@ -87,7 +88,7 @@ theorem seedFree_le_exposeP (adversary : Adversary) (q : Nat) (steps : Message �
   refine (seedFree_le_expose (internalize adversary) q steps Win
     (fun parameterOutput fixed highs remaining outsideTable =>
       aboveList (truncateHash parameterOutput)
-        (resultsOf (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).forestKey
+        (resultsOf (truncateHash parameterOutput) (keyMessages (sampleData parameterOutput fixed highs remaining))
           (outsideFn (splitMaterial parameterOutput highs remaining fixed)
             (splitAnswers highs remaining fixed) outsideTable)))).trans (le_of_eq ?_)
   refine probEvent_bind_congr₂ _ _ _ _ _ fun parameterOutput => ?_
@@ -102,7 +103,8 @@ theorem seedFree_le_exposeP (adversary : Adversary) (q : Nat) (steps : Message �
   unfold outsideFn
   rw [probEvent_congr' (fun _ _ => Iff.rfl)
     (evalDist_expose_prep (sampleModel parameterOutput highs) _ (truncateHash parameterOutput)
-      (sampleData parameterOutput fixed highs remaining).forestKey _ hshort _
+      (keyMessages (sampleData parameterOutput fixed highs remaining))
+      (fun key => shortMessage_keyMessage _ _ _ _) _ hshort _
       (aboveList (truncateHash parameterOutput)))]
   refine probEvent_bind_congr₂ _ _ _ _ _ fun prepared => ?_
   refine probEvent_bind_congr₂ _ _ _ _ _ fun known => ?_

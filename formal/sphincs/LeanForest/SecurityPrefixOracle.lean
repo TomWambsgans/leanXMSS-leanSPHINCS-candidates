@@ -16,6 +16,8 @@ adversary-visible information.
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.Prefix
+
+variable [Params]
 open Concrete
 
 structure Segment where

@@ -9,11 +9,12 @@ reciprocal number of subtrees times the uniform probability of that set.
 
 namespace LeanForest.Lifetime
 
+variable [Params]
+
 set_option exponentiation.threshold 512
 
 open OracleComp OracleSpec ENNReal Concrete
 
-variable [Params]
 
 abbrev KeptDigestView := Fin (2 ^ subtreeHeight) × (Coord → FieldVal)
 

@@ -1,7 +1,7 @@
 import LeanForest.BridgeA4Final
 import LeanForest.BridgeAssemblyA
-import LeanForest.BridgeForsGameOnce
-import LeanForest.BridgeForsAssemblyOnce
+import LeanForest.BridgeForestGameOnce
+import LeanForest.BridgeForestAssemblyOnce
 import LeanForest.H0NearOpt
 
 /-! **One sample of the small-budget route.** On the stopped experiment with the above-word values
@@ -12,7 +12,9 @@ linear potential leaves `(ρ - 1 - x) 2^-128` per forest step query unused; A4 t
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal
   LeanForest.Base.Domination
@@ -23,7 +25,6 @@ set_option maxRecDepth 10000
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 open Completeness SeedModel Graph Assembly Reduce Internalize in
 attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
@@ -36,7 +37,7 @@ section Flagged
 variable {D R A ι : Type} [Fintype ι] [SampleableType R]
 variable (tg : Targeting D R ι) (initial : HiddenOutside.Cache D R) (model : HiddenRows.Model D R A ι)
 
-omit [Params] [Fintype ι] [SampleableType R] in
+omit [Fintype ι] [SampleableType R] in
 theorem flaggedCount_touch_leF (state : DebtState D R ι) (input : (SourceCostSpec D R ι).Domain) :
     flaggedCount tg (touch tg initial state input) ≤ digestCount tg (recorded input) := by
   rcases input with (draw | (bytes | coordinate)) | amount
@@ -48,7 +49,7 @@ theorem flaggedCount_touch_leF (state : DebtState D R ι) (input : (SourceCostSp
   · simp [touch, flaggedCount, recorded, digestCount]
   · simp [touch, flaggedCount, recorded, digestCount]
 
-omit [Params] [Fintype ι] in
+omit [Fintype ι] in
 theorem flagged_le_digestF {α : Type} (comp : OracleComp (SourceCostSpec D R ι) α) :
     ∀ budget s, ∀ out ∈ support (interp tg initial model comp budget s),
       flaggedCount tg out.1.2.2.2 ≤ digestCount tg out.1.2.2.1 := by
@@ -71,7 +72,7 @@ theorem flagged_le_digestF {α : Type} (comp : OracleComp (SourceCostSpec D R ι
         subst hout
         simp [flaggedCount, digestCount]
 
-omit [Params] [Fintype ι] in
+omit [Fintype ι] in
 theorem expectedFlagged_le_digestF {α : Type} (comp : OracleComp (SourceCostSpec D R ι) α) (budget : ℕ)
     (s : DebtState D R ι) :
     expectedFlagged tg initial model comp budget s ≤
@@ -91,7 +92,7 @@ section Pointwise
 open Completeness SeedModel Graph Assembly Reduce Internalize
 
 variable (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-  (remaining : RemainingOutputs) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+  (remaining : RemainingOutputs) (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
   (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
   (known : Knowledge Coordinate)
   (hk : known ∈ support (exposeR (aboveList (truncateHash parameterOutput) prepared.1)
@@ -150,7 +151,7 @@ section Helpers
 open Completeness SeedModel Graph Assembly Reduce Internalize
 
 theorem targetingA_msgF (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (results : Index → Option (Counter × Encoding)) (x : HashInput)
+    (remaining : RemainingOutputs) (results : OtsKey → Option (Counter × Encoding)) (x : HashInput)
     (h : IsMsgInput x) : (targetingA parameterOutput fixed highs remaining results).kind x = .none := by
   show (if SecondOrderInput (truncateHash parameterOutput) results x then .none
     else sampleKind parameterOutput fixed highs remaining results x) = .none
@@ -158,7 +159,6 @@ theorem targetingA_msgF (parameterOutput : HashOutput) (fixed : HiddenGraph.Tabl
   · rfl
   · exact sampleTargeting_msg parameterOutput fixed highs remaining results x h
 
-omit [Params] in
 theorem numeric_monoF {ρ x x' : ℝ} (h : Numeric ρ x) (hx : x' ≤ x) (_hx0 : 0 ≤ x') : Numeric ρ x' where
   low := h.low
   high := h.high
@@ -170,7 +170,6 @@ theorem numeric_monoF {ρ x x' : ℝ} (h : Numeric ρ x) (hx : x' ≤ x) (_hx0 :
   contact := by have := h.contact; linarith
   small := by have := h.small; linarith
 
-omit [Params] in
 theorem probEvent_le_endValueF (payoff : (Coordinate → Digest) → State → ℝ≥0∞) (s : State)
     (E : (Coordinate → Digest) → Prop) (h : ∀ T, E T → payoff T s = 1) :
     Pr[E | completion s.known] ≤ endValue payoff s := by
@@ -181,7 +180,6 @@ theorem probEvent_le_endValueF (payoff : (Coordinate → Digest) → State → �
   · rw [h T hT, mul_one]
   · exact bot_le
 
-omit [Params] in
 theorem digestCount_cons_inrF {D R ι : Type} (tg : Targeting D R ι) (amount : ℕ) (entries : List (Entry D)) :
     digestCount tg (.inr amount :: entries) = digestCount tg entries := by
   simp [digestCount]
@@ -268,4 +266,4 @@ theorem rateS_eqF : rateS = ENNReal.ofReal ((2 - 1 / (H0.scanM : ℝ)) / 2 ^ 128
 
 end Helpers
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

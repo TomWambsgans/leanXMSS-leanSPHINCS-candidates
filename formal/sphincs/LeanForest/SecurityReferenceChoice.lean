@@ -1,11 +1,13 @@
-import LeanForest.SecurityPrefixSignLayer
+import LeanForest.SecurityPrefixSigning
 
-/-! A valid WOTS reference exists even when the canonical FORS-key encoding search fails.
+/-! A valid WOTS reference exists even when the canonical encoding search fails.
 The failure branch uses a fixed valid dummy word and has no exempt encoding input. -/
 
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.ReferenceChoice
+
+variable [Params]
 open Concrete Completeness Prefix
 
 set_option backward.isDefEq.respectTransparency false
@@ -17,7 +19,7 @@ def dummyWord : Encoding := fun index => if index.val < 41 then ⟨3, by decide�
 theorem dummyWord_valid : TargetSum.Valid dummyWord := by decide
 
 variable (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-  (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (referenceMessage : ForestKey)
+  (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (referenceMessage : HashInput)
 
 theorem firstEncoding_sound (attempts start : Nat) (counter : Counter) (word : Encoding)
     (h : firstEncoding f parameter lay tree leaf referenceMessage attempts start = some (counter, word)) :
@@ -70,7 +72,7 @@ theorem target_decodes : TargetSum.decodeDigest (target f parameter lay tree lea
     some (word f parameter lay tree leaf referenceMessage) :=
   decodeDigest_pack _ (word_valid f parameter lay tree leaf referenceMessage)
 
-theorem same_word_target (message : ForestKey) (counter : Counter)
+theorem same_word_target (message : HashInput) (counter : Counter)
     (h : evalWithAnswerFn f (encode parameter lay tree leaf message counter :
       OracleComp HashSpec (Option Encoding)) = some (word f parameter lay tree leaf referenceMessage)) :
     truncateHash (f (Wots.encodingInput parameter lay tree leaf message counter)) =
@@ -90,7 +92,7 @@ def EncodingMatch (trace : List HashInput) : Prop :=
 
 /-- This classification needs no successful honest signature or counter at the leaf. If
 canonical encoding exhausts, recovering the dummy word instead supplies an encoding match. -/
-theorem otsLeaf_classification (secret : ChainIndex → Digest) (message : ForestKey)
+theorem otsLeaf_classification (secret : ChainIndex → Digest) (message : HashInput)
     (counter : Counter) (values : ChainIndex → Digest) (candidate : Encoding) (trace : List HashInput)
     (hencode : evalWithAnswerFn f (encode parameter lay tree leaf message counter :
       OracleComp HashSpec (Option Encoding)) = some candidate)

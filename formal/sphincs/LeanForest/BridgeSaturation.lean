@@ -14,6 +14,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenDebt
 
+variable [Params]
+
 open HiddenOutside HiddenReveal
 
 set_option backward.isDefEq.respectTransparency false
@@ -31,7 +33,7 @@ inductive TargetKind (ι : Type) where
   | hidden (coordinate : ι)
 
 /-- How answers are compared with targets, which inputs have which target, and which inputs are
-message-digest queries paying the FORS baseline. -/
+message-digest queries paying the forest baseline. -/
 structure Targeting (D R ι : Type) where
   trunc : R → Digest
   kind : D → TargetKind ι

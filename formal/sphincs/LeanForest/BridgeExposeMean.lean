@@ -10,6 +10,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenDebt
 
+variable [Params]
+
 open HiddenOutside HiddenCost HiddenReveal
 
 set_option backward.isDefEq.respectTransparency false

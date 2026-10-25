@@ -15,6 +15,7 @@ namespace LeanForest.Completeness
 
 variable [Params]
 
+
 open Concrete
 
 /-- The input a digest trial hashes to test its randomizer. -/
@@ -23,7 +24,6 @@ abbrev msgInput (secretKey : Seeded.SecretKey) (message : Message) (randomness :
   tweakableHashInput secretKey.parameter .message
     (messageDigestPayload secretKey.root message randomness)
 
-omit [Params] in
 theorem msgInput_inj (secretKey : Seeded.SecretKey) (message : Message)
     {randomness randomness' : Randomness}
     (h : msgInput secretKey message randomness = msgInput secretKey message randomness') :
@@ -32,7 +32,6 @@ theorem msgInput_inj (secretKey : Seeded.SecretKey) (message : Message)
   exact LeanForest.bytesLE_injective (List.append_cancel_left (List.append_cancel_left
     (List.append_cancel_left h)))
 
-omit [Params] in
 theorem cached_run (input : HashInput) (cache : QueryCache HashSpec) (answer : HashOutput)
     (hcached : cache input = some answer) :
     (randomOracle (spec := HashSpec) input).run cache = pure (answer, cache) :=
@@ -54,7 +53,6 @@ theorem digestReject_add (parameter : PublicParameter) :
 
 theorem digestReject_le_one (parameter : PublicParameter) : digestReject parameter ≤ 1 := probEvent_le_one
 
-omit [Params] in
 /-- Averaging a two-valued function over one uniform answer. -/
 theorem tsum_uniform_ite (P : HashOutput → Prop) [DecidablePred P] (x y : ℝ≥0∞) :
     ∑' u : HashOutput, (Fintype.card HashOutput : ℝ≥0∞)⁻¹ * (if P u then x else y)
@@ -79,7 +77,7 @@ theorem digestFactor_room (parameter : PublicParameter) :
     two_pow_div_two_pow 32 96
   have hcast (k : Nat) : ((2 ^ k : Nat) : ℝ≥0∞)⁻¹ = (2⁻¹ : ℝ≥0∞) ^ k := by
     rw [Nat.cast_pow, Nat.cast_ofNat, ENNReal.inv_pow]
-  have hsmall : totalHeight - subtreeHeight + 1 ≤ 96 := by unfold totalHeight; omega
+  have hsmall : totalHeight - subtreeHeight + 1 ≤ 96 := by have := totalHeight_le_28; omega
   rw [digestFactor, hcoll, hcast, add_assoc, ← digestReject_add parameter, hcast]
   apply add_le_add le_rfl
   calc
@@ -89,20 +87,20 @@ theorem digestFactor_room (parameter : PublicParameter) :
           add_le_add (inv_two_pow_anti hsmall) le_rfl
     _ = (2⁻¹ : ℝ≥0∞) ^ (totalHeight - subtreeHeight) := inv_two_pow_succ_add _
 
-/-- Numerical grinding bound: `2^32` trials leave at most `2^(-2^(b+5))` failure mass. -/
+/-- Numerical grinding bound: `2^32` trials leave at most `2^(-2^(31-(h-b)))` failure mass. -/
 theorem digestFactor_pow_bound (parameter : PublicParameter) :
-    digestFactor parameter ^ digestAttemptLimit ≤ (2⁻¹ : ℝ≥0∞) ^ (2 ^ (subtreeHeight + 5)) := by
+    digestFactor parameter ^ digestAttemptLimit ≤
+      (2⁻¹ : ℝ≥0∞) ^ (2 ^ (31 - (totalHeight - subtreeHeight))) := by
   have hhalf := pow_le_half_ennreal (2 ^ (totalHeight - subtreeHeight + 1))
     (Nat.two_pow_pos _) (digestFactor parameter) (digestFactor_room parameter)
-  have hb : subtreeHeight ≤ 24 := Params.subtreeHeight_le
+  have hb : subtreeHeight ≤ totalHeight := subtreeHeight_le_total
+  have hh := totalHeight_le_28
   have hsplit : digestAttemptLimit =
-      2 ^ (totalHeight - subtreeHeight + 1) * 2 ^ (subtreeHeight + 7) := by
+      2 ^ (totalHeight - subtreeHeight + 1) * 2 ^ (31 - (totalHeight - subtreeHeight)) := by
     rw [digestAttemptLimit, ← pow_add]
     congr 1
-    change 32 = 24 - subtreeHeight + 1 + (subtreeHeight + 7)
     omega
   rw [hsplit, pow_mul]
-  refine (pow_le_pow_left₀ (by positivity) hhalf _).trans ?_
-  exact inv_two_pow_anti (Nat.pow_le_pow_right (by norm_num) (by omega))
+  exact pow_le_pow_left₀ (by positivity) hhalf _
 
 end LeanForest.Completeness

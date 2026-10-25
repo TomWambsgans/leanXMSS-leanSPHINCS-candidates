@@ -18,6 +18,8 @@ set_option maxRecDepth 100000
 
 namespace LeanForest.Completeness
 
+variable [Params]
+
 open TargetSum
 
 /-- A base above every coefficient, so the coefficients are the digits. -/

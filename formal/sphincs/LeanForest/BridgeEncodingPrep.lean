@@ -8,21 +8,31 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
 
+variable [Params]
+
 open Eager Short HiddenCost Concrete
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-/-- Every leaf's canonical WOTS encoding search of its FORS key, run in order. -/
-def searchAll (parameter : PublicParameter) (forsKey : Index → ForestKey) :
-    OracleComp HashSpec (Index → Option (Counter × Encoding)) :=
-  Concrete.sequenceFin fun leaf => ReferenceChoice.search parameter topLayer rootTree leaf (forsKey leaf)
-    encodingAttemptLimit 0
+/-- Every key's canonical WOTS encoding search of its message, run in order. -/
+def searchAll (parameter : PublicParameter) (message : OtsKey → HashInput) :
+    OracleComp HashSpec (OtsKey → Option (Counter × Encoding)) := do
+  let found ← Concrete.sequenceFin fun lay : Layer => Concrete.sequenceFin fun tree : TreeIndex =>
+    Concrete.sequenceFin fun leaf : LeafIndex =>
+      ReferenceChoice.search parameter lay tree leaf (message (lay, tree, leaf)) encodingAttemptLimit 0
+  return fun key => found key.1 key.2.1 key.2.2
 
-theorem Only.searchAll (parameter : PublicParameter) (forsKey : Index → ForestKey) :
-    Short.Only (searchAll parameter forsKey) :=
-  Short.Only.sequenceFin _ fun _ => Only.search _ _ _ _ _ _ _
+theorem Only.searchAll (parameter : PublicParameter) (message : OtsKey → HashInput)
+    (hmsg : ∀ key, Short.ShortMessage (message key)) :
+    Short.Only (searchAll parameter message) :=
+  Short.Only.bind (Short.Only.sequenceFin _ fun _ => Short.Only.sequenceFin _ fun _ =>
+    Short.Only.sequenceFin _ fun _ => Only.search _ _ _ _ _ (hmsg _) _ _) (fun _ => Short.Only.pure' _)
+
+/-- The public message of every key. -/
+def keyMessages (data : GraphView.PublicData) : OtsKey → HashInput := fun key =>
+  data.keyMessage key.1 key.2.1 key.2.2
 
 /-- Running any short hash computation on the lazy oracle first, then sampling the remaining
 table, is the eager table itself. Only the resulting cache is kept. -/
@@ -75,14 +85,15 @@ theorem evalDist_eager_prefix {β γ : Type} (computation : OracleComp HashSpec 
 
 theorem evalDist_stoppedExperiment_prep {A α : Type}
     (model : HiddenRows.Model HashInput HashOutput A HiddenGraph.Coordinate)
-    (base : QueryCache HashSpec) (parameter : PublicParameter) (forsKey : Index → ForestKey)
+    (base : QueryCache HashSpec) (parameter : PublicParameter) (data : GraphView.PublicData)
     (computation : OracleComp (HiddenRows.SourceSpec HashInput HashOutput HiddenGraph.Coordinate) α)
     (hshort : OnlyShort computation) (known : HiddenReveal.Knowledge HiddenGraph.Coordinate) :
     𝒟[($ᵗ Eager.Table) >>= fun outside =>
         HiddenRows.stoppedExperiment model (extend base outside) computation known] =
-      𝒟[(simulateQ randomOracle (searchAll parameter forsKey)).run base >>= fun prepared =>
+      𝒟[(simulateQ randomOracle (searchAll parameter (keyMessages data))).run base >>= fun prepared =>
         Option.map Prod.fst <$> HiddenOutside.stoppedExperiment model computation known prepared.2] := by
-  rw [evalDist_eager_prefix (searchAll parameter forsKey) (Only.searchAll parameter forsKey) base
+  rw [evalDist_eager_prefix (searchAll parameter (keyMessages data))
+    (Only.searchAll parameter _ fun key => shortMessage_keyMessage data _ _ _) base
     (fun outside => HiddenRows.stoppedExperiment model outside computation known)]
   apply evalDist_bind_congr'
   intro prepared
@@ -92,7 +103,6 @@ section Game
 
 open Completeness SeedModel Graph Assembly Reduce HiddenGraph Internalize GraphView
 
-variable [Params]
 
 attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
   remainingSampleable
@@ -101,9 +111,9 @@ attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSamp
 structural cache. -/
 noncomputable def preparation (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
     (highs : CoordinateHighs) (remaining : RemainingOutputs) :
-    ProbComp ((Index → Option (Counter × Encoding)) × QueryCache HashSpec) :=
+    ProbComp ((OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec) :=
   (simulateQ randomOracle (searchAll (truncateHash parameterOutput)
-    (sampleData parameterOutput fixed highs remaining).forestKey)).run
+    (keyMessages (sampleData parameterOutput fixed highs remaining)))).run
     (structCache (splitMaterial parameterOutput highs remaining fixed) (splitAnswers highs remaining fixed))
 
 end Game

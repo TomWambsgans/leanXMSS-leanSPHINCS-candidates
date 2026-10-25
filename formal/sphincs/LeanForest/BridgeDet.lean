@@ -14,6 +14,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.Det
 
+variable [Params]
+
 open Completeness SeedCoupling Internalize Eager Short SeedModel Graph Assembly Stop HiddenCost
   GraphView Reduce DetValue
 
@@ -280,10 +282,9 @@ theorem evalDist_rtable_split {β : Type} (F : RTable → ProbComp β) :
 /-! ### One sample -/
 
 theorem hashDomain_tag_ne_seven (domain : HashDomain) :
-    (⟨7#5, 0#3, 0#24, 0#32⟩ : TweakFields).tag ≠ (hashDomainFields domain).tag := by
-  cases domain <;> simp [hashDomainFields, tweakFields]
+    (⟨7#5, 0#3, 0#8, 0#32, 0#24, 0#32⟩ : TweakFields).tag ≠ (hashDomainFields domain).tag := by
+  cases domain <;> simp [hashDomainFields, tweakFields, treeFields]
 
-variable [Params]
 
 noncomputable local instance detLabelsSampleable' : SampleableType CanonicalGraphLabels :=
   graphLabelsSampleable
@@ -301,7 +302,7 @@ theorem preparedCache_randomizer (material : Material) (seed : MasterSeed) (answ
   · simp only [canonicalGraphInput, tweakableHashInput, tweakBytes, randomizerHashInput] at h
     rw [List.append_assoc (bytesLE 16 parameter ++ fieldBytes _)] at h
     refine Completeness.fieldInput_ne_of_tag_ne_across parameter (SeedModel.parameter material)
-      (fields1 := ⟨7#5, 0#3, 0#24, 0#32⟩) (fields2 := hashDomainFields position.domain) ?_ _ _ h
+      (fields1 := ⟨7#5, 0#3, 0#8, 0#32, 0#24, 0#32⟩) (fields2 := hashDomainFields position.domain) ?_ _ _ h
     exact hashDomain_tag_ne_seven position.domain
 
 theorem sampleFn_randomizer (material : Material) (seed : MasterSeed) (answers : CanonicalGraphLabels)
@@ -387,7 +388,7 @@ theorem per_sampleDet (adversary : Adversary) (q : Nat) (material : Material) (s
 theorem noRepeat_internalize_memoAdv (adversary : Adversary) :
     (Memo.memoAdv (internalize adversary)).NoRepeat := by
   rw [← Memo.internalize_memoAdv]
-  exact ForsPotential.noRepeat_internalize_adversary _ (Memo.memoAdv_noRepeat adversary)
+  exact ForestPotential.noRepeat_internalize_adversary _ (Memo.memoAdv_noRepeat adversary)
 
 attribute [local irreducible] experimentDet sampleMasterSeed
 

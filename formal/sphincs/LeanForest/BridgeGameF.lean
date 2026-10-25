@@ -1,6 +1,6 @@
 import LeanForest.BridgeRevealRate
 import LeanForest.BridgePotentialA8
-import LeanForest.BridgeForsGameOnce
+import LeanForest.BridgeForestGameOnce
 
 /-! **Paid potentials of the lazy run.** A potential of the state, the cached landed pairs, the
 signing log, the disclosed views, the reveals and the remaining budget pays a final value of the
@@ -11,7 +11,9 @@ that are exposed and upward closed on their chains. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenBridge
@@ -22,11 +24,9 @@ set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### Reveals are exposed -/
 
-omit [Params] in
 /-- Revealed coordinates are exposed at the end of a run. -/
 theorem interp_reveals_known {A : Type} (tg : Targeting HashInput HashOutput Coordinate)
     (initial : HiddenOutside.Cache HashInput HashOutput) (model : HiddenRows.Model HashInput HashOutput A Coordinate)
@@ -246,7 +246,6 @@ section Steps
 variable (K : Ctx) (data : PublicData) (Qtot : ℕ) (model : HiddenRows.Model HashInput HashOutput Address Coordinate)
   (IsF : HashInput → Prop) (pay : ℝ≥0∞) {Φ : PotF} {G : FinalF}
 
-omit [Params] in
 theorem tsum_bound_payF {α : Type} (mx : ProbComp α) (X : ℝ≥0∞) (Y : α → ℝ≥0∞) :
     ∑' a, Pr[= a | mx] * (X + pay * Y a) ≤ X + pay * ∑' a, Pr[= a | mx] * Y a := by
   calc ∑' a, Pr[= a | mx] * (X + pay * Y a)
@@ -493,4 +492,4 @@ theorem final_le_startF (hMp : model.parse = HiddenGraph.parse K.p (candidateAct
 
 end Steps
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

@@ -13,6 +13,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.Internalize
 
+variable [Params]
+
 open Completeness SeedCoupling Short
 
 set_option backward.isDefEq.respectTransparency false
@@ -313,7 +315,6 @@ noncomputable def internalImpl :
 noncomputable def internalize (adversary : Adversary) : Adversary :=
   ⟨fun publicKey => (simulateQ internalImpl (adversary.main publicKey)).run' ∅⟩
 
-variable [Params]
 
 noncomputable def gameImpl (sk : LeanForest.Seeded.SecretKey) :
     QueryImpl AdvSpec (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) :=
@@ -429,21 +430,18 @@ theorem OnlyW.sign (sk : LeanForest.Seeded.SecretKey) (message : Message) :
   | none => exact OnlyW.pure' _
   | some randomness => exact OnlyW.liftHash (Short.Only.finishSign _ _ _)
 
-omit [Params] in
 theorem OnlyW.queryShort {input : HashInput} (h : IsShort input) :
     OnlyW (liftM (OracleWorld.query (.inr input)) : OracleComp OracleWorld _) := by
   rw [OnlyW, isQueryBoundP_query_iff]
   intro hlong
   exact absurd h hlong
 
-omit [Params] in
 theorem OnlyW.queryDraw (draw : unifSpec.Domain) :
     OnlyW (liftM (OracleWorld.query (.inl draw)) : OracleComp OracleWorld _) := by
   rw [OnlyW, isQueryBoundP_query_iff]
   intro h
   exact h.elim
 
-omit [Params] in
 theorem OnlyW.writerLift {α : Type} {oa : OracleComp OracleWorld α} (h : OnlyW oa) :
     OnlyW (liftM oa : WriterT (QueryLog SigningSpec) (OracleComp OracleWorld) α).run := by
   rw [WriterT.run_liftM]
@@ -470,7 +468,6 @@ theorem Block.signing (sk : LeanForest.Seeded.SecretKey) (message : Message) :
     simp only [signingOracle, QueryImpl.run_withLogging_apply]
     exact OnlyW.bind (OnlyW.sign sk message) (fun _ => OnlyW.pure' _))
 
-omit [Params] in
 theorem run_simulateQ_ofLift_writer {α : Type} (x : OracleComp OracleWorld α) :
     (simulateQ (QueryImpl.ofLift OracleWorld
       (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld))) x).run =
@@ -499,13 +496,11 @@ theorem gameImpl_liftWorld (sk : LeanForest.Seeded.SecretKey) {α : Type}
     rfl
   rw [himpl, run_simulateQ_ofLift_writer]
 
-omit [Params] in
 theorem rightRun_liftProb {α : Type} (p : ProbComp α) (cache : QueryCache HashSpec) :
     rightRun (liftM p : OracleComp OracleWorld α) cache = (fun value => ((value, 0), cache)) <$> p := by
   rw [rightRun, countHashQueries_lift_prob, simulateQ_map, StateT.run_map, run_lift_prob,
     Functor.map_map]
 
-omit [Params] in
 theorem leftRun_longQuery {input : HashInput} (h : ¬IsShort input) (cache : QueryCache HashSpec) :
     leftRun (liftM (OracleWorld.query (.inr input))) cache =
       (fun result => ((result.1, 0), result.2)) <$> (randomOracle (spec := HashSpec) input).run cache := by
@@ -582,19 +577,16 @@ theorem OnlyW.verifyPart (publicKey : PublicKey) (output : Forgery × QueryLog S
     OnlyW (verifyPart publicKey output) :=
   OnlyW.bind (OnlyW.liftHash (Short.Only.verify _ _ _)) (fun _ => OnlyW.pure' _)
 
-omit [Params] in
 theorem merge_empty : merge ∅ ∅ = (∅ : QueryCache HashSpec) := by
   funext input
   simp [merge]
 
-omit [Params] in
 /-- The short-count run and the total-count run are projections of one split-count run. -/
 theorem leftRun_eq_split {α : Type} (oa : OracleComp OracleWorld α) (cache : QueryCache HashSpec) :
     leftRun oa cache = (fun result => ((result.1.1.1, result.1.2), result.2)) <$>
       (simulateQ romImpl (count2 oa)).run cache := by
   rw [leftRun, countShort_eq_count2, simulateQ_map, StateT.run_map]
 
-omit [Params] in
 theorem rightRun_eq_split {α : Type} (oa : OracleComp OracleWorld α) (cache : QueryCache HashSpec) :
     rightRun oa cache = (fun result => ((result.1.1.1, result.1.2 + result.1.1.2), result.2)) <$>
       (simulateQ romImpl (count2 oa)).run cache := by
@@ -603,11 +595,12 @@ theorem rightRun_eq_split {α : Type} (oa : OracleComp OracleWorld α) (cache : 
 end LeanForest.Security.Internalize
 
 namespace LeanForest.Security.Internalize
+
+variable [Params]
 open Completeness SeedCoupling Short
 
 attribute [local irreducible] experiment count2 leftRun rightRun sampleMasterSeed
 
-variable [Params]
 
 /-! ### The internalized game only queries short inputs -/
 
@@ -619,26 +612,22 @@ instance : DecidablePred LongAdv := fun input => by unfold LongAdv; split <;> in
 
 def OnlyAdv {β : Type} (M : OracleComp AdvSpec β) : Prop := M.IsQueryBoundP LongAdv 0
 
-omit [Params] in
 theorem OnlyAdv.bind {α β : Type} {oa : OracleComp AdvSpec α} {next : α → OracleComp AdvSpec β}
     (h : OnlyAdv oa) (hnext : ∀ value, OnlyAdv (next value)) : OnlyAdv (oa >>= next) := by
   have := isQueryBoundP_bind (n := 0) (m := 0) h (fun value _ => hnext value)
   simpa [OnlyAdv] using this
 
-omit [Params] in
 theorem OnlyAdv.map {α β : Type} {oa : OracleComp AdvSpec α} (f : α → β) (h : OnlyAdv oa) :
     OnlyAdv (f <$> oa) := by
   rw [OnlyAdv, isQueryBoundP_map_iff]
   exact h
 
-omit [Params] in
 theorem OnlyAdv.query {input : AdvSpec.Domain} (h : ¬LongAdv input) :
     OnlyAdv (liftM (AdvSpec.query input) : OracleComp AdvSpec _) := by
   rw [OnlyAdv, isQueryBoundP_query_iff]
   intro hlong
   exact absurd hlong h
 
-omit [Params] in
 theorem OnlyAdv.ofLiftWorld {α : Type} (x : OracleComp OracleWorld α) (h : OnlyW x) :
     OnlyAdv (liftWorld x) := by
   induction x using OracleComp.inductionOn with
@@ -655,12 +644,10 @@ theorem OnlyAdv.ofLiftWorld {α : Type} (x : OracleComp OracleWorld α) (h : Onl
       · have := h.2 answer
         split at this <;> simpa [OnlyW] using this
 
-omit [Params] in
 theorem OnlyAdv.liftWorldProb {α : Type} (p : ProbComp α) :
     OnlyAdv (liftWorld (liftM p : OracleComp OracleWorld α)) :=
   OnlyAdv.ofLiftWorld _ (OnlyW.liftProb p)
 
-omit [Params] in
 theorem OnlyAdv.internal {β : Type} (M : OracleComp AdvSpec β) (cache : QueryCache HashSpec) :
     OnlyAdv ((simulateQ internalImpl M).run cache) := by
   induction M using OracleComp.inductionOn generalizing cache with

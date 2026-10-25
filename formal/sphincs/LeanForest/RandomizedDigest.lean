@@ -8,9 +8,10 @@ open OracleComp OracleSpec ENNReal Finset
 
 namespace LeanForest.Completeness
 
+variable [Params]
+
 open Concrete
 
-variable [Params]
 
 /-- Exact operational law of one step of the scan: the digest of the current randomizer is answered
 by the consistent random oracle; on a miss the scan continues from the next randomizer. -/
@@ -45,7 +46,6 @@ theorem run_randomizedDigest_start (sk : Seeded.SecretKey) (message : Message) (
   intro half
   rw [simulate_lift_hash]
 
-omit [Params] in
 theorem tsum_randomness_ite (P : Randomness → Prop) [DecidablePred P] (x y : ℝ≥0∞) :
     ∑' ρ : Randomness, (Fintype.card Randomness : ℝ≥0∞)⁻¹ * (if P ρ then x else y) =
       x * Pr[P | ($ᵗ Randomness : ProbComp Randomness)] +
@@ -57,21 +57,18 @@ theorem tsum_randomness_ite (P : Randomness → Prop) [DecidablePred P] (x y : �
   rw [probOutput_uniformSample]
   by_cases h : P ρ <;> simp [h, mul_comm]
 
-omit [Params] in
 theorem randomness_add_succ (step ρ : Randomness) (i : Nat) :
     ρ + step + BitVec.ofNat digestBits i * step = ρ + BitVec.ofNat digestBits (i + 1) * step := by
   rw [← BitVec.natCast_eq_ofNat, ← BitVec.natCast_eq_ofNat]
   push_cast
   ring
 
-omit [Params] in
 theorem randomness_add_ne (half ρ : Randomness) {i : Nat} (hpos : 0 < i) (hi : i < 2 ^ 128) :
     ρ + BitVec.ofNat digestBits i * walkStep half ≠ ρ := by
   obtain ⟨j, rfl⟩ : ∃ j, i = j + 1 := ⟨i - 1, by omega⟩
   have h := walk_iterate_ne half ρ j hi
   rwa [walk_iterate, BitVec.natCast_eq_ofNat, randomness_add_succ] at h
 
-omit [Params] in
 /-- A uniform start puts one of its `n` scanned randomizers in a set `R` with probability at most
 `n |R| / 2^128`. -/
 theorem probEvent_randomness_mem_le (step : Randomness) (R : Finset Randomness) (n : Nat) :
@@ -166,13 +163,13 @@ theorem probEvent_randomizedDigest (sk : Seeded.SecretKey) (message : Message)
     _ = _ := by rw [ENNReal.tsum_mul_right, tsum_probOutput_eq_one' probFailure_eq_zero, one_mul]
 
 
-/-- The randomized grinding loop exhausts its full budget with probability at most `2^(-2^(b+5))`
-from a cache with no message-digest inputs. -/
+/-- The randomized grinding loop exhausts its full budget with probability at most
+`2^(-2^(31-(h-b)))` from a cache with no message-digest inputs. -/
 theorem randomized_digest_exhaustion_bound (sk : Seeded.SecretKey) (message : Message)
     (cache : QueryCache HashSpec) (hfresh : ∀ ρ, cache (msgInput sk message ρ) = none) :
     Pr[fun r => r.1 = none |
       (simulateQ romImpl (Randomized.signDigestLoop sk message digestAttemptLimit)).run cache]
-      ≤ (2⁻¹ : ℝ≥0∞) ^ (2 ^ (subtreeHeight + 5)) := by
+      ≤ (2⁻¹ : ℝ≥0∞) ^ (2 ^ (31 - (totalHeight - subtreeHeight))) := by
   refine (probEvent_randomizedDigest sk message digestAttemptLimit cache ∅
     (by simp [digestAttemptLimit]) (fun ρ _ => hfresh ρ)).trans ?_
   rw [Finset.card_empty, Nat.mul_zero, Nat.cast_zero, ENNReal.zero_div, add_zero]

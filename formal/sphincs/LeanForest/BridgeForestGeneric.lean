@@ -1,16 +1,18 @@
-import LeanForest.BridgeForsPotentialOnce
+import LeanForest.BridgeForestPotentialOnce
 
 /-! The one-coin forest potential of the scan signer with a generic monotone witness. A witness `W`
 assigns to a target view and a multiset of disclosed views a monotone, finite value; the fresh-digest
 price is `landing` times its average over a uniform target. The potential and its new-pair, order and
-signing lemmas are those of `BridgeForsPotentialOnce` (terms through `termO`, lists of touched
+signing lemmas are those of `BridgeForestPotentialOnce` (terms through `termO`, lists of touched
 messages with `MInv`) with the cover witness replaced by `W` and an arbitrary monotone gate in place
 of the decided-hit test, and without the cap term `lam`; the forecast level of the signing lemmas is
 free of the run's budget. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner LeanForest.Base.Domination
@@ -20,7 +22,6 @@ set_option maxRecDepth 10000
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### Witnesses and their prices -/
 
@@ -471,4 +472,4 @@ theorem sign_expectG_level (hW : WitnessProps W) (gate : State → Prop)
 
 end SignPointMainG
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

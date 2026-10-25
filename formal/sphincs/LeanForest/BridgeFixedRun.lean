@@ -11,6 +11,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
 
+variable [Params]
+
 open HiddenCost GraphView Stop Concrete Prefix
 
 set_option backward.isDefEq.respectTransparency false
@@ -304,7 +306,12 @@ theorem costRun_withReveals_coordCostSource (data : PublicData) (index : Index) 
   rw [this]
   rfl
 
-variable [Params]
+
+/-- The chain coordinates the signer reveals at the found words of every layer. -/
+def wotsReveals (index : Index) (found : Layer → Counter × Encoding) : List HiddenGraph.Coordinate :=
+  (List.ofFn fun lay : Layer => List.ofFn fun chain =>
+    HiddenGraph.Coordinate.chain lay (treeIndexAt index lay) (leafIndexAt index lay) chain
+      ((found lay).2 chain)).flatten
 
 /-- The coordinates the signer reveals for a randomizer under a fixed function. -/
 noncomputable def revealsOf (parameter : PublicParameter) (data : PublicData) (message : Message)
@@ -312,13 +319,103 @@ noncomputable def revealsOf (parameter : PublicParameter) (data : PublicData) (m
   let digest := evalWithAnswerFn f (messageDigest parameter data.root message randomness :
     OracleComp HashSpec MessageDigest)
   let index := digestIndex digest
-  match firstEncoding f parameter topLayer rootTree index (data.forestKey index) encodingAttemptLimit 0 with
+  match assembledEncodings f parameter data index with
   | none => []
-  | some pair => List.ofFn (fun chain => HiddenGraph.Coordinate.chain topLayer rootTree index chain (pair.2 chain)) ++
-      (List.ofFn fun c => treeReveals index c (digestMarks digest c)).flatten
+  | some found => wotsReveals index found ++ (List.ofFn fun c => treeReveals index c (digestMarks digest c)).flatten
 
 attribute [local irreducible] ReferenceChoice.search encodingAttemptLimit Concrete.messageDigest
   Concrete.sequenceFin
+
+theorem costRun_withReveals_layerCostSearch (parameter : PublicParameter) (data : PublicData)
+    (index : Index) (lay : Layer) (result : RunResult (Option (Counter × Encoding)))
+    (hresult : result ∈ support (costRun f table (withReveals (layerCostSearch parameter data index lay)))) :
+    result.1 = (firstEncoding f parameter lay (treeIndexAt index lay) (leafIndexAt index lay)
+      (data.keyMessage lay (treeIndexAt index lay) (leafIndexAt index lay)) encodingAttemptLimit 0, []) := by
+  unfold layerCostSearch at hresult
+  obtain ⟨r1, h1, r2, h2, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
+  obtain rfl := costRun_withReveals_tick f table _ r1 h1
+  obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ r2 h2
+  obtain rfl := costRun_withReveals_liftHash f table _ r3 h3
+  dsimp only at h4 ⊢
+  simp only [layerSearch, ReferenceChoice.eval_search] at h4 ⊢
+  cases hfound : firstEncoding f parameter lay (treeIndexAt index lay) (leafIndexAt index lay)
+      (data.keyMessage lay (treeIndexAt index lay) (leafIndexAt index lay)) encodingAttemptLimit 0 with
+  | none =>
+      rw [hfound] at h4
+      rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at h4
+      subst r4
+      rfl
+  | some pair =>
+      rw [hfound] at h4
+      obtain ⟨r5, h5, r6, h6, rfl⟩ := costRun_withReveals_bind f table _ _ r4 h4
+      obtain rfl := costRun_withReveals_tick f table _ r5 h5
+      rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at h6
+      subst r6
+      rfl
+
+theorem costRun_withReveals_sequenceDep_quiet : ∀ {n : Nat} {α : Fin n → Type}
+    (comp : (i : Fin n) → OracleComp CostSpec (Option (α i))) (v : (i : Fin n) → Option (α i)),
+    (∀ i r, r ∈ support (costRun f table (withReveals (comp i))) → r.1 = (v i, [])) →
+    ∀ result, result ∈ support (costRun f table (withReveals (Concrete.sequenceDep comp))) →
+      result.1 = (Completeness.allSome v, [])
+  | 0, _, comp, v, _, result, hresult => by
+      rw [Concrete.sequenceDep, costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at hresult
+      subst result
+      simp only [Completeness.allSome]
+      rw [dif_pos (fun i => Fin.elim0 i)]
+      congr 2
+      funext i
+      exact i.elim0
+  | n + 1, α, comp, v, h, result, hresult => by
+      rw [Concrete.sequenceDep] at hresult
+      obtain ⟨r1, h1, r2, h2, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
+      have hv1 := h 0 r1 h1
+      obtain ⟨⟨x1, L1⟩, E1⟩ := r1
+      simp only [Prod.mk.injEq] at hv1
+      obtain ⟨rfl, rfl⟩ := hv1
+      dsimp only at h2 ⊢
+      cases hhead : v 0 with
+      | none =>
+          rw [hhead] at h2
+          rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at h2
+          subst r2
+          simp only [List.nil_append, Prod.mk.injEq, and_true]
+          unfold Completeness.allSome
+          rw [dif_neg (fun hall => by simpa [hhead] using hall 0)]
+      | some head =>
+          rw [hhead] at h2
+          obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ r2 h2
+          have hv3 := costRun_withReveals_sequenceDep_quiet (α := fun i => α i.succ)
+            (fun i => comp i.succ) (fun i => v i.succ) (fun i => h i.succ) r3 h3
+          obtain ⟨⟨x3, L3⟩, E3⟩ := r3
+          simp only [Prod.mk.injEq] at hv3
+          obtain ⟨rfl, rfl⟩ := hv3
+          dsimp only at h4 ⊢
+          by_cases hall : ∀ i : Fin n, (v i.succ).isSome
+          · have hsome : Completeness.allSome (fun i : Fin n => v i.succ) =
+                some fun i => (v i.succ).get (hall i) := dif_pos hall
+            rw [hsome] at h4
+            rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at h4
+            subst r4
+            have hall' : ∀ i : Fin (n + 1), (v i).isSome := by
+              intro i
+              refine Fin.cases ?_ (fun j => hall j) i
+              simp [hhead]
+            have hsome' : Completeness.allSome v = some fun i => (v i).get (hall' i) := dif_pos hall'
+            simp only [List.nil_append, Prod.mk.injEq, and_true, hsome']
+            congr 1
+            funext i
+            refine Fin.cases ?_ (fun j => ?_) i
+            · simp [hhead]
+            · simp
+          · have hnone : Completeness.allSome (fun i : Fin n => v i.succ) = none := dif_neg hall
+            rw [hnone] at h4
+            rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at h4
+            subst r4
+            simp only [List.nil_append, Prod.mk.injEq, and_true]
+            have hnone' : Completeness.allSome v = none :=
+              dif_neg (fun hall' : ∀ i : Fin (n + 1), (v i).isSome => hall fun i => hall' i.succ)
+            exact hnone'.symm
 
 theorem finish_support (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) (result : RunResult (Option Signature))
@@ -332,40 +429,37 @@ theorem finish_support (parameter : PublicParameter) (data : PublicData) (messag
   obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ r2 h2
   obtain rfl := costRun_withReveals_tick f table _ r3 h3
   obtain ⟨r5, h5, r6, h6, rfl⟩ := costRun_withReveals_bind f table _ _ r4 h4
-  obtain rfl := costRun_withReveals_liftHash f table _ r5 h5
+  have hv5 := costRun_withReveals_sequenceDep_quiet f table _ _
+    (fun lay r hr => costRun_withReveals_layerCostSearch f table parameter data _ lay r hr) r5 h5
+  obtain ⟨⟨x5, L5⟩, E5⟩ := r5
+  simp only [Prod.mk.injEq] at hv5
+  obtain ⟨rfl, rfl⟩ := hv5
   dsimp only at h6 ⊢
-  simp only [ReferenceChoice.eval_search] at h6
   unfold assembled revealsOf
-  cases hfound : firstEncoding f parameter topLayer rootTree
-      (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
-        OracleComp HashSpec MessageDigest)))
-      (data.forestKey (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
-        OracleComp HashSpec MessageDigest)))) encodingAttemptLimit 0 with
+  simp only [assembledEncodings]
+  cases hfound : Completeness.allSome fun lay : Layer => firstEncoding f parameter lay
+      (treeIndexAt (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
+        OracleComp HashSpec MessageDigest))) lay)
+      (leafIndexAt (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
+        OracleComp HashSpec MessageDigest))) lay)
+      (data.keyMessage lay _ _) encodingAttemptLimit 0 with
   | none =>
       rw [hfound] at h6
       rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at h6
       subst r6
-      constructor <;> dsimp only <;> rw [hfound] <;> rfl
-  | some pair =>
-      obtain ⟨counter, word⟩ := pair
-      simp only [hfound] at h6
+      exact ⟨rfl, rfl⟩
+  | some found =>
+      rw [hfound] at h6
       obtain ⟨r7, h7, r8, h8, rfl⟩ := costRun_withReveals_bind f table _ _ r6 h6
-      obtain rfl := costRun_withReveals_sequenceReveal f table _ r7 h7
+      obtain rfl := costRun_withReveals_sequenceFin_det f table _ _ _
+        (fun lay r hr => costRun_withReveals_sequenceReveal f table _ r hr) r7 h7
       obtain ⟨r9, h9, r10, h10, rfl⟩ := costRun_withReveals_bind f table _ _ r8 h8
       obtain rfl := costRun_withReveals_sequenceFin_det f table _ _ _
         (fun c => costRun_withReveals_coordCostSource f table data _ _ c) r9 h9
-      obtain ⟨r11, h11, r12, h12, rfl⟩ := costRun_withReveals_bind f table _ _ r10 h10
-      obtain rfl := costRun_withReveals_tick f table _ r11 h11
-      rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at h12
-      subst r12
-      constructor
-      · dsimp only
-        rw [hfound]
-        rfl
-      · dsimp only
-        rw [hfound]
-        simp only [List.nil_append, List.append_nil]
-
+      rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at h10
+      subst r10
+      refine ⟨rfl, ?_⟩
+      simp only [wotsReveals, List.nil_append, List.append_nil]
 /-- The signer's outcome: either nothing revealed and no signature, or an honest landed
 assembly whose reveals are exactly its own coordinates. -/
 def SignOutcome (parameter : PublicParameter) (seed : MasterSeed) (data : PublicData)
@@ -377,18 +471,14 @@ def SignOutcome (parameter : PublicParameter) (seed : MasterSeed) (data : Public
       some signature ∧
     result.2 = revealsOf f parameter data message randomness
 
-omit [Params] in
 theorem revealsOf_of_assembled_none (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) (h : assembled f parameter data table message randomness = none) :
     revealsOf f parameter data message randomness = [] := by
   unfold assembled at h
   unfold revealsOf
   dsimp only at h ⊢
-  cases hfound : firstEncoding f parameter topLayer rootTree
-      (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
-        OracleComp HashSpec MessageDigest)))
-      (data.forestKey (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
-        OracleComp HashSpec MessageDigest)))) encodingAttemptLimit 0 with
+  cases hfound : assembledEncodings f parameter data (digestIndex (evalWithAnswerFn f
+      (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest))) with
   | none => rfl
   | some pair => rw [hfound] at h; cases h
 
@@ -461,7 +551,6 @@ theorem logGood_append (parameter : PublicParameter) (seed : MasterSeed) (data :
     · obtain ⟨entry, hentry, rest⟩ := h'.2 coordinate hr
       exact ⟨entry, List.mem_append_right _ hentry, rest⟩
 
-omit [Params] in
 theorem costRun_withReveals_plainQuery (input : CostSpec.Domain)
     (hreveal : ∀ coordinate, input ≠ .inl (.inr (.inr coordinate)))
     (result : RunResult (CostSpec.Range input))

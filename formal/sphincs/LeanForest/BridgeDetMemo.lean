@@ -8,7 +8,9 @@ open OracleComp OracleSpec
 
 namespace LeanForest.Security.Memo
 
-open Internalize Short ForsPotential
+variable [Params]
+
+open Internalize Short ForestPotential
 
 set_option backward.isDefEq.respectTransparency false
 attribute [local instance] Classical.propDecidable

@@ -6,7 +6,9 @@ hash inputs are internalized. -/
 
 open OracleComp OracleSpec
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open Internalize Short
 
@@ -72,9 +74,9 @@ theorem noRepeat_internalize {α : Type} :
         simp only [forward, StateT.run, bind_map_left]
         exact ⟨h.1, fun r => ih r _ cache (h.2 r)⟩
 
-theorem noRepeat_internalize_adversary [Params] (adversary : Adversary) (h : adversary.NoRepeat) :
+theorem noRepeat_internalize_adversary (adversary : Adversary) (h : adversary.NoRepeat) :
     (internalize adversary).NoRepeat := by
   intro pk
   exact noRepeat_map _ _ [] (noRepeat_internalize _ [] ∅ (h pk))
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

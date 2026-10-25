@@ -12,6 +12,7 @@ evaluates one option at a time. -/
 
 namespace LeanForest.Security.H0
 
+
 open LeanForest.Base.H0
 
 /-! ### Rebuilding -/
@@ -54,13 +55,13 @@ def leafMean (t : PoisT) (tab : List ℚ) (J : ℚ) : ℚ :=
     t.pb (t.n1 + 1) * (tab.getD t.n1 0 / (1 - t.r) + J / (1 - t.r) ^ 2)
 
 /-- The option with cap `c1`, Chernoff parameter `θ`, `s` squarings and threshold `cthr`. -/
-def fillOpt (b : ℕ) (t : PoisT) (c1 θ : ℚ) (s : ℕ) (cthr : ℚ) : OptF :=
+def fillOpt (H b : ℕ) (t : PoisT) (c1 θ : ℚ) (s : ℕ) (cthr : ℚ) : OptF :=
   let eC := expUp (θ * c1) s t.P
   let A2 := rup ((eC - 1 - θ * c1) / c1 ^ 2) (2 * 127 + 64)
   let o0 : OptF := ⟨c1, θ, cthr, s, eC, A2, [], 0, [], 0, 0, 0, 0⟩
-  let gt := leafTab t.n1 (64 + 127) (gBound o0)
-  let ht := leafTab t.n1 (64 + 64) (hBound o0)
-  let Jg := leafJ t.n1 gt κQ
+  let gt := leafTab t.n1 (64 + 127) (gBound H o0)
+  let ht := leafTab t.n1 (64 + 64) (hBound H o0)
+  let Jg := leafJ t.n1 gt (κQ H)
   let Jh := leafJ t.n1 ht (eC - 1)
   let Eg := rup (leafMean t gt Jg) (64 + 127 + 2 * b)
   let Ee := rup (leafMean t ht Jh) (64 + 2 * b)
@@ -68,55 +69,55 @@ def fillOpt (b : ℕ) (t : PoisT) (c1 θ : ℚ) (s : ℕ) (cthr : ℚ) : OptF :=
   ⟨c1, θ, cthr, s, eC, A2, gt, Jg, ht, Jh, Eg, Ee, B⟩
 
 /-- The near certificate of a Poisson table. -/
-def fillOptN (b : ℕ) (t : PoisT) : OptN :=
-  let nt := leafTab t.n1 (64 + 127) nBound
-  let Jn := leafJ t.n1 nt (16 * κQ)
+def fillOptN (H b : ℕ) (t : PoisT) : OptN :=
+  let nt := leafTab t.n1 (64 + 127) (nBound H)
+  let Jn := leafJ t.n1 nt (16 * κQ H)
   ⟨nt, Jn, rup (leafMean t nt Jn) (64 + 127 + 2 * b)⟩
 
 /-! ### Covers option by option -/
 
 /-- The check of one option, with its threshold and its bound `p = (cthr, B)`. -/
-def checkOptB (b : ℕ) (t : PoisT) (o : OptF) (p : ℚ × ℚ) : Bool :=
-  checkOptF b t o && decide (o.cthr = p.1) && decide (o.B = p.2)
+def checkOptB (H b : ℕ) (t : PoisT) (o : OptF) (p : ℚ × ℚ) : Bool :=
+  checkOptF H b t o && decide (o.cthr = p.1) && decide (o.B = p.2)
 
 /-- `checkEntryF` on the thresholds and the bounds of the options. -/
-def checkEntryQ (b N : ℕ) (ps : List (ℚ × ℚ)) (e : EntryF) : Bool :=
+def checkEntryQ (K N : ℕ) (ps : List (ℚ × ℚ)) (e : EntryF) : Bool :=
   match ps[e.2.2]? with
   | none => false
   | some p =>
-      decide (2 * e.2.1 ≤ 2 ^ 128) && decide (p.1 ≤ ForsPotential.betaWQ e.2.1) &&
-        decide ((e.2.1 : ℚ) * p.2 + ((e.2.1 : ℚ) + kCreditF b + N) / 2 ^ 200 ≤
-          ((e.1 : ℚ) / 2 ^ 128) ^ 2 + (kCreditF b : ℚ) / 2 ^ 127)
+      decide (2 * e.2.1 ≤ 2 ^ 128) && decide (p.1 ≤ ForestPotential.betaWQ e.2.1) &&
+        decide ((e.2.1 : ℚ) * p.2 + ((e.2.1 : ℚ) + K + N) / 2 ^ 200 ≤
+          ((e.1 : ℚ) / 2 ^ 128) ^ 2 + (K : ℚ) / 2 ^ 127)
 
 /-- `chainF` on the thresholds and the bounds of the options. -/
-def chainQ (b N qtop : ℕ) (ps : List (ℚ × ℚ)) : ℕ → List EntryF → Bool
+def chainQ (K N qtop : ℕ) (ps : List (ℚ × ℚ)) : ℕ → List EntryF → Bool
   | last, [] => decide (qtop < last)
-  | last, e :: rest => decide (e.1 ≤ last) && checkEntryQ b N ps e && chainQ b N qtop ps (e.2.1 + 1) rest
+  | last, e :: rest => decide (e.1 ≤ last) && checkEntryQ K N ps e && chainQ K N qtop ps (e.2.1 + 1) rest
 
 /-- The checks of a light cover that do not open its options. -/
-def checkCoverQ (b N qstart : ℕ) (c : CoverW) (ps : List (ℚ × ℚ)) : Bool :=
-  checkRate b N c.qtop c.tab && checkPT c.tab && chainQ b N c.qtop ps qstart c.entries
+def checkCoverQ (H b K N qstart : ℕ) (c : CoverW) (ps : List (ℚ × ℚ)) : Bool :=
+  checkRate H b N c.qtop c.tab && checkPT c.tab && chainQ K N c.qtop ps qstart c.entries
 
 /-- The checks of a heavy cover that do not open its options. -/
-def checkCoverQH (b N qstart : ℕ) (c : CoverW) (ps : List (ℚ × ℚ)) : Bool :=
-  checkRateH b N c.qtop c.tab && checkPT c.tab && chainQ b N c.qtop ps qstart c.entries
+def checkCoverQH (H b K N qstart : ℕ) (c : CoverW) (ps : List (ℚ × ℚ)) : Bool :=
+  checkRateH H b N c.qtop c.tab && checkPT c.tab && chainQ K N c.qtop ps qstart c.entries
 
-theorem checkEntryQ_map (b N : ℕ) (opts : List OptF) (e : EntryF) :
-    checkEntryQ b N (opts.map fun o => (o.cthr, o.B)) e = checkEntryF b N opts e := by
+theorem checkEntryQ_map (K N : ℕ) (opts : List OptF) (e : EntryF) :
+    checkEntryQ K N (opts.map fun o => (o.cthr, o.B)) e = checkEntryF K N opts e := by
   unfold checkEntryQ checkEntryF
   rw [List.getElem?_map]
   cases opts[e.2.2]? <;> rfl
 
-theorem chainQ_map (b N qtop : ℕ) (opts : List OptF) : ∀ (es : List EntryF) (last : ℕ),
-    chainQ b N qtop (opts.map fun o => (o.cthr, o.B)) last es = chainF b N qtop opts last es
+theorem chainQ_map (K N qtop : ℕ) (opts : List OptF) : ∀ (es : List EntryF) (last : ℕ),
+    chainQ K N qtop (opts.map fun o => (o.cthr, o.B)) last es = chainF K N qtop opts last es
   | [], _ => rfl
   | e :: rest, last => by
-      simp only [chainQ, chainF, checkEntryQ_map, chainQ_map b N qtop opts rest]
+      simp only [chainQ, chainF, checkEntryQ_map, chainQ_map K N qtop opts rest]
 
 /-- Options checked one by one pass `checkOptF`, and `ps` lists their thresholds and bounds. -/
-theorem checkOptB_all {b : ℕ} {t : PoisT} : ∀ {opts : List OptF} {ps : List (ℚ × ℚ)},
-    List.Forall₂ (fun o p => checkOptB b t o p = true) opts ps →
-      opts.all (checkOptF b t) = true ∧ (opts.map fun o => (o.cthr, o.B)) = ps
+theorem checkOptB_all {H b : ℕ} {t : PoisT} : ∀ {opts : List OptF} {ps : List (ℚ × ℚ)},
+    List.Forall₂ (fun o p => checkOptB H b t o p = true) opts ps →
+      opts.all (checkOptF H b t) = true ∧ (opts.map fun o => (o.cthr, o.B)) = ps
   | _, _, .nil => ⟨rfl, rfl⟩
   | _, _, .cons (a := o) (b := p) h hs => by
       obtain ⟨h1, h2⟩ := checkOptB_all hs
@@ -126,18 +127,18 @@ theorem checkOptB_all {b : ℕ} {t : PoisT} : ∀ {opts : List OptF} {ps : List 
       simp only [List.map_cons, h2, hc, hB]
 
 /-- **A light cover from its options checked one by one.** -/
-theorem checkCoverW_of {b N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
-    (ho : List.Forall₂ (fun o p => checkOptB b c.tab o p = true) c.opts ps)
-    (h : checkCoverQ b N qstart c ps = true) : checkCoverW b N qstart c = true := by
+theorem checkCoverW_of {H b K N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
+    (ho : List.Forall₂ (fun o p => checkOptB H b c.tab o p = true) c.opts ps)
+    (h : checkCoverQ H b K N qstart c ps = true) : checkCoverW H b K N qstart c = true := by
   obtain ⟨h1, h2⟩ := checkOptB_all ho
   simp only [checkCoverQ, Bool.and_eq_true] at h
   simp only [checkCoverW, Bool.and_eq_true]
   exact ⟨⟨⟨h.1.1, h.1.2⟩, h1⟩, by rw [← chainQ_map, h2]; exact h.2⟩
 
 /-- **A heavy cover from its options checked one by one.** -/
-theorem checkCoverH_of {b N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
-    (ho : List.Forall₂ (fun o p => checkOptB b c.tab o p = true) c.opts ps)
-    (h : checkCoverQH b N qstart c ps = true) : checkCoverH b N qstart c = true := by
+theorem checkCoverH_of {H b K N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
+    (ho : List.Forall₂ (fun o p => checkOptB H b c.tab o p = true) c.opts ps)
+    (h : checkCoverQH H b K N qstart c ps = true) : checkCoverH H b K N qstart c = true := by
   obtain ⟨h1, h2⟩ := checkOptB_all ho
   simp only [checkCoverQH, Bool.and_eq_true] at h
   simp only [checkCoverH, Bool.and_eq_true]

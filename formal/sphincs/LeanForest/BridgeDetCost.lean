@@ -9,6 +9,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.Det
 
+variable [Params]
+
 open Concrete Completeness Prefix HiddenGraph SeedCoupling GraphView
 
 set_option backward.isDefEq.respectTransparency false
@@ -79,7 +81,6 @@ theorem joinTable_update (lows highs : LTable) (message : Message) (low : Random
     simp [joinTable]
   · simp [joinTable, Function.update_of_ne h]
 
-variable [Params]
 
 /-- The deterministic signer in the graph view: charge the one derivation call of the randomizer
 base and step, read them from the table, then scan. -/
@@ -104,7 +105,7 @@ noncomputable def costRestDet (parameter : PublicParameter) (data : PublicData) 
 
 noncomputable def costGameDet (parameter : PublicParameter) (data : PublicData) (rnd : RTable)
     (adversary : Adversary) : OracleComp CostSpec Bool := do
-  HiddenCost.tick (226 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight))
+  HiddenCost.tick Prefix.keygenHashCost
   costRestDet parameter data rnd adversary
 
 /-- The deterministic signer from a scan of `attempts` trials starting at `start`. -/
@@ -113,7 +114,6 @@ def seededFrom (sk : Seeded.SecretKey) (message : Message) (step : Randomness) (
   let some (randomness, _) ← Seeded.signDigestLoop sk message step attempts start | return none
   Randomized.finishSign sk message randomness
 
-omit [Params] in
 theorem eval_deriveRandomizer (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (message : Message) :
     evalWithAnswerFn f (deriveRandomizer parameter seed message : OracleComp HashSpec (Randomness × Randomness)) =
@@ -122,7 +122,6 @@ theorem eval_deriveRandomizer (f : QueryImpl HashSpec Id) (parameter : PublicPar
   simp only [deriveRandomizer, evalWithAnswerFn_bind, evalWithAnswerFn_pure]
   rfl
 
-omit [Params] in
 theorem hashCalls_deriveRandomizer (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (message : Message) :
     hashCalls f (deriveRandomizer parameter seed message : OracleComp HashSpec (Randomness × Randomness)) = 1 := by

@@ -8,13 +8,15 @@ complete counter exhaustion. -/
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.ReferenceChoice
+
+variable [Params]
 open Concrete Completeness Prefix TargetAssignment
 
 attribute [local instance] Classical.propDecidable
 attribute [local irreducible] firstEncoding encodingAttemptLimit encode
 
 def search (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (message : ForestKey) : Nat → Nat → OracleComp HashSpec (Option (Counter × Encoding))
+    (leaf : LeafIndex) (message : HashInput) : Nat → Nat → OracleComp HashSpec (Option (Counter × Encoding))
   | 0, _ => pure none
   | attempts + 1, start => do
       let found ← encode parameter lay tree leaf message (BitVec.ofNat counterBits start)
@@ -23,7 +25,7 @@ def search (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
       | some encoding => pure (some (BitVec.ofNat counterBits start, encoding))
 
 theorem eval_search (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : ForestKey) (attempts start : Nat) :
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput) (attempts start : Nat) :
     evalWithAnswerFn f (search parameter lay tree leaf message attempts start) =
       firstEncoding f parameter lay tree leaf message attempts start := by
   induction attempts generalizing start with
@@ -34,14 +36,14 @@ theorem eval_search (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
         simp only [search, evalWithAnswerFn_bind, firstEncoding, he, evalWithAnswerFn_pure, ih]
 
 theorem queriedInputs_encode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : ForestKey) (counter : Counter) :
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput) (counter : Counter) :
     queriedInputs f (encode parameter lay tree leaf message counter : OracleComp HashSpec _) =
       [Wots.encodingInput parameter lay tree leaf message counter] := by
   simp only [encode, queriedInputs_bind, queriedInputs_tweakableHash, queriedInputs_pure,
     List.append_nil, Wots.encodingInput]
 
 theorem search_query_classification (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : ForestKey) (attempts start : Nat)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput) (attempts start : Nat)
     (input : HashInput) (hinput : input ∈ queriedInputs f
       (search parameter lay tree leaf message attempts start)) :
     ∃ counter, input = Wots.encodingInput parameter lay tree leaf message counter ∧
@@ -70,7 +72,7 @@ theorem search_query_classification (f : QueryImpl HashSpec Id) (parameter : Pub
 
 /-- The prepared search cannot itself contain an exceptional encoding query. -/
 theorem search_targets_empty_or_miss (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : ForestKey)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput)
     (table : Table)
     (hentry : table (hashDomainFields (.encoding lay tree leaf)) =
       some ⟨exemptInput f parameter lay tree leaf message, target f parameter lay tree leaf message⟩)
@@ -94,7 +96,7 @@ theorem search_targets_empty_or_miss (f : QueryImpl HashSpec Id) (parameter : Pu
       cases hencode
   · have hexempt' : exemptInput f parameter lay tree leaf message =
         some (tweakableHashInput parameter (.encoding lay tree leaf)
-          (rootsPayload message ++ bytesLE 4 counter)) := hexempt
+          (message ++ bytesLE 4 counter)) := hexempt
     rw [if_pos hexempt']
     exact Finset.notMem_empty _
 

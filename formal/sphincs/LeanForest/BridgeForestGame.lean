@@ -1,4 +1,4 @@
-import LeanForest.BridgeForsPotential
+import LeanForest.BridgeForestPotential
 
 /-! The rest of the game of an arbitrary adaptive adversary as a cost program (`advProg`): every
 adversary step is a draw, an ordinary hash query or a signing call, and verification is a lifted
@@ -6,7 +6,9 @@ hash computation (`finishGame`). -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner LeanForest.Base.Domination
 
@@ -14,7 +16,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 section Program
 
@@ -84,4 +85,4 @@ theorem advProg_sign (message : Message) (next : Option Signature → OracleComp
 
 end Program
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

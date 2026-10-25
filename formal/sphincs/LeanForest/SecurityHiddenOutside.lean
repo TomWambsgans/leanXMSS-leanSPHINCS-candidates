@@ -6,6 +6,8 @@ and cached; no probability distribution over full infinite answer functions is a
 
 open OracleComp OracleSpec ENNReal
 namespace LeanForest.Security.HiddenOutside
+
+variable [Params]
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 set_option maxHeartbeats 100000

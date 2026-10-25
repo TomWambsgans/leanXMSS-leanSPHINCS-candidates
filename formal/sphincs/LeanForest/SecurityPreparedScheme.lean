@@ -9,6 +9,8 @@ honest code is compiled; adversarial hash requests must continue to use the ordi
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.PreparedScheme
+
+variable [Params]
 open SeedModel SeedCoupling Completeness Concrete
 
 set_option backward.isDefEq.respectTransparency false
@@ -87,7 +89,7 @@ theorem compile_forest (seed : MasterSeed) (material : Material) (index : Index)
       (do let _ ← tick; pure (derivedOutput material.2 (.inr (.inl (index, c, s, j, a, pair))))) := by
   simpa only [derivationDomain] using compile_derivation seed material (.inr (.inl (index, c, s, j, a, pair)))
 
-theorem compile_surrogate (seed : MasterSeed) (material : Material) (level : Fin totalHeight) :
+theorem compile_surrogate (seed : MasterSeed) (material : Material) (level : Fin maxLayerHeight) :
     simulateQ (compileHash seed material)
       (deriveKey (parameter material) (.surrogate level) seed : OracleComp HashSpec Digest) =
       (do let _ ← tick; pure (truncateHash (material.2 (.inr (.inr level))))) := by
@@ -159,7 +161,7 @@ theorem compile_forestWalk (seed : MasterSeed) (material : Material)
 
 theorem compile_encode (seed : MasterSeed) (material : Material)
     (p : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (message : ForestKey) (counter : Counter) :
+    (message : HashInput) (counter : Counter) :
     simulateQ (compileHash seed material)
       (encode p lay tree leaf message counter : OracleComp HashSpec (Option Encoding)) =
         liftM (encode p lay tree leaf message counter : OracleComp HashSpec (Option Encoding)) := by
@@ -198,9 +200,7 @@ theorem compiled_treeNode_eq (left right : MasterSeed) (material : Material)
   | succ level ih =>
       simp only [Seeded.treeNode, simulateQ_bind, ih, compile_tweakableHash]
 
-variable [Params]
 
-omit [Params] in
 theorem compiled_surrogate_eq (left right : MasterSeed) (material : Material) (level : Nat) :
     simulateQ (compileHash left material)
       (Seeded.surrogate (parameter material) left level : OracleComp HashSpec Digest) =
@@ -239,7 +239,6 @@ theorem compiled_treePath_eq (left right : MasterSeed) (material : Material)
   · exact compiled_treeNode_eq left right material lay tree _ _
   · exact compiled_surrogate_eq left right material _
 
-omit [Params] in
 /-- The compiled chain starts of a child: 3 ticks and the material. -/
 theorem compiled_forestSecrets_eq (left right : MasterSeed) (material : Material)
     (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) :
@@ -249,7 +248,6 @@ theorem compiled_forestSecrets_eq (left right : MasterSeed) (material : Material
       (Seeded.forestSecrets (parameter material) index c s j a right : OracleComp HashSpec _) := by
   simp only [Seeded.forestSecrets, simulate_sequenceFin, simulateQ_bind, compile_forest, simulateQ_pure]
 
-omit [Params] in
 theorem compiled_chainValue_eq (left right : MasterSeed) (material : Material)
     (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (pos : Nat) :
     simulateQ (compileHash left material)
@@ -259,7 +257,6 @@ theorem compiled_chainValue_eq (left right : MasterSeed) (material : Material)
   simp only [Seeded.chainValue, Seeded.forestStart, simulateQ_bind, compile_forest, compile_forestWalk,
     simulateQ_pure]
 
-omit [Params] in
 theorem compiled_childLeaf_eq (left right : MasterSeed) (material : Material)
     (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) :
     simulateQ (compileHash left material)
@@ -269,7 +266,6 @@ theorem compiled_childLeaf_eq (left right : MasterSeed) (material : Material)
   simp only [Seeded.childLeaf, simulateQ_bind, simulate_sequenceFin, compiled_forestSecrets_eq left right,
     compile_forestWalk, childLeafHash, compile_tweakableHash]
 
-omit [Params] in
 theorem compiled_subNode_eq (left right : MasterSeed) (material : Material)
     (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (level node : Nat) :
     simulateQ (compileHash left material)
@@ -288,7 +284,6 @@ theorem compiled_subNode_eq (left right : MasterSeed) (material : Material)
       intro r
       split <;> simp only [compile_tweakableHash, simulateQ_pure]
 
-omit [Params] in
 theorem compiled_superNode_eq (left right : MasterSeed) (material : Material)
     (index : Index) (c : Coord) (s : SuperIdx) :
     simulateQ (compileHash left material)
@@ -298,7 +293,6 @@ theorem compiled_superNode_eq (left right : MasterSeed) (material : Material)
   simp only [Seeded.superNode, simulateQ_bind, simulate_sequenceFin, compiled_subNode_eq left right,
     superHash, compile_tweakableHash, simulateQ_pure]
 
-omit [Params] in
 theorem compiled_topNode_eq (left right : MasterSeed) (material : Material)
     (index : Index) (c : Coord) (level node : Nat) :
     simulateQ (compileHash left material)
@@ -317,7 +311,6 @@ theorem compiled_topNode_eq (left right : MasterSeed) (material : Material)
       intro r
       split <;> simp only [compile_tweakableHash, simulateQ_pure]
 
-omit [Params] in
 theorem compiled_forestKey_eq (left right : MasterSeed) (material : Material) (index : Index) :
     simulateQ (compileHash left material)
       (Seeded.forestKey (parameter material) index left : OracleComp HashSpec ForestKey) =
@@ -326,7 +319,6 @@ theorem compiled_forestKey_eq (left right : MasterSeed) (material : Material) (i
   simp only [Seeded.forestKey, simulateQ_bind, simulate_sequenceFin,
     compiled_topNode_eq left right, compile_tweakableHash, simulateQ_pure]
 
-omit [Params] in
 theorem compiled_coordOpen_eq (left right : MasterSeed) (material : Material) (index : Index)
     (c : Coord) (mark : CoordMark) :
     simulateQ (compileHash left material)
@@ -336,7 +328,6 @@ theorem compiled_coordOpen_eq (left right : MasterSeed) (material : Material) (i
   simp only [Seeded.coordOpen, simulateQ_bind, simulate_sequenceFin, compiled_forestSecrets_eq left right,
     compile_forestWalk, compiled_subNode_eq left right, compiled_topNode_eq left right, simulateQ_pure]
 
-omit [Params] in
 theorem compiled_forestOpen_eq (left right : MasterSeed) (material : Material) (index : Index)
     (marks : Coord → CoordMark) :
     simulateQ (compileHash left material)
@@ -345,9 +336,8 @@ theorem compiled_forestOpen_eq (left right : MasterSeed) (material : Material) (
       (Seeded.forestOpen (parameter material) index marks right : OracleComp HashSpec _) := by
   simp only [Seeded.forestOpen, simulate_sequenceFin, compiled_coordOpen_eq left right]
 
-omit [Params] in
 theorem compiled_otsSignFrom_eq (left right : MasterSeed) (material : Material)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : ForestKey) (attempts counter : Nat) :
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput) (attempts counter : Nat) :
     simulateQ (compileHash left material)
       (Seeded.otsSignFrom (parameter material) lay tree leaf left message attempts counter : OracleComp HashSpec _) =
     simulateQ (compileHash right material)
@@ -385,13 +375,25 @@ theorem compile_keygen (seed : MasterSeed) (material : Material) :
       (fun result => (result.1, reseedKey seed result.2)) <$> keygen material :=
   compiled_keygen_eq seed 0 material
 
+theorem compiled_layerMessage_eq (left right : MasterSeed) (material : Material) (root : Digest)
+    (index : Index) (lay : Layer) :
+    simulateQ (compileHash left material)
+      (Seeded.layerMessage ⟨left, parameter material, root⟩ index lay : OracleComp HashSpec HashInput) =
+    simulateQ (compileHash right material)
+      (Seeded.layerMessage ⟨right, parameter material, root⟩ index lay : OracleComp HashSpec HashInput) := by
+  unfold Seeded.layerMessage Seeded.keyMessage
+  by_cases h : lay.val + 1 < numLayers
+  · simp only [dif_pos h, simulateQ_bind, Seeded.treeRoot, compiled_spineNode_eq left right,
+      simulateQ_pure]
+  · simp only [dif_neg h, simulateQ_bind, compiled_forestKey_eq left right, simulateQ_pure]
+
 theorem compiled_signLayer_eq (left right : MasterSeed) (material : Material) (root : Digest)
     (index : Index) (lay : Layer) :
     simulateQ (compileHash left material)
       (Seeded.signLayer ⟨left, parameter material, root⟩ index lay : OracleComp HashSpec _) =
     simulateQ (compileHash right material)
       (Seeded.signLayer ⟨right, parameter material, root⟩ index lay : OracleComp HashSpec _) := by
-  simp only [Seeded.signLayer, Seeded.layerMessage, simulateQ_bind, compiled_forestKey_eq left right,
+  simp only [Seeded.signLayer, simulateQ_bind, compiled_layerMessage_eq left right material root,
     Seeded.otsSign, compiled_otsSignFrom_eq left right]
   apply bind_congr
   intro message
@@ -402,7 +404,6 @@ theorem compiled_signLayer_eq (left right : MasterSeed) (material : Material) (r
   | some result =>
       simp only [simulateQ_bind, compiled_treePath_eq left right, simulateQ_pure]
 
-omit [Params] in
 theorem compile_messageDigest (seed : MasterSeed) (material : Material)
     (p : PublicParameter) (root : Digest) (message : Message) (randomness : Randomness) :
     simulateQ (compileHash seed material)
@@ -410,6 +411,26 @@ theorem compile_messageDigest (seed : MasterSeed) (material : Material)
       liftM (messageDigest p root message randomness : OracleComp HashSpec MessageDigest) := by
   simp only [messageDigest, simulateQ_bind, compile_messageDigestCall,
     simulateQ_pure, liftM_bind, liftM_pure]
+
+/-- Sequencing computations whose compilations agree pointwise. -/
+theorem compiled_sequenceDep_congr (left right : QueryImpl HashSpec (OracleComp PreparedHashSpec)) :
+    ∀ {n : Nat} {α : Fin n → Type} (c₁ c₂ : (i : Fin n) → OracleComp HashSpec (Option (α i))),
+      (∀ i, simulateQ left (c₁ i) = simulateQ right (c₂ i)) →
+      simulateQ left (sequenceDep c₁) = simulateQ right (sequenceDep c₂)
+  | 0, _, _, _, _ => by simp only [sequenceDep, simulateQ_pure]
+  | n + 1, α, c₁, c₂, h => by
+      simp only [sequenceDep, simulateQ_bind, h 0]
+      apply bind_congr
+      intro head
+      cases head with
+      | none => simp only [simulateQ_pure]
+      | some head =>
+          simp only [simulateQ_bind,
+            compiled_sequenceDep_congr left right (α := fun i => α i.succ) (fun i => c₁ i.succ)
+              (fun i => c₂ i.succ) (fun i => h i.succ)]
+          apply bind_congr
+          intro tail
+          cases tail <;> simp only [simulateQ_pure]
 
 theorem compiled_finishSign_eq (left right : MasterSeed) (material : Material) (root : Digest)
     (message : Message) (randomness : Randomness) :
@@ -423,10 +444,11 @@ theorem compiled_finishSign_eq (left right : MasterSeed) (material : Material) (
   simp only [compiled_forestOpen_eq left right]
   apply bind_congr
   intro opening
-  simp only [sequenceLayers, simulateQ_bind, compiled_signLayer_eq left right, bind_assoc]
+  simp only [sequenceLayers, simulateQ_bind]
+  rw [compiled_sequenceDep_congr _ _ _ _ (fun lay => compiled_signLayer_eq left right material root _ lay)]
   apply bind_congr
   intro layer
-  cases layer <;> simp only [simulateQ_pure, pure_bind]
+  cases layer <;> simp only [simulateQ_pure]
 
 theorem compile_signAttempt (seed : MasterSeed) (material : Material)
     (p : PublicParameter) (root : Digest) (message : Message) (randomness : Randomness) :
@@ -494,6 +516,8 @@ theorem compile_sign (seed : MasterSeed) (material : Material) (root : Digest) (
 end LeanForest.Security.PreparedScheme
 
 namespace LeanForest.Security.PreparedScheme
+
+variable [Params]
 open SeedModel SeedCoupling Completeness Concrete
 set_option backward.isDefEq.respectTransparency false
 set_option maxHeartbeats 30000
@@ -704,7 +728,6 @@ theorem run_compileWorld_counted {α : Type} (seed : MasterSeed) (material : Mat
   rw [← simulateQ_countHashQueries, run_compileWorld, ← countPrepared_compileWorld,
     simulateQ_countPreparedQueries]
 
-variable [Params]
 
 /-- Prepared key generation returns its material parameter and a dummy-seed private key. -/
 theorem keygen_eq (material : Material) :

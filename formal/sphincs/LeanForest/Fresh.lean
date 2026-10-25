@@ -11,6 +11,8 @@ open OracleComp OracleSpec
 
 namespace LeanForest.Completeness
 
+variable [Params]
+
 open Concrete
 
 /-- A computation preserves absence of one cache entry, from every initial cache. -/
@@ -99,7 +101,7 @@ theorem fieldInput_ne_of_tag_ne_across (parameter parameter' : PublicParameter)
 /-- Every derivation domain is separate from both encoding (4) and message (12). -/
 theorem keygenDomain_tag_ne (domain : KeygenDomain) (tag : Nat) (htag : tag = 4 ∨ tag = 12) :
     (keygenDomainFields domain).tag ≠ BitVec.ofNat 5 tag := by
-  rcases htag with rfl | rfl <;> cases domain <;> simp [keygenDomainFields, tweakFields]
+  rcases htag with rfl | rfl <;> cases domain <;> simp [keygenDomainFields, tweakFields, treeFields]
 
 /-- Exclusion facts needed by structural tree computations. Surrogate derivations are included. -/
 structure StructuralFresh (target : HashInput) : Prop where
@@ -136,11 +138,11 @@ theorem structuralFresh_of_tag (parameter : PublicParameter) (fields : TweakFiel
     intros
     apply fieldInput_ne_of_tag_ne_across
     rw [hfields]
-    rcases htag with rfl | rfl <;> simp [hashDomainFields, tweakFields]
+    rcases htag with rfl | rfl <;> simp [hashDomainFields, tweakFields, treeFields]
 
 /-- Every counter-search input is separate from all structural tree inputs. -/
 theorem structuralFresh_encoding (parameter : PublicParameter) (lay : Layer)
-    (tree : TreeIndex) (leaf : LeafIndex) (message : ForestKey) (c : Nat) :
+    (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput) (c : Nat) :
     StructuralFresh (encodeInput parameter lay tree leaf message c) :=
   structuralFresh_of_tag parameter (hashDomainFields (.encoding lay tree leaf))
     _ 4 (Or.inl rfl) rfl
@@ -149,12 +151,12 @@ theorem structuralFresh_encoding (parameter : PublicParameter) (lay : Layer)
 theorem messageInput_ne_encoding (parameter : PublicParameter) (root : Digest)
     (message : Message) (randomness : Randomness)
     (encodingParameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (encodingMessage : ForestKey) (c : Nat) :
+    (leaf : LeafIndex) (encodingMessage : HashInput) (c : Nat) :
     tweakableHashInput parameter .message
       (messageDigestPayload root message randomness) ≠
         encodeInput encodingParameter lay tree leaf encodingMessage c := by
   apply fieldInput_ne_of_tag_ne_across
-  simp [hashDomainFields, tweakFields]
+  simp [hashDomainFields, tweakFields, treeFields]
 
 /-- Message inputs are separate from structural key generation for all public parameters. -/
 theorem structuralFresh_message (parameter : PublicParameter) (root : Digest)
@@ -210,7 +212,6 @@ theorem surrogate (parameter : PublicParameter) (seed : MasterSeed) (level : Nat
   · exact deriveKey _ _ _ _ (hs.derive _ _ _)
   · exact pure' _ _
 
-variable [Params]
 
 theorem spineNode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (seed : MasterSeed) (steps : Nat) :
@@ -229,7 +230,6 @@ theorem keygenFromSeed (seed : MasterSeed) :
   exact bind (deriveKey _ _ _ _ (hs.derive _ _ _)) (fun _ =>
     bind (spineNode hs _ _ _ _ _) (fun _ => pure' _ _))
 
-omit [Params] in
 theorem forestWalk (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
     (a : ChildIdx) (i : FChain) (start steps : Nat) (value : Digest) :
     PreservesFresh target (Concrete.forestWalk parameter index c s j a i start steps value) := by
@@ -242,7 +242,6 @@ theorem forestWalk (parameter : PublicParameter) (index : Index) (c : Coord) (s 
       · exact tweakableHash _ _ _ _ (hs.fchain _ _ _ _ _ _ _ _ _)
       · exact pure' _ _
 
-omit [Params] in
 theorem chainValue (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
     (a : ChildIdx) (i : FChain) (seed : MasterSeed) (pos : Nat) :
     PreservesFresh target (Seeded.chainValue parameter index c s j a i seed pos) := by
@@ -250,14 +249,12 @@ theorem chainValue (parameter : PublicParameter) (index : Index) (c : Coord) (s 
   exact bind (bind (deriveOutput _ _ _ _ (hs.derive _ _ _)) (fun _ => pure' _ _))
     (fun _ => forestWalk hs _ _ _ _ _ _ _ _ _ _)
 
-omit [Params] in
 theorem forestSecrets (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
     (j : SubIdx) (a : ChildIdx) (seed : MasterSeed) :
     PreservesFresh target (Seeded.forestSecrets parameter index c s j a seed) := by
   rw [Seeded.forestSecrets]
   exact bind (sequenceFin _ _ (fun _ => deriveOutput _ _ _ _ (hs.derive _ _ _))) (fun _ => pure' _ _)
 
-omit [Params] in
 theorem childLeaf (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
     (a : ChildIdx) (seed : MasterSeed) :
     PreservesFresh target (Seeded.childLeaf parameter index c s j a seed) := by
@@ -266,7 +263,6 @@ theorem childLeaf (parameter : PublicParameter) (index : Index) (c : Coord) (s :
     bind (sequenceFin _ _ (fun _ => forestWalk hs _ _ _ _ _ _ _ _ _ _))
       (fun _ => tweakableHash _ _ _ _ (hs.childLeaf _ _ _ _ _ _ _)))
 
-omit [Params] in
 theorem subNode (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
     (seed : MasterSeed) (level node : Nat) :
     PreservesFresh target (Seeded.subNode parameter index c s j seed level node) := by
@@ -281,7 +277,6 @@ theorem subNode (parameter : PublicParameter) (index : Index) (c : Coord) (s : S
       · exact tweakableHash _ _ _ _ (hs.subNode _ _ _ _ _ _ _ _)
       · exact pure' _ _
 
-omit [Params] in
 theorem superNode (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
     (seed : MasterSeed) :
     PreservesFresh target (Seeded.superNode parameter index c s seed) := by
@@ -290,7 +285,6 @@ theorem superNode (parameter : PublicParameter) (index : Index) (c : Coord) (s :
       bind (subNode hs _ _ _ _ _ _ _ _) (fun _ => pure' _ _))))
     (fun _ => tweakableHash _ _ _ _ (hs.superChild _ _ _ _ _))
 
-omit [Params] in
 theorem topNode (parameter : PublicParameter) (index : Index) (c : Coord)
     (seed : MasterSeed) (level node : Nat) :
     PreservesFresh target (Seeded.topNode parameter index c seed level node) := by
@@ -305,14 +299,12 @@ theorem topNode (parameter : PublicParameter) (index : Index) (c : Coord)
       · exact tweakableHash _ _ _ _ (hs.topNode _ _ _ _ _ _)
       · exact pure' _ _
 
-omit [Params] in
 theorem forestKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) :
     PreservesFresh target (Seeded.forestKey parameter index seed) := by
   rw [Seeded.forestKey]
   exact sequenceFin _ _ (fun _ => bind (topNode hs _ _ _ _ _ _) (fun _ =>
     bind (topNode hs _ _ _ _ _ _) (fun _ => pure' _ _)))
 
-omit [Params] in
 theorem coordOpen (parameter : PublicParameter) (index : Index) (c : Coord) (mark : CoordMark)
     (seed : MasterSeed) :
     PreservesFresh target (Seeded.coordOpen parameter index c mark seed) := by
@@ -323,7 +315,6 @@ theorem coordOpen (parameter : PublicParameter) (index : Index) (c : Coord) (mar
     bind (sequenceFin _ _ (fun _ => forestWalk hs _ _ _ _ _ _ _ _ _ _)) (fun _ =>
       bind (sequenceFin _ _ (fun _ => subNode hs _ _ _ _ _ _ _ _)) (fun _ => pure' _ _)))
 
-omit [Params] in
 theorem forestOpen (parameter : PublicParameter) (index : Index)
     (marks : Coord → CoordMark) (seed : MasterSeed) :
     PreservesFresh target (Seeded.forestOpen parameter index marks seed) := by

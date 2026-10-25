@@ -11,9 +11,10 @@ open ENNReal
 
 namespace LeanForest.Security.ForestPrice
 
+variable [Params]
+
 open Concrete LeanForest.Base.Domination
 
-variable [Params]
 
 abbrev View := Lifetime.KeptDigestView
 
@@ -53,11 +54,9 @@ theorem witness_mono (target : View) : Monotone' (witness target) := by
 
 /-! ### The fresh-digest price and its excess over a baseline -/
 
-omit [Params] in
 theorem mono_const_mul {V : Type} {g : Multiset V → ℝ≥0∞} (hg : Monotone' g) (c : ℝ≥0∞) :
     Monotone' fun d => c * g d := fun _ _ hle => mul_le_mul_right (hg _ _ hle) c
 
-omit [Params] in
 theorem mono_freshAvg' {V W : Type} (U : Finset W) {h : W → Multiset V → ℝ≥0∞} (hh : ∀ u, Monotone' (h u)) :
     Monotone' fun d => freshAvg U fun u => h u d :=
   fun _ _ hle => freshAvg_mono U fun u _ => hh u _ _ hle
@@ -86,7 +85,6 @@ theorem price_le_landing (disclosed : Multiset View) : price disclosed ≤ landi
 theorem price_ne_top (disclosed : Multiset View) : price disclosed ≠ ⊤ :=
   ne_top_of_le_ne_top (ne_top_of_le_ne_top ENNReal.one_ne_top landing_le_one) (price_le_landing disclosed)
 
-omit [Params] in
 theorem excess_mono {V : Type} {g : Multiset V → ℝ≥0∞} (hmono : Monotone' g) (b : ℝ≥0∞) :
     Monotone' fun d => g d - b := fun _ _ hle => tsub_le_tsub_right (hmono _ _ hle) b
 

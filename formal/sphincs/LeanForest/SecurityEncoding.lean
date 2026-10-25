@@ -6,6 +6,8 @@ Adapted from leanVM b7a107256; the candidate uses 64 two-bit digits without padd
 
 namespace LeanForest.Security.EncodingCode
 
+variable [Params]
+
 open TargetSum OracleComp OracleSpec ENNReal
 open scoped BigOperators
 attribute [local instance] Classical.propDecidable

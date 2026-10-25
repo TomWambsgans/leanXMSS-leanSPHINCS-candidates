@@ -13,6 +13,7 @@ namespace LeanForest.Security.Det
 
 variable [Params]
 
+
 noncomputable def signingOracleDet (sk : Seeded.SecretKey) :
     QueryImpl SigningSpec (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) :=
   QueryImpl.withLogging fun request =>

@@ -9,6 +9,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
 
+variable [Params]
+
 open Completeness SeedModel Graph Assembly Reduce HiddenGraph Eager
 
 set_option backward.isDefEq.respectTransparency false
@@ -21,7 +23,6 @@ def IsRowPosition : Position → Prop
   | .fchain .. => True
   | _ => False
 
-variable [Params]
 
 def structActive (parameter : PublicParameter) (position : Position) : Prop :=
   PrunedGraph.active parameter position ∧ ¬IsRowPosition position
@@ -42,7 +43,6 @@ variable (parameter : PublicParameter)
   (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
   (ftsSecret : ForestSecrets) (labels : CanonicalGraphLabels)
 
-omit [Params] in
 theorem programGraphCache_empty_some (positions : List Position) (position : Position)
     (hmem : position ∈ positions) (bytes : HashInput)
     (heq : bytes = canonicalGraphInput parameter otsSecret ftsSecret position labels) :
@@ -50,7 +50,6 @@ theorem programGraphCache_empty_some (positions : List Position) (position : Pos
   rw [heq]
   exact programGraphCache_label parameter otsSecret ftsSecret labels positions ∅ _ hmem
 
-omit [Params] in
 theorem programGraphCache_empty_none (positions : List Position) (bytes : HashInput)
     (hmiss : ∀ position ∈ positions,
       bytes ≠ canonicalGraphInput parameter otsSecret ftsSecret position labels) :
@@ -126,13 +125,12 @@ theorem graphFn_eq_answer (material : Material) (answers : CanonicalGraphLabels)
 /-- Coordinates fixed before the stopped experiment: WOTS chain endpoints, forest chain tops, and
 every coordinate at a pruned-away leaf. Only these are read outside the hidden rows. -/
 def KnownCoordinate (parameter : PublicParameter) : Coordinate → Prop
-  | .chain _ _ leaf _ position => position.val = chainLength - 1 ∨ ¬Landed parameter leaf
+  | .chain lay tree leaf _ position => position.val = chainLength - 1 ∨ ¬PrunedGraph.KeyActive parameter lay tree leaf
   | .fchain _ _ _ _ _ _ position => position.val = chainTop
 
 noncomputable local instance hiddenSampleCellFintype : Fintype SampleCell := sampleCellFintype
 noncomputable local instance hiddenSampleCellDecEq : DecidableEq SampleCell := Classical.decEq _
 
-omit [Params] in
 theorem coordinateAtCell_of_cell {coordinate : Coordinate} {cell : SampleCell}
     (h : coordinateCell coordinate = cell) : coordinateAtCell cell = some coordinate := by
   rw [← h, coordinateAtCell_cell]
@@ -171,7 +169,7 @@ theorem cellKnown_lastForest (parameter : PublicParameter) (index : Index) (c : 
   subst coordinate
   simp [KnownCoordinate, Position.lastForestStep, chainTop]
 
-theorem cellKnown_surrogate (parameter : PublicParameter) (level : Fin totalHeight) :
+theorem cellKnown_surrogate (parameter : PublicParameter) (level : Fin maxLayerHeight) :
     CellKnown parameter (.inl (.inr (.inr level))) :=
   cellKnown_of_none parameter _ rfl
 
@@ -233,7 +231,6 @@ theorem assemble_agree (parameter : PublicParameter) (lows lows' : HiddenGraph.T
     exact (assemble_remaining lows highs remaining ⟨cell, hout⟩).trans
       (assemble_remaining lows' highs remaining ⟨cell, hout⟩).symm
 
-omit [Params] in
 theorem splitMaterial_parameter (lows : HiddenGraph.Table) :
     parameter (splitMaterial parameterOutput highs remaining lows) = truncateHash parameterOutput := rfl
 
@@ -257,7 +254,6 @@ theorem labelsOf_agree (lows lows' : HiddenGraph.Table)
 
 end Split
 
-omit [Params] in
 theorem programGraphCache_congr (parameter : PublicParameter)
     (otsSecret otsSecret' : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
     (ftsSecret ftsSecret' : ForestSecrets) (positions : List Position)
@@ -279,7 +275,6 @@ theorem programGraphCache_congr (parameter : PublicParameter)
       rw [hinput, hlabel]
       exact ih _ (fun position hp => h position (List.mem_cons_of_mem _ hp))
 
-omit [Params] in
 theorem canonicalGraphInput_struct (parameter : PublicParameter)
     (otsSecret otsSecret' : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
     (ftsSecret ftsSecret' : ForestSecrets) (position : Position)
@@ -317,7 +312,6 @@ theorem structCache_agree (lows lows' : HiddenGraph.Table)
   · exact labelsOf_agree parameterOutput highs remaining lows lows' hagree position
       (cellKnown_struct _ position hrow)
 
-omit [Params] in
 theorem publicData_congr (labels labels' : CanonicalGraphLabels) (steps : Message → Randomness)
     (h : ∀ position, ¬IsRowPosition position → labels position = labels' position) :
     GraphView.publicData labels steps = GraphView.publicData labels' steps := by
@@ -346,7 +340,9 @@ theorem publicData_congr (labels labels' : CanonicalGraphLabels) (steps : Messag
     unfold GraphCorrectness.keyLabels
     rw [h (.topNode index c ⟨topHeight - 2, by decide⟩ ⟨0, by decide⟩) (by simp [IsRowPosition]),
       h (.topNode index c ⟨topHeight - 2, by decide⟩ ⟨1, by decide⟩) (by simp [IsRowPosition])]
-  · funext leaf level
+  · funext lay tree
+    rw [htree]
+  · funext lay tree leaf level
     rw [htree]
   · funext index c s j a level
     rw [hsub]
@@ -374,7 +370,6 @@ theorem highHalves_split (lows : HiddenGraph.Table) (address : Address)
 
 end Split
 
-omit [Params] in
 theorem answer_congr_high (parameter : PublicParameter) (active : Address → Prop)
     (table : HiddenGraph.Table) (high high' : Address → Prefix.High) (outside : HashInput → HashOutput)
     (h : ∀ address, active address → high address = high' address) :
@@ -392,7 +387,7 @@ theorem answer_congr_high (parameter : PublicParameter) (active : Address → Pr
 
 /-- Chain coordinates above a pruned-away leaf's secret are masked to zero by preparation. -/
 def Masked (parameter : PublicParameter) : Coordinate → Prop
-  | .chain _ _ leaf _ position => position.val ≠ 0 ∧ ¬Landed parameter leaf
+  | .chain lay tree leaf _ position => position.val ≠ 0 ∧ ¬PrunedGraph.KeyActive parameter lay tree leaf
   | _ => False
 
 theorem known_of_masked (parameter : PublicParameter) (coordinate : Coordinate)
@@ -445,7 +440,7 @@ theorem graphCoordinates_split (lows : HiddenGraph.Table) :
         rw [if_neg hm, ← hcoord]
         simp only [HiddenGraph.coordinates, dif_pos hzero]
         rfl
-      · by_cases hland : Landed (truncateHash parameterOutput) leaf
+      · by_cases hland : PrunedGraph.KeyActive (truncateHash parameterOutput) lay tree leaf
         · have hm : ¬Masked (truncateHash parameterOutput) (.chain lay tree leaf chainIdx position) :=
             fun h => h.2 hland
           rw [if_neg hm, ← hcoord]

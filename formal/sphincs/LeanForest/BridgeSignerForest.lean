@@ -11,6 +11,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.ForestSigner
 
+variable [Params]
+
 open Concrete HiddenCost HiddenDebt GraphView
 
 set_option backward.isDefEq.respectTransparency false
@@ -53,13 +55,13 @@ theorem NoMsg.tweakableHash (parameter : PublicParameter) (domain : HashDomain) 
   exact NoMsg.bind (NoMsg.query (not_msg_tweakable parameter domain payload hdomain)) fun _ => NoMsg.pure' _
 
 theorem NoMsg.encode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (message : ForestKey) (counter : Counter) :
+    (message : HashInput) (counter : Counter) :
     NoMsg (Concrete.encode parameter lay tree leaf message counter : OracleComp HashSpec (Option Encoding)) := by
   unfold Concrete.encode
-  exact NoMsg.bind (NoMsg.tweakableHash _ _ _ (by simp [hashDomainFields, tweakFields])) fun _ => NoMsg.pure' _
+  exact NoMsg.bind (NoMsg.tweakableHash _ _ _ (by simp [hashDomainFields, treeFields])) fun _ => NoMsg.pure' _
 
 theorem NoMsg.search (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (message : ForestKey) : ∀ attempts start,
+    (message : HashInput) : ∀ attempts start,
     NoMsg (ReferenceChoice.search parameter lay tree leaf message attempts start)
   | 0, _ => NoMsg.pure' _
   | attempts + 1, start => by
@@ -72,6 +74,8 @@ theorem NoMsg.search (parameter : PublicParameter) (lay : Layer) (tree : TreeInd
 end LeanForest.Security.ForestSigner
 
 namespace LeanForest.Security.HiddenDebt
+
+variable [Params]
 
 open HiddenCost HiddenBridge HiddenOutside HiddenReveal
 
@@ -113,26 +117,25 @@ end LeanForest.Security.HiddenDebt
 
 namespace LeanForest.Security.GraphView
 
+variable [Params]
+
 open LeanForest.Base
 open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForestSigner
 
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-- The final assembly after its digest call. -/
 noncomputable def finishRest (parameter : PublicParameter) (data : PublicData) (_message : Message)
     (randomness : Randomness) (digest : MessageDigest) : OracleComp CostSpec (Option Signature) := do
-  HiddenCost.tick 118080
+  HiddenCost.tick 58960
   let index := digestIndex digest
-  let some (counter, word) ← liftM (ReferenceChoice.search parameter topLayer rootTree index
-    (data.forestKey index) encodingAttemptLimit 0) | return none
-  let values ← sequenceFin fun chain => HiddenCost.reveal
-    (.chain topLayer rootTree index chain (word chain))
+  let some found ← sequenceDep (α := fun _ => Counter × Encoding) (layerCostSearch parameter data index)
+    | return none
+  let values ← sequenceFin fun lay : Layer => sequenceFin fun chain => HiddenCost.reveal
+    (.chain lay (treeIndexAt index lay) (leafIndexAt index lay) chain ((found lay).2 chain))
   let opening ← sequenceFin fun c => coordCostSource data index c (digestMarks digest c)
-  HiddenCost.tick (155 + treePathCost)
-  let top : LayerSignature topLayer := ⟨counter, values, data.treePath index⟩
-  return some ⟨randomness, opening, Fin.cases top (fun i => Fin.elim0 i)⟩
+  return some ⟨randomness, opening, layerSignatures data index found values⟩
 
 theorem finishCostSource_eq (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) :
@@ -143,13 +146,11 @@ theorem finishCostSource_eq (parameter : PublicParameter) (data : PublicData) (m
   simp only [liftM_bind, bind_assoc, liftM_pure, pure_bind]
   rfl
 
-omit [Params] in
 theorem msgInput_digestInput (parameter : PublicParameter) (root : Digest) (message : Message)
     (randomness : Randomness) :
     IsMsgInput (Security.digestInput parameter root message randomness) :=
   ⟨parameter, _, rfl⟩
 
-omit [Params] in
 theorem avoids_coordCostSource (avoid : HashInput → Prop) (data : PublicData) (index : Index) (c : Coord)
     (mark : CoordMark) : Avoids avoid (coordCostSource data index c mark) := by
   unfold coordCostSource
@@ -161,20 +162,42 @@ theorem avoids_coordCostSource (avoid : HashInput → Prop) (data : PublicData) 
   · exact avoids_reveal _ _
   · exact avoids_pure _ _
 
+theorem avoids_sequenceDep (avoid : HashInput → Prop) : ∀ {n : Nat} {α : Fin n → Type}
+    {computation : (i : Fin n) → OracleComp CostSpec (Option (α i))},
+    (∀ i, Avoids avoid (computation i)) → Avoids avoid (sequenceDep computation)
+  | 0, _, _, _ => avoids_pure _ _
+  | _ + 1, α, computation, h => by
+      unfold sequenceDep
+      refine avoids_bind _ (h 0) fun head => ?_
+      rcases head with _ | head
+      · exact avoids_pure _ _
+      · refine avoids_bind _ (avoids_sequenceDep avoid (α := fun i => α i.succ) fun i => h i.succ)
+          fun tail => ?_
+        rcases tail with _ | tail <;> exact avoids_pure _ _
+
+theorem avoids_layerCostSearch (parameter : PublicParameter) (data : PublicData) (index : Index)
+    (lay : Layer) : Avoids IsMsgInput (layerCostSearch parameter data index lay) := by
+  unfold layerCostSearch layerSearch
+  refine avoids_bind _ (avoids_tick _ _) fun _ => ?_
+  refine avoids_bind _ (avoids_liftHash _ _ (NoMsg.search _ _ _ _ _ _ _)) fun found => ?_
+  rcases found with _ | pair
+  · exact avoids_pure _ _
+  · exact avoids_bind _ (avoids_tick _ _) fun _ => avoids_pure _ _
+
 /-- The rest of the final assembly never queries a message-digest input. -/
 theorem avoids_finishRest (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) (digest : MessageDigest) :
     Avoids IsMsgInput (finishRest parameter data message randomness digest) := by
   unfold finishRest
   refine avoids_bind _ (avoids_tick _ _) fun _ => ?_
-  refine avoids_bind _ (avoids_liftHash _ _ (NoMsg.search _ _ _ _ _ _ _)) fun found => ?_
-  rcases found with _ | ⟨counter, word⟩
+  refine avoids_bind _ (avoids_sequenceDep _ fun lay => avoids_layerCostSearch _ _ _ lay) fun found => ?_
+  rcases found with _ | found
   · exact avoids_pure _ _
-  · refine avoids_bind _ (avoids_sequenceFin _ _ fun _ => avoids_reveal _ _) fun _ => ?_
+  · refine avoids_bind _ (avoids_sequenceFin _ _ fun _ => avoids_sequenceFin _ _ fun _ => avoids_reveal _ _)
+      fun _ => ?_
     refine avoids_bind _ (avoids_sequenceFin _ _ fun _ => avoids_coordCostSource _ _ _ _ _) fun _ => ?_
-    exact avoids_bind _ (avoids_tick _ _) fun _ => avoids_pure _ _
+    exact avoids_pure _ _
 
-omit [Params] in
 theorem post_bind {spec : OracleSpec ι} {α β : Type} (P : β → Prop) (first : OracleComp spec α)
     {next : α → OracleComp spec β} (h : ∀ a, ∀ v ∈ support (next a), P v) :
     ∀ v ∈ support (first >>= next), P v := by
@@ -192,12 +215,12 @@ theorem finish_randomness (parameter : PublicParameter) (data : PublicData) (mes
   refine post_bind _ _ fun a => ?_
   unfold finishRest
   refine post_bind _ _ fun _ => post_bind _ _ fun found => ?_
-  rcases found with _ | ⟨counter, word⟩
+  rcases found with _ | found
   · intro v hv sig hsig
     rw [support_pure, Set.mem_singleton_iff] at hv
     rw [hv] at hsig
     cases hsig
-  · refine post_bind _ _ fun _ => post_bind _ _ fun _ => post_bind _ _ fun _ => ?_
+  · refine post_bind _ _ fun _ => post_bind _ _ fun _ => ?_
     intro v hv sig hsig
     rw [support_pure, Set.mem_singleton_iff] at hv
     rw [hv] at hsig
@@ -341,13 +364,11 @@ noncomputable def landedCount (state : DebtState HashInput HashOutput Coordinate
   (Finset.univ.filter fun ρ : Randomness => ∃ u0, state.cache (blk parameter data message ρ) = some u0 ∧
     Landed parameter (blockIndex u0)).card
 
-omit [Params] in
 theorem payload_randomness_injective (root : Digest) (message : Message) {ρ ρ' : Randomness}
     (h : messageDigestPayload root message ρ = messageDigestPayload root message ρ') : ρ = ρ' := by
   have hparts := List.append_inj h (by simp [bytesLE_length])
   exact bytesLE_injective hparts.2
 
-omit [Params] in
 theorem blk_ne_of_ne {ρ ρ' : Randomness} (h : ρ ≠ ρ') :
     blk parameter data message ρ ≠ blk parameter data message ρ' := fun heq =>
   h (payload_randomness_injective data.root message (tweakableInput_injective heq).2.2)
@@ -368,7 +389,6 @@ theorem related_store (reference state : DebtState HashInput HashOutput Coordina
   · rw [store_cache_ne state _ _ (blk_ne_of_ne parameter data message hρ) u]
     exact hrel ρ'
 
-omit [Params] in
 theorem cachedCount_store (state : DebtState HashInput HashOutput Coordinate) (ρ : Randomness) (u : HashOutput) :
     cachedCount parameter data message (state.store (blk parameter data message ρ) u) ≤
       cachedCount parameter data message state + 1 := by
@@ -406,7 +426,6 @@ theorem outWeight_finish_le (reference : DebtState HashInput HashOutput Coordina
     subst hrand
     exact le_rfl
 
-omit [Params] in
 theorem card_randomness : Fintype.card Randomness = 2 ^ 128 := HiddenDebt.card_digest
 
 theorem landed_mass (parameter : PublicParameter) :

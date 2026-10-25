@@ -9,6 +9,8 @@ open OracleComp OracleSpec
 
 namespace LeanForest.Security.Short
 
+variable [Params]
+
 open Concrete
 
 attribute [local irreducible] digestAttemptLimit encodingAttemptLimit
@@ -142,25 +144,48 @@ theorem Only.chainWalk (parameter : PublicParameter) (lay : Layer) (tree : TreeI
       · exact Only.tweakableHash _ _ _ (by rw [bytes16_length]; omega)
       · exact Only.pure' _
 
+theorem Only.sequenceDep : ∀ {n : Nat} {α : Fin n → Type}
+    {computation : (i : Fin n) → OracleComp HashSpec (Option (α i))}, (∀ i, Only (computation i)) →
+      Only (sequenceDep computation)
+  | 0, _, _, _ => Only.pure' _
+  | _ + 1, α, computation, h => by
+      unfold LeanForest.Concrete.sequenceDep
+      refine Only.bind (h 0) (fun head => ?_)
+      rcases head with _ | head
+      · exact Only.pure' _
+      · refine Only.bind (Only.sequenceDep (α := fun i => α i.succ) fun i => h i.succ) (fun tail => ?_)
+        rcases tail with _ | tail <;> exact Only.pure' _
+
 theorem Only.leafHash (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (endpoints : ChainIndex → Digest) :
     Only (Concrete.leafHash parameter lay tree leaf endpoints : OracleComp HashSpec Digest) :=
   Only.tweakableHash _ _ _ (by rw [leafPayload_length])
 
+/-- A layer's message is at most the forest key's 256 bytes. -/
+def ShortMessage (message : HashInput) : Prop := message.length ≤ 256
+
+theorem shortMessage_roots (tops : Coord → Digest × Digest) : ShortMessage (rootsPayload tops) := by
+  unfold ShortMessage; rw [rootsPayload_length]
+
+theorem shortMessage_root (root : Digest) : ShortMessage (rootPayload root) := by
+  unfold ShortMessage rootPayload; rw [bytesLE_length]; omega
+
 theorem Only.encode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (message : ForestKey) (counter : Counter) :
+    (leaf : LeafIndex) (message : HashInput) (hmsg : ShortMessage message) (counter : Counter) :
     Only (Concrete.encode parameter lay tree leaf message counter :
       OracleComp HashSpec (Option Encoding)) := by
   unfold Concrete.encode
-  exact Only.bind (Only.tweakableHash _ _ _ (by simp [rootsPayload_length, bytesLE_length]))
+  unfold ShortMessage at hmsg
+  exact Only.bind (Only.tweakableHash _ _ _ (by simp [bytesLE_length]; omega))
     (fun _ => Only.pure' _)
 
 theorem Only.otsLeaf (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (message : ForestKey) (counter : Counter) (values : ChainIndex → Digest) :
+    (leaf : LeafIndex) (message : HashInput) (hmsg : ShortMessage message) (counter : Counter)
+    (values : ChainIndex → Digest) :
     Only (Concrete.otsLeaf parameter lay tree leaf message counter values :
       OracleComp HashSpec (Option Digest)) := by
   unfold Concrete.otsLeaf
-  refine Only.bind (Only.encode _ _ _ _ _ _) ?_
+  refine Only.bind (Only.encode _ _ _ _ _ hmsg _) ?_
   intro encoding
   cases encoding with
   | none => exact Only.pure' _
@@ -260,20 +285,35 @@ theorem Only.messageDigest (parameter : PublicParameter) (root : Digest) (messag
 attribute [local irreducible] Concrete.treeFold Concrete.chainWalk
   Concrete.otsLeaf Concrete.forestRecover Concrete.messageDigest
 
+theorem Only.verifyLayers (parameter : PublicParameter) (index : Index) (signature : Signature) :
+    ∀ (n : Nat) (message : HashInput), ShortMessage message →
+      Only (Concrete.verifyLayers parameter index signature n message :
+        OracleComp HashSpec (Option Digest))
+  | 0, _, _ => Only.pure' _
+  | n + 1, message, hmsg => by
+      rw [Concrete.verifyLayers]
+      split
+      · refine Only.bind (Only.otsLeaf _ _ _ _ _ hmsg _ _) ?_
+        intro value
+        cases value with
+        | none => exact Only.pure' _
+        | some value =>
+            refine Only.bind (Only.treeFold _ _ _ _ _ _ value) (fun root => ?_)
+            split
+            · exact Only.pure' _
+            · exact Only.verifyLayers parameter index signature n _ (shortMessage_root root)
+      · exact Only.pure' _
+
 theorem Only.verify (publicKey : PublicKey) (message : Message) (signature : Signature) :
     Only (Concrete.verify publicKey message signature : OracleComp HashSpec Bool) := by
-  rw [verify_eq_single_layer]
+  rw [verify_eq_layers]
   refine Only.bind (Only.messageDigest _ _ _ _) ?_
   intro digest
   refine Only.bind (Only.forestRecover _ _ _ _) ?_
   intro key
-  refine Only.bind (Only.otsLeaf _ _ _ _ _ _ _) ?_
+  refine Only.bind (Only.verifyLayers _ _ _ _ _ (shortMessage_roots key)) ?_
   intro value
-  cases value with
-  | none => exact Only.pure' _
-  | some value =>
-      exact Only.bind (Only.treeFold publicKey.parameter topLayer rootTree _ _ totalHeight value)
-        (fun _ => Only.pure' _)
+  cases value <;> exact Only.pure' _
 
 namespace Seeded
 open LeanForest.Seeded
@@ -293,16 +333,16 @@ theorem Only.oneTimePublicKey (parameter : PublicParameter) (lay : Layer) (tree 
     Short.Only.sequenceFin _ fun _ => Short.Only.chainWalk _ _ _ _ _ _ _ _)
 
 theorem Only.otsSignFrom (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (seed : MasterSeed) (message : ForestKey) :
+    (leaf : LeafIndex) (seed : MasterSeed) (message : HashInput) (hmsg : ShortMessage message) :
     ∀ attempts counter, Short.Only (otsSignFrom parameter lay tree leaf seed message attempts counter :
       OracleComp HashSpec (Option (Counter × (ChainIndex → Digest))))
   | 0, _ => Short.Only.pure' _
   | attempts + 1, counter => by
       rw [LeanForest.Seeded.otsSignFrom]
-      refine Short.Only.bind (Short.Only.encode _ _ _ _ _ _) ?_
+      refine Short.Only.bind (Short.Only.encode _ _ _ _ _ hmsg _) ?_
       intro encoding
       cases encoding with
-      | none => exact Only.otsSignFrom parameter lay tree leaf seed message attempts (counter + 1)
+      | none => exact Only.otsSignFrom parameter lay tree leaf seed message hmsg attempts (counter + 1)
       | some encoding =>
           exact Short.Only.bind (Only.otsSecrets _ _ _ _ _) (fun _ =>
             Short.Only.bind (Short.Only.sequenceFin _ fun _ => Short.Only.chainWalk _ _ _ _ _ _ _ _)
@@ -394,9 +434,7 @@ theorem Only.forestOpen (parameter : PublicParameter) (index : Index) (marks : C
       Short.Only.bind (Short.Only.sequenceFin _ fun _ => Only.topNode _ _ _ _ _ _)
         (fun _ => Short.Only.pure' _))
 
-variable [Params]
 
-omit [Params] in
 theorem Only.surrogate (parameter : PublicParameter) (seed : MasterSeed) (level : Nat) :
     Short.Only (surrogate parameter seed level : OracleComp HashSpec Digest) := by
   unfold LeanForest.Seeded.surrogate
@@ -449,19 +487,31 @@ attribute [local irreducible] LeanForest.Seeded.treeNode LeanForest.Seeded.subNo
 
 theorem Only.signLayer (secretKey : SecretKey) (index : Index) (lay : Layer) :
     Short.Only (signLayer secretKey index lay : OracleComp HashSpec (Option (LayerSignature lay))) := by
-  unfold LeanForest.Seeded.signLayer LeanForest.Seeded.layerMessage LeanForest.Seeded.otsSign
+  unfold LeanForest.Seeded.signLayer LeanForest.Seeded.layerMessage LeanForest.Seeded.keyMessage
+    LeanForest.Seeded.otsSign
   dsimp only
   generalize treeIndexAt index lay = tree
   generalize leafIndexAt index lay = leaf
-  refine Short.Only.bind (Only.forestKey _ _ _) (fun _ => ?_)
-  refine Short.Only.bind (Only.otsSignFrom _ _ _ _ _ _ _ _) (fun result => ?_)
-  rcases result with _ | ⟨counter, values⟩
-  · exact Short.Only.pure' _
-  · exact Short.Only.bind (Only.treePath _ _ _ _ _) (fun _ => Short.Only.pure' _)
+  have hrest : ∀ message, ShortMessage message →
+      Short.Only (do
+        let some (counter, values) ← LeanForest.Seeded.otsSignFrom secretKey.parameter lay tree leaf
+          secretKey.seed message encodingAttemptLimit 0 | return none
+        let path ← LeanForest.Seeded.treePath secretKey.parameter lay tree secretKey.seed leaf
+        return some (⟨counter, values, path⟩ : LayerSignature lay) :
+        OracleComp HashSpec (Option (LayerSignature lay))) := by
+    intro message hmsg
+    refine Short.Only.bind (Only.otsSignFrom _ _ _ _ _ _ hmsg _ _) (fun result => ?_)
+    rcases result with _ | ⟨counter, values⟩
+    · exact Short.Only.pure' _
+    · exact Short.Only.bind (Only.treePath _ _ _ _ _) (fun _ => Short.Only.pure' _)
+  split
+  · simp only [bind_assoc, pure_bind]
+    exact Short.Only.bind (Only.treeRoot _ _ _ _) (fun root => hrest _ (shortMessage_root root))
+  · simp only [bind_assoc, pure_bind]
+    exact Short.Only.bind (Only.forestKey _ _ _) (fun key => hrest _ (shortMessage_roots key))
 
 end Seeded
 
-variable [Params]
 
 attribute [local irreducible] LeanForest.Seeded.signLayer LeanForest.Seeded.forestOpen
 
@@ -476,9 +526,7 @@ theorem Only.finishSign (secretKey : LeanForest.Seeded.SecretKey) (message : Mes
   generalize digestMarks digest = marks
   refine Only.bind (Seeded.Only.forestOpen _ _ _ _) (fun _ => ?_)
   unfold sequenceLayers
-  refine Only.bind ?_ (fun layers => ?_)
-  · exact Only.bind (Seeded.Only.signLayer secretKey index topLayer) (fun top => by
-      rcases top with _ | top <;> exact Only.pure' _)
-  · rcases layers with _ | layers <;> exact Only.pure' _
+  refine Only.bind (Only.sequenceDep fun lay => Seeded.Only.signLayer secretKey index lay) (fun layers => ?_)
+  rcases layers with _ | layers <;> exact Only.pure' _
 
 end LeanForest.Security.Short

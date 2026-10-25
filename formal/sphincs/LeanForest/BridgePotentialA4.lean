@@ -8,6 +8,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.PotentialA
 
+variable [Params]
+
 open Concrete HiddenGraph HiddenDebt HiddenBridge EncodingCode
 
 set_option backward.isDefEq.respectTransparency false
@@ -23,7 +25,6 @@ theorem three_halves_le {ρ : ℝ} (h : 3 / 2 ≤ ρ) : (1 : ℝ≥0∞) + 2⁻�
   rw [h1]
   exact ENNReal.ofReal_le_ofReal h
 
-variable [Params]
 
 namespace Ctx
 
@@ -44,21 +45,21 @@ theorem vrate_armed {s : St} (h : K.Armed s) : K.vrate s = 2 := by
   unfold vrate
   rw [if_pos h]
 
-theorem leafCount_le_contactCount (s : St) {l : Index} (hl : Landed K.p l) :
+theorem leafCount_le_contactCount (s : St) {l : OtsKey} (hl : Retained K.p l) :
     K.leafCount s l ≤ K.contactCount s := by
   unfold contactCount
-  calc K.leafCount s l = if Landed K.p l then K.leafCount s l else 0 := by rw [if_pos hl]
-    _ ≤ _ := Finset.single_le_sum (f := fun l => if Landed K.p l then K.leafCount s l else 0)
+  calc K.leafCount s l = if Retained K.p l then K.leafCount s l else 0 := by rw [if_pos hl]
+    _ ≤ _ := Finset.single_le_sum (f := fun l => if Retained K.p l then K.leafCount s l else 0)
         (fun _ _ => bot_le) (Finset.mem_univ l)
 
-theorem encard_le_leafCount (s : St) {l : Index} (hnb : ¬K.BadLeaf s l) (i : ChainIndex) :
+theorem encard_le_leafCount (s : St) {l : OtsKey} (hnb : ¬K.BadLeaf s l) (i : ChainIndex) :
     ((K.ContactB s l i).encard : ℝ≥0∞) ≤ K.leafCount s l := by
   unfold leafCount
   rw [if_neg hnb]
   exact Finset.single_le_sum (f := fun i => ((K.ContactB s l i).encard : ℝ≥0∞)) (fun _ _ => bot_le)
     (Finset.mem_univ i)
 
-theorem nonempty_le_leafCount (s : St) {l : Index} (hnb : ¬K.BadLeaf s l) :
+theorem nonempty_le_leafCount (s : St) {l : OtsKey} (hnb : ¬K.BadLeaf s l) :
     ∑ i, (if (K.ContactB s l i).Nonempty then (1 : ℝ≥0∞) else 0) ≤ K.leafCount s l := by
   unfold leafCount
   rw [if_neg hnb]
@@ -68,14 +69,14 @@ theorem nonempty_le_leafCount (s : St) {l : Index} (hnb : ¬K.BadLeaf s l) :
     exact Set.one_le_encard_iff_nonempty.2 hne
   · exact bot_le
 
-theorem not_badLeaf {s : St} (hb : ¬K.Bad s) {l : Index} (hl : Landed K.p l) : ¬K.BadLeaf s l :=
+theorem not_badLeaf {s : St} (hb : ¬K.Bad s) {l : OtsKey} (hl : Retained K.p l) : ¬K.BadLeaf s l :=
   fun h => hb (Or.inr ⟨l, hl, h⟩)
 
-theorem armed_of_contact {s : St} {l : Index} (hl : Landed K.p l) (hnb : ¬K.BadLeaf s l) {i : ChainIndex}
+theorem armed_of_contact {s : St} {l : OtsKey} (hl : Retained K.p l) (hnb : ¬K.BadLeaf s l) {i : ChainIndex}
     (hne : (K.ContactB s l i).Nonempty) : K.Armed s :=
   ⟨l, hl, hnb, Or.inr ⟨i, hne⟩⟩
 
-theorem armed_of_marker {s : St} {l : Index} (hl : Landed K.p l) (hnb : ¬K.BadLeaf s l) {i : ChainIndex}
+theorem armed_of_marker {s : St} {l : OtsKey} (hl : Retained K.p l) (hnb : ¬K.BadLeaf s l) {i : ChainIndex}
     (hm : K.Marker s l i) : K.Armed s :=
   ⟨l, hl, hnb, Or.inl ⟨i, hm⟩⟩
 
@@ -92,7 +93,7 @@ theorem rate_ge_rho (s : St) : ENNReal.ofReal K.ρ ≤ K.rate s :=
 theorem one_le_rate (s : St) : (1 : ℝ≥0∞) ≤ K.rate s :=
   (one_le_ofReal (by linarith [hN.low])).trans (K.rate_ge_rho hN s)
 
-theorem arithA (s : St) {l : Index} (hl : Landed K.p l) (i : ChainIndex) {g : ℝ≥0∞} (hg : g ≤ 1) :
+theorem arithA (s : St) {l : OtsKey} (hl : Retained K.p l) (i : ChainIndex) {g : ℝ≥0∞} (hg : g ≤ 1) :
     g + 2⁻¹ + (if K.Bad s then 0 else ((K.ContactB s l i).encard : ℝ≥0∞)) ≤ K.rate s := by
   have hbase : g + 2⁻¹ ≤ ENNReal.ofReal K.ρ := (add_le_add hg le_rfl).trans (three_halves_le hN.low)
   by_cases hb : K.Bad s
@@ -116,7 +117,7 @@ theorem arithA (s : St) {l : Index} (hl : Landed K.p l) (i : ChainIndex) {g : �
       exact hbase.trans (K.rate_ge_rho hN s)
 
 include hxr hY in
-theorem arithB (s : St) {l : Index} (hl : Landed K.p l) (i : ChainIndex) (v : Digest) {g : ℝ≥0∞}
+theorem arithB (s : St) {l : OtsKey} (hl : Retained K.p l) (i : ChainIndex) (v : Digest) {g : ℝ≥0∞}
     (hg : g ≤ 1) :
     g + (if K.BadLeaf s l ∨ v ∈ K.AAns s l i ∨ K.Marker s l i ∨ ∃ i', i' ≠ i ∧ (K.ContactB s l i').Nonempty
         then (if K.Bad s then 0 else 1)
@@ -160,7 +161,7 @@ theorem arithB (s : St) {l : Index} (hl : Landed K.p l) (i : ChainIndex) (v : Di
         _ ≤ _ := K.rate_ge_rho hN s
 
 include hxr hY in
-theorem arithEnc (s : St) {l : Index} (hl : Landed K.p l) {g : ℝ≥0∞} (hg : g ≤ 1) :
+theorem arithEnc (s : St) {l : OtsKey} (hl : Retained K.p l) {g : ℝ≥0∞} (hg : g ≤ 1) :
     g + (if K.Bad s then 0 else 63 * ∑ i, (if (K.ContactB s l i).Nonempty then (1 : ℝ≥0∞) else 0)) +
       Y * (if K.Armed s then 0 else 4032 * ENNReal.ofReal (2 - K.ρ)) ≤ K.rate s := by
   by_cases hb : ¬K.Bad s ∧ ∃ i, (K.ContactB s l i).Nonempty
@@ -211,18 +212,18 @@ end Arith
 
 /-! ### Second-order shapes -/
 
-theorem secondOrder_of_isA {l : Index} {i : ChainIndex} {x : HashInput} (h : K.IsA l i x) :
+theorem secondOrder_of_isA {l : OtsKey} {i : ChainIndex} {x : HashInput} (h : K.IsA l i x) :
     SecondOrderInput K.p K.R x := by
   obtain ⟨st, pay, hst, rfl⟩ := h
-  refine Or.inl ⟨topLayer, rootTree, l, i, st, pay, rfl, fun h' => ?_⟩
-  have : (K.w l i).val ≤ st.val := h'.2.2.2
+  refine Or.inl ⟨l.1, l.2.1, l.2.2, i, st, pay, rfl, fun h' => ?_⟩
+  have : (K.w l i).val ≤ st.val := h'.2
   omega
 
-theorem secondOrder_of_isB {l : Index} {i : ChainIndex} {v : Digest} {x : HashInput} (h : K.IsB l i v x) :
+theorem secondOrder_of_isB {l : OtsKey} {i : ChainIndex} {v : Digest} {x : HashInput} (h : K.IsB l i v x) :
     SecondOrderInput K.p K.R x := by
   obtain ⟨st, hst, rfl⟩ := h
-  refine Or.inl ⟨topLayer, rootTree, l, i, st, v, rfl, fun h' => ?_⟩
-  have : (K.w l i).val ≤ st.val := h'.2.2.2
+  refine Or.inl ⟨l.1, l.2.1, l.2.2, i, st, v, rfl, fun h' => ?_⟩
+  have : (K.w l i).val ≤ st.val := h'.2
   omega
 
 /-! ### One fresh answer, paid by the rate -/
@@ -233,8 +234,8 @@ variable {xr : ℝ} (hN : Numeric K.ρ xr) (hxr : 0 ≤ xr) {y' : ℕ} (hY : (y'
 
 include hN in
 theorem fresh_other {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none)
-    (hAB : ∀ l, Landed K.p l → (∀ i, ¬K.IsA l i x) ∧ ∀ i v, ¬K.IsB l i v x)
-    (hE : ∀ l msg ctr, Landed K.p l → x ≠ Wots.encodingInput K.p topLayer rootTree l msg ctr)
+    (hAB : ∀ l, Retained K.p l → (∀ i, ¬K.IsA l i x) ∧ ∀ i v, ¬K.IsB l i v x)
+    (hE : ∀ l msg ctr, Retained K.p l → x ≠ Wots.encodingInput K.p l.1 l.2.1 l.2.2 msg ctr)
     (hF : ∀ f : FIn, x ≠ f.input K.p)
     {w : ℝ≥0∞} (hw : w + K.kindUnit x ≤ ENNReal.ofReal K.ρ) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y' r.2 + ν * w ≤ K.pot (y' + 1) s := by
@@ -246,8 +247,8 @@ theorem fresh_other {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = 
     _ ≤ _ := add_le_add le_rfl (mul_le_mul_of_nonneg_left (hw.trans (K.rate_ge_rho hN s)) bot_le)
 
 include hN in
-theorem fresh_A {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none) {l : Index}
-    {i : ChainIndex} (hl : Landed K.p l) (hA : K.IsA l i x) (hk : K.tg.kind x = .none) {g : ℝ≥0∞}
+theorem fresh_A {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none) {l : OtsKey}
+    {i : ChainIndex} (hl : Retained K.p l) (hA : K.IsA l i x) (hk : K.tg.kind x = .none) {g : ℝ≥0∞}
     (hg : g ≤ 1) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y' r.2 + ν * g ≤ K.pot (y' + 1) s := by
   have hi := initial_none_of_fresh K.initial s hinv.prepared x hx
@@ -262,8 +263,8 @@ theorem fresh_A {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none
     _ ≤ _ := add_le_add le_rfl (mul_le_mul_of_nonneg_left ha bot_le)
 
 include hN hxr hY in
-theorem fresh_B {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none) {l : Index}
-    {i : ChainIndex} {v : Digest} (hl : Landed K.p l) (hB : K.IsB l i v x) (hk : K.tg.kind x = .none)
+theorem fresh_B {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none) {l : OtsKey}
+    {i : ChainIndex} {v : Digest} (hl : Retained K.p l) (hB : K.IsB l i v x) (hk : K.tg.kind x = .none)
     {g : ℝ≥0∞} (hg : g ≤ 1) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y' r.2 + ν * g ≤ K.pot (y' + 1) s := by
   have hi := initial_none_of_fresh K.initial s hinv.prepared x hx
@@ -290,8 +291,8 @@ theorem fresh_B {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none
     _ = _ := by rw [mul_add, hcr', add_assoc]
 
 include hN hxr hY in
-theorem fresh_enc {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none) {l : Index}
-    {msg : ForestKey} {ctr : Counter} (hl : Landed K.p l) (hxE : x = Wots.encodingInput K.p topLayer rootTree l msg ctr)
+theorem fresh_enc {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none) {l : OtsKey}
+    {msg : HashInput} {ctr : Counter} (hl : Retained K.p l) (hxE : x = Wots.encodingInput K.p l.1 l.2.1 l.2.2 msg ctr)
     {g : ℝ≥0∞} (hg : g + K.kindUnit x ≤ 1) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y' r.2 + ν * g ≤ K.pot (y' + 1) s := by
   have hi := initial_none_of_fresh K.initial s hinv.prepared x hx

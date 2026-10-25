@@ -2,8 +2,9 @@
 """Attack lifetimes of the forest (FOREST.md), floats and Monte Carlo; needs numpy and scipy.
 
 Usage (from formal/sphincs):
-    python3 scripts/forest_attack.py            # the table of scripts/forest_table.py
-    python3 scripts/forest_attack.py lex        # the 246 codewords in lexicographic order, then the first 10
+    python3 scripts/forest_attack.py [rule|lex] [H]   # the table of scripts/forest_table.py (or the 246 codewords
+                                                      # in lexicographic order, then the first 10), height H (24)
+    python3 scripts/forest_attack.py cover H          # the cover model only (no Monte Carlo), height H
 
 Cover model: the largest N with E[Y] <= 1, Y the cover rate of a digest query in units 2^-127 (Poisson
 loads of the 2^b instances). Best known attack: the largest N with E[max(Y, r)] <= 1, where Y is the
@@ -22,8 +23,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import forest_table as ft
 
 UMAX = 48; NMAX = 220; NMIN, NMX = 1, 125
-TOTAL = 24          # tree height: the full key keeps all 2^TOTAL instances
+TOTAL = 24          # tree height: the full key keeps all 2^TOTAL instances (set by the command line)
 BS = [24, 20, 14, 13, 12, 10, 8]
+
+def set_height(h):
+    global TOTAL, BS
+    TOTAL, BS = h, [h, 20, 14, 13, 12, 10, 8]
 
 def rate_wots(search=2.0 ** 116):
     """best success rate per query, in units 2^-127, of: `search` hashes, then 2 * 2^-128 per query"""
@@ -114,11 +119,11 @@ def prepare(name,Q=20000,seed=9):
     ys={}
     for n,phi in pl.items():
         p=phi/phi.sum()
-        ys[n]=2.0**101*np.prod(phi[rng.choice(len(phi),size=(Q,8),p=p)],axis=1)   # size-biased y given n
+        ys[n]=2.0**(127-TOTAL)*np.prod(phi[rng.choice(len(phi),size=(Q,8),p=p)],axis=1)   # size-biased y given n
     return P,ys,{n:(phi.mean()/P[n]) for n,phi in pl.items()}
 def crit(P,ys,b,N,rs,M=20000,y0=1e-3,seed=3):
     rng=np.random.default_rng(seed)
-    L=2.0**b; n=np.arange(NMAX+1); pn=poisson.pmf(n,N/L); m1=2.0**101*P**8
+    L=2.0**b; n=np.arange(NMAX+1); pn=poisson.pmf(n,N/L); m1=2.0**(127-TOTAL)*P**8
     bulk=0.0; rates=[]; vals=[]
     for k in range(NMAX+1):
         mass=L*pn[k]*m1[k]
@@ -139,6 +144,13 @@ def life(P,ys,b,r,N0):
     return lo
 if __name__=='__main__':
     name=sys.argv[1] if len(sys.argv)>1 else 'rule'
+    set_height(int(sys.argv[2]) if len(sys.argv)>2 else 24)
+    if name=='cover':
+        cnt=np.zeros((5,)*6,dtype=np.int64)
+        for w in tables('rule'): cnt[tuple(w)]+=1
+        P=tree_P(f_of_counts(cnt),4,2,3)
+        print('H %d cover model'%TOTAL,' '.join('%d:%.5e'%(b,lifetime(P,8,b)) for b in BS))
+        sys.exit(0)
     P,ys,chk=prepare(name)
     print('pool mean / exact:',' '.join('%d:%.3f'%(n,chk[n]) for n in (10,20,40,80,120)))
     cov=[lifetime(P,8,b) for b in BS]

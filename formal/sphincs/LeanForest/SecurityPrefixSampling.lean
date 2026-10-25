@@ -9,6 +9,8 @@ secret tables whose selected coordinate is erased. Adapted from leanVM's OtsPref
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.Prefix
+
+variable [Params]
 open SphincsSecurity.Concrete.UniformTableSplit
 
 attribute [local instance] Classical.propDecidable

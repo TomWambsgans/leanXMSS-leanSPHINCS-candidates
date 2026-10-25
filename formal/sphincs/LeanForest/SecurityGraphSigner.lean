@@ -7,6 +7,8 @@ table: private draws are uniform, and hash and reveal queries are answered by th
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.GraphView
+
+variable [Params]
 open Concrete Completeness Prefix HiddenGraph
 attribute [local instance] Classical.propDecidable
 attribute [local irreducible] finishSource Randomized.finishSign digestAttemptLimit

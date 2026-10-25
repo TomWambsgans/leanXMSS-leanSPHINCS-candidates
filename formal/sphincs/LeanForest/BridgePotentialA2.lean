@@ -8,6 +8,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.PotentialA
 
+variable [Params]
+
 open Concrete HiddenGraph HiddenDebt HiddenBridge EncodingCode
 
 set_option backward.isDefEq.respectTransparency false
@@ -16,7 +18,6 @@ set_option linter.constructorNameAsVariable false
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 namespace Ctx
 
@@ -35,7 +36,6 @@ theorem forest_same_store {s : St} {x : HashInput} (u : HashOutput) (hx : s.cach
       rw [K.fr_store u hx hi]; exact ⟨fun h => h.resolve_right fun h' => hF f h'.1.symm, Or.inl⟩)
     (fun _ => rfl)) rfl
 
-omit [Params] in
 /-- A sum over forest steps that changes at one step only, from zero. -/
 theorem sum_single (F F' : FIn → ℝ≥0∞) (f : FIn) (h : ∀ g, g ≠ f → F' g = F g) (h0 : F f = 0) :
     ∑ g, F' g = ∑ g, F g + F' f := by
@@ -43,7 +43,6 @@ theorem sum_single (F F' : FIn → ℝ≥0∞) (f : FIn) (h : ∀ g, g ≠ f →
     zero_add, add_comm, Finset.sum_congr rfl fun g hg => h g (Finset.ne_of_mem_erase hg)]
 
 
-omit [Params] in
 /-- A double sum over forest steps that changes on the row and the column of one step only. -/
 theorem sum_double_le (G G' : FIn → FIn → ℝ≥0∞) (f : FIn) (h : ∀ g h, g ≠ f → h ≠ f → G' g h = G g h) :
     ∑ g, ∑ h, G' g h ≤ ∑ g, ∑ h, G g h + ∑ h, G' f h + ∑ g, G' g f := by
@@ -91,10 +90,10 @@ theorem cw_of_not_fe {s : St} {f : FIn} (h : ¬K.FE s f) : K.cw s f = 0 := by
   have h2 : ¬K.Lat s f := fun hl => h hl.1
   simp only [cw, h1, h2, if_false]
 
-/-- **Other inputs.** An input of no WOTS or FORS shape pays at most its first-order hazard. -/
+/-- **Other inputs.** An input of no WOTS or forest shape pays at most its first-order hazard. -/
 theorem step_other (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none) (hi : K.initial x = none)
-    (hAB : ∀ l, Landed K.p l → (∀ i, ¬K.IsA l i x) ∧ ∀ i v, ¬K.IsB l i v x)
-    (hE : ∀ l msg ctr, Landed K.p l → x ≠ Wots.encodingInput K.p topLayer rootTree l msg ctr)
+    (hAB : ∀ l, Retained K.p l → (∀ i, ¬K.IsA l i x) ∧ ∀ i v, ¬K.IsB l i v x)
+    (hE : ∀ l msg ctr, Retained K.p l → x ≠ Wots.encodingInput K.p l.1 l.2.1 l.2.2 msg ctr)
     (hF : ∀ f : FIn, x ≠ f.input K.p) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y r.2 ≤ K.pot y s + ν * K.kindUnit x := by
   have h := K.mean_store y hx 0 (fun t => (if ¬K.Bad s ∧ Fatal (K.tg.kind x) s.known t then 1 else 0) +
@@ -108,7 +107,7 @@ theorem step_other (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none) (h
       split_ifs <;> simp
     · rw [if_neg h1, if_neg (fun h => h1 h.2)]
   · set s' := s.store x u with hs'
-    have hsame : ∀ l, Landed K.p l → K.SameLeaf s s' l := fun l hl =>
+    have hsame : ∀ l, Retained K.p l → K.SameLeaf s s' l := fun l hl =>
       K.sameLeaf_store u hx hi l (hAB l hl).1 (hAB l hl).2 (fun msg ctr => hE l msg ctr hl)
     obtain ⟨hW, hA, hC⟩ := K.wots_of_allSame hsame
     obtain ⟨-, hKF, -, hLt⟩ := K.forest_same_store u hx hi hF
@@ -150,7 +149,7 @@ theorem step_fchain (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none) (
     exact h
   · set s' := s.store x u with hs'
     set t := truncateHash u with ht
-    have hsame : ∀ l, Landed K.p l → K.SameLeaf s s' l := fun l _ =>
+    have hsame : ∀ l, Retained K.p l → K.SameLeaf s s' l := fun l _ =>
       K.sameLeaf_store u hx hi l (hnotA l) (hnotB l) (fun msg ctr he => enc_ne_fchain (he.symm.trans hxF))
     obtain ⟨hW, hA, hC⟩ := K.wots_of_allSame hsame
     have hRs : ∀ g, Recd s' g ↔ Recd s g := fun g => Iff.rfl
@@ -264,7 +263,7 @@ theorem step_fchain (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none) (
 
 /-! ### Helpers for one changed leaf -/
 
-theorem leafCount_le_of {s s' : St} {l : Index} (hc : ∀ i, K.ContactB s' l i = K.ContactB s l i)
+theorem leafCount_le_of {s s' : St} {l : OtsKey} (hc : ∀ i, K.ContactB s' l i = K.ContactB s l i)
     (hb : K.BadLeaf s l → K.BadLeaf s' l) : K.leafCount s' l ≤ K.leafCount s l := by
   unfold leafCount
   by_cases h' : K.BadLeaf s' l
@@ -273,7 +272,7 @@ theorem leafCount_le_of {s s' : St} {l : Index} (hc : ∀ i, K.ContactB s' l i =
   · rw [if_neg h', if_neg (fun h => h' (hb h))]
     simp only [hc, le_refl]
 
-theorem armedAt_of_le {s s' : St} {l : Index} (hc : ∀ i, K.ContactB s' l i = K.ContactB s l i)
+theorem armedAt_of_le {s s' : St} {l : OtsKey} (hc : ∀ i, K.ContactB s' l i = K.ContactB s l i)
     (hm : ∀ i, K.Marker s' l i ↔ K.Marker s l i) (hb : K.BadLeaf s l → K.BadLeaf s' l)
     (h : K.ArmedAt s' l) : K.ArmedAt s l := by
   obtain ⟨hn, hr⟩ := h
@@ -293,21 +292,21 @@ theorem meanD_mul (c : ℝ≥0∞) (f : Digest → ℝ≥0∞) : meanD (fun t =>
   simp only [meanD, ← Finset.mul_sum]
   ring
 
-theorem markSet_card (l : Index) (i : ChainIndex) : ((K.markSet l i).card : ℝ≥0∞) ≤ 63 := by
+theorem markSet_card (l : OtsKey) (i : ChainIndex) : ((K.markSet l i).card : ℝ≥0∞) ≤ 63 := by
   have h1 := decodingDigests_card_le (unitNeighbors (K.w l) i)
   have h2 := unitNeighbors_card_le (K.w l) i
   rw [unitNeighborBound_eq] at h2
   have : (K.markSet l i).card ≤ 63 := h1.trans h2
   exact_mod_cast this
 
-theorem markAll_card (l : Index) : ((K.markAll l).card : ℝ≥0∞) ≤ 4032 := by
+theorem markAll_card (l : OtsKey) : ((K.markAll l).card : ℝ≥0∞) ≤ 4032 := by
   have h1 := decodingDigests_card_le (allUnitNeighbors (K.w l))
   have h2 := allUnitNeighbors_card_le (K.w l)
   rw [neighborBound_eq] at h2
   have : (K.markAll l).card ≤ 4032 := h1.trans h2
   exact_mod_cast this
 
-theorem markSet_subset (l : Index) (i : ChainIndex) {t : Digest} (h : t ∈ K.markSet l i) : t ∈ K.markAll l := by
+theorem markSet_subset (l : OtsKey) (i : ChainIndex) {t : Digest} (h : t ∈ K.markSet l i) : t ∈ K.markAll l := by
   obtain ⟨word, hw, hd⟩ := mem_decodingDigests.1 h
   exact mem_decodingDigests.2 ⟨word, mem_allUnitNeighbors.2 ⟨i, mem_unitNeighbors.1 hw⟩, hd⟩
 
@@ -316,7 +315,7 @@ theorem markSet_subset (l : Index) (i : ChainIndex) {t : Digest} (h : t ∈ K.ma
 /-- **Two steps below the word.** One more credit, and a two-edge completion when the answer is
 the payload of a contact. -/
 theorem step_A (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none)
-    (hi : K.initial x = none) {l : Index} {i : ChainIndex} (hl : Landed K.p l) (hA : K.IsA l i x)
+    (hi : K.initial x = none) {l : OtsKey} {i : ChainIndex} (hl : Retained K.p l) (hA : K.IsA l i x)
     (hk : K.tg.kind x = .none) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y r.2 ≤
       K.pot y s + (ν / 2 + ν * (if K.Bad s then 0 else ((K.ContactB s l i).encard : ℝ≥0∞))) := by
@@ -331,10 +330,10 @@ theorem step_A (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.cac
   · set s' := s.store x u with hs'
     set t := truncateHash u with ht
     have hnotB : ∀ l' i' v', ¬K.IsB l' i' v' x := fun l' i' v' hB => isA_not_isB hA hB
-    have hnotE : ∀ l' msg ctr, x ≠ Wots.encodingInput K.p topLayer rootTree l' msg ctr :=
+    have hnotE : ∀ (l' : OtsKey) msg ctr, x ≠ Wots.encodingInput K.p l'.1 l'.2.1 l'.2.2 msg ctr :=
       fun l' msg ctr => isA_ne_enc hA l' msg ctr
     have hnotF : ∀ f : FIn, x ≠ f.input K.p := isA_ne_fchain hA
-    have hsame : ∀ l', Landed K.p l' → l' ≠ l → K.SameLeaf s s' l' := fun l' _ hne =>
+    have hsame : ∀ l', Retained K.p l' → l' ≠ l → K.SameLeaf s s' l' := fun l' _ hne =>
       K.sameLeaf_store u hx hi l' (fun i' hA' => hne (isA_unique hA' hA).1) (hnotB l') (hnotE l')
     have hCB : ∀ i', K.ContactB s' l i' = K.ContactB s l i' := fun i' => by
       rw [K.contactB_store u hx hi]
@@ -400,11 +399,11 @@ theorem ite_or_le (P : Prop) [Decidable P] (Q : ChainIndex → Prop) [DecidableP
 
 /-! ### Encoding inputs -/
 
-/-- **Encoding inputs at a landed leaf.** The first-order hit, a marker at a contacted chain, and
+/-- **Encoding inputs at a retained key.** The first-order hit, a marker at a contacted chain, and
 the arming by a new marker. -/
 theorem step_enc (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none)
-    (hi : K.initial x = none) {l : Index} {msg : ForestKey} {ctr : Counter} (hl : Landed K.p l)
-    (hxE : x = Wots.encodingInput K.p topLayer rootTree l msg ctr) :
+    (hi : K.initial x = none) {l : OtsKey} {msg : HashInput} {ctr : Counter} (hl : Retained K.p l)
+    (hxE : x = Wots.encodingInput K.p l.1 l.2.1 l.2.2 msg ctr) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y r.2 ≤ K.pot y s + (ν * K.kindUnit x +
       ν * (if K.Bad s then 0 else 63 * ∑ i, (if (K.ContactB s l i).Nonempty then (1 : ℝ≥0∞) else 0)) +
       ν * (((y : ℝ≥0∞) * ν) * (if K.Armed s then 0 else 4032 * ENNReal.ofReal (2 - K.ρ)))) := by
@@ -449,7 +448,7 @@ theorem step_enc (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.c
     have hnotB : ∀ l' i' v, ¬K.IsB l' i' v x := fun l' i' v hB => isB_ne_enc hB l msg ctr hxE
     have hnotF : ∀ f : FIn, x ≠ f.input K.p := fun _ he =>
       enc_ne_fchain (hxE.symm.trans he)
-    have hsame : ∀ l', Landed K.p l' → l' ≠ l → K.SameLeaf s s' l' := fun l' _ hne =>
+    have hsame : ∀ l', Retained K.p l' → l' ≠ l → K.SameLeaf s s' l' := fun l' _ hne =>
       K.sameLeaf_store u hx hi l' (hnotA l') (hnotB l')
         (fun msg' ctr' he => hne (enc_inj (hxE.symm.trans he)).1.symm)
     have hCB : ∀ i', K.ContactB s' l i' = K.ContactB s l i' := fun i' => by
@@ -527,7 +526,7 @@ theorem step_enc (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.c
 observed answer, a WOTS event at a marked or second chain, and otherwise a new contact at a
 clean leaf, arming the state. An observed payload uses up one credit. -/
 theorem step_B (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none)
-    (hi : K.initial x = none) {l : Index} {i : ChainIndex} {v : Digest} (hl : Landed K.p l)
+    (hi : K.initial x = none) {l : OtsKey} {i : ChainIndex} {v : Digest} (hl : Retained K.p l)
     (hB : K.IsB l i v x) (hk : K.tg.kind x = .none) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y r.2 + (if v ∈ K.AAns s l i then ν / 2 else 0) ≤ K.pot y s +
       ν * (if K.BadLeaf s l ∨ v ∈ K.AAns s l i ∨ K.Marker s l i ∨ ∃ i', i' ≠ i ∧ (K.ContactB s l i').Nonempty
@@ -544,10 +543,10 @@ theorem step_B (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.cac
   · set s' := s.store x u with hs'
     set t := truncateHash u with ht
     have hnotA : ∀ l' i', ¬K.IsA l' i' x := fun l' i' hA => isA_not_isB hA hB
-    have hnotE : ∀ l' msg ctr, x ≠ Wots.encodingInput K.p topLayer rootTree l' msg ctr :=
+    have hnotE : ∀ (l' : OtsKey) msg ctr, x ≠ Wots.encodingInput K.p l'.1 l'.2.1 l'.2.2 msg ctr :=
       fun l' msg ctr => isB_ne_enc hB l' msg ctr
     have hnotF : ∀ f : FIn, x ≠ f.input K.p := isB_ne_fchain hB
-    have hsame : ∀ l', Landed K.p l' → l' ≠ l → K.SameLeaf s s' l' := fun l' _ hne =>
+    have hsame : ∀ l', Retained K.p l' → l' ≠ l → K.SameLeaf s s' l' := fun l' _ hne =>
       K.sameLeaf_store u hx hi l' (hnotA l') (fun i' v' hB' => hne (isB_unique hB' hB).1) (hnotE l')
     have hAAeq : ∀ i', K.AAns s' l i' = K.AAns s l i' := fun i' => by
       rw [K.aAns_store u hx hi, if_neg (hnotA l i')]
@@ -668,7 +667,7 @@ theorem step_B (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.cac
         rw [hCBi]
         ext w
         simp [hfront]
-      have hsameAll : ∀ l', Landed K.p l' → K.SameLeaf s s' l' := fun l' hl' => by
+      have hsameAll : ∀ l', Retained K.p l' → K.SameLeaf s s' l' := fun l' hl' => by
         by_cases hll : l' = l
         · rw [hll]
           refine ⟨fun i' => ?_, hAAeq, hMk⟩

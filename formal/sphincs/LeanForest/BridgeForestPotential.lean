@@ -6,11 +6,13 @@ import LeanForest.BridgeImplication
 pair is an item; the unsigned ones are candidates. This file defines the pairs, their views, the
 item and disclosure invariants, the final value (a forest cover) and proves the facts about fresh
 pairs, ordinary queries and signing calls that the one-coin potentials of
-`BridgeForsPotentialOnce` and `BridgeForsGeneric` build on. -/
+`BridgeForestPotentialOnce` and `BridgeForestGeneric` build on. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner LeanForest.Base.Domination
@@ -19,7 +21,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-- A message and a randomizer. -/
 abbrev Pair := Message × Randomness
@@ -28,7 +29,6 @@ abbrev State := DebtState HashInput HashOutput Coordinate
 
 noncomputable instance viewInhabited : Inhabited View := ⟨(⟨0, Nat.two_pow_pos _⟩, fun _ => ⟨0, Nat.two_pow_pos _⟩)⟩
 
-omit [Params] in
 theorem payload_pair_injective (root : Digest) {m m' : Message} {ρ ρ' : Randomness}
     (h : messageDigestPayload root m ρ = messageDigestPayload root m' ρ') : m = m' ∧ ρ = ρ' := by
   have hparts := List.append_inj h (by simp [bytesLE_length])
@@ -41,13 +41,11 @@ variable (parameter : PublicParameter) (data : PublicData)
 /-- The digest block of a pair. -/
 abbrev pblk (p : Pair) : HashInput := blk parameter data p.1 p.2
 
-omit [Params] in
 theorem pblk_injective {p q : Pair} (h : pblk parameter data p = pblk parameter data q) : p = q := by
   obtain ⟨-, -, hpayload⟩ := tweakableInput_injective h
   obtain ⟨hm, hρ⟩ := payload_pair_injective data.root hpayload
   exact Prod.ext hm hρ
 
-omit [Params] in
 theorem pblk_ne_of_ne {p q : Pair} (h : p ≠ q) : pblk parameter data p ≠ pblk parameter data q := fun heq =>
   h (pblk_injective parameter data heq)
 
@@ -122,7 +120,6 @@ theorem pair_mean (parameter : PublicParameter) (F : View → ℝ≥0∞) (C : �
   simp only [hsplit, ENNReal.tsum_add, ENNReal.tsum_mul_left]
   rw [fresh_view_mean parameter F, unlanded_mass parameter, mul_comm C]
 
-omit [Params] in
 /-- Expectations distribute over a list sum. -/
 theorem tsum_list_sum {β γ : Type} (w : β → ℝ≥0∞) (l : List γ) (f : β → γ → ℝ≥0∞) :
     ∑' x, w x * (l.map (f x)).sum = (l.map fun c => ∑' x, w x * f x c).sum := by
@@ -141,23 +138,18 @@ section PairE
 noncomputable def pairE (F : HashOutput → ℝ≥0∞) : ℝ≥0∞ :=
   ∑' u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] * F u0
 
-omit [Params] in
 theorem pairE_add (F G : HashOutput → ℝ≥0∞) : pairE (fun a => F a + G a) = pairE F + pairE G := by
   simp only [pairE, mul_add, ENNReal.tsum_add]
 
-omit [Params] in
 theorem pairE_mono {F G : HashOutput → ℝ≥0∞} (h : ∀ a, F a ≤ G a) : pairE F ≤ pairE G :=
   ENNReal.tsum_le_tsum fun a => mul_le_mul_right (h a) _
 
-omit [Params] in
 theorem pairE_const (c : ℝ≥0∞) : pairE (fun _ => c) = c := by
   simp only [pairE, ENNReal.tsum_mul_right, tsum_probOutput_eq_one' probFailure_eq_zero, one_mul]
 
-omit [Params] in
 theorem pairE_const_mul (c : ℝ≥0∞) (F : HashOutput → ℝ≥0∞) : pairE (fun a => c * F a) = c * pairE F := by
   simp only [pairE, mul_left_comm _ c, ENNReal.tsum_mul_left]
 
-omit [Params] in
 theorem pairE_list_sum {γ : Type} (l : List γ) (F : HashOutput → γ → ℝ≥0∞) :
     pairE (fun a => (l.map (F a)).sum) = (l.map fun c => pairE fun a => F a c).sum := by
   induction l with
@@ -189,19 +181,16 @@ noncomputable def addPair (P : List Pair) (p : Pair) (u0 : HashOutput) : List Pa
 
 variable {parameter data}
 
-omit [Params] in
 theorem withPair_other (s : State) (p : Pair) (u0 : HashOutput) (x : HashInput) (h0 : x ≠ pblk parameter data p) :
     (withPair parameter data s p u0).cache x = s.cache x := by
   unfold withPair
   rw [store_cache_ne _ _ _ h0]
 
-omit [Params] in
 theorem withPair_self (s : State) (p : Pair) (u0 : HashOutput) :
     (withPair parameter data s p u0).cache (pblk parameter data p) = some u0 := by
   unfold withPair
   simp [DebtState.store]
 
-omit [Params] in
 theorem withPair_other_pair (s : State) (p q : Pair) (hq : q ≠ p) (u0 : HashOutput) :
     (withPair parameter data s p u0).cache (pblk parameter data q) = s.cache (pblk parameter data q) :=
   withPair_other s p u0 _ (pblk_ne_of_ne parameter data hq)
@@ -294,7 +283,6 @@ section Count
 
 variable {parameter : PublicParameter} {data : PublicData}
 
-omit [Params] in
 theorem blk_injective' (m : Message) : Function.Injective fun ρ : Randomness => blk parameter data m ρ := by
   intro ρ ρ' h
   by_contra hne
@@ -305,13 +293,11 @@ variable (parameter data) in
 noncomputable def zeroInputs (m : Message) : Finset HashInput :=
   Finset.univ.image fun ρ => blk parameter data m ρ
 
-omit [Params] in
 theorem cachedCount_eq (m : Message) (s : State) :
     cachedCount parameter data m s = ((zeroInputs parameter data m).filter fun x => s.cache x ≠ none).card := by
   unfold cachedCount zeroInputs
   rw [Finset.filter_image, Finset.card_image_of_injective _ (blk_injective' m)]
 
-omit [Params] in
 theorem count_withPair (m : Message) (s : State) (p : Pair) (u0 : HashOutput) :
     cachedCount parameter data m (withPair parameter data s p u0) ≤ cachedCount parameter data m s + 1 := by
   rw [cachedCount_eq, cachedCount_eq]
@@ -348,7 +334,6 @@ section Ordinary
 variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
   (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
-omit [Params] in
 theorem readOutside_cache_ne (x : HashInput) (s : State) :
     ∀ r ∈ support (readOutside x s), ∀ y, y ≠ x → r.2.cache y = s.cache y := by
   intro r hr y hy
@@ -356,7 +341,6 @@ theorem readOutside_cache_ne (x : HashInput) (s : State) :
   · rw [h]
   · rw [h]; exact store_cache_ne s x y hy r.1
 
-omit [Params] in
 /-- An ordinary query changes the cache at most at its input. -/
 theorem ordinaryStep_cache_ne (x : HashInput) (s : State) :
     ∀ r ∈ support (ordinaryStep model x s.known s), ∀ y, y ≠ x → r.2.cache y = s.cache y := by
@@ -373,7 +357,6 @@ theorem ordinaryStep_cache_ne (x : HashInput) (s : State) :
         rfl
       · exact readOutside_cache_ne x s r hr y hy
 
-omit [Params] in
 theorem ordinaryStep_extends (x : HashInput) (s : State) :
     ∀ r ∈ support (ordinaryStep model x s.known s), Extends s r.2 := by
   intro r hr
@@ -425,7 +408,6 @@ theorem finalValue_presample (y : HashInput) (hk : tg.kind y = .none) (R : List 
 theorem finalValue_abort (R : List Coordinate) (s : State) :
     finalValue parameter data tg initial R ((none, [], [], []), s) = 0 := rfl
 
-omit [Params] in
 theorem interp_mass {α : Type} (computation : OracleComp CostSpec α) (budget : ℕ) (s : State) :
     ∑' out, Pr[= out | interp tg initial model computation budget s] = 1 :=
   tsum_probOutput_eq_one' probFailure_eq_zero
@@ -441,7 +423,6 @@ theorem finalValue_ordinary (R : List Coordinate) (x : HashInput)
   simp only [tsum_probOutput_map_mul]
   rfl
 
-omit [Params] in
 theorem flagged_ordinary (x : HashInput) (next : HashOutput → OracleComp CostSpec HiddenBridge.Outcome)
     (budget : ℕ) (hb : 1 ≤ budget) (s : State) :
     expectedFlagged tg initial model (liftM (CostSpec.query (.inl (.inr (.inl x)))) >>= next) budget s =
@@ -478,7 +459,6 @@ theorem same_items {x : HashInput} {s s' : State} (hext : Extends s s') (hother 
 
 end Ordinary
 
-omit [Params] in
 theorem tsum_swap2 {α : Type} (w : α → ℝ≥0∞) (C : α → α → ℝ≥0∞) :
     ∑' u, w u * ∑' u', w u' * C u' u = ∑' a, w a * ∑' b, w b * C a b := by
   calc ∑' u, w u * ∑' u', w u' * C u' u = ∑' u, ∑' u', w u' * (w u * C u' u) :=
@@ -519,11 +499,9 @@ theorem witness_pos_of_covered {R : List Coordinate} {d : Multiset View} (hD : D
 /-- The pairs that are not excluded. -/
 noncomputable def others (excl : Pair → Prop) (P : List Pair) : List Pair := P.filter fun q => ¬excl q
 
-omit [Params] in
 theorem mem_others {excl : Pair → Prop} {P : List Pair} {q : Pair} : q ∈ others excl P ↔ q ∈ P ∧ ¬excl q := by
   unfold others; simp
 
-omit [Params] in
 theorem others_nodup {excl : Pair → Prop} {P : List Pair} (h : P.Nodup) : (others excl P).Nodup := h.filter _
 
 section SignDefs
@@ -680,7 +658,6 @@ end SignParams
 
 /-! ### Signing helpers -/
 
-omit [Params] in
 theorem erase_eq_filter' {P : List Pair} (hP : P.Nodup) (q : Pair) : P.erase q = others (· = q) P := by
   rw [hP.erase_eq_filter]
   unfold others
@@ -689,15 +666,12 @@ theorem erase_eq_filter' {P : List Pair} (hP : P.Nodup) (q : Pair) : P.erase q =
   rw [Bool.eq_iff_iff]
   simp [bne_iff_ne]
 
-omit [Params] in
 theorem filter_false' (P : List Pair) : others (fun _ => False) P = P := by unfold others; simp
 
-omit [Params] in
 theorem unsigned_of_append {L : QueryLog SigningSpec} {e : (_ : Message) × Option Signature} {q : Pair}
     (h : Unsigned (L ++ [e]) q) : Unsigned L q :=
   fun entry he sig hs => h entry (List.mem_append_left _ he) sig hs
 
-omit [Params] in
 theorem not_unsigned_signed {m : Message} {L : QueryLog SigningSpec} {sig : Signature} :
     ¬Unsigned (L ++ [⟨m, some sig⟩]) (m, sig.randomness) := fun h =>
   h ⟨m, some sig⟩ (List.mem_append_right _ (List.mem_singleton_self _)) sig rfl ⟨rfl, rfl⟩
@@ -707,7 +681,6 @@ section SignGood
 variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
   (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
-omit [Params] in
 theorem interpThen_some {α β : Type} (next : α → OracleComp CostSpec β) (budget : ℕ)
     (o1 : Run HashInput Coordinate α × State) (v : α) (hv : o1.1.1 = some v) :
     interpThen tg initial model next budget o1 =
@@ -716,7 +689,6 @@ theorem interpThen_some {α β : Type} (next : α → OracleComp CostSpec β) (b
   unfold interpThen
   rw [hv]
 
-omit [Params] in
 theorem interpThen_none {α β : Type} (next : α → OracleComp CostSpec β) (budget : ℕ)
     (o1 : Run HashInput Coordinate α × State) (hv : o1.1.1 = none) :
     interpThen tg initial model next budget o1 = pure ((none, o1.1.2.1, o1.1.2.2.1, o1.1.2.2.2), o1.2) := by
@@ -725,4 +697,4 @@ theorem interpThen_none {α β : Type} (next : α → OracleComp CostSpec β) (b
 
 end SignGood
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

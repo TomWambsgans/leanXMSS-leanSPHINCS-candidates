@@ -7,9 +7,11 @@ assumption occurs. This is the deterministic assembly part of randomized-signing
 open OracleComp
 
 namespace LeanForest.Completeness
+
+variable [Params]
 open Concrete Seeded
 
-variable (f : QueryImpl HashSpec Id) [Params]
+variable (f : QueryImpl HashSpec Id)
 attribute [local irreducible] Seeded.signLayer Seeded.forestOpen Seeded.treePath Seeded.treeNode
   Seeded.forestKey Seeded.treeRoot Seeded.spineNode sequenceFin
 

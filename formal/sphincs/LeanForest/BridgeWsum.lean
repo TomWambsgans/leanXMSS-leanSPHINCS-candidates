@@ -9,6 +9,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.PotentialA
 
+variable [Params]
+
 open Concrete HiddenGraph HiddenDebt HiddenBridge
 
 set_option backward.isDefEq.respectTransparency false
@@ -16,7 +18,6 @@ set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 namespace Ctx
 
@@ -182,7 +183,7 @@ theorem input_of_guess {x : HashInput} {a : Address} {v : Digest} (hp : M.parse 
 
 include hMp hMi in
 /-- A fresh forest step input carries no guess record. -/
-theorem not_recd_of_fresh {s : St} (hgc : ForsPotential.GuessCached M s) {f : FIn}
+theorem not_recd_of_fresh {s : St} (hgc : ForestPotential.GuessCached M s) {f : FIn}
     (hx : s.cache (f.input K.p) = none) : ¬Recd s f := by
   intro hr
   obtain ⟨x', a, v, hp, hg, hc⟩ := hgc _ hr
@@ -193,7 +194,7 @@ theorem not_recd_of_fresh {s : St} (hgc : ForsPotential.GuessCached M s) {f : FI
 include hMp hMi in
 /-- **One ordinary query.** The recorded contact weights keep their mean, except that a fresh forest
 step query at an unexposed read coordinate adds `2^-128` times its coefficient. -/
-theorem wsum_ordinary {s : St} (hinv : K.Inv s) (hgc : ForsPotential.GuessCached M s) (x : HashInput)
+theorem wsum_ordinary {s : St} (hinv : K.Inv s) (hgc : ForestPotential.GuessCached M s) (x : HashInput)
     (g : FIn → ℝ≥0∞) (C : ℝ≥0∞) (hC : ∀ f : FIn, x = f.input K.p → s.known f.inC = none → g f ≤ C) :
     ∑' r, Pr[= r | ordinaryStep M x s.known s] * K.wsum g r.2 ≤
       K.wsum g s + ν * C * (if IsFchainIn K.p x then 1 else 0) := by

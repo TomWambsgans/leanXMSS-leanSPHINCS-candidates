@@ -7,6 +7,8 @@ function. -/
 
 open OracleComp OracleSpec
 namespace LeanForest.Security.GraphView
+
+variable [Params]
 open Concrete Completeness Prefix HiddenGraph SeedCoupling
 set_option backward.isDefEq.respectTransparency false
 attribute [local irreducible] signCostSource Randomized.sign Seeded.keygenFromSeed
@@ -20,7 +22,6 @@ theorem fixedCostSource_ordinary (f : QueryImpl HashSpec Id) (table : HiddenGrap
     simulateQ (fixedCostSource f table) (ordinaryCostSource request) = fixedWorldCost f request := by
   cases request <;> rw [ordinaryCostSource, simulateQ_spec_query] <;> rfl
 
-variable [Params]
 
 noncomputable def costInteraction (parameter : PublicParameter) (data : PublicData) :
     QueryImpl (OracleWorld + SigningSpec) (WriterT (QueryLog SigningSpec) (OracleComp CostSpec)) :=
@@ -37,7 +38,7 @@ noncomputable def costRest (parameter : PublicParameter) (data : PublicData) (ad
 
 noncomputable def costGame (parameter : PublicParameter) (data : PublicData) (adversary : Adversary) :
     OracleComp CostSpec Bool := do
-  HiddenCost.tick (226 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight))
+  HiddenCost.tick keygenHashCost
   costRest parameter data adversary
 
 theorem fixedWorldCost_keygen_graph (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -46,7 +47,7 @@ theorem fixedWorldCost_keygen_graph (f : QueryImpl HashSpec Id) (parameter : Pub
     simulateQ (fixedWorldCost f) (liftM (Seeded.keygenFromSeed seed) :
       OracleComp OracleWorld (PublicKey × Seeded.SecretKey)) =
       WriterT.mk (PMF.pure ((⟨data.root, parameter⟩, ⟨seed, parameter, data.root⟩),
-        Multiplicative.ofAdd (226 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight)))) := by
+        Multiplicative.ofAdd keygenHashCost)) := by
   rw [fixedWorldCost_lift_hash, hashCalls_keygenFromSeed]
   simp only [Seeded.keygenFromSeed, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
     hparameter, ← hdata.root]

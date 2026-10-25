@@ -10,6 +10,8 @@ open ENNReal NNReal
 
 namespace LeanForest.Security.H0
 
+variable [Params]
+
 open Concrete LeanForest.Base.H0 LeanForest.Base.Domination H0Avg
 
 set_option linter.unusedSectionVars false

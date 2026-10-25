@@ -10,6 +10,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.GraphView
 
+variable [Params]
+
 open LeanForest.Base
 open Concrete HiddenCost HiddenDebt HiddenGraph ForestSigner LeanForest.LoopWalk
 
@@ -39,7 +41,6 @@ theorem nextRand_pow_ne (half ρ : Randomness) (j : ℕ) (h0 : 0 < j) (hj : j < 
   rwa [walk_iterate, show ρ + walkStep half + (i : Randomness) * walkStep half =
     ρ + ((i + 1 : ℕ) : Randomness) * walkStep half by push_cast; ring, ← nextRand_pow] at h
 
-variable [Params]
 
 theorem signCostSourceLoop_succ (parameter : PublicParameter) (data : PublicData) (message : Message)
     (attempts : ℕ) (randomness : Randomness) :

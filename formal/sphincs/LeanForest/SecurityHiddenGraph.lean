@@ -9,6 +9,8 @@ queries are monitored before a hidden input can expose its successor. -/
 
 open OracleComp OracleSpec ENNReal
 namespace LeanForest.Security.HiddenGraph
+
+variable [Params]
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 set_option maxHeartbeats 200000
@@ -65,7 +67,7 @@ def Address.outputCoordinate : Address → Coordinate
   | .fchain index c s j a i t => .fchain index c s j a i ⟨t.val + 1, by have := t.isLt; omega⟩
 
 /-- Only the retained WOTS chains and the forest chain rows are programmed for a pruned key. -/
-def candidateActive [Params] (parameter : PublicParameter) (address : Address) : Prop :=
+def candidateActive (parameter : PublicParameter) (address : Address) : Prop :=
   PrunedGraph.active parameter address.position
 
 def input (parameter : PublicParameter) (query : Address × Digest) : HashInput :=

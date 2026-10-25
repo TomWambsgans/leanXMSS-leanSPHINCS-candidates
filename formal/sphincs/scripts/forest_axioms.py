@@ -6,7 +6,8 @@ From formal/sphincs:
     python3 scripts/forest_axioms.py prepare             # writes .build/forest_print_axioms.lean
     lake env lean .build/forest_print_axioms.lean > .build/forest_axioms_out.txt
     python3 scripts/forest_axioms.py emit                # writes LeanForest/Axioms.lean
-Every public theorem of every LeanForest module loaded by LeanForest.Lifetimes gets a #guard_msgs
+Every public theorem of every LeanForest module loaded by LeanForest.Lifetimes and
+LeanForest.Configurations gets a #guard_msgs
 guard with the exact output of #print axioms; `emit` refuses any axiom other than propext,
 Classical.choice and Quot.sound.
 """
@@ -14,7 +15,7 @@ import os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ALLOWED = {'propext', 'Classical.choice', 'Quot.sound'}
-EXTRA_IMPORTS = ['LeanForest.Lifetimes', 'LeanForest.VerificationCost', 'LeanForest.SecurityPosition',
+EXTRA_IMPORTS = ['LeanForest.Lifetimes', 'LeanForest.Configurations', 'LeanForest.VerificationCost', 'LeanForest.SecurityPosition',
                  'LeanForest.SecurityForestWitness', 'LeanForest.SecurityGraphView']
 
 def read_list():

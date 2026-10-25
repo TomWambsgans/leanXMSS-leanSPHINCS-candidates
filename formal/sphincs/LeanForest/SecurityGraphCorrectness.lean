@@ -7,6 +7,8 @@ for every sample. No correctness of the labels is assumed. -/
 
 open OracleComp OracleSpec
 namespace LeanForest.Security.GraphCorrectness
+
+variable [Params]
 open Concrete Completeness Graph PrunedGraph
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -18,10 +20,8 @@ set_option allowUnsafeReducibility false
 attribute [local irreducible] Seeded.treeNode Seeded.subNode Seeded.topNode Seeded.spineNode chainWalk
   forestWalk sequenceFin
 
-variable [inst : Params]
 
-omit [Params] in
-theorem one_lt_leaf_capacity : 1 < 2 ^ maxLayerHeight := by decide
+theorem one_lt_leaf_capacity : 1 < 2 ^ maxLayerHeight := Nat.one_lt_two_pow maxLayerHeight_pos.ne'
 
 def otsSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed) :
     Layer → TreeIndex → LeafIndex → ChainIndex → Digest :=
@@ -32,7 +32,7 @@ def ftsSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed :
   fun index c s j a i => Completeness.forestSecret f parameter index c s j a i seed
 
 def surrogates (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed) :
-    Fin totalHeight → Digest := fun level =>
+    Fin maxLayerHeight → Digest := fun level =>
   evalWithAnswerFn f (Seeded.surrogate parameter seed level.val : OracleComp HashSpec Digest)
 
 def Consistent (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed)
@@ -48,18 +48,40 @@ def BoundaryCorrect (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (s
 
 -- The instance is passed explicitly so that `unusedSectionVars` sees `hconsistent` use it.
 variable (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed)
-  (labels : CanonicalGraphLabels) (hconsistent : @Consistent inst f parameter seed labels)
+  (labels : CanonicalGraphLabels) (hconsistent : @Consistent _ f parameter seed labels)
+
+/-! ### The layers' trees
+
+At every layer the labels of a retained tree are its honest values: the kept part (the whole tree
+below the top layer) and, in the top layer's root tree, the spine above the kept subtree, whose
+siblings are the surrogates. -/
+
+omit f seed labels hconsistent in
+theorem keptPosition_lt (lay : Layer) :
+    keptPosition parameter lay < 2 ^ (layerHeight lay - keptHeight lay) := by
+  by_cases h : lay.val = 0
+  · have hl : lay = topLayer := Fin.ext h
+    subst hl
+    have hpos : keptPosition parameter topLayer = subtreePosition parameter := if_pos rfl
+    rw [hpos, Completeness.keptHeight_top, Completeness.layerHeight_top]
+    have h1 := Completeness.maxLayerHeight_add
+    have h2 := Completeness.heightBelow_le_subtree
+    have h3 := subtreeHeight_le_total
+    rw [show maxLayerHeight - (subtreeHeight - heightBelow topLayer) = totalHeight - subtreeHeight by omega]
+    exact subtreePosition_lt parameter
+  · rw [keptPosition_of_ne_top parameter lay h, keptHeight_of_ne_top lay h, Nat.sub_self, pow_zero]
+    exact Nat.one_pos
 
 include hconsistent in
 theorem chain_value (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (hland : Landed parameter leaf) (chain : ChainIndex) (step : ChainStep) :
+    (hactive : KeyActive parameter lay tree leaf) (chain : ChainIndex) (step : ChainStep) :
     truncateHash (labels (.chain lay tree leaf chain step)) =
       Chain.honestChain f parameter lay tree leaf chain
         (otsSecrets f parameter seed lay tree leaf chain) (step.val + 1) := by
   obtain ⟨step, hstep⟩ := step
   induction step with
   | zero =>
-      rw [hconsistent (.chain lay tree leaf chain ⟨0, hstep⟩) hland,
+      rw [hconsistent (.chain lay tree leaf chain ⟨0, hstep⟩) hactive,
         Chain.honestChain_succ _ _ _ _ _ _ _ _ hstep]
       have hz : Chain.honestChain f parameter lay tree leaf chain
           (otsSecrets f parameter seed lay tree leaf chain) 0 =
@@ -73,7 +95,7 @@ theorem chain_value (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
         ↓reduceIte, List.flatMap_cons, List.flatMap_nil, List.append_nil]
   | succ step ih =>
       have hprev : step < chainLength - 1 := by omega
-      rw [hconsistent (.chain lay tree leaf chain ⟨step + 1, hstep⟩) hland,
+      rw [hconsistent (.chain lay tree leaf chain ⟨step + 1, hstep⟩) hactive,
         Chain.honestChain_succ _ _ _ _ _ _ _ _ hstep]
       apply congrArg (fun input : HashInput => truncateHash (f input))
       simp only [canonicalGraphInput, canonicalGraphSlots, Position.children, Position.domain]
@@ -84,7 +106,7 @@ theorem chain_value (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
 
 include hconsistent in
 theorem leaf_input (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (hland : Landed parameter leaf) :
+    (hactive : KeyActive parameter lay tree leaf) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
       (.leaf lay tree leaf) labels = tweakableHashInput parameter (.leaf lay tree leaf)
         (leafPayload (otsEndpoint f parameter lay tree leaf seed)) := by
@@ -95,15 +117,15 @@ theorem leaf_input (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
   apply congrArg List.ofFn
   funext chain
   simp only [Function.comp_apply]
-  rw [chain_value f parameter seed labels hconsistent lay tree leaf hland chain]
+  rw [chain_value f parameter seed labels hconsistent lay tree leaf hactive chain]
   rfl
 
 include hconsistent in
 theorem leaf_value (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (hland : Landed parameter leaf) :
+    (hactive : KeyActive parameter lay tree leaf) :
     truncateHash (labels (.leaf lay tree leaf)) = node f parameter lay tree seed 0 leaf.val := by
-  rw [hconsistent (.leaf lay tree leaf) hland,
-    leaf_input f parameter seed labels hconsistent lay tree leaf hland, node_zero]
+  rw [hconsistent (.leaf lay tree leaf) hactive,
+    leaf_input f parameter seed labels hconsistent lay tree leaf hactive, node_zero]
   simp only [leafHash, eval_tweakableHash]
 
 /-- Graph location for a tree node, including the level-zero leaf. -/
@@ -112,7 +134,7 @@ def treePosition (lay : Layer) (tree : TreeIndex) :
   | 0, _, index => .leaf lay tree index
   | level + 1, hlevel, index => .node lay tree ⟨level, by omega⟩ index
 
-omit hconsistent [Params] in
+omit hconsistent in
 theorem tree_input (lay : Layer) (tree : TreeIndex) (level : Nat)
     (hlevel : level + 1 ≤ maxLayerHeight) (index : LeafIndex)
     (hindex : 2 * index.val + 1 < 2 ^ maxLayerHeight) :
@@ -126,7 +148,7 @@ theorem tree_input (lay : Layer) (tree : TreeIndex) (level : Nat)
     simp [treePosition, canonicalGraphInput, canonicalGraphSlots, Position.children,
       Position.domain, hindex, nodePayload]
 
-omit f parameter seed labels hconsistent [Params] in
+omit f parameter seed labels hconsistent in
 theorem child_index_bound {height level index : Nat} (hlevel : level + 1 ≤ height)
     (hindex : index < 2 ^ (height - (level + 1))) :
     2 * index + 1 < 2 ^ (height - level) := by
@@ -134,7 +156,7 @@ theorem child_index_bound {height level index : Nat} (hlevel : level + 1 ≤ hei
   rw [hsub, Nat.pow_succ]
   omega
 
-omit f parameter seed labels hconsistent [Params] in
+omit f parameter seed labels hconsistent in
 theorem double_div_pow (index level bit : Nat) (hbit : bit < 2) :
     (2 * index + bit) / 2 ^ (level + 1) = index / 2 ^ level := by
   rw [Nat.pow_succ, Nat.mul_comm (2 ^ level), ← Nat.div_div_eq_div_mul]
@@ -142,96 +164,154 @@ theorem double_div_pow (index level bit : Nat) (hbit : bit < 2) :
   rw [hdiv]
 
 omit f seed labels hconsistent in
-theorem treePosition_active_below (lay : Layer) (tree : TreeIndex) (level : Nat)
-    (hlevel : level ≤ maxLayerHeight) (hlower : level ≤ subtreeHeight) (index : LeafIndex)
-    (hkept : index.val / 2 ^ (subtreeHeight - level) = subtreePosition parameter) :
+/-- A node of the kept part of a retained tree is retained. -/
+theorem treePosition_active_below (lay : Layer) (tree : TreeIndex) (htree : TreeActive parameter lay tree)
+    (level : Nat) (hlevel : level ≤ maxLayerHeight) (hlower : level ≤ keptHeight lay) (index : LeafIndex)
+    (hindex : index.val < 2 ^ (layerHeight lay - level))
+    (hkept : index.val / 2 ^ (keptHeight lay - level) = keptPosition parameter lay) :
     active parameter (treePosition lay tree level hlevel index) := by
+  have hKL := Completeness.keptHeight_le lay
   cases level with
-  | zero => simpa only [treePosition, active, Landed, Nat.sub_zero] using hkept
-  | succ level => simpa only [treePosition, active, KeptNode, if_pos hlower] using hkept
+  | zero =>
+      refine (keyActive_iff parameter lay tree index).2 ⟨htree, ?_, ?_⟩
+      · simpa only [Kept, Nat.sub_zero] using hkept
+      · simpa only [Nat.sub_zero] using hindex
+  | succ level =>
+      change NodeActive parameter lay tree (level + 1) index.val
+      unfold NodeActive
+      by_cases htop : lay = topLayer
+      · subst htop
+        rw [if_pos rfl]
+        refine ⟨treeActive_top parameter tree htree, ?_⟩
+        have hpos : keptPosition parameter topLayer = subtreePosition parameter := if_pos rfl
+        unfold KeptNode
+        rw [if_pos hlower, ← hpos]
+        exact hkept
+      · rw [if_neg htop]
+        have hpow : 2 ^ (level + 1) * 2 ^ (layerHeight lay - (level + 1)) = 2 ^ layerHeight lay := by
+          rw [← pow_add]; congr 1; omega
+        have hleaf : index.val * 2 ^ (level + 1) < 2 ^ maxLayerHeight := by
+          have : index.val * 2 ^ (level + 1) < 2 ^ layerHeight lay := by
+            rw [← hpow, Nat.mul_comm (2 ^ (level + 1))]
+            exact Nat.mul_lt_mul_of_pos_right hindex (Nat.two_pow_pos _)
+          exact this.trans_le (Nat.pow_le_pow_right (by decide) (layerHeight_le lay))
+        refine ⟨by omega, ⟨index.val * 2 ^ (level + 1), hleaf⟩, ?_, ?_⟩
+        · refine (keyActive_iff parameter lay tree _).2 ⟨htree, ?_, ?_⟩
+          · have hlay : lay.val ≠ 0 := fun e => htop (Fin.ext e)
+            apply kept_of_ne_top parameter lay hlay
+            change index.val * 2 ^ (level + 1) < 2 ^ layerHeight lay
+            rw [← hpow, Nat.mul_comm (2 ^ (level + 1))]
+            exact Nat.mul_lt_mul_of_pos_right hindex (Nat.two_pow_pos _)
+          · change index.val * 2 ^ (level + 1) < 2 ^ layerHeight lay
+            rw [← hpow, Nat.mul_comm (2 ^ (level + 1))]
+            exact Nat.mul_lt_mul_of_pos_right hindex (Nat.two_pow_pos _)
+        · change index.val * 2 ^ (level + 1) / 2 ^ (level + 1) = index.val
+          exact Nat.mul_div_cancel _ (Nat.two_pow_pos _)
 
 include hconsistent in
-theorem tree_value_below (lay : Layer) (tree : TreeIndex) (level : Nat)
-    (hlevel : level ≤ maxLayerHeight) (hlower : level ≤ subtreeHeight) (index : LeafIndex)
-    (hindex : index.val < 2 ^ (maxLayerHeight - level))
-    (hkept : index.val / 2 ^ (subtreeHeight - level) = subtreePosition parameter) :
+/-- The labels of the kept part of a retained tree are the honest nodes. -/
+theorem tree_value_below (lay : Layer) (tree : TreeIndex) (htree : TreeActive parameter lay tree)
+    (level : Nat) (hlevel : level ≤ maxLayerHeight) (hlower : level ≤ keptHeight lay) (index : LeafIndex)
+    (hindex : index.val < 2 ^ (layerHeight lay - level))
+    (hkept : index.val / 2 ^ (keptHeight lay - level) = keptPosition parameter lay) :
     truncateHash (labels (treePosition lay tree level hlevel index)) =
       node f parameter lay tree seed level index.val := by
+  have hKL := Completeness.keptHeight_le lay
   induction level generalizing index with
   | zero =>
       exact leaf_value f parameter seed labels hconsistent lay tree index
-        (by simpa only [Landed, Nat.sub_zero] using hkept)
+        ((keyActive_iff parameter lay tree index).2 ⟨htree,
+          by simpa only [Kept, Nat.sub_zero] using hkept, by simpa only [Nat.sub_zero] using hindex⟩)
   | succ level ih =>
-      have hchildren := child_index_bound hlevel hindex
+      have hchildren := child_index_bound (Nat.le_trans hlower hKL) hindex
       have hglobal : 2 * index.val + 1 < 2 ^ maxLayerHeight :=
-        hchildren.trans_le (Nat.pow_le_pow_right (by decide) (Nat.sub_le _ _))
-      have hsub : subtreeHeight - level = subtreeHeight - (level + 1) + 1 := by omega
-      have hleft : (2 * index.val) / 2 ^ (subtreeHeight - level) = subtreePosition parameter := by
+        hchildren.trans_le ((Nat.pow_le_pow_right (by decide) (Nat.sub_le _ _)).trans
+          (Nat.pow_le_pow_right (by decide) (layerHeight_le lay)))
+      have hsub : keptHeight lay - level = keptHeight lay - (level + 1) + 1 := by omega
+      have hleft : (2 * index.val) / 2 ^ (keptHeight lay - level) = keptPosition parameter lay := by
         rw [hsub, show 2 * index.val = 2 * index.val + 0 by omega, double_div_pow _ _ 0 (by decide)]
         exact hkept
-      have hright : (2 * index.val + 1) / 2 ^ (subtreeHeight - level) = subtreePosition parameter := by
+      have hright : (2 * index.val + 1) / 2 ^ (keptHeight lay - level) = keptPosition parameter lay := by
         rw [hsub, double_div_pow _ _ 1 (by decide)]
         exact hkept
-      rw [hconsistent _ (treePosition_active_below parameter lay tree (level + 1) hlevel hlower index hkept),
+      rw [hconsistent _ (treePosition_active_below parameter lay tree htree (level + 1) hlevel hlower
+          index hindex hkept),
         tree_input f parameter seed labels lay tree level hlevel index hglobal, node_succ,
         ih (by omega) (by omega) _ (by change 2 * index.val < _; omega) hleft,
         ih (by omega) (by omega) _ hchildren hright]
 
+/-! The spine of the top layer's root tree. -/
+
 omit f seed labels hconsistent in
-theorem spineIndex_range (level : Nat) (hlower : subtreeHeight ≤ level)
+theorem spineIndex_range (level : Nat) (hlower : keptHeight topLayer ≤ level)
     (hupper : level ≤ maxLayerHeight) : spineIndex parameter level < 2 ^ (maxLayerHeight - level) := by
   unfold spineIndex
   apply (Nat.div_lt_iff_lt_mul (by positivity)).2
   rw [← Nat.pow_add]
-  have hexp : maxLayerHeight - level + (level - subtreeHeight) = totalHeight - subtreeHeight := by
-    change totalHeight - level + (level - subtreeHeight) = totalHeight - subtreeHeight
-    change level ≤ totalHeight at hupper
-    omega
-  rw [hexp]
-  exact subtreePosition_lt parameter
+  have hk := keptPosition_lt parameter topLayer
+  have hpos : keptPosition parameter topLayer = subtreePosition parameter := if_pos rfl
+  rw [hpos, Completeness.layerHeight_top] at hk
+  rw [show maxLayerHeight - level + (level - keptHeight topLayer) =
+    maxLayerHeight - keptHeight topLayer by omega]
+  exact hk
 
 omit f seed labels hconsistent in
-theorem spineIndex_step (level : Nat) (hlower : subtreeHeight ≤ level) :
+theorem spineIndex_step (level : Nat) (hlower : keptHeight topLayer ≤ level) :
     spineIndex parameter (level + 1) = spineIndex parameter level / 2 := by
   unfold spineIndex
-  rw [show level + 1 - subtreeHeight = (level - subtreeHeight) + 1 by omega,
+  rw [show level + 1 - keptHeight topLayer = (level - keptHeight topLayer) + 1 by omega,
     Nat.pow_succ, Nat.div_div_eq_div_mul]
 
 omit f seed labels hconsistent in
-theorem spinePosition_active (lay : Layer) (tree : TreeIndex) (level : Nat)
-    (hlower : subtreeHeight ≤ level) (hupper : level ≤ maxLayerHeight) :
-    active parameter (treePosition lay tree level hupper
+theorem spinePosition_active (level : Nat) (hlower : keptHeight topLayer ≤ level)
+    (hupper : level ≤ maxLayerHeight) :
+    active parameter (treePosition topLayer rootTree level hupper
       ⟨spineIndex parameter level, (spineIndex_range parameter level hlower hupper).trans_le
         (Nat.pow_le_pow_right (by decide) (Nat.sub_le _ _))⟩) := by
+  have hpos : keptPosition parameter topLayer = subtreePosition parameter := if_pos rfl
   cases level with
   | zero =>
-      have hb : subtreeHeight = 0 := by omega
-      simp [treePosition, active, Landed, spineIndex, hb]
+      have hb : keptHeight topLayer = 0 := by omega
+      refine (keyActive_iff parameter topLayer rootTree _).2 ⟨?_, ?_, ?_⟩
+      · obtain ⟨index, hland⟩ : ∃ index : Index, Landed parameter index := by
+          refine ⟨⟨subtreePosition parameter * 2 ^ subtreeHeight, ?_⟩, ?_⟩
+          · rw [← subtree_size_mul]
+            exact Nat.mul_lt_mul_of_pos_right (subtreePosition_lt parameter) (Nat.two_pow_pos _)
+          · unfold Landed
+            exact Nat.mul_div_cancel _ (Nat.two_pow_pos _)
+        exact ⟨index, hland, Completeness.treeIndexAt_top index⟩
+      · simp [Kept, spineIndex, hb, hpos]
+      · rw [Completeness.layerHeight_top]
+        exact (spineIndex_range parameter 0 hlower hupper).trans_le
+          (Nat.pow_le_pow_right (by decide) (Nat.sub_le _ _))
   | succ level =>
-      simp only [treePosition, active, KeptNode]
+      change NodeActive parameter topLayer rootTree (level + 1) (spineIndex parameter (level + 1))
+      unfold NodeActive
+      rw [if_pos rfl]
+      refine ⟨rfl, ?_⟩
+      unfold KeptNode
       split
       next h =>
-        have heq : level + 1 = subtreeHeight := by omega
+        have heq : level + 1 = keptHeight topLayer := by omega
         simp [spineIndex, heq]
       next => trivial
 
 omit hconsistent in
 theorem boundary_tree_value (hboundary : BoundaryCorrect f parameter seed labels)
-    (lay : Layer) (tree : TreeIndex) (level : Fin totalHeight)
-    (hlower : subtreeHeight ≤ level.val) :
-    truncateHash (labels (treePosition lay tree level.val (by have := level.isLt; exact Nat.le_of_lt this)
+    (level : Fin maxLayerHeight) (hlower : keptHeight topLayer ≤ level.val) :
+    truncateHash (labels (treePosition topLayer rootTree level.val (by have := level.isLt; exact Nat.le_of_lt this)
       ⟨boundaryIndex parameter level.val, boundaryIndex_lt parameter level.val⟩)) =
         evalWithAnswerFn f (Seeded.surrogate parameter seed level.val : OracleComp HashSpec Digest) := by
   apply hboundary
   obtain ⟨level, hlevel⟩ := level
   cases level with
   | zero =>
-      have hb : subtreeHeight = 0 := by change subtreeHeight ≤ 0 at hlower; omega
+      have hb : keptHeight topLayer = 0 := by change keptHeight topLayer ≤ 0 at hlower; omega
       simp [treePosition, boundary, hb, surrogates]
   | succ level =>
       simp [treePosition, boundary, hlevel, hlower, surrogates]
 
-omit hconsistent [Params] in
+omit hconsistent in
 theorem tree_input_ordered (lay : Layer) (tree : TreeIndex) (level : Nat)
     (hlevel : level + 1 ≤ maxLayerHeight) (current : LeafIndex) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
@@ -244,7 +324,9 @@ theorem tree_input_ordered (lay : Layer) (tree : TreeIndex) (level : Nat)
           ⟨Nat.xor current.val 1, Nat.xor_lt_two_pow current.isLt one_lt_leaf_capacity⟩)))) := by
   have hglobal : 2 * (current.val / 2) + 1 < 2 ^ maxLayerHeight := by
     have hc := current.isLt
-    norm_num [maxLayerHeight] at hc ⊢
+    have hpos : 0 < maxLayerHeight := maxLayerHeight_pos
+    have h2 : 2 ^ maxLayerHeight = 2 * 2 ^ (maxLayerHeight - 1) := by
+      rw [← Nat.pow_succ']; congr 1; omega
     omega
   rw [tree_input f parameter seed labels lay tree level hlevel _ hglobal]
   have hparts := Nat.div_add_mod current.val 2
@@ -271,51 +353,61 @@ theorem tree_input_ordered (lay : Layer) (tree : TreeIndex) (level : Nat)
       simp only [orderedPayload, ↓reduceIte, hcurrent, hsibling]
 
 include hconsistent in
-theorem spine_value (hboundary : BoundaryCorrect f parameter seed labels)
-    (lay : Layer) (tree : TreeIndex) (steps : Nat)
-    (hupper : subtreeHeight + steps ≤ maxLayerHeight) :
-    truncateHash (labels (treePosition lay tree (subtreeHeight + steps) hupper
-      ⟨spineIndex parameter (subtreeHeight + steps), spineIndex_lt parameter _⟩)) =
-      evalWithAnswerFn f (Seeded.spineNode parameter lay tree seed steps : OracleComp HashSpec Digest) := by
+theorem spine_value (hboundary : BoundaryCorrect f parameter seed labels) (steps : Nat)
+    (hupper : keptHeight topLayer + steps ≤ maxLayerHeight) :
+    truncateHash (labels (treePosition topLayer rootTree (keptHeight topLayer + steps) hupper
+      ⟨spineIndex parameter (keptHeight topLayer + steps), spineIndex_lt parameter _⟩)) =
+      evalWithAnswerFn f (Seeded.spineNode parameter topLayer rootTree seed steps : OracleComp HashSpec Digest) := by
+  have hpos : keptPosition parameter topLayer = subtreePosition parameter := if_pos rfl
+  have htree : TreeActive parameter topLayer rootTree := by
+    refine ⟨⟨subtreePosition parameter * 2 ^ subtreeHeight, ?_⟩, ?_, Completeness.treeIndexAt_top _⟩
+    · rw [← subtree_size_mul]
+      exact Nat.mul_lt_mul_of_pos_right (subtreePosition_lt parameter) (Nat.two_pow_pos _)
+    · unfold Landed
+      exact Nat.mul_div_cancel _ (Nat.two_pow_pos _)
   induction steps with
   | zero =>
-      have hb : subtreeHeight ≤ maxLayerHeight := by omega
-      have hi : subtreePosition parameter < 2 ^ maxLayerHeight := by
-        exact (subtreePosition_lt parameter).trans_le
-          (Nat.pow_le_pow_right (by decide) (Nat.sub_le _ _))
+      have hb : keptHeight topLayer ≤ maxLayerHeight := by omega
+      have hk := keptPosition_lt parameter topLayer
+      rw [hpos] at hk
+      have hi : subtreePosition parameter < 2 ^ maxLayerHeight :=
+        hk.trans_le (Nat.pow_le_pow_right (by decide) (Nat.sub_le _ _) |>.trans
+          (Nat.pow_le_pow_right (by decide) (layerHeight_le topLayer)))
       simp only [Nat.add_zero, spineIndex, Nat.sub_self, pow_zero, Nat.div_one]
       rw [Seeded.spineNode]
-      exact tree_value_below f parameter seed labels hconsistent lay tree subtreeHeight hb le_rfl
-        ⟨subtreePosition parameter, hi⟩ (subtreePosition_lt parameter) (by simp)
+      have hv := tree_value_below f parameter seed labels hconsistent topLayer rootTree htree
+        (keptHeight topLayer) hb le_rfl ⟨subtreePosition parameter, hi⟩ hk (by simp [hpos])
+      exact hv
   | succ steps ih =>
-      have hprev : subtreeHeight + steps ≤ maxLayerHeight := by omega
-      have hact := spinePosition_active parameter lay tree (subtreeHeight + (steps + 1))
-        (by omega) hupper
-      have hlevel : subtreeHeight + steps < totalHeight := by change _ < maxLayerHeight; omega
-      have hbnd := boundary_tree_value f parameter seed labels hboundary lay tree
-        ⟨subtreeHeight + steps, hlevel⟩ (by change subtreeHeight ≤ subtreeHeight + steps; omega)
+      have hprev : keptHeight topLayer + steps ≤ maxLayerHeight := by omega
+      have hact := spinePosition_active parameter (keptHeight topLayer + (steps + 1)) (by omega) hupper
+      have hlevel : keptHeight topLayer + steps < maxLayerHeight := by omega
+      have hbnd := boundary_tree_value f parameter seed labels hboundary
+        ⟨keptHeight topLayer + steps, hlevel⟩ (by change keptHeight topLayer ≤ keptHeight topLayer + steps; omega)
       rw [hconsistent _ hact]
-      have hparent := spineIndex_step parameter (subtreeHeight + steps) (by omega)
-      have hpos : (⟨spineIndex parameter (subtreeHeight + (steps + 1)), spineIndex_lt parameter _⟩ : LeafIndex) =
-          ⟨spineIndex parameter (subtreeHeight + steps) / 2,
+      have hparent := spineIndex_step parameter (keptHeight topLayer + steps) (by omega)
+      have hposn : (⟨spineIndex parameter (keptHeight topLayer + (steps + 1)), spineIndex_lt parameter _⟩ : LeafIndex) =
+          ⟨spineIndex parameter (keptHeight topLayer + steps) / 2,
             (Nat.div_le_self _ _).trans_lt (spineIndex_lt parameter _)⟩ := by
         apply Fin.ext
         simpa only [Nat.add_assoc] using hparent
-      rw [hpos]
-      have hinput := tree_input_ordered f parameter seed labels lay tree (subtreeHeight + steps) hupper
-        ⟨spineIndex parameter (subtreeHeight + steps), spineIndex_lt parameter _⟩
+      rw [hposn]
+      have hinput := tree_input_ordered f parameter seed labels topLayer rootTree
+        (keptHeight topLayer + steps) hupper
+        ⟨spineIndex parameter (keptHeight topLayer + steps), spineIndex_lt parameter _⟩
       refine (congrArg (fun input : HashInput => truncateHash (f input)) hinput).trans ?_
       rw [Seeded.spineNode]
       simp only [evalWithAnswerFn_bind]
       have hi := ih hprev
-      have hs : truncateHash (labels (treePosition lay tree (subtreeHeight + steps) hprev
-          ⟨Nat.xor (spineIndex parameter (subtreeHeight + steps)) 1,
+      have hs : truncateHash (labels (treePosition topLayer rootTree (keptHeight topLayer + steps) hprev
+          ⟨Nat.xor (spineIndex parameter (keptHeight topLayer + steps)) 1,
             Nat.xor_lt_two_pow (spineIndex_lt parameter _) one_lt_leaf_capacity⟩)) =
-          evalWithAnswerFn f (Seeded.surrogate parameter seed (subtreeHeight + steps) :
+          evalWithAnswerFn f (Seeded.surrogate parameter seed (keptHeight topLayer + steps) :
             OracleComp HashSpec Digest) := hbnd
-      have hidx : spineIndex parameter (subtreeHeight + steps) = subtreePosition parameter / 2 ^ steps := by
-        simp only [spineIndex, Nat.add_sub_cancel_left]
-      cases hb : (subtreePosition parameter / 2 ^ steps).testBit 0 <;>
+      have hidx : spineIndex parameter (keptHeight topLayer + steps) =
+          keptPosition parameter topLayer / 2 ^ steps := by
+        simp only [spineIndex, Nat.add_sub_cancel_left, hpos]
+      cases hb : (keptPosition parameter topLayer / 2 ^ steps).testBit 0 <;>
         try simp only [Bool.false_eq_true, ↓reduceIte, eval_tweakableHash]
       all_goals
         apply congrArg (fun input : HashInput => truncateHash (f input))
@@ -326,7 +418,7 @@ theorem spine_value (hboundary : BoundaryCorrect f parameter seed labels)
 
 include hconsistent in
 theorem chain_input (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (hland : Landed parameter leaf) (chain : ChainIndex) (step : ChainStep) :
+    (hactive : KeyActive parameter lay tree leaf) (chain : ChainIndex) (step : ChainStep) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
       (.chain lay tree leaf chain step) labels =
     tweakableHashInput parameter (.chain lay tree leaf chain step)
@@ -348,9 +440,9 @@ theorem chain_input (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
       simp only [show step + 1 ≠ 0 by omega, show 0 < step + 1 by omega,
         ↓reduceIte, ↓reduceDIte, Nat.add_sub_cancel, List.map_cons, List.map_nil,
         List.flatMap_cons, List.flatMap_nil, List.append_nil]
-      rw [chain_value f parameter seed labels hconsistent lay tree leaf hland chain ⟨step, by omega⟩]
+      rw [chain_value f parameter seed labels hconsistent lay tree leaf hactive chain ⟨step, by omega⟩]
 
-omit f parameter seed labels hconsistent [Params] in
+omit f parameter seed labels hconsistent in
 theorem quotient_range (height level index : Nat) (hlevel : level ≤ height)
     (hindex : index < 2 ^ height) : index / 2 ^ level < 2 ^ (height - level) := by
   apply (Nat.div_lt_iff_lt_mul (by positivity)).2
@@ -358,99 +450,139 @@ theorem quotient_range (height level index : Nat) (hlevel : level ≤ height)
   exact hindex
 
 omit f seed labels hconsistent in
-theorem pathNode_kept (leaf : LeafIndex) (hland : Landed parameter leaf) (level : Nat)
-    (hlevel : level ≤ subtreeHeight) :
-    (leaf.val / 2 ^ level) / 2 ^ (subtreeHeight - level) = subtreePosition parameter := by
+theorem pathNode_kept (lay : Layer) (leaf : LeafIndex) (hkept : Kept parameter lay leaf) (level : Nat)
+    (hlevel : level ≤ keptHeight lay) :
+    (leaf.val / 2 ^ level) / 2 ^ (keptHeight lay - level) = keptPosition parameter lay := by
   rw [Nat.div_div_eq_div_mul, ← Nat.pow_add, Nat.add_sub_of_le hlevel]
-  exact hland
+  exact hkept
 
 omit f seed labels hconsistent in
-theorem pathSibling_kept (leaf : LeafIndex) (hland : Landed parameter leaf) (level : Nat)
-    (hlevel : level < subtreeHeight) :
-    (Nat.xor (leaf.val / 2 ^ level) 1) / 2 ^ (subtreeHeight - level) = subtreePosition parameter := by
-  change ((leaf.val / 2 ^ level) ^^^ 1) / 2 ^ (subtreeHeight - level) = _
+theorem pathSibling_kept (lay : Layer) (leaf : LeafIndex) (hkept : Kept parameter lay leaf) (level : Nat)
+    (hlevel : level < keptHeight lay) :
+    (Nat.xor (leaf.val / 2 ^ level) 1) / 2 ^ (keptHeight lay - level) = keptPosition parameter lay := by
+  change ((leaf.val / 2 ^ level) ^^^ 1) / 2 ^ (keptHeight lay - level) = _
   rw [Nat.xor_div_two_pow, Nat.div_eq_of_lt (Nat.one_lt_two_pow (by omega)), Nat.xor_zero,
-    pathNode_kept parameter leaf hland level (by omega)]
+    pathNode_kept parameter lay leaf hkept level (by omega)]
 
 omit hconsistent in
 theorem canonicalPath_below (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (level : Nat) (hlower : level < subtreeHeight) :
+    (level : Nat) (hlower : level < keptHeight lay) :
     canonicalTreePath f parameter lay tree seed leaf level =
       node f parameter lay tree seed level (Nat.xor (leaf.val / 2 ^ level) 1) := by
-  have hlevel : level < layerHeight lay := hlower.trans_le Params.subtreeHeight_le
+  have hlevel : level < layerHeight lay := hlower.trans_le (Completeness.keptHeight_le lay)
   rw [canonicalTreePath, dif_pos hlevel, eval_treePath, if_pos hlower]
+
+omit f seed labels hconsistent in
+/-- Above the kept part there is only the top layer's spine. -/
+theorem top_of_above_kept (lay : Layer) (level : Nat) (hlevel : level ≤ layerHeight lay)
+    (habove : ¬level ≤ keptHeight lay) : lay = topLayer := by
+  by_contra htop
+  have hlay : lay.val ≠ 0 := fun e => htop (Fin.ext e)
+  rw [keptHeight_of_ne_top lay hlay] at habove
+  exact habove hlevel
+
+omit f seed labels hconsistent in
+theorem treeActive_of_key (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (hactive : KeyActive parameter lay tree leaf) : TreeActive parameter lay tree :=
+  ((keyActive_iff parameter lay tree leaf).1 hactive).1
+
+omit f seed labels hconsistent in
+theorem leaf_lt_of_key (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (hactive : KeyActive parameter lay tree leaf) : leaf.val < 2 ^ layerHeight lay :=
+  ((keyActive_iff parameter lay tree leaf).1 hactive).2.2
+
+omit f seed labels hconsistent in
+theorem kept_of_key (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (hactive : KeyActive parameter lay tree leaf) : Kept parameter lay leaf :=
+  ((keyActive_iff parameter lay tree leaf).1 hactive).2.1
 
 include hconsistent in
 theorem tree_path_value (hboundary : BoundaryCorrect f parameter seed labels)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (hland : Landed parameter leaf)
-    (level : Nat) (hlevel : level ≤ totalHeight) :
-    truncateHash (labels (treePosition lay tree level hlevel
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (hactive : KeyActive parameter lay tree leaf)
+    (level : Nat) (hlevel : level ≤ layerHeight lay) :
+    truncateHash (labels (treePosition lay tree level (hlevel.trans (layerHeight_le lay))
       ⟨leaf.val / 2 ^ level, (Nat.div_le_self _ _).trans_lt leaf.isLt⟩)) =
     merkleValue f parameter (fun height index => .node lay tree height index) leaf.val
       (canonicalTreePath f parameter lay tree seed leaf)
       (node f parameter lay tree seed 0 leaf.val) level := by
-  by_cases hlower : level ≤ subtreeHeight
-  · rw [tree_value_below f parameter seed labels hconsistent lay tree level hlevel hlower _
-      (quotient_range maxLayerHeight level leaf.val hlevel leaf.isLt)
-      (pathNode_kept parameter leaf hland level hlower)]
+  have hkept := kept_of_key parameter lay tree leaf hactive
+  have hrange := leaf_lt_of_key parameter lay tree leaf hactive
+  by_cases hlower : level ≤ keptHeight lay
+  · rw [tree_value_below f parameter seed labels hconsistent lay tree
+      (treeActive_of_key parameter lay tree leaf hactive) level _ hlower _
+      (quotient_range (layerHeight lay) level leaf.val hlevel hrange)
+      (pathNode_kept parameter lay leaf hkept level hlower)]
     symm
     rw [merkleValue, merkleFold_treeFold]
     exact eval_treeFold_path f parameter lay tree seed leaf _ level
       (fun k hk => canonicalPath_below f parameter seed lay tree leaf k (by omega))
-  · have hb : subtreeHeight ≤ level := by omega
-    have hsum : subtreeHeight + (level - subtreeHeight) = level := Nat.add_sub_of_le hb
+  · have htop := top_of_above_kept lay level hlevel hlower
+    subst htop
+    have htree := treeActive_top parameter tree (treeActive_of_key parameter _ tree leaf hactive)
+    subst htree
+    have hpos : keptPosition parameter topLayer = subtreePosition parameter := if_pos rfl
+    have hb : keptHeight topLayer ≤ level := by omega
+    have hsum : keptHeight topLayer + (level - keptHeight topLayer) = level := Nat.add_sub_of_le hb
     have hindex : leaf.val / 2 ^ level = spineIndex parameter level := by
-      rw [← hsum, landed_div parameter leaf hland]
+      rw [← hsum, kept_div parameter topLayer leaf hkept, hpos]
       simp only [spineIndex, Nat.add_sub_cancel_left]
     have hposition : (⟨leaf.val / 2 ^ level, (Nat.div_le_self _ _).trans_lt leaf.isLt⟩ : LeafIndex) =
         ⟨spineIndex parameter level, spineIndex_lt parameter level⟩ := Fin.ext hindex
     rw [hposition]
-    have hspine := spine_value f parameter seed labels hconsistent hboundary lay tree
-      (level - subtreeHeight) (by change subtreeHeight + (level - subtreeHeight) ≤ totalHeight; omega)
+    have hspine := spine_value f parameter seed labels hconsistent hboundary
+      (level - keptHeight topLayer) (by rw [hsum]; exact hlevel.trans (layerHeight_le _))
     simp only [hsum] at hspine
     rw [hspine]
     symm
     rw [merkleValue, merkleFold_treeFold]
-    simpa only [hsum] using eval_treeFold_spine f parameter lay tree seed leaf hland _
-      (fun k hk => canonicalPath_below f parameter seed lay tree leaf k hk)
-      (level - subtreeHeight) (fun k hk => canonicalTreePath_surrogate f parameter lay tree seed leaf
-        (subtreeHeight + k) (by omega) (by omega))
+    simpa only [hsum] using eval_treeFold_spine f parameter topLayer rootTree seed leaf hkept _
+      (fun k hk => canonicalPath_below f parameter seed topLayer rootTree leaf k hk)
+      (level - keptHeight topLayer) (fun k hk => canonicalTreePath_surrogate f parameter topLayer rootTree
+        seed leaf (keptHeight topLayer + k) (by omega) (by omega))
 
 include hconsistent in
 theorem tree_path_sibling (hboundary : BoundaryCorrect f parameter seed labels)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (hland : Landed parameter leaf)
-    (level : Nat) (hlevel : level < totalHeight) :
-    truncateHash (labels (treePosition lay tree level (Nat.le_of_lt hlevel)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (hactive : KeyActive parameter lay tree leaf)
+    (level : Nat) (hlevel : level < layerHeight lay) :
+    truncateHash (labels (treePosition lay tree level (Nat.le_of_lt (hlevel.trans_le (layerHeight_le lay)))
       ⟨Nat.xor (leaf.val / 2 ^ level) 1,
         Nat.xor_lt_two_pow ((Nat.div_le_self _ _).trans_lt leaf.isLt) one_lt_leaf_capacity⟩)) =
       canonicalTreePath f parameter lay tree seed leaf level := by
-  by_cases hlower : level < subtreeHeight
+  have hkept := kept_of_key parameter lay tree leaf hactive
+  have hrange := leaf_lt_of_key parameter lay tree leaf hactive
+  by_cases hlower : level < keptHeight lay
   · rw [canonicalPath_below f parameter seed lay tree leaf level hlower]
-    exact tree_value_below f parameter seed labels hconsistent lay tree level (Nat.le_of_lt hlevel)
-      (by omega) _
-      (Nat.xor_lt_two_pow (quotient_range maxLayerHeight level leaf.val (Nat.le_of_lt hlevel) leaf.isLt)
-        (Nat.one_lt_two_pow (by change level < maxLayerHeight at hlevel; omega)))
-      (pathSibling_kept parameter leaf hland level hlower)
-  · have hb : subtreeHeight ≤ level := by omega
+    exact tree_value_below f parameter seed labels hconsistent lay tree
+      (treeActive_of_key parameter lay tree leaf hactive) level _ (by omega) _
+      (Nat.xor_lt_two_pow (quotient_range (layerHeight lay) level leaf.val (Nat.le_of_lt hlevel) hrange)
+        (Nat.one_lt_two_pow (by omega)))
+      (pathSibling_kept parameter lay leaf hkept level hlower)
+  · have htop := top_of_above_kept lay (level + 1) hlevel (by omega)
+    subst htop
+    have htree := treeActive_top parameter tree (treeActive_of_key parameter _ tree leaf hactive)
+    subst htree
+    have hpos : keptPosition parameter topLayer = subtreePosition parameter := if_pos rfl
+    have hb : keptHeight topLayer ≤ level := by omega
     have hindex : leaf.val / 2 ^ level = spineIndex parameter level := by
-      have hsum : subtreeHeight + (level - subtreeHeight) = level := Nat.add_sub_of_le hb
-      rw [← hsum, landed_div parameter leaf hland]
+      have hsum : keptHeight topLayer + (level - keptHeight topLayer) = level := Nat.add_sub_of_le hb
+      rw [← hsum, kept_div parameter topLayer leaf hkept, hpos]
       simp only [spineIndex, Nat.add_sub_cancel_left]
     have hposition : (⟨Nat.xor (leaf.val / 2 ^ level) 1,
         Nat.xor_lt_two_pow ((Nat.div_le_self _ _).trans_lt leaf.isLt) one_lt_leaf_capacity⟩ : LeafIndex) =
         ⟨boundaryIndex parameter level, boundaryIndex_lt parameter level⟩ := by
       apply Fin.ext
       exact congrArg (fun index => Nat.xor index 1) hindex
-    rw [hposition, canonicalTreePath_surrogate f parameter lay tree seed leaf level hb hlevel]
-    exact boundary_tree_value f parameter seed labels hboundary lay tree ⟨level, hlevel⟩ hb
+    rw [hposition, canonicalTreePath_surrogate f parameter topLayer rootTree seed leaf level hb hlevel]
+    exact boundary_tree_value f parameter seed labels hboundary
+      ⟨level, hlevel.trans_le (layerHeight_le _)⟩ hb
 
 include hconsistent in
 /-- The exempt input at each retained path node is exactly the canonical verifier-fold input. -/
 theorem tree_path_input (hboundary : BoundaryCorrect f parameter seed labels)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (hland : Landed parameter leaf)
-    (level : Nat) (hlevel : level < totalHeight) :
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (hactive : KeyActive parameter lay tree leaf)
+    (level : Nat) (hlevel : level < layerHeight lay) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (treePosition lay tree (level + 1) hlevel
+      (treePosition lay tree (level + 1) (hlevel.trans_le (layerHeight_le lay))
         ⟨leaf.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt leaf.isLt⟩) labels =
     merkleInput f parameter (fun height index => .node lay tree height index) leaf.val
       (canonicalTreePath f parameter lay tree seed leaf)
@@ -461,10 +593,11 @@ theorem tree_path_input (hboundary : BoundaryCorrect f parameter seed labels)
     apply Fin.ext
     change leaf.val / 2 ^ (level + 1) = (leaf.val / 2 ^ level) / 2
     rw [Nat.pow_succ, Nat.div_div_eq_div_mul]
-  rw [hparent, tree_input_ordered f parameter seed labels lay tree level hlevel
+  rw [hparent, tree_input_ordered f parameter seed labels lay tree level _
     ⟨leaf.val / 2 ^ level, (Nat.div_le_self _ _).trans_lt leaf.isLt⟩,
-    tree_path_value f parameter seed labels hconsistent hboundary lay tree leaf hland level (Nat.le_of_lt hlevel),
-    tree_path_sibling f parameter seed labels hconsistent hboundary lay tree leaf hland level hlevel]
+    tree_path_value f parameter seed labels hconsistent hboundary lay tree leaf hactive level
+      (Nat.le_of_lt hlevel),
+    tree_path_sibling f parameter seed labels hconsistent hboundary lay tree leaf hactive level hlevel]
   simp only [merkleInput]
   have hbit : (leaf.val / 2 ^ level).testBit 0 = leaf.val.testBit level := by
     simpa only [Nat.zero_add] using (Nat.testBit_add leaf.val 0 level).symm
@@ -472,34 +605,61 @@ theorem tree_path_input (hboundary : BoundaryCorrect f parameter seed labels)
 
 omit f seed labels hconsistent in
 theorem tree_path_active (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (hland : Landed parameter leaf) (level : Nat) (hlevel : level ≤ totalHeight) :
-    active parameter (treePosition lay tree level hlevel
+    (hactive : KeyActive parameter lay tree leaf) (level : Nat) (hlevel : level ≤ layerHeight lay) :
+    active parameter (treePosition lay tree level (hlevel.trans (layerHeight_le lay))
       ⟨leaf.val / 2 ^ level, (Nat.div_le_self _ _).trans_lt leaf.isLt⟩) := by
-  by_cases hlower : level ≤ subtreeHeight
-  · exact treePosition_active_below parameter lay tree level hlevel hlower _
-      (pathNode_kept parameter leaf hland level hlower)
-  · have hb : subtreeHeight ≤ level := by omega
-    have hsum : subtreeHeight + (level - subtreeHeight) = level := Nat.add_sub_of_le hb
+  have hkept := kept_of_key parameter lay tree leaf hactive
+  have hrange := leaf_lt_of_key parameter lay tree leaf hactive
+  by_cases hlower : level ≤ keptHeight lay
+  · exact treePosition_active_below parameter lay tree (treeActive_of_key parameter lay tree leaf hactive)
+      level _ hlower _ (quotient_range (layerHeight lay) level leaf.val hlevel hrange)
+      (pathNode_kept parameter lay leaf hkept level hlower)
+  · have htop := top_of_above_kept lay level hlevel hlower
+    subst htop
+    have htree := treeActive_top parameter tree (treeActive_of_key parameter _ tree leaf hactive)
+    subst htree
+    have hpos : keptPosition parameter topLayer = subtreePosition parameter := if_pos rfl
+    have hb : keptHeight topLayer ≤ level := by omega
+    have hsum : keptHeight topLayer + (level - keptHeight topLayer) = level := Nat.add_sub_of_le hb
     have hindex : leaf.val / 2 ^ level = spineIndex parameter level := by
-      rw [← hsum, landed_div parameter leaf hland]
+      rw [← hsum, kept_div parameter topLayer leaf hkept, hpos]
       simp only [spineIndex, Nat.add_sub_cancel_left]
     have hposition : (⟨leaf.val / 2 ^ level, (Nat.div_le_self _ _).trans_lt leaf.isLt⟩ : LeafIndex) =
         ⟨spineIndex parameter level, spineIndex_lt parameter level⟩ := Fin.ext hindex
     rw [hposition]
-    exact spinePosition_active parameter lay tree level hb hlevel
+    exact spinePosition_active parameter level hb _
 
 include hconsistent in
+/-- The label at the root of a retained tree is the tree's root. -/
 theorem tree_root_value (hboundary : BoundaryCorrect f parameter seed labels)
-    (lay : Layer) (tree : TreeIndex) :
-    truncateHash (labels (treePosition lay tree totalHeight le_rfl ⟨0, by decide⟩)) =
+    (lay : Layer) (tree : TreeIndex) (htree : TreeActive parameter lay tree) :
+    truncateHash (labels (treePosition lay tree (layerHeight lay) (layerHeight_le lay)
+      ⟨0, Nat.two_pow_pos _⟩)) =
       evalWithAnswerFn f (Seeded.treeRoot parameter lay tree seed : OracleComp HashSpec Digest) := by
-  have hb := Params.subtreeHeight_le (self := inferInstance)
-  have hsum : subtreeHeight + (totalHeight - subtreeHeight) = totalHeight := Nat.add_sub_of_le hb
-  have hindex : spineIndex parameter totalHeight = 0 :=
-    Nat.div_eq_of_lt (subtreePosition_lt parameter)
-  have hs := spine_value f parameter seed labels hconsistent hboundary lay tree
-    (totalHeight - subtreeHeight) (by change _ ≤ totalHeight; omega)
-  simpa only [hsum, hindex, Seeded.treeRoot] using hs
+  by_cases htop : lay = topLayer
+  · subst htop
+    have htr := treeActive_top parameter tree htree
+    subst htr
+    have hb := Completeness.keptHeight_le topLayer
+    have hsum : keptHeight topLayer + (layerHeight topLayer - keptHeight topLayer) = layerHeight topLayer :=
+      Nat.add_sub_of_le hb
+    have hpos : keptPosition parameter topLayer = subtreePosition parameter := if_pos rfl
+    have hindex : spineIndex parameter (layerHeight topLayer) = 0 := by
+      have hk := keptPosition_lt parameter topLayer
+      rw [hpos] at hk
+      exact Nat.div_eq_of_lt hk
+    have hs := spine_value f parameter seed labels hconsistent hboundary
+      (layerHeight topLayer - keptHeight topLayer) (by rw [hsum]; exact layerHeight_le _)
+    simp only [hsum, hindex] at hs
+    simpa only [Seeded.treeRoot] using hs
+  · have hlay : lay.val ≠ 0 := fun e => htop (Fin.ext e)
+    have hkh := keptHeight_of_ne_top lay hlay
+    have hkp := keptPosition_of_ne_top parameter lay hlay
+    have hv := tree_value_below f parameter seed labels hconsistent lay tree htree (layerHeight lay)
+      (layerHeight_le lay) (le_of_eq hkh.symm) ⟨0, Nat.two_pow_pos _⟩ (by simp)
+      (by simp [hkp])
+    rw [hv, Seeded.treeRoot, hkh, Nat.sub_self, Seeded.spineNode, hkh, hkp]
+    rfl
 
 /-! ### The forest
 
@@ -513,7 +673,7 @@ section Forest
 
 variable (index : Index) (c : Coord)
 
-omit hconsistent [Params] in
+omit hconsistent in
 theorem fchain_input (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (t : FStep)
     (hprev : ∀ (hpos : 0 < t.val), truncateHash (labels (.fchain index c s j a i ⟨t.val - 1, by omega⟩)) =
       Forest.honestChain f parameter index c s j a i (Completeness.forestSecret f parameter index c s j a i seed)
@@ -560,7 +720,6 @@ theorem fchain_value (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (t 
         fchain_input f parameter seed labels index c s j a i ⟨t + 1, ht⟩ (fun _ => ih (by omega)),
         Forest.honestChain_succ _ _ _ _ _ _ _ _ _ _ ht]
 
-omit [Params] in
 theorem honestChain_eq_chainValueOf (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (pos : Nat) :
     Forest.honestChain f parameter index c s j a i (Completeness.forestSecret f parameter index c s j a i seed) pos =
       Completeness.chainValueOf f parameter index c s j a i seed pos := rfl
@@ -598,7 +757,7 @@ def topPosition :
   | 0, _, s => .superChild index c s
   | level + 1, hlevel, nd => .topNode index c ⟨level, by omega⟩ nd
 
-omit hconsistent [Params] in
+omit hconsistent in
 theorem sub_input (s : SuperIdx) (j : SubIdx) (level : Nat) (hlevel : level + 1 ≤ subHeight) (nd : ChildIdx)
     (hindex : 2 * nd.val + 1 < 2 ^ subHeight) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
@@ -611,7 +770,7 @@ theorem sub_input (s : SuperIdx) (j : SubIdx) (level : Nat) (hlevel : level + 1 
     simp [subPosition, canonicalGraphInput, canonicalGraphSlots, Position.children,
       Position.domain, hindex, nodePayload]
 
-omit hconsistent [Params] in
+omit hconsistent in
 theorem top_input (level : Nat) (hlevel : level + 1 ≤ topHeight) (nd : SuperIdx)
     (hindex : 2 * nd.val + 1 < 2 ^ topHeight) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
@@ -705,7 +864,6 @@ theorem roots_input :
     Forest.canonicalRoots, Completeness.topTopsValue]
   rw [h c' ⟨0, by decide⟩ (by decide), h c' ⟨1, by decide⟩ (by decide)]
 
-omit [Params] in
 /-- The forest key as graph labels: the two level-3 nodes of every tree. -/
 def keyLabels : ForestKey :=
   fun c' => (truncateHash (labels (.topNode index c' ⟨topHeight - 2, by decide⟩ ⟨0, by decide⟩)),
@@ -726,7 +884,7 @@ theorem forest_key_value :
 
 /-! #### Paths -/
 
-omit hconsistent [Params] in
+omit hconsistent in
 theorem sub_input_ordered (s : SuperIdx) (j : SubIdx) (level : Nat) (hlevel : level + 1 ≤ subHeight)
     (current : ChildIdx) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
@@ -767,7 +925,7 @@ theorem sub_input_ordered (s : SuperIdx) (j : SubIdx) (level : Nat) (hlevel : le
         omega
       simp only [orderedPayload, ↓reduceIte, hcurrent, hsibling]
 
-omit hconsistent [Params] in
+omit hconsistent in
 theorem top_input_ordered (level : Nat) (hlevel : level + 1 ≤ topHeight) (current : SuperIdx) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
       (topPosition index c (level + 1) hlevel
@@ -915,32 +1073,29 @@ theorem top_path_input (s : SuperIdx) (level : Nat) (hlevel : level < topHeight)
 
 end Forest
 
-omit [Params] in
 /-- Material tables with their full hash outputs truncated exactly as key derivation does. -/
 def materialOts (material : SeedModel.Material) : Layer → TreeIndex → LeafIndex → ChainIndex → Digest :=
   fun lay tree leaf chain => truncateHash (material.2 (.inl (lay, tree, leaf, chain)))
 
-omit [Params] in
 def materialFts (material : SeedModel.Material) : ForestSecrets :=
   fun index c s j a i => truncateHash (material.2 (.inr (.inl (index, c, s, j, a, i))))
 
-omit [Params] in
-def materialSurrogates (material : SeedModel.Material) : Fin totalHeight → Digest :=
+def materialSurrogates (material : SeedModel.Material) : Fin maxLayerHeight → Digest :=
   fun level => truncateHash (material.2 (.inr (.inr level)))
 
-omit parameter labels hconsistent [Params] in
+omit parameter labels hconsistent in
 theorem materialOts_eq (material : SeedModel.Material) (hagrees : SeedModel.PreparedAgreement f seed material) :
     materialOts material = otsSecrets f (SeedModel.parameter material) seed := by
   funext lay tree leaf chain
   exact (SeedModel.eval_ots_prepared f seed material hagrees lay tree leaf chain).symm
 
-omit parameter labels hconsistent [Params] in
+omit parameter labels hconsistent in
 theorem materialFts_eq (material : SeedModel.Material) (hagrees : SeedModel.PreparedAgreement f seed material) :
     materialFts material = ftsSecrets f (SeedModel.parameter material) seed := by
   funext index c s j a i
   exact (SeedModel.eval_forest_prepared f seed material hagrees index c s j a i).symm
 
-omit parameter labels hconsistent [Params] in
+omit parameter labels hconsistent in
 theorem materialSurrogates_eq (material : SeedModel.Material)
     (hagrees : SeedModel.PreparedAgreement f seed material) :
     materialSurrogates material = surrogates f (SeedModel.parameter material) seed := by

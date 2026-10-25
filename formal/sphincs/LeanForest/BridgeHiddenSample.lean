@@ -8,6 +8,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
 
+variable [Params]
+
 open Completeness SeedModel Graph Assembly Reduce HiddenGraph
 open SphincsSecurity.Concrete.UniformTableSplit
 
@@ -15,7 +17,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-- Swapping the known parts of two tables is an involution. -/
 noncomputable def swapKnown (parameter : PublicParameter) (pair : HiddenGraph.Table × HiddenGraph.Table) :
@@ -28,7 +29,6 @@ theorem swapKnown_involutive (parameter : PublicParameter) :
   apply Prod.ext <;> funext coordinate <;>
     by_cases h : KnownCoordinate parameter coordinate <;> simp [swapKnown, mix, h]
 
-omit [Params] in
 theorem uniform_map_fst {α β : Type} [Fintype α] [Fintype β] [Nonempty α] [Nonempty β] :
     (PMF.uniformOfFintype (α × β)).map Prod.fst = PMF.uniformOfFintype α := by
   rw [uniform_product, PMF.map_bind]
@@ -51,7 +51,6 @@ theorem uniform_mix (parameter : PublicParameter) :
   rw [hpair, PMF.uniformOfFintype_map_of_bijective _ (swapKnown_involutive parameter).bijective,
     uniform_map_fst]
 
-omit [Params] in
 theorem evalDist_uniform_congr {α : Type} [Fintype α] [Nonempty α] (left right : SampleableType α) :
     𝒟[(@uniformSample α left : ProbComp α)] = 𝒟[(@uniformSample α right : ProbComp α)] := by
   rw [@evalDist_uniformSample α left, @evalDist_uniformSample α right]
@@ -68,12 +67,10 @@ noncomputable local instance highsSampleable : SampleableType CoordinateHighs :=
 noncomputable local instance remainingSampleable : SampleableType RemainingOutputs :=
   SampleableType.ofFintype _
 
-omit [Params] in
 private theorem lift_pmf_bind {α β : Type} (distribution : PMF α) (next : α → PMF β) :
     (liftM (distribution.bind next) : SPMF β) =
       (liftM distribution >>= fun value => liftM (next value)) := liftM_bind distribution next
 
-omit [Params] in
 private theorem lift_pmf_map {α β : Type} (distribution : PMF α) (next : α → β) :
     (liftM (distribution.map next) : SPMF β) = next <$> liftM distribution := liftM_map next distribution
 
@@ -95,7 +92,6 @@ theorem evalDist_mix_bind {β : Type} (parameter : PublicParameter) (next : Hidd
   simp only [← evalDist_bind, bind_assoc, bind_map_left] at h
   exact h.symm
 
-omit [Params] in
 theorem evalDist_completion_bind {β : Type} (known : HiddenReveal.Knowledge Coordinate)
     (next : HiddenGraph.Table → ProbComp β) :
     𝒟[HiddenReveal.completion known >>= next] =
@@ -160,7 +156,6 @@ theorem evalDist_seedFree_completion (adversary : Adversary) (q : Nat) (steps : 
   rw [evalDist_completion_bind]
   rfl
 
-omit [Params] in
 theorem probEvent_bind_mono_support {α β γ : Type} (p : ProbComp α) (k₁ : α → ProbComp β)
     (k₂ : α → ProbComp γ) (event₁ : β → Prop) (event₂ : γ → Prop)
     (h : ∀ a ∈ support p, Pr[event₁ | k₁ a] ≤ Pr[event₂ | k₂ a]) :

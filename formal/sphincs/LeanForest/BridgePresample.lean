@@ -2,12 +2,14 @@ import LeanForest.BridgeInterp
 
 /-! Fixing the answer to an untargeted, unparsed outside input in advance commutes with the
 interpreted lazy comparison: the lazy oracle would draw the same uniform value on first use.
-The FORS potentials use this to treat the unknown blocks of partially queried digest pairs as
+The forest potentials use this to treat the unknown blocks of partially queried digest pairs as
 already sampled. -/
 
 open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenDebt
+
+variable [Params]
 
 open HiddenCost HiddenBridge HiddenOutside HiddenReveal
 

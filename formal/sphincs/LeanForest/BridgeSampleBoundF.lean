@@ -7,7 +7,9 @@ potential, the coin part of A4, and `κ` times its near term, once
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal
   LeanForest.Base.Domination
@@ -18,13 +20,11 @@ set_option maxRecDepth 10000
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 open Completeness SeedModel Graph Assembly Reduce Internalize in
 attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
   remainingSampleable
 
-omit [Params] in
 theorem ofReal_le_two_halfF (c : ℚ) : ENNReal.ofReal (c : ℝ) ≤ 2 * ENNReal.ofReal ((c / 2 : ℚ) : ℝ) := by
   calc ENNReal.ofReal (c : ℝ) = ENNReal.ofReal (2 * ((c / 2 : ℚ) : ℝ)) := by
         congr 1
@@ -40,10 +40,10 @@ open Completeness SeedModel Graph Assembly Reduce Internalize
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 1000000 in
 /-- **One sample of the small-budget route of the forest.** -/
-theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
+theorem sample_boundF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
-    (remaining : RemainingOutputs) (steps : Message → Randomness) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (remaining : RemainingOutputs) (steps : Message → Randomness) (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (known : Knowledge Coordinate)
     (hk : known ∈ support (exposeR (aboveList (truncateHash parameterOutput) prepared.1)
@@ -51,10 +51,10 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℝ) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
       (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ κ) (hκ1 : κ ≤ 1)
-    (b N : ℕ) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
+    (H b N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
-    (hrt : H0.checkRate b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
-    (ho : H0.checkOptF b t o = true) (hon : H0.checkOptN t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
+    (hrt : H0.checkRate H b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
+    (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
     Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
         (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
           (sampleData parameterOutput fixed highs remaining steps)))) known prepared.2] ≤
@@ -86,7 +86,7 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
   set c := (2 ^ b * on.En : ℚ) with hc
   set Fset := failSet prepared.1 with hFset
   set Lmax := H0.LmaxOf q' with hLmax
-  have hfair : FairS wbar (q' + 2 ^ 32) Lmax := H0.fair_of q' (H0.fair_of_rate b N qtop t hrt hbb q' hqtop)
+  have hfair : FairS wbar (q' + 2 ^ 32) Lmax := H0.fair_of q' (H0.fair_of_rate H b N qtop t hrt hHH hbb q' hqtop)
   have hQ : q' ≤ q' + 2 ^ 32 := Nat.le_add_right _ _
   have hmsg : ∀ x, IsMsgInput x → tgA.kind x = .none := fun x h =>
     targetingA_msgF parameterOutput fixed highs remaining prepared.1 x h
@@ -153,7 +153,7 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
         (start_minv param data prepared.2 hclean known)
         (fun _ _ _ _ _ _ _ h => by cases h) (start_count param data prepared.2 hclean known q')
       have hval : startExcessO wbar b0 q' ≤ ENNReal.ofReal (o.B : ℝ) :=
-        H0.startExcessO_le_opt b N qtop t o hrt hpt ho hbb hNN q' hqtop b0 (ENNReal.ofReal_le_ofReal hcthr)
+        H0.startExcessO_le_opt H b N qtop t o hrt hpt ho hHH hbb hNN q' hqtop b0 (ENNReal.ofReal_le_ofReal hcthr)
       have hpot : potO param data wbar b0 Fset tgA prepared.2 Lmax start [] [] [] 0 q' ≤
           (((q' : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + φ) + signatureLimit * φ) + lam Lmax 0 q' := by
         refine le_trans (potO_start_le param data wbar b0 Fset tgA prepared.2 Lmax start q') ?_
@@ -193,7 +193,7 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
       simp only [fleafCount_cons_inr]
       refine add_le_add ?_ le_rfl
       have hnear : startNearF wbar q' ≤ 2 * ENNReal.ofReal ((c / 2 : ℚ) : ℝ) :=
-        le_trans (H0.hNearOf_le b N qtop hbb hNN t on hrt hpt hon q' hqtop) (ofReal_le_two_halfF c)
+        le_trans (H0.hNearOf_le H b N qtop hHH hbb hNN t on hrt hpt hon q' hqtop) (ofReal_le_two_halfF c)
       have hsum := start_sum_leF hfair.le_one q' φ _ hnear
       refine add_le_add (add_le_add le_rfl ?_) le_rfl
       exact mul_le_mul_left' hsum _
@@ -306,4 +306,4 @@ theorem sample_boundF (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : ad
 
 end SampleF
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

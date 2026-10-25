@@ -9,6 +9,8 @@ open ENNReal
 
 namespace LeanForest.Security.H0
 
+variable [Params]
+
 open Concrete LeanForest.Base.H0
 
 set_option linter.unusedSectionVars false

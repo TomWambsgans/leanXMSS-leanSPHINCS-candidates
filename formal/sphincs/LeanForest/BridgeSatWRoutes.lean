@@ -1,19 +1,21 @@
-import LeanForest.BridgeSatWFors
+import LeanForest.BridgeSatWForest
 import LeanForest.BridgeRoutes
-import LeanForest.BridgeForsAssemblyOnce
+import LeanForest.BridgeForestAssemblyOnce
 import LeanForest.BridgeDet
 import LeanForest.H0Fair
 import LeanForest.BridgeTargeting
 
 /-! The large-budget route with the weighted baseline. The saturation pays each digest query the
-baseline times the current survival weight, and the one-coin FORS potential is weighted by the
+baseline times the current survival weight, and the one-coin forest potential is weighted by the
 same survival weight, so the baseline is the plain budget decrement `(2 (N - q) + 1) / N^2`
-instead of `(2 (N - q) + 1) (N - 2q) / (N (N - q)^2)`. A hit or a FORS cover then has probability
+instead of `(2 (N - q) + 1) (N - 2q) / (N (N - q)^2)`. A hit or a forest cover then has probability
 at most `E[(1 - w_end) + w_end 1[cover]]`, which both sides pay. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal LeanForest.Base.Domination
 
@@ -23,7 +25,6 @@ set_option linter.unusedSectionVars false
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### The weighted baseline as a rational threshold -/
 
@@ -56,7 +57,7 @@ variable (parameter : PublicParameter) (data : PublicData) (wbar : ℝ≥0∞) (
   {A : Type} (tg : Targeting HashInput HashOutput Coordinate)
   (initial : HiddenOutside.Cache HashInput HashOutput) (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
-/-- A hit or a FORS cover of one interpreted outcome has probability at most the missing survival
+/-- A hit or a forest cover of one interpreted outcome has probability at most the missing survival
 weight plus the weighted final value. -/
 theorem hit_or_cover_le (out : Run HashInput Coordinate HiddenBridge.Outcome × State) :
     Pr[fun r => Hit tg initial r.1 r.2.2 ∨ CoverOf parameter data r.2 |
@@ -90,8 +91,8 @@ theorem hit_or_cover_le (out : Run HashInput Coordinate HiddenBridge.Outcome × 
       _ ≤ _ := tsub_le_tsub_left hle _
 
 /-- **The rest of the game with the weighted baseline.** For an adversary that never repeats a
-message, a decided hit or a FORS cover has probability at most the weighted saturation budget plus
-the one-coin FORS potential at the baseline `baselineW total`. -/
+message, a decided hit or a forest cover has probability at most the weighted saturation budget plus
+the one-coin forest potential at the baseline `baselineW total`. -/
 theorem rest_boundW (hcompat : Compatible tg model) (htrunc : UniformTruncation (R := HashOutput) tg)
     (hparse : ∀ p, model.parse (pblk parameter data p) = none)
     (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
@@ -118,7 +119,7 @@ theorem rest_boundW (hcompat : Compatible tg model) (htrunc : UniformTruncation 
   have htotal2 : (total : ℝ) ≤ spaceReal := by
     have : (0 : ℝ) ≤ total := Nat.cast_nonneg _
     linarith
-  -- the weighted FORS potential
+  -- the weighted forest potential
   have hgood := goodW_advProg parameter data wbar b0 Fail total Lmax tg initial model hparse hkind hdigest hfail hfair
     (Nat.le_add_right _ _) M [] hnr total start [] [] 0 [] (start_prepared initial known)
     (start_pinv parameter data initial hclean known) (start_minv parameter data initial hclean known)
@@ -181,7 +182,7 @@ def TargetingAll : Prop :=
     TargetingFor parameterOutput fixed highs remaining prepared
 
 /-- Every prepared sample has a targeting, at every pruning height `b ≥ 1`. -/
-theorem targetingAll (hb : 0 < subtreeHeight) : TargetingAll := by
+theorem targetingAll (hb : 0 < keptHeight topLayer) : TargetingAll := by
   intro parameterOutput fixed highs remaining prepared hprepared
   obtain ⟨tg, htrunc, hcompat, hmsg, hhit⟩ :=
     exists_targeting hb parameterOutput fixed highs remaining prepared hprepared
@@ -192,11 +193,11 @@ attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSamp
 
 set_option maxRecDepth 100000 in
 /-- **One sample, weighted baseline.** -/
-theorem sample_boundW (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
+theorem sample_boundW (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
     (remaining : RemainingOutputs) (steps : Message → Randomness)
-    (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate)
     (hhit : ∀ table, tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table →
@@ -276,7 +277,7 @@ set_option maxRecDepth 100000 in
 /-- **Large budgets from the seed-free win, weighted baseline.** The seed-free win is at most the
 weighted saturation budget, `q - keygenCost` times the one-coin excess forecast at the baseline
 `baselineW (q - keygenCost)`, and the failing share of the prepared searches. -/
-theorem large_seedFree_boundW (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
+theorem large_seedFree_boundW (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (steps : Message → Randomness) (hq : q < 2 ^ 256)
     (htarget : ∀ parameterOutput fixed highs remaining prepared,
       prepared ∈ support (preparation parameterOutput fixed highs remaining) →
@@ -333,7 +334,7 @@ set_option maxRecDepth 100000 in
 /-- **Large budgets, deterministic signer, weighted baseline.** If the large-budget inequality `hH0`
 with the weighted baseline holds at the adversary's budget after key generation, the deterministic
 signer's advantage is at most `q / 2^127`. -/
-theorem det_largeW (hb : 0 < subtreeHeight) (hN : signatureLimit ≤ 2 ^ 70) (adversary : Adversary) (q : ℕ)
+theorem det_largeW (hb : 0 < keptHeight topLayer) (hN : signatureLimit ≤ 2 ^ 70) (adversary : Adversary) (q : ℕ)
     (hbound : Det.HasHashQueryBoundDet adversary q) (hq : q < 2 ^ 127) (hK : keygenCost ≤ q)
     (hfairq : q - keygenCost + 2 ^ 32 + (H0.scanM - 1) * H0.LmaxOf (q - keygenCost) + (2 * H0.scanM - 1) ≤ 2 ^ 128)
     (hH0 : (1 - budget 0 (q - keygenCost)) + ((q - keygenCost : ℕ) : ℝ≥0∞) *
@@ -355,8 +356,8 @@ theorem det_largeW (hb : 0 < subtreeHeight) (hN : signatureLimit ≤ 2 ^ 70) (ad
   have hE := expectedFail_le
   -- the negligible terms fit in the slack
   have hK1 : 1 ≤ keygenCost := by
-    have := Nat.two_pow_pos subtreeHeight
-    unfold keygenCost
+    have := Nat.two_pow_pos (keptHeight topLayer)
+    unfold keygenCost Prefix.keygenHashCost
     omega
   have hlam : lam (H0.LmaxOf q') 0 q' ≤ (2 : ℝ≥0∞)⁻¹ ^ 201 := by
     refine le_trans (H0.lam_start q') ?_
@@ -409,4 +410,4 @@ theorem det_largeW (hb : 0 < subtreeHeight) (hN : signatureLimit ≤ 2 ^ 70) (ad
 
 end ChainW
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

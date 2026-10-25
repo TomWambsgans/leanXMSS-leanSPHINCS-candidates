@@ -9,6 +9,8 @@ open OracleComp OracleSpec
 
 namespace LeanForest.Security.Wots
 
+variable [Params]
+
 open Concrete Chain
 
 attribute [local irreducible] chainWalk
@@ -21,25 +23,25 @@ theorem leafPayload_injective {endpoints endpoints' : ChainIndex → Digest}
 variable (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
 
-/-- The encoding's input: the forest key's sixteen nodes, then the counter. -/
-def encodingInput (message : ForestKey) (counter : Counter) : HashInput :=
-  tweakableHashInput parameter (.encoding lay tree leaf) (rootsPayload message ++ bytesLE 4 counter)
+/-- The encoding's input: the message (the forest key's sixteen nodes, or a root), then the counter. -/
+def encodingInput (message : HashInput) (counter : Counter) : HashInput :=
+  tweakableHashInput parameter (.encoding lay tree leaf) (message ++ bytesLE 4 counter)
 
-theorem encodingInput_injective {message message' : ForestKey} {counter counter' : Counter}
+theorem encodingInput_injective {message message' : HashInput} {counter counter' : Counter}
     (h : encodingInput parameter lay tree leaf message counter =
       encodingInput parameter lay tree leaf message' counter') :
     message = message' ∧ counter = counter' := by
   have hpayload := List.append_cancel_left h
-  obtain ⟨hm, hc⟩ := List.append_inj hpayload (by rw [rootsPayload_len, rootsPayload_len])
-  exact ⟨rootsPayload_injective hm, bytesLE_injective hc⟩
+  obtain ⟨hm, hc⟩ := List.append_inj' hpayload (by rw [bytesLE_length, bytesLE_length])
+  exact ⟨hm, bytesLE_injective hc⟩
 
-theorem encode_query_mem (message : ForestKey) (counter : Counter) :
+theorem encode_query_mem (message : HashInput) (counter : Counter) :
     encodingInput parameter lay tree leaf message counter ∈
       queriedInputs f (encode parameter lay tree leaf message counter) := by
   simp only [encode, queriedInputs_bind, queriedInputs_tweakableHash, queriedInputs_pure,
     List.append_nil, List.mem_singleton, encodingInput]
 
-theorem decode_of_encode (message : ForestKey) (counter : Counter) (candidate : Encoding)
+theorem decode_of_encode (message : HashInput) (counter : Counter) (candidate : Encoding)
     (hencode : evalWithAnswerFn f (encode parameter lay tree leaf message counter
       : OracleComp HashSpec (Option Encoding)) = some candidate) :
     TargetSum.decodeDigest (truncateHash (f (encodingInput parameter lay tree leaf message counter))) =
@@ -47,7 +49,7 @@ theorem decode_of_encode (message : ForestKey) (counter : Counter) (candidate : 
   simpa only [encode, evalWithAnswerFn_bind, Completeness.eval_tweakableHash,
     evalWithAnswerFn_pure, encodingInput] using hencode
 
-theorem otsLeaf_chain_run (message : ForestKey) (counter : Counter) (values : ChainIndex → Digest)
+theorem otsLeaf_chain_run (message : HashInput) (counter : Counter) (values : ChainIndex → Digest)
     (candidate : Encoding) (trace : List HashInput)
     (hencode : evalWithAnswerFn f (encode parameter lay tree leaf message counter
       : OracleComp HashSpec (Option Encoding)) = some candidate)
@@ -58,7 +60,7 @@ theorem otsLeaf_chain_run (message : ForestKey) (counter : Counter) (values : Ch
   rw [hencode] at htail
   exact ContainsRun.sequenceFin_component _ htail.bind_left index
 
-theorem otsLeaf_leaf_query_mem (message : ForestKey) (counter : Counter)
+theorem otsLeaf_leaf_query_mem (message : HashInput) (counter : Counter)
     (values : ChainIndex → Digest) (candidate : Encoding)
     (hencode : evalWithAnswerFn f (encode parameter lay tree leaf message counter
       : OracleComp HashSpec (Option Encoding)) = some candidate) :
@@ -82,7 +84,7 @@ def EncodingMarker (reference : Encoding) (lowered : ChainIndex) (trace : List H
       (truncateHash (f (encodingInput parameter lay tree leaf message counter))) = some candidate ∧
     EncodingCode.UnitNeighborAt reference candidate lowered
 
-theorem otsLeaf_marker (reference : Encoding) (message : ForestKey) (counter : Counter)
+theorem otsLeaf_marker (reference : Encoding) (message : HashInput) (counter : Counter)
     (values : ChainIndex → Digest) (candidate : Encoding) (trace : List HashInput)
     (hencode : evalWithAnswerFn f (encode parameter lay tree leaf message counter
       : OracleComp HashSpec (Option Encoding)) = some candidate)
@@ -111,7 +113,7 @@ def ChainException (trace : List HashInput) : Prop :=
     Contact f parameter lay tree leaf index (reference index)
       (frontier f parameter lay tree leaf reference secret index) trace)
 
-theorem otsLeaf_chain_classification (message : ForestKey) (counter : Counter)
+theorem otsLeaf_chain_classification (message : HashInput) (counter : Counter)
     (values : ChainIndex → Digest) (candidate : Encoding) (trace : List HashInput)
     (hvalid : TargetSum.Valid reference)
     (hencode : evalWithAnswerFn f (encode parameter lay tree leaf message counter
@@ -177,7 +179,7 @@ def LeafOutputMatch (trace : List HashInput) : Prop :=
 
 /-- The complete WOTS verifier either recovers the reference word and frontier, or exposes
 one of the explicit leaf, chain, prefix-contact, or encoding-neighbor witnesses. -/
-theorem otsLeaf_classification (message : ForestKey) (counter : Counter)
+theorem otsLeaf_classification (message : HashInput) (counter : Counter)
     (values : ChainIndex → Digest) (candidate : Encoding) (trace : List HashInput)
     (hvalid : TargetSum.Valid reference)
     (hencode : evalWithAnswerFn f (encode parameter lay tree leaf message counter
@@ -205,7 +207,7 @@ theorem otsLeaf_classification (message : ForestKey) (counter : Counter)
     · simpa only [leafHash, Completeness.eval_tweakableHash] using heval
 
 /-- Another message/counter input has the same truncated encoding hash as the reference. -/
-def EncodingOutputMatch (referenceMessage : ForestKey) (referenceCounter : Counter)
+def EncodingOutputMatch (referenceMessage : HashInput) (referenceCounter : Counter)
     (trace : List HashInput) : Prop :=
   ∃ message counter,
     encodingInput parameter lay tree leaf message counter ≠

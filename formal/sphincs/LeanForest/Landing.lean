@@ -8,6 +8,7 @@ namespace LeanForest
 
 variable [Params]
 
+
 theorem subtreePosition_lt (parameter : PublicParameter) :
     subtreePosition parameter < 2 ^ (totalHeight - subtreeHeight) :=
   Nat.mod_lt _ (Nat.two_pow_pos _)
@@ -45,14 +46,13 @@ theorem landed_card (parameter : PublicParameter) :
   rw [← Fintype.card_subtype]
   rw [← Fintype.card_congr (keptLeafEquiv parameter), Fintype.card_fin]
 
-omit [Params] in
 theorem evalDist_blockIndex_uniform :
     𝒟[Concrete.blockIndex <$> ($ᵗ HashOutput : ProbComp HashOutput)] =
     𝒟[($ᵗ Index : ProbComp Index)] := by
   have heq : Concrete.blockIndex <$> ($ᵗ HashOutput : ProbComp HashOutput) =
       BitVec.toFin <$> ((fun u : HashOutput => u.extractLsb' Concrete.indexOffset totalHeight) <$>
         ($ᵗ HashOutput : ProbComp HashOutput)) := by rw [Functor.map_map]; rfl
-  rw [heq, evalDist_map, evalDist_hashOutput_extractAt_uniform (by decide), ← evalDist_map]
+  rw [heq, evalDist_map, evalDist_hashOutput_extractAt_uniform indexOffset_add_le, ← evalDist_map]
   exact evalDist_map_bijective_uniform_cross (α := BitVec totalHeight) (β := Index) BitVec.toFin
     ⟨fun _ _ h => congrArg BitVec.ofFin h, fun i => ⟨BitVec.ofFin i, rfl⟩⟩
 

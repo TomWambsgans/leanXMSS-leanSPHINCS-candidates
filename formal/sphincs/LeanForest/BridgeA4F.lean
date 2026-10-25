@@ -15,7 +15,9 @@ recorded contact; a forest step query costs `2^-128 (N rate + 1 - κ)`. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenBridge
@@ -28,11 +30,9 @@ set_option linter.unusedSectionVars false
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### Capped expectations -/
 
-omit [Params] in
 theorem tsum_min_leF {α : Type} (mx : ProbComp α) (X : α → ℝ≥0∞) :
     ∑' a, Pr[= a | mx] * min 1 (X a) ≤ min 1 (∑' a, Pr[= a | mx] * X a) := by
   refine le_min ?_ (ENNReal.tsum_le_tsum fun a => mul_le_mul_right (min_le_right _ _) _)
@@ -41,11 +41,9 @@ theorem tsum_min_leF {α : Type} (mx : ProbComp α) (X : α → ℝ≥0∞) :
     _ = ∑' a, Pr[= a | mx] := by simp only [mul_one]
     _ ≤ 1 := tsum_probOutput_le_one
 
-omit [Params] in
 theorem pairE_min_leF (F : HashOutput → ℝ≥0∞) : pairE (fun a => min 1 (F a)) ≤ min 1 (pairE F) :=
   tsum_min_leF _ F
 
-omit [Params] in
 /-- **The split of one contact.** A contact with capped value is paid by `pay` and `κ` times its
 uncapped value. -/
 theorem capped_splitF {pay κ : ℝ≥0∞} (hκ : ν ≤ pay + κ * ν) (Q : ℝ≥0∞) :
@@ -56,7 +54,6 @@ theorem capped_splitF {pay κ : ℝ≥0∞} (hκ : ν ≤ pay + κ * ν) (Q : �
         add_le_add (mul_le_mul_right (min_le_left _ _) _) (mul_le_mul_right (min_le_right _ _) _)
     _ = pay + κ * ν * Q := by rw [mul_one]
 
-omit [Params] in
 theorem pairE_sum_range (n : ℕ) (F : HashOutput → ℕ → ℝ≥0∞) :
     pairE (fun a => ∑ j ∈ Finset.range n, F a j) = ∑ j ∈ Finset.range n, pairE fun a => F a j := by
   unfold pairE
@@ -134,7 +131,6 @@ section Basic
 
 variable (K : Ctx)
 
-omit [Params] in
 theorem gA_mono (R : List Coordinate) {C C' : ℝ≥0∞} (h : C ≤ C') (f : FIn) : gA R C f ≤ gA R C' f := by
   unfold gA
   split_ifs
@@ -602,4 +598,4 @@ theorem psiF_start (Lmax : ℕ) (known : HiddenReveal.Knowledge Coordinate) (tot
 
 end Start
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

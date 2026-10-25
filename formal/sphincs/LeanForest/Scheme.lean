@@ -3,16 +3,18 @@ import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 import Mathlib.Data.BitVec
 
 /-!
-# leanSPHINCS with a two-level WOTS forest
+# leanSPHINCS: a two-level WOTS forest under a hypertree of WOTS+C keys
 
-The scheme of `LeanSphincs.Scheme` (one height-24 tree of WOTS+C keys with 64 chains of length 4 and
-target sum 123, pruning with surrogate siblings, randomizer grinding, tweakable hash with 16-byte
-outputs) with the few-time signature under each tree leaf replaced by a **two-level WOTS forest**:
+The scheme has a height `h = totalHeight` (22, 24, 26 or 28) and a shape (`Params`): one tree of
+height `h` of which the key keeps a subtree of `2^b` leaves (`numLayers = 1`, `b = subtreeHeight`,
+`b = h` being the full key), or a hypertree of `numLayers = d` layers whose layers below the top have
+height 6 (`lowerHeight`) and whose key builds the top layer only (`b = h`). The few-time signature
+under every bottom leaf is a **two-level WOTS forest**:
 
 * 8 independent coordinates; a coordinate is a top Merkle tree of height 4 over 16 super-children,
   hashed up to level 3 only: its two level-3 nodes `t_c[0]`, `t_c[1]` are not hashed into a root. The
-  forest key is the sixteen nodes `t_0[0], t_0[1], ..., t_7[0], t_7[1]` themselves, the message WOTS+C
-  signs: no hash folds them, and the WOTS+C encoding absorbs them with its counter,
+  forest key is the sixteen nodes `t_0[0], t_0[1], ..., t_7[0], t_7[1]` themselves, the message the
+  bottom WOTS+C key signs: no hash folds them, and the WOTS+C encoding absorbs them with its counter,
   `Th(enc(e), t_0[0] || t_0[1] || ... || t_7[0] || t_7[1] || ctr)`;
 * a sub-tree is a Merkle tree of height 3 over 8 children, hashed up to level 2 only; super-child `s`
   is `Th(super(idx, c, s), m_0[0] || m_0[1] || m_1[0] || m_1[1])` where `m_j[0]`, `m_j[1]` are the two
@@ -23,23 +25,30 @@ outputs) with the few-time signature under each tree leaf replaced by a **two-le
 * a codeword is a deficit vector `d ∈ {0..4}^6` with `Σ d_i = 5` (246 of them); `lut` is a fixed list
   of 256 of them (`codewordCodes`): the codewords sorted by decreasing `Σ d_i²`, then
   lexicographically, entry `t` being codeword number `t mod 214`;
-* one digest call gives `24 + 8 · 26 = 232` bits. The first 16 bytes are the 16 codeword indices
-  (byte `2c + j` for sub-tree `j` of coordinate `c`); then, from bit 128, the 16 children (3 bits
-  each, in the order `2c + j`), the 8 super-children (4 bits each, from bit 176) and the index
-  (24 bits, from bit 208). No field lies across two 64-bit words;
+* one digest call gives `h + 8 · 26` bits. The first 16 bytes are the 16 codeword indices (byte
+  `2c + j` for sub-tree `j` of coordinate `c`); then, from bit 128, the 16 children (3 bits each, in
+  the order `2c + j`), the 8 super-children (4 bits each, from bit 176) and the index (`h` bits, from
+  bit 208). No field lies across two 64-bit words;
 * an opening reveals, per coordinate and sub-tree, `x_{i, 4 - d_i}` for the 6 chains and the 3 auth
   nodes of the sub-tree, then the 4 auth nodes of the top tree. The last auth node of a tree is its
   other top node: the verifier folds all levels but the last and hashes the two top nodes, in index
   order, into the hash above.
 
-Everything that is not the forest (parameters, WOTS+C, the tree, pruning, grinding, key generation)
-is `LeanSphincs.Scheme` verbatim. Every hash input is `P || A || payload`: the 16-byte public
-parameter, then the 16-byte address of the call (a 32-bit field `lo`, a 24-bit field `hi`, one byte
-holding the type and a chain step, then 8 zero bytes), so the payload starts at byte 32. Forest
-hashes use types 14 (secret derivation) and 15 to 19, with the instance `idx` in `lo` and the
-position inside the instance in `hi`; type 20 (`roots`, the former forest-key hash) is not hashed. The message digest hashes `m || rho` (the root is not hashed:
-`P` binds the key) and the randomizer base `S || m`: the randomizer, which changes between two
-grinding attempts, comes last, alone in the second block.
+At every layer a WOTS+C key (64 chains of length 4, target sum 123) signs the message of the layer
+below: the forest key at the bottom layer, the 16-byte root of the tree below at a layer above.
+Layers are numbered from the top (`topLayer = 0`), as in leanVM. Every hash input is
+`P || A || payload`: the 16-byte public parameter, then the 16-byte address of the call (a 32-bit
+field `lo`, a 24-bit field `hi`, one byte holding the type and a chain step, one byte for the layer
+counted from the bottom, 4 bytes for the tree, then 3 zero bytes), so the payload starts at byte 32.
+Forest hashes use types 14 (secret derivation) and 15 to 19, with the instance `idx` in `lo` and the
+position inside the instance in `hi`; type 20 (`roots`, the former forest-key hash) is not hashed.
+The message digest hashes `m || rho` (the root is not hashed: `P` binds the key) and the randomizer
+base `S || m`: the randomizer, which changes between two grinding attempts, comes last.
+
+The model is one random oracle on these inputs. Keccak-256 and BLAKE2s hash them as they are;
+SHA-256 hashes `P` alone in a zero-padded first block and puts 16 zero bytes before the randomizer of
+the digest, a fixed injective re-encoding of the same inputs, so the random-oracle statements are
+the same for the three hashes and only the costs (`VerificationCost.lean`) depend on the hash.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -57,23 +66,38 @@ def winternitzBits : Nat := 2
 def chainLength : Nat := 2 ^ winternitzBits
 def numChains : Nat := 64
 def targetSum : Nat := 123
-def numLayers : Nat := 1
-def totalHeight : Nat := 24
-/-- The height of the only XMSS layer, which bounds its leaf index. -/
-def maxLayerHeight : Nat := 24
+/-- The height of every layer below the top one. -/
+def lowerHeight : Nat := 6
 /-- Randomizers tried per signature (`ctr` is a `u32`), `A_max`. -/
 def digestAttemptLimit : Nat := 2 ^ 32
 /-- Encoding counters tried per signature, `C_max`. -/
 def encodingAttemptLimit : Nat := 2 ^ 32
 
-/-- The key's shape and lifetime: the kept subtree holds `2^subtreeHeight` leaves
-(`subtreeHeight = 24` is the full key), and the key signs at most `signatureLimit` messages. -/
+/-- The key's shape and lifetime. The index has `totalHeight = h` bits. The key is a hypertree of
+`numLayers = d` layers, every layer below the top one of height `lowerHeight = 6` (`d = 1` is one
+tree of height `h`). Its top layer keeps a subtree: the kept instances are the `2^subtreeHeight`
+indices that land in it (`subtreeHeight = h` keeps them all: a full or a layered key). The key signs
+at most `signatureLimit` messages. -/
 class Params where
+  totalHeight : Nat
+  numLayers : Nat
   subtreeHeight : Nat
   signatureLimit : Nat
+  numLayers_pos : 0 < numLayers
+  /-- The top layer is at least as tall as the others. -/
+  lower_le : lowerHeight * numLayers ≤ totalHeight
+  /-- The index fields fit the digest and the 32-bit address fields. -/
+  totalHeight_le : totalHeight ≤ 28
+  /-- The kept subtree lies in the top layer. -/
+  below_le : lowerHeight * (numLayers - 1) ≤ subtreeHeight
   subtreeHeight_le : subtreeHeight ≤ totalHeight
 
-export Params (subtreeHeight signatureLimit)
+export Params (totalHeight numLayers subtreeHeight signatureLimit)
+
+variable [Params]
+
+/-- The height of the top layer, the tallest: `h - 6 (d - 1)`. -/
+def maxLayerHeight : Nat := totalHeight - lowerHeight * (numLayers - 1)
 
 abbrev MasterSeed := BitVec 256
 
@@ -83,12 +107,13 @@ abbrev Message := BitVec messageBits
 abbrev PublicParameter := BitVec publicParameterBits
 abbrev Randomness := Digest
 abbrev Counter := BitVec counterBits
+/-- A layer, `0` being the top one. -/
 abbrev Layer := Fin numLayers
-/-- `idx`, the leaf and the forest instance a digest selects. -/
+/-- `idx`, the bottom leaf and the forest instance a digest selects. -/
 abbrev Index := Fin (2 ^ totalHeight)
-/-- `tau`, always `0`: the scheme has one tree, and a hash address has no tree field. -/
-abbrev TreeIndex := Fin 1
-/-- `e`, a leaf of the tree. -/
+/-- `tau`, a tree of a layer. Layer `lay` only uses the values below `2^heightAbove lay`. -/
+abbrev TreeIndex := Fin (2 ^ totalHeight)
+/-- `e`, a leaf of a tree. Layer `lay` only uses the values below `2^layerHeight lay`. -/
 abbrev LeafIndex := Fin (2 ^ maxLayerHeight)
 abbrev ChainIndex := Fin numChains
 /-- A pair of chains `(2t, 2t + 1)` of a one-time key, `t < 32`: one seed derivation. -/
@@ -129,16 +154,23 @@ abbrev Codeword := FChain → FPos
 /-- A codeword index, 8 digest bits. -/
 abbrev LutIdx := Fin 256
 
-/-- The layer height, `h = 24`. -/
-def layerHeight (_lay : Layer) : Nat := maxLayerHeight
+/-- The height of a layer: `h - 6 (d - 1)` at the top, 6 below. -/
+def layerHeight (lay : Layer) : Nat := if lay.val = 0 then maxLayerHeight else lowerHeight
 
-def topLayer : Layer := ⟨0, by decide⟩
+def topLayer : Layer := ⟨0, Params.numLayers_pos⟩
 
-/-- `sum_{j < lay} h_j`, the index bits above layer `lay`. -/
-def heightAbove (lay : Layer) : Nat := ∑ j : Layer, if j.val < lay.val then layerHeight j else 0
+/-- The bottom layer, whose WOTS+C keys sign the forest keys. -/
+def bottomLayer : Layer := ⟨numLayers - 1, Nat.sub_lt Params.numLayers_pos Nat.one_pos⟩
+
+/-- The layer `k` steps above the bottom one (the top layer from `k = numLayers - 1` on): the
+signature lists the layers in that order. -/
+def layerUp (k : Nat) : Layer := ⟨numLayers - 1 - k, by have := Params.numLayers_pos; omega⟩
 
 /-- `sum_{j > lay} h_j`, the index bits below layer `lay`. -/
-def heightBelow (lay : Layer) : Nat := totalHeight - heightAbove lay - layerHeight lay
+def heightBelow (lay : Layer) : Nat := lowerHeight * (numLayers - 1 - lay.val)
+
+/-- `sum_{j < lay} h_j`, the index bits above layer `lay`: the trees of the layer are `2^heightAbove`. -/
+def heightAbove (lay : Layer) : Nat := totalHeight - heightBelow lay - layerHeight lay
 
 /-- Keep the first 128 output bits, the low bits of the little-endian bit vector. -/
 def truncateHash (output : HashOutput) : Digest :=
@@ -199,17 +231,17 @@ def codeDigit (code : Nat) (i : FChain) : FPos :=
 /-- `lut t`: entry `t` of the table. -/
 def lut (t : LutIdx) : Codeword := codeDigit (codewordCodes.getD t.val 0)
 
-/-! ### The message digest: one call, 232 bits -/
+/-! ### The message digest: one call, `h + 208` bits -/
 
 /-- Digest bits of one coordinate: super-child 4, and child 3 and codeword 8 for each sub-tree. -/
 def coordBits : Nat := 26
 
-/-- The message digest is `h + 8 · 26 = 232` bits: an index and the fields of 8 coordinates. -/
+/-- The message digest is `h + 8 · 26` bits: an index and the fields of 8 coordinates. -/
 def messageDigestBits : Nat := totalHeight + forestCoords * coordBits
 
 abbrev MessageDigest := BitVec messageDigestBits
 
-/-- The first 232 bits of the single digest call. -/
+/-- The first `h + 208` bits of the single digest call. -/
 def truncateMessageDigest (first : HashOutput) : MessageDigest :=
   first.extractLsb' 0 messageDigestBits
 
@@ -250,7 +282,8 @@ structure CoordOpening where
   top : Fin topHeight → Digest
 deriving DecidableEq
 
-/-- The randomizer, the forest opening, and the WOTS+C signature with its path: 4276 bytes. -/
+/-- The randomizer, the forest opening, and the WOTS+C signature with its path at every layer:
+`2832 + 1028 d + 16 h` bytes (`Layout.signature_size`). -/
 structure Signature where
   randomness : Randomness
   forest : Coord → CoordOpening
@@ -263,22 +296,35 @@ def bytesLE (byteCount : Nat) (value : BitVec (8 * byteCount)) : List UInt8 :=
     UInt8.ofBitVec (value.extractLsb' (8 * index.val) 8)
 
 /-- The address of a hash call (`Tweak` in `crates/sphincs`): its type `tag < 32`, a chain step
-`step < 8`, and two fields `hi < 2^24` and `lo < 2^32`. -/
+`step < 8`, the layer (counted from the bottom) and the tree, and two fields `hi < 2^24` and
+`lo < 2^32`. -/
 structure TweakFields where
   tag : BitVec 5
   step : BitVec 3
+  layer : BitVec 8
+  tree : BitVec 32
   hi : BitVec 24
   lo : BitVec 32
 deriving DecidableEq
 
-/-- The 16 address bytes `lo || hi || (tag + 32 * step) || 0^8`: `lo` on 4 bytes, `hi` on 3 bytes,
-each least significant byte first, then the type byte, then 8 zero bytes. -/
+/-- The 16 address bytes `lo || hi || (tag + 32 * step) || layer || tree || 0^3`: `lo` on 4 bytes,
+`hi` on 3 bytes, the type byte, the layer byte, `tree` on 4 bytes, each least significant byte
+first, then 3 zero bytes. -/
 def fieldBytes (fields : TweakFields) : HashInput :=
-  bytesLE 4 fields.lo ++ bytesLE 3 fields.hi ++ bytesLE 1 (fields.step ++ fields.tag) ++ bytesLE 8 0
+  bytesLE 4 fields.lo ++ bytesLE 3 fields.hi ++ bytesLE 1 (fields.step ++ fields.tag) ++
+    bytesLE 1 fields.layer ++ bytesLE 4 fields.tree ++ bytesLE 3 0
 
-/-- Convert the four integer fields to their fixed widths. -/
+/-- Convert the integer fields of an address outside the hypertree (layer and tree 0). -/
 def tweakFields (tag step hi lo : Nat) : TweakFields :=
-  ⟨BitVec.ofNat 5 tag, BitVec.ofNat 3 step, BitVec.ofNat 24 hi, BitVec.ofNat 32 lo⟩
+  ⟨BitVec.ofNat 5 tag, BitVec.ofNat 3 step, 0, 0, BitVec.ofNat 24 hi, BitVec.ofNat 32 lo⟩
+
+/-- The layer byte of layer `lay`: the layers are counted from the bottom on the wire. -/
+def layerByte (lay : Layer) : Nat := numLayers - 1 - lay.val
+
+/-- Convert the integer fields of an address in tree `tree` of layer `lay`. -/
+def treeFields (tag step : Nat) (lay : Layer) (tree : TreeIndex) (hi lo : Nat) : TweakFields :=
+  ⟨BitVec.ofNat 5 tag, BitVec.ofNat 3 step, BitVec.ofNat 8 (layerByte lay), BitVec.ofNat 32 tree.val,
+    BitVec.ofNat 24 hi, BitVec.ofNat 32 lo⟩
 
 /-! ### Forest addresses -/
 
@@ -314,12 +360,12 @@ deriving DecidableEq
 /-- The address of a hash domain: types `TWEAK_CHAIN = 1`, ..., `TWEAK_MSG = 12`, forest types 15 to
 20. In the tree `lo` is the leaf (or the node index) and `hi` the chain (or the node level); a chain
 step carries its step. In a forest instance `lo` is `idx` and `hi` the packed position; a forest chain
-step from position `t` carries step `t`. The layer and the tree, always `0`, are not addressed. -/
+step from position `t` carries step `t`. A hash of the hypertree carries its layer and its tree. -/
 def hashDomainFields : HashDomain → TweakFields
-  | .chain _ _ leaf chainIdx step => tweakFields 1 step chainIdx leaf
-  | .leaf _ _ leaf => tweakFields 2 0 0 leaf
-  | .node _ _ level nodeIdx => tweakFields 3 0 level nodeIdx
-  | .encoding _ _ leaf => tweakFields 4 0 0 leaf
+  | .chain lay tree leaf chainIdx step => treeFields 1 step lay tree chainIdx leaf
+  | .leaf lay tree leaf => treeFields 2 0 lay tree 0 leaf
+  | .node lay tree level nodeIdx => treeFields 3 0 lay tree level nodeIdx
+  | .encoding lay tree leaf => treeFields 4 0 lay tree 0 leaf
   | .fchain index c s j a i t => tweakFields 15 t (chainSlot c s j a i) index
   | .childLeaf index c s j a => tweakFields 16 0 (childSlot c s j a) index
   | .subNode index c s j level node =>
@@ -342,7 +388,7 @@ def tweakableHashInput (parameter : PublicParameter) (domain : HashDomain)
 /-- `P || A(7, 0, 0) || S || m` (`TWEAK_RANDOMIZER = 7`): the randomizer base of a message. -/
 def randomizerHashInput (parameter : PublicParameter) (seed : MasterSeed)
     (message : Message) : HashInput :=
-  bytesLE 16 parameter ++ fieldBytes ⟨7#5, 0#3, 0#24, 0#32⟩ ++
+  bytesLE 16 parameter ++ fieldBytes ⟨7#5, 0#3, 0#8, 0#32, 0#24, 0#32⟩ ++
     bytesLE 32 seed ++ bytesLE 32 message
 
 /-- The pair of chains a chain of a one-time key belongs to. -/
@@ -365,15 +411,16 @@ inductive KeygenDomain where
   | parameter
   | ots (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (pair : ChainPair)
   | forest (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (pair : FPair)
-  | surrogate (level : Fin totalHeight)
+  | surrogate (level : Fin maxLayerHeight)
 deriving DecidableEq
 
-/-- `TWEAK_PARAMETER = 5`, `TWEAK_PRF = 0` (`hi` the pair of chains, `lo` the leaf),
+/-- `TWEAK_PARAMETER = 5`, `TWEAK_PRF = 0` (`hi` the pair of chains, `lo` the leaf, with the layer
+and the tree),
 `TWEAK_FOREST_PRF = 14` (`hi` the packed pair of chains, `lo = idx`), `TWEAK_SURROGATE = 13` (`hi`
 the level). -/
 def keygenDomainFields : KeygenDomain → TweakFields
   | .parameter => tweakFields 5 0 0 0
-  | .ots _ _ leaf pair => tweakFields 0 0 pair leaf
+  | .ots lay tree leaf pair => treeFields 0 0 lay tree pair leaf
   | .forest index c s j a pair => tweakFields 14 0 (pairSlot c s j a pair) index
   | .surrogate level => tweakFields 13 0 level 0
 
@@ -448,13 +495,38 @@ def tweakableHash (parameter : PublicParameter) (domain : HashDomain) (payload :
 
 /-! ### The index -/
 
-/-- `tau`, the tree: `0`. -/
-def treeIndexAt (_index : Index) (_lay : Layer) : TreeIndex := 0
+/-- `tau`, the tree of layer `lay` on the path of `idx`: the bits above the layer. -/
+def treeIndexAt (index : Index) (lay : Layer) : TreeIndex :=
+  ⟨index.val / 2 ^ (heightBelow lay + layerHeight lay),
+    Nat.lt_of_le_of_lt (Nat.div_le_self _ _) index.isLt⟩
 
-/-- `e = idx`, the leaf. -/
+theorem layerHeight_le (lay : Layer) : layerHeight lay ≤ maxLayerHeight := by
+  unfold layerHeight
+  split
+  · exact le_refl _
+  · have h1 := Params.lower_le
+    have h2 := Params.numLayers_pos
+    unfold maxLayerHeight
+    have : lowerHeight * numLayers = lowerHeight * (numLayers - 1) + lowerHeight := by
+      rw [← Nat.mul_succ]; congr 1; omega
+    omega
+
+/-- The tree below the leaf `leaf` of tree `tree` of layer `lay` (the tree that leaf's key signs the
+root of), or at the bottom layer the forest instance it signs the key of: `tree · 2^h_lay + leaf`. -/
+def childTree (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) : TreeIndex :=
+  ⟨(tree.val * 2 ^ layerHeight lay + leaf.val) % 2 ^ totalHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩
+
+/-- `e`, the leaf of that tree on the path of `idx`: the layer's bits of the index. -/
 def leafIndexAt (index : Index) (lay : Layer) : LeafIndex :=
   ⟨index.val / 2 ^ heightBelow lay % 2 ^ layerHeight lay,
-    Nat.lt_of_lt_of_le (Nat.mod_lt _ (Nat.two_pow_pos _)) (le_refl _)⟩
+    Nat.lt_of_lt_of_le (Nat.mod_lt _ (Nat.two_pow_pos _))
+      (Nat.pow_le_pow_right (by decide) (layerHeight_le lay))⟩
+
+/-- A WOTS+C key of the hypertree: its layer, its tree and its leaf in that tree. -/
+abbrev OtsKey := Layer × TreeIndex × LeafIndex
+
+/-- The key of layer `lay` on the path of `idx`. -/
+def keyAt (index : Index) (lay : Layer) : OtsKey := (lay, treeIndexAt index lay, leafIndexAt index lay)
 
 /-! ### The one-time signature -/
 
@@ -498,18 +570,22 @@ top trees. -/
 def rootsPayload (tops : ForestKey) : HashInput :=
   (List.ofFn tops).flatMap fun pair => nodePayload pair.1 pair.2
 
-/-- `Enc(P, e, K, c)`: hash the forest key's sixteen nodes, then the counter, under the leaf's encoding
-tweak, and decode. There is no forest-key hash: the counter falls in the last block of this one
-(`P || A || K || c`, 292 bytes). -/
+/-- The message a layer's WOTS+C key signs, as bytes: the forest key's sixteen nodes at the bottom
+layer (`rootsPayload`), the 16-byte root of the tree below at a layer above. -/
+def rootPayload (root : Digest) : HashInput := bytesLE 16 root
+
+/-- `Enc(P, e, M, c)`: hash the message, then the counter, under the leaf's encoding tweak, and
+decode. There is no message hash: the counter falls in the last block of this one
+(`P || A || K || c`, 292 bytes, at the bottom layer; `P || A || root || c`, 68 bytes, above). -/
 def encode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (message : ForestKey) (counter : Counter) : m (Option Encoding) := do
+    (message : HashInput) (counter : Counter) : m (Option Encoding) := do
   let digest ← tweakableHash parameter (.encoding lay tree leaf)
-    (rootsPayload message ++ bytesLE 4 counter)
+    (message ++ bytesLE 4 counter)
   return TargetSum.decodeDigest digest
 
 /-- `Ots.leaf` (`wots_recover`): the verifier's leaf, or nothing if the counter does not encode the message. -/
 def otsLeaf (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (message : ForestKey) (counter : Counter) (values : ChainIndex → Digest) : m (Option Digest) := do
+    (message : HashInput) (counter : Counter) (values : ChainIndex → Digest) : m (Option Digest) := do
   let some encoding ← encode parameter lay tree leaf message counter | return none
   let endpoints ← sequenceFin fun chainIdx =>
     recoverChain parameter lay tree leaf chainIdx (encoding chainIdx) (values chainIdx)
@@ -659,7 +735,7 @@ super-children (4 bits each), then the index (`h` bits): `48 + 32 = 80` bits pre
 that order no field lies across two 64-bit words. -/
 def indexOffset : Nat := 128 + 2 * forestCoords * subHeight + forestCoords * topHeight
 
-/-- `idx`, the 24 bits of the digest from bit 208. -/
+/-- `idx`, the `h` bits of the digest from bit 208. -/
 def digestIndex (digest : MessageDigest) : Index :=
   (digest.extractLsb' indexOffset totalHeight).toFin
 
@@ -667,7 +743,7 @@ def digestIndex (digest : MessageDigest) : Index :=
 def blockIndex (first : HashOutput) : Index :=
   (first.extractLsb' indexOffset totalHeight).toFin
 
-/-- `Digest(P, m, rho)` (`message_digest`): the single call, truncated to 232 bits. The root is not
+/-- `Digest(P, m, rho)` (`message_digest`): the single call, truncated to `h + 208` bits. The root is not
 an input of the hash. -/
 def messageDigest (parameter : PublicParameter) (root : Digest) (message : Message)
     (randomness : Randomness) : m MessageDigest := do
@@ -696,10 +772,11 @@ def digestMarks (digest : MessageDigest) : Coord → CoordMark := fun c =>
 def signaturePath (signature : Signature) (lay : Layer) (level : Nat) : Digest :=
   if hlevel : level < layerHeight lay then (signature.layers lay).path ⟨level, hlevel⟩ else 0
 
-/-- The tree walk of the one layer: `remaining + 1` enters at layer `remaining`, whose WOTS+C key
-signs the forest key; its fold is the value compared against the public root. -/
+/-- The walk up the layers: `remaining + 1` enters at layer `remaining`, whose WOTS+C key signs
+`message` (the forest key at the bottom layer, the root of the tree below above it); the fold of the
+top layer is the value compared against the public root. -/
 def verifyLayers (parameter : PublicParameter) (index : Index) (signature : Signature) :
-    Nat → ForestKey → m (Option Digest)
+    Nat → HashInput → m (Option Digest)
   | 0, _ => pure none
   | remaining + 1, message => do
       if hlayer : remaining < numLayers then
@@ -710,29 +787,41 @@ def verifyLayers (parameter : PublicParameter) (index : Index) (signature : Sign
         let some value ← otsLeaf parameter lay tree leaf message part.counter part.chainValues
           | return none
         let root ← treeFold parameter lay tree leaf (signaturePath signature lay) (layerHeight lay) value
-        return some root
+        if remaining = 0 then
+          return some root
+        else
+          verifyLayers parameter index signature remaining (rootPayload root)
       else
         pure none
 
-/-- `Ver(pk, m, sigma)`: recompute the digest, recover the forest key, recover the one-time leaf,
-fold the path and compare with the root. -/
+/-- `Ver(pk, m, sigma)`: recompute the digest, recover the forest key, walk the layers (recover the
+one-time leaf, fold the path) and compare with the root. -/
 def verify (publicKey : PublicKey) (message : Message) (signature : Signature) : m Bool := do
   let digest ← messageDigest publicKey.parameter publicKey.root message signature.randomness
   let index := digestIndex digest
   let forestKey ← forestRecover publicKey.parameter index (digestMarks digest) signature.forest
-  let some root ← verifyLayers publicKey.parameter index signature numLayers forestKey | return false
+  let some root ← verifyLayers publicKey.parameter index signature numLayers (rootsPayload forestKey)
+    | return false
   return decide (root = publicKey.root)
 
 /-! ### Signing -/
 
-/-- The scheme has one tree, at index `0`. -/
-def rootTree : TreeIndex := 0
+/-- The top layer holds one tree, at index `0`. -/
+def rootTree : TreeIndex := ⟨0, Nat.two_pow_pos _⟩
 
-/-- Run the layer, stopping on failure. -/
+/-- Run the `n` computations from index `0` up, stopping on the first failure. -/
+def sequenceDep : {n : Nat} → {α : Fin n → Type} →
+    ((i : Fin n) → m (Option (α i))) → m (Option ((i : Fin n) → α i))
+  | 0, _, _ => pure (some fun i => Fin.elim0 i)
+  | _ + 1, α, computation => do
+      let some head ← computation 0 | return none
+      let some tail ← sequenceDep (α := fun i => α i.succ) fun i => computation i.succ | return none
+      return some (Fin.cases head tail)
+
+/-- Run the layers from the top down, stopping on failure. -/
 def sequenceLayers {α : Layer → Type}
-    (computation : (lay : Layer) → m (Option (α lay))) : m (Option ((lay : Layer) → α lay)) := do
-  let some top ← computation topLayer | return none
-  return some (Fin.cases top (fun i => Fin.elim0 i))
+    (computation : (lay : Layer) → m (Option (α lay))) : m (Option ((lay : Layer) → α lay)) :=
+  sequenceDep computation
 
 attribute [irreducible] verify
 
@@ -742,19 +831,36 @@ end Concrete
 
 section Pruning
 
-variable [Params]
-
-/-- `s`, the kept subtree: the low `h - b` bits of `P`, read as a little-endian number (`0` for a
-full key). -/
+/-- `s`, the kept subtree of the top layer: the low `h - b` bits of `P`, read as a little-endian
+number (`0` for a full or a layered key). -/
 def subtreePosition (parameter : PublicParameter) : Nat :=
   parameter.toNat % 2 ^ (totalHeight - subtreeHeight)
 
-/-- The kept subtree holds leaves `s * 2^b .. (s + 1) * 2^b` (`XmssTree::contains`). -/
+/-- The kept instances are `s * 2^b .. (s + 1) * 2^b` (`XmssTree::contains` on the top layer's
+leaf `idx >> heightBelow topLayer`). -/
 def Landed (parameter : PublicParameter) (index : Index) : Prop :=
   index.val / 2 ^ subtreeHeight = subtreePosition parameter
 
 instance (parameter : PublicParameter) (index : Index) : Decidable (Landed parameter index) :=
   inferInstanceAs (Decidable (index.val / 2 ^ subtreeHeight = subtreePosition parameter))
+
+/-- The height of the kept part of a layer's tree: `b - heightBelow topLayer` at the top layer, the
+whole tree below it. -/
+def keptHeight (lay : Layer) : Nat := if lay.val = 0 then subtreeHeight - heightBelow lay else layerHeight lay
+
+/-- The position of the kept part among the nodes of level `keptHeight`: `s` at the top layer, `0`
+below it. -/
+def keptPosition (parameter : PublicParameter) (lay : Layer) : Nat :=
+  if lay.val = 0 then subtreePosition parameter else 0
+
+/-- A leaf of a layer's tree that its kept part holds: one of the top layer's kept subtree, any leaf
+below the top layer. -/
+def Kept (parameter : PublicParameter) (lay : Layer) (leaf : LeafIndex) : Prop :=
+  leaf.val / 2 ^ keptHeight lay = keptPosition parameter lay
+
+instance (parameter : PublicParameter) (lay : Layer) (leaf : LeafIndex) :
+    Decidable (Kept parameter lay leaf) :=
+  inferInstanceAs (Decidable (leaf.val / 2 ^ keptHeight lay = keptPosition parameter lay))
 
 end Pruning
 
@@ -849,7 +955,7 @@ def oneTimePublicKey (parameter : PublicParameter) (lay : Layer) (tree : TreeInd
     chainWalk parameter lay tree leaf chainIdx 0 (chainLength - 1) (secrets chainIdx)
 
 def otsSignFrom (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (seed : MasterSeed) (message : ForestKey) :
+    (seed : MasterSeed) (message : HashInput) :
     Nat → Nat → m (Option (Counter × (ChainIndex → Digest)))
   | 0, _ => pure none
   | attempts + 1, counter => do
@@ -863,7 +969,7 @@ def otsSignFrom (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (
 
 /-- `wots_sign`: the least admissible counter, then the opened chain values. -/
 def otsSign (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
-    (seed : MasterSeed) (message : ForestKey) :
+    (seed : MasterSeed) (message : HashInput) :
     m (Option (Counter × (ChainIndex → Digest))) :=
   otsSignFrom parameter lay tree leaf seed message encodingAttemptLimit 0
 
@@ -879,40 +985,38 @@ def treeNode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
       let right ← treeNode parameter lay tree seed level (2 * nodeIdx + 1)
       tweakableHash parameter (.node lay tree (level + 1) nodeIdx) (nodePayload left right)
 
-variable [Params]
-
 /-- The surrogate sibling at `level >= b`, derived from the seed (`TWEAK_SURROGATE`). Honest calls
 have `level < h`. -/
 def surrogate (parameter : PublicParameter) (seed : MasterSeed) (level : Nat) : m Digest :=
-  if hlevel : level < totalHeight then deriveKey parameter (.surrogate ⟨level, hlevel⟩) seed else pure 0
+  if hlevel : level < maxLayerHeight then deriveKey parameter (.surrogate ⟨level, hlevel⟩) seed else pure 0
 
-/-- The node at level `b + steps` above the kept subtree: the subtree root folded with the first
-`steps` surrogates (`XmssTree::from_leaves`). -/
+/-- The node at level `k + steps` above the kept part (`k = keptHeight lay`): its root folded with
+the first `steps` surrogates (`XmssTree::from_leaves`). -/
 def spineNode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (seed : MasterSeed) :
     Nat → m Digest
-  | 0 => treeNode parameter lay tree seed subtreeHeight (subtreePosition parameter)
+  | 0 => treeNode parameter lay tree seed (keptHeight lay) (keptPosition parameter lay)
   | steps + 1 => do
       let below ← spineNode parameter lay tree seed steps
-      let sibling ← surrogate parameter seed (subtreeHeight + steps)
-      let nodeIdx := subtreePosition parameter / 2 ^ steps
+      let sibling ← surrogate parameter seed (keptHeight lay + steps)
+      let nodeIdx := keptPosition parameter lay / 2 ^ steps
       if nodeIdx.testBit 0 then
-        tweakableHash parameter (.node lay tree (subtreeHeight + steps + 1) (nodeIdx / 2))
+        tweakableHash parameter (.node lay tree (keptHeight lay + steps + 1) (nodeIdx / 2))
           (nodePayload sibling below)
       else
-        tweakableHash parameter (.node lay tree (subtreeHeight + steps + 1) (nodeIdx / 2))
+        tweakableHash parameter (.node lay tree (keptHeight lay + steps + 1) (nodeIdx / 2))
           (nodePayload below sibling)
 
-/-- The root: the spine's top. -/
+/-- The root of a layer's tree: the spine's top (the whole tree's root below the top layer). -/
 def treeRoot (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (seed : MasterSeed) : m Digest :=
-  spineNode parameter lay tree seed (totalHeight - subtreeHeight)
+  spineNode parameter lay tree seed (layerHeight lay - keptHeight lay)
 
-/-- The authentication path of a kept leaf (`XmssTree::path`): subtree nodes below level `b`,
-surrogates from level `b` on. -/
+/-- The authentication path of a kept leaf (`XmssTree::path`): nodes of the kept part below level
+`keptHeight`, surrogates from that level on. -/
 def treePath (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (seed : MasterSeed) (leaf : LeafIndex) : m (Fin (layerHeight lay) → Digest) :=
   sequenceFin fun level =>
-    if level.val < subtreeHeight then
+    if level.val < keptHeight lay then
       treeNode parameter lay tree seed level.val (Nat.xor (leaf.val / 2 ^ level.val) 1)
     else
       surrogate parameter seed level.val
@@ -1017,9 +1121,8 @@ def forestOpen (parameter : PublicParameter) (index : Index) (marks : Coord → 
     (seed : MasterSeed) : m (Coord → CoordOpening) :=
   sequenceFin fun c => coordOpen parameter index c (marks c) seed
 
-variable [Params]
-
-/-- `Gen` (`key_gen`): derive the public parameter, which places the kept subtree, and build the root. -/
+/-- `Gen` (`key_gen`): derive the public parameter, which places the kept subtree, and build the root
+of the top layer. -/
 def keygenFromSeed (seed : MasterSeed) : OracleComp HashSpec (PublicKey × SecretKey) := do
   let parameter ← deriveKey 0 .parameter seed
   let root ← treeRoot parameter topLayer rootTree seed
@@ -1034,8 +1137,20 @@ def signAttempt (secretKey : SecretKey) (message : Message) (randomness : Random
   else
     return none
 
-def layerMessage (secretKey : SecretKey) (index : Index) (_lay : Layer) : m ForestKey :=
-  forestKey secretKey.parameter index secretKey.seed
+/-- What the WOTS+C key at leaf `leaf` of tree `tree` of layer `lay` signs: the root of the tree
+below it, or the forest key of its instance at the bottom layer. -/
+def keyMessage (parameter : PublicParameter) (seed : MasterSeed) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) : m HashInput :=
+  if hbelow : lay.val + 1 < numLayers then do
+    let root ← treeRoot parameter ⟨lay.val + 1, hbelow⟩ (childTree lay tree leaf) seed
+    return rootPayload root
+  else do
+    let key ← forestKey parameter (childTree lay tree leaf) seed
+    return rootsPayload key
+
+/-- What the WOTS+C key of layer `lay` on the path of `idx` signs. -/
+def layerMessage (secretKey : SecretKey) (index : Index) (lay : Layer) : m HashInput :=
+  keyMessage secretKey.parameter secretKey.seed lay (treeIndexAt index lay) (leafIndexAt index lay)
 
 def signLayer (secretKey : SecretKey) (index : Index) (lay : Layer) : m (Option (LayerSignature lay)) := do
   let tree := treeIndexAt index lay
@@ -1057,8 +1172,8 @@ def signDigestLoop (secretKey : SecretKey) (message : Message) (step : Randomnes
       | none => signDigestLoop secretKey message step attempts (randomness + step)
 
 /-- `Sign`: derive the randomizer base `R0` and the step `delta` of the message (one hash), scan
-`R0, R0 + delta, ...` into the kept subtree, compute the digest, open the forest, sign its key (the
-sixteen level-3 nodes) with
+`R0, R0 + delta, ...` into the kept subtree, compute the digest, open the forest, and at every layer
+sign the message of the layer below (the forest key's sixteen level-3 nodes at the bottom) with
 WOTS+C and attach the path. -/
 def sign (secretKey : SecretKey) (message : Message) : m (Option Signature) := do
   let walk ← deriveRandomizer secretKey.parameter secretKey.seed message
@@ -1071,5 +1186,97 @@ def sign (secretKey : SecretKey) (message : Message) : m (Option Signature) := d
   return some ⟨randomness, opening, layers⟩
 
 end Seeded
+
+end LeanForest
+
+namespace LeanForest
+
+variable [Params]
+
+/-! ### Bounds of the parameters -/
+
+/-- A bit vector determines the natural it encodes, below the wrap. -/
+theorem ofNat_inj_of_lt' {w a b : Nat} (ha : a < 2 ^ w) (hb : b < 2 ^ w)
+    (h : BitVec.ofNat w a = BitVec.ofNat w b) : a = b := by
+  have htoNat := congrArg BitVec.toNat h
+  rwa [BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt ha, Nat.mod_eq_of_lt hb] at htoNat
+
+theorem totalHeight_le_28 : totalHeight ≤ 28 := Params.totalHeight_le
+
+theorem subtreeHeight_le_total : subtreeHeight ≤ totalHeight := Params.subtreeHeight_le
+
+theorem numLayers_pos : 0 < numLayers := Params.numLayers_pos
+
+theorem totalHeight_pos : 0 < totalHeight := by
+  have h1 := Params.lower_le
+  have h2 := Params.numLayers_pos
+  unfold lowerHeight at h1
+  omega
+
+/-- The index field lies inside the hash output. -/
+theorem indexOffset_add_le : Concrete.indexOffset + totalHeight ≤ hashOutputBits := by
+  have := totalHeight_le_28
+  unfold Concrete.indexOffset hashOutputBits forestCoords subHeight topHeight
+  omega
+
+/-- The index field lies inside the truncated digest. -/
+theorem indexOffset_add_le_digest : Concrete.indexOffset + totalHeight ≤ messageDigestBits := by
+  unfold Concrete.indexOffset messageDigestBits forestCoords subHeight topHeight coordBits
+  omega
+
+theorem two_pow_totalHeight_le : 2 ^ totalHeight ≤ 2 ^ 28 :=
+  Nat.pow_le_pow_right (by decide) totalHeight_le_28
+
+theorem index_lt_two_pow_32 (index : Index) : index.val < 2 ^ 32 :=
+  lt_of_lt_of_le index.isLt (two_pow_totalHeight_le.trans (by decide))
+
+theorem maxLayerHeight_le : maxLayerHeight ≤ totalHeight := Nat.sub_le _ _
+
+/-- The top layer is at least as tall as a lower one, 6. -/
+theorem lowerHeight_le_max : lowerHeight ≤ maxLayerHeight := by
+  have h1 := Params.lower_le
+  have h2 := Params.numLayers_pos
+  unfold maxLayerHeight
+  have : lowerHeight * numLayers = lowerHeight * (numLayers - 1) + lowerHeight := by
+    rw [← Nat.mul_succ]; congr 1; omega
+  omega
+
+theorem maxLayerHeight_pos : 0 < maxLayerHeight :=
+  lt_of_lt_of_le (by decide) lowerHeight_le_max
+
+theorem messageDigestBits_le : messageDigestBits ≤ hashOutputBits := by
+  have := totalHeight_le_28
+  unfold messageDigestBits hashOutputBits forestCoords coordBits
+  omega
+
+/-- At most 4 layers: the layers below the top have height 6 and `h ≤ 28`. -/
+theorem numLayers_le : numLayers ≤ 4 := by
+  have h1 := Params.lower_le
+  have := totalHeight_le_28
+  unfold lowerHeight at h1
+  omega
+
+theorem tree_lt_two_pow_32 (tree : TreeIndex) : tree.val < 2 ^ 32 :=
+  lt_of_lt_of_le tree.isLt (two_pow_totalHeight_le.trans (by decide))
+
+theorem leaf_lt_two_pow_32 (leaf : LeafIndex) : leaf.val < 2 ^ 32 :=
+  lt_of_lt_of_le leaf.isLt ((Nat.pow_le_pow_right (by decide) maxLayerHeight_le).trans
+    (two_pow_totalHeight_le.trans (by decide)))
+
+/-- The layer byte names the layer. -/
+theorem layerByte_lt (lay : Layer) : layerByte lay < 2 ^ 8 := by
+  have := numLayers_le
+  unfold layerByte
+  omega
+
+theorem layerByte_injective {lay lay' : Layer} (h : layerByte lay = layerByte lay') : lay = lay' := by
+  have := lay.isLt; have := lay'.isLt
+  unfold layerByte at h
+  exact Fin.ext (by omega)
+
+/-- The layer byte, as encoded, names the layer. -/
+theorem layerByte_ofNat_injective {lay lay' : Layer}
+    (h : BitVec.ofNat 8 (layerByte lay) = BitVec.ofNat 8 (layerByte lay')) : lay = lay' :=
+  layerByte_injective (ofNat_inj_of_lt' (layerByte_lt lay) (layerByte_lt lay') h)
 
 end LeanForest

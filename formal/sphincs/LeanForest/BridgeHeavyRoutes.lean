@@ -1,7 +1,7 @@
 import LeanForest.BridgeHeavyW
 import LeanForest.BridgeSatWRoutes
 
-/-! The large-budget route with the weighted baseline and one heavy message. The one-coin FORS
+/-! The large-budget route with the weighted baseline and one heavy message. The one-coin forest
 potential is the one of `BridgeHeavyW`: the coin only pays the rate of a message with at most half of
 the budget in cached digests, so the fair-rate hypothesis is needed at `(q - keygenCost) / 2` cached
 digests, and the start value of the potential is the excess forecast with one spare slot
@@ -9,7 +9,9 @@ digests, and the start value of the potential is the excess forecast with one sp
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal LeanForest.Base.Domination
 
@@ -19,7 +21,6 @@ set_option linter.unusedSectionVars false
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### The start of the run -/
 
@@ -72,8 +73,8 @@ variable (parameter : PublicParameter) (data : PublicData) (wbar : ℝ≥0∞) (
   (initial : HiddenOutside.Cache HashInput HashOutput) (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
 /-- **The rest of the game with the weighted baseline and one heavy message.** For an adversary that
-never repeats a message, a decided hit or a FORS cover has probability at most the weighted
-saturation budget plus the one-coin FORS potential with one heavy message at the baseline
+never repeats a message, a decided hit or a forest cover has probability at most the weighted
+saturation budget plus the one-coin forest potential with one heavy message at the baseline
 `baselineW total`. The coin pays the rate at `total / 2` cached digests. -/
 theorem rest_boundH (hcompat : Compatible tg model) (htrunc : UniformTruncation (R := HashOutput) tg)
     (hparse : ∀ p, model.parse (pblk parameter data p) = none)
@@ -101,7 +102,7 @@ theorem rest_boundH (hcompat : Compatible tg model) (htrunc : UniformTruncation 
   have htotal2 : (total : ℝ) ≤ spaceReal := by
     have : (0 : ℝ) ≤ total := Nat.cast_nonneg _
     linarith
-  -- the weighted FORS potential
+  -- the weighted forest potential
   have hgood := goodHW_advProg parameter data total wbar b0 Fail Lmax tg initial model hparse hkind hdigest hfail hfair
     le_rfl M [] hnr total start [] [] 0 [] (start_prepared initial known)
     (start_pinv parameter data initial hclean known) (start_minv parameter data initial hclean known)
@@ -164,11 +165,11 @@ attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSamp
 
 set_option maxRecDepth 100000 in
 /-- **One sample, weighted baseline, one heavy message.** -/
-theorem sample_boundH (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
+theorem sample_boundH (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
     (remaining : RemainingOutputs) (steps : Message → Randomness)
-    (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (tg : Targeting HashInput HashOutput Coordinate)
     (hhit : ∀ table, tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table →
@@ -249,7 +250,7 @@ set_option maxRecDepth 100000 in
 win is at most the weighted saturation budget, `q - keygenCost` times the one-coin excess forecast
 with one spare slot at the baseline `baselineW (q - keygenCost)`, and the failing share of the
 prepared searches. -/
-theorem large_seedFree_boundH (hb : 0 < subtreeHeight) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
+theorem large_seedFree_boundH (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (steps : Message → Randomness) (hq : q < 2 ^ 256)
     (htarget : ∀ parameterOutput fixed highs remaining prepared,
       prepared ∈ support (preparation parameterOutput fixed highs remaining) →
@@ -308,7 +309,7 @@ that pays the rate at `(q - keygenCost) / 2` cached digests and `Lmax` landed pa
 negligible cap term: if the large-budget inequality `hH0` with the weighted baseline and the excess
 forecast with one spare slot holds at the adversary's budget after key generation, the deterministic
 signer's advantage is at most `q / 2^127`. -/
-theorem det_largeH (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ)
+theorem det_largeH (hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : ℕ)
     (hbound : Det.HasHashQueryBoundDet adversary q) (hq : q < 2 ^ 127) (hK : keygenCost ≤ q)
     (wbar : ℝ≥0∞) (Lmax : ℕ) (hfair : FairS wbar ((q - keygenCost) / 2) Lmax)
     (hlam : lam Lmax 0 (q - keygenCost) ≤ (2 : ℝ≥0∞)⁻¹ ^ 201)
@@ -345,8 +346,8 @@ theorem det_largeH (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ)
     have hnat : ((q' : ℝ≥0∞) + signatureLimit) + ((q' + keygenCost : ℕ) : ℝ≥0∞) + 1 ≤
         2 * ((q' + keygenCost + signatureLimit : ℕ) : ℝ≥0∞) := by
       have hK1 : 1 ≤ keygenCost := by
-        have := Nat.two_pow_pos subtreeHeight
-        unfold keygenCost
+        have := Nat.two_pow_pos (keptHeight topLayer)
+        unfold keygenCost Prefix.keygenHashCost
         omega
       have h : (q' + signatureLimit) + (q' + keygenCost) + 1 ≤ 2 * (q' + keygenCost + signatureLimit) := by omega
       have h' : (((q' + signatureLimit) + (q' + keygenCost) + 1 : ℕ) : ℝ≥0∞) ≤
@@ -375,4 +376,4 @@ theorem det_largeH (hb : 0 < subtreeHeight) (adversary : Adversary) (q : ℕ)
 
 end ChainH
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

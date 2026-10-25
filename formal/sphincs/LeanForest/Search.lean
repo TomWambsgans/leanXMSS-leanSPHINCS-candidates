@@ -19,6 +19,8 @@ set_option maxRecDepth 10000
 
 namespace LeanForest.Completeness
 
+variable [Params]
+
 variable {β γ : Type}
 
 /-- A search: query `inputs t`, and stop at the first answer the decoder accepts, running `success` on what it decoded. Both of the signer's searches have this shape. -/
@@ -181,13 +183,13 @@ over the encoding inputs. -/
 open Concrete Seeded in
 /-- The counter search, as a search over its encoding inputs. -/
 theorem otsSignFrom_eq_searchLoop (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (seed : MasterSeed) (message : ForestKey) :
+    (leaf : LeafIndex) (seed : MasterSeed) (message : HashInput) :
     ∀ (n t : Nat),
       (otsSignFrom parameter lay tree leaf seed message n t
         : OracleComp HashSpec (Option (Counter × (ChainIndex → Digest))))
         = searchLoop
             (fun c => tweakableHashInput parameter (.encoding lay tree leaf)
-              (rootsPayload message ++ bytesLE 4 (BitVec.ofNat counterBits c)))
+              (message ++ bytesLE 4 (BitVec.ofNat counterBits c)))
             (fun out => TargetSum.decodeDigest (truncateHash out))
             (fun c encoding => do
               let secrets ← otsSecrets parameter lay tree leaf seed

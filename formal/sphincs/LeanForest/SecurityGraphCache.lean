@@ -10,6 +10,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.Graph
 
+variable [Params]
+
 open Concrete Completeness TargetAssignment
 attribute [local instance] Classical.propDecidable
 set_option backward.isDefEq.respectTransparency false

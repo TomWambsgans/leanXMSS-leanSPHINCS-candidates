@@ -1,8 +1,7 @@
 import LeanForest.BridgeClassify
 
-/-! Accepted-signature classification keeping the recovered forest key. An accepted signature is a
-canonical WOTS and tree opening at a retained leaf whose forest part recovers the canonical forest
-key, a tree hit, or a WOTS exception at a retained leaf. A recovered canonical forest key is a
+/-! The forest part of the classification that keeps the recovered forest key
+(`accepted_recovered_classification`, `BridgeClassify.lean`). A recovered canonical forest key is a
 structural match (WOTS-key leaf, subtree node, tree leaf or tree node), or every path is canonical
 and every opened chain value is canonical or walks into its chain through a match. A tree has no
 root hash and the key is not hashed: the key is the two level-3 nodes of every tree, and a tree leaf
@@ -12,6 +11,8 @@ element. -/
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.Forest
+
+variable [Params]
 open Concrete
 
 section Refined
@@ -127,113 +128,27 @@ end LeanForest.Security.Forest
 
 
 namespace LeanForest.Security.SignatureWitness
+
+variable [Params]
 open Concrete
 
 attribute [local irreducible] messageDigest forestRecover otsLeaf treeFold
   Seeded.forestKey Seeded.treeRoot Seeded.treePath chainWalk encode
 
-variable [Params]
 
-/-- The three WOTS exceptions at a retained leaf. -/
-def WotsException (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
-    (message : Message) (signature : Signature) : Prop :=
-  let leaf := index f pk message signature
-  let inputs := trace f pk message signature
-  ReferenceChoice.EncodingMatch f pk.parameter topLayer rootTree leaf
-    (canonicalForest f pk.parameter seed leaf) inputs ∨
-  Wots.LeafOutputMatch f pk.parameter topLayer rootTree leaf
-    (Completeness.otsSecret f pk.parameter topLayer rootTree leaf seed) inputs ∨
-  Wots.ChainException f pk.parameter topLayer rootTree leaf (chosenWord f pk.parameter seed leaf)
-    (Completeness.otsSecret f pk.parameter topLayer rootTree leaf seed) inputs
-
-/-- A canonical WOTS and tree opening at a retained leaf whose FORS part recovers the canonical
-FORS key. -/
-def RecoveredOpening (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
-    (message : Message) (signature : Signature) (referenceCounter : Counter) : Prop :=
-  let leaf := index f pk message signature
-  Landed pk.parameter leaf ∧
-    (signature.layers topLayer).counter = referenceCounter ∧
-    (signature.layers topLayer).chainValues = Wots.frontier f pk.parameter topLayer rootTree leaf
-      (chosenWord f pk.parameter seed leaf) (Completeness.otsSecret f pk.parameter topLayer rootTree leaf seed) ∧
-    (signature.layers topLayer).path = evalWithAnswerFn f
-      (Seeded.treePath pk.parameter topLayer rootTree seed leaf :
-        OracleComp HashSpec (Fin (layerHeight topLayer) → Digest)) ∧
-    verificationForest f pk message signature = canonicalForest f pk.parameter seed leaf
-
-/-- A recovered opening whose FORS part is the canonical opening is a canonical opening. -/
+/-- A recovered opening whose forest part is the canonical opening is a canonical opening. -/
 theorem RecoveredOpening.canonical {f : QueryImpl HashSpec Id} {pk : PublicKey} {seed : MasterSeed}
-    {message : Message} {signature : Signature} {counter : Counter}
+    {message : Message} {signature : Signature} {counter : Layer → Counter}
     (h : RecoveredOpening f pk seed message signature counter)
     (hopening : Forest.Opening f pk.parameter (index f pk message signature) seed
       (digestMarks (verificationDigest f pk message signature)) signature.forest) :
     CanonicalOpening f pk seed message signature counter
       (chosenWord f pk.parameter seed (index f pk message signature)) :=
-  ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, hopening⟩
-
-/-- **Recovered canonical FORS key, a tree hit, or a WOTS exception at a retained leaf.** -/
-theorem accepted_recovered_classification (f : QueryImpl HashSpec Id) (pk : PublicKey)
-    (seed : MasterSeed) (message : Message) (signature : Signature) (hb : 0 < subtreeHeight)
-    (hroot : pk.root = evalWithAnswerFn f
-      (Seeded.treeRoot pk.parameter topLayer rootTree seed : OracleComp HashSpec Digest))
-    (hverified : evalWithAnswerFn f
-      (Concrete.verify pk message signature : OracleComp HashSpec Bool) = true) :
-    (∃ counter, chosenCounter f pk.parameter seed (index f pk message signature) = some counter ∧
-      RecoveredOpening f pk seed message signature counter) ∨
-    TreeHit f pk seed message signature ∨
-    (Landed pk.parameter (index f pk message signature) ∧
-      WotsException f pk seed message signature) := by
-  obtain ⟨value, hleaf, hfold, hrunLeaf, hrunTree⟩ := verified_tree f pk message signature hverified
-  have hfold' := hfold.trans hroot
-  by_cases hland : Landed pk.parameter (index f pk message signature)
-  · rcases inside_subtree_treeFold_witness f pk.parameter topLayer rootTree seed
-        (index f pk message signature) (signaturePath signature topLayer) value hland hfold' with
-      hopen | hmatch
-    · have hcanonical : evalWithAnswerFn f (otsLeaf pk.parameter topLayer rootTree
-          (index f pk message signature) (verificationForest f pk message signature)
-          (signature.layers topLayer).counter (signature.layers topLayer).chainValues :
-          OracleComp HashSpec (Option Digest)) =
-        some (Wots.canonicalLeaf f pk.parameter topLayer rootTree (index f pk message signature)
-          (Completeness.otsSecret f pk.parameter topLayer rootTree (index f pk message signature) seed)) :=
-        hleaf.trans (congrArg some (hopen.1.trans (canonical_wots_leaf f pk.parameter seed _)))
-      obtain ⟨candidate, hencode⟩ : ∃ candidate, evalWithAnswerFn f
-          (encode pk.parameter topLayer rootTree (index f pk message signature)
-            (verificationForest f pk message signature) (signature.layers topLayer).counter :
-            OracleComp HashSpec (Option Encoding)) = some candidate := by
-        cases henc : evalWithAnswerFn f
-            (encode pk.parameter topLayer rootTree (index f pk message signature)
-              (verificationForest f pk message signature) (signature.layers topLayer).counter :
-              OracleComp HashSpec (Option Encoding)) with
-        | none =>
-            simp only [otsLeaf, evalWithAnswerFn_bind, henc, evalWithAnswerFn_pure,
-              reduceCtorEq] at hcanonical
-        | some candidate => exact ⟨candidate, rfl⟩
-      rcases ReferenceChoice.otsLeaf_classification f pk.parameter topLayer rootTree
-          (index f pk message signature) (canonicalForest f pk.parameter seed (index f pk message signature))
-          (Completeness.otsSecret f pk.parameter topLayer rootTree (index f pk message signature) seed)
-          (verificationForest f pk message signature) (signature.layers topLayer).counter
-          (signature.layers topLayer).chainValues candidate (trace f pk message signature)
-          hencode hrunLeaf hcanonical with
-        ⟨counter, hselected, hfors, hcounter, hvalues⟩ | hencoding | hleafMatch | hchain
-      · refine Or.inl ⟨counter, ?_, hland, hcounter, funext hvalues, ?_, hfors⟩
-        · simp only [chosenCounter, hselected, Option.map_some]
-        · funext level
-          have hp := hopen.2 level.val level.isLt
-          simpa only [index, signaturePath, canonicalTreePath, dif_pos level.isLt] using hp
-      · exact Or.inr (Or.inr ⟨hland, Or.inl hencoding⟩)
-      · exact Or.inr (Or.inr ⟨hland, Or.inr (Or.inl hleafMatch)⟩)
-      · exact Or.inr (Or.inr ⟨hland, Or.inr (Or.inr hchain)⟩)
-    · exact Or.inr (Or.inl ⟨value, hleaf, hrunTree,
-        Or.inl ⟨index f pk message signature, hland, hmatch⟩⟩)
-  · let reference := keptLeafEquiv pk.parameter ⟨0, Nat.two_pow_pos _⟩
-    rcases outside_witness_address f pk.parameter seed (index f pk message signature) reference.val
-        (signaturePath signature topLayer) value hb reference.property hland hfold' with
-      hmatch | hsurrogate
-    · exact Or.inr (Or.inl ⟨value, hleaf, hrunTree, Or.inl ⟨reference.val, reference.property, hmatch⟩⟩)
-    · exact Or.inr (Or.inl ⟨value, hleaf, hrunTree, Or.inr hsurrogate⟩)
+  ⟨h.1, h.2.1, hopening⟩
 
 /-- **The refined forest case.** -/
 theorem RecoveredOpening.forest_classification {f : QueryImpl HashSpec Id} {pk : PublicKey}
-    {seed : MasterSeed} {message : Message} {signature : Signature} {counter : Counter}
+    {seed : MasterSeed} {message : Message} {signature : Signature} {counter : Layer → Counter}
     (h : RecoveredOpening f pk seed message signature counter) :
     Forest.StructException f pk.parameter (index f pk message signature) seed
         (digestMarks (verificationDigest f pk message signature)) signature.forest ∨
@@ -249,6 +164,6 @@ theorem RecoveredOpening.forest_classification {f : QueryImpl HashSpec Id} {pk :
         Forest.ChainMatch f pk.parameter (index f pk message signature) seed c
           (digestMarks (verificationDigest f pk message signature) c) j ((signature.forest c).sub j).values i :=
   Forest.recovered_classification f pk.parameter (index f pk message signature) seed
-    (digestMarks (verificationDigest f pk message signature)) signature.forest h.2.2.2.2
+    (digestMarks (verificationDigest f pk message signature)) signature.forest h.2.2
 
 end LeanForest.Security.SignatureWitness

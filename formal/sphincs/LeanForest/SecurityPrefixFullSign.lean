@@ -1,12 +1,13 @@
-import LeanForest.SecurityPrefixSignLayer
+import LeanForest.SecurityPrefixSigning
 import LeanForest.SecurityPrefixExecution
 
-/-! Hash-only evaluation inside the private-sampling interpreter is deterministic, and the hash-only
-signature assembly that receives only the selected chain frontier (`publicFinishSign`). -/
+/-! Hash-only evaluation inside the private-sampling interpreter is deterministic. -/
 
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.Prefix
+
+variable [Params]
 open Concrete
 set_option backward.isDefEq.respectTransparency false
 
@@ -32,20 +33,5 @@ theorem fixedHashWorld_lift_hash (f : QueryImpl HashSpec Id) {α : Type}
         ← PMF.monad_pure_eq_pure, pure_bind]
       exact ih (f input)
 
-variable [Params]
-
-/-- The hash-only signature assembly receives only the selected chain frontier; the forest
-opening and all other chains are evaluated using the outside function. -/
-noncomputable def publicFinishSign (segment : Segment) (outside : QueryImpl HashSpec Id)
-    (secrets : Secrets) (frontier : Digest) (surrogates : Nat → Digest)
-    (seed : MasterSeed) (root : Digest) (message : Message) (randomness : Randomness) : Option Signature :=
-  let digest := evalWithAnswerFn outside
-    (messageDigest segment.parameter root message randomness : OracleComp HashSpec MessageDigest)
-  let index := digestIndex digest
-  let opening := evalWithAnswerFn outside (Seeded.forestOpen segment.parameter index (digestMarks digest) seed :
-    OracleComp HashSpec (Coord → CoordOpening))
-  let layer := publicLayer segment outside secrets frontier surrogates index topLayer
-    (evalWithAnswerFn outside (Seeded.forestKey segment.parameter index seed : OracleComp HashSpec ForestKey))
-  layer.map fun top => ⟨randomness, opening, Fin.cases top (fun i => Fin.elim0 i)⟩
 
 end LeanForest.Security.Prefix

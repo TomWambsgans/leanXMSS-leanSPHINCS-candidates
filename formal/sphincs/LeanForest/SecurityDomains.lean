@@ -6,6 +6,8 @@ derivation and verification addresses distinct in later random-oracle reductions
 
 namespace LeanForest.Security
 
+variable [Params]
+
 /-- The fixed-width prefix `P || A` determines its fields and parameter, with no restriction on
 payload. -/
 theorem fieldInput_injective {fields fields' : TweakFields}
@@ -93,38 +95,36 @@ theorem pairSlot_injective {c c' : Coord} {s s' : SuperIdx} {j j' : SubIdx} {a a
 theorem deriveFields_injective : Function.Injective keygenDomainFields := by
   intro left right h
   cases left <;> cases right <;>
-    simp only [keygenDomainFields, tweakFields, TweakFields.mk.injEq] at h
+    simp only [keygenDomainFields, tweakFields, treeFields, TweakFields.mk.injEq] at h
   all_goals try { simp at h; done }
   · rfl
   · rename_i lay tree leaf chain lay' tree' leaf' chain'
-    obtain ⟨_, _, hchain, hleaf⟩ := h
-    have hl : lay = lay' := Subsingleton.elim (α := Fin 1) _ _
-    have ht : tree = tree' := Subsingleton.elim (α := Fin 1) _ _
+    obtain ⟨_, _, hlayer, htree, hchain, hleaf⟩ := h
+    have hl : lay = lay' := layerByte_ofNat_injective hlayer
+    have ht : tree = tree' :=
+      Fin.ext (ofNat_inj_of_lt (tree_lt_two_pow_32 tree) (tree_lt_two_pow_32 tree') htree)
     have hc : chain = chain' := by
       apply Fin.ext
       exact ofNat_inj_of_lt (chain.isLt.trans_le (by decide))
         (chain'.isLt.trans_le (by decide)) hchain
-    have he : leaf = leaf' := by
-      apply Fin.ext
-      exact ofNat_inj_of_lt (leaf.isLt.trans_le (by decide))
-        (leaf'.isLt.trans_le (by decide)) hleaf
+    have he : leaf = leaf' :=
+      Fin.ext (ofNat_inj_of_lt (leaf_lt_two_pow_32 leaf) (leaf_lt_two_pow_32 leaf') hleaf)
     cases hl; cases ht; cases he; cases hc; rfl
   · rename_i index c s j a i index' c' s' j' a' i'
-    obtain ⟨_, _, hpos, hindex⟩ := h
-    have hidx : index = index' := by
-      apply Fin.ext
-      exact ofNat_inj_of_lt (index.isLt.trans_le (by decide))
-        (index'.isLt.trans_le (by decide)) hindex
+    obtain ⟨_, _, _, _, hpos, hindex⟩ := h
+    have hidx : index = index' :=
+      Fin.ext (ofNat_inj_of_lt (index_lt_two_pow_32 index) (index_lt_two_pow_32 index') hindex)
     have hp := ofNat_inj_of_lt ((pairSlot_lt c s j a i).trans_le (by decide))
       ((pairSlot_lt c' s' j' a' i').trans_le (by decide)) hpos
     obtain ⟨hc, hs, hj, ha, hi⟩ := pairSlot_injective hp
     subst hidx hc hs hj ha hi; rfl
   · rename_i level level'
-    obtain ⟨_, _, hlevel, _⟩ := h
+    obtain ⟨_, _, _, _, hlevel, _⟩ := h
     have hl : level = level' := by
       apply Fin.ext
-      exact ofNat_inj_of_lt (level.isLt.trans_le (by decide))
-        (level'.isLt.trans_le (by decide)) hlevel
+      have := totalHeight_le_28; have := maxLayerHeight_le
+      exact ofNat_inj_of_lt (level.isLt.trans_le (by omega))
+        (level'.isLt.trans_le (by omega)) hlevel
     cases hl; rfl
 
 /-- No two seed-derivation queries have the same input unless their full arguments agree. -/
@@ -138,7 +138,7 @@ theorem keygenInput_injective {parameter parameter' : PublicParameter}
 /-- Every verification-domain tag is distinct from every seed-derivation tag. -/
 theorem derive_tag_ne_hash_tag (derive : KeygenDomain) (hash : HashDomain) :
     (keygenDomainFields derive).tag ≠ (hashDomainFields hash).tag := by
-  cases derive <;> cases hash <;> simp [keygenDomainFields, hashDomainFields, tweakFields]
+  cases derive <;> cases hash <;> simp [keygenDomainFields, hashDomainFields, tweakFields, treeFields]
 
 /-- Seed derivation cannot be confused with any verifier hash input, even across parameters. -/
 theorem keygenInput_ne_hashInput (parameter parameter' : PublicParameter)

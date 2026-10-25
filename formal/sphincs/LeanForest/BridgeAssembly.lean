@@ -11,6 +11,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.Assembly
 
+variable [Params]
+
 open Completeness SeedCoupling Internalize Eager Short SeedModel Graph
 
 set_option backward.isDefEq.respectTransparency false
@@ -62,7 +64,6 @@ theorem evalDist_fixedRom_eq_fixedHashWorld (f : HashInput → HashOutput) {α :
 noncomputable local instance assemblyLabelsSampleable : SampleableType CanonicalGraphLabels :=
   graphLabelsSampleable
 
-variable [Params]
 
 /-- Canonical labels completed from independent answers and the boundary surrogates. -/
 noncomputable def labelsOf (material : Material) (answers : CanonicalGraphLabels) : CanonicalGraphLabels :=
@@ -78,7 +79,6 @@ noncomputable def preparedCache (material : Material) (seed : MasterSeed)
 
 /-! ### Every sample is a consistent fixed answer function -/
 
-omit [Params] in
 theorem extend_cached {cache : QueryCache HashSpec} {table : Eager.Table} {input : HashInput}
     {answer : HashOutput} (h : cache input = some answer) : extend cache table input = answer := by
   simp [extend, h]
@@ -159,7 +159,6 @@ noncomputable def sampleCoordinates (material : Material) (seed : MasterSeed)
     (GraphCorrectness.ftsSecrets (sampleFn material seed answers table) (parameter material) seed)
     (labelsOf material answers)
 
-omit [Params] in
 theorem fixedHashWorld_countHashQueries (f : QueryImpl HashSpec Id) {α : Type}
     (oa : OracleComp OracleWorld α) :
     simulateQ (Prefix.fixedHashWorld f) (countHashQueries oa) =

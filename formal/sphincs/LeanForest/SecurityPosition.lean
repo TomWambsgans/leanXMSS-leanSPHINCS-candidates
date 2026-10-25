@@ -11,6 +11,8 @@ algorithm reads. -/
 
 namespace LeanForest
 
+variable [Params]
+
 /-- The two natural-number fields of a tree node must fit their serialized slots: 24 bits for the
 level, 32 bits for the node index. -/
 def HashDomain.InRange : HashDomain → Prop
@@ -36,52 +38,55 @@ one value. -/
 theorem hashFields_injective {left right : HashDomain} (hl : HashDomain.InRange left)
     (hr : HashDomain.InRange right) (heq : hashDomainFields left = hashDomainFields right) : left = right := by
   cases left <;> cases right <;>
-    simp only [hashDomainFields, tweakFields, TweakFields.mk.injEq] at heq
+    simp only [hashDomainFields, tweakFields, treeFields, TweakFields.mk.injEq] at heq
   all_goals try { simp at heq; done }
   · rename_i lay tree leaf chain step lay' tree' leaf' chain' step'
-    obtain ⟨_, hstep, hchain, hleaf⟩ := heq
-    have he1 : lay = lay' := Subsingleton.elim (α := Fin 1) _ _
-    have he2 : tree = tree' := Subsingleton.elim (α := Fin 1) _ _
-    have he3 := fin_of_ofNat_eq (by decide) hleaf
+    obtain ⟨_, hstep, hlayer, htree, hchain, hleaf⟩ := heq
+    have he1 : lay = lay' := layerByte_ofNat_injective hlayer
+    have he2 : tree = tree' := Fin.ext (ofNat_inj_of_lt (tree_lt_two_pow_32 _) (tree_lt_two_pow_32 _) htree)
+    have he3 : leaf = leaf' := Fin.ext (ofNat_inj_of_lt (leaf_lt_two_pow_32 _) (leaf_lt_two_pow_32 _) hleaf)
     have he4 := fin_of_ofNat_eq (by decide) hchain
     have he5 := fin_of_ofNat_eq (by decide) hstep
     cases he1; cases he2; cases he3; cases he4; cases he5; rfl
   · rename_i lay tree leaf lay' tree' leaf'
-    obtain ⟨_, _, _, hleaf⟩ := heq
-    have he1 : lay = lay' := Subsingleton.elim (α := Fin 1) _ _
-    have he2 : tree = tree' := Subsingleton.elim (α := Fin 1) _ _
-    have he3 := fin_of_ofNat_eq (by decide) hleaf
+    obtain ⟨_, _, hlayer, htree, _, hleaf⟩ := heq
+    have he1 : lay = lay' := layerByte_ofNat_injective hlayer
+    have he2 : tree = tree' := Fin.ext (ofNat_inj_of_lt (tree_lt_two_pow_32 _) (tree_lt_two_pow_32 _) htree)
+    have he3 : leaf = leaf' := Fin.ext (ofNat_inj_of_lt (leaf_lt_two_pow_32 _) (leaf_lt_two_pow_32 _) hleaf)
     cases he1; cases he2; cases he3; rfl
   · rename_i lay tree level nodeIdx lay' tree' level' nodeIdx'
-    obtain ⟨_, _, hlevel, hindex⟩ := heq
-    have he1 : lay = lay' := Subsingleton.elim (α := Fin 1) _ _
-    have he2 : tree = tree' := Subsingleton.elim (α := Fin 1) _ _
+    obtain ⟨_, _, hlayer, htree, hlevel, hindex⟩ := heq
+    have he1 : lay = lay' := layerByte_ofNat_injective hlayer
+    have he2 : tree = tree' := Fin.ext (ofNat_inj_of_lt (tree_lt_two_pow_32 _) (tree_lt_two_pow_32 _) htree)
     have he3 := ofNat_inj_of_lt hl.1 hr.1 hlevel
     have he4 := ofNat_inj_of_lt hl.2 hr.2 hindex
     cases he1; cases he2; cases he3; cases he4; rfl
   · rename_i lay tree leaf lay' tree' leaf'
-    obtain ⟨_, _, _, hleaf⟩ := heq
-    have he1 : lay = lay' := Subsingleton.elim (α := Fin 1) _ _
-    have he2 : tree = tree' := Subsingleton.elim (α := Fin 1) _ _
-    have he3 := fin_of_ofNat_eq (by decide) hleaf
+    obtain ⟨_, _, hlayer, htree, _, hleaf⟩ := heq
+    have he1 : lay = lay' := layerByte_ofNat_injective hlayer
+    have he2 : tree = tree' := Fin.ext (ofNat_inj_of_lt (tree_lt_two_pow_32 _) (tree_lt_two_pow_32 _) htree)
+    have he3 : leaf = leaf' := Fin.ext (ofNat_inj_of_lt (leaf_lt_two_pow_32 _) (leaf_lt_two_pow_32 _) hleaf)
     cases he1; cases he2; cases he3; rfl
   · rename_i index c s j a i t index' c' s' j' a' i' t'
-    obtain ⟨_, hstep, hpos, hindex⟩ := heq
-    have hidx := fin_of_ofNat_eq (by decide) hindex
+    obtain ⟨_, hstep, _, _, hpos, hindex⟩ := heq
+    have hidx : index = index' :=
+      Fin.ext (ofNat_inj_of_lt (index_lt_two_pow_32 _) (index_lt_two_pow_32 _) hindex)
     have htt := fin_of_ofNat_eq (by decide) hstep
     have hp := nat_eq_of_ofNat (chainSlot_lt c s j a i) (chainSlot_lt c' s' j' a' i') (by decide) hpos
     obtain ⟨hc, hs, hj, ha, hi⟩ := chainSlot_injective hp
     subst hidx hc hs hj ha hi htt; rfl
   · rename_i index c s j a index' c' s' j' a'
-    obtain ⟨_, _, hpos, hindex⟩ := heq
-    have hidx := fin_of_ofNat_eq (by decide) hindex
+    obtain ⟨_, _, _, _, hpos, hindex⟩ := heq
+    have hidx : index = index' :=
+      Fin.ext (ofNat_inj_of_lt (index_lt_two_pow_32 _) (index_lt_two_pow_32 _) hindex)
     have hp := nat_eq_of_ofNat (childSlot_lt c s j a) (childSlot_lt c' s' j' a') (by decide) hpos
     obtain ⟨hsub, ha⟩ := childSlot_inj hp
     obtain ⟨hc, hs, hj⟩ := subSlot_inj hsub
     subst hidx hc hs hj ha; rfl
   · rename_i index c s j level node index' c' s' j' level' node'
-    obtain ⟨_, _, hpos, hindex⟩ := heq
-    have hidx := fin_of_ofNat_eq (by decide) hindex
+    obtain ⟨_, _, _, _, hpos, hindex⟩ := heq
+    have hidx : index = index' :=
+      Fin.ext (ofNat_inj_of_lt (index_lt_two_pow_32 _) (index_lt_two_pow_32 _) hindex)
     have hl := level.isLt; have hl' := level'.isLt
     have hn := node.isLt; have hn' := node'.isLt
     simp only [subHeight] at hl hl' hn hn'
@@ -93,8 +98,9 @@ theorem hashFields_injective {left right : HashDomain} (hl : HashDomain.InRange 
     obtain ⟨hc, hs, hj⟩ := subSlot_inj hslot
     subst hidx hc hs hj hnode hlv; rfl
   · rename_i index c s index' c' s'
-    obtain ⟨_, _, hpos, hindex⟩ := heq
-    have hidx := fin_of_ofNat_eq (by decide) hindex
+    obtain ⟨_, _, _, _, hpos, hindex⟩ := heq
+    have hidx : index = index' :=
+      Fin.ext (ofNat_inj_of_lt (index_lt_two_pow_32 _) (index_lt_two_pow_32 _) hindex)
     have := c.isLt; have := s.isLt; have := c'.isLt; have := s'.isLt
     simp only [forestCoords, topHeight] at *
     have hp := nat_eq_of_ofNat (bound := 136) (by omega) (by omega) (by decide) hpos
@@ -102,8 +108,9 @@ theorem hashFields_injective {left right : HashDomain} (hl : HashDomain.InRange 
     have hs : s = s' := Fin.ext (by omega)
     subst hidx hc hs; rfl
   · rename_i index c level node index' c' level' node'
-    obtain ⟨_, _, hpos, hindex⟩ := heq
-    have hidx := fin_of_ofNat_eq (by decide) hindex
+    obtain ⟨_, _, _, _, hpos, hindex⟩ := heq
+    have hidx : index = index' :=
+      Fin.ext (ofNat_inj_of_lt (index_lt_two_pow_32 _) (index_lt_two_pow_32 _) hindex)
     have := c.isLt; have := node.isLt; have := c'.isLt; have := node'.isLt
     have := level.isLt; have := level'.isLt
     simp only [forestCoords, topHeight] at *
@@ -112,8 +119,8 @@ theorem hashFields_injective {left right : HashDomain} (hl : HashDomain.InRange 
     have hn : node = node' := Fin.ext (by omega)
     have hl : level = level' := Fin.ext (by omega)
     subst hidx hc hn hl; rfl
-  · obtain ⟨_, _, _, hindex⟩ := heq
-    have he := fin_of_ofNat_eq (by decide) hindex
+  · obtain ⟨_, _, _, _, _, hindex⟩ := heq
+    have he : _ = _ := Fin.ext (ofNat_inj_of_lt (index_lt_two_pow_32 _) (index_lt_two_pow_32 _) hindex)
     cases he; rfl
   · rfl
 /-- A structural position of the honest key. A `node` at `level` is the node of actual level
@@ -171,10 +178,10 @@ theorem domain_inRange (p : Position) : HashDomain.InRange p.domain := by
   cases p with
   | node lay tree level nodeIdx =>
       have hlevel := level.isLt
-      have hnode := nodeIdx.isLt
-      simp only [maxLayerHeight] at hlevel hnode
+      have hmax := maxLayerHeight_le
+      have hh := totalHeight_le_28
       show level.val + 1 < 2 ^ 24 ∧ nodeIdx.val < 2 ^ 32
-      exact ⟨by omega, by omega⟩
+      exact ⟨by omega, leaf_lt_two_pow_32 nodeIdx⟩
   | _ => exact (trivial : True)
 
 theorem domain_injective {p q : Position} (h : p.domain = q.domain) : p = q := by

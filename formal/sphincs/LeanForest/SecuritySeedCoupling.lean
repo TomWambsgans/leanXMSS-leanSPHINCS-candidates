@@ -13,6 +13,8 @@ open OracleComp OracleSpec
 
 namespace LeanForest.Security.SeedCoupling
 
+variable [Params]
+
 def finHeadTailEquiv (α : Type) (count : Nat) :
     (α × (Fin count → α)) ≃ (Fin (count + 1) → α) where
   toFun pair := Fin.cases pair.1 pair.2
@@ -145,6 +147,8 @@ end LeanForest.Security.SeedCoupling
 
 namespace LeanForest.Security.SeedCoupling
 
+variable [Params]
+
 set_option backward.isDefEq.respectTransparency false
 
 variable (J R : Type) [Fintype J]
@@ -203,6 +207,8 @@ theorem evalDist_queryTable_fresh (inputs : J → D) (hinj : Function.Injective 
 end LeanForest.Security.SeedCoupling
 
 namespace LeanForest.Security.SeedCoupling
+
+variable [Params]
 open SeedModel Completeness
 
 set_option backward.isDefEq.respectTransparency false
@@ -619,7 +625,6 @@ theorem evalDist_seeded_prepared_counted {α : Type}
   simpa only [simulateQ_countHashQueries] using
     evalDist_seeded_prepared (fun seed => countHashQueries (next seed))
 
-variable [Params]
 
 /-- The actual SUF-CMA computation after its master-seed sample; honest algorithms are unchanged. -/
 noncomputable def gameAfterSeed (adversary : Adversary) (seed : MasterSeed) :

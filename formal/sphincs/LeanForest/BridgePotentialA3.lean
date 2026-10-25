@@ -8,6 +8,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.PotentialA
 
+variable [Params]
+
 open Concrete HiddenGraph HiddenDebt HiddenBridge EncodingCode
 
 set_option backward.isDefEq.respectTransparency false
@@ -92,7 +94,6 @@ theorem ofReal_le_two {ρ : ℝ} (h : ρ ≤ 2) : ENNReal.ofReal ρ ≤ 2 := by
   rw [show (2 : ℝ≥0∞) = ENNReal.ofReal 2 by simp]
   exact ENNReal.ofReal_le_ofReal h
 
-variable [Params]
 
 namespace Ctx
 
@@ -101,7 +102,7 @@ variable (K : Ctx)
 /-! ### The invariant -/
 
 /-- Coordinates known from the start with fixed values: the chain values at and above the
-prepared word of a landed leaf, and the tops of the forest chains. -/
+prepared word of a retained key, and the tops of the forest chains. -/
 def Anchor (c : Coordinate) : Prop :=
   AboveWord K.p K.R c ∨ ∃ index cc sp j a i, c = .fchain index cc sp j a i ⟨chainTop, by omega⟩
 

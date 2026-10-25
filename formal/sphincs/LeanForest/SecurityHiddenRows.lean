@@ -5,6 +5,8 @@ coordinate and expose one successor. Instantiating the parser later keeps all by
 explicit without making the kernel unfold concrete cryptographic types here. -/
 open OracleComp OracleSpec ENNReal
 namespace LeanForest.Security.HiddenRows
+
+variable [Params]
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 set_option maxHeartbeats 100000
@@ -46,7 +48,7 @@ theorem KnownAgrees.reveal {table : (ι → Digest)} {known : (HiddenReveal.Know
     exact h other value hvalue
 
 /-- Privileged disclosures are explicit operations, so honest calls can reveal a signature's
-frontier or FORS secret without being mistaken for an adversarial equality guess. -/
+frontier or forest secret without being mistaken for an adversarial equality guess. -/
 abbrev SourceSpec (D R ι : Type) := unifSpec + ((D →ₒ R) + (ι →ₒ Digest))
 
 /-- Execute the actual programmed oracle, stopping immediately before an ordinary query

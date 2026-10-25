@@ -12,6 +12,8 @@ the sibling may be a surrogate rather than the root of a constructed subtree.
 open OracleComp OracleSpec
 
 namespace LeanForest.Security
+
+variable [Params]
 open Concrete
 
 /-- Inputs on the actual deterministic execution path selected by `f`. -/
@@ -97,7 +99,7 @@ theorem orderedPayload_cross {bit bit' : Bool} (hne : bit ≠ bit')
   · exact nodePayload_injective h
   · exact (nodePayload_injective h).symm
 
-/-- The shared binary fold used by the XMSS tree and each FORS tree. -/
+/-- The shared binary fold used by the XMSS tree and each forest tree. -/
 def merkleFold (parameter : PublicParameter) (domain : Nat → Nat → HashDomain)
     (index : Nat) (path : Nat → Digest) : Nat → Digest → OracleComp HashSpec Digest
   | 0, value => pure value
@@ -267,7 +269,6 @@ theorem quotient_eq_above {index reference lower upper : Nat} (hlevels : lower �
   have hsplit : upper = lower + (upper - lower) := (Nat.add_sub_of_le hlevels).symm
   rw [hsplit, Nat.pow_add, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul, hquotient]
 
-variable [Params]
 
 /-- The actual authentication path of a retained leaf, extended by zero beyond its height. -/
 def canonicalTreePath (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -279,22 +280,21 @@ def canonicalTreePath (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
 
 theorem canonicalTreePath_surrogate (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (seed : MasterSeed) (leaf : LeafIndex) (level : Nat)
-    (hlow : subtreeHeight ≤ level) (hhigh : level < totalHeight) :
+    (hlow : keptHeight lay ≤ level) (hhigh : level < layerHeight lay) :
     canonicalTreePath f parameter lay tree seed leaf level =
       evalWithAnswerFn f (Seeded.surrogate parameter seed level : OracleComp HashSpec Digest) := by
-  have hheight : level < layerHeight lay := hhigh
-  rw [canonicalTreePath, dif_pos hheight, Completeness.eval_treePath,
+  rw [canonicalTreePath, dif_pos hhigh, Completeness.eval_treePath,
     if_neg (Nat.not_lt.mpr hlow)]
 
 theorem canonicalTreePath_root (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (seed : MasterSeed) (leaf : LeafIndex)
-    (hland : Landed parameter leaf) :
+    (hkept : Kept parameter lay leaf) :
     merkleValue f parameter (fun level index => .node lay tree level index) leaf.val
       (canonicalTreePath f parameter lay tree seed leaf)
-      (Completeness.node f parameter lay tree seed 0 leaf.val) totalHeight =
+      (Completeness.node f parameter lay tree seed 0 leaf.val) (layerHeight lay) =
         evalWithAnswerFn f (Seeded.treeRoot parameter lay tree seed : OracleComp HashSpec Digest) := by
   rw [merkleValue, merkleFold_treeFold]
-  apply Completeness.eval_treeFold_pruned_path f parameter lay tree seed leaf hland
+  apply Completeness.eval_treeFold_pruned_path f parameter lay tree seed leaf hkept
   intro level hlevel
   exact dif_pos hlevel
 
@@ -303,7 +303,7 @@ the target has no honest node-domain preimage: the key generated it by seed deri
 def SurrogatePreimage (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (seed : MasterSeed) (leaf : LeafIndex)
     (path : Nat → Digest) (value : Digest) (level : Nat) : Prop :=
-  subtreeHeight ≤ level ∧ 0 < level ∧
+  keptHeight lay ≤ level ∧ 0 < level ∧
   truncateHash (f (merkleInput f parameter (fun height index => .node lay tree height index)
     leaf.val path value (level - 1))) =
       evalWithAnswerFn f (Seeded.surrogate parameter seed level : OracleComp HashSpec Digest)
@@ -312,18 +312,18 @@ def SurrogatePreimage (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
 different queried input producing a canonical node value. -/
 theorem inside_subtree_treeFold_witness (f : QueryImpl HashSpec Id)
     (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (seed : MasterSeed)
-    (leaf : LeafIndex) (path : Nat → Digest) (value : Digest) (hland : Landed parameter leaf)
-    (hfold : evalWithAnswerFn f (treeFold parameter lay tree leaf path totalHeight value :
+    (leaf : LeafIndex) (path : Nat → Digest) (value : Digest) (hkept : Kept parameter lay leaf)
+    (hfold : evalWithAnswerFn f (treeFold parameter lay tree leaf path (layerHeight lay) value :
       OracleComp HashSpec Digest) =
       evalWithAnswerFn f (Seeded.treeRoot parameter lay tree seed : OracleComp HashSpec Digest)) :
     (value = Completeness.node f parameter lay tree seed 0 leaf.val ∧
-      ∀ level, level < totalHeight → path level = canonicalTreePath f parameter lay tree seed leaf level) ∨
-    ∃ level, level < totalHeight ∧
+      ∀ level, level < layerHeight lay → path level = canonicalTreePath f parameter lay tree seed leaf level) ∨
+    ∃ level, level < layerHeight lay ∧
       MerkleMatch f parameter (fun height index => .node lay tree height index)
         leaf.val leaf.val path (canonicalTreePath f parameter lay tree seed leaf)
         value (Completeness.node f parameter lay tree seed 0 leaf.val) level := by
   apply merkleFold_same_index
-  rw [canonicalTreePath_root f parameter lay tree seed leaf hland,
+  rw [canonicalTreePath_root f parameter lay tree seed leaf hkept,
     merkleValue, merkleFold_treeFold]
   exact hfold
 

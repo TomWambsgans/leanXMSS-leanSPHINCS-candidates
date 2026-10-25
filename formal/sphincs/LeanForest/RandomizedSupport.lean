@@ -11,6 +11,8 @@ open OracleComp OracleSpec
 
 namespace LeanForest.Completeness
 
+variable [Params]
+
 open Concrete
 
 /-- A lazy-oracle query records its answer and preserves all previous answers. -/
@@ -63,7 +65,6 @@ theorem hash_support_cache_le {α : Type} (oa : OracleComp HashSpec α)
   obtain ⟨f, hf⟩ := QueryCache.exists_agreesWithFn cache'
   exact (replay_hash_support oa cache a cache' hmem f hf).1
 
-variable [Params]
 
 attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Seeded.treeRoot
   Seeded.treeNode Seeded.subNode Seeded.topNode Seeded.spineNode Randomized.finishSign

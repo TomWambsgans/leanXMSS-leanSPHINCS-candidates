@@ -2,11 +2,13 @@ import LeanForest.BridgeClassify
 import LeanForest.BridgeSupport
 
 /-! Deterministic core: a winning non-stopped run of the rich program yields a cached hit of
-a fixed target or a covered FORS digest. -/
+a fixed target or a covered forest digest. -/
 
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.HiddenBridge
+
+variable [Params]
 
 open Concrete Completeness Graph GraphCorrectness TargetAssignment HiddenGraph Assembly SeedModel Reduce Eager
 
@@ -14,13 +16,11 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### The honest counter is the canonical one -/
 
-omit [Params] in
 theorem otsSignFrom_firstEncoding (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (seed : MasterSeed) (message : ForestKey) :
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (seed : MasterSeed) (message : HashInput) :
     ∀ (attempts start : Nat) {counter : Counter} {values : ChainIndex → Digest},
       evalWithAnswerFn f (Seeded.otsSignFrom parameter lay tree leaf seed message attempts start
           : OracleComp HashSpec (Option (Counter × (ChainIndex → Digest)))) = some (counter, values) →
@@ -47,23 +47,20 @@ theorem otsSignFrom_firstEncoding (f : QueryImpl HashSpec Id) (parameter : Publi
 theorem honest_counter (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (message : Message)
     (randomness : Randomness) (signature : Signature)
     (hland : Landed sk.parameter (digestIndex (Completeness.digestValue f sk message randomness)))
-    (hsign : evalWithAnswerFn f (Randomized.finishSign sk message randomness) = some signature) :
+    (hsign : evalWithAnswerFn f (Randomized.finishSign sk message randomness) = some signature)
+    (lay : Layer) :
     SignatureWitness.chosenCounter f sk.parameter sk.seed
-      (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) =
-        some (signature.layers topLayer).counter := by
+      (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) lay =
+        some (signature.layers lay).counter := by
   obtain ⟨-, -, hlayers⟩ := Completeness.finishSign_spec f sk message randomness hland hsign
-  obtain ⟨hots, -⟩ := Completeness.signLayer_spec f sk _ topLayer (hlayers topLayer)
-  simp only [Completeness.treeIndexAt_eq, Completeness.leafIndexAt_eq] at hots
-  obtain ⟨word, hword⟩ := otsSignFrom_firstEncoding f sk.parameter topLayer rootTree _ sk.seed _
+  obtain ⟨hots, -⟩ := Completeness.signLayer_spec f sk _ lay (hlayers lay)
+  obtain ⟨word, hword⟩ := otsSignFrom_firstEncoding f sk.parameter lay _ _ sk.seed _
     encodingAttemptLimit 0 hots
   have hindex : SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature =
       digestIndex (Completeness.digestValue f sk message signature.randomness) := rfl
   rw [hindex]
   simp only [SignatureWitness.chosenCounter, ReferenceChoice.selection]
-  rw [show SignatureWitness.canonicalForest f sk.parameter sk.seed
-      (digestIndex (Completeness.digestValue f sk message signature.randomness)) =
-    Completeness.layerMessageValue f sk
-      (digestIndex (Completeness.digestValue f sk message signature.randomness)) topLayer from rfl, hword]
+  rw [SignatureWitness.canonicalMessage_eq, hword]
   rfl
 
 /-! ### The fixed comparison-world events -/
@@ -81,14 +78,14 @@ noncomputable def answersT (table : HiddenGraph.Table) : CanonicalGraphLabels :=
   splitAnswers highs remaining (mix (truncateHash parameterOutput) fixed table)
 
 /-- Encoding targets fixed by the preparation's search results. -/
-noncomputable def encTable (parameter : PublicParameter) (forsKey : Index → ForestKey)
-    (results : Index → Option (Counter × Encoding)) : TargetAssignment.Table := fun fields =>
-  (encodingAt fields).map fun leaf =>
-    ⟨(results leaf).map (fun pair => Wots.encodingInput parameter topLayer rootTree leaf (forsKey leaf) pair.1),
-      Completeness.pack (((results leaf).map Prod.snd).getD ReferenceChoice.dummyWord)⟩
+noncomputable def encTable (parameter : PublicParameter) (message : OtsKey → HashInput)
+    (results : OtsKey → Option (Counter × Encoding)) : TargetAssignment.Table := fun fields =>
+  (encodingAt fields).map fun key =>
+    ⟨(results key).map (fun pair => Wots.encodingInput parameter key.1 key.2.1 key.2.2 (message key) pair.1),
+      Completeness.pack (((results key).map Prod.snd).getD ReferenceChoice.dummyWord)⟩
 
 /-- All fixed targets of one sample, hidden table and preparation. -/
-noncomputable def compTable (table : HiddenGraph.Table) (results : Index → Option (Counter × Encoding)) :
+noncomputable def compTable (table : HiddenGraph.Table) (results : OtsKey → Option (Counter × Encoding)) :
     TargetAssignment.Table := fun fields =>
   match positionAt fields with
   | some _ => referenceTable (truncateHash parameterOutput)
@@ -100,7 +97,7 @@ noncomputable def compTable (table : HiddenGraph.Table) (results : Index → Opt
       (labelsOf (materialT parameterOutput fixed highs remaining table)
         (answersT parameterOutput fixed highs remaining table)) fields
   | none => encTable (truncateHash parameterOutput)
-      (sampleData parameterOutput fixed highs remaining).forestKey results fields
+      (keyMessages (sampleData parameterOutput fixed highs remaining)) results fields
 
 end Events
 
@@ -175,7 +172,6 @@ theorem sampleFn_answer (table : HiddenGraph.Table)
 
 end Aux
 
-omit [Params] in
 /-- The hidden-row oracle over the structural cache and a table read off a final cache is the
 final-cache oracle, on every short input. -/
 theorem answer_extend_final {A : Type} (model : HiddenRows.Model HashInput HashOutput A HiddenGraph.Coordinate)
@@ -215,22 +211,22 @@ theorem answer_extend_final {A : Type} (model : HiddenRows.Model HashInput HashO
           cases hq
           exact absurd hmatch' hmatch
 
-omit [Params] in
-/-- Preparation facts: the structural cache persists, and every leaf's encoding search result is
+/-- Preparation facts: the structural cache persists, and every key's encoding search result is
 the one recorded, for any function agreeing with the prepared cache. -/
-theorem preparation_support (parameter : PublicParameter) (forsKey : Index → ForestKey)
-    (base : QueryCache HashSpec) (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
-    (hprepared : prepared ∈ support ((simulateQ randomOracle (searchAll parameter forsKey)).run base))
+theorem preparation_support (parameter : PublicParameter) (message : OtsKey → HashInput)
+    (base : QueryCache HashSpec) (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (hprepared : prepared ∈ support ((simulateQ randomOracle (searchAll parameter message)).run base))
     (f : QueryImpl HashSpec Id) (hf : prepared.2.AgreesWithFn f) :
-    base ≤ prepared.2 ∧ ∀ leaf, Prefix.firstEncoding f parameter topLayer rootTree leaf (forsKey leaf)
-      encodingAttemptLimit 0 = prepared.1 leaf := by
+    base ≤ prepared.2 ∧ ∀ key : OtsKey, Prefix.firstEncoding f parameter key.1 key.2.1 key.2.2 (message key)
+      encodingAttemptLimit 0 = prepared.1 key := by
   obtain ⟨hle, heval⟩ := replay_hash_support _ base prepared.1 prepared.2 hprepared f hf
-  refine ⟨hle, fun leaf => ?_⟩
-  rw [← heval, searchAll, eval_sequenceFin, ← ReferenceChoice.eval_search]
+  refine ⟨hle, fun key => ?_⟩
+  rw [← heval, searchAll]
+  simp only [evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_sequenceFin]
+  rw [← ReferenceChoice.eval_search]
 
 /-! ### Runs: short entries, cost, seed choice and support transfer -/
 
-omit [Params] in
 theorem OnlyC.withReveals {α : Type} {computation : OracleComp GraphView.CostSpec α}
     (h : OnlyC computation) : OnlyC (withReveals computation) := by
   induction computation using OracleComp.inductionOn with
@@ -240,7 +236,6 @@ theorem OnlyC.withReveals {α : Type} {computation : OracleComp GraphView.CostSp
       rw [withReveals_query_bind']
       exact OnlyC.bind (OnlyC.query hinput) (fun value => OnlyC.map _ (ih value (hnext value)))
 
-omit [Params] in
 theorem costRun_entries_short {α : Type} (f : HashInput → HashOutput) (table : HiddenGraph.Table)
     (computation : OracleComp GraphView.CostSpec α) (h : OnlyC computation)
     (result : α × List (HiddenCost.Entry HashInput)) (hresult : result ∈ support (Stop.costRun f table computation)) :
@@ -265,7 +260,6 @@ theorem costRun_entries_short {α : Type} (f : HashInput → HashOutput) (table 
         exact hinput hlong
       · exact ih answer (hnext answer) tail htail bytes hrest
 
-omit [Params] in
 theorem costRun_withReveals_cap_cost {α : Type} (f : HashInput → HashOutput) (table : HiddenGraph.Table)
     (computation : OracleComp GraphView.CostSpec α) (budget : Nat)
     (result : (Option α × List HiddenGraph.Coordinate) × List (HiddenCost.Entry HashInput))
@@ -293,7 +287,6 @@ theorem costRun_withReveals_cap_cost {α : Type} (f : HashInput → HashOutput) 
         subst result
         simp [HiddenCost.traceCost]
 
-omit [Params] in
 theorem ordinary_length_le_cost (entries : List (HiddenCost.Entry HashInput)) :
     (entries.filterMap fun entry => match entry with
       | .inl input => some input
@@ -310,7 +303,6 @@ theorem ordinary_length_le_cost (entries : List (HiddenCost.Entry HashInput)) :
           simp only [List.filterMap_cons, HiddenCost.traceCost, List.map_cons, List.sum_cons] at ih ⊢
           omega
 
-omit [Params] in
 /-- A seed named by none of fewer than 2^256 inputs. -/
 theorem exists_seed_avoiding (inputs : List HashInput) (hlength : inputs.length < 2 ^ 256) :
     ∃ seed : MasterSeed, ∀ input ∈ inputs, ¬SeedGuess.SeedHit input seed := by
@@ -327,7 +319,6 @@ theorem exists_seed_avoiding (inputs : List HashInput) (hlength : inputs.length 
   simp only [named, List.mem_toFinset, List.mem_filterMap]
   exact ⟨input, hinput, hparse⟩
 
-omit [Params] in
 /-- A fixed-function run depends only on the function at its recorded ordinary inputs. -/
 theorem costRun_support_congr {α : Type} (f g : HashInput → HashOutput) (table : HiddenGraph.Table)
     (computation : OracleComp GraphView.CostSpec α) (result : α × List (HiddenCost.Entry HashInput))
@@ -392,15 +383,15 @@ theorem reach_fchain (parameterOutput : HashOutput) (highs : CoordinateHighs) (f
           · exact Or.inr ⟨q, by simp only at hq ⊢; omega, hmem⟩
 
 theorem reach_chain (parameterOutput : HashOutput) (highs : CoordinateHighs) (fixed : HiddenGraph.Table)
-    (reveals : List Coordinate) (leaf : LeafIndex) (hland : Landed (truncateHash parameterOutput) leaf)
-    (word : Encoding)
+    (reveals : List Coordinate) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (hactive : PrunedGraph.KeyActive (truncateHash parameterOutput) lay tree leaf) (word : Encoding)
     (hreveals : ∀ (chain : ChainIndex) (position : Digit),
-      Coordinate.chain topLayer rootTree leaf chain position ∈ reveals → (word chain).val ≤ position.val)
+      Coordinate.chain lay tree leaf chain position ∈ reveals → (word chain).val ≤ position.val)
     (coordinate : Coordinate)
     (h : Reach (sampleModel parameterOutput highs) (knownOf (truncateHash parameterOutput) fixed)
       reveals coordinate) :
     ∀ (chain : ChainIndex) (position : Digit),
-      coordinate = .chain topLayer rootTree leaf chain position → (word chain).val ≤ position.val := by
+      coordinate = .chain lay tree leaf chain position → (word chain).val ≤ position.val := by
   induction h with
   | known coordinate value hvalue =>
       intro chain position heq
@@ -409,7 +400,7 @@ theorem reach_chain (parameterOutput : HashOutput) (highs : CoordinateHighs) (fi
       · have := (word chain).isLt
         simp only [chainLength, winternitzBits] at this htop ⊢
         omega
-      · exact (hout hland).elim
+      · exact (hout hactive).elim
   | reveal coordinate hmem =>
       intro chain position heq
       subst heq
@@ -417,7 +408,7 @@ theorem reach_chain (parameterOutput : HashOutput) (highs : CoordinateHighs) (fi
   | succ address _ ih =>
       intro chain position heq
       cases address with
-      | chain lay tree leaf' chainIdx step =>
+      | chain lay' tree' leaf' chainIdx step =>
           simp only [sampleModel, rowModel, Address.outputCoordinate, Coordinate.chain.injEq] at heq
           obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := heq
           have hprev := ih chainIdx ⟨step.val, by have := step.isLt; omega⟩ rfl
@@ -428,9 +419,8 @@ theorem reach_chain (parameterOutput : HashOutput) (highs : CoordinateHighs) (fi
 
 /-! ### Small helpers -/
 
-omit [Params] in
 theorem firstEncoding_congr (f g : QueryImpl HashSpec Id) (parameter : PublicParameter) (lay : Layer)
-    (tree : TreeIndex) (leaf : LeafIndex) (message : ForestKey)
+    (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput)
     (h : ∀ counter : Counter, f (Wots.encodingInput parameter lay tree leaf message counter) =
       g (Wots.encodingInput parameter lay tree leaf message counter)) :
     ∀ attempts start, Prefix.firstEncoding f parameter lay tree leaf message attempts start =
@@ -440,8 +430,8 @@ theorem firstEncoding_congr (f g : QueryImpl HashSpec Id) (parameter : PublicPar
         evalWithAnswerFn g (encode parameter lay tree leaf message counter : OracleComp HashSpec (Option Encoding)) := by
     intro counter
     simp only [encode, evalWithAnswerFn_bind, eval_tweakableHash, evalWithAnswerFn_pure]
-    rw [show f (tweakableHashInput parameter (.encoding lay tree leaf) (rootsPayload message ++ bytesLE 4 counter)) =
-      g (tweakableHashInput parameter (.encoding lay tree leaf) (rootsPayload message ++ bytesLE 4 counter)) from
+    rw [show f (tweakableHashInput parameter (.encoding lay tree leaf) (message ++ bytesLE 4 counter)) =
+      g (tweakableHashInput parameter (.encoding lay tree leaf) (message ++ bytesLE 4 counter)) from
       h counter]
   intro attempts
   induction attempts with
@@ -450,7 +440,6 @@ theorem firstEncoding_congr (f g : QueryImpl HashSpec Id) (parameter : PublicPar
       intro start
       simp only [Prefix.firstEncoding, hencode, ih]
 
-omit [Params] in
 theorem digestInputs_mem (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) :
     tweakableHashInput pk.parameter .message
@@ -512,7 +501,7 @@ theorem canonicalRow_input (address : Address) :
 
 include htable in
 /-- A queried input with a nonempty target set is not a canonical row input. -/
-theorem not_canonicalRow_of_target (results : Index → Option (Counter × Encoding)) (input : HashInput)
+theorem not_canonicalRow_of_target (results : OtsKey → Option (Counter × Encoding)) (input : HashInput)
     (hhit : (targets (truncateHash parameterOutput)
       (compTable parameterOutput fixed highs remaining table results) input).Nonempty) :
     ∀ query, (sampleModel parameterOutput highs).parse input = some query →
@@ -544,7 +533,6 @@ end Sample
 
 /-! ### Unparsed and noncanonical inputs read the final cache -/
 
-omit [Params] in
 theorem parse_tweakable_none (parameter : PublicParameter) (active : Address → Prop) (domain : HashDomain)
     (payload : HashInput) (hdomain : ∀ address : Address, address.position.domain ≠ domain)
     (hrange : domain.InRange) :
@@ -569,9 +557,9 @@ theorem finalFn_unparsed (parameterOutput : HashOutput) (highs : CoordinateHighs
       rw [if_neg (hnot query hparse)]
 
 theorem encoding_not_row (parameterOutput : HashOutput) (highs : CoordinateHighs) (table : HiddenGraph.Table)
-    (leaf : LeafIndex) (message : ForestKey) (counter : Counter) :
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput) (counter : Counter) :
     ∀ query, (sampleModel parameterOutput highs).parse
-      (Wots.encodingInput (truncateHash parameterOutput) topLayer rootTree leaf message counter) = some query →
+      (Wots.encodingInput (truncateHash parameterOutput) lay tree leaf message counter) = some query →
       ¬query.2 = table ((sampleModel parameterOutput highs).incoming query.1) := by
   intro query hparse
   rw [sampleModel_parse, Wots.encodingInput, parse_tweakable_none _ _ _ _
@@ -588,7 +576,6 @@ theorem message_not_row (parameterOutput : HashOutput) (highs : CoordinateHighs)
     (fun address => by cases address <;> simp [Address.position, Position.domain]) (by trivial)] at hparse
   cases hparse
 
-omit [Params] in
 theorem tweakable_not_seedHit (parameter : PublicParameter) (domain : HashDomain) (payload : HashInput)
     (seed : MasterSeed) : ¬SeedGuess.SeedHit (tweakableHashInput parameter domain payload) seed := by
   rintro ⟨parameter', derive, heq⟩
@@ -597,12 +584,10 @@ theorem tweakable_not_seedHit (parameter : PublicParameter) (domain : HashDomain
 /-- The consistent preparation's targets are the sample's fixed targets. -/
 theorem fullTable_eq (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
     (remaining : RemainingOutputs) (table : HiddenGraph.Table)
-    (results : Index → Option (Counter × Encoding)) (f : QueryImpl HashSpec Id) (seed : MasterSeed)
+    (results : OtsKey → Option (Counter × Encoding)) (f : QueryImpl HashSpec Id) (seed : MasterSeed)
     (hagreement : SeedModel.PreparedAgreement f seed (materialT parameterOutput fixed highs remaining table))
-    (hfors : ∀ leaf : Index, SignatureWitness.canonicalForest f (truncateHash parameterOutput) seed leaf =
-      (sampleData parameterOutput fixed highs remaining).forestKey leaf)
-    (hselection : ∀ leaf : Index, ReferenceChoice.selection f (truncateHash parameterOutput) topLayer
-      rootTree leaf ((sampleData parameterOutput fixed highs remaining).forestKey leaf) = results leaf) :
+    (hselection : ∀ key : OtsKey, ReferenceChoice.selection f (truncateHash parameterOutput) key.1 key.2.1
+      key.2.2 (keyMessages (sampleData parameterOutput fixed highs remaining) key) = results key) :
     fullTable f (truncateHash parameterOutput) seed
         (labelsOf (materialT parameterOutput fixed highs remaining table)
           (answersT parameterOutput fixed highs remaining table)) =
@@ -626,29 +611,33 @@ theorem fullTable_eq (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) 
   | none =>
       dsimp only
       unfold encodingEntry encTable
-      refine congrArg (fun g => Option.map g (encodingAt fields)) (funext fun leaf => ?_)
-      rw [hfors leaf]
+      refine congrArg (fun g => Option.map g (encodingAt fields)) (funext fun key => ?_)
+      have hmsg : labelMessage (labelsOf (materialT parameterOutput fixed highs remaining table)
+          (answersT parameterOutput fixed highs remaining table)) key =
+          keyMessages (sampleData parameterOutput fixed highs remaining) key := by
+        unfold labelMessage keyMessages
+        rw [publicData_T]
+      rw [hmsg]
       unfold ReferenceChoice.exemptInput ReferenceChoice.target ReferenceChoice.word
-      rw [hselection leaf]
+      rw [hselection key]
 
-omit [Params] in
-theorem selection_of_agree (parameter : PublicParameter) (forsKey : Index → ForestKey)
-    (results : Index → Option (Counter × Encoding)) (f g : QueryImpl HashSpec Id)
-    (hsearch : ∀ leaf, Prefix.firstEncoding g parameter topLayer rootTree leaf (forsKey leaf)
-      encodingAttemptLimit 0 = results leaf)
-    (hagree : ∀ (leaf : Index) (counter : Counter),
-      f (Wots.encodingInput parameter topLayer rootTree leaf (forsKey leaf) counter) =
-        g (Wots.encodingInput parameter topLayer rootTree leaf (forsKey leaf) counter))
-    (leaf : Index) :
-    ReferenceChoice.selection f parameter topLayer rootTree leaf (forsKey leaf) = results leaf := by
+theorem selection_of_agree (parameter : PublicParameter) (message : OtsKey → HashInput)
+    (results : OtsKey → Option (Counter × Encoding)) (f g : QueryImpl HashSpec Id)
+    (hsearch : ∀ key : OtsKey, Prefix.firstEncoding g parameter key.1 key.2.1 key.2.2 (message key)
+      encodingAttemptLimit 0 = results key)
+    (hagree : ∀ (key : OtsKey) (counter : Counter),
+      f (Wots.encodingInput parameter key.1 key.2.1 key.2.2 (message key) counter) =
+        g (Wots.encodingInput parameter key.1 key.2.1 key.2.2 (message key) counter))
+    (key : OtsKey) :
+    ReferenceChoice.selection f parameter key.1 key.2.1 key.2.2 (message key) = results key := by
   unfold ReferenceChoice.selection
-  rw [firstEncoding_congr f g _ _ _ _ _ (hagree leaf), hsearch leaf]
+  rw [firstEncoding_congr f g _ _ _ _ _ (hagree key), hsearch key]
 
 /-- A target hit at a recorded, non-canonical query is a cached hit of a fixed target. -/
 theorem cached_hit (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
     (remaining : RemainingOutputs) (table : HiddenGraph.Table)
     (htable : tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table)
-    (results : Index → Option (Counter × Encoding)) (cacheF : QueryCache HashSpec)
+    (results : OtsKey → Option (Counter × Encoding)) (cacheF : QueryCache HashSpec)
     (f : QueryImpl HashSpec Id) (entries : List (HiddenCost.Entry HashInput))
     (hagree : ∀ input, Sum.inl input ∈ entries →
       f input = finalFn (sampleModel parameterOutput highs) table cacheF input)
@@ -695,50 +684,70 @@ theorem queried_chain_reach (parameterOutput : HashOutput) (highs : CoordinateHi
     (fixed table : HiddenGraph.Table) (reveals : List Coordinate) (entries : List (HiddenCost.Entry HashInput))
     (hguess : NoHiddenGuess (sampleModel parameterOutput highs) table
       (knownOf (truncateHash parameterOutput) fixed) reveals entries)
-    (leaf : LeafIndex) (hland : Landed (truncateHash parameterOutput) leaf) (word : Encoding)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (hactive : PrunedGraph.KeyActive (truncateHash parameterOutput) lay tree leaf) (word : Encoding)
     (hreveals : ∀ (chain : ChainIndex) (position : Digit),
-      Coordinate.chain topLayer rootTree leaf chain position ∈ reveals → (word chain).val ≤ position.val)
+      Coordinate.chain lay tree leaf chain position ∈ reveals → (word chain).val ≤ position.val)
     (chain : ChainIndex) (step : ChainStep)
-    (hmem : Sum.inl (tweakableHashInput (truncateHash parameterOutput) (.chain topLayer rootTree leaf chain step)
-      (bytesLE 16 (table (.chain topLayer rootTree leaf chain ⟨step.val, by have := step.isLt; omega⟩)))) ∈
+    (hmem : Sum.inl (tweakableHashInput (truncateHash parameterOutput) (.chain lay tree leaf chain step)
+      (bytesLE 16 (table (.chain lay tree leaf chain ⟨step.val, by have := step.isLt; omega⟩)))) ∈
         entries) :
     (word chain).val ≤ step.val := by
   have hparse : (sampleModel parameterOutput highs).parse
-      (tweakableHashInput (truncateHash parameterOutput) (.chain topLayer rootTree leaf chain step)
-        (bytesLE 16 (table (.chain topLayer rootTree leaf chain ⟨step.val, by have := step.isLt; omega⟩)))) =
-      some (.chain topLayer rootTree leaf chain step,
-        table (.chain topLayer rootTree leaf chain ⟨step.val, by have := step.isLt; omega⟩)) := by
+      (tweakableHashInput (truncateHash parameterOutput) (.chain lay tree leaf chain step)
+        (bytesLE 16 (table (.chain lay tree leaf chain ⟨step.val, by have := step.isLt; omega⟩)))) =
+      some (.chain lay tree leaf chain step,
+        table (.chain lay tree leaf chain ⟨step.val, by have := step.isLt; omega⟩)) := by
     rw [sampleModel_parse]
-    exact parse_input _ _ (.chain topLayer rootTree leaf chain step, _) hland
+    exact parse_input _ _ (.chain lay tree leaf chain step, _) hactive
   have hreach := hguess _ hmem _ hparse (by rw [sampleModel_incoming]; rfl)
   rw [sampleModel_incoming] at hreach
-  exact reach_chain parameterOutput highs fixed reveals leaf hland word hreveals _ hreach chain _ rfl
+  exact reach_chain parameterOutput highs fixed reveals lay tree leaf hactive word hreveals _ hreach chain _ rfl
 
-/-- Every revealed root-tree chain value of a retained leaf is at that leaf's canonical word. -/
+theorem allSome_some {n : Nat} {α : Fin n → Type} {values : (i : Fin n) → Option (α i)}
+    {found : (i : Fin n) → α i} (h : allSome values = some found) (i : Fin n) :
+    values i = some (found i) := by
+  unfold allSome at h
+  split at h
+  · rename_i hall
+    cases h
+    exact (Option.some_get (hall i)).symm
+  · cases h
+
+/-- Every revealed chain value of a retained key is at that key's canonical word. -/
 theorem revealed_chain_word (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed)
     (data : GraphView.PublicData) (log : QueryLog SigningSpec) (reveals : List Coordinate)
     (hgood : LogGood f parameter seed data log reveals)
-    (hfors : ∀ leaf : Index, SignatureWitness.canonicalForest f parameter seed leaf = data.forestKey leaf)
-    (leaf : Index) (chain : ChainIndex) (position : Digit)
-    (hmem : Coordinate.chain topLayer rootTree leaf chain position ∈ reveals) :
-    (SignatureWitness.chosenWord f parameter seed leaf chain).val ≤ position.val := by
+    (hdata : GraphView.DataCorrect f parameter seed data)
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (hactive : PrunedGraph.KeyActive parameter lay tree leaf) (chain : ChainIndex) (position : Digit)
+    (hmem : Coordinate.chain lay tree leaf chain position ∈ reveals) :
+    (ReferenceChoice.word f parameter lay tree leaf
+      (SignatureWitness.keyMessageValue f parameter seed (lay, tree, leaf)) chain).val ≤ position.val := by
   obtain ⟨entry, -, signature, -, hcoordinate⟩ := hgood.2 _ hmem
   unfold revealsOf at hcoordinate
   dsimp only at hcoordinate
-  generalize hindex : digestIndex (evalWithAnswerFn f (messageDigest parameter data.root entry.1
+  generalize digestIndex (evalWithAnswerFn f (messageDigest parameter data.root entry.1
     signature.randomness : OracleComp HashSpec MessageDigest)) = index at hcoordinate
-  cases hfound : Prefix.firstEncoding f parameter topLayer rootTree index (data.forestKey index)
-      encodingAttemptLimit 0 with
+  cases hfound : GraphView.assembledEncodings f parameter data index with
   | none => rw [hfound] at hcoordinate; cases hcoordinate
-  | some pair =>
+  | some found =>
       rw [hfound] at hcoordinate
       rcases List.mem_append.mp hcoordinate with hchain | hfts
-      · obtain ⟨chain', hchain'⟩ := List.mem_ofFn.mp hchain
+      · unfold wotsReveals at hchain
+        obtain ⟨l, hl, hchain⟩ := List.mem_flatten.mp hchain
+        obtain ⟨lay', rfl⟩ := List.mem_ofFn.mp hl
+        obtain ⟨chain', hchain'⟩ := List.mem_ofFn.mp hchain
         simp only [Coordinate.chain.injEq] at hchain'
-        obtain ⟨-, -, rfl, rfl, rfl⟩ := hchain'
-        have hword : SignatureWitness.chosenWord f parameter seed index = pair.2 := by
-          unfold SignatureWitness.chosenWord ReferenceChoice.word ReferenceChoice.selection
-          rw [hfors, hfound]
+        obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := hchain'
+        have hlay := allSome_some hfound lay'
+        have hmsg := hdata.keyMessage lay' _ _ hactive
+        rw [hmsg] at hlay
+        have hword : ReferenceChoice.word f parameter lay' (treeIndexAt index lay') (leafIndexAt index lay')
+            (SignatureWitness.keyMessageValue f parameter seed
+              (lay', treeIndexAt index lay', leafIndexAt index lay')) = (found lay').2 := by
+          unfold ReferenceChoice.word ReferenceChoice.selection SignatureWitness.keyMessageValue
+          rw [hlay]
           rfl
         rw [hword]
       · obtain ⟨l, hl, hfts'⟩ := List.mem_flatten.mp hfts
@@ -751,9 +760,9 @@ theorem canonical_signed_eq (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) 
     (randomness : Randomness) (signature honest : Signature)
     (hland : Landed sk.parameter (digestIndex (Completeness.digestValue f sk message randomness)))
     (hfinish : evalWithAnswerFn f (Randomized.finishSign sk message randomness) = some honest)
-    (hrandomness : honest.randomness = signature.randomness) (counter : Counter)
-    (hchosen : SignatureWitness.chosenCounter f sk.parameter sk.seed
-      (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) = some counter)
+    (hrandomness : honest.randomness = signature.randomness) (counter : Layer → Counter)
+    (hchosen : ∀ lay, SignatureWitness.chosenCounter f sk.parameter sk.seed
+      (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) lay = some (counter lay))
     (hcanonical : SignatureWitness.CanonicalOpening f ⟨sk.root, sk.parameter⟩ sk.seed message signature counter
       (SignatureWitness.chosenWord f sk.parameter sk.seed
         (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature))) :
@@ -761,31 +770,41 @@ theorem canonical_signed_eq (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) 
   have hindex : SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message honest =
       SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature := by
     simp only [SignatureWitness.index, verificationDigest, hrandomness]
-  have hcounter := honest_counter f sk message randomness honest hland hfinish
-  rw [hindex, hchosen, Option.some.injEq] at hcounter
+  have hcounter : ∀ lay, (honest.layers lay).counter = counter lay := by
+    intro lay
+    have h := honest_counter f sk message randomness honest hland hfinish lay
+    rw [hindex, hchosen lay, Option.some.injEq] at h
+    exact h.symm
   obtain ⟨word, href, hhonest⟩ := SignatureWitness.canonical_of_finishSign f sk message randomness honest
     hland hfinish
   rw [hindex] at href
-  rw [← hcounter] at href hhonest
+  have hcounterFn : (fun lay => (honest.layers lay).counter) = counter := funext hcounter
+  rw [hcounterFn] at hhonest
   -- the honest word is the chosen word
-  obtain ⟨pair, hpair⟩ : ∃ pair, ReferenceChoice.selection f sk.parameter topLayer rootTree
-      (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature)
-      (SignatureWitness.canonicalForest f sk.parameter sk.seed
-        (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature)) = some pair := by
-    cases h : ReferenceChoice.selection f sk.parameter topLayer rootTree
-        (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature)
-        (SignatureWitness.canonicalForest f sk.parameter sk.seed
-          (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature)) with
-    | none => simp [SignatureWitness.chosenCounter, h] at hchosen
-    | some pair => exact ⟨pair, rfl⟩
-  have hpairCounter : pair.1 = counter := by
-    simpa [SignatureWitness.chosenCounter, hpair] using hchosen
-  have hencode := ReferenceChoice.firstEncoding_sound f sk.parameter topLayer rootTree _ _
-    encodingAttemptLimit 0 pair.1 pair.2 hpair
-  rw [hpairCounter] at hencode
   have hword : word = SignatureWitness.chosenWord f sk.parameter sk.seed
       (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) := by
-    have h := href.symm.trans hencode
+    funext lay
+    have hchosenLay := hchosen lay
+    obtain ⟨pair, hpair⟩ : ∃ pair, ReferenceChoice.selection f sk.parameter lay
+        (SignatureWitness.keyTree (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) lay)
+        (SignatureWitness.keyLeaf (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) lay)
+        (SignatureWitness.canonicalMessage f sk.parameter sk.seed
+          (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) lay) = some pair := by
+      cases h : ReferenceChoice.selection f sk.parameter lay
+          (SignatureWitness.keyTree (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) lay)
+          (SignatureWitness.keyLeaf (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) lay)
+          (SignatureWitness.canonicalMessage f sk.parameter sk.seed
+            (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) lay) with
+      | none => simp [SignatureWitness.chosenCounter, h] at hchosenLay
+      | some pair => exact ⟨pair, rfl⟩
+    have hpairCounter : pair.1 = counter lay := by
+      simpa [SignatureWitness.chosenCounter, hpair] using hchosenLay
+    have hencode := ReferenceChoice.firstEncoding_sound f sk.parameter lay _ _ _
+      encodingAttemptLimit 0 pair.1 pair.2 hpair
+    have href' := href lay
+    unfold SignatureWitness.ReferenceCertificate at href'
+    rw [hcounter lay, ← hpairCounter] at href'
+    have h := href'.symm.trans hencode
     rw [Option.some.injEq] at h
     rw [h]
     unfold SignatureWitness.chosenWord
@@ -827,13 +846,28 @@ theorem cachedDigest_eq (parameterOutput : HashOutput) (highs : CoordinateHighs)
 
 attribute [local irreducible] ReferenceChoice.selection encodingAttemptLimit
 
+/-- The label message of a retained key is its canonical message. -/
+theorem labelMessage_eq (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
+    (remaining : RemainingOutputs) (steps : Message → Randomness) (table : HiddenGraph.Table)
+    (f : QueryImpl HashSpec Id) (seed : MasterSeed)
+    (hdata : GraphView.DataCorrect f (truncateHash parameterOutput) seed
+      (sampleData parameterOutput fixed highs remaining steps))
+    (key : OtsKey) (hactive : PrunedGraph.KeyActive (truncateHash parameterOutput) key.1 key.2.1 key.2.2) :
+    labelMessage (labelsOf (materialT parameterOutput fixed highs remaining table)
+        (answersT parameterOutput fixed highs remaining table)) key =
+      SignatureWitness.keyMessageValue f (truncateHash parameterOutput) seed key := by
+  have h := hdata.keyMessage key.1 key.2.1 key.2.2 hactive
+  unfold labelMessage
+  rw [publicData_T]
+  exact h
+
 /-- **Case analysis.** For any answer function consistent with the sample and agreeing with the
-final cache on the run's queries, an accepted fresh forgery yields a cached target hit or FORS
+final cache on the run's queries, an accepted fresh forgery yields a cached target hit or forest
 coverage. -/
-theorem bad_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
+theorem bad_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
     (highs : CoordinateHighs) (remaining : RemainingOutputs) (steps : Message → Randomness) (table : HiddenGraph.Table)
     (htable : tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table)
-    (results : Index → Option (Counter × Encoding)) (cacheF : QueryCache HashSpec)
+    (results : OtsKey → Option (Counter × Encoding)) (cacheF : QueryCache HashSpec)
     (reveals : List Coordinate) (entries : List (HiddenCost.Entry HashInput))
     (f : QueryImpl HashSpec Id) (seed : MasterSeed)
     (hcons : GraphCorrectness.Consistent f (truncateHash parameterOutput) seed
@@ -845,8 +879,6 @@ theorem bad_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) 
     (hdata : GraphView.DataCorrect f (truncateHash parameterOutput) seed
       (sampleData parameterOutput fixed highs remaining steps))
     (hcoord : GraphView.CoordinatesCorrect f (truncateHash parameterOutput) seed table)
-    (hfors : ∀ leaf : Index, SignatureWitness.canonicalForest f (truncateHash parameterOutput) seed leaf =
-      (sampleData parameterOutput fixed highs remaining).forestKey leaf)
     (hfull : fullTable f (truncateHash parameterOutput) seed
         (labelsOf (materialT parameterOutput fixed highs remaining table)
           (answersT parameterOutput fixed highs remaining table)) =
@@ -882,7 +914,7 @@ theorem bad_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) 
       hcached input (htrace input hinput) hmem
   rcases SignatureWitness.accepted_full_classification f ⟨(sampleData parameterOutput fixed highs remaining).root,
       truncateHash parameterOutput⟩ seed forgery.message forgery.signature hb hdata.root hverify with
-    ⟨counter, hchosen, hcanon⟩ | htree | ⟨hland, hexc⟩
+    ⟨counter, hchosen, hcanon⟩ | ⟨j, -, htree⟩ | ⟨hland, hexc⟩
   · by_cases hsigned : ∃ entry ∈ log, ∃ honest, entry.2 = some honest ∧ entry.1 = forgery.message ∧
         honest.randomness = forgery.signature.randomness
     · exfalso
@@ -897,7 +929,7 @@ theorem bad_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) 
     · right
       have hmarks := funext (digestMarks_eq (verificationDigest f ⟨(sampleData parameterOutput fixed highs
         remaining).root, truncateHash parameterOutput⟩ forgery.message forgery.signature))
-      have hopen := hcanon.2.2.2.2
+      have hopen := hcanon.2.2
       have hrun := SignatureWitness.verification_forest_run f ⟨(sampleData parameterOutput fixed highs
         remaining).root, truncateHash parameterOutput⟩ forgery.message forgery.signature
       rw [hmarks] at hopen hrun
@@ -918,35 +950,48 @@ theorem bad_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) 
         omega
   · left
     obtain ⟨input, hinput, hmem⟩ := treeHit_hit f (truncateHash parameterOutput) seed _ hcons hbound _ rfl
-      forgery.message forgery.signature htree
+      forgery.message forgery.signature j htree
     exact hhit input hinput (graph_targets_subset _ _ _ _ _ hmem)
-  · rcases hexc with henc | hleafMatch | hchain | ⟨hforsExc, -⟩
+  · have hactive : ∀ lay : Layer, PrunedGraph.KeyActive (truncateHash parameterOutput) lay
+        (treeIndexAt (SignatureWitness.index f _ forgery.message forgery.signature) lay)
+        (leafIndexAt (SignatureWitness.index f _ forgery.message forgery.signature) lay) :=
+      fun lay => ⟨_, hland, rfl, rfl⟩
+    rcases hexc with ⟨lay, henc | hleafMatch | hchain⟩ | ⟨hforestExc, -⟩
     · left
-      obtain ⟨input, hinput, hmem⟩ := encodingMatch_hit f (truncateHash parameterOutput) seed _ _ _ henc
+      have hmsg := labelMessage_eq parameterOutput fixed highs remaining steps table f seed hdata
+        (keyAt (SignatureWitness.index f ⟨(sampleData parameterOutput fixed highs remaining).root,
+          truncateHash parameterOutput⟩ forgery.message forgery.signature) lay) (hactive lay)
+      obtain ⟨input, hinput, hmem⟩ := encodingMatch_hit f (truncateHash parameterOutput) seed
+        (labelsOf (materialT parameterOutput fixed highs remaining table)
+          (answersT parameterOutput fixed highs remaining table))
+        (keyAt (SignatureWitness.index f ⟨(sampleData parameterOutput fixed highs remaining).root,
+          truncateHash parameterOutput⟩ forgery.message forgery.signature) lay) _ (by rw [hmsg]; exact henc)
       exact hhit input hinput hmem
     · left
-      obtain ⟨input, hinput, hmem⟩ := leafOutput_hit f (truncateHash parameterOutput) seed _ hcons _ hland _
-        hleafMatch
+      obtain ⟨input, hinput, hmem⟩ := leafOutput_hit f (truncateHash parameterOutput) seed _ hcons _ _ _
+        (hactive lay) _ hleafMatch
       exact hhit input hinput (graph_targets_subset _ _ _ _ _ hmem)
     · rcases Wots.ChainException.hidden_or_output f _ _ _ _ _ _ hchain with
         ⟨chain, step, hlt, hmem⟩ | houtput
       · exfalso
-        have hvalue := hcoord.1 _ hland chain ⟨step.val, by have := step.isLt; omega⟩
+        have hvalue := hcoord.1 _ _ _ (hactive lay) chain ⟨step.val, by have := step.isLt; omega⟩
         rw [← hvalue] at hmem
-        have hle := queried_chain_reach parameterOutput highs fixed table reveals entries hguess _ hland
+        have hle := queried_chain_reach parameterOutput highs fixed table reveals entries hguess _ _ _
+          (hactive lay)
           (SignatureWitness.chosenWord f (truncateHash parameterOutput) seed
-            (SignatureWitness.index f _ forgery.message forgery.signature))
-          (fun chain position h => revealed_chain_word f _ seed _ log reveals hgood hfors _ chain position h)
+            (SignatureWitness.index f _ forgery.message forgery.signature) lay)
+          (fun chain position h => revealed_chain_word f _ seed _ log reveals hgood hdata _ _ _ (hactive lay)
+            chain position h)
           chain step (htrace _ hmem)
         dsimp only at hlt hle
         omega
       · left
-        obtain ⟨input, hinput, hmem⟩ := chainOutput_hit f (truncateHash parameterOutput) seed _ hcons _ hland _
-          houtput
+        obtain ⟨input, hinput, hmem⟩ := chainOutput_hit f (truncateHash parameterOutput) seed _ hcons _ _ _
+          (hactive lay) _ houtput
         exact hhit input hinput (graph_targets_subset _ _ _ _ _ hmem)
     · left
       obtain ⟨input, hinput, hmem⟩ := forestException_hit f (truncateHash parameterOutput) seed _ hcons _ _ _
-        hforsExc
+        hforestExc
       exact hhit input (SignatureWitness.verification_forest_run f _ forgery.message forgery.signature input hinput)
         (graph_targets_subset _ _ _ _ _ hmem)
 
@@ -954,7 +999,6 @@ theorem bad_of_accepted (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) 
 def preferCache (cache : QueryCache HashSpec) (f : QueryImpl HashSpec Id) : QueryImpl HashSpec Id :=
   fun input => (cache input).getD (f input)
 
-omit [Params] in
 theorem preferCache_agrees (cache : QueryCache HashSpec) (f : QueryImpl HashSpec Id) :
     cache.AgreesWithFn (preferCache cache f) := fun input answer h => by
   simp [preferCache, h]
@@ -964,11 +1008,12 @@ noncomputable def finalTable (parameterOutput : HashOutput) (highs : CoordinateH
     (table : HiddenGraph.Table) (cacheF : QueryCache HashSpec) : Eager.Table :=
   fun short => finalFn (sampleModel parameterOutput highs) table cacheF short.val
 
-omit [Params] in
-theorem encodingInput_short (parameter : PublicParameter) (leaf : Index) (key : ForestKey) (counter : Counter) :
-    Short.IsShort (Wots.encodingInput parameter topLayer rootTree leaf key counter) := by
+theorem encodingInput_short (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (message : HashInput) (hmessage : Short.ShortMessage message) (counter : Counter) :
+    Short.IsShort (Wots.encodingInput parameter lay tree leaf message counter) := by
+  unfold Short.ShortMessage at hmessage
   simp only [Wots.encodingInput, Short.IsShort, Short.bound, Short.tweakableHashInput_length,
-    List.length_append, rootsPayload_len, bytesLE_length]
+    List.length_append, bytesLE_length]
   omega
 
 /-- Encoding inputs read the same value through the prepared cache. -/
@@ -978,15 +1023,18 @@ theorem encoding_preferCache (parameterOutput : HashOutput) (highs : CoordinateH
     (hagreeAll : ∀ input, Short.IsShort input → ¬SeedGuess.SeedHit input seed →
       f input = finalFn (sampleModel parameterOutput highs) table cacheF input)
     (hgrow : ∀ input answer, prepCache input = some answer → cacheF input = some answer)
-    (leaf : Index) (key : ForestKey) (counter : Counter) :
-    f (Wots.encodingInput (truncateHash parameterOutput) topLayer rootTree leaf key counter) =
-      preferCache prepCache f (Wots.encodingInput (truncateHash parameterOutput) topLayer rootTree leaf key counter) := by
+    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput)
+    (hmessage : Short.ShortMessage message) (counter : Counter) :
+    f (Wots.encodingInput (truncateHash parameterOutput) lay tree leaf message counter) =
+      preferCache prepCache f (Wots.encodingInput (truncateHash parameterOutput) lay tree leaf message counter) := by
   unfold preferCache
-  cases hp : prepCache (Wots.encodingInput (truncateHash parameterOutput) topLayer rootTree leaf key counter) with
+  cases hp : prepCache (Wots.encodingInput (truncateHash parameterOutput) lay tree leaf message counter) with
   | none => exact (Option.getD_none).symm
   | some answer =>
-      rw [Option.getD_some, hagreeAll _ (encodingInput_short _ _ _ _) (tweakable_not_seedHit _ _ _ seed),
-        finalFn_unparsed parameterOutput highs table cacheF _ (encoding_not_row parameterOutput highs table leaf _ counter),
+      rw [Option.getD_some, hagreeAll _ (encodingInput_short _ _ _ _ _ hmessage _)
+          (tweakable_not_seedHit _ _ _ seed),
+        finalFn_unparsed parameterOutput highs table cacheF _
+          (encoding_not_row parameterOutput highs table lay tree leaf _ counter),
         hgrow _ _ hp]
       exact Option.getD_some
 
@@ -1007,11 +1055,11 @@ theorem sampleFn_final (parameterOutput : HashOutput) (fixed : HiddenGraph.Table
 
 /-- **Win implication.** In every non-stopped lazy run of the rich program whose outcome wins
 the original game, either a cached answer hits one of the sample's fixed targets, or the run's
-reveals cover the FORS openings of a cached, landed, unsigned forgery digest. -/
-theorem win_implies_bad (hb : 0 < subtreeHeight) (adversary : Adversary) (q : Nat) (hq : q < 2 ^ 256)
+reveals cover the forest openings of a cached, landed, unsigned forgery digest. -/
+theorem win_implies_bad (hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : Nat) (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
     (remaining : RemainingOutputs) (steps : Message → Randomness)
-    (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (table : HiddenGraph.Table)
     (htable : tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table)
@@ -1077,25 +1125,24 @@ theorem win_implies_bad (hb : 0 < subtreeHeight) (adversary : Adversary) (q : Na
   obtain ⟨hverified, htrace, hgood⟩ := rich_support f' table (Internalize.internalize adversary) q
     (truncateHash parameterOutput) seed (sampleData parameterOutput fixed highs remaining steps) hdata hcoord
     outcome reveals entries hrun'
-  have hfors : ∀ leaf : Index, SignatureWitness.canonicalForest f' (truncateHash parameterOutput) seed leaf =
-      (sampleData parameterOutput fixed highs remaining).forestKey leaf := fun leaf => (hdata.forestKey leaf).symm
-  have hencAgree : ∀ (leaf : Index) (counter : Counter),
-      f' (Wots.encodingInput (truncateHash parameterOutput) topLayer rootTree leaf
-        ((sampleData parameterOutput fixed highs remaining).forestKey leaf) counter) =
-      preferCache prepared.2 f' (Wots.encodingInput (truncateHash parameterOutput) topLayer rootTree leaf
-        ((sampleData parameterOutput fixed highs remaining).forestKey leaf) counter) :=
-    fun leaf counter => encoding_preferCache parameterOutput highs table cacheF prepared.2 f' seed
-      (fun input hshort hnot => hagreeAll input hshort hnot) hgrow leaf _ counter
+  have hencAgree : ∀ (key : OtsKey) (counter : Counter),
+      f' (Wots.encodingInput (truncateHash parameterOutput) key.1 key.2.1 key.2.2
+        (keyMessages (sampleData parameterOutput fixed highs remaining) key) counter) =
+      preferCache prepared.2 f' (Wots.encodingInput (truncateHash parameterOutput) key.1 key.2.1 key.2.2
+        (keyMessages (sampleData parameterOutput fixed highs remaining) key) counter) :=
+    fun key counter => encoding_preferCache parameterOutput highs table cacheF prepared.2 f' seed
+      (fun input hshort hnot => hagreeAll input hshort hnot) hgrow _ _ _ _
+      (shortMessage_keyMessage _ _ _ _) counter
   have hselection := selection_of_agree (truncateHash parameterOutput)
-    (sampleData parameterOutput fixed highs remaining).forestKey prepared.1 f' (preferCache prepared.2 f')
+    (keyMessages (sampleData parameterOutput fixed highs remaining)) prepared.1 f' (preferCache prepared.2 f')
     hstructPrep.2 hencAgree
   have hfull := fullTable_eq parameterOutput fixed highs remaining table prepared.1 f' seed hagreement
-    hfors hselection
+    hselection
   obtain ⟨forgery, log, verified⟩ := outcome
   simp only [outcomeWins, Bool.and_eq_true, decide_eq_true_eq] at hwin
   obtain ⟨⟨hvalid, hnotContains⟩, rfl⟩ := hwin
   exact bad_of_accepted hb parameterOutput fixed highs remaining steps table htable prepared.1 cacheF reveals entries
-    f' seed hcons hbound hdata hcoord hfors hfull hagree hcached hguess forgery log htrace hgood
+    f' seed hcons hbound hdata hcoord hfull hagree hcached hguess forgery log htrace hgood
     hverified.symm hvalid hnotContains
 
 end LeanForest.Security.HiddenBridge

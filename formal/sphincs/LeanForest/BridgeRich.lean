@@ -7,6 +7,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.HiddenBridge
 
+variable [Params]
+
 open HiddenCost GraphView Concrete
 
 set_option backward.isDefEq.respectTransparency false
@@ -124,7 +126,6 @@ theorem outside_stopped_map {A α β : Type}
       · rw [outside_stopped_reveal, outside_stopped_reveal]
         exact ih _ _ cache
 
-variable [Params]
 
 /-- Forgery, signing log and verifier answer of the graph-view game. -/
 abbrev Outcome := Forgery × QueryLog SigningSpec × Bool
@@ -142,7 +143,7 @@ noncomputable def costRestX (parameter : PublicParameter) (data : PublicData) (a
 
 noncomputable def costGameX (parameter : PublicParameter) (data : PublicData) (adversary : Adversary) :
     OracleComp CostSpec Outcome := do
-  HiddenCost.tick (226 * 2 ^ subtreeHeight + 2 * (totalHeight - subtreeHeight))
+  HiddenCost.tick Prefix.keygenHashCost
   costRestX parameter data adversary
 
 theorem costGame_eq_map (parameter : PublicParameter) (data : PublicData) (adversary : Adversary) :

@@ -5,14 +5,18 @@ import LeanForest.RandomizedCorrectness
 
 /-!
 The interface of deterministic extraction from an accepted candidate signature: its index and
-verifier trace, the canonical forest key, reference certificates for the WOTS counter and word at a
-leaf, canonical openings, and the explicit exceptional branches (`ForestException`, `Exception`).
-`BridgeClassify` proves the classification of accepted signatures.
+verifier trace, the canonical forest key and the canonical message of every layer's WOTS+C key on
+the index's path (the root of the honest tree below it, the forest key at the bottom), reference
+certificates for the counter and word of each key, canonical openings, and the explicit exceptional
+branches (`ForestException`, `LayerException`, `Exception`). `BridgeClassify` proves the
+classification of accepted signatures.
 -/
 
 open OracleComp OracleSpec
 
 namespace LeanForest.Security.SignatureWitness
+
+variable [Params]
 
 open Concrete
 
@@ -30,11 +34,51 @@ def canonicalForest (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (leaf : Index) : ForestKey :=
   evalWithAnswerFn f (Seeded.forestKey parameter leaf seed : OracleComp HashSpec ForestKey)
 
-/-- A concrete reference counter certifies the canonical forest key's valid WOTS encoding. -/
+/-- The canonical message of a WOTS+C key: the root of the honest tree below it, or the forest key
+of its instance at the bottom layer. -/
+def keyMessageValue (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed)
+    (key : OtsKey) : HashInput :=
+  evalWithAnswerFn f (Seeded.keyMessage parameter seed key.1 key.2.1 key.2.2 : OracleComp HashSpec HashInput)
+
+/-- The canonical message of the WOTS+C key of layer `lay` on the path of `leaf`. -/
+def canonicalMessage (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (seed : MasterSeed) (leaf : Index) (lay : Layer) : HashInput :=
+  keyMessageValue f parameter seed (keyAt leaf lay)
+
+theorem canonicalMessage_eq (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (leaf : Index)
+    (lay : Layer) :
+    canonicalMessage f sk.parameter sk.seed leaf lay = Completeness.layerMessageValue f sk leaf lay := rfl
+
+/-- The bottom key signs the forest key. -/
+theorem canonicalMessage_bottom (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (seed : MasterSeed) (leaf : Index) :
+    canonicalMessage f parameter seed leaf (layerUp 0) = rootsPayload (canonicalForest f parameter seed leaf) := by
+  have h := Completeness.layerMessageValue_bottom f ⟨seed, parameter, 0⟩ leaf
+  exact h
+
+/-- A key above the bottom signs the root of the tree below on the path. -/
+theorem canonicalMessage_succ (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (seed : MasterSeed) (leaf : Index) (j : Nat) (hj : j + 1 < numLayers) :
+    canonicalMessage f parameter seed leaf (layerUp (j + 1)) =
+      rootPayload (evalWithAnswerFn f (Seeded.treeRoot parameter (layerUp j)
+        (treeIndexAt leaf (layerUp j)) seed : OracleComp HashSpec Digest)) := by
+  have hbelow : (layerUp (j + 1)).val + 1 < numLayers := by simp only [layerUp]; omega
+  have hlay : (⟨(layerUp (j + 1)).val + 1, hbelow⟩ : Layer) = layerUp j := by
+    apply Fin.ext; simp only [layerUp]; omega
+  have h := Completeness.layerMessageValue_above f ⟨seed, parameter, 0⟩ leaf (layerUp (j + 1)) hbelow
+  rw [hlay] at h
+  exact h
+
+/-- The key of layer `lay` on the path of `leaf`, at the canonical message. -/
+abbrev keyTree (leaf : Index) (lay : Layer) : TreeIndex := treeIndexAt leaf lay
+abbrev keyLeaf (leaf : Index) (lay : Layer) : LeafIndex := leafIndexAt leaf lay
+
+/-- A concrete reference counter certifies the valid WOTS encoding of the canonical message of the
+key of layer `lay` on the path of `leaf`. -/
 def ReferenceCertificate (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (seed : MasterSeed) (leaf : Index) (counter : Counter) (word : Encoding) : Prop :=
-  evalWithAnswerFn f (encode parameter topLayer rootTree leaf
-    (canonicalForest f parameter seed leaf) counter : OracleComp HashSpec (Option Encoding)) = some word
+    (seed : MasterSeed) (leaf : Index) (lay : Layer) (counter : Counter) (word : Encoding) : Prop :=
+  evalWithAnswerFn f (encode parameter lay (keyTree leaf lay) (keyLeaf leaf lay)
+    (canonicalMessage f parameter seed leaf lay) counter : OracleComp HashSpec (Option Encoding)) = some word
 
 /-- The forest recovery is always part of the complete verifier's actual execution. -/
 theorem verification_forest_run (f : QueryImpl HashSpec Id) (pk : PublicKey)
@@ -45,82 +89,93 @@ theorem verification_forest_run (f : QueryImpl HashSpec Id) (pk : PublicKey)
   have hrun : ContainsRun f
       (queriedInputs f (Concrete.verify pk message signature : OracleComp HashSpec Bool))
       (Concrete.verify pk message signature : OracleComp HashSpec Bool) := fun _ hi => hi
-  rw [verify_eq_single_layer] at hrun
-  simpa only [← verify_eq_single_layer, trace, index, verificationDigest] using hrun.bind_right.bind_left
+  rw [verify_eq_layers] at hrun
+  simpa only [← verify_eq_layers, trace, index, verificationDigest] using hrun.bind_right.bind_left
 
 theorem canonical_wots_leaf (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (seed : MasterSeed) (leaf : LeafIndex) :
-    Completeness.node f parameter topLayer rootTree seed 0 leaf.val =
-      Wots.canonicalLeaf f parameter topLayer rootTree leaf
-        (Completeness.otsSecret f parameter topLayer rootTree leaf seed) := by
+    (seed : MasterSeed) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) :
+    Completeness.node f parameter lay tree seed 0 leaf.val =
+      Wots.canonicalLeaf f parameter lay tree leaf
+        (Completeness.otsSecret f parameter lay tree leaf seed) := by
   rw [Completeness.node_zero]
   rfl
 
-variable [Params]
 
 /-- A successful honest WOTS layer supplies its reference certificate and exact published values.
 The counter is the counter actually returned by the signer, rather than an arbitrary valid one. -/
 theorem reference_of_signLayer (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (leaf : Index)
-    (part : LayerSignature topLayer)
-    (hsign : evalWithAnswerFn f (Seeded.signLayer sk leaf topLayer :
-      OracleComp HashSpec (Option (LayerSignature topLayer))) = some part) :
-    ∃ word, ReferenceCertificate f sk.parameter sk.seed leaf part.counter word ∧
-      part.chainValues = Wots.frontier f sk.parameter topLayer rootTree leaf word
-        (Completeness.otsSecret f sk.parameter topLayer rootTree leaf sk.seed) ∧
-      part.path = evalWithAnswerFn f (Seeded.treePath sk.parameter topLayer rootTree sk.seed leaf :
-        OracleComp HashSpec (Fin (layerHeight topLayer) → Digest)) := by
-  obtain ⟨hots, hpath⟩ := Completeness.signLayer_spec f sk leaf topLayer hsign
-  simp only [Completeness.treeIndexAt_eq, Completeness.leafIndexAt_eq] at hots hpath
-  obtain ⟨word, hencode, hvalues⟩ := Completeness.otsSignFrom_spec f sk.parameter topLayer rootTree
-    leaf sk.seed (Completeness.layerMessageValue f sk leaf topLayer) encodingAttemptLimit 0 hots
-  exact ⟨word, hencode, funext hvalues, hpath⟩
+    (lay : Layer) (part : LayerSignature lay)
+    (hsign : evalWithAnswerFn f (Seeded.signLayer sk leaf lay :
+      OracleComp HashSpec (Option (LayerSignature lay))) = some part) :
+    ∃ word, ReferenceCertificate f sk.parameter sk.seed leaf lay part.counter word ∧
+      part.chainValues = Wots.frontier f sk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay) word
+        (Completeness.otsSecret f sk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay) sk.seed) ∧
+      part.path = evalWithAnswerFn f (Seeded.treePath sk.parameter lay (keyTree leaf lay) sk.seed
+        (keyLeaf leaf lay) : OracleComp HashSpec (Fin (layerHeight lay) → Digest)) := by
+  obtain ⟨hots, hpath⟩ := Completeness.signLayer_spec f sk leaf lay hsign
+  obtain ⟨word, hencode, hvalues⟩ := Completeness.otsSignFrom_spec f sk.parameter lay
+    (treeIndexAt leaf lay) (leafIndexAt leaf lay) sk.seed
+    (Completeness.layerMessageValue f sk leaf lay) encodingAttemptLimit 0 hots
+  refine ⟨word, ?_, funext hvalues, hpath⟩
+  unfold ReferenceCertificate
+  rw [canonicalMessage_eq]
+  exact hencode
+
+/-- Exact canonical components of one layer of a signature: its counter, the chain values of the
+reference word and the honest path of its key on the index's path. -/
+def CanonicalLayer (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed) (leaf : Index)
+    (signature : Signature) (lay : Layer) (referenceCounter : Counter) (referenceWord : Encoding) : Prop :=
+  (signature.layers lay).counter = referenceCounter ∧
+    (signature.layers lay).chainValues = Wots.frontier f pk.parameter lay (keyTree leaf lay)
+      (keyLeaf leaf lay) referenceWord
+      (Completeness.otsSecret f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay) seed) ∧
+    (signature.layers lay).path = evalWithAnswerFn f
+      (Seeded.treePath pk.parameter lay (keyTree leaf lay) seed (keyLeaf leaf lay) :
+        OracleComp HashSpec (Fin (layerHeight lay) → Digest))
 
 /-- Exact retained-leaf components of a canonical signature. The message and randomizer are
 unrestricted; they select the index and the forest marks through the actual message digest. -/
 def CanonicalOpening (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
-    (message : Message) (signature : Signature) (referenceCounter : Counter)
-    (referenceWord : Encoding) : Prop :=
+    (message : Message) (signature : Signature) (referenceCounter : Layer → Counter)
+    (referenceWord : Layer → Encoding) : Prop :=
   let leaf := index f pk message signature
   Landed pk.parameter leaf ∧
-    (signature.layers topLayer).counter = referenceCounter ∧
-    (signature.layers topLayer).chainValues = Wots.frontier f pk.parameter topLayer rootTree leaf
-      referenceWord (Completeness.otsSecret f pk.parameter topLayer rootTree leaf seed) ∧
-    (signature.layers topLayer).path = evalWithAnswerFn f
-      (Seeded.treePath pk.parameter topLayer rootTree seed leaf :
-        OracleComp HashSpec (Fin (layerHeight topLayer) → Digest)) ∧
+    (∀ lay, CanonicalLayer f pk seed leaf signature lay (referenceCounter lay) (referenceWord lay)) ∧
     Forest.Opening f pk.parameter leaf seed (digestMarks (verificationDigest f pk message signature))
       signature.forest
 
-/-- All canonical signature components are fixed by the message, randomizer, reference counter
-and reference word. This is equality of the complete signature structure. -/
+/-- All canonical signature components are fixed by the message, randomizer, reference counters
+and reference words. This is equality of the complete signature structure. -/
 theorem canonicalOpening_unique (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
-    (message : Message) (left right : Signature) (counter : Counter) (word : Encoding)
+    (message : Message) (left right : Signature) (counter : Layer → Counter) (word : Layer → Encoding)
     (hleft : CanonicalOpening f pk seed message left counter word)
     (hright : CanonicalOpening f pk seed message right counter word)
     (hrandomness : left.randomness = right.randomness) : left = right := by
   have hdigest : verificationDigest f pk message left = verificationDigest f pk message right := by
     simp only [verificationDigest, hrandomness]
   have hindex : index f pk message left = index f pk message right := congrArg digestIndex hdigest
-  obtain ⟨_, hcounterL, hvaluesL, hpathL, hforsL⟩ := hleft
-  obtain ⟨_, hcounterR, hvaluesR, hpathR, hforsR⟩ := hright
-  have hcounter : (left.layers topLayer).counter = (right.layers topLayer).counter :=
-    hcounterL.trans hcounterR.symm
-  have hvalues : (left.layers topLayer).chainValues = (right.layers topLayer).chainValues := by
-    rw [hvaluesL, hvaluesR, hindex]
-  have hpath : (left.layers topLayer).path = (right.layers topLayer).path := by
-    rw [hpathL, hpathR, hindex]
+  obtain ⟨_, hlayersL, hforestL⟩ := hleft
+  obtain ⟨_, hlayersR, hforestR⟩ := hright
   have hlayers : left.layers = right.layers := by
     funext lay
-    rw [Completeness.only_layer lay]
-    change LayerSignature.mk (left.layers topLayer).counter (left.layers topLayer).chainValues
-      (left.layers topLayer).path =
-        LayerSignature.mk (right.layers topLayer).counter (right.layers topLayer).chainValues
-          (right.layers topLayer).path
-    rw [hcounter, hvalues, hpath]
+    obtain ⟨hcounterL, hvaluesL, hpathL⟩ := hlayersL lay
+    obtain ⟨hcounterR, hvaluesR, hpathR⟩ := hlayersR lay
+    have hcounter : (left.layers lay).counter = (right.layers lay).counter :=
+      hcounterL.trans hcounterR.symm
+    have hvalues : (left.layers lay).chainValues = (right.layers lay).chainValues := by
+      rw [hvaluesL, hvaluesR, hindex]
+    have hpath : (left.layers lay).path = (right.layers lay).path := by
+      rw [hpathL, hpathR, hindex]
+    rcases hl : left.layers lay with ⟨cl, vl, pl⟩
+    rcases hr : right.layers lay with ⟨cr, vr, pr⟩
+    rw [hl, hr] at hcounter hvalues hpath
+    simp only at hcounter hvalues hpath
+    subst hcounter hvalues hpath
+    rfl
   have hforest : left.forest = right.forest := by
     funext c
-    obtain ⟨hvL, hpL, htL⟩ := hforsL c
-    obtain ⟨hvR, hpR, htR⟩ := hforsR c
+    obtain ⟨hvL, hpL, htL⟩ := hforestL c
+    obtain ⟨hvR, hpR, htR⟩ := hforestR c
     rw [hindex, hdigest] at hvL hpL htL
     have hsub : (left.forest c).sub = (right.forest c).sub := by
       funext j
@@ -164,19 +219,19 @@ theorem finishSign_randomness (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey
   next => simp at hsign
 
 /-- A successful honest assembly supplies a canonical opening and its concrete reference
-certificate. Only the randomizer's actual landing condition is required. -/
+certificates. Only the randomizer's actual landing condition is required. -/
 theorem canonical_of_finishSign (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey)
     (message : Message) (randomness : Randomness) (signature : Signature)
     (hland : Landed sk.parameter (digestIndex (Completeness.digestValue f sk message randomness)))
     (hsign : evalWithAnswerFn f (Randomized.finishSign sk message randomness) = some signature) :
-    ∃ word,
-      ReferenceCertificate f sk.parameter sk.seed
-        (index f ⟨sk.root, sk.parameter⟩ message signature) (signature.layers topLayer).counter word ∧
+    ∃ word : Layer → Encoding,
+      (∀ lay, ReferenceCertificate f sk.parameter sk.seed
+        (index f ⟨sk.root, sk.parameter⟩ message signature) lay (signature.layers lay).counter (word lay)) ∧
       CanonicalOpening f ⟨sk.root, sk.parameter⟩ sk.seed message signature
-        (signature.layers topLayer).counter word := by
+        (fun lay => (signature.layers lay).counter) word := by
   obtain ⟨hland, hforest, hlayers⟩ := Completeness.finishSign_spec f sk message randomness hland hsign
-  obtain ⟨word, href, hvalues, hpath⟩ := reference_of_signLayer f sk _ _ (hlayers topLayer)
-  refine ⟨word, href, hland, rfl, hvalues, hpath, ?_⟩
+  choose word href hvalues hpath using fun lay => reference_of_signLayer f sk _ lay _ (hlayers lay)
+  refine ⟨word, href, hland, fun lay => ⟨rfl, hvalues lay, hpath lay⟩, ?_⟩
   intro c
   have hc := congrFun hforest c
   simp only [Seeded.forestOpen, Completeness.eval_sequenceFin, Completeness.eval_coordOpen] at hc
@@ -193,19 +248,27 @@ def ForestException (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterS
   ∃ input canonicalInput, input ∈ trace f pk message signature ∧ input ≠ canonicalInput ∧
     truncateHash (f input) = truncateHash (f canonicalInput)
 
-/-- Structural outside-subtree events and all explicit WOTS/forest exceptional cases. -/
-def Exception (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
-    (message : Message) (signature : Signature) (referenceCounter : Counter)
+/-- The exceptions of one layer of the forgery's path: a tree exception of the layer's tree, or a
+WOTS exception of its key against the canonical message, at the reference counter and word. -/
+def LayerException (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
+    (message : Message) (signature : Signature) (lay : Layer) (referenceCounter : Counter)
     (referenceWord : Encoding) : Prop :=
   let leaf := index f pk message signature
   let inputs := trace f pk message signature
-  (∃ value, TreeException f pk.parameter seed leaf (signaturePath signature topLayer) value) ∨
-  Wots.EncodingOutputMatch f pk.parameter topLayer rootTree leaf
-    (canonicalForest f pk.parameter seed leaf) referenceCounter inputs ∨
-  Wots.LeafOutputMatch f pk.parameter topLayer rootTree leaf
-    (Completeness.otsSecret f pk.parameter topLayer rootTree leaf seed) inputs ∨
-  Wots.ChainException f pk.parameter topLayer rootTree leaf referenceWord
-    (Completeness.otsSecret f pk.parameter topLayer rootTree leaf seed) inputs ∨
+  (∃ value, TreeException f pk.parameter seed lay (keyTree leaf lay) (keyLeaf leaf lay)
+    (signaturePath signature lay) value) ∨
+  Wots.EncodingOutputMatch f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay)
+    (canonicalMessage f pk.parameter seed leaf lay) referenceCounter inputs ∨
+  Wots.LeafOutputMatch f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay)
+    (Completeness.otsSecret f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay) seed) inputs ∨
+  Wots.ChainException f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay) referenceWord
+    (Completeness.otsSecret f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay) seed) inputs
+
+/-- Structural outside-subtree events and all explicit WOTS/forest exceptional cases. -/
+def Exception (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
+    (message : Message) (signature : Signature) (referenceCounter : Layer → Counter)
+    (referenceWord : Layer → Encoding) : Prop :=
+  (∃ lay, LayerException f pk seed message signature lay (referenceCounter lay) (referenceWord lay)) ∨
   ForestException f pk seed message signature
 
 end LeanForest.Security.SignatureWitness

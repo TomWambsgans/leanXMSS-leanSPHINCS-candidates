@@ -9,6 +9,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.Det
 
+variable [Params]
+
 open Completeness SeedCoupling Short Internalize
 
 set_option backward.isDefEq.respectTransparency false
@@ -33,7 +35,6 @@ theorem Only.deriveRandomizer (parameter : PublicParameter) (seed : MasterSeed)
   unfold LeanForest.deriveRandomizer
   exact Only.bind (Only.query (randomizerHashInput_short _ _ _)) (fun _ => Only.pure' _)
 
-variable [Params]
 
 attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Randomized.finishSign
   LeanForest.Seeded.signAttempt

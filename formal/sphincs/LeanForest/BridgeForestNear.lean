@@ -1,4 +1,4 @@
-import LeanForest.BridgeForsGeneric
+import LeanForest.BridgeForestGeneric
 import LeanForest.H0NearMom
 
 /-! **The near witness.** A target is near covered at the free subtree `(c, j')` when every chain
@@ -9,7 +9,9 @@ indices of `κ E` times the near value `yN` of the index's marks. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner LeanForest.Base.Domination
@@ -18,7 +20,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-- Every chain of the target outside subtree `1 - j` of tree `c` is covered: the other trees, and
 subtree `j` of tree `c`. -/
@@ -77,7 +78,6 @@ theorem chainCovered_of_chainCov {R : List Coordinate} {d : Multiset View} (hD :
 /-- The other subtree. -/
 def otherSub (j : SubIdx) : SubIdx := if j = 0 then 1 else 0
 
-omit [Params] in
 theorem otherSub_ne (j : SubIdx) : otherSub j ≠ j := by
   fin_cases j <;> decide
 
@@ -101,15 +101,15 @@ theorem nearWitness_pos {R : List Coordinate} {d : Multiset View} (hD : DInv R d
     then (1 : ℝ≥0∞) else 0) (fun _ _ => zero_le) (Finset.mem_univ (otherSub j)))
   rw [if_pos hsub]
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential
 
 namespace LeanForest.Security.H0
 
-open Concrete ForestPrice LeanForest.Base.Domination H0Avg ForsPotential
-
 variable [Params]
 
-omit [Params] in
+open Concrete ForestPrice LeanForest.Base.Domination H0Avg ForestPotential
+
+
 theorem freshAvg_sum' {V β : Type} (U : Finset V) (s : Finset β) (g : β → V → ℝ≥0∞) :
     freshAvg U (fun u => ∑ b ∈ s, g b u) = ∑ b ∈ s, freshAvg U (g b) := by
   unfold freshAvg

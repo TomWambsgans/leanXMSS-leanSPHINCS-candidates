@@ -10,12 +10,14 @@ open ENNReal NNReal
 
 namespace LeanForest.Security.H0
 
-open Concrete ForestPrice LeanForest.Base.H0 LeanForest.Base.Domination H0Avg ForsPotential
+variable [Params]
+
+open Concrete ForestPrice LeanForest.Base.H0 LeanForest.Base.Domination H0Avg ForestPotential
 
 set_option linter.unusedSectionVars false
 
 /-- The near bound at `n` from the moment tables. -/
-def nBound (n : ℕ) : ℚ := 16 * κQ * PHtab.getD n 0 * P1tab.getD n 0 ^ 7
+def nBound (H n : ℕ) : ℚ := 16 * κQ H * PHtab.getD n 0 * P1tab.getD n 0 ^ 7
 
 /-- A near certificate: the table, its extension slope, and its Poisson mean. -/
 structure OptN where
@@ -24,15 +26,15 @@ structure OptN where
   En : ℚ
 
 /-- The check of a near certificate against a Poisson table. -/
-def checkOptN (t : PoisT) (o : OptN) : Bool :=
+def checkOptN (H : ℕ) (t : PoisT) (o : OptN) : Bool :=
   decide (t.n1 ≤ 150) && decide (o.nt.length = t.n1 + 1) && checkLeaf o.nt o.Jn &&
-    decide (∀ n < t.n1 + 1, nBound n ≤ o.nt.getD n 0) && decide (16 * κQ ≤ o.nt.getD t.n1 0 + o.Jn) &&
+    decide (∀ n < t.n1 + 1, nBound H n ≤ o.nt.getD n 0) && decide (16 * κQ H ≤ o.nt.getD t.n1 0 + o.Jn) &&
     decide ((((List.range (t.n1 + 1)).map fun n => t.pb n * o.nt.getD n 0).sum +
       t.pb (t.n1 + 1) * (o.nt.getD t.n1 0 / (1 - t.r) + o.Jn / (1 - t.r) ^ 2)) ≤ o.En)
 
-theorem checkOptN_parts {t : PoisT} {o : OptN} (h : checkOptN t o = true) :
+theorem checkOptN_parts {H : ℕ} {t : PoisT} {o : OptN} (h : checkOptN H t o = true) :
     t.n1 ≤ 150 ∧ o.nt.length = t.n1 + 1 ∧ checkLeaf o.nt o.Jn = true ∧
-      (∀ n < t.n1 + 1, nBound n ≤ o.nt.getD n 0) ∧ 16 * κQ ≤ o.nt.getD t.n1 0 + o.Jn ∧
+      (∀ n < t.n1 + 1, nBound H n ≤ o.nt.getD n 0) ∧ 16 * κQ H ≤ o.nt.getD t.n1 0 + o.Jn ∧
       (((List.range (t.n1 + 1)).map fun n => t.pb n * o.nt.getD n 0).sum +
         t.pb (t.n1 + 1) * (o.nt.getD t.n1 0 / (1 - t.r) + o.Jn / (1 - t.r) ^ 2)) ≤ o.En := by
   simp only [checkOptN, Bool.and_eq_true, decide_eq_true_eq] at h
@@ -46,15 +48,14 @@ theorem SepGood.one : SepGood (fun _ : ℕ => (1 : ℝ≥0∞)) where
     simp only [ENNReal.coe_one, one_mul]
     exact one_le_pow₀ (by norm_num)⟩
 
-variable [Params]
 
 /-- **The near value is dominated by the table.** -/
-theorem avgN_near_le {b : ℕ} (hb : subtreeHeight = b) {t : PoisT} {o : OptN} (ho : checkOptN t o) (n : ℕ) :
+theorem avgN_near_le {H b : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) {t : PoisT} {o : OptN} (ho : checkOptN H t o) (n : ℕ) :
     avgN (fun Ms => κE * yN Ms) n 0 ≤ ENNReal.ofReal (leafQ o.nt o.Jn n : ℝ) := by
   obtain ⟨h150, hl, hleaf, hnb, hend, -⟩ := checkOptN_parts ho
-  have hκ := κE_toReal b hb
-  have hκ0 : (0 : ℝ) ≤ (κQ : ℝ) := by unfold κQ; positivity
-  have hκE : κE = ENNReal.ofReal (κQ : ℝ) := by
+  have hκ := κE_toReal H b hH hb
+  have hκ0 : (0 : ℝ) ≤ (κQ H : ℝ) := by unfold κQ; positivity
+  have hκE : κE = ENNReal.ofReal (κQ H : ℝ) := by
     rw [← hκ, ENNReal.ofReal_toReal κE_ne_top]
   by_cases hn : n < t.n1 + 1
   · rw [leafQ_of_lt (by omega), avgN_const_mul, avgN_yN]
@@ -71,7 +72,7 @@ theorem avgN_near_le {b : ℕ} (hb : subtreeHeight = b) {t : PoisT} {o : OptN} (
     calc κE * ∑ _c : Coord, ∑ j : SubIdx, ENNReal.ofReal (ΨHR j n) * ENNReal.ofReal (Ψ1R n) ^ 7
         ≤ κE * ∑ _c : Coord, ∑ _j : SubIdx, ENNReal.ofReal (((PHtab.getD n 0 * P1tab.getD n 0 ^ 7 : ℚ)) : ℝ) :=
           mul_le_mul_left' (Finset.sum_le_sum fun c _ => Finset.sum_le_sum fun j _ => hterm j) _
-      _ = ENNReal.ofReal ((nBound n : ℚ) : ℝ) := by
+      _ = ENNReal.ofReal ((nBound H n : ℚ) : ℝ) := by
           simp only [Finset.sum_const, Finset.card_univ, card_coord, nsmul_eq_mul]
           rw [hκE, show Fintype.card SubIdx = 2 from rfl]
           rw [← ENNReal.ofReal_natCast, ← ENNReal.ofReal_natCast, ← ENNReal.ofReal_mul (by positivity),
@@ -81,7 +82,7 @@ theorem avgN_near_le {b : ℕ} (hb : subtreeHeight = b) {t : PoisT} {o : OptN} (
           push_cast
           ring
       _ ≤ _ := ENNReal.ofReal_le_ofReal (by exact_mod_cast hnb n hn)
-  · have hcap : avgN (fun Ms => κE * yN Ms) n 0 ≤ ENNReal.ofReal ((16 * κQ : ℚ) : ℝ) := by
+  · have hcap : avgN (fun Ms => κE * yN Ms) n 0 ≤ ENNReal.ofReal ((16 * κQ H : ℚ) : ℝ) := by
       calc avgN (fun Ms => κE * yN Ms) n 0 ≤ avgN (fun _ => κE * 16) n 0 :=
             avgN_mono (fun Ms => mul_le_mul_left' (yN_le Ms) _) n 0
         _ = κE * 16 := avgN_const _ n 0
@@ -131,12 +132,12 @@ theorem hNearOf_eq (q : ℕ) :
   simp only [tsub_zero]
 
 /-- **The near H-term for every budget `q ≤ qtop`, from a checked table and certificate.** -/
-theorem hNearOf_le (b N qtop : ℕ) (hb : subtreeHeight = b) (hN : signatureLimit = N) (t : PoisT) (o : OptN)
-    (hr : checkRate b N qtop t = true) (ht : checkPT t = true) (ho : checkOptN t o = true) (q : ℕ)
+theorem hNearOf_le (H b N qtop : ℕ) (hH : totalHeight = H) (hb : subtreeHeight = b) (hN : signatureLimit = N)
+    (t : PoisT) (o : OptN) (hr : checkRate H b N qtop t = true) (ht : checkPT t = true) (ho : checkOptN H t o = true) (q : ℕ)
     (hq : q ≤ qtop) : hNearOf q ≤ ENNReal.ofReal ((2 ^ b * o.En : ℚ) : ℝ) := by
   obtain ⟨-, hl, hleaf, -, -, hEn⟩ := checkOptN_parts ho
   set w := wbarOf q with hwdef
-  have hw1 : w ≤ 1 := wbar_le_one q (fair_of_rate b N qtop t hr hb q hq)
+  have hw1 : w ≤ 1 := wbar_le_one q (fair_of_rate H b N qtop t hr hH hb q hq)
   have hlw : landing * w ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top (mul_le_one' ForestPrice.landing_le_one hw1)
   have hcard : Fintype.card (Fin (2 ^ subtreeHeight)) = 2 ^ b := by rw [Fintype.card_fin, hb]
   set α : ℝ≥0 := ((2 : ℝ≥0) ^ b)⁻¹ with hαdef
@@ -159,10 +160,10 @@ theorem hNearOf_le (b N qtop : ℕ) (hb : subtreeHeight = b) (hN : signatureLimi
     push_cast
     calc (signatureLimit : ℝ) * ((2 : ℝ) ^ b)⁻¹ + (q : ℝ) * ((landing * w).toReal / 2 ^ b)
         = (signatureLimit : ℝ) / 2 ^ b + (q : ℝ) * (landing * w).toReal / 2 ^ b := by ring
-      _ ≤ _ := rate_le_tableF b N qtop t hr hb hN q hq
+      _ ≤ _ := rate_le_tableF H b N qtop t hr hH hb hN q hq
   rw [hNearOf_eq]
   refine le_trans (hTermO_near_le w landing hw1 ForestPrice.landing_le_one signatureLimit q
-    (fun n => ENNReal.ofReal (leafQ o.nt o.Jn n : ℝ)) (leaf_sepGood hleaf) (avgN_near_le hb ho) α γ hα hγ μ hμ) ?_
+    (fun n => ENNReal.ofReal (leafQ o.nt o.Jn n : ℝ)) (leaf_sepGood hleaf) (avgN_near_le hH hb ho) α γ hα hγ μ hμ) ?_
   have hpm := poisMean_leaf_le ht hleaf hl
   rw [← hμdef] at hpm
   have hpm' : poisMean μ (fun n => ENNReal.ofReal (leafQ o.nt o.Jn n : ℝ)) ≤ ENNReal.ofReal (o.En : ℝ) :=

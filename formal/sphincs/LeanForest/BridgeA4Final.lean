@@ -9,7 +9,9 @@ near potential one. Through the whole game the event is paid by the start potent
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenBridge
@@ -21,7 +23,6 @@ set_option linter.unusedSectionVars false
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### The event -/
 
@@ -185,4 +186,4 @@ theorem a4F_bound (hparse : ∀ p, model.parse (pblk K.p data p) = none)
 
 end Bound
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

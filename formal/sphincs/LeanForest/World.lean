@@ -6,6 +6,8 @@ open OracleComp OracleSpec
 
 namespace LeanForest.Completeness
 
+variable [Params]
+
 noncomputable def romImpl : QueryImpl OracleWorld (StateT (QueryCache HashSpec) ProbComp) :=
   unifFwdImpl HashSpec + (randomOracle : QueryImpl HashSpec (StateT (QueryCache HashSpec) ProbComp))
 

@@ -9,7 +9,9 @@ exposed by the call is decided with chance `2^-128`, whatever the call does. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open LeanForest.Base
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenBridge
@@ -21,7 +23,6 @@ set_option linter.unusedSectionVars false
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### What a run avoiding forest step inputs does to forest steps -/
 
@@ -119,7 +120,6 @@ def kTop (f : FIn) : ℕ := min (f.t.val + 1) 3
 def OpensF (f : FIn) (reveals : List Coordinate) : Prop :=
   ∃ q : FPos, q.val ≤ kTop f ∧ Coordinate.fchain f.index f.c f.s f.j f.a f.i q ∈ reveals
 
-omit [Params] in
 theorem kTop_lt (f : FIn) : kTop f < chainTop := by
   unfold kTop chainTop
   omega
@@ -307,7 +307,6 @@ theorem sign_cw_mean {m : Message} {budget : ℕ} {s : State} {P : List Pair} {M
       rw [h, hmass, mul_one]
     · exact le_of_eq (hcongr _)
 
-omit [Params] in
 theorem settled_append {R : List Coordinate} {f : FIn} (h : Settled R f) (L : List Coordinate) :
     Settled (R ++ L) f := by
   obtain ⟨q, hq, hmem⟩ := h
@@ -642,4 +641,4 @@ theorem psiF_sign (hparse : ∀ p, model.parse (pblk K.p data p) = none)
 
 end SignPays
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

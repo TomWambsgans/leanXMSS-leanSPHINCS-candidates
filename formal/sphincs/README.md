@@ -1,16 +1,22 @@
 # leanSPHINCS proofs in Lean 4
 
 **Status: the leanSphincs signer has 127 bits of classical SUF-CMA security in the random-oracle
-model at the signature limits below (`LeanForest.Lifetimes.requestedSecurity`,
-[Lifetimes.lean](LeanForest/Lifetimes.lean)).** The proof uses only `propext`, `Classical.choice`
-and `Quot.sound`; [Axioms.lean](LeanForest/Axioms.lean) pins every public theorem to its axioms.
+model in each of its configurations, at the signature limits below
+(`LeanForest.Lifetimes.requestedSecurity`, [Lifetimes.lean](LeanForest/Lifetimes.lean)).** The
+proof uses only `propext`, `Classical.choice` and `Quot.sound`; [Axioms.lean](LeanForest/Axioms.lean)
+pins every public theorem to its axioms.
 
-`LeanForest/` models the candidate: one height-24 tree of WOTS+C keys (64 chains of four positions,
-target sum 123), a two-level WOTS forest as the few-time signature, one message-digest call, and
-pruning with surrogate siblings. No tree of the forest has a root hash and the forest key is not
-hashed either: the WOTS+C encoding absorbs its sixteen nodes with the counter last. Every hash input
-is the 16-byte public parameter P, a 16-byte address (4 bytes `lo`, 3 bytes `hi`, one byte
-type + 32·step, then 8 zero bytes) and the payload. One hash of the seed gives two secrets, the two
+`LeanForest/` models the candidate for every height `h ≤ 28`, number of layers `d` and kept subtree
+height `b` (`Params`, [Scheme.lean](LeanForest/Scheme.lean)): an index of `h` bits; a hypertree of
+`d` layers of WOTS+C keys (64 chains of four positions, target sum 123), whose bottom layers have
+height 6 and whose top layer has the rest; a two-level WOTS forest as the few-time signature; one
+message-digest call; and pruning of the top layer with surrogate siblings. A pruned key is `d = 1`,
+`b ≤ h` (`b = h` is the full key); a layered key keeps everything, `b = h`, `d ≥ 2`. No tree of the
+forest has a root hash and the forest key is not hashed: the WOTS+C encoding of the bottom layer
+absorbs its sixteen nodes with the counter last, and the encoding of a higher layer the root of the
+tree below. Every hash input is the 16-byte public parameter P, a 16-byte address (4 bytes `lo`,
+3 bytes `hi`, one byte type + 32·step, one byte for the layer counted from the bottom, 4 bytes for
+the tree, then 3 zero bytes) and the payload. One hash of the seed gives two secrets, the two
 16-byte halves of its output. The signer derives R0 and the step δ from one hash
 H(P ‖ A(7, 0, 0) ‖ seed ‖ m) per message and tries R0, R0 + δ, R0 + 2δ, … until the digest index
 lands in the kept subtree, as the Rust signer does, so a repeated request returns the same
@@ -19,46 +25,62 @@ secret, so a signature does not tell which randomizers were rejected before it. 
 [StatementDet.lean](LeanForest/StatementDet.lean): every adversary, every number q ≥ 1 of hash
 queries (keygen, signing and verification included), forges with probability at most q / 2^127.
 
-The scheme, the digest layout, the codeword table, the costs and the proof route of the forest are
-documented in [FOREST.md](FOREST.md); the shared proof machinery and the modeling differences with
-the Rust code are in [PROOF.md](PROOF.md).
+The proof is the same for every hash: the random oracle stands for Keccak-256, BLAKE2s or SHA-256,
+and only the costs depend on the hash ([VerificationCost.lean](LeanForest/VerificationCost.lean),
+[Configurations.lean](LeanForest/Configurations.lean)). So the 24 configurations of the candidate
+(4 heights, 2 shapes, 3 hashes) take 32 lifetime theorems (per height: the full key, six kept subtree
+heights and the layered key, below), 8 size theorems and 24 cost theorems.
+
+The scheme, the digest layout, the codeword table, the costs and the forest are documented in
+[FOREST.md](FOREST.md); the proof route and the modeling differences with the Rust code are in
+[PROOF.md](PROOF.md).
 
 ## Proved lifetimes
 
-| Subtree height b | Proved signature limit N | N_att | N / N_att |
-| --- | ---: | ---: | ---: |
-| 24 (full tree) | 336,700,000 | 3.60e8 | 93.5% |
-| 20 | 23,830,000 | 2.64e7 | 90.3% |
-| 14 | 441,500 | 5.18e5 | 85.2% |
-| 13 | 226,800 | 2.69e5 | 84.3% |
-| 12 | 116,600 | 1.39e5 | 83.9% |
-| 10 | 30,810 | 3.74e4 | 82.4% |
-| 8 | 8,154 | 9.85e3 | 82.8% |
+Signature limits N with 127 bits (`Lifetimes.<config>_bits`); layered keys: 10 + 6 + 6, 12 + 6 + 6,
+8 + 6 + 6 + 6 and 10 + 6 + 6 + 6.
 
-N_att is the lifetime of the best known attack: the largest N with E[max(Y, r)] ≤ 1, where Y is the
-cover rate per digest query of a forger that sees the realized key, in units of 2^-127, and r is the
-rate of the other searches — including the WOTS+C unit-neighbour route (grind the counter until the
-encoding is a unit neighbour of the published word, about 2^116 hashes, then one chain preimage at
-about 2·2^-128 per query). `scripts/forest_attack.py` computes it; [PROOF.md](PROOF.md) explains
-where the remaining gap comes from.
+| h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 22 | 81,860,000 | 21,760,000 | 405,300 | 208,500 | 107,200 | 28,410 | 7,514 | 81,860,000 |
+| 24 | 336,700,000 | 23,830,000 | 441,500 | 226,800 | 116,600 | 30,810 | 8,154 | 336,700,000 |
+| 26 | 1,381,000,000 | 26,030,000 | 480,100 | 246,900 | 126,900 | 33,480 | 8,830 | 1,381,000,000 |
+| 28 | 5,634,000,000 | 28,350,000 | 522,000 | 267,900 | 137,400 | 36,190 | 9,541 | 5,634,000,000 |
 
-These attack figures do not depend on how the signer picks its randomizer. The proof fixes the steps
-δ of all messages and averages only the starts R0 (`Det.forgeAdvantageDet_le_seedFree`): the bound
-holds for every table of steps, as if the forger knew them.
+As a share of the lifetime in the cover model (the attack that covers a forest instance; at h = 24
+the best known attack, with the WOTS+C unit-neighbour route, is the same except at b = 8, where it is
+2% lower; FOREST.md):
+
+| h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 22 | 91.0% | 89.2% | 84.3% | 83.6% | 82.8% | 81.5% | 80.2% | 91.0% |
+| 24 | 93.5% | 90.3% | 85.2% | 84.4% | 83.7% | 82.3% | 81.1% | 93.5% |
+| 26 | 95.9% | 91.3% | 86.1% | 85.4% | 84.7% | 83.2% | 81.9% | 95.9% |
+| 28 | 97.8% | 92.1% | 87.1% | 86.3% | 85.4% | 83.9% | 82.6% | 97.8% |
+
+The full key lasts about 21.45 · 2^h signatures in the cover model; a layered key has the same
+limit, since the proof only charges its smaller key generation. A pruned key loses less than its
+pruning factor 2^(h−b): the forger must land in the kept subtree as well.
+
+These figures do not depend on how the signer picks its randomizer. The proof fixes the steps δ of
+all messages and averages only the starts R0 (`Det.forgeAdvantageDet_le_seedFree`): the bound holds
+for every table of steps, as if the forger knew them.
 
 ## Checked claims
 
 | Claim | Theorem / file |
 | --- | --- |
 | **127-bit SUF-CMA security at the limits above** | `Lifetimes.requestedSecurity`, [Lifetimes](LeanForest/Lifetimes.lean) |
-| The bound follows from rational checks on two budget routes | `ForsPotential.det_bitsFH`, [BridgeDetCloseF](LeanForest/BridgeDetCloseF.lean); certificates in [LifetimeCertificates](LeanForest/LifetimeCertificates.lean) |
+| The bound follows from rational checks on two budget routes, for any height, shape and hash | `ForestPotential.det_bitsFH`, [BridgeHeavyCert](LeanForest/BridgeHeavyCert.lean); certificates in [Certificates](LeanForest/Certificates) |
 | The deterministic signer reduces to a seed-free game of an adversary that never repeats a message | `Det.forgeAdvantageDet_le_seedFree`, [BridgeDet](LeanForest/BridgeDet.lean) |
-| Key generation makes exactly 226·2^b + 2(24 − b) hash calls | `Prefix.hashCalls_keygenFromSeed`, [SecurityPrefixErasedKeygen](LeanForest/SecurityPrefixErasedKeygen.lean) |
-| The digest's index and the 26-bit field of each of the 8 trees are a bijection of its 232 bits | `fullDigestView_bijective`, [ForestCoverage](LeanForest/ForestCoverage.lean) |
+| An accepted forgery is classified layer by layer, from the top | `SignatureWitness.accepted_full_classification`, [BridgeClassify](LeanForest/BridgeClassify.lean) |
+| Key generation makes exactly 226·2^k + 2(t − k) hash calls (top layer of height t, kept height k) | `Prefix.hashCalls_keygenFromSeed`, [SecurityPrefixErasedKeygen](LeanForest/SecurityPrefixErasedKeygen.lean) |
+| The digest's index and the 26-bit field of each of the 8 trees are a bijection of its h + 208 bits | `fullDigestView_bijective`, [ForestCoverage](LeanForest/ForestCoverage.lean) |
 | A successful seeded signature verifies | `Completeness.correct`, [Correctness](LeanForest/Correctness.lean) |
-| Computed subtree and surrogate path recover the root | `Completeness.eval_treeFold_pruned_path`, [Pruning](LeanForest/Pruning.lean) |
-| Serialized signature length = 4244 bytes | `signature_size`, [Layout](LeanForest/Layout.lean) |
-| Accepted verification uses exactly 265 Keccak-f permutations (at most 265 for any signature) | `Cost.verification_permutations`, [VerificationCost](LeanForest/VerificationCost.lean) |
+| Computed subtree and surrogate path recover the root, at every layer | `Completeness.eval_treeFold_pruned_path`, [Pruning](LeanForest/Pruning.lean) |
+| Serialized signature length = 2832 + 1028·d + 16·h bytes | `signature_size`, [Layout](LeanForest/Layout.lean) |
+| An accepted verification costs exactly `verifyCost` compressions of each hash (at most that for any signature) | `Cost.verification_compressions`, [VerificationCost](LeanForest/VerificationCost.lean) |
+| The size and the three verification costs of each of the 8 shapes | [Configurations](LeanForest/Configurations.lean) |
 
 ## Build
 
@@ -68,11 +90,12 @@ env LEAN_NUM_THREADS=1 nice -n 19 lake exe cache get
 env LEAN_NUM_THREADS=1 nice -n 19 lake build LeanForest
 ```
 
-No `sorry`, `native_decide`, or new axioms are used. The certificates take about 6 minutes and 7 GB
-of memory.
+No `sorry`, `native_decide`, or new axioms are used. The certificates of one height take about
+10 minutes and 8 GB of memory; lake builds the four heights in parallel unless they are built one
+at a time (`lake build LeanForest.Certificates.H22`, then `H24`, …).
 
 The numeric certificates are generated by `python3 scripts/forest_certificates.py emit` (pure
-Python, exact rationals), which rewrites `LeanForest/LifetimeCertificates.lean` and
+Python, exact rationals), which rewrites `LeanForest/Certificates/H*.lean` and
 `LeanForest/Lifetimes.lean`; the kernel re-checks them with `decide +kernel` during the build.
 `scripts/forest_table.py` writes the codeword table.
 
@@ -82,4 +105,5 @@ The unchanged `SphincsSecurity/` library is the earlier **three-layer leanVM sch
 [leanVM](https://github.com/leanEthereum/leanVM) at commit `b7a107256` (MIT OR Apache-2.0, see
 [licenses](../../licenses)). Its theorem
 `sphincs_has_127_bits_of_classical_security` applies only to that older scheme. Its documentation is
-[LEANVM_README.md](LEANVM_README.md) and [LEANVM_PROOF.md](LEANVM_PROOF.md).
+[LEANVM_README.md](LEANVM_README.md) and [LEANVM_PROOF.md](LEANVM_PROOF.md). `LeanForest` follows its
+layered structure for the hypertree.

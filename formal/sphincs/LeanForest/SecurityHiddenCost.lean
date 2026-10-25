@@ -6,6 +6,8 @@ private draws and privileged disclosures are free. Every monitor can inspect thi
 
 open OracleComp OracleSpec
 namespace LeanForest.Security.HiddenCost
+
+variable [Params]
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 set_option maxHeartbeats 100000

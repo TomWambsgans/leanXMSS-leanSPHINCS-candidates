@@ -7,6 +7,8 @@ adversary-visible high halves come from the independently prepared full hash lab
 
 open OracleComp OracleSpec
 namespace LeanForest.Security.HiddenGraph
+
+variable [Params]
 open Graph
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -108,7 +110,7 @@ theorem programGraphCache_preserves_other (positions : List Position) (cache : Q
       rw [ih _ (fun position hp => hmiss position (List.mem_cons_of_mem _ hp))]
       exact QueryCache.cacheQuery_of_ne _ _ (hmiss first List.mem_cons_self)
 
-/-- A noncanonical payload at a parsed chain/FORS-leaf address cannot alias any other
+/-- A noncanonical payload at a parsed chain or forest-step address cannot alias any other
 prepared structural input, including the multi-digest tree and leaf-compression inputs. -/
 theorem row_miss_all_inputs (address : Address) (value : Digest)
     (hmiss : value ≠ coordinates otsSecret ftsSecret labels address.inputCoordinate)

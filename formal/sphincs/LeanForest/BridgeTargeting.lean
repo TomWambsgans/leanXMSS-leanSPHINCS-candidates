@@ -3,7 +3,7 @@ import LeanForest.BridgeSignerForest
 import LeanForest.BridgeInterpSupport
 
 /-! Hit inclusion: the sample's fixed targets, read as a `Targeting` of the saturation potential.
-Row addresses (chain steps and FORS leaves) target their output coordinate; every other address
+Row addresses (chain steps and forest chain steps) target their output coordinate; every other address
 keeps a target that does not depend on the hidden table. Prepared cache entries never hit, so a
 cached target hit of the win implication, or a correct recorded guess, is a `Hit` for every
 state that keeps the prepared cache and every table that agrees with its exposed coordinates. -/
@@ -12,22 +12,21 @@ open OracleComp OracleSpec
 
 namespace LeanForest.Security.HiddenBridge
 
+variable [Params]
+
 open Concrete Completeness Graph GraphCorrectness TargetAssignment HiddenGraph Assembly SeedModel Reduce Eager
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 /-! ### Row addresses of tweak fields -/
 
-omit [Params] in
 theorem address_position_injective {left right : Address} (h : left.position = right.position) :
     left = right := by
   cases left <;> cases right <;> simp_all [Address.position]
 
-omit [Params] in
 theorem address_fields_injective {left right : Address}
     (h : hashDomainFields left.position.domain = hashDomainFields right.position.domain) : left = right :=
   address_position_injective (Position.domain_injective
@@ -38,7 +37,6 @@ noncomputable def rowAt (fields : TweakFields) : Option Address :=
   if h : ∃ address : Address, hashDomainFields address.position.domain = fields then some h.choose
   else none
 
-omit [Params] in
 theorem rowAt_some_iff (fields : TweakFields) (address : Address) :
     rowAt fields = some address ↔ hashDomainFields address.position.domain = fields := by
   unfold rowAt
@@ -53,12 +51,10 @@ theorem rowAt_some_iff (fields : TweakFields) (address : Address) :
     · intro heq; cases heq
     · intro ha; exact (h ⟨address, ha⟩).elim
 
-omit [Params] in
 theorem rowAt_address (address : Address) :
     rowAt (hashDomainFields address.position.domain) = some address :=
   (rowAt_some_iff _ _).2 rfl
 
-omit [Params] in
 theorem not_row_of_rowAt_none (fields : TweakFields) (position : Position)
     (hp : positionAt fields = some position) (hnone : rowAt fields = none) : ¬IsRowPosition position := by
   intro hrow
@@ -76,13 +72,11 @@ theorem not_row_of_rowAt_none (fields : TweakFields) (position : Position)
       cases h
   | _ => exact hrow.elim
 
-omit [Params] in
 theorem output_ne_input (address : Address) : address.outputCoordinate ≠ address.inputCoordinate := by
   cases address <;> simp [Address.outputCoordinate, Address.inputCoordinate]
 
 /-! ### Message-digest fields carry no target -/
 
-omit [Params] in
 theorem msg_fields (parameter : PublicParameter) (input : HashInput) (h : ForestSigner.IsMsgInput input)
     (fields : TweakFields) (hf : parseFields parameter input = some fields) :
     fields = hashDomainFields .message := by
@@ -90,7 +84,6 @@ theorem msg_fields (parameter : PublicParameter) (input : HashInput) (h : Forest
   obtain ⟨payload', heq⟩ := (parseFields_some_iff _ _ _).1 hf
   exact (fieldInput_injective heq).1.symm
 
-omit [Params] in
 theorem rowAt_message : rowAt (hashDomainFields .message) = none := by
   cases h : rowAt (hashDomainFields .message) with
   | none => rfl
@@ -98,7 +91,6 @@ theorem rowAt_message : rowAt (hashDomainFields .message) = none := by
       have hd := hashFields_injective (Position.domain_inRange _) (by trivial) ((rowAt_some_iff _ _).1 h)
       cases address <;> simp [Address.position, Position.domain] at hd
 
-omit [Params] in
 theorem positionAt_message : positionAt (hashDomainFields .message) = none := by
   cases h : positionAt (hashDomainFields .message) with
   | none => rfl
@@ -107,7 +99,6 @@ theorem positionAt_message : positionAt (hashDomainFields .message) = none := by
         ((positionAt_some_iff _ position).mp h)
       cases position <;> simp [Position.domain] at hd
 
-omit [Params] in
 theorem encodingAt_message : encodingAt (hashDomainFields .message) = none := by
   unfold encodingAt
   rw [dif_neg]
@@ -117,13 +108,12 @@ theorem encodingAt_message : encodingAt (hashDomainFields .message) = none := by
 
 theorem compTable_message (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
     (highs : CoordinateHighs) (remaining : RemainingOutputs) (table : HiddenGraph.Table)
-    (results : Index → Option (Counter × Encoding)) :
+    (results : OtsKey → Option (Counter × Encoding)) :
     compTable parameterOutput fixed highs remaining table results (hashDomainFields .message) = none := by
   unfold compTable
   rw [positionAt_message]
   simp only [encTable, encodingAt_message, Option.map_none]
 
-omit [Params] in
 theorem parse_msg_none (parameter : PublicParameter) (active : Address → Prop) (input : HashInput)
     (h : ForestSigner.IsMsgInput input) : HiddenGraph.parse parameter active input = none := by
   obtain ⟨parameter', payload, rfl⟩ := h
@@ -185,7 +175,7 @@ theorem mix_agree_mix (table table' : HiddenGraph.Table) :
   fun coordinate h => (mix_known _ fixed table coordinate h).trans (mix_known _ fixed table' coordinate h).symm
 
 /-- Away from row addresses, the sample's targets are the same for every hidden table. -/
-theorem compTable_nonrow (table table' : HiddenGraph.Table) (results : Index → Option (Counter × Encoding))
+theorem compTable_nonrow (table table' : HiddenGraph.Table) (results : OtsKey → Option (Counter × Encoding))
     (fields : TweakFields) (hrow : rowAt fields = none) :
     compTable parameterOutput fixed highs remaining table results fields =
       compTable parameterOutput fixed highs remaining table' results fields := by
@@ -204,7 +194,7 @@ theorem compTable_nonrow (table table' : HiddenGraph.Table) (results : Index →
 
 /-- The kind of a target at given tweak fields: the output coordinate of a row address, or the
 table-independent target of every other address. -/
-noncomputable def kindAt (results : Index → Option (Counter × Encoding)) (fields : TweakFields) :
+noncomputable def kindAt (results : OtsKey → Option (Counter × Encoding)) (fields : TweakFields) :
     HiddenDebt.TargetKind Coordinate :=
   (rowAt fields).elim
     ((compTable parameterOutput fixed highs remaining fixed results fields).elim .none
@@ -212,23 +202,23 @@ noncomputable def kindAt (results : Index → Option (Counter × Encoding)) (fie
     fun address => .hidden address.outputCoordinate
 
 /-- The target kind of an input, read from its tweak fields. -/
-noncomputable def sampleKind (results : Index → Option (Counter × Encoding)) (input : HashInput) :
+noncomputable def sampleKind (results : OtsKey → Option (Counter × Encoding)) (input : HashInput) :
     HiddenDebt.TargetKind Coordinate :=
   (parseFields (truncateHash parameterOutput) input).elim .none
     (kindAt parameterOutput fixed highs remaining results)
 
 /-- The targeting of one sample and preparation. -/
-noncomputable def sampleTargeting (results : Index → Option (Counter × Encoding)) :
+noncomputable def sampleTargeting (results : OtsKey → Option (Counter × Encoding)) :
     HiddenDebt.Targeting HashInput HashOutput Coordinate where
   trunc := truncateHash
   kind := sampleKind parameterOutput fixed highs remaining results
   digest := ForestSigner.IsMsgInput
 
-theorem sampleTargeting_kind_eq (results : Index → Option (Counter × Encoding)) :
+theorem sampleTargeting_kind_eq (results : OtsKey → Option (Counter × Encoding)) :
     (sampleTargeting parameterOutput fixed highs remaining results).kind =
       sampleKind parameterOutput fixed highs remaining results := rfl
 
-theorem sampleTargeting_kind (results : Index → Option (Counter × Encoding)) (input : HashInput)
+theorem sampleTargeting_kind (results : OtsKey → Option (Counter × Encoding)) (input : HashInput)
     (fields : TweakFields) (hf : parseFields (truncateHash parameterOutput) input = some fields) :
     (sampleTargeting parameterOutput fixed highs remaining results).kind input =
       kindAt parameterOutput fixed highs remaining results fields := by
@@ -237,14 +227,14 @@ theorem sampleTargeting_kind (results : Index → Option (Counter × Encoding)) 
   rw [hf]
   exact Option.elim_some _ _ _
 
-theorem kindAt_row (results : Index → Option (Counter × Encoding)) (fields : TweakFields) (address : Address)
+theorem kindAt_row (results : OtsKey → Option (Counter × Encoding)) (fields : TweakFields) (address : Address)
     (hr : rowAt fields = some address) :
     kindAt parameterOutput fixed highs remaining results fields = .hidden address.outputCoordinate := by
   unfold kindAt
   rw [hr]
   exact Option.elim_some _ _ _
 
-theorem kindAt_nonrow (results : Index → Option (Counter × Encoding)) (fields : TweakFields)
+theorem kindAt_nonrow (results : OtsKey → Option (Counter × Encoding)) (fields : TweakFields)
     (hr : rowAt fields = none) :
     kindAt parameterOutput fixed highs remaining results fields =
       (compTable parameterOutput fixed highs remaining fixed results fields).elim .none
@@ -253,7 +243,7 @@ theorem kindAt_nonrow (results : Index → Option (Counter × Encoding)) (fields
   rw [hr]
   exact Option.elim_none _ _
 
-theorem sampleTargeting_msg (results : Index → Option (Counter × Encoding)) (input : HashInput)
+theorem sampleTargeting_msg (results : OtsKey → Option (Counter × Encoding)) (input : HashInput)
     (h : ForestSigner.IsMsgInput input) :
     (sampleTargeting parameterOutput fixed highs remaining results).kind input = .none := by
   cases hf : parseFields (truncateHash parameterOutput) input with
@@ -269,7 +259,7 @@ theorem sampleTargeting_msg (results : Index → Option (Counter × Encoding)) (
         compTable_message]
       exact Option.elim_none _ _
 
-theorem sampleTargeting_compatible (results : Index → Option (Counter × Encoding)) :
+theorem sampleTargeting_compatible (results : OtsKey → Option (Counter × Encoding)) :
     HiddenDebt.Compatible (sampleTargeting parameterOutput fixed highs remaining results)
       (sampleModel parameterOutput highs) where
   row := by
@@ -288,7 +278,7 @@ theorem sampleTargeting_compatible (results : Index → Option (Counter × Encod
     rw [sampleModel_parse]
     exact parse_msg_none _ _ bytes h
 
-theorem boundary_row (parameter : PublicParameter) (surrogates : Fin totalHeight → Digest) (address : Address) :
+theorem boundary_row (parameter : PublicParameter) (surrogates : Fin maxLayerHeight → Digest) (address : Address) :
     PrunedGraph.boundary parameter surrogates address.position = none := by
   cases address <;> rfl
 
@@ -296,7 +286,7 @@ theorem boundary_row (parameter : PublicParameter) (surrogates : Fin totalHeight
 coordinate. -/
 theorem target_kind (table : HiddenGraph.Table)
     (htable : tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table)
-    (results : Index → Option (Counter × Encoding)) (input : HashInput) (value : Digest)
+    (results : OtsKey → Option (Counter × Encoding)) (input : HashInput) (value : Digest)
     (hmem : value ∈ targets (truncateHash parameterOutput)
       (compTable parameterOutput fixed highs remaining table results) input) :
     (sampleTargeting parameterOutput fixed highs remaining results).kind input = .fixed value ∨
@@ -370,7 +360,6 @@ end Targeting
 
 /-! ### The prepared cache never hits -/
 
-omit [Params] in
 theorem queriedInputs_sequenceFin_mem {α : Type} (f : QueryImpl HashSpec Id) :
     ∀ {n : Nat} (computation : Fin n → OracleComp HashSpec α) {input : HashInput},
       input ∈ queriedInputs f (Concrete.sequenceFin computation) →
@@ -390,7 +379,7 @@ theorem queriedInputs_sequenceFin_mem {α : Type} (f : QueryImpl HashSpec Id) :
 hidden table. -/
 theorem prepared_clean (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
     (remaining : RemainingOutputs)
-    (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (table : HiddenGraph.Table) (input : HashInput) (answer : HashOutput)
     (hcache : prepared.2 input = some answer) :
@@ -444,23 +433,37 @@ theorem prepared_clean (parameterOutput : HashOutput) (fixed : HiddenGraph.Table
     rw [hempty]
     exact Finset.notMem_empty _
   · -- an encoding search query: rejected, or the exempt successful trial
-    obtain ⟨leaf, hleaf⟩ := queriedInputs_sequenceFin_mem f _ hquery
+    have hquery' : input ∈ queriedInputs f (Concrete.sequenceFin fun lay : Layer =>
+        Concrete.sequenceFin fun tree : TreeIndex => Concrete.sequenceFin fun leaf : LeafIndex =>
+          ReferenceChoice.search (truncateHash parameterOutput) lay tree leaf
+            (keyMessages (sampleData parameterOutput fixed highs remaining) (lay, tree, leaf))
+            encodingAttemptLimit 0) := by
+      unfold searchAll at hquery
+      rw [queriedInputs_bind, queriedInputs_pure, List.append_nil] at hquery
+      exact hquery
+    obtain ⟨lay, h1⟩ := queriedInputs_sequenceFin_mem f _ hquery'
+    obtain ⟨tree, h2⟩ := queriedInputs_sequenceFin_mem f _ h1
+    obtain ⟨leaf, hleaf⟩ := queriedInputs_sequenceFin_mem f _ h2
     have hanswer : f input = answer := hf hcache
     rw [← hanswer]
-    refine ReferenceChoice.search_targets_empty_or_miss f _ topLayer rootTree leaf _ _ ?_ input hleaf
-    have hsel : ReferenceChoice.selection f (truncateHash parameterOutput) topLayer rootTree leaf
-        ((sampleData parameterOutput fixed highs remaining).forestKey leaf) = prepared.1 leaf := hsearch leaf
+    refine ReferenceChoice.search_targets_empty_or_miss f _ lay tree leaf _ _ ?_ input hleaf
+    have hsel : ReferenceChoice.selection f (truncateHash parameterOutput) lay tree leaf
+        (keyMessages (sampleData parameterOutput fixed highs remaining) (lay, tree, leaf)) =
+          prepared.1 (lay, tree, leaf) := hsearch (lay, tree, leaf)
+    have hpos : positionAt (hashDomainFields (.encoding lay tree leaf)) = none :=
+      encoding_positionAt (lay, tree, leaf)
+    have hat : encodingAt (hashDomainFields (.encoding lay tree leaf)) = some (lay, tree, leaf) :=
+      encodingAt_encoding (lay, tree, leaf)
     unfold compTable
-    rw [encoding_positionAt]
+    rw [hpos]
     dsimp only
     unfold encTable
-    rw [encodingAt_encoding, Option.map_some]
+    rw [hat, Option.map_some]
     unfold ReferenceChoice.exemptInput ReferenceChoice.target ReferenceChoice.word
     rw [hsel]
 
 /-! ### Hit inclusion -/
 
-omit [Params] in
 theorem hit_of_debt {tg : HiddenDebt.Targeting HashInput HashOutput Coordinate}
     {initial : QueryCache HashSpec} {table : HiddenGraph.Table}
     {state : HiddenDebt.DebtState HashInput HashOutput Coordinate} (hagree : HiddenDebt.Agrees state.known table)
@@ -477,7 +480,7 @@ sample's fixed targets is a saturation `Hit`, for every state keeping the prepar
 agreeing with the table. -/
 theorem sampleTargeting_hit (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
     (highs : CoordinateHighs) (remaining : RemainingOutputs)
-    (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining))
     (table : HiddenGraph.Table)
     (htable : tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table)
@@ -509,9 +512,9 @@ set_option linter.unusedVariables false in
 /-- **A targeting for the saturation bound** that covers the win implication's cached hits: its
 kind map is compatible with the sample's row model, message-digest inputs are untargeted digest
 queries, and a correct guess or cached target hit is a saturation `Hit`. -/
-theorem exists_targeting (hb : 0 < subtreeHeight) (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
+theorem exists_targeting (hb : 0 < keptHeight topLayer) (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
     (highs : CoordinateHighs) (remaining : RemainingOutputs)
-    (prepared : (Index → Option (Counter × Encoding)) × QueryCache HashSpec)
+    (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
     (hprepared : prepared ∈ support (preparation parameterOutput fixed highs remaining)) :
     ∃ tg : HiddenDebt.Targeting HashInput HashOutput HiddenGraph.Coordinate,
       tg.trunc = truncateHash ∧
@@ -531,7 +534,6 @@ theorem exists_targeting (hb : 0 < subtreeHeight) (parameterOutput : HashOutput)
     fun table htable s hprep hagree hbad =>
       sampleTargeting_hit parameterOutput fixed highs remaining prepared hprepared table htable s hprep hagree hbad⟩
 
-omit [Params] in
 /-- Truncating a uniform hash output is uniform, for any targeting comparing by `truncateHash`. -/
 theorem uniformTruncation_of_trunc (tg : HiddenDebt.Targeting HashInput HashOutput HiddenGraph.Coordinate)
     (h : tg.trunc = truncateHash) : HiddenDebt.UniformTruncation tg := by
@@ -541,7 +543,6 @@ theorem uniformTruncation_of_trunc (tg : HiddenDebt.Targeting HashInput HashOutp
 
 /-! ### Extending knowledge -/
 
-omit [Params] in
 theorem tableExtending_of_extends (known known' : HiddenReveal.Knowledge Coordinate)
     (h : ∀ coordinate value, known coordinate = some value → known' coordinate = some value)
     (fresh : HiddenGraph.Table) :

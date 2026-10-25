@@ -7,6 +7,8 @@ the other128bits and all unselected answers remain explicit independent residual
 
 open OracleComp OracleSpec
 namespace LeanForest.Security.HiddenGraph
+
+variable [Params]
 open Graph SeedModel SphincsSecurity.Concrete.UniformTableSplit
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000

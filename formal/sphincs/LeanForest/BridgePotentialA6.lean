@@ -10,6 +10,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.PotentialA
 
+variable [Params]
+
 open Concrete HiddenGraph HiddenDebt HiddenBridge HiddenCost HiddenReveal EncodingCode
 
 set_option backward.isDefEq.respectTransparency false
@@ -17,7 +19,6 @@ set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 namespace Ctx
 
@@ -234,7 +235,6 @@ noncomputable def pinChance (o : Option Digest) (Q : Digest → Prop) : ℝ≥0�
   | none => ((Finset.univ.filter Q).card : ℝ≥0∞) / (Fintype.card Digest : ℝ≥0∞)
   | some w => if Q w then 1 else 0
 
-omit [Params] in
 /-- **Pinning coordinates.** Completing a knowledge cache satisfies coordinatewise conditions with
 the product of their chances. -/
 theorem completion_pin (known : Knowledge Coordinate) (P : Coordinate → Digest → Prop) :
@@ -267,7 +267,6 @@ theorem completion_pin (known : Knowledge Coordinate) (P : Coordinate → Digest
   · intro c _
     simp
 
-omit [Params] in
 theorem pinChance_true (o : Option Digest) : pinChance o (fun _ => True) = 1 := by
   cases o with
   | none =>
@@ -276,13 +275,11 @@ theorem pinChance_true (o : Option Digest) : pinChance o (fun _ => True) = 1 := 
       exact ENNReal.div_self (by norm_num) (by norm_num)
   | some w => simp [pinChance]
 
-omit [Params] in
 theorem pinChance_congr (o : Option Digest) {Q Q' : Digest → Prop} (h : ∀ v, Q v ↔ Q' v) :
     pinChance o Q = pinChance o Q' := by
   have : Q = Q' := funext fun v => propext (h v)
   rw [this]
 
-omit [Params] in
 theorem pinChance_eq (o : Option Digest) (t : Digest) :
     pinChance o (fun v => v = t) = match o with | none => ν | some w => if w = t then 1 else 0 := by
   cases o with

@@ -2,6 +2,8 @@ import LeanForest.Scheme
 
 /-! Uniform bit extraction; adapted from leanVM b7a107256. -/
 namespace LeanForest
+
+variable [Params]
 open OracleComp OracleSpec ENNReal
 theorem hashOutput_eq_of_extract {width : Nat} (hwidth : width ≤ hashOutputBits) {x y : HashOutput}
     (hlow : x.extractLsb' 0 width = y.extractLsb' 0 width)

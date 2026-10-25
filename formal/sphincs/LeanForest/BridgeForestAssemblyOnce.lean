@@ -1,13 +1,15 @@
-import LeanForest.BridgeForsAssembly
+import LeanForest.BridgeForestAssembly
 import LeanForest.BridgeNoRepeat
-import LeanForest.BridgeForsGameOnce
+import LeanForest.BridgeForestGameOnce
 
 /-! The one-coin excess forecast of a new pair at the start of the run (`startExcessO`), which is
-the start value of the future-pair term of the one-coin FORS potential. -/
+the start value of the future-pair term of the one-coin forest potential. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.ForsPotential
+namespace LeanForest.Security.ForestPotential
+
+variable [Params]
 
 open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal LeanForest.Base.Domination
 
@@ -16,7 +18,6 @@ set_option maxRecDepth 10000
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-variable [Params]
 
 section TotalO
 
@@ -32,7 +33,6 @@ noncomputable def startExcessO (wbar b0 : ℝ≥0∞) (k : ℕ) : ℝ≥0∞ :=
 theorem hValueO_start (parameter : PublicParameter) (data : PublicData) (wbar b0 : ℝ≥0∞) (s : State) (k : ℕ) :
     hValueO parameter data wbar b0 s [] [] 0 signatureLimit k = startExcessO wbar b0 k := rfl
 
-omit [Params] in
 /-- At the start no digest block is cached: the empty list of touched messages is valid. -/
 theorem start_minv (parameter : PublicParameter) (data : PublicData)
     (initial : HiddenOutside.Cache HashInput HashOutput) (hclean : ∀ p, initial (pblk parameter data p) = none)
@@ -56,4 +56,4 @@ theorem potO_start_le (parameter : PublicParameter) (data : PublicData) (wbar b0
 
 end TotalO
 
-end LeanForest.Security.ForsPotential
+end LeanForest.Security.ForestPotential

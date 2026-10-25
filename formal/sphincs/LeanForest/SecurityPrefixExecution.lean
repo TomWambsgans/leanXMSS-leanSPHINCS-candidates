@@ -11,6 +11,8 @@ fresh private draws and a supplied hash function).
 open OracleComp OracleSpec ENNReal
 
 namespace LeanForest.Security.Prefix
+
+variable [Params]
 open SphincsSecurity.Concrete.PartialChainEndpoint
 set_option backward.isDefEq.respectTransparency false
 
