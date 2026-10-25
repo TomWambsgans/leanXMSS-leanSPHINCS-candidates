@@ -43,7 +43,7 @@ class Params:
 
 
 PRESETS = {
-    "lean": Params("leanSPHINCS candidate", n=16, h=26, a=10, k=24, limit=30),
+    "lean": Params("FORS comparison for leanSPHINCS", n=16, h=24, a=10, k=24, limit=28),
     "128-24": Params("SLH-DSA-*-128-24 (SP 800-230 ipd)", n=16, h=22, a=24, k=6, limit=24),
     "128s": Params("SLH-DSA-*-128s (FIPS 205)", n=16, h=63, a=12, k=14, limit=64),
     "128f": Params("SLH-DSA-*-128f (FIPS 205)", n=16, h=66, a=6, k=33, limit=64),
@@ -195,7 +195,7 @@ def main():
         description=__doc__.split("\n\n")[0],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="examples:\n"
-        "  %(prog)s                          # leanSPHINCS candidate (h=26, a=10, k=24)\n"
+        "  %(prog)s                          # the FORS comparison row (h=24, a=10, k=24)\n"
         "  %(prog)s --h 23                   # same set with one more level of tree height\n"
         "  %(prog)s --sigs 24 24.5 25 --levels 128 100\n"
         "  %(prog)s --preset 128s\n"

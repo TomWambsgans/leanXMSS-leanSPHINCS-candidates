@@ -1,113 +1,80 @@
 # leanSPHINCS proofs in Lean 4
 
 **Status: the leanSphincs signer has 127 bits of classical SUF-CMA security in the random-oracle
-model at the signature limits below (`LeanSphincs.Lifetimes.requestedSecurity`,
-[Lifetimes.lean](LeanSphincs/Lifetimes.lean)).** The proof uses only `propext`, `Classical.choice`
-and `Quot.sound`; [Axioms.lean](LeanSphincs/Axioms.lean) pins every public theorem to its axioms.
+model at the signature limits below (`LeanForest.Lifetimes.requestedSecurity`,
+[Lifetimes.lean](LeanForest/Lifetimes.lean)).** The proof uses only `propext`, `Classical.choice`
+and `Quot.sound`; [Axioms.lean](LeanForest/Axioms.lean) pins every public theorem to its axioms.
 
-`LeanSphincs/` models the candidate: one height-26 tree, 24 FORS trees of 1024 leaves, 64 WOTS+C
-chains with four positions and sum 120, two message-digest calls, and pruning with surrogate
-siblings. A FORS tree has no root hash, and no hash folds the trees into a key: the WOTS+C encoding
-hashes the two level-9 nodes of every tree with the counter last,
-Th(P, A(4, 0, idx), n_0[0] ‖ n_0[1] ‖ … ‖ n_23[0] ‖ n_23[1] ‖ c), 804 bytes (`encode`, `ftsKey`,
-`ftsRecover`); the verifier folds an opened leaf nine levels and reads the other level-9 node as the
-last path element. Every hash input is the 16-byte public parameter P, a 16-byte address (4 bytes `lo`,
-3 bytes `hi`, one byte type + 32·step, then 8 zero bytes) and the payload; the message digest hashes
-m ‖ ρ (the root is not hashed), and its fields do not lie across 64-bit words: the index is bits
-128..153 of call 0, and FORS index κ is in call ⌊κ/12⌋ at bit 64·⌊(κ mod 12)/6⌋ + 10·(κ mod 6)
-(`truncateMessageDigest`, `digestLeaves_truncate`). One hash of the seed gives two secrets, the two 16-byte halves of its output:
-the starts of chains 2t and 2t + 1 of the one-time key at leaf e are the halves of
-H(P ‖ A(0, t, e) ‖ seed), and the secrets of leaves 2t and 2t + 1 of tree κ of FORS instance idx are
-the halves of H(P ‖ A(8, κ + 512·t, idx) ‖ seed) (`derivePair`, `otsValues`, `ftsNode`). The public
-parameter and the surrogates each take one hash and keep its first half; the randomizer hash gives R0 (its
-first half) and the step δ (its second half with the lowest bit set).
-[Scheme.lean](LeanSphincs/Scheme.lean) is the functional model; `Seeded.sign`
-derives R0 and δ from one hash H(P ‖ A(7, 0, 0) ‖ seed ‖ m) per message and tries R0, R0 + δ,
-R0 + 2δ, … (128-bit little-endian arithmetic, `walkStep`) until the digest index lands in the kept
-subtree, as the Rust signer does, so a repeated request returns the same signature. δ is odd, so the
-walk does not come back within 2^128 attempts (`walk_iterate_ne`), and secret, so a signature does not
-tell which randomizers were rejected before it. The SUF-CMA game is [StatementDet.lean](LeanSphincs/StatementDet.lean): every
-adversary, every number q ≥ 1 of hash queries (keygen, signing and verification included), forges
-with probability at most q / 2^127.
+`LeanForest/` models the candidate: one height-24 tree of WOTS+C keys (64 chains of four positions,
+target sum 123), a two-level WOTS forest as the few-time signature, one message-digest call, and
+pruning with surrogate siblings. No tree of the forest has a root hash and the forest key is not
+hashed either: the WOTS+C encoding absorbs its sixteen nodes with the counter last. Every hash input
+is the 16-byte public parameter P, a 16-byte address (4 bytes `lo`, 3 bytes `hi`, one byte
+type + 32·step, then 8 zero bytes) and the payload. One hash of the seed gives two secrets, the two
+16-byte halves of its output. The signer derives R0 and the step δ from one hash
+H(P ‖ A(7, 0, 0) ‖ seed ‖ m) per message and tries R0, R0 + δ, R0 + 2δ, … until the digest index
+lands in the kept subtree, as the Rust signer does, so a repeated request returns the same
+signature. δ is odd, so the walk does not come back within 2^128 attempts (`walk_iterate_ne`), and
+secret, so a signature does not tell which randomizers were rejected before it. The SUF-CMA game is
+[StatementDet.lean](LeanForest/StatementDet.lean): every adversary, every number q ≥ 1 of hash
+queries (keygen, signing and verification included), forges with probability at most q / 2^127.
+
+The scheme, the digest layout, the codeword table, the costs and the proof route of the forest are
+documented in [FOREST.md](FOREST.md); the shared proof machinery and the modeling differences with
+the Rust code are in [PROOF.md](PROOF.md).
 
 ## Proved lifetimes
 
 | Subtree height b | Proved signature limit N | N_att | N / N_att |
 | --- | ---: | ---: | ---: |
-| 26 (full tree) | 1,156,000,000 | 1,203,133,390 | 96.1% |
-| 20 | 22,380,000 | 23,797,911 | 94.0% |
-| 14 | 412,500 | 466,871 | 88.4% |
-| 13 | 211,900 | 242,291 | 87.5% |
-| 12 | 108,700 | 125,715 | 86.5% |
-| 10 | 28,600 | 33,809 | 84.6% |
-| 8 | 7,530 | 9,074 | 83.0% |
+| 24 (full tree) | 336,700,000 | 3.60e8 | 93.5% |
+| 20 | 23,830,000 | 2.64e7 | 90.3% |
+| 14 | 441,500 | 5.18e5 | 85.2% |
+| 13 | 226,800 | 2.69e5 | 84.3% |
+| 12 | 116,600 | 1.39e5 | 83.9% |
+| 10 | 30,810 | 3.74e4 | 82.4% |
+| 8 | 8,154 | 9.85e3 | 82.8% |
 
-N_att is the lifetime of the best known FORS attack: the largest N with E[max(X, 1/2)] ≤ 1, where X
-is the cover rate per digest query of an adaptive forger (distinct revealed leaves, exact multinomial
-loads over the 2^b indices) in units of 2^-127, and 1/2 is the rate of the other searches.
-
-That model omits a WOTS attack. The WOTS key signs the FORS tops, which a forger controls through
-the FORS opening. Grinding the WOTS counter until the encoding is a unit neighbour of the
-published word (one chain lowered, one raised; about 3,300 such words for the worst leaf of a key)
-takes about 2^116 hashes, after which a single chain preimage forges, at about 2·2^-128 per query.
-With this attack the best known lifetimes are about 100 / 99.8 / 97.3 / 96.5 / 95.6 / 93.7 / 92.1%
-of N_att (b = 26 … 8), so the proved limits are 90–96% of them. [PROOF.md](PROOF.md) explains where the
-remaining gap comes from.
+N_att is the lifetime of the best known attack: the largest N with E[max(Y, r)] ≤ 1, where Y is the
+cover rate per digest query of a forger that sees the realized key, in units of 2^-127, and r is the
+rate of the other searches — including the WOTS+C unit-neighbour route (grind the counter until the
+encoding is a unit neighbour of the published word, about 2^116 hashes, then one chain preimage at
+about 2·2^-128 per query). `scripts/forest_attack.py` computes it; [PROOF.md](PROOF.md) explains
+where the remaining gap comes from.
 
 These attack figures do not depend on how the signer picks its randomizer. The proof fixes the steps
 δ of all messages and averages only the starts R0 (`Det.forgeAdvantageDet_le_seedFree`): the bound
-holds for every table of steps, as if the forger knew them. A forger that knows δ and scans a message's
-randomizers up to the first one that lands knows in advance, per digest query, about twice as often
-which digest a pruned key will sign (`Walk.grp_step`); the proof pays for it, and it is far too rare
-to change the lifetimes above.
+holds for every table of steps, as if the forger knew them.
 
 ## Checked claims
 
 | Claim | Theorem / file |
 | --- | --- |
-| **127-bit SUF-CMA security at the limits above** | `Lifetimes.requestedSecurity`, [Lifetimes](LeanSphincs/Lifetimes.lean) |
-| The bound follows from rational checks on two budget routes | `ForsPotential.det_bits`, [BridgeDetClose](LeanSphincs/BridgeDetClose.lean); certificates in [LifetimeCertificates](LeanSphincs/LifetimeCertificates.lean) |
-| The deterministic signer reduces to a seed-free game of an adversary that never repeats a message | `Det.forgeAdvantageDet_le_seedFree`, [BridgeDet](LeanSphincs/BridgeDet.lean) |
-| The secrets are independent uniform values hidden behind the seed: the hash answers the proof programs, two secrets each, are independent uniform outputs | `SeedCoupling.evalDist_hashAnswers`, `SeedCoupling.evalDist_prepared_continuation`, [SecuritySeedCoupling](LeanSphincs/SecuritySeedCoupling.lean) |
-| Key generation makes exactly 226·2^b + 2(26 − b) hash calls (per leaf: 32 hashes of the seed, 192 chain steps, the leaf hash) | `Prefix.hashCalls_keygenFromSeed`, [SecurityPrefixErasedKeygen](LeanSphincs/SecurityPrefixErasedKeygen.lean) |
-| The signer that walks R0, R0 + δ, … selects a cached digest with exactly the walk probability | `GraphView.loop_bound`, [BridgeSignerFors](LeanSphincs/BridgeSignerFors.lean) |
-| A uniform randomizer table is a uniform table of steps and an independent uniform table of starts | `Det.evalDist_rtable_split`, [BridgeDet](LeanSphincs/BridgeDet.lean) |
-| One digest query adds at most (2 − 2^-(26−b)) / 2^128 selection mass to a message | `Walk.grp_step`, [BridgeGroup](LeanSphincs/BridgeGroup.lean) |
-| A successful seeded signature verifies | `Completeness.correct`, [Correctness](LeanSphincs/Correctness.lean) |
-| A signature assembled from any landed randomizer verifies | `Completeness.verify_of_finishSign`, [RandomizedCorrectness](LeanSphincs/RandomizedCorrectness.lean) |
-| Every successful randomized signature verifies in the shared ROM | `Completeness.verify_of_keygen_sign_support`, [RandomizedSupport](LeanSphincs/RandomizedSupport.lean) |
-| Honest keygen, signing and verification fail with probability ≤ 2^(-2^(b+5)) + 2^(-4194304) | `Completeness.honest_completeness`, [Honest](LeanSphincs/Honest.lean) |
-| Sum of honest failure probabilities over all messages ≤ 2^-256 (b ≥ 10) | `Completeness.honest_completeness_all_messages`, [Honest](LeanSphincs/Honest.lean) |
-| Computed subtree and surrogate path recover the root | `Completeness.eval_treeFold_pruned_path`, [Pruning](LeanSphincs/Pruning.lean) |
-| Graph-label programming preserves the random-oracle continuation | `Security.Graph.evalDist_graph_continuation`, [SecurityGraphSampling](LeanSphincs/SecurityGraphSampling.lean) |
-| Serialized signature length = 5684 bytes | `signature_size`, [Layout](LeanSphincs/Layout.lean) |
-| Accepted verification uses exactly 354 Keccak-f permutations (at most 354 for any signature) | `Cost.verification_permutations`, [VerificationCost](LeanSphincs/VerificationCost.lean) |
-
-The proof route, its modules, the gap to the attack and the modeling differences with the Rust code
-are in [PROOF.md](PROOF.md).
+| **127-bit SUF-CMA security at the limits above** | `Lifetimes.requestedSecurity`, [Lifetimes](LeanForest/Lifetimes.lean) |
+| The bound follows from rational checks on two budget routes | `ForsPotential.det_bitsFH`, [BridgeDetCloseF](LeanForest/BridgeDetCloseF.lean); certificates in [LifetimeCertificates](LeanForest/LifetimeCertificates.lean) |
+| The deterministic signer reduces to a seed-free game of an adversary that never repeats a message | `Det.forgeAdvantageDet_le_seedFree`, [BridgeDet](LeanForest/BridgeDet.lean) |
+| Key generation makes exactly 226·2^b + 2(24 − b) hash calls | `Prefix.hashCalls_keygenFromSeed`, [SecurityPrefixErasedKeygen](LeanForest/SecurityPrefixErasedKeygen.lean) |
+| The digest's index and the 26-bit field of each of the 8 trees are a bijection of its 232 bits | `fullDigestView_bijective`, [ForestCoverage](LeanForest/ForestCoverage.lean) |
+| A successful seeded signature verifies | `Completeness.correct`, [Correctness](LeanForest/Correctness.lean) |
+| Computed subtree and surrogate path recover the root | `Completeness.eval_treeFold_pruned_path`, [Pruning](LeanForest/Pruning.lean) |
+| Serialized signature length = 4244 bytes | `signature_size`, [Layout](LeanForest/Layout.lean) |
+| Accepted verification uses exactly 265 Keccak-f permutations (at most 265 for any signature) | `Cost.verification_permutations`, [VerificationCost](LeanForest/VerificationCost.lean) |
 
 ## Build
 
 ```sh
 cd formal/sphincs
 env LEAN_NUM_THREADS=1 nice -n 19 lake exe cache get
-env LEAN_NUM_THREADS=1 nice -n 19 lake build
+env LEAN_NUM_THREADS=1 nice -n 19 lake build LeanForest
 ```
 
-The default build includes the candidate with its axiom guards, the retained leanVM proof, and the
-legacy query-budget regression check. No `sorry`, `native_decide`, or new axioms are used.
+No `sorry`, `native_decide`, or new axioms are used. The certificates take about 6 minutes and 7 GB
+of memory.
 
-The numeric certificates are generated by `python3 scripts/lifetime_certificates.py` (pure Python,
-exact rationals), which rewrites `LeanSphincs/LifetimeCertificates.lean`; the kernel re-checks them
-with `decide +kernel` during the build.
-
-## The forest variant (leanSphincs-spicy)
-
-`LeanForest/` proves the same statement for the variant that replaces FORS by a two-level WOTS
-forest (4,276-byte signatures, 267 Keccak-f permutations to verify), at lifetimes above the ones of this
-table: `LeanForest.Lifetimes.requestedSecurity`, see [FOREST.md](FOREST.md). It is not a default
-target: `env LEAN_NUM_THREADS=1 nice -n 19 lake build LeanForest` (its certificates take about 6
-minutes and 7 GB of memory).
+The numeric certificates are generated by `python3 scripts/forest_certificates.py emit` (pure
+Python, exact rationals), which rewrites `LeanForest/LifetimeCertificates.lean` and
+`LeanForest/Lifetimes.lean`; the kernel re-checks them with `decide +kernel` during the build.
+`scripts/forest_table.py` writes the codeword table.
 
 ## The leanVM library
 

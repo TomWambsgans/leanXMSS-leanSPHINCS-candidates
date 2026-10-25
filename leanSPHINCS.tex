@@ -42,10 +42,10 @@
 
 Same shape as SLH-DSA-128-24 from NIST's recent SP~800-230~\cite{SP800230} (single XMSS layer), with the differences:
   \begin{itemize}
-    \item $h = 26$, instead of $22$ (tree height, i.e. height of the only XMSS layer)
-    \item $k = 24$, instead of $6$ (number of trees per FORS)
-    \item $a = 10$, instead of $24$ (height of each FORS tree)
-    \item WOTS$^+$C~\cite{HK22C}, instead of WOTS$^+$. 64 chains of length $w=4$, with a target sum of 120
+    \item $h = 24$, instead of $22$ (tree height, i.e. height of the only XMSS layer)
+    \item a \emph{two-level WOTS forest} (\cref{sec:twolevel}) instead of FORS: signatures are 25\% smaller and
+          verification 25\% cheaper, at the same signing cost and longer lifetimes
+    \item WOTS$^+$C~\cite{HK22C}, instead of WOTS$^+$. 64 chains of length $w=4$, with a target sum of 123
   \end{itemize}
 
 Properties:
@@ -53,10 +53,10 @@ Properties:
 \begin{itemize}
   \item public key: 32 bytes
   \item secret key: 32 bytes
-  \item signature size: 5\,684 bytes
-  \item verification: 354 Keccak-f[1600] permutations (hash: Keccak-256)
+  \item signature size: 4\,244 bytes
+  \item verification: 265 Keccak-f[1600] permutations (hash: Keccak-256)
   \item security: NIST level 1 \cite{FIPS205} (applies to all the usages below) (127 bits SUF in the ROM, and $\approx 64$ bits in the QROM)
-  \item lifetime: up to $2^{30}$ signatures.
+  \item lifetime: up to $2^{28}$ signatures.
 \end{itemize}
 
 \paragraph{Hash inputs.} $\hash$ is Keccak-256 (Ethereum's \texttt{keccak256}: SHA3-256 with the original Keccak padding), truncated to
@@ -72,49 +72,52 @@ and the step in a chain, and 8 zero bytes.
         lands in its subtree. Each try costs 1 permutation. $\Delta$ is secret: a signature does not tell which
         randomizers were tried and rejected before it (with $R_0 + i$, $R-1, R-2, \dots$ were, which reveals that a
         key is pruned)
-  \item a FORS tree has no root hash, and there is no FORS public key: the WOTS$^+$C encoding hashes the two nodes
-        below the root of every tree, then the counter. This saves one hash per tree and the hash of a FORS key; the
-        counter falls in the last block, so each counter the signer tries costs 1 permutation
+  \item no tree of the forest has a root hash, and there is no forest public key: the WOTS$^+$C encoding hashes
+        the two nodes below the root of every coordinate, then the counter. This saves one hash per tree and the
+        hash of a forest key; the counter falls in the last block, so each counter the signer tries costs
+        1 permutation
   \item the secrets are derived from the secret key two at a time: one hash gives 32 bytes, i.e.\ two chain starts
-        or two FORS secrets
+  \item the digest is one call of $24 + 8\cdot26 = 232$ bits: the 16 codeword indices are its first 16 bytes, and
+        its last 16 bytes hold the 16 children (3 bits each), the 8 super-children (4 bits each) and the index
+        (24 bits), in that order, so that no field lies across two 64-bit words
 \end{itemize}
 
 \section{Usage}
 
-\subsection{Full \texorpdfstring{$2^{30}$}{2\textasciicircum 30} lifetime}
+\subsection{Full \texorpdfstring{$2^{28}$}{2\textasciicircum 28} lifetime}
 
 For powerful devices.
 
 \begin{itemize}
-  \item lifetime: $2^{30}$ (at 127 bits of security in the ROM)
-  \item keygen: $15.6 \cdot 10^9$ permutations
-  \item signing: $92\cdot10^3$ permutations, with a 16~MiB cache
+  \item lifetime: $2^{28}$ (at 127 bits of security in the ROM)
+  \item keygen: $3.9 \cdot 10^9$ permutations
+  \item signing: $69\cdot10^3$ permutations, with a 16~MiB cache
 \end{itemize}
 
 \emph{A modern laptop CPU computes around $2^{29}$ Keccak-f permutations per second.}
 
 
-\subsection{Pruned: \texorpdfstring{$2.1\cdot10^5$}{210K} lifetime}
+\subsection{Pruned: \texorpdfstring{$2.2\cdot10^5$}{220K} lifetime}
 
-For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 13, and replace the 13 siblings above it by pseudorandom surrogate nodes.
+For weaker devices. The trick is to trade smaller lifetime for faster keygen, using hypertree pruning~\cite{conduition}: only build one subtree of height 13, and replace the 11 siblings above it by pseudorandom surrogate nodes.
 
 \begin{itemize}
-  \item lifetime: $2.1\cdot10^5$ signatures (at 127 bits of security in the ROM)
+  \item lifetime: $2.2\cdot10^5$ signatures (at 127 bits of security in the ROM)
   \item keygen: $1.9\cdot10^6$ permutations
-  \item signing: $74\cdot10^3$ permutations, with a 16~KiB cache (including $8\cdot10^3$ permutations of grinding)
+  \item signing: $66\cdot10^3$ permutations, with a 16~KiB cache (including $2.0\cdot10^3$ permutations of grinding)
 \end{itemize}
 
 \emph{A Ledger Nano S+ can compute $5.8$ thousand Keccak-f permutations per second~\cite{hwbench}.}
 
-\subsection{Pruned: \texorpdfstring{$2.2\cdot10^7$}{22M} lifetime}
+\subsection{Pruned: \texorpdfstring{$2.3\cdot10^7$}{23M} lifetime}
 
-For laptops, phones and powerful hardware wallets. The same pruning, with a subtree of height 20 (and 6
+For laptops, phones and powerful hardware wallets. The same pruning, with a subtree of height 20 (and 4
 surrogate siblings).
 
 \begin{itemize}
-  \item lifetime: $2.2\cdot10^7$ signatures (at 127 bits of security in the ROM)
+  \item lifetime: $2.3\cdot10^7$ signatures (at 127 bits of security in the ROM)
   \item keygen: $244\cdot10^6$ permutations
-  \item signing: $70\cdot10^3$ permutations, with a 1~MiB cache (including 64 permutations of grinding)
+  \item signing: $69\cdot10^3$ permutations, with a 1~MiB cache (including 16 permutations of grinding)
 \end{itemize}
 
 \subsection{Threshold signing}
@@ -122,20 +125,27 @@ surrogate siblings).
 
 \begin{itemize}
   \item $t$-of-$n$
-  \item signing: malicious security against $t-1$ operators (with abort); 432 bytes per signer, 3 rounds
+  \item signing: malicious security against $t-1$ operators (with abort); about 790 bytes per signer on
+        average and at most 1\,152, 3 rounds
   \item keygen: no trusted dealer, a one-time MPC among the $n$ operators, fewer than $n/2$ corrupt
-  \item lifetime: $7.5\cdot10^3$, $2.86\cdot10^4$ or $1.08\cdot10^5$ signatures, with a pruned subtree of $2^b$ leaves, $b=8$,
+  \item lifetime: $8.15\cdot10^3$, $3.08\cdot10^4$ or $1.16\cdot10^5$ signatures, with a pruned subtree of $2^b$ leaves, $b=8$,
         10 or 12
 \end{itemize}
 
-\paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS}).} Each FORS secret is $F(\mathit{addr})$, for a
-threshold PRF $F$: $t$ operators evaluate it together, $t-1$ learn nothing (context-aware, see below).
+\paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS}).} Every secret of the forest is derived from a
+threshold PRF $F$: $t$ operators evaluate it together, $t-1$ learn nothing (context-aware, see below). A
+signature reveals $x_{i,4-d_i}$, the chain secret hashed $4-d_i$ times, which no threshold PRF outputs, so
+the keygen publishes the chain values encrypted under $F$:
 \begin{itemize}
-  \item keygen (MPC): computes and publishes all FORS leaves $\hash(F(\mathit{addr}))$, and the WOTS signature
-        of each FORS instance (of its tree tops)
-  \item signing: the $t$ signers evaluate $F$ at the 24 FORS addresses selected by the message; everything
-        else (FORS paths, WOTS signature, authentication path) is read from the public data
+  \item position 0, the secret: $F(\mathit{addr})$
+  \item positions $j = 1$ to 3: computed by the keygen MPC, published as $x_{i,j} \oplus F(\mathit{addr}_{i,j})$,
+        for a fresh address $\mathit{addr}_{i,j}$
+  \item position 4, the top: published, so the whole forest and the WOTS signature of each instance are public
 \end{itemize}
+Revealing $x_{i,j}$ is then one context-aware evaluation of $F$, and signing needs no MPC: the $t$ signers
+evaluate $F$ at the addresses the message selects, and everything else (the forest paths, the WOTS signature,
+the authentication path) is read from the public data. Each signer sends a part for every revealed value
+below the top: 44 on average and at most 64.
 
 \paragraph{Choice of $F$.}
 \begin{itemize}
@@ -154,19 +164,21 @@ $i\in J$ sends a part, and the parts combine into $F(x)$:
         plus a rounded share of zero evaluated at $(x,m,J)$; the sum is $F(x)$ up to $\pm t$, and the
         candidates are checked against the public leaf
 \end{itemize}
-Parts from signings of different $(m,J)$ don't combine, so aborted signings reveal no FORS secret.
+Parts from signings of different $(m,J)$ don't combine, so aborted signings reveal no secret of the forest.
 
 \paragraph{Keygen.} Honest-majority MPC, malicious with abort:
 \begin{enumerate}
-  \item coin tossing: $P$, the kept subtree, its $26-b$ surrogates
+  \item coin tossing: $P$, the kept subtree, its $24-b$ surrogates
   \item the key of $F$ (hash-based: each seed by commit-reveal among its holders; lattice-based: a
         verifiable Shamir sharing of $\mathit{msk}$), and the pairwise keys $k_{ij}$
-  \item MPC: $F$ at the $2^b\cdot24\cdot2^{10}$ FORS addresses, hashed into leaves; $F$ at the
-        $2^b\cdot64$ WOTS chain starts, hashed 3 times. Open the leaves and chain ends
-  \item in the clear: FORS tree tops, WOTS$^+$C counters; open the WOTS signatures; build the tree
-  \item the operators check they all got the same public data (public key, FORS leaves, WOTS signatures;
-        1.6~GB for $b=12$) by comparing its hash. Each keeps the public data and its key share of $F$, and
-        deletes everything else
+  \item MPC: $F$ at the $2^b\cdot12\,288$ forest chain starts, each hashed 4 times and the three values
+        below the top masked by $F$; $F$ at the $2^b\cdot64$ WOTS chain starts, hashed 3 times. Open the
+        chain values and ends
+  \item in the clear: the forest trees up to their tops, WOTS$^+$C counters; open the WOTS signatures;
+        build the tree
+  \item the operators check they all got the same public data (public key, forest chain values, WOTS
+        signatures; 3.2~GB for $b=12$) by comparing its hash. Each keeps the public data and its key share
+        of $F$, and deletes everything else
 \end{enumerate}
 
 \paragraph{Signing (any $t$).}
@@ -175,11 +187,11 @@ Parts from signings of different $(m,J)$ don't combine, so aborted signings reve
   \item each signer commits to a random $r_i$, then reveals it; $R_0$ and $\Delta$ are the two halves of
         $\hash(r_1,\dots,r_t,m)$, the lowest bit of $\Delta$ set, and the signers take the first $R=R_0+i\Delta$ that
         lands in the kept subtree.
-  \item open $F$ at the 24 FORS addresses; check each against its leaf
-  \item output $R$, the 24 secrets and paths, the WOTS signature, the authentication path
+  \item open $F$ at the addresses of the revealed chain values; check each against the published chain
+  \item output $R$, the forest opening, the WOTS signature, the authentication path
 \end{enumerate}
 
-\paragraph{Keygen cost (measured, hash-based $F$, $t=(n+1)/2$).} $\approx2.5\cdot10^4\cdot2^b$ MPC hashes (mostly FORS leaves) of
+\paragraph{Keygen cost (measured, hash-based $F$, $t=(n+1)/2$).} $\approx4.9\cdot10^4\cdot2^b$ MPC hashes (mostly forest chains) of
 $36.3\cdot10^3$ AND gates and AND-depth 24 (Keccak-f has 1\,600 AND gates per round, in its non-linear layer $\chi$; part of the
 first round is public, and the truncated output skips most of the last one). The MPC uses replicated sharing over $\mathrm{GF}(2)$ as
 in~\cite{BGIN19}, generalized to $n=2f+1$: each AND gate is computed locally and reshared through one
@@ -190,11 +202,11 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
 \begin{tabular}{lrrr}
   \toprule
   subtree & $2^8$ & $2^{10}$ & $2^{12}$ \\
-  lifetime & $7.5\cdot10^3$ & $2.86\cdot10^4$ & $1.08\cdot10^5$ \\
+  lifetime & $8.15\cdot10^3$ & $3.08\cdot10^4$ & $1.16\cdot10^5$ \\
   \midrule
-  2-of-3 & 29~GB & 116~GB & 462~GB \\
-  3-of-5 & 35~GB & 139~GB & 554~GB \\
-  4-of-7 & 37~GB & 149~GB & 594~GB \\
+  2-of-3 & 57~GB & 230~GB & 919~GB \\
+  3-of-5 & 69~GB & 276~GB & 1\,100~GB \\
+  4-of-7 & 74~GB & 295~GB & 1\,180~GB \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -202,8 +214,7 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
 \paragraph{Remarks.}
 \begin{itemize}
   \item With a trusted dealer instead, keygen needs no MPC: the dealer computes everything in the clear
-        ($5\cdot10^8$ to $4\cdot10^9$ permutations for $b=12$, from 2-of-3 to 4-of-7 with the hash-based
-        $F$) and gives each operator its key share of $F$.
+        and gives each operator its key share of $F$.
   \item The key shares can be refreshed, and the committee changed (including $n$ and $t$), with the same
         public key:
   \begin{itemize}
@@ -211,9 +222,9 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
     \begin{enumerate}
       \item the new committee generates fresh seeds for its own $n'$, $t'$ (as at keygen): they define a
             new PRF $F'$
-      \item an MPC among $t$ old and the new operators computes, for each FORS address $x$, $F(x)$ (checked
-            against its leaf) and $F'(x)$, and opens $c(x)=F(x)\oplus F'(x)$, which is published (it reveals
-            nothing: $F'(x)$ masks $F(x)$). About one MPC hash per address, as at keygen
+      \item an MPC among $t$ old and the new operators computes, for each address $x$, $F(x)$ (checked
+            against the published chain) and $F'(x)$, and opens $c(x)=F(x)\oplus F'(x)$, which is published
+            (it reveals nothing: $F'(x)$ masks $F(x)$). About one MPC hash per address, as at keygen
       \item from then on, the secret at $x$ is $F'(x)\oplus c(x)$, which equals $F(x)$: signing uses $F'$
             and the public $c$
       \item new pairwise keys are generated, and the old seeds are deleted
@@ -222,21 +233,21 @@ check~\cite{GS20} of negligible traffic. Traffic per operator:
   \end{itemize}
 \end{itemize}
 
-{\color{newfts}
-\section{Smaller signatures: a two-level WOTS forest}
+\section{The few-time signature: a two-level WOTS forest}
 \label{sec:twolevel}
 
-FORS can be replaced by a few-time signature (FTS) built from small WOTS keys. Signatures are 25\% smaller
-and verification 25\% cheaper, with about the same signing cost and longer lifetimes, proved in Lean~\cite{proofs}. The idea is
-inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
+The few-time signature (FTS) under each tree leaf is built from small WOTS keys instead of FORS. Against
+FORS with $k=24$ trees of height $a=10$, at the same parameters otherwise, signatures are 25\% smaller and
+verification 25\% cheaper, for about the same signing cost and longer lifetimes, proved in Lean~\cite{proofs}.
+The idea is inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
 
 \begin{center}
 \begin{tabular}{lrrr}
   \toprule
   FTS & size & verification & FTS signing \\
   \midrule
-  FORS, $k=24$, $a=10$ (\cref{sec:scheme}) & 5\,684 bytes & 354 permutations & $61\cdot10^3$ permutations \\
-  two-level WOTS forest & 4\,276 bytes & 267 permutations & $59\cdot10^3$ permutations \\
+  FORS, $k=24$, $a=10$ & 5\,652 bytes & 352 permutations & $61\cdot10^3$ permutations \\
+  two-level WOTS forest & 4\,244 bytes & 265 permutations & $59\cdot10^3$ permutations \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -327,11 +338,11 @@ no root hash: in $\hash(R_0,R_1)$ and in the encoding, $R$ stands for the two no
 
 \paragraph{Encoding.} Bit fields and one 256-entry table: the encoding rejects no digest. Each tree takes 26 bits:
 4 for the leaf, then, per subtree, 3 for the WOTS key and 8 for a table index. The 16 table indices are the first
-16 bytes of the digest; its last 16 bytes, as a little-endian integer, hold the instance index, then the 8 leaves,
-then the 16 WOTS keys, so no field lies across two 64-bit words. The table has 256 entries: sort the 246
+16 bytes of the digest; its last 16 bytes, as a little-endian integer, hold the 16 WOTS keys, then the 8 leaves,
+then the instance index, so no field lies across two 64-bit words. The table has 256 entries: sort the 246
 codewords by decreasing $\sum_i d_i^2$, then in increasing lexicographic order (first digit most significant); entry $t$ is codeword number $t \bmod 214$.
 Spread-out codewords are easier to forge once a key has signed twice, so the 32 most spread-out ones are left out,
-and the 42 most concentrated ones appear twice. With the 26 bits of the instance index, the digest is 234 bits,
+and the 42 most concentrated ones appear twice. With the 24 bits of the instance index, the digest is 232 bits,
 so it still takes one hash.
 
 \paragraph{Costs.} Per tree:
@@ -342,9 +353,9 @@ so it still takes one hash.
   \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 28 permutations each
 \end{itemize}
 Every signature has the same size and verification cost, and keygen is unchanged. The WOTS$^+$C key that signs
-the forest uses a target sum of 123 instead of 120: 3 fewer chain steps at verification, for about 2\,200 counter
-tries instead of 830 when signing ($1.4\cdot10^3$ more permutations, still within the signing costs of
-\cref{sec:scheme}).
+the forest uses a target sum of 123 instead of the 120 that would suit FORS: 3 fewer chain steps at verification,
+for about 2\,200 counter tries instead of 830 when signing ($1.4\cdot10^3$ more permutations, still within the
+signing costs of \cref{sec:scheme}).
 
 \paragraph{Security.} A forgery at an instance with $r$ prior signatures needs every tree to be covered: in
 both subtrees, the target WOTS key must have been opened, and the target codeword must lie below the componentwise
@@ -353,46 +364,28 @@ max of those openings. Let $f_t$ be the probability that $t$ random signatures b
 \[
 \mathrm{cover}(r)=\Big(\sum_{u\ge1}\mathrm{Bin}(r,\tfrac1{16})(u)\Big[\sum_{t\ge1}\mathrm{Bin}(u,\tfrac18)(t)\,f_t\Big]^2\Big)^8 .
 \]
-The lifetime is the largest $N$ with $2^{127}\,2^{b-26}\,\mathbb{E}_{r\sim\mathrm{Poisson}(N/2^b)}[\mathrm{cover}(r)]\le1$.
-The same cover rule applied to FORS gives the first row~\cite{proofs}, and the two-level forest is about 19\%
+The lifetime is the largest $N$ with $2^{127}\,2^{b-24}\,\mathbb{E}_{r\sim\mathrm{Poisson}(N/2^b)}[\mathrm{cover}(r)]\le1$:
+the signatures spread over the $2^b$ instances of the kept subtree, and a forger's digest must also land in it.
+The factor $2^{b-24}$ is what hypertree pruning~\cite{conduition} does not charge the forger: its rule reduces
+the lifetime by the full pruning factor $2^{24-b}$, which is the signer's grinding cost, but the forger pays that
+same cost per attempt. Here the credit is worth $2^{(24-b)/18}$, from $+14\%$ at $b=20$ to a factor 2 at $b=8$.
+The same cover rule applied to FORS gives the first row, and the two-level forest is about 19\%
 ahead at every subtree height. The best known attack also uses the WOTS$^+$C key (a counter search for a neighbouring
-encoding, then one chain preimage): for both schemes it is up to 8\% below the cover figure at small $b$~\cite{proofs}. Every figure is rounded down. The last two rows are the lifetimes proved in Lean~\cite{proofs}: an adversary
+encoding, then one chain preimage): for both schemes it is up to 8\% below the cover figure at small $b$~\cite{proofs}. Every figure is rounded down. The last row holds the lifetimes proved in Lean~\cite{proofs}: an adversary
 making $q$ hash queries forges with probability at most $q\cdot2^{-127}$.
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{lrrrrrrr}
   \toprule
-  $b$ & 26 & 20 & 14 & 13 & 12 & 10 & 8 \\
+  $b$ & 24 & 20 & 14 & 13 & 12 & 10 & 8 \\
   \midrule
-  FORS, cover & $1.20\cdot10^9$ & $2.37\cdot10^7$ & $4.66\cdot10^5$ & $2.42\cdot10^5$ & $1.25\cdot10^5$ & $3.38\cdot10^4$ & $9.0\cdot10^3$ \\
-  forest, cover & $1.43\cdot10^9$ & $2.85\cdot10^7$ & $5.57\cdot10^5$ & $2.89\cdot10^5$ & $1.49\cdot10^5$ & $4.02\cdot10^4$ & $1.07\cdot10^4$ \\
+  FORS, cover & $3.00\cdot10^8$ & $2.20\cdot10^7$ & $4.33\cdot10^5$ & $2.24\cdot10^5$ & $1.16\cdot10^5$ & $3.14\cdot10^4$ & $8.4\cdot10^3$ \\
+  forest, cover & $3.59\cdot10^8$ & $2.63\cdot10^7$ & $5.18\cdot10^5$ & $2.68\cdot10^5$ & $1.39\cdot10^5$ & $3.74\cdot10^4$ & $1.00\cdot10^4$ \\
   \midrule
-  FORS, proved & $1.15\cdot10^9$ & $2.23\cdot10^7$ & $4.12\cdot10^5$ & $2.11\cdot10^5$ & $1.08\cdot10^5$ & $2.86\cdot10^4$ & $7.5\cdot10^3$ \\
-  forest, proved & $1.38\cdot10^9$ & $2.60\cdot10^7$ & $4.80\cdot10^5$ & $2.47\cdot10^5$ & $1.26\cdot10^5$ & $3.34\cdot10^4$ & $8.8\cdot10^3$ \\
+  forest, proved & $3.36\cdot10^8$ & $2.38\cdot10^7$ & $4.41\cdot10^5$ & $2.26\cdot10^5$ & $1.16\cdot10^5$ & $3.08\cdot10^4$ & $8.1\cdot10^3$ \\
   \bottomrule
 \end{tabular}
 \end{center}
-
-\paragraph{Threshold signing.} In \cref{sec:threshold}, a signature reveals FORS secrets, which are outputs $F(\mathit{addr})$
-of the threshold PRF, so signing needs no MPC. Here a signature reveals $x_{i,4-d_i}$, i.e.\ the secret hashed
-$4-d_i$ times, which no threshold PRF outputs. As for the key refresh, the keygen publishes these values encrypted
-under $F$:
-\begin{itemize}
-  \item position 0, the secret: $F(\mathit{addr})$, as before
-  \item positions $j = 1$ to 3: computed by the keygen MPC, and published as $x_{i,j} \oplus F(\mathit{addr}_{i,j})$, for a
-        fresh address $\mathit{addr}_{i,j}$
-  \item position 4, the top: published
-\end{itemize}
-Revealing $x_{i,j}$ is then one context-aware evaluation of $F$, as for a FORS secret, so signing still needs no MPC.
-Each signer sends a part for every revealed value below the top: 44 on average and at most 64, instead of 24. Per
-instance of the kept subtree:
-\begin{itemize}
-  \item keygen MPC: 4 hashes per chain, $2048\cdot6\cdot4 = 49\,152$, instead of $24\cdot2^{10} = 24\,576$ FORS leaves:
-        about twice the traffic
-  \item public data: 4 values per chain (the top and 3 encrypted values), $2048\cdot6\cdot4\cdot16$~B $= 768$~KiB instead
-        of 384~KiB of FORS leaves, e.g.\ 3.2~GB instead of 1.6~GB for $b=12$
-\end{itemize}
-}
 
 \begin{thebibliography}{99}
 \bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
@@ -418,8 +411,8 @@ instance of the kept subtree:
   \url{https://eprint.iacr.org/2019/1390}.
 \bibitem{PRAWNS} D.~Boneh, B.~B\"unz, J.~D., Y.~Litchev, K.~Nazirkhanova. \emph{PRAWNS: Threshold Hash-Based
   Signatures from Threshold PRFs}, 2026. \url{https://eprint.iacr.org/2026/2142}.
-{\color{newfts}\bibitem{siggolf} J.~Nick (Blockstream). \emph{WCT-9: a WOTS-child forest replaces BPORS}, sig.golf
-  submission, 2026. \url{https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0}.}
+\bibitem{siggolf} J.~Nick (Blockstream). \emph{WCT-9: a WOTS-child forest replaces BPORS}, sig.golf
+  submission, 2026. \url{https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0}.
 \end{thebibliography}
 
 \end{document}

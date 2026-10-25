@@ -19,29 +19,31 @@ it reached and the last path element in index order (`orderTops`: the reached no
 of the WOTS-key index, bit 3 of the leaf index, is 0).
 
 Final statement: `LeanForest.Lifetimes.requestedSecurity`, 127 classical bits (SUF-CMA in the ROM)
-for the deterministic Lean signer at subtree heights 26, 20, 14, 13, 12, 10, 8.
+for the deterministic Lean signer at subtree heights 24, 20, 14, 13, 12, 10, 8.
 
-| b | proved N (forest) | cover attack | best known attack | proved / best known | proved N (FORS variant) |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 26 | 1,383,000,000 | 1.43966e9 | 1.44e9 | 96% | 1,156,000,000 |
-| 20 | 26,030,000 | 2.85120e7 | 2.84e7 | 92% | 22,380,000 |
-| 14 | 480,900 | 5.57495e5 | 5.40e5 | 89% | 412,500 |
-| 13 | 247,000 | 2.89047e5 | 2.78e5 | 89% | 211,900 |
-| 12 | 126,900 | 1.49820e5 | 1.43e5 | 89% | 108,700 |
-| 10 | 33,490 | 4.02171e4 | 3.76e4 | 89% | 28,600 |
-| 8 | 8,830 | 1.07843e4 | 9.9e3 | 89% | 7,530 |
+| b | proved N | cover attack | best known attack | proved / best known |
+| ---: | ---: | ---: | ---: | ---: |
+| 24 (full tree) | 336,700,000 | 3.59915e8 | 3.60e8 | 94% |
+| 20 | 23,830,000 | 2.63862e7 | 2.64e7 | 90% |
+| 14 | 441,500 | 5.18006e5 | 5.18e5 | 85% |
+| 13 | 226,800 | 2.68735e5 | 2.69e5 | 84% |
+| 12 | 116,600 | 1.39374e5 | 1.39e5 | 84% |
+| 10 | 30,810 | 3.74550e4 | 3.74e4 | 82% |
+| 8 | 8,154 | 1.00543e4 | 9.85e3 | 83% |
 
 The cover attack column is the lifetime in the cover model: the number of signatures at which a
 digest query covers a forest with probability `2^-127` (Poisson loads of the kept indices). The best
 known attack also uses the WOTS+C unit-neighbour route, which applies unchanged: a forger that sees
 the realized key takes the better of the cover rate `Y` and the rate `r` of that route, and the
-lifetime is the largest `N` with `E[max(Y, r)] ≤ 1`. It is 100 / 100 / 97 / 96 / 96 / 94 / 92% of the
-cover lifetime (`b = 26 … 8`). `scripts/forest_attack.py` computes both columns. `Y` comes from a
+lifetime is the largest `N` with `E[max(Y, r)] ≤ 1`. It is 100% of the cover lifetime except at
+`b = 8`, where it is 98% (`b = 24 … 8`); at `h = 24` the landing credit is four times smaller than at
+`h = 26`, so the cover route dominates the fixed-rate searches almost everywhere.
+`scripts/forest_attack.py` computes both columns. `Y` comes from a
 Monte Carlo of the realized key (loads, leaves, WOTS keys, codewords), with about 0.3% of noise on `N`
 and 0.6% at `b = 8`: the column has three digits and the ratios are good to about a point. The rate is
 `r = 0.9694`: a search of about `2^116` hashes for a neighbouring encoding, then one chain preimage at
-`2 · 2^-128` per query, is at its best after about `2^122` queries. A rate between 0.95 and 0.98 moves
-the lowest ratio between 87.5% and 89.4%. Every forest lifetime is 16% to 20% above the FORS one.
+`2 · 2^-128` per query, is at its best after about `2^122` queries. Every forest lifetime is about 19%
+above the FORS one at the same height.
 
 ## The codeword table
 
@@ -66,15 +68,12 @@ the codewords with few large digits costs a little at one signature (`f(1) = Σ 
 gains from two on. At most 123 entries have a given digit at least one, which sets the reveal rate
 of the contact bound.
 
-Two earlier tables, for comparison (cover lifetimes, `b = 26 … 8`):
+Two earlier tables, for comparison (measured at `h = 26`, where the ratios were established):
 
-- the 246 codewords in lexicographic order followed by the first 10 again: 1.35236e9 / 2.66937e7 /
-  5.20592e5 / 2.69813e5 / 1.39801e5 / 3.75025e4 / 1.00502e4, 7% below the rule;
+- the 246 codewords in lexicographic order followed by the first 10 again: 7% below the rule;
 - a table found by search, with the same number of entries per digit pattern as the rule but other
-  codewords of `{3,2}` and `{2,1,1,1}` (reveal constant 117): 1.45521e9 / 2.88064e7 / 5.63003e5 /
-  2.91881e5 / 1.51278e5 / 4.06029e4 / 1.08862e4, 1% above the rule, proved at 1,400,000,000 /
-  26,340,000 / 486,400 / 249,800 / 128,300 / 33,850 / 8,930. The rule replaced it to make the table
-  one sentence of the specification.
+  codewords of `{3,2}` and `{2,1,1,1}` (reveal constant 117): 1% above the rule. The rule replaced it
+  to make the table one sentence of the specification.
 
 Every entry has digit sum 5 (`Completeness.lut_sum`, `Cost.lut_sum`), so a WOTS key is verified
 with exactly 5 chain steps: the verification cost and the signature size below do not depend on the table. The
@@ -118,7 +117,7 @@ Every hash input is `P ‖ A ‖ payload` (`Scheme.lean`: `tweakableHashInput`, 
 derivation (under `P = 0`), the randomizer base, the seed derivations and the surrogates have the same
 address format. `Th` keeps the first 16 bytes of the hash. The public key is `root ‖ P`, 32 bytes.
 Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`, chain `i < 6`,
-`idx` the 26-bit instance. A seed derivation of chain starts is addressed by a pair of chains `t`
+`idx` the 24-bit instance. A seed derivation of chain starts is addressed by a pair of chains `t`
 (chains `2t` and `2t + 1`): `t < 32` in a WOTS+C key, `t < 3` in a forest WOTS key.
 
 | call | type | step | hi | lo | payload |
@@ -163,13 +162,13 @@ lands in the kept subtree. `δ` is odd, so the scan does not come back within `2
 (`walk_iterate_ne`, `BridgeScan.nextRand_pow_ne`), and secret, so a signature does not tell which
 randomizers were rejected before it.
 The randomizer comes last in the digest payload: a grinding attempt changes only the last block of
-the digest hash. The digest input is 80 bytes: the first block is
-`P ‖ A ‖ message` and the second the randomizer alone. The root is not hashed (`P` binds the
-key); `messageDigestPayload` keeps its root argument for its callers and ignores it.
+the digest hash. The digest input is 80 bytes, `P ‖ A ‖ message ‖ randomizer`, within one 136-byte
+block. The root is not hashed (`P` binds the key); `messageDigestPayload` keeps its root argument for
+its callers and ignores it.
 
 ### Digest fields
 
-The digest is the first 234 bits of the hash output (`truncateMessageDigest`), read as a little-endian
+The digest is the first 232 bits of the hash output (`truncateMessageDigest`), read as a little-endian
 number; a field is `extractLsb'` at a bit offset (`Scheme.lean`: `wordOffset`, `indexOffset`,
 `superOffset`, `childOffset`, `digestMarks`, `digestIndex`). With `c < 8` the tree and `j < 2` the
 subtree:
@@ -177,14 +176,16 @@ subtree:
 | field | bits | bit offset |
 | --- | ---: | --- |
 | codeword-table index of WOTS key `(c, j)` | 8 | `8 (2c + j)`: byte `2c + j` of the digest |
-| instance index `idx` | 26 | 128: the low 26 bits of the last 16 bytes |
-| leaf of tree `c` | 4 | `154 + 4c` |
-| WOTS key of subtree `(c, j)` | 3 | `186 + 3 (2c + j)` |
+| WOTS key of subtree `(c, j)` | 3 | `128 + 3 (2c + j)` |
+| leaf of tree `c` | 4 | `176 + 4c` |
+| instance index `idx` | 24 | 208: the high 24 bits of the last 64-bit word |
 
-Bits 234 to 255 are unused. No field lies across two 64-bit words. The proof reads a digest as its
+Bits 232 to 255 are unused. No field lies across two 64-bit words: the children, the leaves and the
+index are laid out in that order, which is what makes the three groups fall inside words at `h = 24`.
+The proof reads a digest as its
 index and one 26-bit field per tree (`ForestCoverage.lean`): `coordField` gathers the 26 bits of a
 tree from the three places that hold them (leaf, then per subtree WOTS key and table index), and
-`fullDigestView_bijective` states that the index and the 8 fields are a bijection of the 234 bits,
+`fullDigestView_bijective` states that the index and the 8 fields are a bijection of the 232 bits,
 so a uniform digest gives a uniform index and 8 independent uniform fields
 (`evalDist_fullDigestView_uniform`), each a uniform mark (`H0Mark.markEquiv`). The index of a
 uniform hash output is uniform (`evalDist_blockIndex_uniform`, from
@@ -199,10 +200,10 @@ inputs of different types differ whatever their parameters (`fieldInput_ne_of_ta
 `randomizerHashInput_injective` (`BridgeDet.lean`) for the randomizer base. The address has no layer and
 no tree field; the scheme has one of each (`Layer` and `TreeIndex` are `Fin 1`).
 
-`Layout.signature_size`: a signature serializes to 4,276 bytes. `Cost.verification_permutations`:
-an accepted signature costs exactly 267 Keccak-f permutations (1 for the 80-byte digest input, 160
-for the forest, 106 for WOTS+C and the path: 3 for the encoding of the key, 69 chain steps, 8 for the
-leaf and 26 nodes), and no signature costs more (`verification_permutations_le`). The forest is 20
+`Layout.signature_size`: a signature serializes to 4,244 bytes. `Cost.verification_permutations`:
+an accepted signature costs exactly 265 Keccak-f permutations (1 for the 80-byte digest input, 160
+for the forest, 104 for WOTS+C and the path: 3 for the encoding of the key, 69 chain steps, 8 for the
+leaf and 24 nodes), and no signature costs more (`verification_permutations_le`). The forest is 20
 per tree (`permutations_coordRecover`: in each of the two subtrees 5 chain steps, 1 for the WOTS-key
 leaf and 2 folds; 1 for the tree leaf; 3 folds), times 8. The key is not hashed.
 
@@ -213,7 +214,7 @@ Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
 | --- | ---: |
 | one-time key (`hashCalls_oneTimePublicKey`) | `32 + 64 · 3 = 224` |
 | tree node at level `l` (`hashCalls_treeNode`) | `226 · 2^l − 1` |
-| key generation (`hashCalls_keygenFromSeed`) | `226 · 2^b + 2 (26 − b)` |
+| key generation (`hashCalls_keygenFromSeed`) | `226 · 2^b + 2 (24 − b)` |
 | forest WOTS key leaf (`hashCalls_childLeaf`) | `3 + 6 · 4 + 1 = 28` |
 | subtree node at level `l ≤ 2` (`hashCalls_subNode`) | `29 · 2^l − 1` |
 | tree leaf (`hashCalls_superNode`) | `2 · 2 · 115 + 1 = 461` |
@@ -256,7 +257,7 @@ per chain start), so uniform material programs independent uniform answers
 inputs (`evalDist_prepareTable`, `evalDist_prepared_continuation`). Every module above the seed
 model sees `truncateHash (material.2 position)` as before, and its statements are unchanged. The
 only numbers that change are the hash-call counts of the signer above; the key-generation credit of
-the certificates is `kCreditF b = 226 · 2^b + 2 (26 − b)` (`BridgeDetW.lean`, `keygenCost`).
+the certificates is `kCreditF b = 226 · 2^b + 2 (24 − b)` (`BridgeDetW.lean`, `keygenCost`).
 
 After the deterministic
 signer is replaced by a seed-free one (`BridgeDet*`), a forgery is a first-order hit, a WOTS
@@ -296,7 +297,7 @@ fresh, cached and rejected, or cached and landing; the law of the signed pair is
 `LoopWalk.lean` over these statuses (`BridgeScan.scan_boundW`). A cached landed pair is selected
 with a probability that depends on the cache (the run of rejected values before it), not `1/(n + R)`,
 and one digest query raises the selection mass of the adversary's pairs by at most `(2 − p)/2^128`
-(`LoopWalk.creation_le`, `p = 2^-(26−b)`; attained by scanning forward from random starts), against
+(`LoopWalk.creation_le`, `p = 2^-(24−b)`; attained by scanning forward from random starts), against
 `1/2^128` for independent attempts. The potentials therefore keep the cached pairs of each unsigned
 message as one exclusive group (`GroupFuture.grp`, `BridgeGroups.grpAll`) applied to the one-coin
 future of the pairs still to come:
@@ -364,8 +365,8 @@ The one-coin bound at the survival-weighted baseline (`BridgeSatW*`, `det_largeW
 option, the near certificate, `checkSmallF` at `qh` (coin summand `(2 − p) qh / 2^129`), and a chain
 of covers of `[qh + 1, 2^127)`, each with its own Poisson table: light covers (`checkCoverW`, coin
 `wbarOf`) up to about `0.249 · 2^128`, then one heavy cover (`checkCoverH`, `N + 1` signatures, coin
-`wbarH`). For `b = 26` there is no grinding and one light cover reaches `2^127`. The splits are
-`lx` = −10.41 / −9.25 / −8.17 / −8.02 / −7.88 / −7.61 / −7.39 (`b = 26 … 8`, `PARAMS` in the script),
+`wbarH`). For `b = 24` there is no grinding and one light cover reaches `2^127`. The splits are
+`lx` = −10.0 / −9.125 / −8.125 / −8.0 / −7.75 / −7.625 / −7.375 (`b = 24 … 8`, `PARAMS` in the script),
 the best of a grid of step 1/8 refined to 1/64 around its optimum; the limits are the largest `N`
-both routes certify there, rounded down to four digits. For `b = 26` the large route alone limits
+both routes certify there, rounded down to four digits. For `b = 24` the large route alone limits
 `N`; below, both routes are tight.

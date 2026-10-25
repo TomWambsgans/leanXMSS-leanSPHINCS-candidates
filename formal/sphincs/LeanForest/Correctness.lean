@@ -66,7 +66,8 @@ theorem digestIndex_truncate (first : HashOutput) :
   unfold digestIndex truncateMessageDigest blockIndex
   refine congrArg BitVec.toFin (BitVec.eq_of_getLsbD_eq fun i hi => ?_)
   have hi24 : i < 24 := hi
-  have hlt : indexOffset + i < messageDigestBits := by change 208 + i < 232; omega
+  have hlt : 128 + 2 * forestCoords * subHeight + forestCoords * topHeight + i < messageDigestBits := by
+    change 208 + i < 232; omega
   simp only [BitVec.getLsbD_extractLsb', indexOffset, hlt, hi, decide_true, Bool.true_and,
     Nat.zero_add]
 

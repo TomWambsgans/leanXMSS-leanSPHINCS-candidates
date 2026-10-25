@@ -6,7 +6,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%2726 -86 372 372%27%3E%3Cpath d=%27M54%20176%20C42%20150%2054%20114%2096%20108%20C150%20102%20200%20106%20236%20104%20C246%2080%20252%2052%20262%2038%20C272%2024%20296%2026%20302%2042%20L305%2055%20L317%2072%20L310%2075%20L312%2083%20L306%2094%20L296%2097%20L302%20134%20C304%20146%20302%20150%20308%20152%20L382%20152%20C394%20152%20394%20176%20382%20176%20Z%27 fill=%27%23111%27/%3E%3C/svg%3E">
 <meta name="color-scheme" content="light">
 <title>A proposal for leanSphincs</title>
-<meta name="description" content="A proposal for leanSphincs: a hash-based signature with the shape of SLH-DSA-128-24, retuned for a 2^30 lifetime, fast signing, and pruned or threshold keys.">
+<meta name="description" content="A proposal for leanSphincs: a hash-based signature with the shape of SLH-DSA-128-24, retuned for a 2^28 lifetime, fast signing, and pruned or threshold keys.">
 <style>
 :root {
   color-scheme: light;
@@ -75,20 +75,7 @@ body:not([data-v="spicy"]) .s-only, body[data-v="spicy"] .v-only, body:not([data
 body[data-v="spicy"] .old::after { content: ""; position: absolute; left: -0.2em; right: -0.2em; top: 52%; border-top: 1.5px solid rgba(139, 26, 26, 0.45); transform: rotate(-16deg); pointer-events: none; }
 .new { color: var(--spicy); margin-left: 0.45em; }
 .titlerow { position: relative; }
-.toggle { position: absolute; left: calc(100% + 1.5rem); top: 50%; transform: translateY(-50%); z-index: 2; white-space: nowrap; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 3px; background: #fff; }
 .page { position: relative; }
-.notes { position: absolute; z-index: 3; visibility: hidden; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.95rem; color: var(--muted); white-space: nowrap; }
-.arrow { position: absolute; display: none; overflow: visible; pointer-events: none; }
-.arrow .line { fill: none; stroke: #c48c8c; stroke-width: 1.3; stroke-linecap: round; }
-.arrow .head { fill: #c48c8c; }
-.notes.flow { position: static; visibility: visible; margin: 1.7rem 0 0.6rem; }
-.notes ul { margin: 0; padding: 0; list-style: none; }
-.notes li::before { display: inline-flex; align-items: center; justify-content: center; width: 1.15em; height: 1.15em; margin-right: 0.5em; border: 1px solid currentColor; border-radius: 50%; font-size: 0.85em; line-height: 1; vertical-align: 0.1em; }
-.notes .pro li::before { content: "+"; color: var(--ink); }
-.notes .con li::before { content: "−"; }
-.toggle button { font: inherit; font-size: 1.1rem; border: 0; background: none; color: var(--muted); padding: 0.35rem 1.4rem; border-radius: 999px; cursor: pointer; }
-.toggle button[aria-pressed="true"] { background: var(--ink); color: #fff; }
-.toggle button[data-v="spicy"][aria-pressed="true"] { background: var(--spicy); }
 
 svg text { font-family: var(--sans); }
 svg .lb { font-size: 15px; fill: var(--muted); }
@@ -207,9 +194,7 @@ footer a + a { margin-left: 1.25rem; }
   .params p { white-space: normal; }
   figure { min-height: 0; }
   figure svg { position: static; height: auto; }
-  .toggle { position: static; transform: none; margin: 0.9rem 0 0.2rem; }
-  .notes { position: static; visibility: visible; margin: 1.7rem 0 0.6rem; }
-  .split { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+      .split { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
   .scroll { overflow-x: auto; }
   .cmp { table-layout: auto; width: auto; }
   .cmp col.label, .split .cmp col.label { width: auto; }
@@ -223,13 +208,10 @@ footer a + a { margin-left: 1.25rem; }
   .info::after { white-space: pre-wrap; width: max-content; max-width: 70vw; }
   .m-only { display: inline; }
 
-  /* Title, author, then the variant switch and what it changes */
+  /* Title, then the author */
   header { display: flex; flex-direction: column; }
   .titlerow { display: contents; }
   .by { order: 1; margin-top: 0.3rem; color: var(--muted); }
-  .toggle { order: 2; align-self: flex-start; margin: 1.1rem 0 0; }
-  .notes, .notes.flow { order: 3; flex-flow: row wrap; gap: 0.4rem 1.5rem; margin: 1.6rem 0 0; }
-
   /* The parameter table fits the screen */
   .params { margin-top: 1.5rem; }
   .params table { width: 100%; font-size: 0.9rem; }
@@ -313,30 +295,23 @@ body[data-v="spicy"] .sphinx { color: var(--spicy); }
 /* the face of a pushed stone is the stone itself: its piece of the image, in the colour of the variant */
 .sphinx .faces { opacity: 0.3; filter: url(#sphinx-ink); }
 body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
-/* Narrow screens: the sphinx has its own band under the variant switch, standing on its own line */
+/* Narrow screens: the sphinx has its own band under the title, standing on its own line */
 .sphinx-line.inflow { position: relative; left: auto; top: auto; width: 100%; max-width: 33rem; height: auto; z-index: 0; margin: 1.3rem 0 0; border-bottom: 1px solid var(--rule); }
 .sphinx-line.inflow .sphinx { position: relative; left: 0; top: 0; transform: none; display: block; width: min(108%, 100% + 2rem); margin-left: max(-4%, -1rem); height: auto; }   /* its faded ends reach into the margins */
 @media (max-width: 600px) {
-  /* the switch, and at its right what it changes */
   header { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.9rem; align-items: center; }
   h1, .by, .sphinx-line { grid-column: 1 / -1; }
   .sphinx-line.inflow { order: 4; margin-top: 1rem; }
-  .toggle button { font-size: 1rem; padding: 0.3rem 0.95rem; }
-  .toggle { margin-top: 1.9rem; }
-  .notes, .notes.flow { margin-top: 1.9rem !important; }
-  .notes, .notes.flow { order: 3; flex-flow: column; gap: 0.1rem; margin: 1.1rem 0 0; font-size: 0.74rem; line-height: 1.4; white-space: normal; }
 }
 </style>
 </head>
-<body data-v="vanilla">
+<body data-v="spicy">
 <main>
 
 <div class="page">
   <div class="text">
     <header>
-      <div class="titlerow"><h1>A proposal for leanSphincs</h1><div class="toggle" role="group" aria-label="Variant"><button type="button" data-v="vanilla" aria-pressed="true">vanilla</button><button type="button" data-v="spicy" aria-pressed="false">spicy</button></div></div>
-      <div class="notes"><ul class="pro"><li>25% smaller signatures</li><li>25% faster verification<span class="info" tabindex="0" data-tip="Measured in Keccak-f permutations: 354 → 267">i</span></li></ul><ul class="con"><li>more complex</li><li>2× worse threshold</li></ul></div>
-      <svg class="arrow" aria-hidden="true"><path class="line"/><path class="head"/></svg>
+      <div class="titlerow"><h1>A proposal for leanSphincs</h1></div>
       <p class="by">by Tom Wambsgans</p>
     </header>
     <div class="params">
@@ -344,17 +319,17 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
       <table>
         <thead><tr><th></th><th><a href="https://csrc.nist.gov/pubs/sp/800/230/ipd">SLH-DSA-128-24</a></th><th>leanSphincs</th></tr></thead>
         <tbody>
-          <tr><th><i>h</i></th><td>22</td><td>26</td></tr>
-          <tr><th><i>k</i></th><td>6</td><td><span class="old">24</span><span class="new s-only">8</span></td></tr>
-          <tr><th><i>a</i></th><td>24</td><td><span class="old">10</span><span class="new s-only">4 + 3</span></td></tr>
+          <tr><th><i>h</i></th><td>22</td><td>24</td></tr>
+          <tr><th><i>k</i></th><td>6</td><td>8</td></tr>
+          <tr><th><i>a</i></th><td>24</td><td>4 + 3</td></tr>
           <tr><th>OTS</th><td>WOTS+</td><td>WOTS+C</td></tr>
-          <tr><th>FTS</th><td>FORS</td><td class="two"><span class="old">FORS</span><span class="new s-only">WOTS forest</span><span class="info r s-only" tabindex="0" data-tip="8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5">i</span></td></tr>
+          <tr><th>FTS</th><td>FORS</td><td class="two">WOTS forest<span class="info r" tabindex="0" data-tip="8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5">i</span></td></tr>
           <tr><th>Hash</th><td>SHA-2 or SHAKE</td><td>Keccak-256</td></tr>
         </tbody>
         <tbody class="out">
-          <tr><th>Lifetime</th><td>2<sup>24</sup></td><td>2<sup>30</sup><span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></td></tr>
-          <tr><th>Size</th><td>3,856 bytes</td><td><span class="old">5,684</span><span class="new s-only">4,276</span> bytes</td></tr>
-          <tr><th>Verification<br><span class="unit">(permutations)</span></th><td>296<span class="info" tabindex="0" data-tip="SHA-2 compressions">i</span></td><td><span class="old">354</span><span class="new s-only">267</span><span class="info" tabindex="0" data-tip="Keccak-f[1600] permutations">i</span></td></tr>
+          <tr><th>Lifetime</th><td>2<sup>24</sup></td><td>2<sup>28</sup><span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></td></tr>
+          <tr><th>Size</th><td>3,856 bytes</td><td>4,244 bytes</td></tr>
+          <tr><th>Verification<br><span class="unit">(permutations)</span></th><td>296<span class="info" tabindex="0" data-tip="SHA-2 compressions">i</span></td><td>265<span class="info" tabindex="0" data-tip="Keccak-f[1600] permutations">i</span></td></tr>
         </tbody>
       </table>
       </div>
@@ -625,36 +600,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
         <g class="tree"><line x1="165.8" y1="320" x2="308.8" y2="320"/><line x1="165.8" y1="316" x2="165.8" y2="324"/><line x1="308.8" y1="316" x2="308.8" y2="324"/></g>
         <text x="237.2" y="342" class="pv" text-anchor="middle"><tspan class="it">ℓ</tspan> = 64</text>
         <line x1="237.2" y1="352" x2="237.2" y2="378" class="brace"/>
-        <g class="fts-vanilla">
-        <path class="brace" d="M106.2,392 Q106.2,385.0 113.2,385.0 L230.2,385.0 Q237.2,385.0 237.2,378 Q237.2,385.0 244.2,385.0 L361.2,385.0 Q368.2,385.0 368.2,392"/>
-        <g class="fors">
-          <polygon points="117.2,402 106.2,430 128.2,430"/>
-          <polygon points="147.2,402 136.2,430 158.2,430"/>
-          <polygon points="177.2,402 166.2,430 188.2,430"/>
-          <polygon points="207.2,402 196.2,430 218.2,430"/>
-          <polygon points="267.2,402 256.2,430 278.2,430"/>
-          <polygon points="297.2,402 286.2,430 308.2,430"/>
-          <polygon points="327.2,402 316.2,430 338.2,430"/>
-          <polygon points="357.2,402 346.2,430 368.2,430"/>
-        </g>
-        <g class="on">
-          <circle cx="112.2" cy="430" r="2.6"/>
-          <circle cx="151.2" cy="430" r="2.6"/>
-          <circle cx="175.2" cy="430" r="2.6"/>
-          <circle cx="213.2" cy="430" r="2.6"/>
-          <circle cx="261.2" cy="430" r="2.6"/>
-          <circle cx="298.2" cy="430" r="2.6"/>
-          <circle cx="332.2" cy="430" r="2.6"/>
-          <circle cx="354.2" cy="430" r="2.6"/>
-        </g>
-        <g class="ell"><circle cx="232.2" cy="420.0" r="1.3"/><circle cx="237.2" cy="420.0" r="1.3"/><circle cx="242.2" cy="420.0" r="1.3"/></g>
-        <text x="388.2" y="421.0" class="nm">FORS</text>
-        <g class="tree"><line x1="94.2" y1="402" x2="94.2" y2="430"/><line x1="90.2" y1="402" x2="98.2" y2="402"/><line x1="90.2" y1="430" x2="98.2" y2="430"/></g>
-        <text x="84.2" y="421" class="pv" text-anchor="end"><tspan class="it">a</tspan> = 10</text>
-        <g class="tree"><line x1="106.2" y1="444" x2="368.2" y2="444"/><line x1="106.2" y1="440" x2="106.2" y2="448"/><line x1="368.2" y1="440" x2="368.2" y2="448"/></g>
-        <text x="237.2" y="466" class="pv" text-anchor="middle"><tspan class="it">k</tspan> = 24</text>
-        </g>
-        <g class="fts-spicy">
+<g class="fts">
         <path class="brace" d="M106.2,392 Q106.2,385.0 113.2,385.0 L230.2,385.0 Q237.2,385.0 237.2,378 Q237.2,385.0 244.2,385.0 L361.2,385.0 Q368.2,385.0 368.2,392"/>
         <g class="fors">
           <polygon points="122.6,399 111.6,417 133.6,417"/>
@@ -717,14 +663,14 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
           <tr><th></th><th><div class="hd">Light<span class="dev"><a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a><span class="info" tabindex="0" data-tip="5.8K permutations per second">i</span></span></div></th><th><div class="hd">Standard<span class="dev">weak CPU<span class="info" tabindex="0" data-tip="128M permutations per second">i</span></span></div></th><th><div class="hd">Full<span class="dev">powerful CPU<span class="info" tabindex="0" data-tip="512M permutations per second">i</span></span></div></th></tr>
         </thead>
         <tbody>
-          <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Lifetime"><div><span class="old">210K</span><span class="new s-only">247K</span> signatures <span class="st">(subtree of 2<sup>13</sup>)</span></div></td><td data-l="Lifetime"><div><span class="old">22M</span><span class="new s-only">26M</span> signatures <span class="st">(subtree of 2<sup>20</sup>)</span></div></td><td data-l="Lifetime"><div><span class="old">1.15B</span><span class="new s-only">1.38B</span> signatures <span class="st">(full tree of 2<sup>26</sup>)</span></div></td></tr>
-          <tr><th>Key generation</th><td data-l="Key generation"><div class="hd"><span>1.91M permutations</span><span class="ex">5.5&nbsp;min</span></div></td><td data-l="Key generation"><div class="hd"><span>244M permutations</span><span class="ex">1.9&nbsp;s</span></div></td><td data-l="Key generation"><div class="hd"><span>15.6B permutations</span><span class="ex">31&nbsp;s</span></div></td></tr>
-          <tr><th>Signing</th><td data-l="Signing"><div class="hd"><span>74K permutations<span class="br">, </span>16&nbsp;KiB cache</span><span class="ex">13&nbsp;s</span></div></td><td data-l="Signing"><div class="hd"><span>70K permutations<span class="br">, </span>1&nbsp;MiB cache</span><span class="ex">0.5&nbsp;ms</span></div></td><td data-l="Signing"><div class="hd"><span>92K permutations<span class="br">, </span>16&nbsp;MiB cache</span><span class="ex">0.2&nbsp;ms</span></div></td></tr>
+          <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Lifetime"><div>226K signatures <span class="st">(subtree of 2<sup>13</sup>)</span></div></td><td data-l="Lifetime"><div>23M signatures <span class="st">(subtree of 2<sup>20</sup>)</span></div></td><td data-l="Lifetime"><div>336M signatures <span class="st">(full tree of 2<sup>24</sup>)</span></div></td></tr>
+          <tr><th>Key generation</th><td data-l="Key generation"><div class="hd"><span>1.91M permutations</span><span class="ex">5.5&nbsp;min</span></div></td><td data-l="Key generation"><div class="hd"><span>244M permutations</span><span class="ex">1.9&nbsp;s</span></div></td><td data-l="Key generation"><div class="hd"><span>3.91B permutations</span><span class="ex">7.6&nbsp;s</span></div></td></tr>
+          <tr><th>Signing</th><td data-l="Signing"><div class="hd"><span>66K permutations<span class="br">, </span>16&nbsp;KiB cache</span><span class="ex">11&nbsp;s</span></div></td><td data-l="Signing"><div class="hd"><span>69K permutations<span class="br">, </span>1&nbsp;MiB cache</span><span class="ex">0.5&nbsp;ms</span></div></td><td data-l="Signing"><div class="hd"><span>69K permutations<span class="br">, </span>16&nbsp;MiB cache</span><span class="ex">0.1&nbsp;ms</span></div></td></tr>
         </tbody>
       </table>
       </div>
       <h2>Threshold, <i>t</i>-of-<i>n</i></h2>
-      <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>: a one-time ceremony at keygen precomputes every hash of a secret, run either as an honest-majority MPC among the operators (DKG) or by a trusted dealer; signing then needs no MPC (<span class="old">432</span><span class="new s-only">≈ 750</span> bytes per signer, 3 rounds), and is secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers (with abort).</p>
+      <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>: a one-time ceremony at keygen precomputes every hash of a secret, run either as an honest-majority MPC among the operators (DKG) or by a trusted dealer; signing then needs no MPC (≈ 790 bytes per signer, 3 rounds), and is secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious signers (with abort).</p>
       <div class="split">
         <div>
           <h3>With DKG</h3>
@@ -732,11 +678,11 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
           <div class="scroll">
           <table class="cmp groups">
             <colgroup><col class="label"><col><col><col></colgroup>
-            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><br><span class="sub">(signatures)</span></th><th><span class="old">7.5K</span><span class="new s-only">8.8K</span><span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>8</sup>)</span></th><th><span class="old">28.6K</span><span class="new s-only">33.4K</span><span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th><span class="old">108K</span><span class="new s-only">126K</span><span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>12</sup>)</span></th></tr></thead>
+            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><br><span class="sub">(signatures)</span></th><th>8.1K<span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>8</sup>)</span></th><th>30.8K<span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th>116K<span class="m-only"> signatures </span><br><span class="sub">(subtree of 2<sup>12</sup>)</span></th></tr></thead>
             <tbody>
-              <tr><th>2-of-3</th><td><span class="old">29</span><span class="new s-only">57</span>&nbsp;GB</td><td><span class="old">116</span><span class="new s-only">230</span>&nbsp;GB</td><td><span class="old">462</span><span class="new s-only">919</span>&nbsp;GB</td></tr>
-              <tr><th>3-of-5</th><td><span class="old">35</span><span class="new s-only">69</span>&nbsp;GB</td><td><span class="old">139</span><span class="new s-only">276</span>&nbsp;GB</td><td><span class="old">554</span><span class="new s-only">1,102</span>&nbsp;GB</td></tr>
-              <tr><th>4-of-7</th><td><span class="old">37</span><span class="new s-only">74</span>&nbsp;GB</td><td><span class="old">149</span><span class="new s-only">295</span>&nbsp;GB</td><td><span class="old">594</span><span class="new s-only">1,181</span>&nbsp;GB</td></tr>
+              <tr><th>2-of-3</th><td>57&nbsp;GB</td><td>230&nbsp;GB</td><td>919&nbsp;GB</td></tr>
+              <tr><th>3-of-5</th><td>69&nbsp;GB</td><td>276&nbsp;GB</td><td>1,102&nbsp;GB</td></tr>
+              <tr><th>4-of-7</th><td>74&nbsp;GB</td><td>295&nbsp;GB</td><td>1,181&nbsp;GB</td></tr>
             </tbody>
           </table>
           </div>
@@ -747,9 +693,9 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
           <div class="scroll">
           <table class="cmp pairs">
             <colgroup><col class="label"><col><col><col></colgroup>
-            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><br><span class="sub">(signatures)</span></th><th><span class="old">28.6K</span><span class="new s-only">33.4K</span><br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th><span class="old">108K</span><span class="new s-only">126K</span><br><span class="sub">(subtree of 2<sup>12</sup>)</span></th><th><span class="old">410K</span><span class="new s-only">480K</span><br><span class="sub">(subtree of 2<sup>14</sup>)</span></th></tr></thead>
+            <thead><tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span><br><span class="sub">(signatures)</span></th><th>30.8K<br><span class="sub">(subtree of 2<sup>10</sup>)</span></th><th>116K<br><span class="sub">(subtree of 2<sup>12</sup>)</span></th><th>441K<br><span class="sub">(subtree of 2<sup>14</sup>)</span></th></tr></thead>
             <tbody>
-              <tr><th>Public data</th><td><span class="old">404&nbsp;MB</span><span class="new s-only">806&nbsp;MB</span></td><td><span class="old">1.6&nbsp;GB</span><span class="new s-only">3.2&nbsp;GB</span></td><td><span class="old">6.5&nbsp;GB</span><span class="new s-only">12.9&nbsp;GB</span></td></tr>
+              <tr><th>Public data</th><td>806&nbsp;MB</td><td>3.2&nbsp;GB</td><td>12.9&nbsp;GB</td></tr>
             </tbody>
           </table>
           </div>
@@ -773,62 +719,6 @@ document.addEventListener('pointerdown', function (e) {
   if (open.contains(e.target)) e.preventDefault();
   open.blur();
 }, true);
-</script>
-<script>
-document.querySelectorAll('.toggle button').forEach(function (b) {
-  b.addEventListener('click', function () {
-    document.body.dataset.v = b.dataset.v;
-    document.querySelectorAll('.toggle button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
-  });
-});
-</script>
-<script>
-// Desktop: the notes sit just below the toggle, centred between the parameter table and the diagram,
-// with an arrow from the spicy button.
-(function () {
-  var notes = document.querySelector('.notes'), page = document.querySelector('.page');
-  var arrow = document.querySelector('.arrow'), line = arrow.querySelector('.line'), head = arrow.querySelector('.head');
-  var table = document.querySelector('.params table'), tree = document.querySelector('figure svg .tree');
-  var spicy = document.querySelector('.toggle button[data-v="spicy"]');
-  function place() {
-    notes.classList.remove('flow');
-    notes.style.left = notes.style.top = '';
-    arrow.style.display = 'none';
-    var p = page.getBoundingClientRect(), b = spicy.getBoundingClientRect(), w = notes.offsetWidth;
-    var flow = matchMedia('(max-width: 1150px)').matches;
-    if (!flow) {
-      // measure the table in its widest (spicy) state, so the notes do not move when switching
-      var mode = document.body.dataset.v;
-      document.body.dataset.v = 'spicy';
-      var t = table.getBoundingClientRect();
-      document.body.dataset.v = mode;
-      var d = tree.getBoundingClientRect();
-      flow = d.left - t.right < w + 48;
-      if (!flow) {
-        notes.style.left = ((t.right + d.left) / 2 - w / 2 - p.left) + 'px';
-        notes.style.top = (b.bottom + 44 - p.top) + 'px';
-        notes.style.visibility = 'visible';
-      }
-    }
-    if (flow) notes.classList.add('flow');
-    var n = notes.getBoundingClientRect();
-    var x1 = b.left + b.width / 2, y1 = b.bottom + 6, y2 = n.top - 7;
-    var x2 = flow ? Math.min(Math.max(x1, n.left + 12), n.right - 12) : n.left + n.width / 2;
-    if (y2 - y1 < 12) return;
-    var x0 = Math.min(x1, x2) - 10, y0 = y1;
-    arrow.style.left = (x0 - p.left) + 'px';
-    arrow.style.top = (y0 - p.top) + 'px';
-    arrow.setAttribute('width', Math.abs(x2 - x1) + 20);
-    arrow.setAttribute('height', y2 - y1 + 2);
-    var ax = x1 - x0, bx = x2 - x0, by = y2 - y0, m = (by - 7) * 0.6;
-    line.setAttribute('d', 'M' + ax + ',0 C' + ax + ',' + m + ' ' + bx + ',' + (by - 7 - m) + ' ' + bx + ',' + (by - 7));
-    head.setAttribute('d', 'M' + (bx - 4.5) + ',' + (by - 8) + ' L' + (bx + 4.5) + ',' + (by - 8) + ' L' + bx + ',' + by + ' Z');
-    arrow.style.display = 'block';
-  }
-  window.addEventListener('resize', place);
-  window.addEventListener('load', place);
-  place();
-})();
 </script>
 <script>
 // The diagram, animated in the order of verification: from the revealed values up to the root.
@@ -938,9 +828,9 @@ document.querySelectorAll('.toggle button').forEach(function (b) {
   var line = document.querySelector('.sphinx-line'), box = document.querySelector('.sphinx'), ratio = D.w / D.h;
   function obstacles() {
     var out = [], keep = document.body.dataset.v;
-    ['vanilla', 'spicy'].forEach(function (v) {
+    ['spicy'].forEach(function (v) {
       document.body.dataset.v = v;
-      [].forEach.call(document.querySelectorAll('.titlerow, .notes, .arrow'), function (e) {
+      [].forEach.call(document.querySelectorAll('.titlerow'), function (e) {
         var r = e.getBoundingClientRect();
         if (r.width > 0 && r.height > 0) out.push(r);
       });
@@ -967,30 +857,10 @@ document.querySelectorAll('.toggle button').forEach(function (b) {
     var rem = parseFloat(getComputedStyle(document.documentElement).fontSize), pad = 0.5 * rem, n = D.top.length;
     var p = line.getBoundingClientRect(), obs = obstacles(), ground = document.querySelector('hr.sep').getBoundingClientRect().top + 1;
     var header = document.querySelector('header'), page = document.querySelector('.page'), sep = document.querySelector('hr.sep');
-    if (matchMedia('(max-width: 1150px)').matches) {       // narrow: in the flow, under the switch
+    if (matchMedia('(max-width: 1150px)').matches) {       // narrow: in the flow, under the title
       if (line.parentNode !== header) header.appendChild(line);
       line.classList.add('inflow');
       box.style.cssText = '';
-      if (matchMedia('(max-width: 600px)').matches) {      // phone: a curved arrow from "spicy" to the notes at its right
-        var arrow = document.querySelector('.arrow'), pr = page.getBoundingClientRect();
-        var b = document.querySelector('.toggle button[data-v="spicy"]').getBoundingClientRect();
-        // from the top of "spicy", an arch over to the top of the four notes, at the middle of their text
-        var lo = Infinity, hi = -Infinity, top = Infinity;
-        [].forEach.call(document.querySelectorAll('.notes li'), function (li) {
-          var rg = document.createRange(); rg.selectNodeContents(li);
-          var r = rg.getBoundingClientRect();
-          lo = Math.min(lo, r.left); hi = Math.max(hi, r.right); top = Math.min(top, r.top);
-        });
-        var x1 = b.left + b.width / 2, y1 = b.top - 6, x2 = (lo + hi) / 2, y2 = top - 4, lift = 30;
-        var x0 = x1 - 10, y0 = Math.min(y1, y2) - lift, ax = 10, ay = y1 - y0, bx = x2 - x0, by = y2 - y0;
-        arrow.style.left = (x0 - pr.left) + 'px';
-        arrow.style.top = (y0 - pr.top) + 'px';
-        arrow.setAttribute('width', bx + 10);
-        arrow.setAttribute('height', Math.max(ay, by) + 4);
-        arrow.querySelector('.line').setAttribute('d', 'M' + ax + ',' + ay + ' C' + (ax + 4) + ',' + (ay - lift) + ' ' + bx + ',' + (by - lift - 6) + ' ' + bx + ',' + (by - 7));
-        arrow.querySelector('.head').setAttribute('d', 'M' + (bx - 4.5) + ',' + (by - 8) + ' L' + (bx + 4.5) + ',' + (by - 8) + ' L' + bx + ',' + by + ' Z');
-        arrow.style.display = 'block';
-      }
       return;
     }
     if (line.parentNode !== page) page.insertBefore(line, sep);
