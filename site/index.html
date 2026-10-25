@@ -162,6 +162,7 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .cards .ph { color: var(--muted); white-space: nowrap; }
 .cards td .hd > :first-child { flex: 1 1 auto; min-width: 0; }
 .cards .st { display: block; color: var(--muted); }
+.cards .cache { color: var(--muted); white-space: nowrap; font-size: 0.88em; }
 .cards .br { font-size: 0; }
 .cards .br::after { content: "\A"; white-space: pre; }
 .plain { font-variant-numeric: tabular-nums; }
@@ -259,6 +260,7 @@ footer a + a { margin-left: 1.25rem; }
   .tables .scroll .cards td { display: grid; grid-template-columns: 7.6rem minmax(0, 1fr); align-items: baseline; padding: 0.14rem 0; }
   .cards td::before { content: attr(data-l); color: var(--muted); font-size: 0.92em; }
   .tables .scroll .cards td.na { display: none; }
+  .cards .cache { display: block; }
   .cards td .hd { gap: 0 0.6em; flex-wrap: wrap; }
   .cards td .hd .ex { margin-left: auto; }
   .cards .ph { display: block; }
@@ -1148,18 +1150,18 @@ document.addEventListener('pointerdown', function (e) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
       var dev = d.dev + '<span class="info' + (lay_ && k > 0 ? ' r' : '') + '" tabindex="0" data-tip="' + fmt(d.rate) + ' ' + units() + ' per second">i</span>';
       set('head-' + k, lay_ ? '<div class="hd"><span>' + dev + '</span></div>' : '<div class="hd">' + d.name + '<span class="dev">' + dev + '</span></div>');
-      if (c.shape === 'layered') what = 'layers of ' + split(c);
+      if (c.shape === 'layered') what = '';
       else if (c.b === c.h) what = 'full tree of ' + pow2(c.h);
       else what = 'subtree of ' + pow2(c.b);
       var t = function (n, r) { return '<span class="ex">' + time(n / (r || d.rate)) + '</span>'; };
-      set('life-' + k, '<div>' + fmt(c.lifetime) + ' signatures <span class="st">(' + what + ')</span></div>');
+      set('life-' + k, '<div>' + fmt(c.lifetime) + ' signatures' + (what ? ' <span class="st">(' + what + ')</span>' : '') + '</div>');
       set('keygen-' + k, '<div class="hd"><span>' + fmt(c.keygen) + '&nbsp;' + unit() + '</span>' + t(c.keygen) + '</div>');
-      set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="st">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
+      set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="cache">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
-      set('assist-' + k, '<div class="hd"><span>Offline / Online<span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span>' +
-        '<span class="ex">' + time(tt.prep * np / d.rate) + ' / ' + time(g / W.host_rate + W.stark_verify_s) + '</span></div>');
+      set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.prep * np / d.rate) + '</span>&emsp;Online: <span class="ex">' +
+        time(g / W.host_rate + W.stark_verify_s) + '</span><span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></div>');
     });
 
     // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
