@@ -1163,8 +1163,8 @@ document.addEventListener('pointerdown', function (e) {
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
       set('sign-' + k, '<div><div class="hd"><span>Offline / Online<span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span>' +
         '<span class="ex">' + time(tt.prep * np / d.rate) + ' / ' + time(g / W.host_rate + W.stark_verify_s) + '</span></div>' +
-        '<div class="hd"><span>Naive <span class="ph">(' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ')</span>' +
-        '<span class="st">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div></div>');
+        '<div class="hd"><span>Naive</span>' + t(c.sign[d.kib]) + '</div>' +
+        '<div class="st">(' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ', ' + d.cache + ' cache)</div></div>');
     });
 
     // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
