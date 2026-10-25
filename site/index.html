@@ -159,7 +159,6 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .cmp thead .sub { font-weight: 400; color: var(--muted); }
 .m-only { display: none; }
 .cards thead .dev { white-space: nowrap; }
-.cards .assist { display: flex; align-items: center; gap: 0.4em; margin-top: 0.4rem; font-size: 0.85rem; font-weight: 400; }
 .cards .ph { color: var(--muted); white-space: nowrap; }
 .cards td .hd > :first-child { flex: 1 1 auto; min-width: 0; }
 .cards .st { display: block; color: var(--muted); }
@@ -990,7 +989,7 @@ footer a + a { margin-left: 1.25rem; }
       <table class="cmp cards">
         <colgroup><col class="label"><col><col><col></colgroup>
         <thead>
-          <tr><th></th><th><div data-f="head-0"></div><div class="assist">with host assistance<span class="info w" tabindex="0" id="assist-tip" data-tip="Host assistance">i</span></div></th><th data-f="head-1"></th><th data-f="head-2"></th></tr>
+          <tr><th></th><th data-f="head-0"></th><th data-f="head-1"></th><th data-f="head-2"></th></tr>
         </thead>
         <tbody>
           <tr><th>Lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Lifetime" data-f="life-0"></td><td data-l="Lifetime" data-f="life-1"></td><td data-l="Lifetime" data-f="life-2"></td></tr>
@@ -1136,15 +1135,16 @@ document.addEventListener('pointerdown', function (e) {
       { name: 'Standard', b: 20, rate: rate('weak CPU'), kib: '1024', cache: '1&nbsp;MiB', dev: lay_ ? 'Weak CPU' : 'weak CPU' },
       { name: 'Full', b: S.h, rate: rate('powerful CPU'), kib: '16384', cache: '16&nbsp;MiB', dev: lay_ ? 'Powerful CPU' : 'powerful CPU' }
     ];
-    var at = document.getElementById('assist-tip');
-    var np = W.ledger_prepared[S.h];
-    if (at) at.setAttribute('data-tip', 'The Ledger keeps ' + np + ' random instances prepared in advance, so that the host grinds about ' +
-      pow2t(Math.log2(W.ledger_grind[S.h])) + ' digests on average' + (np > W.prepared ? ' (the host can hold their public parts, the WOTS+C signatures and paths, ' +
-      'the device keeping a hash of each)' : '') + '. To sign, it sends ' +
-      'R₀, Δ, the message and the ' + np + ' indices to the untrusted host, which returns the least i such that index(R₀ + iΔ) ' +
-      'is one of them, with a STARK that this i is the least; the device checks the STARK and signs with that instance. The statement is public ' +
-      '(no zero knowledge), but Δ is no longer secret against the host. Host: ' + fmt(W.host_rate) + ' hashes per second. The idea of ' +
-      'delegating this work to the host and proving it with a STARK comes from Riva (riva.xyz).');
+    // the Ledger with the host: offline, it prepares np FTS; online, the host grinds onto one of them and proves it in a STARK
+    var np = W.ledger_prepared[S.h], g = W.ledger_grind[S.h];
+    var assist = function (tt) {
+      return 'Offline: the Ledger prepares ' + np + ' random instances (FTS and their WOTS+C signatures and paths), ' + fmt(tt.prep * np) + ' ' + units() +
+        ' in idle time; each signature uses one, then refilled (' + fmt(tt.prep) + ').' + (np > W.prepared ? ' The host can hold their public parts, the device keeping a hash of each.' : '') +
+        ' Online: the Ledger sends R₀, Δ, the message and the ' + np + ' indices to the untrusted host, which returns the least i such that ' +
+        'index(R₀ + iΔ) is one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes), with a STARK that this i is the least: ' + time(g / W.host_rate) +
+        ' to prove, ' + time(W.stark_verify_s) + ' for the Ledger to verify. The statement is public (no zero knowledge), but Δ is no longer secret ' +
+        'against the host. The idea of delegating this work to the host and proving it with a STARK comes from Riva (riva.xyz).';
+    };
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
       var dev = d.dev + '<span class="info' + (lay_ && k > 0 ? ' r' : '') + '" tabindex="0" data-tip="' + fmt(d.rate) + ' ' + units() + ' per second">i</span>';
@@ -1159,13 +1159,11 @@ document.addEventListener('pointerdown', function (e) {
         set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="st">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
         return;
       }
-      // with the host: the prepared instances built in advance (one is refilled per signature), the STARK checked online, the grinding proved by the host
+      // two techniques: offline / online with the host, or naive (the Ledger alone, with a 16 KiB cache)
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
-      var g = W.ledger_grind[S.h], info = function (tip) { return '<span class="info" tabindex="0" data-tip="' + tip + '">i</span>'; };
-      set('sign-' + k, '<div><div class="hd"><span>Offline <span class="ph">(keygen ' + np + ' FTS)' +
-        info(fmt(tt.prep * np) + ' ' + units() + ', in idle time;&#10;each signature uses one FTS, then refilled (' + fmt(tt.prep) + ')') + '</span></span>' + t(tt.prep * np) + '</div>' +
-        '<div class="hd"><span>Online <span class="ph">(STARK of &asymp;&thinsp;' + pow2(Math.log2(g)) + ' hashes)' +
-        info('The host proves &asymp; ' + pow2t(Math.log2(g)) + ' hashes (' + time(g / W.host_rate) + '),&#10;the Ledger verifies the proof (' + time(W.stark_verify_s) + ')') + '</span></span><span class="ex">&asymp;&thinsp;' + time(g / W.host_rate + W.stark_verify_s) + '</span></div></div>');
+      set('sign-' + k, '<div><div class="hd"><span>Offline / Online<span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span>' +
+        '<span class="ex">' + time(tt.prep * np / d.rate) + ' / &asymp;&thinsp;' + time(g / W.host_rate + W.stark_verify_s) + '</span></div>' +
+        '<div class="hd"><span>Naive <span class="ph">(' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ')</span></span>' + t(c.sign[d.kib]) + '</div></div>');
     });
 
     // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
