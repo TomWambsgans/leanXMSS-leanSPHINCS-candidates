@@ -12733,6 +12733,10 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Params.below_le
 
+/-- info: 'LeanForest.Params.lowerHeight_ge' does not depend on any axioms -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Params.lowerHeight_ge
+
 /-- info: 'LeanForest.Params.lower_le' does not depend on any axioms -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Params.lower_le
@@ -12844,6 +12848,10 @@ import LeanForest.World
 /-- info: 'LeanForest.lowerHeight_le_max' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.lowerHeight_le_max
+
+/-- info: 'LeanForest.lowerHeight_pos' does not depend on any axioms -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.lowerHeight_pos
 
 /-- info: 'LeanForest.maxLayerHeight_le' does not depend on any axioms -/
 #guard_msgs (whitespace := lax) in
