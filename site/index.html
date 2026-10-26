@@ -110,8 +110,6 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .cmp .hd { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75em; }
 .cmp .hd > * { flex: none; }
 .cmp .dev { font-weight: 400; color: var(--muted); }
-.cmp .dev .info::after { left: auto; right: 0; }
-.info.r::after { left: auto; right: 0; }
 .cmp th + th, .cmp th + td, .cmp td + td { border-left: 1px solid var(--rule); padding-left: 1rem; padding-right: 1rem; }
 .info {
   position: relative;
@@ -130,27 +128,25 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
   cursor: help;
   vertical-align: 0.15em;
 }
-.info::after {
-  content: attr(data-tip);
-  position: absolute;
-  left: 0;
-  bottom: calc(100% + 0.5rem);
+/* The tip of an (i): one element, placed by the script; links in a tip are written [text](url) */
+#tip {
+  position: fixed;
+  z-index: 10;
   white-space: pre;
+  max-width: calc(100vw - 2rem);
   background: var(--ink);
   color: #fff;
   font-size: 0.9rem;
   font-weight: 400;
+  font-style: normal;
+  letter-spacing: normal;
+  text-align: left;
   line-height: 1.5;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s;
-  z-index: 10;
 }
-.info.w::after { white-space: normal; width: max-content; max-width: 32rem; }
-.info.dn::after { bottom: auto; top: calc(100% + 0.5rem); }
-.info:hover::after, .info:focus::after { opacity: 1; }
+#tip.w { white-space: normal; width: max-content; max-width: 32rem; }
+#tip a { color: #fff; text-decoration: underline; }
 .cmp tbody th { font-weight: 500; }
 .cmp tbody tr:first-child > * { padding-top: 0.45rem; }
 .cmp col.label { width: 10rem; }
@@ -198,17 +194,7 @@ footer p { margin: 0; }
 footer a + a { margin-left: 1.25rem; }
 
 @media (hover: none), (max-width: 600px) {
-  .info::after, .cmp .dev .info::after, .info.r::after, .info.w::after {
-    position: fixed;
-    left: 1rem;
-    right: 1rem;
-    top: auto;
-    bottom: 1.25rem;
-    width: auto;
-    max-width: none;
-    white-space: pre-wrap;
-    text-align: center;
-  }
+  #tip, #tip.w { left: 1rem !important; right: 1rem; top: auto !important; bottom: 1.25rem; width: auto; max-width: none; white-space: pre-wrap; text-align: center; }
 }
 @media (max-width: 1150px) {
   main { min-height: 0; }
@@ -228,7 +214,6 @@ footer a + a { margin-left: 1.25rem; }
   main { padding: 1.25rem 1rem 1.5rem; }
   h1 { font-size: 2.2rem; }
   .idea { font-size: 1.1rem; text-align: left; margin: 0.4rem 0 1.2rem; }
-  .info::after { white-space: pre-wrap; width: max-content; max-width: 70vw; }
   .m-only { display: inline; }
 
   /* Title, then the author */
@@ -325,7 +310,7 @@ footer a + a { margin-left: 1.25rem; }
       <div class="toggles" id="toggles">
         <span class="sl" id="tl-h">Lifetime</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-h" data-key="h"><button type="button" role="radio" data-val="22" aria-label="2 to the 26">2<sup>26</sup></button><button type="button" role="radio" data-val="24" aria-label="2 to the 28">2<sup>28</sup></button><button type="button" role="radio" data-val="26" aria-label="2 to the 30">2<sup>30</sup></button><button type="button" role="radio" data-val="28" aria-label="2 to the 32">2<sup>32</sup></button></div>
-        <span class="sl" id="tl-shape">Mode<span class="info w dn" tabindex="0" data-tip="Pruning: keygen builds only a subtree of 2ᵇ leaves, pseudorandom nodes stand in for the rest, and the signer grinds until its index lands in it (idea: conduition, conduition.io). A forger must land there too, so the lifetime drops by less than the pruning factor. Security: never reuse a seed under different pruning parameters; derive it as H(seed ‖ parameters). Privacy: the indices reveal the subtree size, hence the kind of signer.">i</span></span>
+        <span class="sl" id="tl-shape">Mode<span class="info w dn" tabindex="0" data-tip="Pruning: keygen builds only a subtree of 2ᵇ leaves, pseudorandom nodes stand in for the rest, and the signer grinds until its index lands in it (idea: [conduition](https://conduition.io/cryptography/hypertree-pruning/)). A forger must land there too, so the lifetime drops by less than the pruning factor. Security: never reuse a seed under different pruning parameters; derive it as H(seed ‖ parameters). Privacy: the indices reveal the subtree size, hence the kind of signer.">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-shape" data-key="shape"><button type="button" role="radio" data-val="layered">Uniform</button><button type="button" role="radio" data-val="pruned">Pruning</button></div>
         <span class="sl" id="tl-hash">Hash</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-hash" data-key="hash"><button type="button" role="radio" data-val="Keccak-256">Keccak-256</button><button type="button" role="radio" data-val="BLAKE2s">BLAKE2s</button><button type="button" role="radio" data-val="SHA-256">SHA-256</button></div>
@@ -337,7 +322,7 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th><i>k</i></th><td>8</td></tr>
           <tr><th><i>a</i></th><td>4 + 3</td></tr>
           <tr><th>OTS</th><td>WOTS+C<span class="info" tabindex="0" data-tip="v = 64 chains of length w = 4,&#10;target sum T = 123">i</span></td></tr>
-          <tr><th>FTS</th><td class="two">WOTS forest<span class="info" tabindex="0" data-tip="8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5&#10;(credit: Jonas Nick, sig.golf)">i</span></td></tr>
+          <tr><th>FTS</th><td class="two">WOTS forest<span class="info" tabindex="0" data-tip="8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5&#10;(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))">i</span></td></tr>
         </tbody>
         <tbody class="out">
           <tr><th>Size</th><td data-f="size">&hellip;</td></tr>
@@ -898,7 +883,7 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th></th><th data-f="head-0"></th><th data-f="head-1"></th><th data-f="head-2"></th></tr>
         </thead>
         <tbody>
-          <tr><th class="nw">Pruned lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span></th><td data-l="Pruned lifetime" data-f="life-0"></td><td data-l="Pruned lifetime" data-f="life-1"></td><td data-l="Pruned lifetime" data-f="life-2"></td></tr>
+          <tr><th class="nw">Pruned lifetime<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, [proved in Lean](https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/v2/formal/sphincs)">i</span></th><td data-l="Pruned lifetime" data-f="life-0"></td><td data-l="Pruned lifetime" data-f="life-1"></td><td data-l="Pruned lifetime" data-f="life-2"></td></tr>
           <tr><th>Key generation</th><td data-l="Key generation" data-f="keygen-0"></td><td data-l="Key generation" data-f="keygen-1"></td><td data-l="Key generation" data-f="keygen-2"></td></tr>
           <tr><th>Signing</th><td data-l="Signing" data-f="sign-0"></td><td data-l="Signing" data-f="sign-1"></td><td data-l="Signing" data-f="sign-2"></td></tr>
           <tr><th class="nw">Assisted signing<span class="info w" tabindex="0" id="assist-tip" data-tip="">i</span></th><td data-l="Assisted" data-f="assist-0"></td><td class="na"></td><td class="na"></td></tr>
@@ -928,14 +913,62 @@ footer a + a { margin-left: 1.25rem; }
 
 </main>
 <script>
-// On touch, a tip stays up until something else takes the focus: close it on a tap
-// outside, and let a second tap on the same (i) close it too.
-document.addEventListener('pointerdown', function (e) {
-  var open = document.activeElement;
-  if (!open || !open.classList || !open.classList.contains('info')) return;
-  if (open.contains(e.target)) e.preventDefault();
-  open.blur();
-}, true);
+// The tip of an (i), from its data-tip: shown on hover or focus, and on touch by a tap (a second tap, or a
+// tap elsewhere, closes it). It sits right after its (i), so that its links come next when tabbing, and
+// stays up while the pointer moves into it, so that they can be clicked.
+(function () {
+  var tip = document.createElement('span'), cur = null, timer = null;
+  tip.id = 'tip'; tip.setAttribute('role', 'tooltip'); tip.hidden = true;
+  function touch() { return matchMedia('(hover: none), (max-width: 600px)').matches; }
+  function html(t) {
+    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  }
+  function show(i) {
+    clearTimeout(timer);
+    cur = i;
+    tip.innerHTML = html(i.getAttribute('data-tip') || '');
+    tip.className = i.classList.contains('w') ? 'w' : '';
+    i.after(tip);
+    tip.hidden = false;
+    if (touch()) return;
+    var r = i.getBoundingClientRect(), t = tip.getBoundingClientRect(), W = document.documentElement.clientWidth;
+    var x = i.classList.contains('r') || i.closest('.cmp .dev') ? r.right - t.width : r.left;
+    var y = i.classList.contains('dn') || r.top - t.height - 8 < 0 ? r.bottom + 8 : r.top - t.height - 8;
+    tip.style.left = Math.max(8, Math.min(x, W - t.width - 8)) + 'px';
+    tip.style.top = y + 'px';
+  }
+  function hide() { clearTimeout(timer); tip.hidden = true; cur = null; }
+  function info(e) { return e.target.closest ? e.target.closest('.info') : null; }
+  document.addEventListener('mouseover', function (e) {
+    if (touch()) return;
+    var i = info(e);
+    if (i) { if (i !== cur) show(i); else clearTimeout(timer); }
+    else if (tip.contains(e.target)) clearTimeout(timer);
+  });
+  document.addEventListener('mouseout', function (e) {
+    if (touch() || !cur) return;
+    var to = e.relatedTarget;
+    if (to && (cur.contains(to) || tip.contains(to))) return;
+    if (info(e) === cur || tip.contains(e.target)) { clearTimeout(timer); timer = setTimeout(hide, 200); }
+  });
+  document.addEventListener('focusin', function (e) {
+    if (tip.contains(e.target)) return;
+    var i = info(e);
+    if (i && !touch()) show(i);
+    else if (cur && !i) hide();
+  });
+  document.addEventListener('click', function (e) {
+    if (tip.contains(e.target)) return;
+    var i = info(e);
+    if (i && touch() && i === cur) { hide(); i.blur(); }
+    else if (i) show(i);
+    else hide();
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') hide(); });
+  window.addEventListener('scroll', function () { if (cur && !touch()) hide(); }, { passive: true });
+  window.addEventListener('resize', function () { if (cur) hide(); });
+})();
 </script>
 <script>
 // The figures: every number comes from data.json (python3 scripts/scheme.py --json > site/data.json),
@@ -948,7 +981,7 @@ document.addEventListener('pointerdown', function (e) {
   } catch (e) {}
   // the devices: hashes per second for each hash, from data.json (rates[device][hash])
   function rate(dev) { return D.rates[dev][S.hash]; }
-  var LIFE_TIP = '<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, proved in Lean">i</span>';
+  var LIFE_TIP = '<span class="info" tabindex="0" data-tip="&gt; 127 bits of security, [proved in Lean](https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/tree/v2/formal/sphincs)">i</span>';
 
   // 3 significant digits with K, M, B (as scripts/scheme.py prints them)
   function fmt(x) {
@@ -1018,7 +1051,7 @@ document.addEventListener('pointerdown', function (e) {
     var lay_ = S.shape === 'layered', ledger = rate('Ledger Nano S+');
     var devs = [
       { b: 12, rate: ledger, kib: '16', cache: '16&nbsp;KiB', host: true,
-        dev: '<a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a>' },
+        dev: 'Ledger Nano S+', bench: 'https://github.com/TomWambsgans/hardware-wallet-benchmark' },
       { b: 20, rate: rate('laptop'), kib: '1024', cache: '1&nbsp;MiB', dev: 'Laptop' },
       { b: S.h, rate: rate('server'), kib: '16384', cache: '16&nbsp;MiB', dev: 'Server' }
     ];
@@ -1027,7 +1060,7 @@ document.addEventListener('pointerdown', function (e) {
     var assist = function (tt) {
       return 'Offline: the Ledger prepares ' + np + ' FTS (' + fmt(tt.ledger_prep * np) + ' ' + unit() + '); each signature uses one. ' +
         'Online: the host finds the randomizer that lands on one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes) and proves it in a STARK (≈ ' +
-        time(g / W.host_rate) + '), which the Ledger verifies (≈ ' + time(W.stark_verify_s) + '). Idea from Riva (riva.xyz).';
+        time(g / W.host_rate) + '), which the Ledger verifies (≈ ' + time(W.stark_verify_s) + '). Idea from [Riva](https://www.riva.xyz/).';
     };
     // the layered key has the same lifetime on every device: no lifetime row
     var lifeRow = document.querySelector('[data-f="life-0"]').closest('tr');
@@ -1035,7 +1068,8 @@ document.addEventListener('pointerdown', function (e) {
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
       var dev = d.dev + '<span class="info' + (k > 0 ? ' r' : '') + '" tabindex="0" data-tip="' + (d.host ? fmt(d.rate) : pow2t(Math.round(Math.log2(d.rate)))) +
-        ' ' + units() + ' per second' + (!d.host && S.hash === 'SHA-256' ? ' (counted at the BLAKE2s rate)' : '') + '">i</span>';
+        ' ' + units() + ' per second' + (!d.host && S.hash === 'SHA-256' ? ' (counted at the BLAKE2s rate)' : '') +
+        (d.bench ? ' ([benchmark](' + d.bench + '))' : '') + '">i</span>';
       set('head-' + k, '<div class="hd"><span>' + dev + '</span></div>');
       if (c.shape === 'layered') what = '';
       else if (c.b === c.h) what = 'full tree of ' + pow2(c.h);
