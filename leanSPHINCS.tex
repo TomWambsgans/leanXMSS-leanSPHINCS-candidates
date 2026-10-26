@@ -298,16 +298,9 @@ another: 3 at key generation and 4 for the forest in preprocessing, then one rou
 Online, signing grinds about $2^h$ digests in the clear ($1.68\cdot10^7$ at $h=24$) and opens 44 forest chain values
 on average, at most 64: each signer sends one part per value.
 
-\paragraph{Remarks.}
-\begin{itemize}
-  \item The Lean proof covers the single deterministic signer. The prepared instances are uniform and each is used
-        once, so the indices of the threshold signatures are distributed as the single signer's, and the lifetime
-        is meant to be the one of the configuration.
-  \item The key shares can be refreshed, and the committee changed (including $n$ and $t$), with the same
-        public key: hash-based, the new committee generates fresh seeds, defining a new PRF $F'$, and an MPC
-        among $t$ old and the new operators publishes $c(x)=F(x)\oplus F'(x)$ for every published address $x$, so
-        that the secret at $x$ is $F'(x)\oplus c(x)$; lattice-based, $t$ old operators reshare $\mathit{msk}$.
-\end{itemize}
+\paragraph{Remark.} The Lean proof covers the single deterministic signer. The prepared instances are uniform and each
+is used once, so the indices of the threshold signatures are distributed as the single signer's, and the lifetime is
+meant to be the one of the configuration.
 
 \subsection{Hardware wallets}
 \label{sec:ledger}
