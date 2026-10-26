@@ -1,4 +1,4 @@
-import LeanForest.StatementDet
+import LeanForest.Statement
 import LeanForest.SecuritySignatureWitness
 import LeanForest.SecurityDomains
 import LeanForest.Base.Prelude

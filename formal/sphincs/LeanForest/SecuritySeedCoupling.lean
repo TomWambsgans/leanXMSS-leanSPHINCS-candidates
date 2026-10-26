@@ -1,5 +1,5 @@
 import LeanForest.SecuritySeedModel
-import LeanForest.StatementDet
+import LeanForest.Statement
 import LeanForest.Base.Prelude
 import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 

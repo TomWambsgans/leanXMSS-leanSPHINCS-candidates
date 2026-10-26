@@ -372,7 +372,7 @@ theorem det_bitsFH (hb0 : 0 < keptHeight topLayer) (H b K N : ℕ) (hH : totalHe
     (hrt : H0.checkRate H b N qh t = true) (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true)
     (hsmall : checkSmallF H b N qh ρ o.cthr o.B ((2 ^ b * on.En : ℚ) / 2) = true)
     (covers heavy : List H0.CoverW) (hcov : checkCoversH H b K N (qh + 1) covers heavy = true) :
-    Det.HasClassicalSecurityBitsDet 127 := by
+    HasClassicalSecurityBits 127 := by
   obtain ⟨hnum, hqh, hN70, hcthr, hB, hc, hpayR, hcheck⟩ := checkSmallF_sound hsmall
   have hN70' : signatureLimit ≤ 2 ^ 70 := hN ▸ hN70
   set c : ℚ := (2 ^ b * on.En : ℚ) / 2 with hcdef

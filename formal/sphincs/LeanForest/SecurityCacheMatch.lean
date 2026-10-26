@@ -1,4 +1,4 @@
-import LeanForest.StatementDet
+import LeanForest.Statement
 import LeanForest.Correctness
 import LeanForest.World
 import LeanForest.Search

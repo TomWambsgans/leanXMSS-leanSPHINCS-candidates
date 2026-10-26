@@ -1,6 +1,6 @@
 # Proof route
 
-`LeanForest.Lifetimes.requestedSecurity` proves 127 bits of SUF-CMA security for `Seeded.sign` in
+`LeanForest.requestedSecurity` ([Main.lean](LeanForest/Main.lean)) proves 127 bits of SUF-CMA security for `Seeded.sign` in
 each configuration of [README.md](README.md). This file documents the route. Everything below holds
 for every `Params` (height `h ≤ 28`, `d` layers, kept subtree height `b`, signature limit `N`); only
 the last step, the certificates, is numeric.
@@ -24,9 +24,9 @@ landing probability of a digest is p = 2^-(h−b).
    through a hash input that contains the 256-bit seed, guessed with probability 2^-256 per query
    ([SecuritySeedGuess](LeanForest/SecuritySeedGuess.lean)).
 
-1. **Statement and memo reduction.** [StatementDet](LeanForest/StatementDet.lean) is the SUF-CMA game,
+1. **Statement and memo reduction.** [Statement](LeanForest/Statement.lean) is the SUF-CMA game,
    with the signing oracle `Seeded.sign`.
-   `Det.forgeAdvantageDet_le_seedFree` ([BridgeDet](LeanForest/BridgeDet.lean)) bounds the advantage
+   `Det.forgeAdvantage_le_seedFree` ([BridgeDet](LeanForest/BridgeDet.lean)) bounds the advantage
    by the seed-free win of the memoizing adversary, which never asks for the same message twice, plus
    2q/2^256: the randomizer hash of each message is replaced by a uniform value, split into a table of
    steps and an independent table of starts R0 (`Det.evalDist_rtable_split`). The steps are fixed (the

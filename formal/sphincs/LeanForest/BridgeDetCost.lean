@@ -213,7 +213,7 @@ theorem fixedCostSource_interactionDet (f : QueryImpl HashSpec Id) (parameter : 
       (fixedWorldCost f).writerTMapBase
         (QueryImpl.ofLift OracleWorld
           (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) +
-          signingOracleDet ⟨seed, parameter, data.root⟩) := by
+          signingOracle ⟨seed, parameter, data.root⟩) := by
   funext request
   cases request with
   | inl request =>
@@ -229,8 +229,8 @@ theorem fixedCostSource_interactionDet (f : QueryImpl HashSpec Id) (parameter : 
       change ((fixedCostSource f table).writerTMapBase
         (QueryImpl.withLogging (spec := SigningSpec) (m := OracleComp CostSpec)
           (fun message => signCostDet parameter data rnd message))) message =
-        ((fixedWorldCost f).writerTMapBase (signingOracleDet ⟨seed, parameter, data.root⟩)) message
-      rw [signingOracleDet, map_logging_query, map_logging_query]
+        ((fixedWorldCost f).writerTMapBase (signingOracle ⟨seed, parameter, data.root⟩)) message
+      rw [signingOracle, map_logging_query, map_logging_query]
       have hsign : (fun message => simulateQ (fixedCostSource f table)
           (signCostDet parameter data rnd message)) =
           (fun message => simulateQ (fixedWorldCost f)
@@ -251,7 +251,7 @@ theorem fixedCostSource_restDet (f : QueryImpl HashSpec Id) (parameter : PublicP
         let pk : PublicKey := ⟨data.root, parameter⟩
         let (forgery, log) ← (simulateQ (QueryImpl.ofLift OracleWorld
           (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) +
-          signingOracleDet ⟨seed, parameter, data.root⟩) (adversary.main pk)).run
+          signingOracle ⟨seed, parameter, data.root⟩) (adversary.main pk)).run
         let verified ← liftM (Concrete.verify pk forgery.message forgery.signature : OracleComp HashSpec Bool)
         return decide (SigningTranscript.Valid log ∧ ¬SigningTranscript.Contains log forgery) && verified) := by
   simp only [costRestDet, simulateQ_bind, simulateQ_pure, QueryImpl.simulateQ_writerTMapBase_run,

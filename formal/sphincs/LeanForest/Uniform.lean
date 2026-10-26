@@ -1,4 +1,4 @@
-import LeanForest.Scheme
+import LeanForest.Scheme.Lemmas
 
 /-! Uniform bit extraction; adapted from leanVM b7a107256. -/
 namespace LeanForest

@@ -2,7 +2,7 @@ import LeanForest.BridgeAssembly
 
 /-! Internalizing long adversarial hash inputs for the deterministic-randomizer game, and its
 fixed-function form. `Seeded.sign` only makes short queries (its randomizer derivation is 88
-bytes), so the argument of `BridgeInternalize` applies verbatim with `signingOracleDet`. -/
+bytes), so the argument of `BridgeInternalize` applies verbatim with `signingOracle`. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -79,7 +79,7 @@ theorem OnlyW.seededSign (sk : LeanForest.Seeded.SecretKey) (message : Message) 
 noncomputable def gameImplDet (sk : LeanForest.Seeded.SecretKey) :
     QueryImpl AdvSpec (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) :=
   QueryImpl.ofLift OracleWorld (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) +
-    signingOracleDet sk
+    signingOracle sk
 
 noncomputable def leftProgD (sk : LeanForest.Seeded.SecretKey) {β : Type}
     (M : OracleComp AdvSpec β) : OracleComp OracleWorld (β × QueryLog SigningSpec) :=
@@ -167,14 +167,14 @@ theorem BlockD.short (sk : LeanForest.Seeded.SecretKey) {input : HashInput} (h :
     exact OnlyW.writerLift (OnlyW.queryShort h))
 
 theorem OnlyW.signingDet (sk : LeanForest.Seeded.SecretKey) (message : Message) :
-    OnlyW (signingOracleDet sk message).run := by
-  simp only [Det.signingOracleDet, QueryImpl.run_withLogging_apply]
+    OnlyW (signingOracle sk message).run := by
+  simp only [signingOracle, QueryImpl.run_withLogging_apply]
   exact OnlyW.bind (OnlyW.seededSign sk message) (fun _ => OnlyW.pure' _)
 
 theorem BlockD.signing (sk : LeanForest.Seeded.SecretKey) (message : Message) :
     BlockD sk (liftM (AdvSpec.query (.inr message))) :=
   BlockD.forward sk _ rfl (by
-    change OnlyW (signingOracleDet sk message).run
+    change OnlyW (signingOracle sk message).run
     exact OnlyW.signingDet sk message)
 
 theorem gameImplDet_liftWorld (sk : LeanForest.Seeded.SecretKey) {α : Type}
@@ -262,13 +262,13 @@ noncomputable def gameAfterSeedDet (adversary : Adversary) (seed : MasterSeed) :
   let (pk, sk) ← liftM (LeanForest.Seeded.keygenFromSeed seed)
   let ((forgery, log) : Forgery × QueryLog SigningSpec) ←
     (simulateQ (QueryImpl.ofLift OracleWorld
-      (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) + signingOracleDet sk)
+      (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) + signingOracle sk)
       (adversary.main pk)).run
   let verified ← liftM (Concrete.verify pk forgery.message forgery.signature : OracleComp HashSpec Bool)
   return decide (SigningTranscript.Valid log ∧ ¬SigningTranscript.Contains log forgery) && verified
 
-theorem gameCoreDet_eq_sampling (adversary : Adversary) :
-    gameCoreDet adversary = (liftM sampleMasterSeed : OracleComp OracleWorld MasterSeed) >>=
+theorem gameCore_eq_sampling (adversary : Adversary) :
+    gameCore adversary = (liftM sampleMasterSeed : OracleComp OracleWorld MasterSeed) >>=
       gameAfterSeedDet adversary := rfl
 
 theorem gameAfterSeedDet_eq (adversary : Adversary) (seed : MasterSeed) :
@@ -321,15 +321,15 @@ theorem gameAfterSeedDet_rel (adversary : Adversary) (seed : MasterSeed) (short 
       (fun a => (a.1.1, first.1.2 + a.1.2)) (fun a => (a.1.1, first.1.2 + a.1.2))
       (fun _ => rfl) (fun _ => rfl)
 
-theorem experimentDet_eq_rightRun (adversary : Adversary) :
-    experimentDet adversary = (fun result => result.1) <$> rightRun (gameCoreDet adversary) ∅ := by
-  rw [experimentDet, rightRun, ← simulateQ_countHashQueries]
+theorem experiment_eq_rightRun (adversary : Adversary) :
+    experiment adversary = (fun result => result.1) <$> rightRun (gameCore adversary) ∅ := by
+  rw [experiment, rightRun, ← simulateQ_countHashQueries]
   rfl
 
-theorem evalDist_experimentDet_internalize (adversary : Adversary) :
-    𝒟[experimentDet (internalize adversary)] =
-      𝒟[(fun result => result.1) <$> leftRun (gameCoreDet adversary) ∅] := by
-  rw [experimentDet_eq_rightRun, gameCoreDet_eq_sampling, gameCoreDet_eq_sampling,
+theorem evalDist_experiment_internalize (adversary : Adversary) :
+    𝒟[experiment (internalize adversary)] =
+      𝒟[(fun result => result.1) <$> leftRun (gameCore adversary) ∅] := by
+  rw [experiment_eq_rightRun, gameCore_eq_sampling, gameCore_eq_sampling,
     show leftRun ((liftM sampleMasterSeed : OracleComp OracleWorld MasterSeed) >>=
       gameAfterSeedDet adversary) ∅ = leftRun ((liftM sampleMasterSeed : OracleComp OracleWorld MasterSeed) >>=
       gameAfterSeedDet adversary) (merge ∅ ∅) by rw [merge_empty],
@@ -354,15 +354,15 @@ theorem evalDist_experimentDet_internalize (adversary : Adversary) :
 
 section Budgeted
 
-attribute [local irreducible] experimentDet count2 leftRun rightRun sampleMasterSeed
+attribute [local irreducible] experiment count2 leftRun rightRun sampleMasterSeed
 
 /-- Internalizing long inputs never lowers the probability of a budgeted win. -/
 theorem budgetedWin_le_internalize (adversary : Adversary) (q : Nat) :
-    Pr[fun result : Bool × Nat => result.1 = true ∧ result.2 ≤ q | experimentDet adversary] ≤
+    Pr[fun result : Bool × Nat => result.1 = true ∧ result.2 ≤ q | experiment adversary] ≤
       Pr[fun result : Bool × Nat => result.1 = true ∧ result.2 ≤ q |
-        experimentDet (internalize adversary)] := by
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_experimentDet_internalize adversary),
-    experimentDet_eq_rightRun, leftRun_eq_split, rightRun_eq_split, probEvent_map, probEvent_map,
+        experiment (internalize adversary)] := by
+  rw [probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_experiment_internalize adversary),
+    experiment_eq_rightRun, leftRun_eq_split, rightRun_eq_split, probEvent_map, probEvent_map,
     probEvent_map, probEvent_map]
   refine probEvent_mono fun result _ hresult => ⟨hresult.1, ?_⟩
   exact le_trans (Nat.le_add_right _ _) hresult.2
@@ -394,7 +394,7 @@ theorem OnlyW.gameImplDet (sk : LeanForest.Seeded.SecretKey) {β : Type} (M : Or
         change OnlyW (liftM (liftM (OracleWorld.query (.inr bytes)) : OracleComp OracleWorld _) :
           WriterT (QueryLog SigningSpec) (OracleComp OracleWorld) _).run
         exact OnlyW.writerLift (OnlyW.queryShort hshort)
-      · change OnlyW (signingOracleDet sk message).run
+      · change OnlyW (signingOracle sk message).run
         exact OnlyW.signingDet sk message
 
 theorem OnlyW.gameAfterSeedDet_internalize (adversary : Adversary) (seed : MasterSeed) :
@@ -410,15 +410,15 @@ noncomputable local instance detLabelsSampleable : SampleableType CanonicalGraph
 
 open SeedModel Graph Assembly Eager in
 /-- The internalized deterministic experiment as an average of fixed-function counted games. -/
-theorem evalDist_experimentDet_fixed (adversary : Adversary) :
-    𝒟[experimentDet (internalize adversary)] = 𝒟[do
+theorem evalDist_experiment_fixed (adversary : Adversary) :
+    𝒟[experiment (internalize adversary)] = 𝒟[do
       let material ← sampleMaterial
       let seed ← sampleMasterSeed
       let answers ← $ᵗ CanonicalGraphLabels
       let table ← $ᵗ Eager.Table
       simulateQ (fixedRom (extend (preparedCache material seed answers) table))
         (countHashQueries (gameAfterSeedDet (internalize adversary) seed))] := by
-  rw [experimentDet, gameCoreDet_eq_sampling, evalDist_seeded_prepared_counted]
+  rw [experiment, gameCore_eq_sampling, evalDist_seeded_prepared_counted]
   refine evalDist_bind_congr' _ (fun material => evalDist_bind_congr' _ (fun seed => ?_))
   rw [← simulateQ_countHashQueries]
   change 𝒟[(simulateQ romImpl (countHashQueries (gameAfterSeedDet (internalize adversary) seed))).run'

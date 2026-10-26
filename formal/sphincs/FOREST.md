@@ -18,7 +18,7 @@ other top node of its tree. The verifier folds 2 levels in a subtree and 3 in a 
 it reached and the last path element in index order (`orderTops`: the reached node first when bit 2
 of the WOTS-key index, bit 3 of the leaf index, is 0).
 
-Final statement: `LeanForest.Lifetimes.requestedSecurity`, 127 classical bits (SUF-CMA in the ROM)
+Final statement: `LeanForest.requestedSecurity` ([Main.lean](LeanForest/Main.lean)), 127 classical bits (SUF-CMA in the ROM)
 for the deterministic Lean signer in every configuration of [README.md](README.md). At `h = 24`:
 
 | b | proved N | cover attack | best known attack | proved / best known |

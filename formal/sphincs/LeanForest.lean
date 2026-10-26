@@ -132,11 +132,13 @@ import LeanForest.Certificates.H26
 import LeanForest.Certificates.H28
 import LeanForest.LifetimeLanding
 import LeanForest.Lifetimes
+import LeanForest.Main
 import LeanForest.Configurations
 import LeanForest.LoopWalk
 import LeanForest.Pruning
 import LeanForest.Recovery
 import LeanForest.Scheme
+import LeanForest.Scheme.Lemmas
 import LeanForest.Search
 import LeanForest.SecurityCacheMatch
 import LeanForest.SecurityChainWitness
@@ -186,7 +188,7 @@ import LeanForest.SecurityTargetAssignment
 import LeanForest.SecurityTreeWitness
 import LeanForest.SecurityVerifier
 import LeanForest.SecurityWotsWitness
-import LeanForest.StatementDet
+import LeanForest.Statement
 import LeanForest.Uniform
 import LeanForest.VerificationCost
 import LeanForest.World

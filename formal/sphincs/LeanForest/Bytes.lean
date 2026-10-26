@@ -1,4 +1,4 @@
-import LeanForest.Scheme
+import LeanForest.Scheme.Lemmas
 
 /-! Byte encoding and domain separation; adapted from leanVM b7a107256. -/
 namespace LeanForest

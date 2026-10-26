@@ -1,4 +1,4 @@
-import LeanForest.Scheme
+import LeanForest.Scheme.Lemmas
 
 /-!
 # How many digests the target-sum code accepts

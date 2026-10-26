@@ -8,9 +8,9 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 `sorryAx` of `sorry` or the `Lean.ofReduceBool` of `native_decide`.
 -/
 
-/-- info: 'LeanForest.Lifetimes.requestedSecurity' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.requestedSecurity' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.requestedSecurity
+#print axioms LeanForest.requestedSecurity
 
 /-- info: 'LeanForest.Configurations.blake2s_h22_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -144,9 +144,9 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.ForestPotential.det_bitsFH
 
-/-- info: 'LeanForest.Security.Det.forgeAdvantageDet_le_seedFree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanForest.Security.Det.forgeAdvantage_le_seedFree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Security.Det.forgeAdvantageDet_le_seedFree
+#print axioms LeanForest.Security.Det.forgeAdvantage_le_seedFree
 
 /-- info: 'LeanForest.Security.Det.evalDist_rtable_split' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

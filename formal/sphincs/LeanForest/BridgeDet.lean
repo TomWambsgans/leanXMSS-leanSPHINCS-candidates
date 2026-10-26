@@ -390,22 +390,22 @@ theorem noRepeat_internalize_memoAdv (adversary : Adversary) :
   rw [← Memo.internalize_memoAdv]
   exact ForestPotential.noRepeat_internalize_adversary _ (Memo.memoAdv_noRepeat adversary)
 
-attribute [local irreducible] experimentDet sampleMasterSeed
+attribute [local irreducible] experiment sampleMasterSeed
 
 /-- **Seed elimination for the deterministic signer.** If the seed-free capped win of the
 internalized memoizing adversary in the fresh-randomizer graph-view game is at most `B` for every
 table of walk steps, the SUF-CMA advantage against `Seeded.sign` is at most `B` plus `2 q / 2^256`
 for naming the hidden seed. The step halves are fixed and the base randomizers averaged. -/
-theorem forgeAdvantageDet_le_seedFree (adversary : Adversary) (q : Nat)
-    (hbound : HasHashQueryBoundDet adversary q) (B : ℝ≥0∞)
+theorem forgeAdvantage_le_seedFree (adversary : Adversary) (q : Nat)
+    (hbound : HasHashQueryBound adversary q) (B : ℝ≥0∞)
     (hB : ∀ steps, Pr[Win | seedFreeExperiment (internalize (Memo.memoAdv adversary)) q steps] ≤ B) :
-    forgeAdvantageDet adversary ≤ B + 2 * (q / (2 : ℝ≥0∞) ^ 256) := by
-  unfold forgeAdvantageDet
+    forgeAdvantage adversary ≤ B + 2 * (q / (2 : ℝ≥0∞) ^ 256) := by
+  unfold forgeAdvantage
   calc
-    _ = Pr[fun result : Bool × Nat => result.1 = true ∧ result.2 ≤ q | experimentDet adversary] :=
+    _ = Pr[fun result : Bool × Nat => result.1 = true ∧ result.2 ≤ q | experiment adversary] :=
       probEvent_congr' (fun result hresult => ⟨fun h => ⟨h, hbound result hresult⟩, And.left⟩) rfl
     _ ≤ Pr[fun result : Bool × Nat => result.1 = true ∧ result.2 ≤ q |
-          experimentDet (internalize adversary)] := budgetedWin_le_internalize adversary q
+          experiment (internalize adversary)] := budgetedWin_le_internalize adversary q
     _ = Pr[fun result : Bool × Nat => result.1 = true ∧ result.2 ≤ q | do
           let material ← sampleMaterial
           let seed ← sampleMasterSeed
@@ -413,7 +413,7 @@ theorem forgeAdvantageDet_le_seedFree (adversary : Adversary) (q : Nat)
           let table ← $ᵗ Eager.Table
           simulateQ (fixedRom (extend (preparedCache material seed answers) table))
             (countHashQueries (gameAfterSeedDet (internalize adversary) seed))] :=
-      probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_experimentDet_fixed adversary)
+      probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_experiment_fixed adversary)
     _ = Pr[fun result : Bool × Nat => result.1 = true ∧ result.2 ≤ q | do
           let material ← sampleMaterial
           let seed ← sampleMasterSeed

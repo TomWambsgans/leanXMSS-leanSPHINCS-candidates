@@ -1,4 +1,4 @@
-import LeanForest.Scheme
+import LeanForest.Scheme.Lemmas
 import Mathlib.Data.Nat.Bitwise
 
 /-!
