@@ -22,7 +22,6 @@ set_option maxRecDepth 10000
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-
 /-! ### Witnesses and their prices -/
 
 /-- Monotone finite witnesses. -/
@@ -49,7 +48,6 @@ theorem excessW_props {W : View → Multiset View → ℝ≥0∞} (hW : WitnessP
   refine ⟨fun a b hab => tsub_le_tsub_right ((priceW_props hW).1 a b hab) b0, fun D => ?_⟩
   unfold excessW
   exact ne_top_of_le_ne_top ((priceW_props hW).2 D) tsub_le_self
-
 
 /-! ### The potential -/
 
@@ -268,15 +266,6 @@ theorem coreG_congr {s s' : State} (h : ∀ q, s'.cache (pblk parameter data q) 
   have hv : ∀ q, pview parameter data s' q = pview parameter data s q := fun q => by unfold pview; rw [h q]
   unfold coreG hValueG candG candValueG
   simp only [hv, termO_blocks wbar h]
-
-theorem potG_le_coreG (gate : State → Prop) (s : State) (P : List Pair) (Ms : List Message)
-    (L : QueryLog SigningSpec) (d : Multiset View) (k : ℕ) :
-    potG parameter data W wbar b0 Fail gate s P Ms L d k ≤
-      coreG parameter data W wbar b0 Fail s P Ms L d (signatureLimit - L.length) k := by
-  unfold potG
-  split_ifs
-  · exact bot_le
-  · exact le_rfl
 
 /-- A grown state with the same digest blocks has no larger potential. -/
 theorem potG_grow (hW : WitnessProps W) {gate : State → Prop}

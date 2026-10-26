@@ -1,5 +1,4 @@
 import LeanForest.SecurityDomains
-import LeanForest.Uniform
 
 /-!
 Exact derivation-input parsing and hidden-seed guessing. An input names at most one seed, so it
@@ -51,19 +50,6 @@ theorem parseSeed_eq_some_iff (input : HashInput) (seed : MasterSeed) :
     · intro hseed
       exact False.elim (h ⟨seed, hseed⟩)
 
-theorem parseSeed_keygen (parameter : PublicParameter) (domain : KeygenDomain) (seed : MasterSeed) :
-    parseSeed (keygenHashInput parameter domain seed) = some seed :=
-  (parseSeed_eq_some_iff _ _).2 ⟨parameter, domain, rfl⟩
-
-/-- Verifier inputs can never be mistaken for derivation inputs, even across public parameters. -/
-theorem parseSeed_verifier (parameter : PublicParameter) (domain : HashDomain) (payload : HashInput) :
-    parseSeed (tweakableHashInput parameter domain payload) = none := by
-  cases h : parseSeed (tweakableHashInput parameter domain payload) with
-  | none => rfl
-  | some seed =>
-      obtain ⟨parameter', domain', heq⟩ := (parseSeed_eq_some_iff _ _).1 h
-      exact False.elim (keygenInput_ne_hashInput parameter' parameter domain' domain seed payload heq)
-
 /-- Each fixed byte input contributes at most one equality guess against a uniform hidden seed. -/
 theorem seedHit_probability_le (input : HashInput) :
     Pr[SeedHit input | sampleMasterSeed] ≤ 1 / (2 : ℝ≥0∞) ^ 256 := by
@@ -82,22 +68,5 @@ theorem seedHit_probability_le (input : HashInput) :
 structure Trial (σ : Type) where
   input : HashInput
   next : Bool → σ
-
-/-- Private random choices depend on prior state, never directly on the hidden seed. -/
-abbrev Strategy (σ : Type) := σ → ProbComp (Option (Trial σ))
-
-/-- At most `q` adaptive equality guesses. The strategy sees each failed guess, and stops on the
-first success. The input is parsed using the actual candidate derivation layouts. -/
-noncomputable def monitor {σ : Type} (choose : Strategy σ) (seed : MasterSeed) :
-    Nat → σ → ProbComp Bool
-  | 0, _ => pure false
-  | q + 1, state => do
-      let some trial ← choose state | return false
-      if parseSeed trial.input = some seed then return true
-      else monitor choose seed q (trial.next false)
-
-/-- The hidden seed is sampled once and retained for every adaptive guess. -/
-noncomputable def experiment {σ : Type} (choose : Strategy σ) (q : Nat) (state : σ) : ProbComp Bool :=
-  sampleMasterSeed >>= fun seed => monitor choose seed q state
 
 end LeanForest.Security.SeedGuess

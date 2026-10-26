@@ -17,7 +17,6 @@ abbrev Cache (D R : Type) := QueryCache (D →ₒ R)
 
 section Compiler
 variable {D R A ι : Type} [Fintype ι] [SampleableType R]
-noncomputable local instance : DecidableEq D := Classical.decEq _
 noncomputable local instance : DecidableEq ι := Classical.decEq _
 
 noncomputable def outsideRead (input : D) (cache : Cache D R) : ProbComp (R × Cache D R) :=

@@ -8,15 +8,13 @@ open OracleComp OracleSpec
 namespace LeanForest.Security.Prefix
 
 variable [Params]
-open Concrete Completeness SeedModel PreparedScheme MaterialGameCoupling
+open Concrete Completeness SeedModel
 open SeedCoupling
 open QueryCap
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxHeartbeats 40000
-attribute [local irreducible] PreparedScheme.sign PreparedScheme.keygen
-  Randomized.sign digestAttemptLimit encodingAttemptLimit
-  preparedOracle answer
+attribute [local irreducible] digestAttemptLimit encodingAttemptLimit
 
 noncomputable def fixedWorldCost (f : QueryImpl HashSpec Id) :
     QueryImpl OracleWorld (AddWriterT Nat PMF) :=

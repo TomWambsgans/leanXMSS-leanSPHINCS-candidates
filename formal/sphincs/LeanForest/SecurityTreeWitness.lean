@@ -72,9 +72,6 @@ theorem flatMap_ofFn_injective {α β : Type} (g : α → List β) (len : Nat)
       | zero => exact hzero
       | succ j => exact congrFun hsucc j
 
-theorem rootsPayload_len (tops : Coord → Digest × Digest) : (rootsPayload tops).length = 256 := by
-  simp [rootsPayload, nodePayload, bytesLE_length, forestCoords]
-
 theorem rootsPayload_injective {tops tops' : Coord → Digest × Digest}
     (h : rootsPayload tops = rootsPayload tops') : tops = tops' :=
   flatMap_ofFn_injective (fun pair : Digest × Digest => nodePayload pair.1 pair.2) 32
@@ -268,7 +265,6 @@ theorem quotient_eq_above {index reference lower upper : Nat} (hlevels : lower �
     index / 2 ^ upper = reference / 2 ^ upper := by
   have hsplit : upper = lower + (upper - lower) := (Nat.add_sub_of_le hlevels).symm
   rw [hsplit, Nat.pow_add, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul, hquotient]
-
 
 /-- The actual authentication path of a retained leaf, extended by zero beyond its height. -/
 def canonicalTreePath (f : QueryImpl HashSpec Id) (parameter : PublicParameter)

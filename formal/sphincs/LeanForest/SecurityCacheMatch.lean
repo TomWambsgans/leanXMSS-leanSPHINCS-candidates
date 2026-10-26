@@ -1,7 +1,8 @@
-import LeanForest.Statement
-import LeanForest.RandomizedSupport
+import LeanForest.StatementDet
+import LeanForest.Correctness
+import LeanForest.World
+import LeanForest.Search
 import LeanForest.SecurityTreeWitness
-import LeanForest.Uniform
 
 /-!
 Cached matches against fixed input-indexed target sets: a cache is bad when some cached answer

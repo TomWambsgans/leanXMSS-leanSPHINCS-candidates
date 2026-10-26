@@ -1,8 +1,8 @@
 import LeanForest
 
 /-!
-Axiom guards. The `#print axioms` below pin the main theorem, the 32 lifetimes, the 32 size and
-cost theorems of `Configurations` and the theorems the documentation cites. The last command checks
+Axiom guards. The `#print axioms` below pin the main theorem, the 32 size and cost theorems of
+`Configurations` and the theorems the documentation cites. The last command checks
 every declaration of every `LeanForest` module (`LeanForest.lean` imports all of them) and fails if
 one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound`, such as the
 `sorryAx` of `sorry` or the `Lean.ofReduceBool` of `native_decide`.
@@ -11,134 +11,6 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 /-- info: 'LeanForest.Lifetimes.requestedSecurity' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Lifetimes.requestedSecurity
-
-/-- info: 'LeanForest.Lifetimes.h22_full_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h22_full_bits
-
-/-- info: 'LeanForest.Lifetimes.h22_layered_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h22_layered_bits
-
-/-- info: 'LeanForest.Lifetimes.h22_pruned10_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h22_pruned10_bits
-
-/-- info: 'LeanForest.Lifetimes.h22_pruned12_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h22_pruned12_bits
-
-/-- info: 'LeanForest.Lifetimes.h22_pruned13_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h22_pruned13_bits
-
-/-- info: 'LeanForest.Lifetimes.h22_pruned14_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h22_pruned14_bits
-
-/-- info: 'LeanForest.Lifetimes.h22_pruned20_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h22_pruned20_bits
-
-/-- info: 'LeanForest.Lifetimes.h22_pruned8_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h22_pruned8_bits
-
-/-- info: 'LeanForest.Lifetimes.h24_full_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h24_full_bits
-
-/-- info: 'LeanForest.Lifetimes.h24_layered_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h24_layered_bits
-
-/-- info: 'LeanForest.Lifetimes.h24_pruned10_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h24_pruned10_bits
-
-/-- info: 'LeanForest.Lifetimes.h24_pruned12_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h24_pruned12_bits
-
-/-- info: 'LeanForest.Lifetimes.h24_pruned13_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h24_pruned13_bits
-
-/-- info: 'LeanForest.Lifetimes.h24_pruned14_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h24_pruned14_bits
-
-/-- info: 'LeanForest.Lifetimes.h24_pruned20_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h24_pruned20_bits
-
-/-- info: 'LeanForest.Lifetimes.h24_pruned8_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h24_pruned8_bits
-
-/-- info: 'LeanForest.Lifetimes.h26_full_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h26_full_bits
-
-/-- info: 'LeanForest.Lifetimes.h26_layered_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h26_layered_bits
-
-/-- info: 'LeanForest.Lifetimes.h26_pruned10_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h26_pruned10_bits
-
-/-- info: 'LeanForest.Lifetimes.h26_pruned12_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h26_pruned12_bits
-
-/-- info: 'LeanForest.Lifetimes.h26_pruned13_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h26_pruned13_bits
-
-/-- info: 'LeanForest.Lifetimes.h26_pruned14_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h26_pruned14_bits
-
-/-- info: 'LeanForest.Lifetimes.h26_pruned20_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h26_pruned20_bits
-
-/-- info: 'LeanForest.Lifetimes.h26_pruned8_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h26_pruned8_bits
-
-/-- info: 'LeanForest.Lifetimes.h28_full_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h28_full_bits
-
-/-- info: 'LeanForest.Lifetimes.h28_layered_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h28_layered_bits
-
-/-- info: 'LeanForest.Lifetimes.h28_pruned10_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h28_pruned10_bits
-
-/-- info: 'LeanForest.Lifetimes.h28_pruned12_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h28_pruned12_bits
-
-/-- info: 'LeanForest.Lifetimes.h28_pruned13_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h28_pruned13_bits
-
-/-- info: 'LeanForest.Lifetimes.h28_pruned14_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h28_pruned14_bits
-
-/-- info: 'LeanForest.Lifetimes.h28_pruned20_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h28_pruned20_bits
-
-/-- info: 'LeanForest.Lifetimes.h28_pruned8_bits' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Lifetimes.h28_pruned8_bits
 
 /-- info: 'LeanForest.Configurations.blake2s_h22_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

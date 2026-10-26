@@ -112,7 +112,7 @@ noncomputable def costGameDet (parameter : PublicParameter) (data : PublicData) 
 def seededFrom (sk : Seeded.SecretKey) (message : Message) (step : Randomness) (attempts : Nat)
     (start : Randomness) : OracleComp HashSpec (Option Signature) := do
   let some (randomness, _) ← Seeded.signDigestLoop sk message step attempts start | return none
-  Randomized.finishSign sk message randomness
+  Seeded.finishSign sk message randomness
 
 theorem eval_deriveRandomizer (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (message : Message) :
@@ -156,7 +156,7 @@ theorem fixed_signCostDetLoop (f : QueryImpl HashSpec Id) (parameter : PublicPar
           (Seeded.signAttempt ⟨seed, parameter, data.root⟩ message start :
               OracleComp HashSpec (Option Index)) >>= fun result =>
                 match result with
-                | some _ => Randomized.finishSign ⟨seed, parameter, data.root⟩ message start
+                | some _ => Seeded.finishSign ⟨seed, parameter, data.root⟩ message start
                 | none => seededFrom ⟨seed, parameter, data.root⟩ message step attempts (start + step) := by
         simp only [seededFrom, Seeded.signDigestLoop, bind_assoc]
         refine bind_congr fun result => ?_

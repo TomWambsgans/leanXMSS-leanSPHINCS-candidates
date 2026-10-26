@@ -11,7 +11,7 @@ namespace LeanForest.Security.GraphView
 variable [Params]
 open Concrete Completeness Prefix HiddenGraph
 attribute [local instance] Classical.propDecidable
-attribute [local irreducible] finishSource Randomized.finishSign digestAttemptLimit
+attribute [local irreducible] finishSource Seeded.finishSign digestAttemptLimit
 set_option backward.isDefEq.respectTransparency false
 
 noncomputable def fixedSource (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table) :

@@ -34,18 +34,4 @@ theorem encodeInput_inj (parameter : PublicParameter) (lay : Layer) (tree : Tree
   have hpayload' := List.append_cancel_left hpayload
   exact counter_bytes_inj hc hc' (List.append_cancel_left hpayload')
 
-/-- The counter search exhausts its budget with probability at most the rejection share to the budget. -/
-theorem probEvent_otsSign (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (seed : MasterSeed) (message : HashInput) (cache : QueryCache HashSpec)
-    (hfresh : ∀ c, c < encodingAttemptLimit →
-      cache (encodeInput parameter lay tree leaf message c) = none) :
-    Pr[fun r => r.1 = none | (simulateQ randomOracle
-        (otsSign parameter lay tree leaf seed message
-          : OracleComp HashSpec (Option (Counter × (ChainIndex → Digest))))).run cache]
-      ≤ failMass (fun out => TargetSum.decodeDigest (truncateHash out)) ^ encodingAttemptLimit := by
-  rw [otsSign, otsSignFrom_eq_searchLoop]
-  exact probEvent_searchLoop _ _ _ encodingAttemptLimit
-    (fun s s' hs hs' heq => encodeInput_inj parameter lay tree leaf message hs hs' heq)
-    encodingAttemptLimit 0 (by simp) cache (fun s _ hsb => hfresh s hsb)
-
 end LeanForest.Completeness

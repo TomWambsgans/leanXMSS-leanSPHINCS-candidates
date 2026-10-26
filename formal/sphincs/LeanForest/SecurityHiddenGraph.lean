@@ -1,6 +1,5 @@
 import LeanForest.SecurityHiddenRows
 import LeanForest.SecurityPrefixOracle
-import LeanForest.SecurityPosition
 import LeanForest.SecurityPrunedGraph
 
 /-! A concrete programmed graph for the candidate's one-digest hash inputs. Canonical
@@ -32,8 +31,6 @@ instance coordinateFintype : Fintype Coordinate where
   complete := by
     intro p
     cases p <;> simp
-
-noncomputable local instance : DecidableEq Coordinate := Classical.decEq _
 
 inductive Address where
   | chain (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (chainIdx : ChainIndex)
@@ -110,7 +107,6 @@ theorem parse_input (parameter : PublicParameter) (active : Address → Prop) (q
 attribute [local irreducible] parse input Prefix.combine
 
 abbrev Table := Coordinate → Digest
-abbrev Knowledge := HiddenReveal.Knowledge Coordinate
 
 /-- The high half of every canonical answer remains explicit and adversary visible. -/
 noncomputable def answer (parameter : PublicParameter) (active : Address → Prop) (table : Table)
@@ -119,13 +115,6 @@ noncomputable def answer (parameter : PublicParameter) (active : Address → Pro
     if query.2 = table query.1.inputCoordinate then
       Prefix.combine (table query.1.outputCoordinate) (high query.1)
     else outside bytes
-
-theorem answer_canonical (parameter : PublicParameter) (active : Address → Prop) (table : Table)
-    (high : Address → Prefix.High) (outside : HashInput → HashOutput) (address : Address) (hactive : active address) :
-    answer parameter active table high outside (input parameter (address, table address.inputCoordinate)) =
-      Prefix.combine (table address.outputCoordinate) (high address) := by
-  rw [answer, parse_input _ _ _ hactive]
-  exact if_pos rfl
 
 /-- The parser enforces the candidate's complete byte layout and retained-row selection.
 The generic compiler therefore has only one possible input coordinate for each raw query. -/
@@ -142,16 +131,5 @@ theorem rowModel_answer (parameter : PublicParameter) (active : Address → Prop
       answer parameter active table high outside := rfl
 
 abbrev SourceSpec := HiddenRows.SourceSpec HashInput HashOutput Coordinate
-abbrev KnownAgrees := @HiddenRows.KnownAgrees Coordinate
-
-noncomputable abbrev stopped {α : Type} (parameter : PublicParameter) (active : Address → Prop)
-    (table : Table) (high : Address → Prefix.High) (outside : HashInput → HashOutput)
-    (computation : OracleComp SourceSpec α) (known : Knowledge) :=
-  HiddenRows.stopped (rowModel parameter active high) table outside computation known
-
-noncomputable abbrev stoppedExperiment {α : Type} (parameter : PublicParameter)
-    (active : Address → Prop) (high : Address → Prefix.High) (outside : HashInput → HashOutput)
-    (computation : OracleComp SourceSpec α) (known : Knowledge) :=
-  HiddenRows.stoppedExperiment (rowModel parameter active high) outside computation known
 
 end LeanForest.Security.HiddenGraph

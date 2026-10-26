@@ -17,7 +17,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-
 /-- Swapping the known parts of two tables is an involution. -/
 noncomputable def swapKnown (parameter : PublicParameter) (pair : HiddenGraph.Table × HiddenGraph.Table) :
     HiddenGraph.Table × HiddenGraph.Table :=
@@ -57,10 +56,6 @@ theorem evalDist_uniform_congr {α : Type} [Fintype α] [Nonempty α] (left righ
 
 noncomputable local instance sampleCellFintypeInst : Fintype SampleCell := sampleCellFintype
 noncomputable local instance sampleCellDecEq : DecidableEq SampleCell := Classical.decEq _
-noncomputable local instance secretOutputsSampleableInst : SampleableType SecretOutputs :=
-  secretOutputsSampleableType
-noncomputable local instance labelsSampleableInst : SampleableType CanonicalGraphLabels :=
-  graphLabelsSampleable
 noncomputable local instance hiddenTableSampleable : SampleableType HiddenGraph.Table :=
   SampleableType.ofFintype _
 noncomputable local instance highsSampleable : SampleableType CoordinateHighs := SampleableType.ofFintype _

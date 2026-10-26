@@ -1,7 +1,4 @@
 import LeanForest.BridgeSampleBoundF
-import LeanForest.BridgeRoutes
-import LeanForest.BridgeSatWRoutes
-import LeanForest.BridgeDetMemo
 
 /-! **The deterministic signer of the forest at 127 bits.** Small budgets (`q - keygenCost ≤ qh`):
 the sample bound averaged over the prepared samples, in closed form from one rational check
@@ -23,7 +20,6 @@ set_option maxRecDepth 10000
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-
 open Completeness SeedModel Graph Assembly Reduce Internalize in
 attribute [local instance] sampleCellFintypeInst sampleCellDecEq hiddenTableSampleable highsSampleable
   remainingSampleable
@@ -40,9 +36,6 @@ noncomputable def smallMainFF (ρ : ℝ) (q : ℕ) (B c : ℚ) : ℝ≥0∞ :=
   ENNReal.ofReal (ρ * (q - keygenCost : ℕ) / 2 ^ 128) + ((q - keygenCost : ℕ) : ℝ≥0∞) * ENNReal.ofReal (B : ℝ) +
     ν * (((Nat.choose (q - keygenCost) 2 : ℕ) : ℝ≥0∞) * rateS) +
     (((q - keygenCost : ℕ) : ℝ≥0∞) * ν) * ((q - keygenCost : ℕ) * ENNReal.ofReal (c : ℝ))
-
-theorem ofReal_natCast_invF {n : ℕ} (hn : 0 < n) : ((n : ℝ≥0∞))⁻¹ = ENNReal.ofReal ((n : ℝ)⁻¹) := by
-  rw [ENNReal.ofReal_inv_of_pos (by exact_mod_cast hn), ENNReal.ofReal_natCast]
 
 theorem one_le_keygenCostF : 1 ≤ keygenCost := by
   unfold keygenCost Prefix.keygenHashCost
@@ -291,101 +284,6 @@ theorem checkSmallF_sound {H b N qh : ℕ} {ρ cthr B c : ℚ} (h : checkSmallF 
 
 /-! ### A chain of covers -/
 
-/-- A chain of covers of the large budgets: `qstart` is one past the last covered budget, each cover
-is checked from there to its own `qtop`, and the chain ends once every budget `q'` with
-`q' + keygenCost < 2^127` is covered. -/
-def checkCovers (H b K N : ℕ) : ℕ → List H0.CoverW → Bool
-  | qstart, [] => decide (2 ^ 127 ≤ qstart + K)
-  | qstart, c :: rest => H0.checkCoverW H b K N qstart c && checkCovers H b K N (c.qtop + 1) rest
-
-/-- Every budget from `qstart` on with `q' + keygenCost < 2^127` lies in a checked cover of the chain. -/
-theorem checkCovers_sound (H b K N : ℕ) : ∀ (covers : List H0.CoverW) (qstart : ℕ),
-    checkCovers H b K N qstart covers = true → ∀ q', qstart ≤ q' → q' + K < 2 ^ 127 →
-      ∃ c ∈ covers, ∃ qs, H0.checkCoverW H b K N qs c = true ∧ qs ≤ q' ∧ q' ≤ c.qtop
-  | [], qstart, h, q', h0, h1 => by
-      simp only [checkCovers, decide_eq_true_eq] at h
-      omega
-  | c :: rest, qstart, h, q', h0, h1 => by
-      simp only [checkCovers, Bool.and_eq_true] at h
-      by_cases hq : q' ≤ c.qtop
-      · exact ⟨c, List.mem_cons_self .., qstart, h.1, h0, hq⟩
-      · obtain ⟨c', hc', hrest⟩ := checkCovers_sound H b K N rest (c.qtop + 1) h.2 q' (by omega) h1
-        exact ⟨c', List.mem_cons_of_mem _ hc', hrest⟩
-
 /-! ### Both routes -/
-
-set_option maxRecDepth 100000 in
-/-- **127 bits for the deterministic signer of the forest**, from the small-route check at `qh` (with
-a table whose rate is checked at `qh`) and a checked chain of covers of the large budgets from
-`qh + 1` up to `2^127 − 1 − keygenCost`. -/
-theorem det_bitsF (hb0 : 0 < keptHeight topLayer) (H b K N : ℕ) (hH : totalHeight = H) (hb : subtreeHeight = b)
-    (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N)
-    (qh : ℕ) (ρ : ℚ) (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true)
-    (hrt : H0.checkRate H b N qh t = true) (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true)
-    (hsmall : checkSmallF H b N qh ρ o.cthr o.B ((2 ^ b * on.En : ℚ) / 2) = true)
-    (covers : List H0.CoverW) (hcov : checkCovers H b K N (qh + 1) covers = true) :
-    Det.HasClassicalSecurityBitsDet 127 := by
-  obtain ⟨hnum, hqh, hN70, hcthr, hB, hc, hpayR, hcheck⟩ := checkSmallF_sound hsmall
-  have hN70' : signatureLimit ≤ 2 ^ 70 := hN ▸ hN70
-  set c : ℚ := (2 ^ b * on.En : ℚ) / 2 with hcdef
-  set κ : ℚ := 2 - ρ + (qh : ℚ) / 2 ^ 128 + (N : ℚ) * 123 / (2 ^ b * 2 ^ 15) with hκdef
-  have hκR : (κ : ℝ) = 2 - (ρ : ℝ) + (qh : ℝ) / 2 ^ 128 + (N : ℝ) * 123 / (2 ^ b * 2 ^ 15) := by
-    rw [hκdef]
-    push_cast
-    ring
-  have hκ0 : 0 ≤ κ := by
-    have hR : (0 : ℝ) ≤ (κ : ℝ) := by
-      rw [hκR]
-      have h1 : (ρ : ℝ) ≤ 2 := hnum.high
-      have h2 : (0 : ℝ) ≤ (qh : ℝ) / 2 ^ 128 := by positivity
-      have h3 : (0 : ℝ) ≤ (N : ℝ) * 123 / (2 ^ b * 2 ^ 15) := by positivity
-      linarith
-    exact_mod_cast hR
-  have hκ1 : κ ≤ 1 := by
-    have hR : (κ : ℝ) ≤ 1 := by
-      rw [hκR]
-      linarith
-    exact_mod_cast hR
-  have hc2 : (0 : ℚ) ≤ κ * c := mul_nonneg hκ0 hc
-  have hcheck' : (ρ : ℝ) + 2 ^ 128 * (o.B : ℝ) +
-      (2 * (H0.scanM : ℝ) - 1) * (qh : ℝ) / ((H0.scanM : ℝ) * 2 ^ 129) +
-      qh * ((κ * c : ℚ) : ℝ) + 1 / 2 ^ 60 ≤ 2 := by
-    rw [Rat.cast_mul, hκR, ← H0.scanMb_eq H b hH hb]
-    refine le_of_eq_of_le ?_ hcheck
-    ring
-  have hkg : keygenCost = K := hK
-  intro q hq1 adversary hbound
-  by_cases hbig : 2 ^ 127 ≤ q
-  · refine le_trans probEvent_le_one ?_
-    rw [ENNReal.le_div_iff_mul_le (Or.inl (by positivity)) (Or.inl (ENNReal.natCast_ne_top _)), one_mul]
-    exact_mod_cast hbig
-  have hq127 : q < 2 ^ 127 := Nat.lt_of_not_le hbig
-  by_cases hs : q - keygenCost ≤ qh
-  · have hx : ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 ≤ (qh : ℝ) / 2 ^ 128 :=
-      div_le_div_of_nonneg_right (Nat.cast_le.mpr hs) (by positivity)
-    have hnum' : Numeric (ρ : ℝ) (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128) :=
-      numeric_monoF hnum hx (by positivity)
-    have hκq : 2 - (ρ : ℝ) + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
-        (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ) := by
-      have he : (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) =
-          (N : ℝ) * 123 / (2 ^ b * 2 ^ 15) := by
-        rw [hb, hN]
-        field_simp
-      rw [hκR, he]
-      linarith
-    refine le_trans (det_smallF hb0 adversary q hbound (by omega) (ρ : ℝ) hnum' κ hκ0 hκ1 hκq H b N hH hb hN t o on
-      hpt qh hrt hs ho hon hcthr) ?_
-    exact small_closeFF q qh hq1 hs hqh hN70' (ρ : ℝ) (by linarith [hnum.low]) o.B (κ * c) hB hc2 hcheck'
-  · have hKq : keygenCost ≤ q := by omega
-    obtain ⟨cover, -, qs, hcv, hqs, hqt⟩ := checkCovers_sound H b K N covers (qh + 1) hcov (q - keygenCost)
-      (by omega) (by rw [← hkg]; omega)
-    have hcovb := H0.h0W_bound_of_cover H b K N qs cover hcv hH hb hK hN (q - keygenCost) hqs hqt
-    have hfairq := H0.fair_of_cover H b K N qs cover hcv hH hb (q - keygenCost) hqt
-    have h := det_largeW hb0 hN70' adversary q hbound hq127 hKq hfairq (by
-      have e1 : (q - keygenCost) + Prefix.keygenHashCost = q - keygenCost + keygenCost := rfl
-      rw [e1] at hcovb
-      exact hcovb)
-    refine le_trans h (le_of_eq ?_)
-    rw [Nat.cast_pow, Nat.cast_ofNat]
 
 end LeanForest.Security.ForestPotential

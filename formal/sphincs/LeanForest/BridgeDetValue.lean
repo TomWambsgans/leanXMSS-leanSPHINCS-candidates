@@ -1,6 +1,5 @@
 import LeanForest.BridgeDetCost
 import LeanForest.BridgeDetMemo
-import LeanForest.BridgeStop
 import LeanForest.BridgeReduce
 
 /-! The budgeted win value of a graph-view cost program on a fixed answer function, and the
@@ -177,21 +176,12 @@ theorem tsum_uniform_update {D R : Type} [Fintype D] [DecidableEq D] [Fintype R]
       simp only [tsum_probOutput_pure_mul]
 
 omit g c in
-theorem tsum_uniform_truncate (F : Randomness → ℝ≥0∞) :
-    ∑' a, Pr[= a | ($ᵗ HashOutput : ProbComp HashOutput)] * F (truncateHash a) =
-      ∑' r, Pr[= r | ($ᵗ Randomness : ProbComp Randomness)] * F r := by
-  rw [← tsum_probOutput_map_mul]
-  refine tsum_congr fun r => ?_
-  rw [probOutput_congr rfl evalDist_truncateHash_uniform]
-
-omit g c in
 theorem tsum_prob_mul_le {ρ : Type} (p : ProbComp ρ) (C : ℝ≥0∞) :
     ∑' x, Pr[= x | p] * C ≤ C := by
   rw [ENNReal.tsum_mul_right]
   exact mul_le_of_le_one_left bot_le tsum_probOutput_le_one
 
 /-! ### One message: a derived randomizer base read once is a fresh uniform start -/
-
 
 /-- Averaging the planted base `R0` of one message, its step fixed: the deterministic signer (one
 tick, then the scan from the base) wins at most as often as the scan from a uniform start. -/
@@ -416,25 +406,6 @@ theorem fixedCostP_tick (amount : ℕ) :
       (ι := HiddenGraph.Coordinate) amount) = pure () := by
   rw [HiddenCost.tick, simulateQ_spec_query]
   rfl
-
-theorem fixedCostP_sequence_reveal {n : ℕ} (which : Fin n → HiddenGraph.Coordinate) :
-    simulateQ (fixedCostP g c) (Concrete.sequenceFin fun index =>
-      HiddenCost.reveal (D := HashInput) (R := HashOutput) (which index)) =
-      pure (fun index => c (which index)) := by
-  induction n with
-  | zero =>
-      simp only [Concrete.sequenceFin, simulateQ_pure]
-      congr 1
-      funext index
-      exact index.elim0
-  | succ n ih =>
-      simp only [Concrete.sequenceFin, simulateQ_bind, simulateQ_pure]
-      rw [HiddenCost.reveal, simulateQ_spec_query]
-      change (pure (c (which 0)) : ProbComp Digest) >>= _ = _
-      rw [pure_bind, ih (fun index => which index.succ), pure_bind]
-      congr 1
-      funext index
-      cases index using Fin.cases <;> rfl
 
 theorem fixedCostP_sequenceFin_pure {α : Type} {n : ℕ} (computation : Fin n → OracleComp CostSpec α)
     (h : ∀ i, ∃ x, simulateQ (fixedCostP g c) (computation i) = pure x) :

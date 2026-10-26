@@ -1,5 +1,5 @@
 import LeanForest.BridgeForestPotentialOnce
-import LeanForest.Base.Assembly
+import LeanForest.Base.Majorant
 import Mathlib.Analysis.Complex.ExponentialBounds
 
 /-! The fair share `wbarOf q` of the grinding signer at budget `q`, its fair-share hypotheses, real
@@ -17,7 +17,6 @@ open Concrete ForestPrice ForestPotential
 set_option linter.unusedSectionVars false
 set_option exponentiation.threshold 512
 
-
 /-- The inverse of the landing probability. -/
 def scanM : ℕ := 2 ^ (totalHeight - subtreeHeight)
 
@@ -31,18 +30,12 @@ def denOf (q : ℕ) : ℕ := 2 ^ 128 - (q + 2 ^ 32 + (scanM - 1) * LmaxOf q)
 `(2 M − 1) / denOf q`, so that `landing · wbarOf q = (2 − landing) / denOf q`. -/
 noncomputable def wbarOf (q : ℕ) : ℝ≥0∞ := ENNReal.ofReal ((2 * (scanM : ℝ) - 1) / (denOf q : ℝ))
 
-
 theorem landing_eq : landing = ENNReal.ofReal (1 / 2 ^ (totalHeight - subtreeHeight)) := by
   unfold landing
   rw [one_div, ENNReal.ofReal_inv_of_pos (by positivity)]
   congr 1
   rw [← ENNReal.ofReal_natCast]
   congr 1
-  push_cast
-  rfl
-
-theorem card_eq : ((Fintype.card (Fin (2 ^ subtreeHeight)) : ℕ) : ℝ≥0∞) = ENNReal.ofReal (2 ^ subtreeHeight) := by
-  rw [Fintype.card_fin, ← ENNReal.ofReal_natCast]
   push_cast
   rfl
 

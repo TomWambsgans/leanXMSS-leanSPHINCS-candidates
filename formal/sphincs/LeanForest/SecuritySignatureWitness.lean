@@ -1,7 +1,6 @@
 import LeanForest.SecurityVerifier
 import LeanForest.SecurityWotsWitness
 import LeanForest.SecurityForestWitness
-import LeanForest.RandomizedCorrectness
 
 /-!
 The interface of deterministic extraction from an accepted candidate signature: its index and
@@ -99,7 +98,6 @@ theorem canonical_wots_leaf (f : QueryImpl HashSpec Id) (parameter : PublicParam
         (Completeness.otsSecret f parameter lay tree leaf seed) := by
   rw [Completeness.node_zero]
   rfl
-
 
 /-- A successful honest WOTS layer supplies its reference certificate and exact published values.
 The counter is the counter actually returned by the signer, rather than an arbitrary valid one. -/
@@ -207,9 +205,9 @@ attribute [local irreducible] Seeded.signLayer Seeded.forestOpen sequenceFin
 /-- Honest assembly preserves its selected randomizer exactly. -/
 theorem finishSign_randomness (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey)
     (message : Message) (randomness : Randomness) (signature : Signature)
-    (hsign : evalWithAnswerFn f (Randomized.finishSign sk message randomness) = some signature) :
+    (hsign : evalWithAnswerFn f (Seeded.finishSign sk message randomness) = some signature) :
     signature.randomness = randomness := by
-  rw [Randomized.finishSign, evalWithAnswerFn_bind, evalWithAnswerFn_bind,
+  rw [Seeded.finishSign, evalWithAnswerFn_bind, evalWithAnswerFn_bind,
     evalWithAnswerFn_bind] at hsign
   split at hsign
   next =>
@@ -223,7 +221,7 @@ certificates. Only the randomizer's actual landing condition is required. -/
 theorem canonical_of_finishSign (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey)
     (message : Message) (randomness : Randomness) (signature : Signature)
     (hland : Landed sk.parameter (digestIndex (Completeness.digestValue f sk message randomness)))
-    (hsign : evalWithAnswerFn f (Randomized.finishSign sk message randomness) = some signature) :
+    (hsign : evalWithAnswerFn f (Seeded.finishSign sk message randomness) = some signature) :
     ∃ word : Layer → Encoding,
       (∀ lay, ReferenceCertificate f sk.parameter sk.seed
         (index f ⟨sk.root, sk.parameter⟩ message signature) lay (signature.layers lay).counter (word lay)) ∧
@@ -247,28 +245,5 @@ def ForestException (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterS
     (digestMarks (verificationDigest f pk message signature)) signature.forest ∧
   ∃ input canonicalInput, input ∈ trace f pk message signature ∧ input ≠ canonicalInput ∧
     truncateHash (f input) = truncateHash (f canonicalInput)
-
-/-- The exceptions of one layer of the forgery's path: a tree exception of the layer's tree, or a
-WOTS exception of its key against the canonical message, at the reference counter and word. -/
-def LayerException (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
-    (message : Message) (signature : Signature) (lay : Layer) (referenceCounter : Counter)
-    (referenceWord : Encoding) : Prop :=
-  let leaf := index f pk message signature
-  let inputs := trace f pk message signature
-  (∃ value, TreeException f pk.parameter seed lay (keyTree leaf lay) (keyLeaf leaf lay)
-    (signaturePath signature lay) value) ∨
-  Wots.EncodingOutputMatch f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay)
-    (canonicalMessage f pk.parameter seed leaf lay) referenceCounter inputs ∨
-  Wots.LeafOutputMatch f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay)
-    (Completeness.otsSecret f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay) seed) inputs ∨
-  Wots.ChainException f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay) referenceWord
-    (Completeness.otsSecret f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay) seed) inputs
-
-/-- Structural outside-subtree events and all explicit WOTS/forest exceptional cases. -/
-def Exception (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
-    (message : Message) (signature : Signature) (referenceCounter : Layer → Counter)
-    (referenceWord : Layer → Encoding) : Prop :=
-  (∃ lay, LayerException f pk seed message signature lay (referenceCounter lay) (referenceWord lay)) ∨
-  ForestException f pk seed message signature
 
 end LeanForest.Security.SignatureWitness

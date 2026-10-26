@@ -170,9 +170,6 @@ def layerUp (k : Nat) : Layer := ⟨numLayers - 1 - k, by have := Params.numLaye
 /-- `sum_{j > lay} h_j`, the index bits below layer `lay`. -/
 def heightBelow (lay : Layer) : Nat := lowerHeight * (numLayers - 1 - lay.val)
 
-/-- `sum_{j < lay} h_j`, the index bits above layer `lay`: the trees of the layer are `2^heightAbove`. -/
-def heightAbove (lay : Layer) : Nat := totalHeight - heightBelow lay - layerHeight lay
-
 /-- Keep the first 128 output bits, the low bits of the little-endian bit vector. -/
 def truncateHash (output : HashOutput) : Digest :=
   output.extractLsb' 0 digestBits
@@ -859,10 +856,6 @@ below the top layer. -/
 def Kept (parameter : PublicParameter) (lay : Layer) (leaf : LeafIndex) : Prop :=
   leaf.val / 2 ^ keptHeight lay = keptPosition parameter lay
 
-instance (parameter : PublicParameter) (lay : Layer) (leaf : LeafIndex) :
-    Decidable (Kept parameter lay leaf) :=
-  inferInstanceAs (Decidable (leaf.val / 2 ^ keptHeight lay = keptPosition parameter lay))
-
 end Pruning
 
 /-- One seed derivation, first 16 bytes: the parameter and the surrogates. -/
@@ -1172,6 +1165,15 @@ def signDigestLoop (secretKey : SecretKey) (message : Message) (step : Randomnes
       | some index => return some (randomness, index)
       | none => signDigestLoop secretKey message step attempts (randomness + step)
 
+/-- Assemble the signature once a randomizer lands: the digest, the forest opening and the layers. -/
+def finishSign (sk : SecretKey) (message : Message) (randomness : Randomness) :
+    OracleComp HashSpec (Option Signature) := do
+  let digest ← messageDigest sk.parameter sk.root message randomness
+  let index := digestIndex digest
+  let opening ← forestOpen sk.parameter index (digestMarks digest) sk.seed
+  let some layers ← sequenceLayers (fun lay => signLayer sk index lay) | return none
+  return some ⟨randomness, opening, layers⟩
+
 /-- `Sign`: derive the randomizer base `R0` and the step `delta` of the message (one hash), scan
 `R0, R0 + delta, ...` into the kept subtree, compute the digest, open the forest, and at every layer
 sign the message of the layer below (the forest key's sixteen level-3 nodes at the bottom) with
@@ -1207,11 +1209,6 @@ theorem totalHeight_le_28 : totalHeight ≤ 28 := Params.totalHeight_le
 theorem subtreeHeight_le_total : subtreeHeight ≤ totalHeight := Params.subtreeHeight_le
 
 theorem numLayers_pos : 0 < numLayers := Params.numLayers_pos
-
-theorem totalHeight_pos : 0 < totalHeight := by
-  have h1 := Params.lower_le
-  have h2 : 6 * 1 ≤ lowerHeight * numLayers := Nat.mul_le_mul Params.lowerHeight_ge Params.numLayers_pos
-  omega
 
 /-- The index field lies inside the hash output. -/
 theorem indexOffset_add_le : Concrete.indexOffset + totalHeight ≤ hashOutputBits := by

@@ -130,16 +130,6 @@ theorem evalDist_truncateHash_uniform :
       ($ᵗ HashOutput : ProbComp HashOutput)] = _
   exact evalDist_hashOutput_extract_uniform (width := digestBits) (by decide)
 
-theorem probEvent_uniform_truncateHash_eq (target : Digest) :
-    Pr[fun output : HashOutput => truncateHash output = target |
-        ($ᵗ HashOutput : ProbComp HashOutput)] =
-      (Fintype.card Digest : ℝ≥0∞)⁻¹ := by
-  rw [show (fun output : HashOutput => truncateHash output = target) =
-      (fun output => output = target) ∘ truncateHash from rfl]
-  rw [← probEvent_map]
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) evalDist_truncateHash_uniform]
-  rw [probEvent_eq_eq_probOutput, probOutput_uniformSample]
-
 theorem probEvent_uniform_truncateHash_mem (targets : Finset Digest) :
     Pr[fun output : HashOutput => truncateHash output ∈ targets |
         ($ᵗ HashOutput : ProbComp HashOutput)] =

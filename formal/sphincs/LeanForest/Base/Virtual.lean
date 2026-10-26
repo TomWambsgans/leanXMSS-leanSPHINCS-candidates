@@ -24,24 +24,6 @@ theorem slotValue_mono (f : Multiset V → ℝ≥0∞) (hmono : Monotone' f) :
       · exact slotValue_mono f hmono rest _ _ (add_le_add hle le_rfl)
       · exact slotValue_mono f hmono rest _ _ hle
 
-theorem slotValue_super (f : Multiset V → ℝ≥0∞) (hsuper : Supermodular f) :
-    ∀ (coins : List (ℝ≥0∞ × Multiset V)), Supermodular fun current => slotValue f current coins
-  | [], small, large, extra, hle => hsuper small large extra hle
-  | (p, add) :: rest, small, large, extra, hle => by
-      simp only [slotValue]
-      have h1 := slotValue_super f hsuper rest (small + add) (large + add) extra (add_le_add hle le_rfl)
-      have h2 := slotValue_super f hsuper rest small large extra hle
-      have e1 : small + extra + add = small + add + extra := by abel
-      have e2 : large + extra + add = large + add + extra := by abel
-      rw [e1, e2]
-      calc p * slotValue f (small + add + extra) rest + (1 - p) * slotValue f (small + extra) rest +
-            (p * slotValue f (large + add) rest + (1 - p) * slotValue f large rest)
-          = p * (slotValue f (small + add + extra) rest + slotValue f (large + add) rest) +
-            (1 - p) * (slotValue f (small + extra) rest + slotValue f large rest) := by ring
-        _ ≤ p * (slotValue f (large + add + extra) rest + slotValue f (small + add) rest) +
-            (1 - p) * (slotValue f (large + extra) rest + slotValue f small rest) := by gcongr
-        _ = _ := by ring
-
 theorem slotValue_swap (f : Multiset V → ℝ≥0∞) (first second : ℝ≥0∞ × Multiset V)
     (rest : List (ℝ≥0∞ × Multiset V)) (current : Multiset V) :
     slotValue f current (first :: second :: rest) = slotValue f current (second :: first :: rest) := by
@@ -82,25 +64,6 @@ theorem slotValue_le_of_le {f g : Multiset V → ℝ≥0∞} (hfg : ∀ m, f m �
 
 /-! ### Closure properties -/
 
-theorem mono_translate {h : Multiset V → ℝ≥0∞} (hh : Monotone' h) (shift : Multiset V) :
-    Monotone' fun d => h (d + shift) := fun _ _ hle => hh _ _ (add_le_add hle le_rfl)
-
-theorem super_translate {h : Multiset V → ℝ≥0∞} (hh : Supermodular h) (shift : Multiset V) :
-    Supermodular fun d => h (d + shift) := by
-  intro small large extra hle
-  have := hh (small + shift) (large + shift) extra (add_le_add hle le_rfl)
-  simpa only [add_right_comm _ extra shift] using this
-
-theorem mono_freshAvg (U : Finset V) {h : V → Multiset V → ℝ≥0∞} (hh : ∀ u, Monotone' (h u)) :
-    Monotone' fun d => freshAvg U fun u => h u d :=
-  fun _ _ hle => freshAvg_mono U fun u _ => hh u _ _ hle
-
-theorem super_freshAvg (U : Finset V) {h : V → Multiset V → ℝ≥0∞} (hh : ∀ u, Supermodular (h u)) :
-    Supermodular fun d => freshAvg U fun u => h u d := by
-  intro small large extra hle
-  simp only [← freshAvg_add]
-  exact freshAvg_mono U fun u _ => hh u small large extra hle
-
 /-- Coins attached to items with a common probability. -/
 def itemCoins (wbar : ℝ≥0∞) (items : List V) : List (ℝ≥0∞ × Multiset V) :=
   items.map fun w => (wbar, ({w} : Multiset V))
@@ -128,20 +91,6 @@ theorem freshAvg_ne_top {g : V → ℝ≥0∞} (hU : U.Nonempty) (hg : ∀ u, g 
   refine ENNReal.mul_ne_top ?_ (ENNReal.sum_ne_top.2 fun u _ => hg u)
   exact ENNReal.inv_ne_top.2 (by exact_mod_cast hU.card_pos.ne')
 
-/-- Monotone, supermodular and finite in the disclosures. -/
-theorem virtual_props (hU : U.Nonempty) (hw : wbar ≤ 1) (hmono : Monotone' f) (hsuper : Supermodular f)
-    (hfin : ∀ m, f m ≠ ⊤) :
-    ∀ m items, Monotone' (virtual U wbar f m items) ∧ Supermodular (virtual U wbar f m items) ∧
-      ∀ d, virtual U wbar f m items d ≠ ⊤
-  | 0, _ => ⟨hmono, hsuper, hfin⟩
-  | m + 1, items => by
-      have ih := fun u => virtual_props hU hw hmono hsuper hfin m (u :: items)
-      refine ⟨?_, ?_, ?_⟩
-      · exact mono_freshAvg U fun u => mono_translate (slotValue_mono _ (ih u).1 _) {u}
-      · exact super_freshAvg U fun u => super_translate (slotValue_super _ (ih u).2.1 _) {u}
-      · intro d
-        exact freshAvg_ne_top hU fun u => slotValue_ne_top _ (ih u).2.2 _ _ (itemCoins_le hw items)
-
 end Virtual
 
 /-! ### Items -/
@@ -158,51 +107,12 @@ theorem slotValue_translate (H : Multiset V → ℝ≥0∞) (shift : Multiset V)
       simp only [slotValue, slotValue_translate H shift rest]
       rw [add_right_comm e T shift]
 
-theorem virtual_perm : ∀ (m : ℕ) {items items' : List V}, items.Perm items' →
-    ∀ d, virtual U wbar f m items d = virtual U wbar f m items' d
-  | 0, _, _, _, d => rfl
-  | m + 1, items, items', hperm, d => by
-      simp only [virtual]
-      congr 1
-      funext u
-      rw [slotValue_congr (fun e => virtual_perm m (hperm.cons u) e)]
-      exact slotValue_perm _ (hperm.map _) _
-
 theorem itemCoins_cons (w : V) (items : List V) :
     itemCoins wbar (w :: items) = (wbar, ({w} : Multiset V)) :: itemCoins wbar items := rfl
-
-/-- More items, more virtual disclosures. -/
-theorem virtual_le_cons (hU : U.Nonempty) (hw : wbar ≤ 1) (hmono : Monotone' f) (hsuper : Supermodular f)
-    (hfin : ∀ m, f m ≠ ⊤) :
-    ∀ (m : ℕ) (items : List V) (w : V) d, virtual U wbar f m items d ≤ virtual U wbar f m (w :: items) d
-  | 0, _, _, d => le_rfl
-  | m + 1, items, w, d => by
-      simp only [virtual]
-      refine freshAvg_mono U fun u _ => ?_
-      have hstep1 : ∀ e, virtual U wbar f m (u :: items) e ≤ virtual U wbar f m (u :: w :: items) e := by
-        intro e
-        rw [virtual_perm m (List.Perm.swap w u items) e]
-        exact virtual_le_cons hU hw hmono hsuper hfin m (u :: items) w e
-      have hG := virtual_props hU hw hmono hsuper hfin m (u :: w :: items)
-      refine le_trans (slotValue_le_of_le hstep1 _ _) ?_
-      rw [itemCoins_cons]
-      simp only [slotValue]
-      set a := slotValue (virtual U wbar f m (u :: w :: items)) (d + {u} + {w}) (itemCoins wbar items)
-      set b := slotValue (virtual U wbar f m (u :: w :: items)) (d + {u}) (itemCoins wbar items)
-      have hab : b ≤ a := slotValue_mono _ hG.1 _ _ _ (Multiset.le_add_right _ _)
-      calc b = wbar * b + (1 - wbar) * b := by rw [← add_mul, add_tsub_cancel_of_le hw, one_mul]
-        _ ≤ wbar * a + (1 - wbar) * b := by gcongr
 
 end Items
 
 /-! ### What a signing call discloses -/
-
-/-- What a signing call discloses: nothing, a fresh view (which becomes an item), or the view of
-an existing item. -/
-inductive Pick (V : Type) where
-  | none
-  | fresh (view : V)
-  | pool (view : V)
 
 /-! ### Linearity and order in the base function -/
 
@@ -276,28 +186,6 @@ theorem virtual_mono_base {f g : Multiset V → ℝ≥0∞} (hfg : ∀ x, f x �
       simp only [virtual]
       refine freshAvg_mono U fun u _ => ?_
       exact slotValue_le_of_le (fun e => virtual_mono_base hfg m (u :: items) e) _ _
-
-/-- The virtual future only adds disclosures. -/
-theorem base_le_virtual (hU : U.Nonempty) (hw : wbar ≤ 1) {f : Multiset V → ℝ≥0∞} (hmono : Monotone' f)
-    (hsuper : Supermodular f) (hfin : ∀ m, f m ≠ ⊤) :
-    ∀ m items d, f d ≤ virtual U wbar f m items d
-  | 0, _, d => le_rfl
-  | m + 1, items, d => by
-      simp only [virtual]
-      have hprops := fun u => virtual_props hU hw hmono hsuper hfin m (u :: items)
-      calc f d = freshAvg U (fun _ => f d) := (freshAvg_const U hU _).symm
-        _ ≤ _ := freshAvg_mono U fun u _ => by
-            calc f d ≤ virtual U wbar f m (u :: items) (d + {u}) :=
-                  le_trans (hmono _ _ (Multiset.le_add_right _ _)) (base_le_virtual hU hw hmono hsuper hfin m _ _)
-              _ = slotValue (virtual U wbar f m (u :: items)) (d + {u}) [] := rfl
-              _ ≤ _ := by
-                  have hcoins := coins_gain (virtual U wbar f m (u :: items)) (hprops u).1 (hprops u).2.1
-                    (hprops u).2.2 (items.map fun w => (wbar, w))
-                    (by intro i hi; obtain ⟨w, _, rfl⟩ := List.mem_map.1 hi; exact hw) (d + {u}) (d + {u}) le_rfl
-                  have hc' : coinsOf (items.map fun w => (wbar, w)) = itemCoins wbar items := by
-                    simp [coinsOf, itemCoins, Function.comp_def]
-                  rw [hc'] at hcoins
-                  exact le_trans le_self_add hcoins
 
 end Linear
 
@@ -425,31 +313,6 @@ section More
 
 variable {U : Finset V} {land wbar : ℝ≥0∞} {f : Multiset V → ℝ≥0∞}
 
-theorem creations_perm {G : List V → ℝ≥0∞} (hperm : ∀ a b, a.Perm b → G a = G b) :
-    ∀ k (a b : List V), a.Perm b → creations U land G k a = creations U land G k b := by
-  intro k
-  induction k with
-  | zero => intro a b hab; exact hperm a b hab
-  | succ k ih =>
-      intro a b hab
-      simp only [creations]
-      rw [ih a b hab, show (fun x => creations U land G k (x :: a)) =
-        (fun x => creations U land G k (x :: b)) from funext fun x => ih _ _ (hab.cons x)]
-
-/-- Existing items can be moved into the base function. -/
-theorem creations_prepend {G : List V → ℝ≥0∞} (hperm : ∀ a b, a.Perm b → G a = G b) (extra : List V) :
-    ∀ k items, creations U land G k (extra ++ items) = creations U land (fun J => G (extra ++ J)) k items := by
-  intro k
-  induction k with
-  | zero => intro items; rfl
-  | succ k ih =>
-      intro items
-      simp only [creations]
-      rw [ih items, show (fun v => creations U land G k (v :: (extra ++ items))) =
-        (fun v => creations U land (fun J => G (extra ++ J)) k (v :: items)) from funext fun v => by
-          rw [creations_perm hperm k (v :: (extra ++ items)) (extra ++ v :: items) List.perm_middle.symm]
-          exact ih (v :: items)]
-
 theorem creations_mono_count (hU : U.Nonempty) (hland : land ≤ 1) {G : List V → ℝ≥0∞}
     (hG : ∀ v items, G items ≤ G (v :: items)) (hperm : ∀ items items', items.Perm items' → G items = G items')
     {k k' : ℕ} (hk : k ≤ k') (items : List V) : creations U land G k items ≤ creations U land G k' items := by
@@ -498,17 +361,6 @@ theorem creations_freshAvg {W : Type} [DecidableEq W] (T : Finset W) (G : W → 
       freshAvg T fun i => creations U land (G i) k items := by
   unfold freshAvg
   rw [creations_const_mul, creations_finset_sum]
-
-/-- Comparing base functions only on lists that extend the starting items. -/
-theorem creations_mono_suffix {G H : List V → ℝ≥0∞} :
-    ∀ k (I : List V), (∀ news, G (news ++ I) ≤ H (news ++ I)) → creations U land G k I ≤ creations U land H k I
-  | 0, I, h => by simpa [creations] using h []
-  | k + 1, I, h => by
-      simp only [creations]
-      gcongr
-      · exact creations_mono_suffix k I h
-      · exact freshAvg_mono U fun v _ => creations_mono_suffix k (v :: I) fun news => by
-          simpa using h (news ++ [v])
 
 end More
 

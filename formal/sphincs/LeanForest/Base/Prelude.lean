@@ -67,6 +67,15 @@ theorem counted_query_bind (input : spec.Domain) (next : spec.Range input → Or
       let result ← counted selected (next answer)
       pure (result.1, (if selected input then 1 else 0) + result.2)) := rfl
 
+theorem counted_query (input : spec.Domain) :
+    counted selected (liftM (spec.query input)) =
+      (fun answer => (answer, if selected input then 1 else 0)) <$>
+        (liftM (spec.query input) : OracleComp spec _) := by
+  change (do
+    let answer ← liftM (spec.query input)
+    pure (answer, (if selected input then 1 else 0) + 0)) = _
+  simp only [Nat.add_zero, bind_pure_comp]
+
 theorem simulate_withCost {m : Type → Type} [Monad m] [LawfulMonad m]
     (impl : QueryImpl spec m) (computation : OracleComp spec α) :
     simulateQ impl (counted selected computation) =

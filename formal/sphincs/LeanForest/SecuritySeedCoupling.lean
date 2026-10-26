@@ -1,6 +1,5 @@
 import LeanForest.SecuritySeedModel
-import LeanForest.World
-import LeanForest.Statement
+import LeanForest.StatementDet
 import LeanForest.Base.Prelude
 import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 
@@ -624,25 +623,5 @@ theorem evalDist_seeded_prepared_counted {α : Type}
   rw [← simulateQ_countHashQueries, countHashQueries_sampling_bind]
   simpa only [simulateQ_countHashQueries] using
     evalDist_seeded_prepared (fun seed => countHashQueries (next seed))
-
-
-/-- The actual SUF-CMA computation after its master-seed sample; honest algorithms are unchanged. -/
-noncomputable def gameAfterSeed (adversary : Adversary) (seed : MasterSeed) :
-    OracleComp OracleWorld Bool := do
-  let (pk, sk) ← liftM (Seeded.keygenFromSeed seed)
-  let ((forgery, log) : Forgery × QueryLog SigningSpec) ←
-    (simulateQ (QueryImpl.ofLift OracleWorld
-      (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) + signingOracle sk)
-      (adversary.main pk)).run
-  let verified ← liftM (Concrete.verify pk forgery.message forgery.signature : OracleComp HashSpec Bool)
-  return decide (SigningTranscript.Valid log ∧ ¬SigningTranscript.Contains log forgery) && verified
-
-/-- The seeded experiment with independently sampled full-output material programmed first.
-The cache is seed-dependent; deriving a seed-independent adversarial view still requires hiding
-the programmed addresses until the first explicit seed hit. -/
-noncomputable def preparedExperiment (adversary : Adversary) : ProbComp (Bool × Nat) := do
-  let material ← sampleMaterial
-  let seed ← sampleMasterSeed
-  (simulateQ countedOracle (gameAfterSeed adversary seed)).run.run' (programCache ∅ seed material)
 
 end LeanForest.Security.SeedCoupling

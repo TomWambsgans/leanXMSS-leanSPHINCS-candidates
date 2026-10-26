@@ -109,8 +109,4 @@ omit [Fintype ι] in
 theorem run_pure {α : Type} (table : ι → Digest) (value : α) (known : Knowledge ι) :
     run table (pure value) known = pure (some value) := rfl
 
-noncomputable def experiment {α : Type} (computation : OracleComp (ViewSpec ι) α)
-    (known : Knowledge ι) : ProbComp (Option α) :=
-  completion known >>= fun table => run table computation known
-
 end LeanForest.Security.HiddenReveal

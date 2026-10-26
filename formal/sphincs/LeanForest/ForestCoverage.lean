@@ -171,9 +171,6 @@ def KeyCovers (v t : FieldVal) (j : SubIdx) (i : FChain) : Prop :=
   (decodeMark v).super = (decodeMark t).super ∧ (decodeMark v).child j = (decodeMark t).child j ∧
     chainNeed t j i ≤ chainNeed v j i
 
-instance (v t : FieldVal) (j : SubIdx) (i : FChain) : Decidable (KeyCovers v t j i) := by
-  unfold KeyCovers; infer_instance
-
 /-- The revealed positions of every forest chain. -/
 abbrev Disclosures := Index → Coord → SuperIdx → SubIdx → ChildIdx → FChain → Finset FPos
 

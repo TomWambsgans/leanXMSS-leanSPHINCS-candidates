@@ -1,4 +1,4 @@
-import LeanForest.Statement
+import LeanForest.StatementDet
 
 /-! Programs and adversaries that never request a signature on the same message twice (the
 definitions only, so that their users do not depend on the potential modules). -/

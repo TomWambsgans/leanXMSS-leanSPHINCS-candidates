@@ -12,7 +12,6 @@ set_option maxRecDepth 10000
 set_option maxHeartbeats 100000
 attribute [local instance] Classical.propDecidable
 variable {ι : Type} [Fintype ι]
-noncomputable local instance : DecidableEq ι := Classical.decEq _
 
 def StopOr {α : Type} (bad : α → Prop) : Option α → Prop
   | none => True

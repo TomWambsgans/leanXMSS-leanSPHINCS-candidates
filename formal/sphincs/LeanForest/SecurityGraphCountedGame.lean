@@ -11,7 +11,7 @@ namespace LeanForest.Security.GraphView
 variable [Params]
 open Concrete Completeness Prefix HiddenGraph SeedCoupling
 set_option backward.isDefEq.respectTransparency false
-attribute [local irreducible] signCostSource Randomized.sign Seeded.keygenFromSeed
+attribute [local irreducible] signCostSource Seeded.keygenFromSeed
 
 def ordinaryCostSource : QueryImpl OracleWorld (OracleComp CostSpec)
   | .inl request => liftM (CostSpec.query (.inl (.inl request)))

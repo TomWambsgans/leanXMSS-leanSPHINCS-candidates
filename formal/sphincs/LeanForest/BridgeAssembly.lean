@@ -1,6 +1,5 @@
 import LeanForest.BridgeEager
 import LeanForest.SecurityGraphCountedGame
-import LeanForest.SecurityGraphSampling
 
 /-! One sample of the short-query experiment: independent seed material, canonical graph labels
 and a uniform table on all remaining short inputs give a prepared cache and a fixed answer function.
@@ -60,10 +59,6 @@ theorem evalDist_fixedRom_eq_fixedHashWorld (f : HashInput → HashOutput) {α :
       change 𝒟[(liftM (unifSpec.query draw) : ProbComp _)] = 𝒟[PMF.uniformOfFintype (Fin (draw + 1))]
       rw [evalDist_query]
   | inr bytes => simp [fixedRom, Prefix.fixedHashWorld]
-
-noncomputable local instance assemblyLabelsSampleable : SampleableType CanonicalGraphLabels :=
-  graphLabelsSampleable
-
 
 /-- Canonical labels completed from independent answers and the boundary surrogates. -/
 noncomputable def labelsOf (material : Material) (answers : CanonicalGraphLabels) : CanonicalGraphLabels :=

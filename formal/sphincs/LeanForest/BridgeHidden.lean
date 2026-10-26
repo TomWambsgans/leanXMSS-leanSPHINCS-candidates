@@ -23,7 +23,6 @@ def IsRowPosition : Position → Prop
   | .fchain .. => True
   | _ => False
 
-
 def structActive (parameter : PublicParameter) (position : Position) : Prop :=
   PrunedGraph.active parameter position ∧ ¬IsRowPosition position
 
@@ -128,7 +127,6 @@ def KnownCoordinate (parameter : PublicParameter) : Coordinate → Prop
   | .chain lay tree leaf _ position => position.val = chainLength - 1 ∨ ¬PrunedGraph.KeyActive parameter lay tree leaf
   | .fchain _ _ _ _ _ _ position => position.val = chainTop
 
-noncomputable local instance hiddenSampleCellFintype : Fintype SampleCell := sampleCellFintype
 noncomputable local instance hiddenSampleCellDecEq : DecidableEq SampleCell := Classical.decEq _
 
 theorem coordinateAtCell_of_cell {coordinate : Coordinate} {cell : SampleCell}

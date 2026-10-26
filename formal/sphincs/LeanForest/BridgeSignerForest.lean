@@ -80,7 +80,7 @@ variable [Params]
 open HiddenCost HiddenBridge HiddenOutside HiddenReveal
 
 variable {D R A ι : Type} [Fintype ι] [SampleableType R]
-attribute [local instance] saturationDecEqInput saturationDecEqCoordinate
+attribute [local instance] saturationDecEqCoordinate
 variable (tg : Targeting D R ι) (initial : Cache D R) (model : HiddenRows.Model D R A ι)
 
 omit [Fintype ι] in
@@ -123,7 +123,6 @@ open LeanForest.Base
 open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForestSigner
 
 attribute [local instance] Classical.propDecidable
-
 
 /-- The final assembly after its digest call. -/
 noncomputable def finishRest (parameter : PublicParameter) (data : PublicData) (_message : Message)
@@ -308,7 +307,6 @@ theorem fresh_view_mean (parameter : PublicParameter) (gf : Lifetime.KeptDigestV
   rw [← Finset.sum_mul, Domination.freshAvg, Finset.card_univ]
   ring
 
-
 section Loop
 
 variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate)
@@ -388,24 +386,6 @@ theorem related_store (reference state : DebtState HashInput HashOutput Coordina
     exact Or.inr ⟨href, u, by simp [DebtState.store], hu⟩
   · rw [store_cache_ne state _ _ (blk_ne_of_ne parameter data message hρ) u]
     exact hrel ρ'
-
-theorem cachedCount_store (state : DebtState HashInput HashOutput Coordinate) (ρ : Randomness) (u : HashOutput) :
-    cachedCount parameter data message (state.store (blk parameter data message ρ) u) ≤
-      cachedCount parameter data message state + 1 := by
-  unfold cachedCount
-  calc (Finset.univ.filter fun ρ' : Randomness =>
-          (state.store (blk parameter data message ρ) u).cache (blk parameter data message ρ') ≠ none).card
-      ≤ (insert ρ (Finset.univ.filter fun ρ' : Randomness =>
-          state.cache (blk parameter data message ρ') ≠ none)).card := by
-        refine Finset.card_le_card fun ρ' hρ' => ?_
-        rw [Finset.mem_filter] at hρ'
-        rw [Finset.mem_insert, Finset.mem_filter]
-        by_cases h : ρ' = ρ
-        · exact Or.inl h
-        · refine Or.inr ⟨Finset.mem_univ _, ?_⟩
-          rw [store_cache_ne state _ _ (blk_ne_of_ne parameter data message h) u] at hρ'
-          exact hρ'.2
-    _ ≤ _ := Finset.card_insert_le _ _
 
 /-- The weight of a completed assembly is the weight of its own pair. -/
 theorem outWeight_finish_le (reference : DebtState HashInput HashOutput Coordinate)

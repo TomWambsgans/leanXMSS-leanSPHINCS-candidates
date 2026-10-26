@@ -1,5 +1,5 @@
 import LeanForest.SecurityPrefixCountedSign
-import LeanForest.SecurityMaterialGameCoupling
+import LeanForest.SecuritySeedCoupling
 
 /-! The exact hash cost of key generation: the top layer's kept subtree and its surrogate spine,
 `226 · 2^k + 2 (h_top - k)` calls with `k = keptHeight topLayer` (`226 · 2^b + 2 (h - b)` for one
@@ -10,10 +10,10 @@ open OracleComp OracleSpec
 namespace LeanForest.Security.Prefix
 
 variable [Params]
-open Concrete Completeness SeedModel PreparedScheme
+open Concrete Completeness SeedModel
 
 attribute [local irreducible] Seeded.treeNode Seeded.spineNode Seeded.treeRoot
-  programCache preparedOracle
+  programCache
 set_option backward.isDefEq.respectTransparency false
 
 

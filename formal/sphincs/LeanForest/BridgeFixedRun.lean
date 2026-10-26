@@ -1,8 +1,4 @@
 import LeanForest.BridgeEncodingPrep
-import LeanForest.SecurityHiddenOutside
-import LeanForest.SecurityHiddenCost
-import LeanForest.SecuritySeedGuess
-import LeanForest.SecurityHiddenGraph
 
 /-! Support facts for fixed-function runs of the rich graph-view program: decomposition over
 binds, hash-only and private-only phases, and reveals. -/
@@ -467,7 +463,7 @@ def SignOutcome (parameter : PublicParameter) (seed : MasterSeed) (data : Public
   (result.1 = none → result.2 = []) ∧
   ∀ signature, result.1 = some signature → ∃ randomness,
     Landed parameter (digestIndex (Completeness.digestValue f ⟨seed, parameter, data.root⟩ message randomness)) ∧
-    evalWithAnswerFn f (Randomized.finishSign ⟨seed, parameter, data.root⟩ message randomness) =
+    evalWithAnswerFn f (Seeded.finishSign ⟨seed, parameter, data.root⟩ message randomness) =
       some signature ∧
     result.2 = revealsOf f parameter data message randomness
 
@@ -532,7 +528,7 @@ def LogGood (parameter : PublicParameter) (seed : MasterSeed) (data : PublicData
     (log : QueryLog SigningSpec) (reveals : List HiddenGraph.Coordinate) : Prop :=
   (∀ entry ∈ log, ∀ signature, entry.2 = some signature → ∃ randomness,
     Landed parameter (digestIndex (Completeness.digestValue f ⟨seed, parameter, data.root⟩ entry.1 randomness)) ∧
-    evalWithAnswerFn f (Randomized.finishSign ⟨seed, parameter, data.root⟩ entry.1 randomness) =
+    evalWithAnswerFn f (Seeded.finishSign ⟨seed, parameter, data.root⟩ entry.1 randomness) =
       some signature) ∧
   ∀ coordinate ∈ reveals, ∃ entry ∈ log, ∃ signature, entry.2 = some signature ∧
     coordinate ∈ revealsOf f parameter data entry.1 signature.randomness

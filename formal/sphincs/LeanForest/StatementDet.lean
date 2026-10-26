@@ -1,18 +1,60 @@
-import LeanForest.Statement
+import LeanForest.Scheme
+import VCVio.OracleComp.QueryTracking.WriterCost
 
 /-!
-The SUF-CMA target for the signer of the Rust implementation, `Seeded.sign`: randomizers are
-derived from the master seed and the message, so a repeated request returns the same signature.
-The adversary, transcript tests and counted oracle are those of `Statement`; this module adds the
-forgery advantage, the hash-query budget and the security-bits target.
+The SUF-CMA game of the security target, adapted from leanVM b7a107256 to pruning: forgeries,
+signing transcripts and their tests, adversaries, and the counted experiment with the signer of the
+Rust implementation, `Seeded.sign`, whose randomizers are derived from the master seed and the
+message (a repeated request returns the same signature). Every hash call counts, including
+repeated calls and the calls of the honest parties. The module ends with the forgery advantage, the
+hash-query budget and the security-bits target.
 -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanForest.Security.Det
+namespace LeanForest
 
 variable [Params]
 
+structure Forgery where
+  message : Message
+  signature : Signature
+deriving DecidableEq
+
+abbrev SigningSpec := Message →ₒ Option Signature
+
+namespace SigningTranscript
+
+def Valid (log : QueryLog SigningSpec) : Prop := log.length ≤ signatureLimit
+
+instance (log : QueryLog SigningSpec) : Decidable (Valid log) :=
+  inferInstanceAs (Decidable (log.length ≤ signatureLimit))
+
+def Contains (log : QueryLog SigningSpec) (forgery : Forgery) : Prop :=
+  ∃ entry ∈ log, entry.1 = forgery.message ∧ entry.2 = some forgery.signature
+
+instance (log : QueryLog SigningSpec) (forgery : Forgery) : Decidable (Contains log forgery) :=
+  inferInstanceAs
+    (Decidable (∃ entry ∈ log, entry.1 = forgery.message ∧ entry.2 = some forgery.signature))
+
+end SigningTranscript
+
+namespace Security
+
+structure Adversary where
+  main : PublicKey → OracleComp (OracleWorld + SigningSpec) Forgery
+
+noncomputable def countedOracle :=
+  (unifFwdImpl HashSpec + (randomOracle : QueryImpl HashSpec (StateT (QueryCache HashSpec) ProbComp))).withAddCost
+    (fun | .inl _ => (0 : Nat) | .inr _ => 1)
+
+end Security
+
+end LeanForest
+
+namespace LeanForest.Security.Det
+
+variable [Params]
 
 noncomputable def signingOracleDet (sk : Seeded.SecretKey) :
     QueryImpl SigningSpec (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) :=

@@ -24,8 +24,8 @@ landing probability of a digest is p = 2^-(h−b).
    through a hash input that contains the 256-bit seed, guessed with probability 2^-256 per query
    ([SecuritySeedGuess](LeanForest/SecuritySeedGuess.lean)).
 
-1. **Statement and memo reduction.** [StatementDet](LeanForest/StatementDet.lean) is the SUF-CMA game
-   of [Statement](LeanForest/Statement.lean) with the signing oracle `Seeded.sign`.
+1. **Statement and memo reduction.** [StatementDet](LeanForest/StatementDet.lean) is the SUF-CMA game,
+   with the signing oracle `Seeded.sign`.
    `Det.forgeAdvantageDet_le_seedFree` ([BridgeDet](LeanForest/BridgeDet.lean)) bounds the advantage
    by the seed-free win of the memoizing adversary, which never asks for the same message twice, plus
    2q/2^256: the randomizer hash of each message is replaced by a uniform value, split into a table of
@@ -156,9 +156,9 @@ for pruned keys ([README.md](README.md)). The remaining loss is structural:
 
 ## Modeling differences and obligations
 
-- `Randomized.sign` samples a uniform 16-byte base randomizer and step half and walks from them. Rust
-  derives both from the seed and message; that signer is `Seeded.sign`, the one in the security
-  statement. Honest completeness is proved for the randomized variant; correctness for the seeded one.
+- The signer of the security statement is `Seeded.sign`, which derives the base randomizer and the
+  step from the seed and the message, as Rust does; a successful signature verifies
+  (`Completeness.correct`).
 - The formal signer returns `none` after 2^32 randomizer trials, or when a counter search fails. Rust
   uses unbounded loops; overflow and failure behavior are not modeled.
 - The functional model recomputes tree and forest nodes from the seed. Rust keeps the generated top

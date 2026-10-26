@@ -1,5 +1,4 @@
 import LeanForest.SecurityPrefixOracle
-import LeanForest.Base.Prelude
 
 /-!
 Chain addresses, secret tables indexed by them, the address of a selected prefix segment, and
@@ -17,12 +16,5 @@ attribute [local instance] Classical.propDecidable
 
 abbrev ChainAddress := Layer × TreeIndex × LeafIndex × ChainIndex
 abbrev Secrets := ChainAddress → Digest
-
-def address (segment : Segment) : ChainAddress :=
-  (segment.lay, segment.tree, segment.leaf, segment.chainIdx)
-
-abbrev ErasedSecrets (segment : Segment) := {secrets : Secrets // secrets (address segment) = 0}
-
-instance (segment : Segment) : Nonempty (ErasedSecrets segment) := ⟨⟨fun _ => 0, rfl⟩⟩
 
 end LeanForest.Security.Prefix

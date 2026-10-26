@@ -19,7 +19,6 @@ set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
 
-
 namespace Ctx
 
 variable (K : Ctx)
@@ -208,10 +207,6 @@ theorem step (tg' : Targeting HashInput HashOutput Coordinate) (hdig : tg'.diges
 end Model
 
 /-! ### The final payoff -/
-
-theorem payoff_le_one (T : Coordinate → Digest) (s : St) : K.payoff T s ≤ 1 := by
-  unfold payoff
-  split_ifs <;> simp
 
 /-- Completing an unexposed coordinate hits a set with its share of the space. -/
 theorem completion_mem (known : Knowledge Coordinate) (c : Coordinate) (hc : known c = none)

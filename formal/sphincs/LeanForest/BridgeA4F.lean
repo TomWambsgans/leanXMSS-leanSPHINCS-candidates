@@ -30,7 +30,6 @@ set_option linter.unusedSectionVars false
 set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
-
 /-! ### Capped expectations -/
 
 theorem tsum_min_leF {α : Type} (mx : ProbComp α) (X : α → ℝ≥0∞) :
@@ -164,13 +163,6 @@ theorem coinPotF_succ (data : PublicData) (s : State) (Ms : List Message) (L : Q
   rw [Nat.choose_succ_succ' y 1, Nat.choose_one_right]
   push_cast
   ring
-
-theorem coinPotF_mono (data : PublicData) (s : State) (Ms : List Message) (L : QueryLog SigningSpec) {k k' : ℕ}
-    (h : k ≤ k') : coinPotF K data s Ms L k ≤ coinPotF K data s Ms L k' := by
-  unfold coinPotF
-  have hc : ((Nat.choose k 2 : ℕ) : ℝ≥0∞) ≤ ((Nat.choose k' 2 : ℕ) : ℝ≥0∞) := by
-    exact_mod_cast Nat.choose_le_choose 2 h
-  gcongr
 
 theorem potNF_mono (data : PublicData) (wbar : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight))) (hw : wbar ≤ 1)
     (s : State) (P : List Pair) (Ms : List Message) (L : QueryLog SigningSpec) (d : Multiset View) {k k' : ℕ}
@@ -311,7 +303,6 @@ theorem offSum_addMsg {s : State} {Ms : List Message} (hM : MInv parameter data 
     · rfl
 
 end OffMass
-
 
 /-! ### A new pair -/
 
@@ -566,11 +557,6 @@ theorem potNF_start (known : HiddenReveal.Knowledge Coordinate) (total : ℕ) :
   unfold coreG
   simp only [List.map_nil, List.sum_nil, zero_add, List.length_nil, Nat.sub_zero]
   rfl
-
-/-- The coin risk at the start: the creation rate of the whole budget. -/
-theorem coinRiskF_start (s : State) (total : ℕ) : coinRiskF K data s [] [] total = total * rateS := by
-  unfold coinRiskF live
-  simp
 
 /-- The coin potential at the start: the digest queries of the budget after each unit. -/
 theorem coinPotF_start (s : State) (total : ℕ) :

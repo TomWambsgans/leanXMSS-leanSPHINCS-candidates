@@ -1,8 +1,4 @@
 import LeanForest.BridgeEncodingPrep
-import LeanForest.SecurityHiddenOutside
-import LeanForest.SecurityHiddenCost
-import LeanForest.SecuritySeedGuess
-import LeanForest.SecurityHiddenGraph
 
 /-! The forced-failure comparison as a stateful simulation that records every guess made at an
 unexposed coordinate. A stopped run either stops at a correct guess or coincides with the
@@ -23,7 +19,6 @@ set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
 variable {D R A ι : Type} [Fintype ι] [SampleableType R]
-noncomputable local instance hiddenDebtDecEqInput : DecidableEq D := Classical.decEq _
 noncomputable local instance hiddenDebtDecEqCoordinate : DecidableEq ι := Classical.decEq _
 
 /-- Exposed coordinates, the outside cache, and the guesses made at unexposed coordinates. -/

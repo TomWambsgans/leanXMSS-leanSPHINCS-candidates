@@ -8,7 +8,6 @@ namespace LeanForest
 
 variable [Params]
 
-
 theorem subtreePosition_lt (parameter : PublicParameter) :
     subtreePosition parameter < 2 ^ (totalHeight - subtreeHeight) :=
   Nat.mod_lt _ (Nat.two_pow_pos _)
@@ -41,11 +40,6 @@ def keptLeafEquiv (parameter : PublicParameter) :
     change subtreePosition parameter * 2 ^ subtreeHeight + i.val.val % 2 ^ subtreeHeight = _
     rw [← i.property, Nat.mul_comm, Nat.div_add_mod]
 
-theorem landed_card (parameter : PublicParameter) :
-    (Finset.univ.filter (Landed parameter)).card = 2 ^ subtreeHeight := by
-  rw [← Fintype.card_subtype]
-  rw [← Fintype.card_congr (keptLeafEquiv parameter), Fintype.card_fin]
-
 theorem evalDist_blockIndex_uniform :
     𝒟[Concrete.blockIndex <$> ($ᵗ HashOutput : ProbComp HashOutput)] =
     𝒟[($ᵗ Index : ProbComp Index)] := by
@@ -55,25 +49,5 @@ theorem evalDist_blockIndex_uniform :
   rw [heq, evalDist_map, evalDist_hashOutput_extractAt_uniform indexOffset_add_le, ← evalDist_map]
   exact evalDist_map_bijective_uniform_cross (α := BitVec totalHeight) (β := Index) BitVec.toFin
     ⟨fun _ _ h => congrArg BitVec.ofFin h, fun i => ⟨BitVec.ofFin i, rfl⟩⟩
-
-/-- A fresh first message-digest block lands with probability exactly `2^b / 2^26`. -/
-theorem fresh_landing_probability (parameter : PublicParameter) :
-    Pr[fun u : HashOutput => Landed parameter (Concrete.blockIndex u) |
-      ($ᵗ HashOutput : ProbComp HashOutput)] =
-      ((2 ^ subtreeHeight : Nat) : ℝ≥0∞) / ((2 ^ totalHeight : Nat) : ℝ≥0∞) := by
-  rw [show (fun u : HashOutput => Landed parameter (Concrete.blockIndex u)) =
-    (Landed parameter) ∘ Concrete.blockIndex from rfl, ← probEvent_map]
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) evalDist_blockIndex_uniform,
-    probEvent_uniformSample, landed_card, Fintype.card_fin]
-
-/-- Equivalently, the fresh landing probability is the reciprocal number of subtrees. -/
-theorem fresh_landing_probability_inv (parameter : PublicParameter) :
-    Pr[fun u : HashOutput => Landed parameter (Concrete.blockIndex u) |
-      ($ᵗ HashOutput : ProbComp HashOutput)] =
-      ((2 ^ (totalHeight - subtreeHeight) : Nat) : ℝ≥0∞)⁻¹ := by
-  rw [fresh_landing_probability, ← subtree_size_mul, Nat.cast_mul, div_eq_mul_inv,
-    ENNReal.mul_inv (Or.inl (by simp)) (Or.inl (by simp)),
-    mul_comm ((2 ^ (totalHeight - subtreeHeight) : Nat) : ℝ≥0∞)⁻¹,
-    ← mul_assoc, ENNReal.mul_inv_cancel (by simp) (by simp), one_mul]
 
 end LeanForest

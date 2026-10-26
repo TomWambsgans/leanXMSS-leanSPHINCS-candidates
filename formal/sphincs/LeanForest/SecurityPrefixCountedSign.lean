@@ -11,7 +11,7 @@ namespace LeanForest.Security.Prefix
 variable [Params]
 open Concrete QueryCap
 
-attribute [local irreducible] encodingAttemptLimit digestAttemptLimit Randomized.finishSign
+attribute [local irreducible] encodingAttemptLimit digestAttemptLimit Seeded.finishSign
   Seeded.signAttempt
 set_option backward.isDefEq.respectTransparency false
 

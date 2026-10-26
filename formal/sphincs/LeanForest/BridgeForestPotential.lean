@@ -21,7 +21,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-
 /-- A message and a randomizer. -/
 abbrev Pair := Message × Randomness
 
@@ -93,9 +92,6 @@ noncomputable def failMass : ℝ≥0∞ :=
 
 /-- The cover indicator of a target as a value. -/
 noncomputable def witnessFn (v : View) (D : Multiset View) : ℝ≥0∞ := witness v D
-
-/-- Views of a list of pairs. -/
-noncomputable def items (s : State) (P : List Pair) : List View := P.map (pview parameter data s)
 
 end Defs
 
@@ -203,12 +199,6 @@ theorem pview_withPair_other (s : State) (p q : Pair) (hq : q ≠ p) (u0 : HashO
     pview parameter data (withPair parameter data s p u0) q = pview parameter data s q := by
   simp only [pview, withPair_other_pair s p q hq]
 
-theorem items_withPair (s : State) (p : Pair) (u0 : HashOutput) (l : List Pair) (hl : p ∉ l) :
-    items parameter data (withPair parameter data s p u0) l = items parameter data s l := by
-  unfold items
-  refine List.map_congr_left fun q hq => ?_
-  exact pview_withPair_other s p q (fun h => hl (h ▸ hq)) u0
-
 theorem not_mem_of_fresh {s : State} {P : List Pair} (hP : PInv parameter data s P) {p : Pair}
     (hp0 : s.cache (pblk parameter data p) = none) : p ∉ P := by
   intro hp
@@ -270,10 +260,6 @@ end NewPairCore
 section Order
 
 variable {parameter : PublicParameter} {data : PublicData}
-
-theorem items_congr {s s' : State} {l : List Pair} (h : ∀ q ∈ l, pview parameter data s' q = pview parameter data s q) :
-    items parameter data s' l = items parameter data s l :=
-  List.map_congr_left h
 
 end Order
 
@@ -362,48 +348,7 @@ theorem ordinaryStep_extends (x : HashInput) (s : State) :
   intro r hr
   exact extends_costStep model (.inl (.inr (.inl x))) s r (by rw [costStep_ordinary]; exact hr)
 
-theorem forestCover_mono (parameter : PublicParameter) (root : Digest) (outcome : HiddenBridge.Outcome)
-    (reveals : List Coordinate) {c c' : QueryCache HashSpec} (h : ∀ x v, c x = some v → c' x = some v)
-    (hc : HiddenBridge.ForestCover parameter root outcome reveals c) :
-    HiddenBridge.ForestCover parameter root outcome reveals c' := by
-  obtain ⟨hvalid, digest, hdig, hrest⟩ := hc
-  refine ⟨hvalid, digest, ?_, hrest⟩
-  unfold HiddenBridge.cachedDigest at hdig ⊢
-  cases h0 : c (tweakableHashInput parameter .message
-      (messageDigestPayload root outcome.1.message outcome.1.signature.randomness)) with
-  | none => rw [h0] at hdig; cases hdig
-  | some a =>
-      rw [h0] at hdig
-      rw [h _ _ h0]
-      exact hdig
-
 variable (parameter : PublicParameter) (data : PublicData)
-
-theorem finalValue_presample (y : HashInput) (hk : tg.kind y = .none) (R : List Coordinate)
-    (out : Run HashInput Coordinate HiddenBridge.Outcome × State) (s' : State)
-    (hs' : s' ∈ support (presample y out.2)) :
-    finalValue parameter data tg initial R out ≤ finalValue parameter data tg initial R (out.1, s') := by
-  have hreal := realized_presample tg initial y hk out.2 s' hs'
-  have hgrow : ∀ x v, out.2.cache x = some v → s'.cache x = some v := by
-    cases hc : out.2.cache y with
-    | some v =>
-        rw [presample_cached y out.2 v hc, support_pure, Set.mem_singleton_iff] at hs'
-        rw [hs']
-        exact fun _ _ h => h
-    | none =>
-        rw [presample_fresh y out.2 hc, support_map] at hs'
-        obtain ⟨u, _, rfl⟩ := hs'
-        exact (extends_store out.2 y u hc).1
-  unfold finalValue
-  cases out.1.1 with
-  | none => exact le_rfl
-  | some outcome =>
-      simp only [Option.elim]
-      split_ifs with h1 h2
-      · exact le_rfl
-      · exact absurd ⟨forestCover_mono parameter data.root outcome _ hgrow h1.1, fun h => h1.2 (hreal.1 h)⟩ h2
-      · exact bot_le
-      · exact le_rfl
 
 theorem finalValue_abort (R : List Coordinate) (s : State) :
     finalValue parameter data tg initial R ((none, [], [], []), s) = 0 := rfl
@@ -459,13 +404,6 @@ theorem same_items {x : HashInput} {s s' : State} (hext : Extends s s') (hother 
 
 end Ordinary
 
-theorem tsum_swap2 {α : Type} (w : α → ℝ≥0∞) (C : α → α → ℝ≥0∞) :
-    ∑' u, w u * ∑' u', w u' * C u' u = ∑' a, w a * ∑' b, w b * C a b := by
-  calc ∑' u, w u * ∑' u', w u' * C u' u = ∑' u, ∑' u', w u' * (w u * C u' u) :=
-        tsum_congr fun u => by rw [← ENNReal.tsum_mul_left]; exact tsum_congr fun u' => mul_left_comm _ _ _
-    _ = ∑' u', ∑' u, w u' * (w u * C u' u) := ENNReal.tsum_comm
-    _ = _ := tsum_congr fun u' => ENNReal.tsum_mul_left
-
 /-! ### Covers and witnesses -/
 
 /-- A view covered by the reveals is covered by disclosed views accounting for the reveals. -/
@@ -495,14 +433,6 @@ theorem witness_pos_of_covered {R : List Coordinate} {d : Multiset View} (hD : D
   rw [if_pos hall]
 
 /-! ### What a signing call adds -/
-
-/-- The pairs that are not excluded. -/
-noncomputable def others (excl : Pair → Prop) (P : List Pair) : List Pair := P.filter fun q => ¬excl q
-
-theorem mem_others {excl : Pair → Prop} {P : List Pair} {q : Pair} : q ∈ others excl P ↔ q ∈ P ∧ ¬excl q := by
-  unfold others; simp
-
-theorem others_nodup {excl : Pair → Prop} {P : List Pair} (h : P.Nodup) : (others excl P).Nodup := h.filter _
 
 section SignDefs
 
@@ -644,8 +574,6 @@ section SignParams
 
 variable {parameter : PublicParameter} {data : PublicData} {m : Message}
 
-theorem related_self (s : State) : Related parameter data m s s := fun _ => Or.inl rfl
-
 theorem pview_of_cached {s' : State} {q : Pair} {u0 : HashOutput} (h0 : s'.cache (pblk parameter data q) = some u0) :
     pview parameter data s' q = viewOf u0 := by
   simp only [pview, h0, Option.elim]
@@ -657,16 +585,6 @@ theorem landed_of_cached {s : State} {P : List Pair} (hP : PInv parameter data s
 end SignParams
 
 /-! ### Signing helpers -/
-
-theorem erase_eq_filter' {P : List Pair} (hP : P.Nodup) (q : Pair) : P.erase q = others (· = q) P := by
-  rw [hP.erase_eq_filter]
-  unfold others
-  congr 1
-  funext q'
-  rw [Bool.eq_iff_iff]
-  simp [bne_iff_ne]
-
-theorem filter_false' (P : List Pair) : others (fun _ => False) P = P := by unfold others; simp
 
 theorem unsigned_of_append {L : QueryLog SigningSpec} {e : (_ : Message) × Option Signature} {q : Pair}
     (h : Unsigned (L ++ [e]) q) : Unsigned L q :=

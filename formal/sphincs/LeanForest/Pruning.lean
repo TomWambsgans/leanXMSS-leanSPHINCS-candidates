@@ -19,8 +19,6 @@ variable (f : QueryImpl HashSpec Id)
 
 /-! ### The shape of the layers -/
 
-theorem topLayer_val : topLayer.val = 0 := rfl
-
 theorem layerHeight_top : layerHeight topLayer = maxLayerHeight := if_pos rfl
 
 theorem layerHeight_of_ne_top (lay : Layer) (h : lay.val ≠ 0) : layerHeight lay = lowerHeight :=

@@ -20,7 +20,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-
 /-! ### One ordinary step -/
 
 section Step
@@ -414,14 +413,6 @@ theorem closedRuns_finishRest (parameter : PublicParameter) (data : PublicData) 
     refine closedRuns_bind tg initial model (closedRuns_sequenceFin tg initial model _ fun c =>
       closedRuns_coordCostSource tg initial model data _ c _) fun _ => ?_
     exact closedRuns_pure tg initial model _
-
-theorem revealsIn_liftProb (allowed : Coordinate → Prop) {α : Type} (sample : ProbComp α) :
-    RevealsIn allowed (liftM sample : OracleComp CostSpec α) := by
-  induction sample using OracleComp.inductionOn with
-  | pure value => exact revealsIn_pure allowed value
-  | query_bind query rest ih =>
-      rw [liftM_bind]
-      exact (revealsIn_query_bind allowed (.inl (.inl query)) _).2 ⟨fun c h => (by cases h), ih⟩
 
 theorem closedRuns_ordinary_bind (x : HashInput) {β : Type} (next : HashOutput → OracleComp CostSpec β)
     (h : ∀ v, ClosedRuns tg initial model (next v)) :

@@ -1,5 +1,4 @@
 import LeanForest.BridgeDebt
-import LeanForest.SecurityHiddenCost
 
 /-! A saturating potential on the lazy comparison. Every hash input has at most one target:
 none, a fixed digest, or the table value of a hidden coordinate. A guess at an unexposed
@@ -22,7 +21,6 @@ set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
 variable {D R A ι : Type} [Fintype ι] [SampleableType R]
-noncomputable local instance saturationDecEqInput : DecidableEq D := Classical.decEq _
 noncomputable local instance saturationDecEqCoordinate : DecidableEq ι := Classical.decEq _
 
 /-- The single possible target of a hash input. -/
@@ -901,10 +899,6 @@ def Growth (before after : DebtState D R ι) (extra : ι → ℕ) : Prop :=
     (debts tg initial before coordinate).encard + extra coordinate
 
 omit [Fintype ι] [SampleableType R] in
-theorem Growth.refl (state : DebtState D R ι) : Growth tg initial state state 0 :=
-  fun _ => le_self_add
-
-omit [Fintype ι] [SampleableType R] in
 theorem Growth.trans {first second third : DebtState D R ι} {extra extra' : ι → ℕ}
     (h : Growth tg initial first second extra) (h' : Growth tg initial second third extra') :
     Growth tg initial first third (extra + extra') := fun coordinate => by
@@ -1016,13 +1010,6 @@ noncomputable def costStep : (input : (SourceCostSpec D R ι).Domain) → DebtSt
 noncomputable def pays (state : DebtState D R ι) : (SourceCostSpec D R ι).Domain → ℕ
   | .inl (.inr (.inl bytes)) => if tg.digest bytes ∧ ¬Realized tg initial state then 1 else 0
   | _ => 0
-
-/-- The lazy comparison with the number of baseline payments. -/
-noncomputable def monitor {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) :
-    DebtState D R ι → ProbComp ((α × DebtState D R ι) × ℕ) :=
-  OracleComp.construct (fun value state => pure ((value, state), 0))
-    (fun input _ next state => costStep model input state >>= fun result =>
-      (fun out => (out.1, pays tg initial state input + out.2)) <$> next result.1 result.2) computation
 
 omit [Fintype ι] [SampleableType R] in
 theorem erase_query_bind_inl {α : Type} (input : (HiddenRows.SourceSpec D R ι).Domain)

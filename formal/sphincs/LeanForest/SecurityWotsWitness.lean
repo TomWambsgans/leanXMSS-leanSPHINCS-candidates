@@ -206,14 +206,4 @@ theorem otsLeaf_classification (message : HashInput) (counter : Counter)
     · exact hrun _ (otsLeaf_leaf_query_mem f parameter lay tree leaf message counter values candidate hencode)
     · simpa only [leafHash, Completeness.eval_tweakableHash] using heval
 
-/-- Another message/counter input has the same truncated encoding hash as the reference. -/
-def EncodingOutputMatch (referenceMessage : HashInput) (referenceCounter : Counter)
-    (trace : List HashInput) : Prop :=
-  ∃ message counter,
-    encodingInput parameter lay tree leaf message counter ≠
-      encodingInput parameter lay tree leaf referenceMessage referenceCounter ∧
-    encodingInput parameter lay tree leaf message counter ∈ trace ∧
-    truncateHash (f (encodingInput parameter lay tree leaf message counter)) =
-      truncateHash (f (encodingInput parameter lay tree leaf referenceMessage referenceCounter))
-
 end LeanForest.Security.Wots

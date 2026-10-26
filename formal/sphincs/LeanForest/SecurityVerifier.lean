@@ -16,8 +16,6 @@ open Concrete
 attribute [local semireducible] Concrete.verify
 attribute [local irreducible] messageDigest forestRecover otsLeaf treeFold
 
-theorem layerUp_zero : layerUp 0 = bottomLayer := rfl
-
 theorem layerUp_top : layerUp (numLayers - 1) = topLayer := by
   apply Fin.ext
   simp [layerUp, topLayer]
@@ -43,18 +41,6 @@ def verificationForest (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : M
   let digest := verificationDigest f pk message signature
   evalWithAnswerFn f (forestRecover pk.parameter (digestIndex digest) (digestMarks digest)
     signature.forest : OracleComp HashSpec ForestKey)
-
-theorem verification_forest_run (f : QueryImpl HashSpec Id) (pk : PublicKey)
-    (message : Message) (signature : Signature) :
-    ContainsRun f (queriedInputs f (Concrete.verify pk message signature : OracleComp HashSpec Bool))
-      (forestRecover pk.parameter (digestIndex (verificationDigest f pk message signature))
-        (digestMarks (verificationDigest f pk message signature)) signature.forest) := by
-  have hrun : ContainsRun f
-      (queriedInputs f (Concrete.verify pk message signature : OracleComp HashSpec Bool))
-      (Concrete.verify pk message signature : OracleComp HashSpec Bool) := fun _ hi => hi
-  rw [verify_eq_layers] at hrun
-  simpa only [← verify_eq_layers pk message signature, verificationDigest] using
-    hrun.bind_right.bind_left
 
 /-! ### The walk up the layers -/
 
@@ -243,16 +229,5 @@ theorem verified_layers (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : 
         (verificationForest f pk message signature) _ numLayers 0 (Nat.zero_add _) numLayers_pos root hwalk
         (by simpa only [← verify_eq_layers pk message signature] using hwalkRun)
       exact ⟨hr.symm.trans hverified, fun k hk => hall k (Nat.zero_le k) hk⟩
-
-/-- All structural exceptions of a layer's tree: a match against the honest tree of the layer at a
-kept leaf, or a preimage of a surrogate above the top layer's kept subtree. -/
-def TreeException (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed)
-    (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (path : Nat → Digest) (value : Digest) : Prop :=
-  (∃ reference : LeafIndex, Kept parameter lay reference ∧ ∃ level, level < layerHeight lay ∧
-    MerkleMatch f parameter (fun height index => .node lay tree height index)
-      leaf.val reference.val path (canonicalTreePath f parameter lay tree seed reference)
-      value (Completeness.node f parameter lay tree seed 0 reference.val) level) ∨
-  ∃ level, level < layerHeight lay ∧
-    SurrogatePreimage f parameter lay tree seed leaf path value level
 
 end LeanForest.Security

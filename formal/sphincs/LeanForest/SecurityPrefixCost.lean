@@ -109,13 +109,6 @@ theorem hashCalls_forestWalk (f : QueryImpl HashSpec Id) (parameter : PublicPara
   | succ steps ih =>
       rw [forestWalk, hashCalls_bind, dif_pos (by omega), hashCalls_tweakableHash, ih _ _ (by omega)]
 
-theorem hashCalls_chainValue (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain)
-    (seed : MasterSeed) (pos : Nat) (hpos : pos ≤ chainTop) :
-    hashCalls f (Seeded.chainValue parameter index c s j a i seed pos : OracleComp HashSpec Digest) = 1 + pos := by
-  rw [Seeded.chainValue, Seeded.forestStart, hashCalls_bind, hashCalls_bind, hashCalls_deriveOutput,
-    hashCalls_pure, hashCalls_forestWalk f _ _ _ _ _ _ _ _ _ _ (by omega)]
-
 /-- The 6 chain starts of a forest child cost 3 seed derivations. -/
 theorem hashCalls_forestSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (seed : MasterSeed) :
@@ -184,7 +177,6 @@ theorem hashCalls_encode (f : QueryImpl HashSpec Id) (parameter : PublicParamete
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput) (counter : Counter) :
     hashCalls f (encode parameter lay tree leaf message counter : OracleComp HashSpec (Option Encoding)) = 1 := by
   simp only [encode, hashCalls_bind, hashCalls_tweakableHash, hashCalls_pure, Nat.add_zero]
-
 
 /-- The cost of running the computations from index `0` up, stopping after the first failure. -/
 def seqCost : {n : Nat} → (Fin n → Bool) → (Fin n → Nat) → Nat

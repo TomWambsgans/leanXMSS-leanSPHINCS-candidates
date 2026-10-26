@@ -1,4 +1,4 @@
-import LeanForest.Base.Once
+import LeanForest.Base.Poisson
 
 /-! **Averaging out the marks.** The one-coin H-term over views `ι × M` (an index and a mark) is at
 most the H-term over indices alone of any function `F` of index multisets that dominates the mark
@@ -111,11 +111,6 @@ theorem avgI_const_mul (c : ℝ≥0∞) (Φ : List (ι × M) → ℝ≥0∞) :
   | l :: J => by
       simp only [avgI, avgI_const_mul c (fun I => Φ ((l, _) :: I)) J]
       exact freshAvg_mul _ _ _
-
-theorem avgI_mono {Φ Ψ : List (ι × M) → ℝ≥0∞} (h : ∀ I, Φ I ≤ Ψ I) :
-    ∀ (J : List ι), avgI Φ J ≤ avgI Ψ J
-  | [] => h []
-  | l :: J => freshAvg_mono _ fun m _ => avgI_mono (fun I => h ((l, m) :: I)) J
 
 /-! ### The operators of the virtual future -/
 

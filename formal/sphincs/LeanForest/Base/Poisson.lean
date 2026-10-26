@@ -1,4 +1,5 @@
-import LeanForest.Base.Once
+import LeanForest.Base.Majorant
+import LeanForest.Base.VirtualOnce
 
 /-! Poisson domination of the one-coin H-term at the level of count functions
 `F : (ι → ℕ) → ℝ≥0∞`. A count function is good (`CountGood`) if it is monotone, has increasing
@@ -6,7 +7,9 @@ differences across coordinates and along each coordinate, and grows at most expo
 functions are closed under Poisson coordinates and Bernoulli coins; a Bernoulli coin is below a Poisson
 coordinate of the same mean (chord), and a uniform-or-nothing slot of probability `p` is below
 iid Poisson coordinates of mean `p / L`. Hence the one-coin H-term of `F ∘ cnt` is below the iid
-Poisson mean of `F` at rate `N / L + q λ w / L`. -/
+Poisson mean of `F` at rate `N / L + q λ w / L`. The H-term of the one-coin virtual future
+(`virtualOnce`) has fresh slots at the uniform rate `α = 1/L` per index and one coin per future
+pair. -/
 
 open ENNReal NNReal
 
@@ -15,6 +18,10 @@ namespace LeanForest.Base.H0
 open Domination
 
 set_option linter.unusedSectionVars false
+
+/-- The H-term operator of the one-coin future. -/
+noncomputable def hTermO {V : Type} (U : Finset V) (w lam : ℝ≥0∞) (N q : ℕ) (f : Multiset V → ℝ≥0∞) : ℝ≥0∞ :=
+  creations U lam (fun I => virtualOnce U w f N I 0) q []
 
 /-! ### Poisson weights -/
 
@@ -289,69 +296,6 @@ theorem CountGood.poisList (a : ℝ≥0) : ∀ (ls : List ι) {G : (ι → ℕ) 
 
 theorem CountGood.poisIID {G : (ι → ℕ) → ℝ≥0∞} (hG : CountGood G) (a : ℝ≥0) : CountGood (poisIID a G) :=
   CountGood.poisList a _ hG
-
-theorem CountGood.shift {G : (ι → ℕ) → ℝ≥0∞} (hG : CountGood G) (e : ι → ℕ) : CountGood (fun k => G (k + e)) where
-  mono := fun k k' hk => hG.mono (add_le_add_left hk _)
-  super := by
-    intro k i j hij
-    have h := hG.super (k + e) i j hij
-    simp only [add_right_comm _ e] at h ⊢
-    exact h
-  convex := by
-    intro k i
-    have h := hG.convex (k + e) i
-    simp only [add_right_comm _ e] at h ⊢
-    exact h
-  growth := by
-    obtain ⟨C, r, h⟩ := hG.growth
-    refine ⟨C * (r + 1) ^ (∑ l, e l), r + 1, fun k => ?_⟩
-    calc G (k + e) ≤ (C : ℝ≥0∞) * (r : ℝ≥0∞) ^ (∑ l, (k + e) l) := h _
-      _ ≤ (C : ℝ≥0∞) * ((r : ℝ≥0∞) + 1) ^ (∑ l, (k + e) l) := by gcongr; exact le_self_add
-      _ = _ := by
-          simp only [Pi.add_apply, Finset.sum_add_distrib, pow_add]
-          push_cast
-          ring
-
-/-- Mixtures of good functions are good. -/
-theorem CountGood.mix {G H : (ι → ℕ) → ℝ≥0∞} (hG : CountGood G) (hH : CountGood H) {p : ℝ≥0∞} (hp : p ≤ 1) :
-    CountGood (fun k => p * G k + (1 - p) * H k) where
-  mono := fun k k' hk => add_le_add (mul_le_mul_right (hG.mono hk) _) (mul_le_mul_right (hH.mono hk) _)
-  super := by
-    intro k i j hij
-    have h1 := hG.super k i j hij
-    have h2 := hH.super k i j hij
-    calc p * G (k + Pi.single i 1) + (1 - p) * H (k + Pi.single i 1) +
-          (p * G (k + Pi.single j 1) + (1 - p) * H (k + Pi.single j 1))
-        = p * (G (k + Pi.single i 1) + G (k + Pi.single j 1)) +
-          (1 - p) * (H (k + Pi.single i 1) + H (k + Pi.single j 1)) := by ring
-      _ ≤ p * (G (k + Pi.single i 1 + Pi.single j 1) + G k) +
-          (1 - p) * (H (k + Pi.single i 1 + Pi.single j 1) + H k) := by gcongr
-      _ = _ := by ring
-  convex := by
-    intro k i
-    have h1 := hG.convex k i
-    have h2 := hH.convex k i
-    calc p * G (k + Pi.single i 1) + (1 - p) * H (k + Pi.single i 1) +
-          (p * G (k + Pi.single i 1) + (1 - p) * H (k + Pi.single i 1))
-        = p * (G (k + Pi.single i 1) + G (k + Pi.single i 1)) +
-          (1 - p) * (H (k + Pi.single i 1) + H (k + Pi.single i 1)) := by ring
-      _ ≤ p * (G (k + Pi.single i 1 + Pi.single i 1) + G k) +
-          (1 - p) * (H (k + Pi.single i 1 + Pi.single i 1) + H k) := by gcongr
-      _ = _ := by ring
-  growth := by
-    obtain ⟨C, r, h⟩ := hG.growth
-    obtain ⟨C', r', h'⟩ := hH.growth
-    refine ⟨C + C', max r r', fun k => ?_⟩
-    have hp' : 1 - p ≤ 1 := tsub_le_self
-    calc p * G k + (1 - p) * H k ≤ 1 * ((C : ℝ≥0∞) * (r : ℝ≥0∞) ^ (∑ l, k l)) +
-          1 * ((C' : ℝ≥0∞) * (r' : ℝ≥0∞) ^ (∑ l, k l)) := by gcongr <;> [exact h k; exact h' k]
-      _ ≤ (C : ℝ≥0∞) * ((max r r' : ℝ≥0) : ℝ≥0∞) ^ (∑ l, k l) +
-          (C' : ℝ≥0∞) * ((max r r' : ℝ≥0) : ℝ≥0∞) ^ (∑ l, k l) := by
-          rw [one_mul, one_mul]
-          gcongr
-          · exact_mod_cast le_max_left r r'
-          · exact_mod_cast le_max_right r r'
-      _ = _ := by push_cast; ring
 
 /-! ### The chord: a Bernoulli coin is below a Poisson coordinate of the same mean -/
 

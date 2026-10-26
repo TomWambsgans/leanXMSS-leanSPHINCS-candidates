@@ -13,7 +13,7 @@ variable [Params]
 open Concrete Completeness Prefix HiddenGraph
 set_option backward.isDefEq.respectTransparency false
 attribute [local irreducible] firstEncoding ReferenceChoice.search encodingAttemptLimit
-  Randomized.finishSign digestAttemptLimit sequenceFin
+  Seeded.finishSign digestAttemptLimit sequenceFin
 
 abbrev CostSpec := HiddenCost.SourceCostSpec HashInput HashOutput Coordinate
 
@@ -312,7 +312,7 @@ theorem finishCostSource_correct (f : QueryImpl HashSpec Id) (parameter : Public
       (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest)))) :
     simulateQ (fixedCostSource f table) (finishCostSource parameter data message randomness) =
       simulateQ (fixedWorldCost f)
-        (liftM (Randomized.finishSign ⟨seed, parameter, data.root⟩ message randomness) :
+        (liftM (Seeded.finishSign ⟨seed, parameter, data.root⟩ message randomness) :
           OracleComp OracleWorld (Option Signature)) := by
   rw [fixed_finishCostSource, fixedWorldCost_lift_hash,
     eval_finishSign_assembled f parameter seed data table hdata htable message randomness hland,

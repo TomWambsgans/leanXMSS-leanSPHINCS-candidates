@@ -1,5 +1,4 @@
 import LeanForest.SecurityVerifier
-import LeanForest.Randomized
 import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-! Every hash input of the honest algorithms and of the verifier has at most 1056 bytes.
@@ -32,11 +31,6 @@ theorem Only.bind {α β : Type} {oa : OracleComp HashSpec α} {next : α → Or
     (h : Only oa) (hnext : ∀ value, Only (next value)) : Only (oa >>= next) := by
   have := isQueryBoundP_bind (n := 0) (m := 0) h (fun value _ => hnext value)
   simpa [Only] using this
-
-theorem Only.map {α β : Type} {oa : OracleComp HashSpec α} (f : α → β) (h : Only oa) :
-    Only (f <$> oa) := by
-  rw [Only, isQueryBoundP_map_iff]
-  exact h
 
 theorem Only.ite {α : Type} (condition : Prop) [Decidable condition]
     {left right : OracleComp HashSpec α} (hleft : Only left) (hright : Only right) :
@@ -360,12 +354,6 @@ theorem Only.treeNode (parameter : PublicParameter) (lay : Layer) (tree : TreeIn
         Short.Only.bind (Only.treeNode parameter lay tree seed level _) (fun _ =>
           Short.Only.tweakableHash _ _ _ (by rw [nodePayload_length]; omega)))
 
-theorem Only.chainValue (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
-    (j : SubIdx) (a : ChildIdx) (i : FChain) (seed : MasterSeed) (pos : Nat) :
-    Short.Only (chainValue parameter index c s j a i seed pos : OracleComp HashSpec Digest) :=
-  Short.Only.bind (Short.Only.bind (Short.Only.deriveOutput _ _ _) (fun _ => Short.Only.pure' _))
-    (fun _ => Short.Only.forestWalk _ _ _ _ _ _ _ _ _ _)
-
 theorem Only.forestSecrets (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
     (j : SubIdx) (a : ChildIdx) (seed : MasterSeed) :
     Short.Only (forestSecrets parameter index c s j a seed : OracleComp HashSpec (FChain → Digest)) :=
@@ -433,7 +421,6 @@ theorem Only.forestOpen (parameter : PublicParameter) (index : Index) (marks : C
             (fun _ => Short.Only.pure' _)))) (fun _ =>
       Short.Only.bind (Short.Only.sequenceFin _ fun _ => Only.topNode _ _ _ _ _ _)
         (fun _ => Short.Only.pure' _))
-
 
 theorem Only.surrogate (parameter : PublicParameter) (seed : MasterSeed) (level : Nat) :
     Short.Only (surrogate parameter seed level : OracleComp HashSpec Digest) := by
@@ -512,14 +499,13 @@ theorem Only.signLayer (secretKey : SecretKey) (index : Index) (lay : Layer) :
 
 end Seeded
 
-
 attribute [local irreducible] LeanForest.Seeded.signLayer LeanForest.Seeded.forestOpen
 
 theorem Only.finishSign (secretKey : LeanForest.Seeded.SecretKey) (message : Message)
     (randomness : Randomness) :
-    Only (Randomized.finishSign secretKey message randomness :
+    Only (Seeded.finishSign secretKey message randomness :
       OracleComp HashSpec (Option Signature)) := by
-  unfold Randomized.finishSign
+  unfold Seeded.finishSign
   refine Only.bind (Only.messageDigest _ _ _ _) (fun digest => ?_)
   dsimp only
   generalize digestIndex digest = index

@@ -46,9 +46,6 @@ theorem recorded_cost {D R ι : Type} (input : (SourceCostSpec D R ι).Domain) :
 def tick {D R ι : Type} (amount : Nat) : OracleComp (SourceCostSpec D R ι) Unit :=
   liftM ((SourceCostSpec D R ι).query (.inr amount))
 
-def ordinary {D R ι : Type} (input : D) : OracleComp (SourceCostSpec D R ι) R :=
-  liftM ((SourceCostSpec D R ι).query (.inl (.inr (.inl input))))
-
 def reveal {D R ι : Type} (coordinate : ι) : OracleComp (SourceCostSpec D R ι) Digest :=
   liftM ((SourceCostSpec D R ι).query (.inl (.inr (.inr coordinate))))
 

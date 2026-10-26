@@ -1,5 +1,4 @@
 import LeanForest.H0Bridge
-import LeanForest.Base.Split
 
 /-! **The forest H-term.** With per-index majorants `ḡ ≥ E[g(y) | n]` and `h̄ ≥ E[h(y) | n]` that
 are increasing and convex in the number of views `n`, the separable count function
@@ -24,10 +23,6 @@ structure SepGood (g : ℕ → ℝ≥0∞) : Prop where
   mono : Monotone g
   convex : ∀ n, g (n + 1) + g (n + 1) ≤ g (n + 2) + g n
   growth : ∃ C : ℝ≥0, ∀ n, g n ≤ (C : ℝ≥0∞) * 2 ^ n
-
-theorem SepGood.ne_top {g : ℕ → ℝ≥0∞} (hg : SepGood g) (n : ℕ) : g n ≠ ⊤ := by
-  obtain ⟨C, hC⟩ := hg.growth
-  exact ne_top_of_le_ne_top (ENNReal.mul_ne_top ENNReal.coe_ne_top (ENNReal.pow_ne_top (by norm_num))) (hC n)
 
 theorem cross_le {a a' b b' : ℝ≥0∞} (ha : a ≤ a') (hb : b ≤ b') :
     a' * b + a * b' ≤ a' * b' + a * b := by
@@ -154,7 +149,6 @@ theorem sep_countGood {g h : ℕ → ℝ≥0∞} (hg : SepGood g) (hh : SepGood 
         rw [ENNReal.coe_toNNReal hA]
         ring
 
-
 theorem poisIID_sep (μ : ℝ≥0) (g h : ℕ → ℝ≥0∞) (A : ℝ≥0∞) :
     poisIID μ (fun k : ι → ℕ => ∑ l, g (k l) + A * ∏ l, h (k l)) 0 =
       (Fintype.card ι : ℝ≥0∞) * poisMean μ g + A * poisMean μ h ^ Fintype.card ι := by
@@ -173,7 +167,6 @@ theorem cnt_id (e : Multiset ι) (l : ι) : cnt id e l = e.count l := by
   rw [Multiset.count_eq_card_filter_eq]
   congr 1
   exact Multiset.filter_congr fun x _ => by simp [eq_comm]
-
 
 /-- **The forest H-term.** -/
 theorem hTermO_forest_le (w lam : ℝ≥0∞) (hw : w ≤ 1) (hlam : lam ≤ 1) (N q : ℕ) (b0 : ℝ≥0∞) (c c1 θ : ℝ)

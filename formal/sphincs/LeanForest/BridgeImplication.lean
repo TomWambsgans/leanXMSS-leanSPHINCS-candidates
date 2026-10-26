@@ -1,5 +1,4 @@
 import LeanForest.BridgeClassify
-import LeanForest.BridgeSupport
 
 /-! Deterministic core: a winning non-stopped run of the rich program yields a cached hit of
 a fixed target or a covered forest digest. -/
@@ -47,7 +46,7 @@ theorem otsSignFrom_firstEncoding (f : QueryImpl HashSpec Id) (parameter : Publi
 theorem honest_counter (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (message : Message)
     (randomness : Randomness) (signature : Signature)
     (hland : Landed sk.parameter (digestIndex (Completeness.digestValue f sk message randomness)))
-    (hsign : evalWithAnswerFn f (Randomized.finishSign sk message randomness) = some signature)
+    (hsign : evalWithAnswerFn f (Seeded.finishSign sk message randomness) = some signature)
     (lay : Layer) :
     SignatureWitness.chosenCounter f sk.parameter sk.seed
       (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) lay =
@@ -759,7 +758,7 @@ theorem revealed_chain_word (f : QueryImpl HashSpec Id) (parameter : PublicParam
 theorem canonical_signed_eq (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (message : Message)
     (randomness : Randomness) (signature honest : Signature)
     (hland : Landed sk.parameter (digestIndex (Completeness.digestValue f sk message randomness)))
-    (hfinish : evalWithAnswerFn f (Randomized.finishSign sk message randomness) = some honest)
+    (hfinish : evalWithAnswerFn f (Seeded.finishSign sk message randomness) = some honest)
     (hrandomness : honest.randomness = signature.randomness) (counter : Layer → Counter)
     (hchosen : ∀ lay, SignatureWitness.chosenCounter f sk.parameter sk.seed
       (SignatureWitness.index f ⟨sk.root, sk.parameter⟩ message signature) lay = some (counter lay))

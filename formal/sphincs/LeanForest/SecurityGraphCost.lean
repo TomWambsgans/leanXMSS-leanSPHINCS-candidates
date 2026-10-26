@@ -215,9 +215,9 @@ theorem hashCalls_finishSign_exact (f : QueryImpl HashSpec Id) (parameter : Publ
     (message : Message) (randomness : Randomness)
     (hland : Landed parameter (digestIndex (evalWithAnswerFn f
       (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest)))) :
-    hashCalls f (Randomized.finishSign ⟨seed, parameter, data.root⟩ message randomness) =
+    hashCalls f (Seeded.finishSign ⟨seed, parameter, data.root⟩ message randomness) =
       finishHashCost f parameter data message randomness := by
-  simp only [Randomized.finishSign, hashCalls_bind, hashCalls_messageDigest, hashCalls_forestOpen_exact,
+  simp only [Seeded.finishSign, hashCalls_bind, hashCalls_messageDigest, hashCalls_forestOpen_exact,
     finishHashCost]
   generalize digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
     OracleComp HashSpec MessageDigest)) = index at hland ⊢

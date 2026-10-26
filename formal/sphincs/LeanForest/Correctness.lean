@@ -344,4 +344,26 @@ theorem correct (seed : MasterSeed) (publicKey : PublicKey) (secretKey : Seeded.
   subst secretKey
   exact verify_of_sign f ⟨seed, parameter, root⟩ message hrootval.symm hsign
 
+/-- Successful assembly has the same WOTS, forest and path invariants as seeded signing. -/
+theorem finishSign_spec (secretKey : Seeded.SecretKey) (message : Message)
+    (randomness : Randomness) {signature : Signature}
+    (hland : Landed secretKey.parameter (digestIndex (digestValue f secretKey message randomness)))
+    (h : evalWithAnswerFn f (Seeded.finishSign secretKey message randomness) = some signature) :
+    Landed secretKey.parameter (digestIndex (digestValue f secretKey message signature.randomness))
+      ∧ signature.forest = evalWithAnswerFn f (Seeded.forestOpen secretKey.parameter
+          (digestIndex (digestValue f secretKey message signature.randomness))
+          (digestMarks (digestValue f secretKey message signature.randomness)) secretKey.seed
+          : OracleComp HashSpec (Coord → CoordOpening))
+      ∧ ∀ lay : Layer, evalWithAnswerFn f (Seeded.signLayer secretKey
+          (digestIndex (digestValue f secretKey message signature.randomness)) lay
+          : OracleComp HashSpec (Option (LayerSignature lay))) = some (signature.layers lay) := by
+  rw [Seeded.finishSign, evalWithAnswerFn_bind, evalWithAnswerFn_bind,
+    evalWithAnswerFn_bind] at h
+  split at h
+  next layers hlayers =>
+    simp only [evalWithAnswerFn_pure, Option.some.injEq] at h
+    subst h
+    exact ⟨hland, rfl, fun lay => sequenceLayers_spec f _ hlayers lay⟩
+  next => exact absurd h (by simp)
+
 end LeanForest.Completeness

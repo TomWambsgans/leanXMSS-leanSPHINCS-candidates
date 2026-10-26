@@ -36,7 +36,6 @@ def checkCoverH (H b K N qstart : ℕ) (c : CoverW) : Bool :=
   checkRateH H b N c.qtop c.tab && checkPT c.tab && c.opts.all (checkOptF H b c.tab) &&
     chainF K N c.qtop c.opts qstart c.entries
 
-
 /-! ### The heavy coin -/
 
 /-- The mass that the group of a message keeps on the identity, times `2^128`, with at most `q / 2`
@@ -330,17 +329,6 @@ def checkCoversH (H b K N : ℕ) : ℕ → List H0.CoverW → List H0.CoverW →
   | qstart, [], heavy => checkCoversHeavy H b K N qstart heavy
   | qstart, c :: light, heavy => H0.checkCoverW H b K N qstart c && checkCoversH H b K N (c.qtop + 1) light heavy
 
-theorem checkCoversH_cons (H b K N qstart : ℕ) (c : H0.CoverW) (light heavy : List H0.CoverW) :
-    checkCoversH H b K N qstart (c :: light) heavy =
-      (H0.checkCoverW H b K N qstart c && checkCoversH H b K N (c.qtop + 1) light heavy) := rfl
-
-theorem checkCoversH_nil_cons (H b K N qstart : ℕ) (c : H0.CoverW) (heavy : List H0.CoverW) :
-    checkCoversH H b K N qstart [] (c :: heavy) =
-      (H0.checkCoverH H b K N qstart c && checkCoversH H b K N (c.qtop + 1) [] heavy) := rfl
-
-theorem checkCoversH_nil_nil (H b K N qstart : ℕ) :
-    checkCoversH H b K N qstart [] [] = decide (2 ^ 127 ≤ qstart + K) := rfl
-
 /-- Every budget from `qstart` on with `q' + keygenCost < 2^127` lies in a checked heavy cover. -/
 theorem checkCoversHeavy_sound (H b K N : ℕ) : ∀ (heavy : List H0.CoverW) (qstart : ℕ),
     checkCoversHeavy H b K N qstart heavy = true → ∀ q', qstart ≤ q' → q' + K < 2 ^ 127 →
@@ -371,7 +359,6 @@ theorem checkCoversH_sound (H b K N : ℕ) (heavy : List H0.CoverW) : ∀ (light
           ⟨c', hc', hrest⟩ | hheavy
         · exact Or.inl ⟨c', List.mem_cons_of_mem _ hc', hrest⟩
         · exact Or.inr hheavy
-
 
 /-! ### Both routes -/
 

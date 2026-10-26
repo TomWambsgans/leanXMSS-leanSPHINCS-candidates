@@ -193,8 +193,8 @@ uniform hash output is uniform (`evalDist_blockIndex_uniform`, from
 
 Separation is unconditional. An input determines its parameter, its address and its payload
 (`fieldBytes_injective` in `Bytes.lean`, `fieldInput_injective` in `SecurityDomains.lean`), two
-inputs of different types differ whatever their parameters (`fieldInput_ne_of_tag_ne_across` in
-`Fresh.lean`, `keygenInput_ne_hashInput`), and an address determines the call:
+inputs of different types differ whatever their parameters (`fieldInput_ne_of_tag_ne_across` and
+`keygenInput_ne_hashInput`, same file), and an address determines the call:
 `hashFields_injective` and `Position.input_separated` (`SecurityPosition.lean`) for verification,
 `deriveFields_injective` and `keygenInput_injective` for the seed derivations,
 `randomizerHashInput_injective` (`BridgeDet.lean`) for the randomizer base. The layer and the tree of a

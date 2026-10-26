@@ -97,58 +97,6 @@ theorem probEvent_searchLoop (inputs : Nat → HashInput) (decode : HashOutput �
         Finset.sum_ite, Finset.sum_const_zero, add_zero, Finset.sum_const, nsmul_eq_mul,
         pow_succ', failMass, div_eq_mul_inv, ← mul_assoc]
 
-/-- A bound that holds from every reachable state holds for the whole run. -/
-theorem probEvent_bind_le {α δ : Type} (x : OracleComp HashSpec α) (k : α → OracleComp HashSpec δ)
-    (p : δ × QueryCache HashSpec → Prop) (cache : QueryCache HashSpec) (b : ℝ≥0∞)
-    (hk : ∀ r ∈ support ((simulateQ randomOracle x).run cache),
-      Pr[p | (simulateQ randomOracle (k r.1)).run r.2] ≤ b) :
-    Pr[p | (simulateQ randomOracle (x >>= k)).run cache] ≤ b := by
-  rw [simulateQ_bind, StateT.run_bind, probEvent_bind_eq_tsum]
-  calc ∑' r : α × QueryCache HashSpec,
-        Pr[= r | (simulateQ randomOracle x).run cache]
-          * Pr[p | (simulateQ randomOracle (k r.1)).run r.2]
-      ≤ ∑' r : α × QueryCache HashSpec, Pr[= r | (simulateQ randomOracle x).run cache] * b := by
-        refine ENNReal.tsum_le_tsum fun r => ?_
-        by_cases hr : r ∈ support ((simulateQ randomOracle x).run cache)
-        · exact mul_le_mul_right (hk r hr) _
-        · simp [probOutput_eq_zero_of_not_mem_support hr]
-    _ ≤ b := by
-        rw [ENNReal.tsum_mul_right]
-        exact mul_le_of_le_one_left' tsum_probOutput_le_one
-
-/-- A run fails only if its first part lands in `p`, or its continuation fails from a reachable state outside `p`. -/
-theorem probEvent_bind_le_add {α δ : Type} (x : OracleComp HashSpec α)
-    (k : α → OracleComp HashSpec δ) (p : α × QueryCache HashSpec → Prop)
-    (q : δ × QueryCache HashSpec → Prop) (cache : QueryCache HashSpec) (b : ℝ≥0∞)
-    (hk : ∀ r ∈ support ((simulateQ randomOracle x).run cache), ¬ p r →
-      Pr[q | (simulateQ randomOracle (k r.1)).run r.2] ≤ b) :
-    Pr[q | (simulateQ randomOracle (x >>= k)).run cache]
-      ≤ Pr[p | (simulateQ randomOracle x).run cache] + b := by
-  classical
-  rw [simulateQ_bind, StateT.run_bind, probEvent_bind_eq_tsum,
-    probEvent_eq_tsum_ite (mx := (simulateQ randomOracle x).run cache) (p := p)]
-  calc ∑' r : α × QueryCache HashSpec,
-        Pr[= r | (simulateQ randomOracle x).run cache]
-          * Pr[q | (simulateQ randomOracle (k r.1)).run r.2]
-      ≤ ∑' r : α × QueryCache HashSpec,
-          ((if p r then Pr[= r | (simulateQ randomOracle x).run cache] else 0)
-            + Pr[= r | (simulateQ randomOracle x).run cache] * b) := by
-        refine ENNReal.tsum_le_tsum fun r => ?_
-        by_cases hr : r ∈ support ((simulateQ randomOracle x).run cache)
-        · by_cases hp : p r
-          · simp only [hp, if_true]
-            have hone : Pr[q | (simulateQ randomOracle (k r.1)).run r.2] ≤ 1 := probEvent_le_one
-            exact le_add_right (mul_le_of_le_one_right' hone)
-          · simp only [hp, if_false, zero_add]
-            exact mul_le_mul_right (hk r hr hp) _
-        · simp [probOutput_eq_zero_of_not_mem_support hr]
-    _ ≤ (∑' r : α × QueryCache HashSpec,
-          if p r then Pr[= r | (simulateQ randomOracle x).run cache] else 0) + b := by
-        rw [ENNReal.tsum_add, ENNReal.tsum_mul_right]
-        have hmass : ∑' r : α × QueryCache HashSpec,
-            Pr[= r | (simulateQ randomOracle x).run cache] ≤ 1 := tsum_probOutput_le_one
-        exact add_le_add le_rfl (mul_le_of_le_one_left' hmass)
-
 /-! ## Distinct inputs
 
 The counter rides in the hashed bytes, so trials below the wrap hash distinct inputs. -/
@@ -179,33 +127,5 @@ theorem counter_bytes_inj {c c' : Nat} (hc : c < 2 ^ 32) (hc' : c' < 2 ^ 32)
 `otsSignFrom` walks counters from its starting value, hashing the layer message with each under the
 leaf's encoding tweak and stopping at the first digest the target-sum code accepts. That is a search
 over the encoding inputs. -/
-
-open Concrete Seeded in
-/-- The counter search, as a search over its encoding inputs. -/
-theorem otsSignFrom_eq_searchLoop (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (seed : MasterSeed) (message : HashInput) :
-    ∀ (n t : Nat),
-      (otsSignFrom parameter lay tree leaf seed message n t
-        : OracleComp HashSpec (Option (Counter × (ChainIndex → Digest))))
-        = searchLoop
-            (fun c => tweakableHashInput parameter (.encoding lay tree leaf)
-              (message ++ bytesLE 4 (BitVec.ofNat counterBits c)))
-            (fun out => TargetSum.decodeDigest (truncateHash out))
-            (fun c encoding => do
-              let secrets ← otsSecrets parameter lay tree leaf seed
-              let values ← sequenceFin fun chainIdx =>
-                chainWalk parameter lay tree leaf chainIdx 0 (encoding chainIdx).val (secrets chainIdx)
-              pure (BitVec.ofNat counterBits c, values))
-            n t := by
-  intro n
-  induction n with
-  | zero => intro t; rfl
-  | succ n ih =>
-      intro t
-      rw [otsSignFrom, searchLoop]
-      simp only [encode, tweakableHash, oracleHash, bind_assoc, pure_bind,
-        map_eq_bind_pure_comp, Function.comp_def, ih]
-      refine bind_congr fun answer => ?_
-      cases TargetSum.decodeDigest (truncateHash answer) <;> rfl
 
 end LeanForest.Completeness

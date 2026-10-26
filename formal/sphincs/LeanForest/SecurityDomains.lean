@@ -1,8 +1,28 @@
 import LeanForest.Bytes
-import LeanForest.Fresh
+import LeanForest.Encoding
+import LeanForest.World
 
 /-! Injectivity and separation of the candidate's exact byte inputs. These facts keep the
 derivation and verification addresses distinct in later random-oracle reductions. -/
+
+namespace LeanForest.Completeness
+
+variable [Params]
+
+/-- Domain separation is independent of the public parameter and payload: the type byte is at
+offset 23 of every input. -/
+theorem fieldInput_ne_of_tag_ne_across (parameter parameter' : PublicParameter)
+    {fields1 fields2 : TweakFields} (htag : fields1.tag ≠ fields2.tag)
+    (payload1 payload2 : HashInput) :
+    bytesLE 16 parameter ++ fieldBytes fields1 ++ payload1 ≠
+      bytesLE 16 parameter' ++ fieldBytes fields2 ++ payload2 := by
+  intro h
+  apply htag
+  obtain ⟨hprefix, _⟩ := List.append_inj h (by simp [fieldBytes, bytesLE_length])
+  obtain ⟨_, hfields⟩ := List.append_inj hprefix (by simp [bytesLE_length])
+  rw [LeanForest.fieldBytes_injective hfields]
+
+end LeanForest.Completeness
 
 namespace LeanForest.Security
 

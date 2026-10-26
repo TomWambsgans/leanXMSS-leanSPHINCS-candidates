@@ -284,9 +284,9 @@ theorem eval_finishSign_assembled (f : QueryImpl HashSpec Id) (parameter : Publi
     (message : Message) (randomness : Randomness)
     (hland : Landed parameter (digestIndex (evalWithAnswerFn f
       (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest)))) :
-    evalWithAnswerFn f (Randomized.finishSign ⟨seed, parameter, data.root⟩ message randomness) =
+    evalWithAnswerFn f (Seeded.finishSign ⟨seed, parameter, data.root⟩ message randomness) =
       assembled f parameter data table message randomness := by
-  simp only [Randomized.finishSign, assembled, evalWithAnswerFn_bind, sequenceLayers,
+  simp only [Seeded.finishSign, assembled, evalWithAnswerFn_bind, sequenceLayers,
     Completeness.eval_sequenceDep,
     eval_signLayer_assembled f parameter seed data table hdata htable _ _ hland,
     Completeness.allSome_map, eval_forestOpen_assembled f parameter seed data table hdata htable,

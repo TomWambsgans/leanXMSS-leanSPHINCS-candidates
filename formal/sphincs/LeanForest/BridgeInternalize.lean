@@ -1,6 +1,5 @@
 import LeanForest.BridgeShort
 import LeanForest.SecuritySeedCoupling
-import LeanForest.SecurityPreparedScheme
 
 /-! Long adversarial hash inputs are simulated privately by the adversary. No honest party or
 verifier queries an input longer than 1056 bytes, so the adversary can answer its long inputs from
@@ -315,33 +314,6 @@ noncomputable def internalImpl :
 noncomputable def internalize (adversary : Adversary) : Adversary :=
   ⟨fun publicKey => (simulateQ internalImpl (adversary.main publicKey)).run' ∅⟩
 
-
-noncomputable def gameImpl (sk : LeanForest.Seeded.SecretKey) :
-    QueryImpl AdvSpec (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) :=
-  QueryImpl.ofLift OracleWorld (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) +
-    signingOracle sk
-
-noncomputable def leftProg (sk : LeanForest.Seeded.SecretKey) {β : Type}
-    (M : OracleComp AdvSpec β) : OracleComp OracleWorld (β × QueryLog SigningSpec) :=
-  (simulateQ (gameImpl sk) M).run
-
-noncomputable def rightProg (sk : LeanForest.Seeded.SecretKey) {β : Type}
-    (M : OracleComp AdvSpec β) (long : QueryCache HashSpec) :
-    OracleComp OracleWorld ((β × QueryCache HashSpec) × QueryLog SigningSpec) :=
-  (simulateQ (gameImpl sk) ((simulateQ internalImpl M).run long)).run
-
-theorem leftProg_bind (sk : LeanForest.Seeded.SecretKey) {β γ : Type} (M : OracleComp AdvSpec β)
-    (k : β → OracleComp AdvSpec γ) :
-    leftProg sk (M >>= k) = leftProg sk M >>= fun first =>
-      (fun second => (second.1, first.2 ++ second.2)) <$> leftProg sk (k first.1) := by
-  simp only [leftProg, simulateQ_bind, WriterT.run_bind]
-
-theorem rightProg_bind (sk : LeanForest.Seeded.SecretKey) {β γ : Type} (M : OracleComp AdvSpec β)
-    (k : β → OracleComp AdvSpec γ) (long : QueryCache HashSpec) :
-    rightProg sk (M >>= k) long = rightProg sk M long >>= fun first =>
-      (fun second => (second.1, first.2 ++ second.2)) <$> rightProg sk (k first.1.1) first.1.2 := by
-  simp only [rightProg, simulateQ_bind, StateT.run_bind, WriterT.run_bind]
-
 /-- Left result: output, log, short count, cache. Right result: the same with the private table
 merged back into the shared cache. -/
 def leftView {β : Type} (result : ((β × QueryLog SigningSpec) × Nat) × QueryCache HashSpec) :
@@ -353,82 +325,8 @@ def rightView {β : Type}
     (β × QueryLog SigningSpec) × Nat × QueryCache HashSpec :=
   ((result.1.1.1.1, result.1.1.2), result.1.2, merge result.2 result.1.1.1.2)
 
-def Block (sk : LeanForest.Seeded.SecretKey) {β : Type} (M : OracleComp AdvSpec β) : Prop :=
-  ∀ short long, 𝒟[leftView <$> leftRun (leftProg sk M) (merge short long)] =
-    𝒟[rightView <$> rightRun (rightProg sk M long) short]
-
-theorem Block.bind {sk : LeanForest.Seeded.SecretKey} {β γ : Type} {M : OracleComp AdvSpec β}
-    {k : β → OracleComp AdvSpec γ} (hM : Block sk M) (hk : ∀ value, Block sk (k value)) :
-    Block sk (M >>= k) := by
-  intro short long
-  rw [leftProg_bind, rightProg_bind, leftRun_bind, rightRun_bind, map_bind, map_bind]
-  let combine : (β × QueryLog SigningSpec) × Nat × QueryCache HashSpec →
-      (γ × QueryLog SigningSpec) × Nat × QueryCache HashSpec →
-      (γ × QueryLog SigningSpec) × Nat × QueryCache HashSpec :=
-    fun first second => ((second.1.1, first.1.2 ++ second.1.2), first.2.1 + second.2.1, second.2.2)
-  refine evalDist_bind_rel _ _ leftView rightView (hM short long) _ _
-    (fun first => combine first <$> (leftView <$> leftRun (leftProg sk (k first.1.1)) first.2.2))
-    (fun first => ?_) (fun first => ?_)
-  · simp only [leftRun_map, Functor.map_map]
-    rfl
-  · simp only [rightRun_map, Functor.map_map]
-    exact evalDist_map_rel _ _ rightView leftView (hk first.1.1.1.1 first.2 first.1.1.1.2).symm
-      (combine (rightView first)) _ _ (fun _ => rfl) (fun _ => rfl)
-
-theorem Block.pure' (sk : LeanForest.Seeded.SecretKey) {β : Type} (value : β) :
-    Block sk (pure value : OracleComp AdvSpec β) := by
-  intro short long
-  simp only [leftProg, rightProg, simulateQ_pure, StateT.run_pure, WriterT.run_pure, leftRun,
-    rightRun, countShort, countHashQueries, QueryCap.counted_pure,
-    StateT.run_pure, map_pure]
-  rfl
-
-theorem rightProg_forward (sk : LeanForest.Seeded.SecretKey) (input : AdvSpec.Domain)
-    (hforward : internalImpl input = forward input) (long : QueryCache HashSpec) :
-    rightProg sk (liftM (AdvSpec.query input)) long =
-      (fun result => ((result.1, long), result.2)) <$> leftProg sk (liftM (AdvSpec.query input)) := by
-  simp only [rightProg, leftProg, simulateQ_spec_query, hforward]
-  change (simulateQ (gameImpl sk) ((fun answer => (answer, long)) <$>
-      (liftM (AdvSpec.query input) : OracleComp AdvSpec _))).run = _
-  rw [simulateQ_map, simulateQ_spec_query, WriterT.run_map]
-
-theorem Block.forward (sk : LeanForest.Seeded.SecretKey) (input : AdvSpec.Domain)
-    (hforward : internalImpl input = forward input)
-    (honly : OnlyW (gameImpl sk input).run) :
-    Block sk (liftM (AdvSpec.query input)) := by
-  intro short long
-  rw [rightProg_forward sk input hforward long, rightRun_map, Functor.map_map]
-  have hleft : leftProg sk (liftM (AdvSpec.query input)) = (gameImpl sk input).run := by
-    simp only [leftProg, simulateQ_spec_query]
-  rw [hleft, leftRun_short _ honly short long, Functor.map_map]
-  rfl
-
-attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Randomized.finishSign
+attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Seeded.finishSign
   LeanForest.Seeded.signAttempt
-
-theorem Only.scanLoop (sk : LeanForest.Seeded.SecretKey) (message : Message) (step : Randomness) :
-    ∀ attempts randomness, Short.Only (Randomized.scanLoop sk message step attempts randomness)
-  | 0, _ => Short.Only.pure' _
-  | attempts + 1, randomness => by
-      rw [Randomized.scanLoop]
-      refine Short.Only.bind (Short.Seeded.Only.signAttempt _ _ _) (fun result => ?_)
-      cases result with
-      | none => exact Only.scanLoop sk message step attempts (randomness + step)
-      | some _ => exact Short.Only.pure' _
-
-theorem OnlyW.signDigestLoop (sk : LeanForest.Seeded.SecretKey) (message : Message)
-    (attempts : Nat) : OnlyW (Randomized.signDigestLoop sk message attempts) := by
-  rw [Randomized.signDigestLoop]
-  refine OnlyW.bind (OnlyW.liftProb _) (fun _ => ?_)
-  exact OnlyW.bind (OnlyW.liftProb _) (fun _ => OnlyW.liftHash (Only.scanLoop sk message _ _ _))
-
-theorem OnlyW.sign (sk : LeanForest.Seeded.SecretKey) (message : Message) :
-    OnlyW (Randomized.sign sk message) := by
-  unfold Randomized.sign
-  refine OnlyW.bind (OnlyW.signDigestLoop sk message _) (fun result => ?_)
-  cases result with
-  | none => exact OnlyW.pure' _
-  | some randomness => exact OnlyW.liftHash (Short.Only.finishSign _ _ _)
 
 theorem OnlyW.queryShort {input : HashInput} (h : IsShort input) :
     OnlyW (liftM (OracleWorld.query (.inr input)) : OracleComp OracleWorld _) := by
@@ -447,27 +345,6 @@ theorem OnlyW.writerLift {α : Type} {oa : OracleComp OracleWorld α} (h : OnlyW
   rw [WriterT.run_liftM]
   exact OnlyW.map _ h
 
-theorem Block.draw (sk : LeanForest.Seeded.SecretKey) (draw : unifSpec.Domain) :
-    Block sk (liftM (AdvSpec.query (.inl (.inl draw)))) :=
-  Block.forward sk _ rfl (by
-    change OnlyW (liftM (liftM (OracleWorld.query (.inl draw)) : OracleComp OracleWorld _) :
-      WriterT (QueryLog SigningSpec) (OracleComp OracleWorld) _).run
-    exact OnlyW.writerLift (OnlyW.queryDraw draw))
-
-theorem Block.short (sk : LeanForest.Seeded.SecretKey) {input : HashInput} (h : IsShort input) :
-    Block sk (liftM (AdvSpec.query (.inl (.inr input)))) :=
-  Block.forward sk _ (by simp only [internalImpl, h, ↓reduceIte]) (by
-    change OnlyW (liftM (liftM (OracleWorld.query (.inr input)) : OracleComp OracleWorld _) :
-      WriterT (QueryLog SigningSpec) (OracleComp OracleWorld) _).run
-    exact OnlyW.writerLift (OnlyW.queryShort h))
-
-theorem Block.signing (sk : LeanForest.Seeded.SecretKey) (message : Message) :
-    Block sk (liftM (AdvSpec.query (.inr message))) :=
-  Block.forward sk _ rfl (by
-    change OnlyW (signingOracle sk message).run
-    simp only [signingOracle, QueryImpl.run_withLogging_apply]
-    exact OnlyW.bind (OnlyW.sign sk message) (fun _ => OnlyW.pure' _))
-
 theorem run_simulateQ_ofLift_writer {α : Type} (x : OracleComp OracleWorld α) :
     (simulateQ (QueryImpl.ofLift OracleWorld
       (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld))) x).run =
@@ -484,18 +361,6 @@ theorem run_simulateQ_ofLift_writer {α : Type} (x : OracleComp OracleWorld α) 
       rw [ih answer]
       simp
 
-theorem gameImpl_liftWorld (sk : LeanForest.Seeded.SecretKey) {α : Type}
-    (x : OracleComp OracleWorld α) :
-    (simulateQ (gameImpl sk) (liftWorld x)).run = (fun value => (value, ∅)) <$> x := by
-  rw [liftWorld, ← QueryImpl.simulateQ_compose]
-  have himpl : (gameImpl sk ∘ₛ liftWorldImpl) =
-      QueryImpl.ofLift OracleWorld (WriterT (QueryLog SigningSpec) (OracleComp OracleWorld)) := by
-    funext t
-    change simulateQ (gameImpl sk) (liftM (AdvSpec.query (Sum.inl t))) = _
-    rw [simulateQ_spec_query]
-    rfl
-  rw [himpl, run_simulateQ_ofLift_writer]
-
 theorem rightRun_liftProb {α : Type} (p : ProbComp α) (cache : QueryCache HashSpec) :
     rightRun (liftM p : OracleComp OracleWorld α) cache = (fun value => ((value, 0), cache)) <$> p := by
   rw [rightRun, countHashQueries_lift_prob, simulateQ_map, StateT.run_map, run_lift_prob,
@@ -504,64 +369,10 @@ theorem rightRun_liftProb {α : Type} (p : ProbComp α) (cache : QueryCache Hash
 theorem leftRun_longQuery {input : HashInput} (h : ¬IsShort input) (cache : QueryCache HashSpec) :
     leftRun (liftM (OracleWorld.query (.inr input))) cache =
       (fun result => ((result.1, 0), result.2)) <$> (randomOracle (spec := HashSpec) input).run cache := by
-  rw [leftRun, countShort, PreparedScheme.counted_query, simulateQ_map, simulateQ_spec_query,
+  rw [leftRun, countShort, QueryCap.counted_query, simulateQ_map, simulateQ_spec_query,
     StateT.run_map]
   simp only [ShortQuery, h, ↓reduceIte]
   rfl
-
-theorem Block.long (sk : LeanForest.Seeded.SecretKey) {input : HashInput} (h : ¬IsShort input) :
-    Block sk (liftM (AdvSpec.query (.inl (.inr input)))) := by
-  intro short long
-  have hleft : leftProg sk (liftM (AdvSpec.query (.inl (.inr input)))) =
-      (fun answer => (answer, ∅)) <$>
-        (liftM (OracleWorld.query (.inr input)) : OracleComp OracleWorld _) := by
-    simp only [leftProg, simulateQ_spec_query]
-    change (liftM (liftM (OracleWorld.query (.inr input)) : OracleComp OracleWorld _) :
-      WriterT (QueryLog SigningSpec) (OracleComp OracleWorld) _).run = _
-    rw [WriterT.run_liftM]
-  have hlookup : merge short long input = long input := by simp [merge, h]
-  rw [hleft, leftRun_map]
-  have hint : simulateQ internalImpl (liftM (AdvSpec.query (.inl (.inr input))) : OracleComp AdvSpec _) =
-      privateRead input := by
-    rw [simulateQ_spec_query]
-    simp only [internalImpl, h, ↓reduceIte]
-  unfold rightProg
-  rw [hint]
-  cases hc : long input with
-  | some answer =>
-      have hread : (privateRead input).run long = pure (answer, long) := by
-        simp only [StateT.run, privateRead, hc]
-      rw [hread]
-      simp only [leftRun, countShort, rightRun, countHashQueries, simulateQ_pure, WriterT.run_pure,
-        QueryCap.counted_pure, StateT.run_pure, map_pure]
-      rw [PreparedScheme.counted_query, simulateQ_map, simulateQ_spec_query, StateT.run_map]
-      change 𝒟[_ <$> (_ <$> (_ <$> (randomOracle (spec := HashSpec) input).run (merge short long)))] = _
-      rw [QueryImpl.withCaching_run_some _ (hlookup.trans hc)]
-      simp [leftView, rightView, ShortQuery, h]
-  | none =>
-      have hread : (privateRead input).run long =
-          (fun answer => (answer, long.cacheQuery input answer)) <$>
-            liftWorld (liftM ($ᵗ HashOutput : ProbComp HashOutput) : OracleComp OracleWorld HashOutput) := by
-        simp only [StateT.run, privateRead, hc]
-      rw [hread, simulateQ_map, WriterT.run_map, gameImpl_liftWorld, Functor.map_map, rightRun_map,
-        rightRun_map, rightRun_liftProb, Functor.map_map, Functor.map_map, leftRun_longQuery h,
-        QueryImpl.withCaching_run_none _ (hlookup.trans hc)]
-      simp only [Functor.map_map]
-      have hsample : 𝒟[(uniformSampleImpl (spec := HashSpec) input : ProbComp HashOutput)] =
-          𝒟[($ᵗ HashOutput : ProbComp HashOutput)] := by
-        change 𝒟[($ᵗ (HashSpec.Range input) : ProbComp _)] = _
-        rw [evalDist_uniformSample]
-      refine evalDist_map_congr_of_evalDist_eq _ _ hsample _ _ (fun answer => ?_)
-      simp only [leftView, rightView, merge_cacheQuery_long short long h]
-
-theorem Block.query (sk : LeanForest.Seeded.SecretKey) (input : AdvSpec.Domain) :
-    Block sk (liftM (AdvSpec.query input)) := by
-  rcases input with (draw | bytes) | message
-  · exact Block.draw sk draw
-  · by_cases h : IsShort bytes
-    · exact Block.short sk h
-    · exact Block.long sk h
-  · exact Block.signing sk message
 
 /-! ### Verification and the split-count run -/
 
@@ -599,8 +410,7 @@ namespace LeanForest.Security.Internalize
 variable [Params]
 open Completeness SeedCoupling Short
 
-attribute [local irreducible] experiment count2 leftRun rightRun sampleMasterSeed
-
+attribute [local irreducible] count2 leftRun rightRun sampleMasterSeed
 
 /-! ### The internalized game only queries short inputs -/
 
@@ -665,32 +475,5 @@ theorem OnlyAdv.internal {β : Type} (M : OracleComp AdvSpec β) (cache : QueryC
           · simp [OnlyAdv]
           · exact OnlyAdv.map _ (OnlyAdv.liftWorldProb _)
       · exact OnlyAdv.map _ (OnlyAdv.query (by simp [LongAdv]))
-
-theorem OnlyW.gameImpl (sk : LeanForest.Seeded.SecretKey) {β : Type} (M : OracleComp AdvSpec β)
-    (h : OnlyAdv M) : OnlyW (simulateQ (gameImpl sk) M).run := by
-  induction M using OracleComp.inductionOn with
-  | pure value => simp [OnlyW]
-  | query_bind input next ih =>
-      rw [OnlyAdv, isQueryBoundP_query_bind_iff] at h
-      have hnext : ∀ answer, OnlyAdv (next answer) := fun answer => by
-        have := h.2 answer
-        split at this <;> simpa [OnlyAdv] using this
-      rw [simulateQ_bind, WriterT.run_bind]
-      refine OnlyW.bind ?_ (fun result => OnlyW.map _ (ih result.1 (hnext result.1)))
-      rw [simulateQ_spec_query]
-      rcases input with (draw | bytes) | message
-      · change OnlyW (liftM (liftM (OracleWorld.query (.inl draw)) : OracleComp OracleWorld _) :
-          WriterT (QueryLog SigningSpec) (OracleComp OracleWorld) _).run
-        exact OnlyW.writerLift (OnlyW.queryDraw draw)
-      · have hshort : IsShort bytes := by
-          rcases h.1 with hnot | hzero
-          · simpa [LongAdv] using hnot
-          · omega
-        change OnlyW (liftM (liftM (OracleWorld.query (.inr bytes)) : OracleComp OracleWorld _) :
-          WriterT (QueryLog SigningSpec) (OracleComp OracleWorld) _).run
-        exact OnlyW.writerLift (OnlyW.queryShort hshort)
-      · change OnlyW (signingOracle sk message).run
-        simp only [signingOracle, QueryImpl.run_withLogging_apply]
-        exact OnlyW.bind (OnlyW.sign sk message) (fun _ => OnlyW.pure' _)
 
 end LeanForest.Security.Internalize

@@ -1,8 +1,5 @@
 import LeanForest.SecurityPosition
 import LeanForest.SecurityTargetAssignment
-import LeanForest.Statement
-import LeanForest.RandomizedSupport
-import LeanForest.SecurityTreeWitness
 
 /-! Canonical structural graph preparation. The retained positions can be any subset;
 positions omitted by pruning retain their initial labels (in particular surrogate values).

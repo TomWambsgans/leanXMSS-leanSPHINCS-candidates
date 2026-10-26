@@ -20,7 +20,6 @@ set_option allowUnsafeReducibility false
 attribute [local irreducible] Seeded.treeNode Seeded.subNode Seeded.topNode Seeded.spineNode chainWalk
   forestWalk sequenceFin
 
-
 theorem one_lt_leaf_capacity : 1 < 2 ^ maxLayerHeight := Nat.one_lt_two_pow maxLayerHeight_pos.ne'
 
 def otsSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed) :
@@ -720,10 +719,6 @@ theorem fchain_value (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (t 
         fchain_input f parameter seed labels index c s j a i ⟨t + 1, ht⟩ (fun _ => ih (by omega)),
         Forest.honestChain_succ _ _ _ _ _ _ _ _ _ _ ht]
 
-theorem honestChain_eq_chainValueOf (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (pos : Nat) :
-    Forest.honestChain f parameter index c s j a i (Completeness.forestSecret f parameter index c s j a i seed) pos =
-      Completeness.chainValueOf f parameter index c s j a i seed pos := rfl
-
 include hconsistent in
 theorem childLeaf_input (s : SuperIdx) (j : SubIdx) (a : ChildIdx) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
@@ -844,25 +839,6 @@ theorem top_value (level : Nat) (hlevel : level ≤ topHeight) (nd : SuperIdx)
       rw [ih (by omega) _ (by change 2 * nd.val < _; omega), ih (by omega) _ hchildren]
       congr 4
       exact Fin.ext (Nat.mod_eq_of_lt nd.isLt).symm
-
-include hconsistent in
-theorem roots_input :
-    canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (.roots index) labels =
-    tweakableHashInput parameter (.roots index) (rootsPayload (Forest.canonicalRoots f parameter index seed)) := by
-  have h : ∀ (c' : Coord) (nd : SuperIdx) (_ : nd.val < 2 ^ (topHeight - (topHeight - 1))),
-      truncateHash (labels (.topNode index c' ⟨topHeight - 2, by decide⟩ nd)) =
-        Completeness.topNodeValue f parameter index c' seed (topHeight - 1) nd.val :=
-    fun c' nd hnd => top_value f parameter seed labels hconsistent index c' (topHeight - 1) (by decide) nd hnd
-  unfold canonicalGraphInput canonicalGraphSlots
-  simp only [Position.children, Position.domain]
-  congr 1
-  rw [List.map_flatMap, List.flatMap_assoc, rootsPayload, List.ofFn_eq_map, List.flatMap_map]
-  apply List.flatMap_congr
-  intro c' _
-  simp only [List.map_cons, List.map_nil, List.flatMap_cons, List.flatMap_nil, List.append_nil, nodePayload,
-    Forest.canonicalRoots, Completeness.topTopsValue]
-  rw [h c' ⟨0, by decide⟩ (by decide), h c' ⟨1, by decide⟩ (by decide)]
 
 /-- The forest key as graph labels: the two level-3 nodes of every tree. -/
 def keyLabels : ForestKey :=

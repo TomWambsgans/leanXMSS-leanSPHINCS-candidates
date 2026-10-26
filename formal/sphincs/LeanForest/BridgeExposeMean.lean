@@ -19,7 +19,6 @@ set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
 variable {D R A ι : Type} [Fintype ι] [SampleableType R]
-noncomputable local instance exposeMeanDecEqInput : DecidableEq D := Classical.decEq _
 noncomputable local instance exposeMeanDecEqCoordinate : DecidableEq ι := Classical.decEq _
 
 variable (tg : Targeting D R ι) (initial : Cache D R) (model : HiddenRows.Model D R A ι)

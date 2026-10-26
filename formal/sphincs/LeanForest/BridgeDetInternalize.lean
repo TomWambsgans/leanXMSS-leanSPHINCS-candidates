@@ -1,4 +1,3 @@
-import LeanForest.StatementDet
 import LeanForest.BridgeAssembly
 
 /-! Internalizing long adversarial hash inputs for the deterministic-randomizer game, and its
@@ -36,7 +35,7 @@ theorem Only.deriveRandomizer (parameter : PublicParameter) (seed : MasterSeed)
   exact Only.bind (Only.query (randomizerHashInput_short _ _ _)) (fun _ => Only.pure' _)
 
 
-attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Randomized.finishSign
+attribute [local irreducible] digestAttemptLimit encodingAttemptLimit Seeded.finishSign
   LeanForest.Seeded.signAttempt
 
 theorem Only.seededLoop (sk : LeanForest.Seeded.SecretKey) (message : Message) (step : Randomness) :
@@ -57,8 +56,8 @@ theorem seededSign_eq (sk : LeanForest.Seeded.SecretKey) (message : Message) :
       let walk ← LeanForest.deriveRandomizer sk.parameter sk.seed message
       let some (randomness, _) ← LeanForest.Seeded.signDigestLoop sk message walk.2 digestAttemptLimit walk.1
         | return none
-      Randomized.finishSign sk message randomness) := by
-  unfold LeanForest.Seeded.sign Randomized.finishSign
+      Seeded.finishSign sk message randomness) := by
+  unfold LeanForest.Seeded.sign Seeded.finishSign
   rfl
 
 theorem Only.seededSign (sk : LeanForest.Seeded.SecretKey) (message : Message) :
@@ -215,7 +214,7 @@ theorem BlockD.long (sk : LeanForest.Seeded.SecretKey) {input : HashInput} (h : 
       rw [hread]
       simp only [leftRun, countShort, rightRun, countHashQueries, simulateQ_pure, WriterT.run_pure,
         QueryCap.counted_pure, StateT.run_pure, map_pure]
-      rw [PreparedScheme.counted_query, simulateQ_map, simulateQ_spec_query, StateT.run_map]
+      rw [QueryCap.counted_query, simulateQ_map, simulateQ_spec_query, StateT.run_map]
       change 𝒟[_ <$> (_ <$> (_ <$> (randomOracle (spec := HashSpec) input).run (merge short long)))] = _
       rw [QueryImpl.withCaching_run_some _ (hlookup.trans hc)]
       simp [leftView, rightView, ShortQuery, h]
