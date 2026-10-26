@@ -354,7 +354,7 @@ footer a + a { margin-left: 1.25rem; }
     </div>
   </div>
   <figure>
-      <svg viewBox="10 -123 572 614" preserveAspectRatio="xMaxYMid meet" role="img" aria-label="A leanSphincs signature">
+      <svg viewBox="10 -123 572 599" preserveAspectRatio="xMaxYMid meet" role="img" aria-label="A leanSphincs signature">
         <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient></defs>
         <g class="part xmss pruned">
           <g class="tree">
@@ -1146,7 +1146,7 @@ document.addEventListener('pointerdown', function (e) {
 (function () {
   var svg = document.querySelector('figure svg');
   if (!svg) return;
-  var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 250;   // the column of the path, the tip of the forest brace
+  var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 235;   // the column of the path, the tip of the forest brace
   var pruned = svg.querySelector('.xmss.pruned'), layered = svg.querySelector('.xmss.layered');
   var motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   var shown = 'pruned', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
@@ -1272,9 +1272,9 @@ document.addEventListener('pointerdown', function (e) {
   // of 6 chains of 5, drawn large. Every tree is drawn whole, its path in ink.
   var fts = svg.querySelector('.fts'), forest = null;
   var FX = 250, FS = 54;                                  // the centre of the forest, the spacing of its trees
-  var TY = [269, 285, 298, 308, 316], TO = 11.5;           // a tree: its levels, root first, and its first offset
-  var SY = [328, 338, 345, 351], SO = 5, SD = 11.5;        // a subtree: the same, and its offset from the tree
-  var KI = 7, KS = 17, KP = 13, KT = 381, KX;
+  var TY = [254, 270, 283, 293, 301], TO = 11.5;           // a tree: its levels, root first, and its first offset
+  var SY = [313, 323, 330, 336], SO = 5, SD = 11.5;        // a subtree: the same, and its offset from the tree
+  var KI = 7, KS = 17, KP = 13, KT = 366, KX;
   var WT = LEAF + 7;                                      // the top of the small WOTS+C key that signs the forest             // the key: its subtree, chain and position spacing, top
   function tc(i) { return FX + (i - 3.5) * FS; }
   function sc(j) { return tc(j >> 1) + (j & 1 ? SD : -SD); }
