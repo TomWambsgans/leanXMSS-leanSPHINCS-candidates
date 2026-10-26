@@ -6,7 +6,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%2726 -86 372 372%27%3E%3Cpath d=%27M54%20176%20C42%20150%2054%20114%2096%20108%20C150%20102%20200%20106%20236%20104%20C246%2080%20252%2052%20262%2038%20C272%2024%20296%2026%20302%2042%20L305%2055%20L317%2072%20L310%2075%20L312%2083%20L306%2094%20L296%2097%20L302%20134%20C304%20146%20302%20150%20308%20152%20L382%20152%20C394%20152%20394%20176%20382%20176%20Z%27 fill=%27%23111%27/%3E%3C/svg%3E">
 <meta name="color-scheme" content="light">
 <title>leanSphincs exploration</title>
-<meta name="description" content="leanSphincs exploration: a hash-based signature with the shape of SLH-DSA-128-24, retuned for a 2^28 lifetime, fast signing, and pruned or threshold keys.">
+<meta name="description" content="leanSphincs exploration: a hash-based signature built from SLH-DSA-128-24, with lifetimes of 2^26 to 2^32 signatures, fast signing, uniform or pruned keys, and threshold and hardware-wallet signing.">
 <style>
 :root {
   color-scheme: light;
@@ -1158,7 +1158,7 @@ document.addEventListener('pointerdown', function (e) {
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
       var dev = d.dev + '<span class="info' + (lay_ && k > 0 ? ' r' : '') + '" tabindex="0" data-tip="' + (d.host ? fmt(d.rate) : pow2t(Math.round(Math.log2(d.rate)))) +
-        ' ' + units() + ' per second">i</span>';
+        ' ' + units() + ' per second' + (!d.host && S.hash === 'SHA-256' ? ' (counted at the BLAKE2s rate)' : '') + '">i</span>';
       set('head-' + k, lay_ ? '<div class="hd"><span>' + dev + '</span></div>' : '<div class="hd">' + d.name + '<span class="dev">' + dev + '</span></div>');
       if (c.shape === 'layered') what = '';
       else if (c.b === c.h) what = 'full tree of ' + pow2(c.h);
@@ -1190,7 +1190,7 @@ document.addEventListener('pointerdown', function (e) {
     set('th-layered-life', fmt(tl.lifetime) + ' signatures' + LIFE_TIP + ' &middot; traffic per operator');
     set('th-layered', '<tr>' + MPC + '<td>' + bytes(tl.keygen_gb) + '</td><td>' + bytes(tl.prep_mb / 1000) + '</td></tr>');
     var th = S.shape === 'layered' ? tl : tps[0];
-    set('th-online', 'Online, ' + (S.shape === 'layered' ? 'layered' : 'pruned') + ' key at <i>h</i> = ' + S.h + ': about ' + fmt(th.grind) +
+    set('th-online', 'Online at <i>h</i> = ' + S.h + ': about ' + fmt(th.grind) +
       ' grinding attempts in the clear (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared + (S.shape === 'layered' ? '' : ', onto instances of the kept subtree') +
       '), then about ' + Math.round(W.opened_avg) + ' forest chain values opened (at most ' + W.opened_max + ').');
     set('prepared', String(W.prepared));
