@@ -408,6 +408,13 @@ def threshold(heights):
             print(f"  h={h} {label}: keygen MPC {fmt(keygen)} permutations ({gb:.3g} GB per operator); "
                   f"preprocessing {fmt(prep)} per signature ({pm:.0f} MB; on a hardware wallet, which also signs with "
                   f"WOTS+C, {fmt(ledger)}); online grinding {fmt(2 ** h / THRESHOLD_PREPARED)} attempts")
+    # The alternative for a pruned key: every forest of the kept subtree prepared at key generation, once.
+    for H in HASHES:
+        C = Costs(H)
+        forests = 2**12 * (C.mpc_prep(24, "pruned") - C.step) * ANDS[H.name] * BITS_PER_AND / 8 / 1e12
+        lifetime = lifetimes(24, "pruned", 12)[0] * C.mpc_prep(24, "pruned") * ANDS[H.name] * BITS_PER_AND / 8 / 1e12
+        print(f"threshold, every forest at keygen (h=24, b=12, {H.name}): {forests:.2f} TB per operator once, against "
+              f"{lifetime:.1f} TB of preprocessing over the lifetime")
     print(f"hardware wallet: the device prepares max({PREPARED}, 2^h / 2^{HOST_GRIND.bit_length() - 1}) instances and the host grinds "
           f"2^h / that many digests ({', '.join(f'h={h}: {wallet_prepared(h)} prepared, {fmt(2 ** h / wallet_prepared(h))} digests, '
           f'{2 ** h / wallet_prepared(h) / HOST_RATE:.2g} s to prove' for h in heights)});"

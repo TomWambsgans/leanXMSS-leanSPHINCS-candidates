@@ -309,6 +309,16 @@ on average, at most 64: each signer sends one part per value.
 is used once, so the indices of the threshold signatures are distributed as the single signer's, and the lifetime is
 meant to be the one of the configuration.
 
+\paragraph{Alternative: every forest at key generation.} A pruned key has only $2^b$ instances (4\,096 at $b=12$,
+each used about 28 times over the lifetime), so key generation can prepare all of them once: the MPC computes the
+chains of every forest, publishes their masked values, and opens the WOTS$^+$C signatures that link them to the kept
+subtree. Signing then needs no MPC: a quorum $J$ draws $R_0$ and $\Delta$ as $\hash(m, J, k, r_1,\dots,r_t)$, each
+signer committing to $r_i$ before revealing it, with $k$ the session counter of $J$; it grinds the $2^{h-b}$ attempts
+into the kept subtree in the clear, as the single signer, and opens $F$ at the selected addresses. A session whose
+$r_i$ are revealed counts as a signature, and each quorum has its own range of counters, so that there are at most $N$
+in all. Traffic per operator, at $h=24$ and $b=12$, 2-of-3: 0.91~TB once with Keccak-256 (0.37 and 0.57~TB with BLAKE2s
+and SHA-256), against 26~TB (10.7 and 16.2~TB) of preprocessing over the lifetime.
+
 \subsection{Hardware wallets}
 \label{sec:ledger}
 
