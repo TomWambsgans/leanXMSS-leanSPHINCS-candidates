@@ -228,9 +228,12 @@ or predict it. The MPC generates its forest, publishes the masked chain values a
 forest key, the WOTS$^+$C signatures that link it to the top layer (with the trees of the lower layers of a layered key)
 and the authentication path. It also draws a random $s=F(\mathit{addr})$ at a fresh address and publishes only
 $\hash(s)$, a commitment to the signing randomness. A signature consumes the prepared instance, which is then replaced by a fresh one drawn the
-same way, so the preprocessing is one instance per signature.
+same way, so the preprocessing is one instance per signature. Each instance is prepared for one quorum $J$ of $t$
+operators, and only $J$ opens it: an honest member of $J$ sees every use and refuses a second one. Otherwise a corrupt
+operator could sign on one instance with two quorums, each with a different honest member, forcing its reuse and,
+knowing $s$ after the first, choosing the second message.
 
-\paragraph{Signing (any $t$).}
+\paragraph{Signing (the quorum $J$ of the instance).}
 \begin{enumerate}
   \item agree on $m$
   \item open $s$ (as below) and check it against $\hash(s)$; $R_0$ and $\Delta$ are the two halves of
