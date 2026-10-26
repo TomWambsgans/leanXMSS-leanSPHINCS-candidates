@@ -180,8 +180,6 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .thr .cmp th, .thr .cmp td { padding-right: 2rem; white-space: nowrap; }
 .thr .cmp tbody th { font-weight: 400; }
 .thr .cmp thead tr:first-child th { padding-bottom: 0; }
-.thr .cmp thead .grp { font-weight: 400; color: var(--muted); }
-.thr .pair { display: flex; flex-wrap: wrap; gap: 1rem 1rem; align-items: flex-start; }
 .thr .life > * { color: var(--muted); }
 .tables p { margin: 0 0 0.6rem; }
 
@@ -281,10 +279,6 @@ footer a + a { margin-left: 1.25rem; }
   .tables .plain { width: 100%; font-size: 0.95rem; }
   .tables .plain th + th, .tables .plain th + td, .tables .plain td + td { padding-left: 0.7rem; padding-right: 0.4rem; }
   .thr .cmp th, .thr .cmp td { padding-right: 0.4rem; }
-  .thr .pair .cmp { width: 100%; }
-  .thr .pre-t .life { display: none; }
-  .thr .pre-t tr > :first-child { display: none; }     /* below the keygen table: no empty label column, no rule beside it */
-  .tables .thr .pre-t tr > :nth-child(2) { border-left: 0; padding-left: 0; }
 
   footer { margin-top: 2rem; }
 }
@@ -914,31 +908,12 @@ footer a + a { margin-left: 1.25rem; }
 
       <h2>Threshold, <i>t</i>-of-(2<i>t</i>&nbsp;&minus;&nbsp;1)</h2>
       <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>. Key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no dealer, that builds the XMSS part alone, never the few-time signatures: <span data-shape="pruned">the kept subtree, and the pseudorandom surrogate nodes that replace the siblings above it.</span><span data-shape="layered" hidden>the top layer.</span> Preprocessing, before a message: the operators pick <span data-f="prepared">16</span> instances at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate their forest keys, <span data-shape="pruned">WOTS+C signatures and authentication paths</span><span data-shape="layered" hidden>the trees of the lower layers, the WOTS+C signatures that link them up to the top layer, and the authentication paths</span>; a signature consumes one prepared instance, refilled with a fresh random one. Online: they grind the randomizer in the clear onto one of the <span data-f="prepared">16</span>, and threshold-open only the forest chain values the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort).</p>
-      <div class="thr" data-shape="pruned">
-        <p class="bn">Traffic per operator. Key generation grows with the kept subtree; the preprocessing does not.</p>
-        <div class="pair">
-        <table class="cmp plain">
-          <thead>
-            <tr><th></th><th colspan="3" class="grp">Keygen, kept subtree of</th></tr>
-            <tr><th></th><th data-f="th-b-0"></th><th data-f="th-b-1"></th><th data-f="th-b-2"></th></tr>
-          </thead>
-          <tbody data-f="th-pruned"></tbody>
-        </table>
-        <table class="cmp plain pre-t">
-          <thead>
-            <tr><th></th><th class="grp">Preprocessing, per signature</th></tr>
-            <tr><th></th><th>any subtree</th></tr>
-          </thead>
-          <tbody data-f="th-pruned-prep"></tbody>
-        </table>
-        </div>
-      </div>
-      <div class="thr" data-shape="layered" hidden>
-        <p class="bn" data-f="th-layered-life">&nbsp;</p>
+      <div class="thr">
+        <p class="bn" data-f="th-life">&nbsp;</p>
         <div class="scroll">
         <table class="cmp plain">
           <thead><tr><th></th><th>Keygen</th><th>Preprocessing<br><span class="sub">(per signature)</span></th></tr></thead>
-          <tbody data-f="th-layered"></tbody>
+          <tbody data-f="th-traffic"></tbody>
         </table>
         </div>
       </div>
@@ -1079,19 +1054,13 @@ document.addEventListener('pointerdown', function (e) {
       document.getElementById('assist-tip').setAttribute('data-tip', assist(tt).replace(/&nbsp;/g, '\u00a0'));
     });
 
-    // threshold, with the chosen hash, for the chosen shape: a pruned key at a few kept subtrees, or the layered key
-    var TB = [8, 10, 12];
+    // threshold, with the chosen hash, for the chosen shape: the layered key, or a pruned key with the Ledger's subtree
     // traffic per operator at about 1 bit per AND gate
     var MPC = '<th>Traffic<span class="info" tabindex="0" data-tip="Honest-majority MPC with malicious security&#10;costs about 1 bit per AND gate per operator&#10;(Araki et al., CCS 2016; the malicious check is&#10;sublinear: Boyle et al., CCS 2019; Goyal and Song,&#10;CRYPTO 2020)">i</span></th>';
-    var tps = TB.map(function (b) { return thr('pruned', b); }), tl = thr('layered');
-    TB.forEach(function (b, k) { set('th-b-' + k, pow2(b)); });
-    set('th-pruned', '<tr class="life"><th>Lifetime</th>' + tps.map(function (t) { return '<td>' + fmt(t.lifetime) + '</td>'; }).join('') +
-      '</tr><tr>' + MPC + tps.map(function (t) { return '<td>' + bytes(t.keygen_gb) + '</td>'; }).join('') + '</tr>');
-    set('th-pruned-prep', '<tr class="life"><th>&nbsp;</th><td></td></tr>' +     // the same for every kept subtree
-      '<tr><th>&nbsp;</th><td>' + bytes(tps[0].prep_mb / 1000) + '</td></tr>');
-    set('th-layered-life', fmt(tl.lifetime) + ' signatures' + LIFE_TIP + ' &middot; traffic per operator');
-    set('th-layered', '<tr>' + MPC + '<td>' + bytes(tl.keygen_gb) + '</td><td>' + bytes(tl.prep_mb / 1000) + '</td></tr>');
-    var th = S.shape === 'layered' ? tl : tps[0];
+    var th = lay_ ? thr('layered') : thr('pruned', devs[0].b);
+    set('th-life', fmt(th.lifetime) + ' signatures' + (lay_ ? '' : ' <span class="note">(subtree of ' + pow2(devs[0].b) + ', as the Ledger)</span>') +
+      LIFE_TIP + ' &middot; traffic per operator');
+    set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + bytes(th.prep_mb / 1000) + '</td></tr>');
     set('th-online', 'Online at <i>h</i> = ' + S.h + ': about ' + fmt(th.grind) +
       ' grinding attempts in the clear (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared + (S.shape === 'layered' ? '' : ', onto instances of the kept subtree') +
       '), then about ' + Math.round(W.opened_avg) + ' forest chain values opened (at most ' + W.opened_max + ').');

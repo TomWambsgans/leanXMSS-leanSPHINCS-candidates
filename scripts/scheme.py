@@ -334,7 +334,7 @@ def threshold(heights):
     print(f"threshold (Keccak-256): {opened * sum(nonzero) / len(nonzero):.2f} forest chain values opened per "
           f"signature on average, at most {opened * max(nonzero)}")
     for h in heights:
-        for shape, b in (("pruned", 12), ("layered", None)):
+        for shape, b in (("pruned", 13), ("layered", None)):
             ls = layers(h, shape)
             keygen = C.keygen(h, shape, b)
             lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])

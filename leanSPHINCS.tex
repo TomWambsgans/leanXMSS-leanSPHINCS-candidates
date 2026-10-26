@@ -274,7 +274,8 @@ output skips most of the last one), $22.6\cdot10^3$ for SHA-256 (the Bristol cir
   \toprule
   & Keccak-256 & BLAKE2s & SHA-256 \\
   \midrule
-  keygen, layered or pruned $b=12$ & 4.3~GB & 1.8~GB & 2.8~GB \\
+  keygen, layered & 4.3~GB & 1.8~GB & 2.8~GB \\
+  keygen, pruned $b=13$ (as on the Ledger) & 8.7~GB & 3.7~GB & 5.6~GB \\
   preprocessing, pruned (one instance) & 269~MB & 114~MB & 173~MB \\
   preprocessing, layered (and two lower trees) & 406~MB & 172~MB & 262~MB \\
   \bottomrule
