@@ -1092,7 +1092,7 @@ footer a + a { margin-left: 1.25rem; }
     var th = lay_ ? thr('layered') : thr('pruned', devs[0].b);
     var ROUNDS = '<th>Rounds<span class="info" tabindex="0" data-tip="One communication round per layer of AND gates&#10;(' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + '): the hash chains&#10;of the MPC run one step after another, 3 at keygen&#10;and 4 in preprocessing, then one round opens them">i</span></th>';
     // with pruning, the Ledger's subtree; the layered key needs no sentence
-    set('th-life', lay_ ? '' : 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for ' +
+    set('th-life', lay_ ? '' : 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for a lifetime of ' +
       fmt(th.lifetime) + ' signatures' + LIFE_TIP + ':');
     document.querySelector('[data-f="th-life"]').hidden = lay_;
     set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + bytes(th.prep_mb / 1000) + '</td></tr>' +
