@@ -147,6 +147,7 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
   z-index: 10;
 }
 .info.w::after { white-space: normal; width: max-content; max-width: 32rem; }
+.info.dn::after { bottom: auto; top: calc(100% + 0.5rem); }
 .info:hover::after, .info:focus::after { opacity: 1; }
 .cmp tbody th { font-weight: 500; }
 .cmp tbody tr:first-child > * { padding-top: 0.45rem; }
@@ -329,7 +330,7 @@ footer a + a { margin-left: 1.25rem; }
       <div class="toggles" id="toggles">
         <span class="sl" id="tl-h">Lifetime</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-h" data-key="h"><button type="button" role="radio" data-val="22" aria-label="2 to the 26">2<sup>26</sup></button><button type="button" role="radio" data-val="24" aria-label="2 to the 28">2<sup>28</sup></button><button type="button" role="radio" data-val="26" aria-label="2 to the 30">2<sup>30</sup></button><button type="button" role="radio" data-val="28" aria-label="2 to the 32">2<sup>32</sup></button></div>
-        <span class="sl" id="tl-shape">Mode</span>
+        <span class="sl" id="tl-shape">Mode<span class="info w dn" tabindex="0" data-tip="Pruning: keygen builds only a subtree of 2ᵇ leaves, pseudorandom nodes stand in for the rest, and the signer grinds until its index lands in it (idea: conduition, conduition.io). A forger must land there too, so the lifetime drops by less than the pruning factor. Security: never reuse a seed under different pruning parameters; derive it as H(seed ‖ parameters). Privacy: the indices reveal the subtree size, hence the kind of signer.">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-shape" data-key="shape"><button type="button" role="radio" data-val="layered">Uniform</button><button type="button" role="radio" data-val="pruned">Pruning</button></div>
         <span class="sl" id="tl-hash">Hash</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-hash" data-key="hash"><button type="button" role="radio" data-val="Keccak-256">Keccak-256</button><button type="button" role="radio" data-val="BLAKE2s">BLAKE2s</button><button type="button" role="radio" data-val="SHA-256">SHA-256</button></div>
@@ -992,7 +993,6 @@ footer a + a { margin-left: 1.25rem; }
   <hr class="sep">
 
   <section class="modes">
-    <p class="idea" data-shape="pruned"><strong>Key idea:</strong> <span>the signer builds only part of the XMSS tree (<a href="https://conduition.io/cryptography/hypertree-pruning/">pruning</a>), so lifetime scales with keygen time.<span class="info r w" tabindex="0" data-tip="Security: one risk is reusing the same 32-byte seed under different pruning parameters. A straightforward fix: derive the actual seed as H(seed ‖ m), where the metadata m encodes the pruning parameter. A different m then gives a completely unrelated key.">i</span></span></p>
     <div class="tables">
       <h2>One signer</h2>
       <p class="lead" data-f="signer-lead" hidden></p>
