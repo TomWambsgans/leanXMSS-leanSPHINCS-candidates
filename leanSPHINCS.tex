@@ -198,7 +198,7 @@ $5.8$ thousand~\cite{hwbench}.}
   \item any configuration; the MPC never builds the few-time signatures of the whole key
 \end{itemize}
 
-\paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS}).} Every secret is derived from a threshold PRF $F$: $t$ operators
+\paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS} and Riva Labs~\cite{riva}).} Every secret is derived from a threshold PRF $F$: $t$ operators
 evaluate it together, $t-1$ learn nothing (context-aware, see below). A signature reveals $x_{i,4-d_i}$, the chain secret
 hashed $4-d_i$ times, which no threshold PRF outputs, so the MPC publishes the chain values encrypted under $F$:
 \begin{itemize}
