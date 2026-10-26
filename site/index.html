@@ -240,7 +240,6 @@ footer a + a { margin-left: 1.25rem; }
   .params th { width: 42%; }
   .params th, .params td { padding-right: 0.5rem; vertical-align: baseline; white-space: nowrap; }
   .params th:last-child, .params td:last-child { padding-right: 0; width: 100%; white-space: normal; }
-  .params .unit { font-size: 0.78em; }
   .params td.two { white-space: nowrap; }
 
   /* The diagram: larger labels */
@@ -346,7 +345,7 @@ footer a + a { margin-left: 1.25rem; }
         </tbody>
         <tbody class="out">
           <tr><th>Size</th><td data-f="size">&hellip;</td></tr>
-          <tr><th>Verification<br><span class="unit" data-f="unit">(permutations)</span></th><td data-f="verify">&hellip;</td></tr>
+          <tr><th>Verification</th><td data-f="verify">&hellip;</td></tr>
         </tbody>
       </table>
       </div>
@@ -1133,8 +1132,7 @@ document.addEventListener('pointerdown', function (e) {
     // the parameter table
     set('h', S.shape === 'layered' ? split(main) : String(main.h));
     set('size', comma(main.size) + ' bytes');
-    set('unit', '(' + unit() + ')');
-    set('verify', comma(main.verify) + '<span class="info" tabindex="0" data-tip="' + verifyUnit + '">i</span>');
+    set('verify', comma(main.verify) + ' ' + unit() + '<span class="info" tabindex="0" data-tip="' + verifyUnit + '">i</span>');
     set('dia-h', String(S.h));
 
     [].forEach.call(document.querySelectorAll('[data-shape]'), function (e) { e.hidden = e.dataset.shape !== S.shape; });
