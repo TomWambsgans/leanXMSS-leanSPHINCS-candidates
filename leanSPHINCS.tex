@@ -40,8 +40,9 @@
 \section{The scheme}
 \label{sec:scheme}
 
-One scheme with three toggles, 24 configurations in all. Every configuration has the same shape as
-SLH-DSA-128-24 from NIST's SP~800-230~\cite{SP800230}, with the differences:
+One scheme with three toggles, 24 configurations in all. It starts from SLH-DSA-128-24 of NIST's
+SP~800-230~\cite{SP800230}, which is the full key at $h=22$ (one tree of few-time signatures); besides the toggles, the
+differences are:
 \begin{itemize}
   \item a \emph{two-level WOTS forest} (\cref{sec:twolevel}; credit: Jonas Nick, sig.golf~\cite{siggolf}) instead of FORS as the few-time signature (FTS):
         signatures are 25\% smaller and verification 25\% cheaper, at about the same signing cost and slightly longer lifetimes
@@ -163,9 +164,10 @@ of which 91\% ($h=22$) to 98\% ($h=28$) are proved. A pruned key lasts much less
 $2^{h-b}$: the forger must land in the kept subtree too, so its rate carries a factor $2^{b-h}$ (\cref{sec:twolevel}).
 
 \section{Usage}
+\label{sec:usage}
 
 Costs with Keccak-256 at $h=24$ (\texttt{scripts/scheme.py} gives every configuration and hash).
-\emph{A modern laptop CPU computes around $2^{29}$ Keccak-f permutations per second; a Ledger Nano S+ about
+\emph{A laptop CPU computes around $2^{27}$ Keccak-f permutations per second, a server $2^{29}$; a Ledger Nano S+ about
 $5.8$ thousand~\cite{hwbench}.}
 \begin{center}
 \begin{tabular}{lrrrr}
@@ -441,7 +443,7 @@ most 236 bits, so it still takes one hash.
 Every signature has the same size and verification cost, and keygen is unchanged. The WOTS$^+$C key that signs
 the forest uses a target sum of 123 instead of the 120 that would suit FORS: 3 fewer chain steps at verification,
 for about 2\,200 counter tries instead of 830 when signing ($1.4\cdot10^3$ more permutations, still within the
-signing costs of \cref{sec:scheme}).
+signing costs of \cref{sec:usage}).
 
 \paragraph{Security.} A forgery at an instance with $r$ prior signatures needs every tree to be covered: in
 both subtrees, the target WOTS key must have been opened, and the target codeword must lie below the componentwise
