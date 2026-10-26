@@ -1466,7 +1466,7 @@ document.addEventListener('pointerdown', function (e) {
     stage(700, chain.map(function (c) { return [c, [c[0], 452]]; }), true, 2.2);
     stage(450, chain.map(function (c) { return [[c[0], 452], [227.8, 431], subs[7]]; }), false, 1.8);
     stage(450, subs.map(function (c, i) { return [c, ap[3 * (i >> 1) + 1 + (i & 1)]]; }), true, 1.8);
-    stage(300, subs.map(function (c, i) { return [ap[3 * (i >> 1) + 1 + (i & 1)], leaves[i >> 1]]; }), true, 1.8);
+    stage(300, subs.map(function (c, i) { return [ap[3 * (i >> 1) + 1 + (i & 1)], leaves[i >> 1]]; }), false, 1.8);
     stage(600, leaves.map(function (c, i) { return [c, ap[3 * i]]; }), true, 2.2);
     stage(550, leaves.map(function (c, i) { return [ap[3 * i], tip]; }), false, 2);
     var wots = centres(top[0]);
