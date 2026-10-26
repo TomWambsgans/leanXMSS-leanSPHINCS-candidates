@@ -99,11 +99,9 @@ Python, exact rationals), which rewrites `LeanForest/Certificates/H*.lean` and
 `LeanForest/Lifetimes.lean`; the kernel re-checks them with `decide +kernel` during the build.
 `scripts/forest_table.py` writes the codeword table.
 
-## The leanVM library
+## Credit
 
-The unchanged `SphincsSecurity/` library is the earlier **three-layer leanVM scheme**, from
-[leanVM](https://github.com/leanEthereum/leanVM) at commit `b7a107256` (MIT OR Apache-2.0, see
-[licenses](../../licenses)). Its theorem
-`sphincs_has_127_bits_of_classical_security` applies only to that older scheme. Its documentation is
-[LEANVM_README.md](LEANVM_README.md) and [LEANVM_PROOF.md](LEANVM_PROOF.md). `LeanForest` follows its
-layered structure for the hypertree.
+`LeanForest` adapts the security proof of leanVM's three-layer scheme
+([leanVM](https://github.com/leanEthereum/leanVM) at commit `b7a107256`, MIT OR Apache-2.0, see
+[licenses](../../licenses)); that proof, the `SphincsSecurity` library, is in this repository's
+history at commit `7269bd3`.

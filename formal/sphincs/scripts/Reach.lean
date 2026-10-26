@@ -1,4 +1,4 @@
-import SphincsSecurity
+import LeanForest
 import Lean
 
 /-!
@@ -8,8 +8,7 @@ Reachability audit. `lake env lean scripts/Reach.lean` writes `reach.txt`, one l
 open Lean Elab Command in
 run_cmd do
   let env ← getEnv
-  let roots : Array Name := #[``SphincsSecurity.sphincs_has_127_bits_of_classical_security,
-    ``SphincsSecurity.sphincs_is_correct, ``SphincsSecurity.sphincs_is_complete]
+  let roots : Array Name := #[``LeanForest.Lifetimes.requestedSecurity]
   let mut visited : NameSet := {}
   let mut stack : Array Name := roots
   while !stack.isEmpty do
@@ -33,7 +32,7 @@ run_cmd do
   for (name, _) in env.constants.toList do
     let some index := env.getModuleIdxFor? name | continue
     let moduleName := env.header.moduleNames[index.toNat]!
-    if !moduleName.toString.startsWith "SphincsSecurity" then continue
+    if !moduleName.toString.startsWith "LeanForest" then continue
     total := total + 1
     let r := visited.contains name
     if r then reached := reached + 1
