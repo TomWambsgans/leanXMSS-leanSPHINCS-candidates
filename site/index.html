@@ -87,8 +87,9 @@ svg .dash { stroke-dasharray: 2 3; }
 svg .thin, svg .anim .thin { stroke-width: 1.2; }
 svg .anim polyline { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 svg .anim circle { fill: var(--ink); }
+svg .anim .conn { stroke: var(--tree); stroke-width: 1; }
 svg .anim .ring { fill: none; stroke: var(--ink); stroke-width: 1.2; }
-svg.animating .xmss .path, svg.animating .fts .path:not(.dash), svg.animating .on { visibility: hidden; }   /* the animation draws them */
+svg.animating .xmss .path, svg.animating .fts .path:not(.dash), svg.animating .fts .conn, svg.animating .on { visibility: hidden; }   /* the animation draws them */
 svg .on circle { fill: var(--ink); }
 svg .conn { stroke: var(--tree); stroke-width: 1; }
 svg .chain line { stroke: var(--tree); stroke-width: 1; }
@@ -1439,7 +1440,7 @@ document.addEventListener('pointerdown', function (e) {
     stage(700, fo.key.map(function (c) { return [c, [c[0], KT]]; }), true, 2.2);
     stage(450, fo.key.map(function (c) { return [[c[0], KT], [KX, KT - 21], ks]; }), false, 1.8);
     stage(600, fo.subs.map(function (q) { return q.slice().reverse(); }), true, 1.6, 'thin');
-    stage(300, fo.subs.map(function (q, i) { return [q[0], fo.trees[i >> 1][4]]; }), false, 1.6);
+    stage(300, fo.subs.map(function (q, i) { return [q[0], fo.trees[i >> 1][4]]; }), true, 1.6, 'conn');   // the link appears, in grey
     stage(750, fo.trees.map(function (q) { return q.slice().reverse(); }), true, 2, 'thin');
     // the 8 roots into the WOTS+C key of the bottom leaf: its chains to their ends, which hash into that leaf
     function up(leaf) {
