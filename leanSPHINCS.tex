@@ -224,15 +224,17 @@ and its surrogates of a pruned key. It never builds a few-time signature.
 a pruned key, from randomness the operators generate securely together (inside the MPC), so that no coalition can bias
 or predict it. The MPC generates its forest, publishes the masked chain values as above, and builds in the clear its
 forest key, the WOTS$^+$C signatures that link it to the top layer (with the trees of the lower layers of a layered key)
-and the authentication path. A signature consumes the prepared instance, which is then replaced by a fresh one drawn the
+and the authentication path. It also draws a random $s=F(\mathit{addr})$ at a fresh address and publishes only
+$\hash(s)$, a commitment to the signing randomness. A signature consumes the prepared instance, which is then replaced by a fresh one drawn the
 same way, so the preprocessing is one instance per signature.
 
 \paragraph{Signing (any $t$).}
 \begin{enumerate}
   \item agree on $m$
-  \item reveal $F(\mathit{rand}, m)$ (as below); $R_0$ and $\Delta$ are the two halves of
-        $\hash(F(\mathit{rand}, m), m)$, the lowest bit of $\Delta$ set. $R$ depends only on $m$ and the prepared instance, so
-        nobody can bias it, and a retry of $m$ opens the same values
+  \item open $s$ (as below) and check it against $\hash(s)$; $R_0$ and $\Delta$ are the two halves of
+        $\hash(s, m)$, the lowest bit of $\Delta$ set. A part of $s$ has nothing to be checked against but the
+        commitment, fixed before $m$: without it, a signer alone holding a term of $F$ in the quorum could shift $R$
+        at will and choose the chains opened
   \item grind in the clear: the first $R = R_0 + i\Delta$ whose index is the prepared instance, about $2^h$
         attempts, cheap in the clear
   \item open $F$ at the addresses of the forest chain values the message selects, and only those; check each against
@@ -259,7 +261,8 @@ $i\in J$ sends a part, and the parts combine into $F(x)$:
 \end{itemize}
 Parts from signings of different $(m,J)$ don't combine, so an aborted signing reveals at most its own signature. The last
 signer to send can still complete it alone (fairness is impossible against $t-1$ of $t$~\cite{Cle86}), so a signing that
-reaches step 4 consumes its instance and counts as a signature; a missing or wrong part is checked against the
+reaches step 2 consumes its instance and counts as a signature (else, knowing $s$, a coalition could abort and pick
+the message whose opening suits it); a missing or wrong part is checked against the
 published chain, which identifies its sender.
 
 
