@@ -190,7 +190,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--hash", choices=[H.name for H in HASHES], nargs="+", default=[H.name for H in HASHES])
     ap.add_argument("--h", type=int, nargs="+", default=list(HEIGHTS), choices=HEIGHTS)
-    ap.add_argument("--pruned", type=int, nargs="+", default=[13, 20], help="log2 kept leaves of pruned keys")
+    ap.add_argument("--pruned", type=int, nargs="+", default=[12, 20], help="log2 kept leaves of pruned keys")
     ap.add_argument("--cache-kib", type=float, nargs="+", default=[16, 1024], help="signer cache sizes (KiB)")
     ap.add_argument("--table", action="store_true", help="one line per configuration: size, verification, lifetime")
     ap.add_argument("--json", action="store_true", help="every figure of the site, as JSON (site/data.json)")
@@ -334,7 +334,7 @@ def threshold(heights):
     print(f"threshold (Keccak-256): {opened * sum(nonzero) / len(nonzero):.2f} forest chain values opened per "
           f"signature on average, at most {opened * max(nonzero)}")
     for h in heights:
-        for shape, b in (("pruned", 13), ("layered", None)):
+        for shape, b in (("pruned", 12), ("layered", None)):
             ls = layers(h, shape)
             keygen = C.keygen(h, shape, b)
             lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])

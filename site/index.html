@@ -1017,7 +1017,7 @@ document.addEventListener('pointerdown', function (e) {
     // one signer: the pruned key at three sizes, or the layered key, on three devices; the Ledger with the help of the host
     var lay_ = S.shape === 'layered', ledger = rate('Ledger Nano S+');
     var devs = [
-      { b: 13, rate: ledger, kib: '16', cache: '16&nbsp;KiB', host: true,
+      { b: 12, rate: ledger, kib: '16', cache: '16&nbsp;KiB', host: true,
         dev: '<a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a>' },
       { b: 20, rate: rate('laptop'), kib: '1024', cache: '1&nbsp;MiB', dev: 'Laptop' },
       { b: S.h, rate: rate('server'), kib: '16384', cache: '16&nbsp;MiB', dev: 'Server' }

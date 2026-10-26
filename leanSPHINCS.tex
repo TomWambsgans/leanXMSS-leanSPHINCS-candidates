@@ -177,7 +177,7 @@ $5.8$ thousand~\cite{hwbench}.}
   full ($b=24$) & $3.36\cdot10^8$ & $3.9\cdot10^9$ & $3.9\cdot10^6$ & $181\cdot10^3$ \\
   layered ($12+6+6$) & $3.36\cdot10^8$ & $954\cdot10^3$ & $98\cdot10^3$ & $96\cdot10^3$ \\
   pruned, $b=20$ & $2.38\cdot10^7$ & $244\cdot10^6$ & $301\cdot10^3$ & $69\cdot10^3$ \\
-  pruned, $b=13$ & $2.26\cdot10^5$ & $1.9\cdot10^6$ & $66\cdot10^3$ & $64\cdot10^3$ \\
+  pruned, $b=12$ & $1.17\cdot10^5$ & $954\cdot10^3$ & $67\cdot10^3$ & $66\cdot10^3$ \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -186,7 +186,7 @@ $5.8$ thousand~\cite{hwbench}.}
   \item \textbf{Long lifetime, light keygen}: the layered key, for 2\,056 more bytes and 156 more permutations of
         verification at $h=24$.
   \item \textbf{Small signatures, light keygen}: a pruned key, with the lifetime set by $b$; the signer grinds
-        $2^{h-b}$ randomizers per signature (2\,048 permutations at $b=13$).
+        $2^{h-b}$ randomizers per signature (4\,096 permutations at $b=12$).
 \end{itemize}
 
 \subsection{Threshold signing}
@@ -274,8 +274,7 @@ output skips most of the last one), $22.6\cdot10^3$ for SHA-256 (the Bristol cir
   \toprule
   & Keccak-256 & BLAKE2s & SHA-256 \\
   \midrule
-  keygen, layered & 4.3~GB & 1.8~GB & 2.8~GB \\
-  keygen, pruned $b=13$ (as on the Ledger) & 8.7~GB & 3.7~GB & 5.6~GB \\
+  keygen, layered or pruned $b=12$ (as on the Ledger) & 4.3~GB & 1.8~GB & 2.8~GB \\
   preprocessing, pruned (one instance) & 269~MB & 114~MB & 173~MB \\
   preprocessing, layered (and two lower trees) & 406~MB & 172~MB & 262~MB \\
   \bottomrule
