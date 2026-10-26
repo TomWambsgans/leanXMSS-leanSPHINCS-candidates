@@ -274,11 +274,12 @@ def site_data():
                 ls = layers(h, shape)
                 keygen = C.keygen(h, shape, b)
                 lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
-                prep = C.forest_sign + lower + len(ls) * (V // 2 * C.derive + T * C.step)
+                # in the MPC, the forest and the lower trees; the WOTS+C signatures are openings of masked values
+                prep = C.forest_sign + lower
                 out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
                                              keygen=round(keygen), prep=round(prep), grind=2**h // THRESHOLD_PREPARED,
                                              and_depth=and_depth(H.name), keygen_rounds=rounds(H.name, Q - 1), prep_rounds=rounds(H.name, STEPS),
-                                             ledger_prep=round(prep + C.counters(h, shape)),
+                                             ledger_prep=round(prep + sum(C.wots_sign(layer) for layer in range(len(ls)))),
                                              keygen_gb=keygen * ands * BITS_PER_AND / 8 / 1e9,
                                              prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6))
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
@@ -388,13 +389,13 @@ def threshold(heights):
             ls = layers(h, shape)
             keygen = C.keygen(h, shape, b)
             lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
-            prep = C.forest_sign + lower + len(ls) * (V // 2 * C.derive + T * C.step)
+            prep = C.forest_sign + lower
             gb = keygen * KECCAK_ANDS * BITS_PER_AND / 8 / 1e9
             pm = prep * KECCAK_ANDS * BITS_PER_AND / 8 / 1e6
             label = f"pruned b={b}" if shape == "pruned" else "layered"
             print(f"  h={h} {label}: keygen MPC {fmt(keygen)} permutations ({gb:.3g} GB per operator); "
-                  f"preprocessing {fmt(prep)} per signature ({pm:.0f} MB; on a hardware wallet, which also searches the "
-                  f"WOTS+C counters, {fmt(prep + C.counters(h, shape))}); online grinding {fmt(2 ** h / THRESHOLD_PREPARED)} attempts")
+                  f"preprocessing {fmt(prep)} per signature ({pm:.0f} MB; on a hardware wallet, which also signs with "
+                  f"WOTS+C, {fmt(prep + sum(C.wots_sign(layer) for layer in range(len(ls))))}); online grinding {fmt(2 ** h / THRESHOLD_PREPARED)} attempts")
     print(f"hardware wallet: the device prepares max({PREPARED}, 2^h / 2^{HOST_GRIND.bit_length() - 1}) instances and the host grinds "
           f"2^h / that many digests ({', '.join(f'h={h}: {wallet_prepared(h)} prepared, {fmt(2 ** h / wallet_prepared(h))} digests, '
           f'{2 ** h / wallet_prepared(h) / HOST_RATE:.2g} s to prove' for h in heights)});"

@@ -219,14 +219,16 @@ and its surrogates of a pruned key. It never builds a few-time signature.
   \item the key of $F$ (hash-based: each seed by commit-reveal among its holders; lattice-based: a verifiable
         Shamir sharing of $\mathit{msk}$), and the pairwise keys $k_{ij}$
   \item MPC: the WOTS$^+$C chains of every leaf of the top layer (or of the kept subtree); open the chain ends, then build the
-        tree in the clear
+        tree in the clear, and publish the other chain values masked under $F$, as for the forest, so that a WOTS$^+$C
+        signature is later a few openings of $F$
 \end{enumerate}
 
 \paragraph{Preprocessing (before the message).} Pick an instance (index) uniformly at random, in the kept subtree of
 a pruned key, from randomness the operators generate securely together (inside the MPC), so that no coalition can bias
-or predict it. The MPC generates its forest, publishes the masked chain values as above, and builds in the clear its
-forest key, the WOTS$^+$C signatures that link it to the top layer (with the trees of the lower layers of a layered key)
-and the authentication path. It also draws a random $s=F(\mathit{addr})$ at a fresh address and publishes only
+or predict it. The MPC generates its forest (and the WOTS$^+$C chains of the lower layers of a layered key) and publishes the
+masked chain values as above; in the clear, it builds the forest key (and the lower trees) and the authentication path,
+and it opens the WOTS$^+$C signatures that link the instance to the top layer, which are public once it signs, since
+each WOTS$^+$C key only ever signs one root. It also draws a random $s=F(\mathit{addr})$ at a fresh address and publishes only
 $\hash(s)$, a commitment to the signing randomness. A signature consumes the prepared instance, which is then replaced by a fresh one drawn the
 same way, so the preprocessing is one instance per signature. Each instance is prepared for one quorum $J$ of $t$
 operators, and only $J$ opens it: an honest member of $J$ sees every use and refuses a second one. Otherwise a corrupt
@@ -283,8 +285,8 @@ output skips most of the last one), $22.6\cdot10^3$ for SHA-256 (the Bristol cir
   & Keccak-256 & BLAKE2s & SHA-256 \\
   \midrule
   keygen, layered or pruned $b=12$ (as on the Ledger) & 4.3~GB & 1.8~GB & 2.8~GB \\
-  preprocessing, pruned (one instance) & 269~MB & 114~MB & 173~MB \\
-  preprocessing, layered (and two lower trees) & 406~MB & 172~MB & 262~MB \\
+  preprocessing, pruned (one instance) & 268~MB & 114~MB & 173~MB \\
+  preprocessing, layered (and two lower trees) & 404~MB & 172~MB & 260~MB \\
   \bottomrule
 \end{tabular}
 \end{center}
