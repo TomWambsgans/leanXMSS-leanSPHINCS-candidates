@@ -892,7 +892,7 @@ footer a + a { margin-left: 1.25rem; }
       </div>
 
       <h2>Threshold, <i>t</i>-of-(2<i>t</i>&nbsp;&minus;&nbsp;1)</h2>
-      <p class="lead">Adapted from <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a> and <a href="https://www.riva.xyz/">Riva Labs</a>. As in PRAWNS, the chain values are XOR-encrypted under a context-aware threshold PRF; unlike PRAWNS, they are computed in an MPC. Key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick <span data-f="prepared">16</span> instances at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate their forest keys, <span data-shape="pruned">WOTS+C signatures and authentication paths</span><span data-shape="layered" hidden>the trees of the lower layers, the WOTS+C signatures that link them up to the top layer, and the authentication paths</span>; a signature consumes one prepared instance, refilled with a fresh random one, following <a href="https://www.riva.xyz/">Riva Labs</a>. Online: they grind the randomizer in the clear onto one of the <span data-f="prepared">16</span>, and threshold-open only the forest chain values the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort).</p>
+      <p class="lead">As in <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>, the secret values are XOR-encrypted under a context-aware threshold PRF. Unlike PRAWNS, key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick <span data-f="prepared">16</span> instances at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate their forest keys, <span data-shape="pruned">WOTS+C signatures and authentication paths</span><span data-shape="layered" hidden>the trees of the lower layers, the WOTS+C signatures that link them up to the top layer, and the authentication paths</span>; a signature consumes one prepared instance, refilled with a fresh random one (an idea from <a href="https://www.riva.xyz/">Riva Labs</a>). Online: they grind the randomizer in the clear onto one of the <span data-f="prepared">16</span>, and threshold-open only the forest chain values the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort).</p>
       <div class="thr">
         <p class="bn" data-f="th-life">&nbsp;</p>
         <div class="scroll">
@@ -1092,8 +1092,10 @@ footer a + a { margin-left: 1.25rem; }
     // traffic per operator at about 1 bit per AND gate
     var MPC = '<th>Traffic<span class="info" tabindex="0" data-tip="Honest-majority MPC with malicious security&#10;costs about 1 bit per AND gate per operator&#10;(Araki et al., CCS 2016; the malicious check is&#10;sublinear: Boyle et al., CCS 2019; Goyal and Song,&#10;CRYPTO 2020)">i</span></th>';
     var th = lay_ ? thr('layered') : thr('pruned', devs[0].b);
-    set('th-life', fmt(th.lifetime) + ' signatures' + (lay_ ? '' : ' <span class="note">(subtree of height ' + devs[0].b + ', as the Ledger)</span>') +
-      LIFE_TIP + '<br>Traffic per operator:');
+    // with pruning, the Ledger's subtree; the layered key needs no sentence
+    set('th-life', lay_ ? '' : 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for ' +
+      fmt(th.lifetime) + ' signatures' + LIFE_TIP + ':');
+    document.querySelector('[data-f="th-life"]').hidden = lay_;
     set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + bytes(th.prep_mb / 1000) + '</td></tr>');
     set('th-online', 'Online at <i>h</i> = ' + S.h + ': about ' + fmt(th.grind) +
       ' grinding attempts in the clear (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared + (S.shape === 'layered' ? '' : ', onto instances of the kept subtree') +
