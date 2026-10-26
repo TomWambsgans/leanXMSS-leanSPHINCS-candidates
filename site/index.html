@@ -353,7 +353,7 @@ footer a + a { margin-left: 1.25rem; }
     </div>
   </div>
   <figure>
-      <svg viewBox="10 -123 572 640" preserveAspectRatio="xMaxYMid meet" role="img" aria-label="A leanSphincs signature">
+      <svg viewBox="10 -123 572 614" preserveAspectRatio="xMaxYMid meet" role="img" aria-label="A leanSphincs signature">
         <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient></defs>
         <g class="part xmss pruned">
           <g class="tree">
@@ -1145,7 +1145,7 @@ document.addEventListener('pointerdown', function (e) {
 (function () {
   var svg = document.querySelector('figure svg');
   if (!svg) return;
-  var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 228;   // the column of the path, the tip of the forest brace
+  var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 250;   // the column of the path, the tip of the forest brace
   var pruned = svg.querySelector('.xmss.pruned'), layered = svg.querySelector('.xmss.layered');
   var motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   var shown = 'pruned', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
@@ -1165,7 +1165,7 @@ document.addEventListener('pointerdown', function (e) {
   }
 
   // The layers, top first: each a tree whose path ends at a leaf, the hash of a WOTS+C key that signs the
-  // root of the tree below; the last leaf's key (not drawn) signs the forest drawn under it.
+  // root of the tree below; the last leaf's key signs the forest drawn under it.
   // Each tree shows its top DRAWN levels as edges (the path in ink, with its nodes), and below
   // them thin branches that fade out toward the leaf row. A level's height shrinks with its spread, so the
   // branches taper down to the leaf row. The roots stand on one vertical line, the column of
@@ -1245,7 +1245,7 @@ document.addEventListener('pointerdown', function (e) {
       el('line', { x1: n1(X), y1: n1(yb + 2), x2: n1(X), y2: n1(ls[i + 1].root[1] - 3) , 'class': 'brace' }, layered);
     });
     var last = ls[L - 1].leaf;
-    el('line', { x1: n1(last[0]), y1: n1(last[1]), x2: n1(X), y2: TIP, 'class': 'path dash' }, layered);
+    el('line', { x1: n1(last[0]), y1: n1(last[1]), x2: n1(X), y2: WT - 1, 'class': 'path dash' }, layered);
     // the paths, and their nodes
     ls.forEach(function (l) { el('polyline', { points: pts(l.nodes), 'class': 'path' }, layered); });
     var dots = el('g', { 'class': 'on' }, layered);
@@ -1266,14 +1266,15 @@ document.addEventListener('pointerdown', function (e) {
     return ls;
   }
 
-  // The forest, under the bottom leaf (whose WOTS+C key signs it, not drawn): 8 trees of height 4; under the
+  // The forest, under the bottom leaf (whose small WOTS+C key signs it): 8 trees of height 4; under the
   // opened leaf of each, its two subtrees of height 3; under one of the 16 opened subtree leaves, its WOTS key
   // of 6 chains of 5, drawn large. Every tree is drawn whole, its path in ink.
   var fts = svg.querySelector('.fts'), forest = null;
   var FX = 250, FS = 54;                                  // the centre of the forest, the spacing of its trees
-  var TY = [249, 274, 295, 312, 325], TO = 11.5;           // a tree: its levels, root first, and its first offset
-  var SY = [340, 356, 368, 377], SO = 5, SD = 11.5;        // a subtree: the same, and its offset from the tree
-  var KI = 7, KS = 17, KP = 13, KT = 407, KX;             // the key: its subtree, chain and position spacing, top
+  var TY = [269, 285, 298, 308, 316], TO = 11.5;           // a tree: its levels, root first, and its first offset
+  var SY = [328, 338, 345, 351], SO = 5, SD = 11.5;        // a subtree: the same, and its offset from the tree
+  var KI = 7, KS = 17, KP = 13, KT = 381, KX;
+  var WT = LEAF + 7;                                      // the top of the small WOTS+C key that signs the forest             // the key: its subtree, chain and position spacing, top
   function tc(i) { return FX + (i - 3.5) * FS; }
   function sc(j) { return tc(j >> 1) + (j & 1 ? SD : -SD); }
   KX = sc(KI);
@@ -1297,6 +1298,14 @@ document.addEventListener('pointerdown', function (e) {
     el('path', { 'class': 'brace', d: 'M' + n1(x0) + ',' + (TIP + 14) + ' Q' + n1(x0) + ',' + (TIP + 7) + ' ' + n1(x0 + 7) + ',' + (TIP + 7) +
       ' L' + n1(X - 7) + ',' + (TIP + 7) + ' Q' + X + ',' + (TIP + 7) + ' ' + X + ',' + TIP + ' Q' + X + ',' + (TIP + 7) + ' ' + n1(X + 7) + ',' + (TIP + 7) +
       ' L' + n1(x1 - 7) + ',' + (TIP + 7) + ' Q' + n1(x1) + ',' + (TIP + 7) + ' ' + n1(x1) + ',' + (TIP + 14) }, fts);
+    // the small WOTS+C key of the bottom leaf, as between the layers: 8 of its 64 chains
+    var wc = el('g', { 'class': 'chain' }, fts), wd = el('g', { 'class': 'dot' }, fts);
+    for (var c = 0; c < 8; c++) {
+      el('line', { x1: n1(X + (c - 3.5) * 6), y1: WT, x2: n1(X + (c - 3.5) * 6), y2: WT + 12 }, wc);
+      for (var m = 0; m < 4; m++) el('circle', { cx: n1(X + (c - 3.5) * 6), cy: WT + 4 * m, r: 1.1 }, wd);
+    }
+    el('text', { x: n1(X + 30), y: WT + 11, 'class': 'lb' }, fts).textContent = 'WOTS+C';
+    el('line', { x1: X, y1: WT + 14, x2: X, y2: TIP, 'class': 'brace' }, fts);
     var g = el('g', { 'class': 'tree' }, fts);
     for (var i = 0; i < 8; i++) edges(g, tc(i), TY, TO);
     for (var j = 0; j < 16; j++) edges(g, sc(j), SY, SO);
@@ -1358,10 +1367,14 @@ document.addEventListener('pointerdown', function (e) {
     pp.forEach(function (q, j) { if (j) el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j === 6 ? 2.2 : 2.6 }, on); });
     el('circle', { cx: 256, cy: -108, r: 4.2 }, on);
     var dash = pruned.querySelector('line.path.dash');
-    dash.setAttribute('x1', n1(pp[6][0])); dash.setAttribute('y1', n1(pp[6][1])); dash.setAttribute('x2', X); dash.setAttribute('y2', TIP);
+    dash.setAttribute('x1', n1(pp[6][0])); dash.setAttribute('y1', n1(pp[6][1])); dash.setAttribute('x2', X); dash.setAttribute('y2', WT - 1);
     // the forest: the path to a leaf of each tree, and to a leaf of each of the two subtrees under it
     clear(fts.conn); clear(fts.paths); clear(fts.dot); clear(fts.on);
-    forest = { trees: [], subs: [], key: [] };
+    forest = { trees: [], subs: [], key: [], wc: [] };
+    wotsc().forEach(function (p, j) {
+      el('circle', { cx: n1(X + (j - 3.5) * 6), cy: WT + 4 * p, r: 1.9 }, fts.on);
+      forest.wc.push([X + (j - 3.5) * 6, WT + 4 * p]);
+    });
     for (var i = 0; i < 8; i++) forest.trees.push(walk(tc(i), TY, TO));
     for (i = 0; i < 16; i++) {
       var s = walk(sc(i), SY, SO), lf = forest.trees[i >> 1][4];
@@ -1428,17 +1441,24 @@ document.addEventListener('pointerdown', function (e) {
     stage(600, fo.subs.map(function (q) { return q.slice().reverse(); }), true, 1.6, 'thin');
     stage(300, fo.subs.map(function (q, i) { return [q[0], fo.trees[i >> 1][4]]; }), false, 1.6);
     stage(750, fo.trees.map(function (q) { return q.slice().reverse(); }), true, 2, 'thin');
+    // the 8 roots into the WOTS+C key of the bottom leaf: its chains to their ends, which hash into that leaf
+    function up(leaf) {
+      stage(450, fo.trees.map(function (q) { return [q[0], [X, TIP]]; }), false, 2);
+      stage(300, fo.wc.map(function (c) { return [[X, TIP], c]; }), false, 1.4);
+      stage(400, fo.wc.map(function (c) { return [c, [c[0], WT]]; }), true, 1.6);
+      stage(300, fo.wc.map(function (c) { return [[c[0], WT], leaf]; }), false, 1.6);
+    }
     var root;
     if (!geo) {
       var path = pruned.querySelector('polyline.path').getAttribute('points').split(' ').map(function (q) { return q.split(',').map(Number); }).reverse();
-      stage(700, fo.trees.map(function (q) { return [q[0], [X, TIP], path[0]]; }), false, 2.2);
+      up(path[0]);
       stage(1700, [path], true, 3.2);
       root = path[path.length - 1];
     } else {
       // up each layer to its root; the root is signed by the key of the layer above: walk its chains to their
       // ends, which hash into that layer's leaf
       var low = geo[geo.length - 1];
-      stage(700, fo.trees.map(function (q) { return [q[0], [X, TIP], low.leaf]; }), false, 2.2);
+      up(low.leaf);
       for (var i = geo.length - 1; i >= 0; i--) {
         var l = geo[i];
         stage(500 + 70 * l.t, [l.nodes.slice().reverse()], true, i === 0 ? 3.2 : 2.6);
