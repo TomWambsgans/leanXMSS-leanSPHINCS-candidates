@@ -2,43 +2,65 @@ import LeanForest
 import Lean
 
 /-!
-Reachability audit. `lake env lean scripts/Reach.lean` writes `reach.txt`, one line per local declaration with its module, source line range and whether the proof terms of the public theorems reach it. Declarations that reachability cannot see but the elaborator needs (rfl simp lemmas, instances, names used only in simp lists) must be kept when pruning by hand.
+Reachability audit. `lake env lean scripts/Reach.lean` writes `reach.txt`, one line per declaration
+of a `LeanForest` module: module, name, source line range, whether the proof terms of the theorems
+pinned in `LeanForest/Axioms.lean` reach it, whether they or the names cited in README.md, PROOF.md
+and FOREST.md (any declaration whose name ends with a code span) reach it, and whether it is an
+instance. Declarations that reachability cannot see but the elaborator needs (rfl simp lemmas,
+instances, names used only in simp lists) must be kept when pruning by hand.
 -/
 
-open Lean Elab Command in
-run_cmd do
-  let env ← getEnv
-  let roots : Array Name := #[``LeanForest.Lifetimes.requestedSecurity]
+open Lean
+
+def reachFrom (env : Environment) (roots : Array Name) : NameSet := Id.run do
   let mut visited : NameSet := {}
-  let mut stack : Array Name := roots
+  let mut stack := roots
   while !stack.isEmpty do
     let n := stack.back!
     stack := stack.pop
     if visited.contains n then continue
     visited := visited.insert n
-    match env.find? n with
-    | none => pure ()
-    | some ci =>
-      for c in ci.type.getUsedConstants do
-        if !visited.contains c then stack := stack.push c
-      match ci.value? (allowOpaque := true) with
-      | some v =>
-        for c in v.getUsedConstants do
-          if !visited.contains c then stack := stack.push c
-      | none => pure ()
-  let mut out : String := ""
-  let mut total := 0
-  let mut reached := 0
+    let some ci := env.find? n | continue
+    let mut used := ci.type.getUsedConstants
+    if let some v := ci.value? (allowOpaque := true) then used := used ++ v.getUsedConstants
+    if let .inductInfo info := ci then used := used ++ info.ctors.toArray
+    for c in used do
+      if !visited.contains c then stack := stack.push c
+  return visited
+
+def nameSuffixes (n : Name) : List Name :=
+  (List.range n.getNumParts).map fun k =>
+    (n.componentsRev.take (k + 1)).reverse.foldl (fun acc c => acc ++ c) Name.anonymous
+
+open Elab Command in
+run_cmd do
+  let env ← getEnv
+  let guards ← IO.FS.lines "LeanForest/Axioms.lean"
+  let pinned := guards.filterMap fun line =>
+    if line.startsWith "#print axioms " then some (line.drop 14).trimAscii.toString.toName else none
+  let mut spans : NameSet := {}
+  for doc in ["README.md", "PROOF.md", "FOREST.md"] do
+    let pieces := (← IO.FS.readFile doc).splitOn "`"
+    for i in [0:pieces.length] do
+      if i % 2 == 1 then spans := spans.insert pieces[i]!.toName
+  let mut decls : Array (Name × Name) := #[]
+  let mut cited : Array Name := #[]
   for (name, _) in env.constants.toList do
     let some index := env.getModuleIdxFor? name | continue
     let moduleName := env.header.moduleNames[index.toNat]!
-    if !moduleName.toString.startsWith "LeanForest" then continue
-    total := total + 1
-    let r := visited.contains name
-    if r then reached := reached + 1
+    if !(`LeanForest).isPrefixOf moduleName then continue
+    decls := decls.push (moduleName, name)
+    if (nameSuffixes name).any spans.contains then cited := cited.push name
+  let fromPinned := reachFrom env pinned
+  let fromAll := reachFrom env (pinned ++ cited)
+  let mut out : String := ""
+  for (moduleName, name) in decls do
     let range ← match ← findDeclarationRanges? name with
       | some rs => pure s!"{rs.range.pos.line}|{rs.range.endPos.line}"
       | none => pure "-|-"
-    out := out ++ s!"{moduleName}|{name}|{range}|{if r then "1" else "0"}\n"
+    let flag (b : Bool) := if b then "1" else "0"
+    out := out ++ s!"{moduleName}|{name}|{range}|{flag (fromPinned.contains name)}|" ++
+      s!"{flag (fromAll.contains name)}|{flag (Meta.isInstanceCore env name)}\n"
   IO.FS.writeFile "reach.txt" out
-  logInfo m!"total {total} reached {reached}"
+  let count (s : NameSet) := (decls.filter fun (_, n) => s.contains n).size
+  logInfo m!"pinned {pinned.size}, cited {cited.size}, declarations {decls.size}, reached from pinned {count fromPinned}, from pinned or cited {count fromAll}"

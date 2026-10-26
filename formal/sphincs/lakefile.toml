@@ -9,5 +9,7 @@ rev = "cbd4144"
 
 [[lean_lib]]
 name = "LeanForest"
+# `LeanForest.lean` imports every module; `LeanForest/Axioms.lean` checks their axioms.
+roots = ["LeanForest", "LeanForest.Axioms"]
 # Every module carries the `[Params]` instance (the height, the layers, the kept subtree).
 leanOptions = { weak.linter.unusedSectionVars = false }

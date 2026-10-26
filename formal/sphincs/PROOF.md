@@ -184,5 +184,5 @@ for pruned keys ([README.md](README.md)). The remaining loss is structural:
   (`fullDigestView_bijective`, [ForestCoverage](LeanForest/ForestCoverage.lean)), so a uniform output
   gives a uniform index and 8 independent uniform fields.
 
-`Axioms.lean` uses `#guard_msgs` to pin each public theorem to its exact axiom list, a subset of
-`propext`, `Classical.choice` and `Quot.sound`.
+`Axioms.lean` pins the main theorems to their exact axiom lists with `#guard_msgs` and checks that
+every declaration of the library depends only on `propext`, `Classical.choice` and `Quot.sound`.

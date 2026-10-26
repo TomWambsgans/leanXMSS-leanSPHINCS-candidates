@@ -3,8 +3,8 @@
 **Status: the leanSphincs signer has 127 bits of classical SUF-CMA security in the random-oracle
 model in each of its configurations, at the signature limits below
 (`LeanForest.Lifetimes.requestedSecurity`, [Lifetimes.lean](LeanForest/Lifetimes.lean)).** The
-proof uses only `propext`, `Classical.choice` and `Quot.sound`; [Axioms.lean](LeanForest/Axioms.lean)
-pins every public theorem to its axioms.
+proof uses only `propext`, `Classical.choice` and `Quot.sound`: [Axioms.lean](LeanForest/Axioms.lean)
+pins the main theorems to their axioms and checks that no declaration of the library uses another.
 
 `LeanForest/` models the candidate for every height `h ≤ 28`, number of layers `d` and kept subtree
 height `b` (`Params`, [Scheme.lean](LeanForest/Scheme.lean)): an index of `h` bits; a hypertree of

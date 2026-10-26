@@ -83,7 +83,7 @@ and computes from it the Lean literal and the kernel-checked tables `fTab`, `f2T
 `P1tab`, `P2tab` (`H0PTab.lean`) and `PHtab` (`H0NTab.lean`); `scripts/forest_certificates.py` imports
 it and refuses to run if the Lean sources hold other tables.
 
-No `sorry`, no `native_decide`, no new axioms: `LeanForest/Axioms.lean` guards every public theorem
+No `sorry`, no `native_decide`, no new axioms: `LeanForest/Axioms.lean` checks every declaration
 (`propext`, `Classical.choice`, `Quot.sound` only). Certificates are exact rationals checked by the
 kernel (`decide +kernel`). `Certificates/H*.lean` store only the scalars of each Poisson table
 (`m`, `P`, `J`, `n1`), option (`c1`, `θ`, `s`, `cthr`) and near certificate: `H0Fill.lean` rebuilds
@@ -104,8 +104,7 @@ of the script), `write` (rewrite them). Certificates: `python3 scripts/forest_ce
 in about 10 minutes and 8 GB of memory);
 `python3 scripts/forest_certificates.py check H SHAPE B N LX` checks one set in Python with the same exact
 arithmetic; `maxn H SHAPE B N0 [STEP LXLO LXHI]` searches the largest `N` over a grid of splits `lx`.
-Axiom guards: `lake env lean scripts/ForestTheorems.lean` then `python3 scripts/forest_axioms.py`
-(`prepare`, then `emit`; see the script).
+The axiom guards (`LeanForest/Axioms.lean`) are part of the build.
 
 ## Hash inputs
 
