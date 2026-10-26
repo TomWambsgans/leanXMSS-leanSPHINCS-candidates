@@ -84,10 +84,11 @@ svg .lbody line { stroke-width: 1; }
 svg .base { stroke: var(--tree); stroke-width: 1; }
 svg .path { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
 svg .dash { stroke-dasharray: 2 3; }
+svg .thin, svg .anim .thin { stroke-width: 1.2; }
 svg .anim polyline { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 svg .anim circle { fill: var(--ink); }
 svg .anim .ring { fill: none; stroke: var(--ink); stroke-width: 1.2; }
-svg.animating .xmss .path, svg.animating .on { visibility: hidden; }   /* the animation draws them */
+svg.animating .xmss .path, svg.animating .fts .path:not(.dash), svg.animating .on { visibility: hidden; }   /* the animation draws them */
 svg .on circle { fill: var(--ink); }
 svg .conn { stroke: var(--tree); stroke-width: 1; }
 svg .chain line { stroke: var(--tree); stroke-width: 1; }
@@ -352,7 +353,7 @@ footer a + a { margin-left: 1.25rem; }
     </div>
   </div>
   <figure>
-      <svg viewBox="10 -123 572 665" preserveAspectRatio="xMaxYMid meet" role="img" aria-label="A leanSphincs signature">
+      <svg viewBox="10 -123 572 640" preserveAspectRatio="xMaxYMid meet" role="img" aria-label="A leanSphincs signature">
         <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient></defs>
         <g class="part xmss pruned">
           <g class="tree">
@@ -884,107 +885,7 @@ footer a + a { margin-left: 1.25rem; }
           <text x="530.0" y="65" class="pv"><tspan class="it">h</tspan> = <tspan data-f="dia-h">24</tspan></text>
         </g>
         <g class="part xmss layered" display="none"></g>
-        <g class="part sig">
-          <path class="brace" d="M165.8,242 Q165.8,235.0 172.8,235.0 L230.2,235.0 Q237.2,235.0 237.2,228 Q237.2,235.0 244.2,235.0 L301.8,235.0 Q308.8,235.0 308.8,242"/>
-          <g class="chain">
-            <line x1="169.8" y1="252" x2="169.8" y2="306"/>
-            <line x1="184.8" y1="252" x2="184.8" y2="306"/>
-            <line x1="199.8" y1="252" x2="199.8" y2="306"/>
-            <line x1="214.8" y1="252" x2="214.8" y2="306"/>
-            <line x1="259.8" y1="252" x2="259.8" y2="306"/>
-            <line x1="274.8" y1="252" x2="274.8" y2="306"/>
-            <line x1="289.8" y1="252" x2="289.8" y2="306"/>
-            <line x1="304.8" y1="252" x2="304.8" y2="306"/>
-          </g>
-          <g class="dot">
-            <circle cx="169.8" cy="306" r="1.6"/>
-            <circle cx="169.8" cy="288" r="1.6"/>
-            <circle cx="169.8" cy="252" r="1.6"/>
-            <circle cx="184.8" cy="288" r="1.6"/>
-            <circle cx="184.8" cy="270" r="1.6"/>
-            <circle cx="184.8" cy="252" r="1.6"/>
-            <circle cx="199.8" cy="306" r="1.6"/>
-            <circle cx="199.8" cy="288" r="1.6"/>
-            <circle cx="199.8" cy="270" r="1.6"/>
-            <circle cx="214.8" cy="306" r="1.6"/>
-            <circle cx="214.8" cy="270" r="1.6"/>
-            <circle cx="214.8" cy="252" r="1.6"/>
-            <circle cx="259.8" cy="306" r="1.6"/>
-            <circle cx="259.8" cy="270" r="1.6"/>
-            <circle cx="259.8" cy="252" r="1.6"/>
-            <circle cx="274.8" cy="288" r="1.6"/>
-            <circle cx="274.8" cy="270" r="1.6"/>
-            <circle cx="274.8" cy="252" r="1.6"/>
-            <circle cx="289.8" cy="306" r="1.6"/>
-            <circle cx="289.8" cy="288" r="1.6"/>
-            <circle cx="289.8" cy="270" r="1.6"/>
-            <circle cx="304.8" cy="306" r="1.6"/>
-            <circle cx="304.8" cy="288" r="1.6"/>
-            <circle cx="304.8" cy="252" r="1.6"/>
-          </g>
-          <g class="on">
-            <circle cx="169.8" cy="270" r="2.9"/>
-            <circle cx="184.8" cy="306" r="2.9"/>
-            <circle cx="199.8" cy="252" r="2.9"/>
-            <circle cx="214.8" cy="288" r="2.9"/>
-            <circle cx="259.8" cy="288" r="2.9"/>
-            <circle cx="274.8" cy="306" r="2.9"/>
-            <circle cx="289.8" cy="252" r="2.9"/>
-            <circle cx="304.8" cy="270" r="2.9"/>
-          </g>
-          <g class="ell"><circle cx="232.2" cy="279.0" r="1.3"/><circle cx="237.2" cy="279.0" r="1.3"/><circle cx="242.2" cy="279.0" r="1.3"/></g>
-          <text x="328.8" y="284.0" class="nm">WOTS+C</text>
-          <g class="tree"><line x1="155.8" y1="252" x2="155.8" y2="306"/><line x1="151.8" y1="252" x2="159.8" y2="252"/><line x1="151.8" y1="306" x2="159.8" y2="306"/></g>
-          <text x="145.8" y="284" class="pv" text-anchor="end"><tspan class="it">w</tspan> = 4</text>
-          <g class="tree"><line x1="165.8" y1="320" x2="308.8" y2="320"/><line x1="165.8" y1="316" x2="165.8" y2="324"/><line x1="308.8" y1="316" x2="308.8" y2="324"/></g>
-          <text x="237.2" y="342" class="pv" text-anchor="middle"><tspan class="it">ℓ</tspan> = 64</text>
-          <line x1="237.2" y1="352" x2="237.2" y2="364" class="brace"/>
-  <g class="fts">
-          <path class="brace" d="M106.2,378 Q106.2,371.0 113.2,371.0 L230.2,371.0 Q237.2,371.0 237.2,364 Q237.2,371.0 244.2,371.0 L361.2,371.0 Q368.2,371.0 368.2,378"/>
-          <g class="fors">
-            <polygon points="122.6,385 111.6,403 133.6,403"/>
-            <polygon points="114.6,410 109.6,422 119.6,422"/>
-            <polygon points="126.6,410 121.6,422 131.6,422"/>
-            <polygon points="155.3,385 144.3,403 166.3,403"/>
-            <polygon points="151.3,410 146.3,422 156.3,422"/>
-            <polygon points="163.3,410 158.3,422 168.3,422"/>
-            <polygon points="188.1,385 177.1,403 199.1,403"/>
-            <polygon points="181.1,410 176.1,422 186.1,422"/>
-            <polygon points="193.1,410 188.1,422 198.1,422"/>
-            <polygon points="220.8,385 209.8,403 231.8,403"/>
-            <polygon points="215.8,410 210.8,422 220.8,422"/>
-            <polygon points="227.8,410 222.8,422 232.8,422"/>
-            <polygon points="253.6,385 242.6,403 264.6,403"/>
-            <polygon points="249.6,410 244.6,422 254.6,422"/>
-            <polygon points="261.6,410 256.6,422 266.6,422"/>
-            <polygon points="286.3,385 275.3,403 297.3,403"/>
-            <polygon points="278.3,410 273.3,422 283.3,422"/>
-            <polygon points="290.3,410 285.3,422 295.3,422"/>
-            <polygon points="319.1,385 308.1,403 330.1,403"/>
-            <polygon points="314.1,410 309.1,422 319.1,422"/>
-            <polygon points="326.1,410 321.1,422 331.1,422"/>
-            <polygon points="351.8,385 340.8,403 362.8,403"/>
-            <polygon points="344.8,410 339.8,422 349.8,422"/>
-            <polygon points="356.8,410 351.8,422 361.8,422"/>
-          </g>
-          <g class="conn"><line x1="120.6" y1="403" x2="114.6" y2="410"/><line x1="120.6" y1="403" x2="126.6" y2="410"/><line x1="157.3" y1="403" x2="151.3" y2="410"/><line x1="157.3" y1="403" x2="163.3" y2="410"/><line x1="187.1" y1="403" x2="181.1" y2="410"/><line x1="187.1" y1="403" x2="193.1" y2="410"/><line x1="221.8" y1="403" x2="215.8" y2="410"/><line x1="221.8" y1="403" x2="227.8" y2="410"/><line x1="255.6" y1="403" x2="249.6" y2="410"/><line x1="255.6" y1="403" x2="261.6" y2="410"/><line x1="284.3" y1="403" x2="278.3" y2="410"/><line x1="284.3" y1="403" x2="290.3" y2="410"/><line x1="320.1" y1="403" x2="314.1" y2="410"/><line x1="320.1" y1="403" x2="326.1" y2="410"/><line x1="350.8" y1="403" x2="344.8" y2="410"/><line x1="350.8" y1="403" x2="356.8" y2="410"/></g>
-          <g class="on"><circle cx="120.6" cy="403" r="2.4"/><circle cx="157.3" cy="403" r="2.4"/><circle cx="187.1" cy="403" r="2.4"/><circle cx="221.8" cy="403" r="2.4"/><circle cx="255.6" cy="403" r="2.4"/><circle cx="284.3" cy="403" r="2.4"/><circle cx="320.1" cy="403" r="2.4"/><circle cx="350.8" cy="403" r="2.4"/><circle cx="113.8" cy="422" r="1.8"/><circle cx="128.2" cy="422" r="1.8"/><circle cx="152.9" cy="422" r="1.8"/><circle cx="161.7" cy="422" r="1.8"/><circle cx="181.1" cy="422" r="1.8"/><circle cx="193.9" cy="422" r="1.8"/><circle cx="214.2" cy="422" r="1.8"/><circle cx="227.8" cy="422" r="1.8"/><circle cx="250.4" cy="422" r="1.8"/><circle cx="260.8" cy="422" r="1.8"/><circle cx="276.7" cy="422" r="1.8"/><circle cx="291.9" cy="422" r="1.8"/><circle cx="315.7" cy="422" r="1.8"/><circle cx="326.1" cy="422" r="1.8"/><circle cx="344.8" cy="422" r="1.8"/><circle cx="355.2" cy="422" r="1.8"/></g>
-          <text x="388.2" y="407.0" class="nm">WOTS forest</text>
-          <g class="tree"><line x1="94.2" y1="385" x2="94.2" y2="403"/><line x1="90.2" y1="385" x2="98.2" y2="385"/><line x1="90.2" y1="403" x2="98.2" y2="403"/></g>
-          <text x="84.2" y="400" class="pv" text-anchor="end">4</text>
-          <g class="tree"><line x1="94.2" y1="410" x2="94.2" y2="422"/><line x1="90.2" y1="410" x2="98.2" y2="410"/><line x1="90.2" y1="422" x2="98.2" y2="422"/></g>
-          <text x="84.2" y="421" class="pv" text-anchor="end">3</text>
-          <line x1="227.8" y1="424" x2="227.8" y2="431.0" class="path dash"/>
-          <path class="brace" d="M191.3,445.0 Q191.3,438.0 198.3,438.0 L220.8,438.0 Q227.8,438.0 227.8,431.0 Q227.8,438.0 234.8,438.0 L257.3,438.0 Q264.3,438.0 264.3,445.0"/>
-          <g class="chain"><line x1="195.3" y1="452.0" x2="195.3" y2="500.0"/><line x1="208.3" y1="452.0" x2="208.3" y2="500.0"/><line x1="221.3" y1="452.0" x2="221.3" y2="500.0"/><line x1="234.3" y1="452.0" x2="234.3" y2="500.0"/><line x1="247.3" y1="452.0" x2="247.3" y2="500.0"/><line x1="260.3" y1="452.0" x2="260.3" y2="500.0"/></g>
-          <g class="dot"><circle cx="195.3" cy="464.0" r="1.6"/><circle cx="195.3" cy="476.0" r="1.6"/><circle cx="195.3" cy="488.0" r="1.6"/><circle cx="195.3" cy="500.0" r="1.6"/><circle cx="208.3" cy="452.0" r="1.6"/><circle cx="208.3" cy="464.0" r="1.6"/><circle cx="208.3" cy="488.0" r="1.6"/><circle cx="208.3" cy="500.0" r="1.6"/><circle cx="221.3" cy="464.0" r="1.6"/><circle cx="221.3" cy="476.0" r="1.6"/><circle cx="221.3" cy="488.0" r="1.6"/><circle cx="221.3" cy="500.0" r="1.6"/><circle cx="234.3" cy="452.0" r="1.6"/><circle cx="234.3" cy="476.0" r="1.6"/><circle cx="234.3" cy="488.0" r="1.6"/><circle cx="234.3" cy="500.0" r="1.6"/><circle cx="247.3" cy="464.0" r="1.6"/><circle cx="247.3" cy="476.0" r="1.6"/><circle cx="247.3" cy="488.0" r="1.6"/><circle cx="247.3" cy="500.0" r="1.6"/><circle cx="260.3" cy="452.0" r="1.6"/><circle cx="260.3" cy="464.0" r="1.6"/><circle cx="260.3" cy="488.0" r="1.6"/><circle cx="260.3" cy="500.0" r="1.6"/></g>
-          <g class="on"><circle cx="195.3" cy="452.0" r="2.6"/><circle cx="208.3" cy="476.0" r="2.6"/><circle cx="221.3" cy="452.0" r="2.6"/><circle cx="234.3" cy="464.0" r="2.6"/><circle cx="247.3" cy="452.0" r="2.6"/><circle cx="260.3" cy="476.0" r="2.6"/></g>
-          <g class="tree"><line x1="181.3" y1="452.0" x2="181.3" y2="500.0"/><line x1="177.3" y1="452.0" x2="185.3" y2="452.0"/><line x1="177.3" y1="500.0" x2="185.3" y2="500.0"/></g>
-          <text x="171.3" y="481.0" class="pv" text-anchor="end"><tspan class="it">w</tspan> = 5</text>
-          <g class="tree"><line x1="191.3" y1="514.0" x2="264.3" y2="514.0"/><line x1="191.3" y1="510.0" x2="191.3" y2="518.0"/><line x1="264.3" y1="510.0" x2="264.3" y2="518.0"/></g>
-          <text x="227.8" y="536.0" class="pv" text-anchor="middle"><tspan class="it">ℓ</tspan> = 6</text>
-          </g>
-        </g>
+        <g class="part fts"></g>
       </svg>
   </figure>
 
@@ -1244,7 +1145,7 @@ document.addEventListener('pointerdown', function (e) {
 (function () {
   var svg = document.querySelector('figure svg');
   if (!svg) return;
-  var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 228;   // the column of the path, the tip of the WOTS+C brace
+  var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 228;   // the column of the path, the tip of the forest brace
   var pruned = svg.querySelector('.xmss.pruned'), layered = svg.querySelector('.xmss.layered');
   var motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   var shown = 'pruned', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
@@ -1264,7 +1165,7 @@ document.addEventListener('pointerdown', function (e) {
   }
 
   // The layers, top first: each a tree whose path ends at a leaf, the hash of a WOTS+C key that signs the
-  // root of the tree below; the last leaf's key is the large WOTS+C drawn under it, which signs the forest.
+  // root of the tree below; the last leaf's key (not drawn) signs the forest drawn under it.
   // Each tree shows its top DRAWN levels as edges (the path in ink, with its nodes), and below
   // them thin branches that fade out toward the leaf row. A level's height shrinks with its spread, so the
   // branches taper down to the leaf row. The roots stand on one vertical line, the column of
@@ -1364,6 +1265,69 @@ document.addEventListener('pointerdown', function (e) {
     el('tspan', { 'data-f': 'dia-h' }, tx).textContent = String(h);
     return ls;
   }
+
+  // The forest, under the bottom leaf (whose WOTS+C key signs it, not drawn): 8 trees of height 4; under the
+  // opened leaf of each, its two subtrees of height 3; under one of the 16 opened subtree leaves, its WOTS key
+  // of 6 chains of 5, drawn large. Every tree is drawn whole, its path in ink.
+  var fts = svg.querySelector('.fts'), forest = null;
+  var FX = 250, FS = 54;                                  // the centre of the forest, the spacing of its trees
+  var TY = [249, 274, 295, 312, 325], TO = 11.5;           // a tree: its levels, root first, and its first offset
+  var SY = [340, 356, 368, 377], SO = 5, SD = 11.5;        // a subtree: the same, and its offset from the tree
+  var KI = 7, KS = 17, KP = 13, KT = 407, KX;             // the key: its subtree, chain and position spacing, top
+  function tc(i) { return FX + (i - 3.5) * FS; }
+  function sc(j) { return tc(j >> 1) + (j & 1 ? SD : -SD); }
+  KX = sc(KI);
+  function edges(g, cx, ys, o) {                          // every edge of a tree
+    var row = [cx];
+    for (var j = 1; j < ys.length; j++) {
+      var d = o / Math.pow(2, j - 1), next = [];
+      row.forEach(function (p) {
+        [p - d, p + d].forEach(function (q) { el('line', { x1: n1(p), y1: ys[j - 1], x2: n1(q), y2: ys[j] }, g); next.push(q); });
+      });
+      row = next;
+    }
+  }
+  function walk(cx, ys, o) {                              // the path from the root to a leaf picked at random
+    var nodes = [[cx, ys[0]]];
+    for (var j = 1; j < ys.length; j++) nodes.push([nodes[j - 1][0] + coin() * o / Math.pow(2, j - 1), ys[j]]);
+    return nodes;
+  }
+  (function () {                                          // what does not change: the trees, the key's chains, the labels
+    var x0 = tc(0), x1 = tc(7), kb = KT - 7, kw = 2.5 * KS + 4;
+    el('path', { 'class': 'brace', d: 'M' + n1(x0) + ',' + (TIP + 14) + ' Q' + n1(x0) + ',' + (TIP + 7) + ' ' + n1(x0 + 7) + ',' + (TIP + 7) +
+      ' L' + n1(X - 7) + ',' + (TIP + 7) + ' Q' + X + ',' + (TIP + 7) + ' ' + X + ',' + TIP + ' Q' + X + ',' + (TIP + 7) + ' ' + n1(X + 7) + ',' + (TIP + 7) +
+      ' L' + n1(x1 - 7) + ',' + (TIP + 7) + ' Q' + n1(x1) + ',' + (TIP + 7) + ' ' + n1(x1) + ',' + (TIP + 14) }, fts);
+    var g = el('g', { 'class': 'tree' }, fts);
+    for (var i = 0; i < 8; i++) edges(g, tc(i), TY, TO);
+    for (var j = 0; j < 16; j++) edges(g, sc(j), SY, SO);
+    el('path', { 'class': 'brace', d: 'M' + n1(KX - kw) + ',' + kb + ' Q' + n1(KX - kw) + ',' + (kb - 7) + ' ' + n1(KX - kw + 7) + ',' + (kb - 7) +
+      ' L' + n1(KX - 7) + ',' + (kb - 7) + ' Q' + n1(KX) + ',' + (kb - 7) + ' ' + n1(KX) + ',' + (kb - 14) + ' Q' + n1(KX) + ',' + (kb - 7) + ' ' + n1(KX + 7) + ',' + (kb - 7) +
+      ' L' + n1(KX + kw - 7) + ',' + (kb - 7) + ' Q' + n1(KX + kw) + ',' + (kb - 7) + ' ' + n1(KX + kw) + ',' + kb }, fts);
+    var ch = el('g', { 'class': 'chain' }, fts);
+    for (j = 0; j < 6; j++) el('line', { x1: n1(KX + (j - 2.5) * KS), y1: KT, x2: n1(KX + (j - 2.5) * KS), y2: KT + 4 * KP }, ch);
+    // the measures: the heights on the left, the key's w and ℓ around it
+    var m = el('g', { 'class': 'tree' }, fts), lx = x0 - 2 * TO - 10;
+    bar(m, lx, TY[0], TY[4]); bar(m, lx, SY[0], SY[3]);
+    el('text', { x: n1(lx - 8), y: n1((TY[0] + TY[4]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fts).textContent = '4';
+    el('text', { x: n1(lx - 8), y: n1((SY[0] + SY[3]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fts).textContent = '3';
+    var nm = el('text', { x: n1(x1 + 2 * TO + 14), y: n1((TY[0] + SY[3]) / 2 - 3), 'class': 'nm' }, fts);
+    el('tspan', {}, nm).textContent = 'WOTS';
+    el('tspan', { x: n1(x1 + 2 * TO + 14), dy: '1.2em' }, nm).textContent = 'forest';
+    bar(m, KX - kw - 10, KT, KT + 4 * KP);
+    var t = el('text', { x: n1(KX - kw - 20), y: n1(KT + 2 * KP + 5), 'class': 'pv', 'text-anchor': 'end' }, fts);
+    el('tspan', { 'class': 'it' }, t).textContent = 'w'; t.appendChild(document.createTextNode(' = 5'));
+    var yl = KT + 4 * KP + 14;
+    el('line', { x1: n1(KX - kw), y1: yl, x2: n1(KX + kw), y2: yl }, m);
+    el('line', { x1: n1(KX - kw), y1: yl - 4, x2: n1(KX - kw), y2: yl + 4 }, m);
+    el('line', { x1: n1(KX + kw), y1: yl - 4, x2: n1(KX + kw), y2: yl + 4 }, m);
+    t = el('text', { x: n1(KX), y: yl + 22, 'class': 'pv', 'text-anchor': 'middle' }, fts);
+    el('tspan', { 'class': 'it' }, t).textContent = 'ℓ'; t.appendChild(document.createTextNode(' = 6'));
+    // what each signature picks
+    fts.conn = el('g', { 'class': 'conn' }, fts);
+    fts.paths = el('g', {}, fts);
+    fts.dot = el('g', { 'class': 'dot' }, fts);
+    fts.on = el('g', { 'class': 'on' }, fts);
+  })();
   // The drawing is taller than the text beside it: on a wide screen the figure grows in height so that the drawing
   // keeps the width it would have in the height of the text. The same height for every configuration.
   function fit() {
@@ -1393,33 +1357,29 @@ document.addEventListener('pointerdown', function (e) {
     clear(on);
     pp.forEach(function (q, j) { if (j) el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j === 6 ? 2.2 : 2.6 }, on); });
     el('circle', { cx: 256, cy: -108, r: 4.2 }, on);
-    // the WOTS+C key: 8 of its 64 chains, positions 0 (the end) to 3 from the top
-    var sig = svg.querySelector('.sig'), dot = sig.querySelector(':scope > g.dot'), so = sig.querySelector(':scope > g.on');
-    var cx = [169.8, 184.8, 199.8, 214.8, 259.8, 274.8, 289.8, 304.8];
-    clear(dot); clear(so);
-    wotsc().forEach(function (p, j) {
-      for (var m = 0; m < 4; m++) el('circle', { cx: cx[j], cy: 252 + 18 * m, r: 1.6 }, dot);   // every position, under the revealed one
-      el('circle', { cx: cx[j], cy: 252 + 18 * p, r: 2.9 }, so);
-    });
-    // the forest: a leaf of each tree of height 4 (16 leaves), linked to its two subtrees of height 3 (8 leaves)
-    var f = sig.querySelector('.fts'), fo = f.querySelectorAll('g.on'), conn = f.querySelector('g.conn');
-    var ap = Array.prototype.map.call(f.querySelectorAll('.fors polygon'), function (q) { return q.getAttribute('points').split(' ')[0].split(',').map(Number); });
-    clear(fo[0]); clear(conn);
-    for (var i = 0; i < 8; i++) {
-      var lx = ap[3 * i][0] - 11 + 22 * ((Math.random() * 16 | 0) + 0.5) / 16;
-      el('circle', { cx: n1(lx), cy: 403, r: 2.4 }, fo[0]);
-      for (var k = 1; k <= 2; k++) el('line', { x1: n1(lx), y1: 403, x2: ap[3 * i + k][0], y2: 410 }, conn);
-    }
+    var dash = pruned.querySelector('line.path.dash');
+    dash.setAttribute('x1', n1(pp[6][0])); dash.setAttribute('y1', n1(pp[6][1])); dash.setAttribute('x2', X); dash.setAttribute('y2', TIP);
+    // the forest: the path to a leaf of each tree, and to a leaf of each of the two subtrees under it
+    clear(fts.conn); clear(fts.paths); clear(fts.dot); clear(fts.on);
+    forest = { trees: [], subs: [], key: [] };
+    for (var i = 0; i < 8; i++) forest.trees.push(walk(tc(i), TY, TO));
     for (i = 0; i < 16; i++) {
-      var sx = ap[3 * (i >> 1) + 1 + (i & 1)][0] - 5 + 10 * ((Math.random() * 8 | 0) + 0.5) / 8;
-      el('circle', { cx: n1(sx), cy: 422, r: 1.8 }, fo[0]);
+      var s = walk(sc(i), SY, SO), lf = forest.trees[i >> 1][4];
+      forest.subs.push(s);
+      el('line', { x1: n1(lf[0]), y1: n1(lf[1]), x2: n1(s[0][0]), y2: n1(s[0][1]) }, fts.conn);
     }
-    // the WOTS key: 6 chains of 5, its codeword's digits the steps to the top
-    var wd = f.querySelector('g.dot');
-    clear(wd); clear(fo[1]);
+    forest.trees.concat(forest.subs).forEach(function (t, i) {
+      el('polyline', { points: pts(t), 'class': 'path thin' }, fts.paths);
+      t.forEach(function (q, j) { el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: i < 8 ? (j ? 1.6 : 2.1) : 1.25 }, fts.on); });
+    });
+    // the WOTS key under one subtree leaf: 6 chains of 5, its codeword's digits the steps to the top
+    var kl = forest.subs[KI][3];
+    el('line', { x1: n1(kl[0]), y1: n1(kl[1] + 2), x2: n1(KX), y2: KT - 21, 'class': 'path thin dash' }, fts.paths);
     codeword().forEach(function (p, j) {
-      for (var m = 0; m < 5; m++) el('circle', { cx: n1(195.3 + 13 * j), cy: 452 + 12 * m, r: 1.6 }, wd);
-      el('circle', { cx: n1(195.3 + 13 * j), cy: 452 + 12 * p, r: 2.6 }, fo[1]);
+      var cx = KX + (j - 2.5) * KS;
+      for (var m = 0; m < 5; m++) el('circle', { cx: n1(cx), cy: KT + KP * m, r: 1.6 }, fts.dot);
+      el('circle', { cx: n1(cx), cy: KT + KP * p, r: 2.7 }, fts.on);
+      forest.key.push([cx, KT + KP * p]);
     });
     if (cur && cur.shape === 'layered') geo = drawLayered(cur.layers, cur.h);
   }
@@ -1444,47 +1404,41 @@ document.addEventListener('pointerdown', function (e) {
   if (!motion) return;
 
   var layer = null, segs, total, start = null, wasSettled = false, inView = true;
-  function centres(g) { return Array.prototype.map.call(g.querySelectorAll('circle'), function (c) { return [+c.getAttribute('cx'), +c.getAttribute('cy')]; }); }
-  function apexes(g) { return Array.prototype.map.call(g.querySelectorAll('polygon'), function (q) { return q.getAttribute('points').split(' ')[0].split(',').map(Number); }); }
   function build() {
     if (layer) layer.remove();
     layer = el('g', { 'class': 'anim' }, svg);
     segs = [];
     var t = 0;
     // one stage: every item is a list of points walked in `ms`; `trail` keeps the line drawn
-    function stage(ms, items, trail, r) {
+    function stage(ms, items, trail, r, cls) {
       items.forEach(function (pts) {
         var len = 0, cum = [0];
         for (var i = 1; i < pts.length; i++) { len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); cum.push(len); }
-        var line = trail ? el('polyline', { points: pts.map(function (q) { return q.join(','); }).join(' '), 'stroke-dasharray': len + ' ' + len, 'stroke-dashoffset': len, opacity: 0 }, layer) : null;
+        var line = trail ? el('polyline', { points: pts.map(function (q) { return q.join(','); }).join(' '), 'stroke-dasharray': len + ' ' + len, 'stroke-dashoffset': len, opacity: 0, 'class': cls || '' }, layer) : null;
         segs.push({ pts: pts, cum: cum, len: len, line: line, dot: el('circle', { r: r || 2.6, opacity: 0 }, layer), t0: t, t1: t + ms });
       });
       t += ms;
     }
-    var sig = svg.querySelector('.sig'), top = sig.querySelectorAll(':scope > g.on'), tip = [X, 364];
-    var f = sig.querySelector('.fts'), on = f.querySelectorAll('g.on');
-    var nodes = centres(on[0]), leaves = nodes.slice(0, 8), subs = nodes.slice(8), ap = apexes(f.querySelector('.fors'));
-    var chain = centres(on[1]);
-    stage(700, chain.map(function (c) { return [c, [c[0], 452]]; }), true, 2.2);
-    stage(450, chain.map(function (c) { return [[c[0], 452], [227.8, 431], subs[7]]; }), false, 1.8);
-    stage(450, subs.map(function (c, i) { return [c, ap[3 * (i >> 1) + 1 + (i & 1)]]; }), true, 1.8);
-    stage(300, subs.map(function (c, i) { return [ap[3 * (i >> 1) + 1 + (i & 1)], leaves[i >> 1]]; }), false, 1.8);
-    stage(600, leaves.map(function (c, i) { return [c, ap[3 * i]]; }), true, 2.2);
-    stage(550, leaves.map(function (c, i) { return [ap[3 * i], tip]; }), false, 2);
-    var wots = centres(top[0]);
-    stage(800, wots.map(function (c) { return [c, [c[0], 252]]; }), true);
-    stage(500, wots.map(function (c) { return [[c[0], 252], [X, TIP]]; }), false, 2);
+    // the forest: the key's chains to their ends, which hash into its subtree leaf; each subtree up to its root,
+    // which with its sibling hashes into the opened leaf of its tree; each tree up to its root; the 8 roots into
+    // the bottom leaf of the hypertree
+    var fo = forest, ks = fo.subs[KI][3];
+    stage(700, fo.key.map(function (c) { return [c, [c[0], KT]]; }), true, 2.2);
+    stage(450, fo.key.map(function (c) { return [[c[0], KT], [KX, KT - 21], ks]; }), false, 1.8);
+    stage(600, fo.subs.map(function (q) { return q.slice().reverse(); }), true, 1.6, 'thin');
+    stage(300, fo.subs.map(function (q, i) { return [q[0], fo.trees[i >> 1][4]]; }), false, 1.6);
+    stage(750, fo.trees.map(function (q) { return q.slice().reverse(); }), true, 2, 'thin');
     var root;
     if (!geo) {
       var path = pruned.querySelector('polyline.path').getAttribute('points').split(' ').map(function (q) { return q.split(',').map(Number); }).reverse();
-      stage(250, [[[X, TIP], path[0]]], false);
+      stage(700, fo.trees.map(function (q) { return [q[0], [X, TIP], path[0]]; }), false, 2.2);
       stage(1700, [path], true, 3.2);
       root = path[path.length - 1];
     } else {
       // up each layer to its root; the root is signed by the key of the layer above: walk its chains to their
       // ends, which hash into that layer's leaf
       var low = geo[geo.length - 1];
-      stage(250, [[[X, TIP], low.leaf]], false);
+      stage(700, fo.trees.map(function (q) { return [q[0], [X, TIP], low.leaf]; }), false, 2.2);
       for (var i = geo.length - 1; i >= 0; i--) {
         var l = geo[i];
         stage(500 + 70 * l.t, [l.nodes.slice().reverse()], true, i === 0 ? 3.2 : 2.6);
