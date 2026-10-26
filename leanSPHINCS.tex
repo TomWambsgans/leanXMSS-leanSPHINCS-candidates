@@ -216,7 +216,8 @@ selects, and everything else is read from public data.
 and its surrogates of a pruned key. It never builds a few-time signature.
 \begin{enumerate}
   \item coin tossing: $P$ (and the surrogates of a pruned key)
-  \item the key of $F$ (hash-based: each seed by commit-reveal among its holders; lattice-based: a verifiable
+  \item the key of $F$ (hash-based: each seed by commit-reveal among its holders, the commitments broadcast, else a
+        holder could give different seeds to the others, which only aborts signings; lattice-based: a verifiable
         Shamir sharing of $\mathit{msk}$), and the pairwise keys $k_{ij}$
   \item MPC: the WOTS$^+$C chains of every leaf of the top layer (or of the kept subtree); open the chain ends, then build the
         tree in the clear, and publish the other chain values masked under $F$, as for the forest, so that a WOTS$^+$C
