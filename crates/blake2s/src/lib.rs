@@ -71,8 +71,8 @@ pub const fn compressions(len: usize) -> u64 {
     if len == 0 { 1 } else { len.div_ceil(BLOCK) as u64 }
 }
 
-/// Streaming BLAKE2s-256. A full block is compressed only once more input arrives: the last block
-/// must carry the final flag.
+/// Streaming BLAKE2s-256. A full block is compressed only once more input arrives (the last block
+/// must carry the final flag), or on [`Hasher::flush`].
 #[derive(Clone)]
 pub struct Hasher {
     h: [u32; 8],
@@ -101,6 +101,17 @@ impl Hasher {
             self.buf[self.buf_len..self.buf_len + take].copy_from_slice(&data[..take]);
             self.buf_len += take;
             data = &data[take..];
+        }
+        self
+    }
+
+    /// Compresses a full buffered block now, for a caller that will add more input: the states cloned
+    /// from this one then pay only for what follows.
+    pub fn flush(&mut self) -> &mut Self {
+        if self.buf_len == BLOCK {
+            self.t += BLOCK as u64;
+            compress(&mut self.h, &self.buf, self.t, false);
+            self.buf_len = 0;
         }
         self
     }
@@ -165,6 +176,18 @@ mod tests {
             h.update(&data[..split]).update(&data[split..]);
             assert_eq!(h.finalize(), hash(&data), "split at {split}");
         }
+    }
+
+    /// A flushed full block is compressed once: the clones keep only the input that follows.
+    #[test]
+    fn flush_compresses_a_full_block() {
+        let data = pattern(BLOCK + 16);
+        let mut h = Hasher::new();
+        h.update(&data[..BLOCK]).flush();
+        assert_eq!((h.buf_len, h.t), (0, BLOCK as u64));
+        assert_eq!(h.clone().update(&data[BLOCK..]).finalize(), hash(&data));
+        h.update(&data[BLOCK..BLOCK + 1]).flush();
+        assert_eq!((h.buf_len, h.t), (1, BLOCK as u64), "a partial block stays buffered");
     }
 
     #[test]

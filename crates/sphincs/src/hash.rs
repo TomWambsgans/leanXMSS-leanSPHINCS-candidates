@@ -190,6 +190,14 @@ impl Hasher {
         self
     }
 
+    /// Compresses a full buffered block before more input: Keccak and SHA-256 already have, BLAKE2s
+    /// waits for more input.
+    fn flush(&mut self) {
+        if let Hasher::Blake2s(h) = self {
+            h.flush();
+        }
+    }
+
     fn finalize(&self) -> [u8; 32] {
         match self {
             Hasher::Keccak(h) => h.finalize(),
@@ -274,6 +282,7 @@ impl Midstate {
             hasher.update(part);
             len += part.len();
         }
+        hasher.flush();
         let block = pp.hash.block();
         count_blocks((len / block) as u64);
         Self { hasher, hash: pp.hash, rest: len % block }
