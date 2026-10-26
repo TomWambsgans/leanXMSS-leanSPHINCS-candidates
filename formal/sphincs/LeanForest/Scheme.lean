@@ -170,9 +170,6 @@ def subHeight : Nat := 3
 def childChains : Nat := 6
 /-- The top position of a chain: positions `0 .. 4`. -/
 def chainTop : Nat := 4
-/-- The deficit sum of a codeword. -/
-def codewordSum : Nat := 5
-
 abbrev Coord := Fin forestCoords
 abbrev SuperIdx := Fin (2 ^ topHeight)
 abbrev SubIdx := Fin 2
@@ -193,13 +190,6 @@ abbrev LutIdx := Fin 256
 def layerHeight (lay : Layer) : Nat := if lay.val = 0 then maxLayerHeight else lowerHeight
 
 def topLayer : Layer := ⟨0, Params.numLayers_pos⟩
-
-/-- The bottom layer, whose WOTS+C keys sign the forest keys. -/
-def bottomLayer : Layer := ⟨numLayers - 1, Nat.sub_lt Params.numLayers_pos Nat.one_pos⟩
-
-/-- The layer `k` steps above the bottom one (the top layer from `k = numLayers - 1` on): the
-signature lists the layers in that order. -/
-def layerUp (k : Nat) : Layer := ⟨numLayers - 1 - k, by have := Params.numLayers_pos; omega⟩
 
 /-- `sum_{j > lay} h_j`, the index bits below layer `lay`. -/
 def heightBelow (lay : Layer) : Nat := lowerHeight * (numLayers - 1 - lay.val)
@@ -542,12 +532,6 @@ def leafIndexAt (index : Index) (lay : Layer) : LeafIndex :=
     Nat.lt_of_lt_of_le (Nat.mod_lt _ (Nat.two_pow_pos _))
       (Nat.pow_le_pow_right (by decide) (layerHeight_le lay))⟩
 
-/-- A WOTS+C key of the hypertree: its layer, its tree and its leaf in that tree. -/
-abbrev OtsKey := Layer × TreeIndex × LeafIndex
-
-/-- The key of layer `lay` on the path of `idx`. -/
-def keyAt (index : Index) (lay : Layer) : OtsKey := (lay, treeIndexAt index lay, leafIndexAt index lay)
-
 /-! ### The one-time signature -/
 
 /-- A node index at level `0` read as a leaf index. -/
@@ -873,11 +857,6 @@ below it. -/
 def keptPosition (parameter : PublicParameter) (lay : Layer) : Nat :=
   if lay.val = 0 then subtreePosition parameter else 0
 
-/-- A leaf of a layer's tree that its kept part holds: one of the top layer's kept subtree, any leaf
-below the top layer. -/
-def Kept (parameter : PublicParameter) (lay : Layer) (leaf : LeafIndex) : Prop :=
-  leaf.val / 2 ^ keptHeight lay = keptPosition parameter lay
-
 end Pruning
 
 /-- One seed derivation, first 16 bytes: the parameter and the surrogates. -/
@@ -923,13 +902,6 @@ def otsSecrets (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (seed : MasterSeed) : m (ChainIndex → Digest) := do
   let outputs ← sequenceFin fun pair : ChainPair => deriveOutput parameter (.ots lay tree leaf pair) seed
   return fun chainIdx => hashHalf chainIdx.val (outputs (chainPair chainIdx))
-
-/-- The start of one chain of a one-time key, by its own derivation. The signer calls `otsSecrets`;
-this is the value of each of its entries (`Completeness.eval_otsSecrets`). -/
-def otsStart (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
-    (leaf : LeafIndex) (chainIdx : ChainIndex) (seed : MasterSeed) : m Digest := do
-  let output ← deriveOutput parameter (.ots lay tree leaf (chainPair chainIdx)) seed
-  return hashHalf chainIdx.val output
 
 def oneTimePublicKey (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (seed : MasterSeed) : m (ChainIndex → Digest) := do
@@ -1018,21 +990,6 @@ def forestSecrets (parameter : PublicParameter) (index : Index) (c : Coord) (s :
     (j : SubIdx) (a : ChildIdx) (seed : MasterSeed) : m (FChain → Digest) := do
   let outputs ← sequenceFin fun pair : FPair => deriveOutput parameter (.forest index c s j a pair) seed
   return fun i => hashHalf i.val (outputs (fchainPair i))
-
-/-- The start `x_{i,0}` of one chain of a child, by its own derivation. The signer calls
-`forestSecrets`; this is the value of each of its entries (`Completeness.eval_forestSecrets`). -/
-def forestStart (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
-    (a : ChildIdx) (i : FChain) (seed : MasterSeed) : m Digest := do
-  let output ← deriveOutput parameter (.forest index c s j a (fchainPair i)) seed
-  return hashHalf i.val output
-
-/-- The forest chain value `x_{i,pos}` of a child, by its own derivation. The signer computes the 6
-chains of a child from one call of `forestSecrets` (`childLeaf`, `coordOpen`); this is the value of
-each of them. -/
-def chainValue (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
-    (a : ChildIdx) (i : FChain) (seed : MasterSeed) (pos : Nat) : m Digest := do
-  let secret ← forestStart parameter index c s j a i seed
-  forestWalk parameter index c s j a i 0 pos secret
 
 /-- The leaf of a child, from its 6 chain tops. -/
 def childLeaf (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
@@ -1153,15 +1110,6 @@ def signDigestLoop (secretKey : SecretKey) (message : Message) (step : Randomnes
       match ← signAttempt secretKey message randomness with
       | some index => return some (randomness, index)
       | none => signDigestLoop secretKey message step attempts (randomness + step)
-
-/-- Assemble the signature once a randomizer lands: the digest, the forest opening and the layers. -/
-def finishSign (sk : SecretKey) (message : Message) (randomness : Randomness) :
-    OracleComp HashSpec (Option Signature) := do
-  let digest ← messageDigest sk.parameter sk.root message randomness
-  let index := digestIndex digest
-  let opening ← forestOpen sk.parameter index (digestMarks digest) sk.seed
-  let some layers ← sequenceLayers (fun lay => signLayer sk index lay) | return none
-  return some ⟨randomness, opening, layers⟩
 
 /-- `Sign`: derive the randomizer base `R0` and the step `delta` of the message (one hash), scan
 `R0, R0 + delta, ...` into the kept subtree, compute the digest, open the forest, and at every layer

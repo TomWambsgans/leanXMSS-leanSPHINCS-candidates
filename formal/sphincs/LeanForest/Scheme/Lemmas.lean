@@ -1,12 +1,82 @@
 import LeanForest.Scheme
 
-/-! Facts about the specification (`Scheme.lean`): the codeword table is a rule
-(`codewordCodes_eq_rule`), the randomizer walk does not come back within `2^128` steps
-(`walk_iterate_ne`), and the bounds that the parameters (`Params`) give. -/
+/-! Facts about the specification (`Scheme.lean`): the definitions that only the proofs use, the
+codeword table as a rule (`codewordCodes_eq_rule`), the randomizer walk, which does not come back
+within `2^128` steps (`walk_iterate_ne`), and the bounds that the parameters (`Params`) give. -/
 
 namespace LeanForest
 
 variable [Params]
+
+/-! ### Definitions of the proofs
+
+Values that the specification does not use but the proofs name: the codeword sum, the bottom layer,
+the order of the layers in a signature, the key on the path of an index, the kept leaves, the start
+and the values of a single chain, and the end of a signature once a randomizer lands. -/
+
+/-- The deficit sum of a codeword. -/
+def codewordSum : Nat := 5
+
+/-- The bottom layer, whose WOTS+C keys sign the forest keys. -/
+def bottomLayer : Layer := ⟨numLayers - 1, Nat.sub_lt Params.numLayers_pos Nat.one_pos⟩
+
+/-- The layer `k` steps above the bottom one (the top layer from `k = numLayers - 1` on): the
+signature lists the layers in that order. -/
+def layerUp (k : Nat) : Layer := ⟨numLayers - 1 - k, by have := Params.numLayers_pos; omega⟩
+
+/-- A leaf of a layer's tree that its kept part holds: one of the top layer's kept subtree, any leaf
+below the top layer. -/
+def Kept (parameter : PublicParameter) (lay : Layer) (leaf : LeafIndex) : Prop :=
+  leaf.val / 2 ^ keptHeight lay = keptPosition parameter lay
+
+namespace Concrete
+
+/-- A WOTS+C key of the hypertree: its layer, its tree and its leaf in that tree. -/
+abbrev OtsKey := Layer × TreeIndex × LeafIndex
+
+/-- The key of layer `lay` on the path of `idx`. -/
+def keyAt (index : Index) (lay : Layer) : OtsKey := (lay, treeIndexAt index lay, leafIndexAt index lay)
+
+end Concrete
+
+namespace Seeded
+
+open Concrete
+
+variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
+
+/-- The start of one chain of a one-time key, by its own derivation. The signer calls `otsSecrets`;
+this is the value of each of its entries (`Completeness.eval_otsSecrets`). -/
+def otsStart (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (chainIdx : ChainIndex) (seed : MasterSeed) : m Digest := do
+  let output ← deriveOutput parameter (.ots lay tree leaf (chainPair chainIdx)) seed
+  return hashHalf chainIdx.val output
+
+/-- The start `x_{i,0}` of one chain of a child, by its own derivation. The signer calls
+`forestSecrets`; this is the value of each of its entries (`Completeness.eval_forestSecrets`). -/
+def forestStart (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
+    (a : ChildIdx) (i : FChain) (seed : MasterSeed) : m Digest := do
+  let output ← deriveOutput parameter (.forest index c s j a (fchainPair i)) seed
+  return hashHalf i.val output
+
+/-- The forest chain value `x_{i,pos}` of a child, by its own derivation. The signer computes the 6
+chains of a child from one call of `forestSecrets` (`childLeaf`, `coordOpen`); this is the value of
+each of them. -/
+def chainValue (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
+    (a : ChildIdx) (i : FChain) (seed : MasterSeed) (pos : Nat) : m Digest := do
+  let secret ← forestStart parameter index c s j a i seed
+  forestWalk parameter index c s j a i 0 pos secret
+
+/-- Assemble the signature once a randomizer lands: the digest, the forest opening and the layers. -/
+def finishSign (sk : SecretKey) (message : Message) (randomness : Randomness) :
+    OracleComp HashSpec (Option Signature) := do
+  let digest ← messageDigest sk.parameter sk.root message randomness
+  let index := digestIndex digest
+  let opening ← forestOpen sk.parameter index (digestMarks digest) sk.seed
+  let some layers ← sequenceLayers (fun lay => signLayer sk index lay) | return none
+  return some ⟨randomness, opening, layers⟩
+
+end Seeded
 
 /-! ### The codeword table -/
 
