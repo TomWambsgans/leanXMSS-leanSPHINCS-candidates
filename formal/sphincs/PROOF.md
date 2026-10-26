@@ -117,9 +117,10 @@ landing probability of a digest is p = 2^-(h−b).
    weight ([BridgeSatW](LeanForest/BridgeSatW.lean), [BridgeSatWForest](LeanForest/BridgeSatWForest.lean)),
    so the baseline is about 2^-127(1 − x); hits cost at most 1 − (1 − x)^2 in total
    (`det_largeW`, [BridgeSatWRoutes](LeanForest/BridgeSatWRoutes.lean)). Chernoff-split covers
-   (`checkCoverW`, [BridgeDetW](LeanForest/BridgeDetW.lean)) bound every budget from q_h up to about
-   0.249·2^128, then one heavy cover (`checkCoverH`, N + 1 signatures,
-   [BridgeHeavyCert](LeanForest/BridgeHeavyCert.lean)) the rest. The keygen credit K enters the
+   (`checkCoverW`, [BridgeDetW](LeanForest/BridgeDetW.lean)) bound every budget from q_h: for the full
+   and layered keys one cover reaches 2^127; for a pruned key they reach about 0.249·2^128, then one
+   heavy cover (`checkCoverH`, N + 1 signatures, [BridgeHeavyCert](LeanForest/BridgeHeavyCert.lean))
+   bounds the rest. The keygen credit K enters the
    entries of a cover: q' + K is the actual budget.
 
 6. **Closing.** `ForestPotential.det_bitsFH` ([BridgeHeavyCert](LeanForest/BridgeHeavyCert.lean))

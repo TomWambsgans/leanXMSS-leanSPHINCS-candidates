@@ -209,8 +209,8 @@ Keccak-256 at `h = 24` and one layer that is 265 permutations: 1 for the 80-byte
 for the forest, 104 for WOTS+C and the path (3 for the encoding of the key, 69 chain steps, 8 for the
 leaf and 24 nodes). The forest is 20 per tree (`compressions_coordRecover`: in each of the two
 subtrees 5 chain steps, 1 for the WOTS-key leaf and 2 folds; 1 for the tree leaf; 3 folds), times 8.
-The key is not hashed. Each layer above adds 1 for the encoding of a root, 69 chain steps and 8 for
-the leaf, and its 6 path nodes replace 6 of the bottom tree's. `Configurations.lean` states the size
+The key is not hashed. Each further layer adds 1 for the encoding of a root, 69 chain steps and 8 for
+the leaf; the path nodes of all layers are `h` in total. `Configurations.lean` states the size
 and the three costs of each of the 8 shapes.
 
 Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
@@ -232,7 +232,7 @@ Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
 | signature after the scan (`hashCalls_finishSign_exact`) | `1 + 58,960 + Σ_layers (message + counter search + 155 + path)` |
 
 The message of the bottom key is the forest key (59,120 calls); the message of a key above is the root
-of the tree below (`226 · 2^6 − 1` calls). Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less, and without the key
+of the tree below (`226 · 2^l − 1` calls for a lower layer of height `l`, 6 to 8). Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less, and without the key
 hash the key costs 1 call less: the forest key went from 59,385 to 59,120 calls, the opening from
 59,200 to 58,960 and the fixed part of a signature from 118,586 to 118,081 (`1 + 58,960 + 59,120`; the
 signer's tick is 118,080 after the digest call). A counter of the encoding search is one hash call,
