@@ -1,9 +1,9 @@
 import LeanForest.BridgeInterp
 
-/-! Fixing the answer to an untargeted, unparsed outside input in advance commutes with the
-interpreted lazy comparison: the lazy oracle would draw the same uniform value on first use.
-The forest potentials use this to treat the unknown blocks of partially queried digest pairs as
-already sampled. -/
+/-! Storing the answer to an untargeted, unparsed outside input changes neither the debts nor the
+realized values of the interpreted lazy comparison (`debts_store_untargeted`,
+`realized_store_untargeted`), and the cost of one ordinary step (`ordinaryStep`,
+`costStep_ordinary`). -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -57,7 +57,7 @@ theorem realized_store_untargeted (state : DebtState D R ι) (x : D) (u : R) (hk
     exact ⟨input, out, value, by simpa [DebtState.store, QueryCache.cacheQuery_of_ne _ _ hne] using hcache,
       hinit, hkind, htrunc⟩
 
-/-! ### Commuting with every comparison step -/
+/-! ### The ordinary step -/
 
 /-- The ordinary-query step, read off the exposed coordinates. -/
 noncomputable def ordinaryStep (bytes : D) (known : Knowledge ι) (state : DebtState D R ι) :

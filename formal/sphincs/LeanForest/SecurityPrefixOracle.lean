@@ -4,10 +4,9 @@ import LeanForest.SecurityDomains
 import LeanForest.Base.Prelude
 
 /-!
-An exact candidate-byte oracle split for one hidden WOTS prefix. Adapted from leanVM's
-OtsPrefixOracle; the candidate has 64 chains and three hash steps per chain. Outside queries
-and the unused high 128 output bits remain explicit, so erasure cannot silently discard
-adversary-visible information.
+A hash output as its low 128 bits (the digest the scheme keeps) and its unused high bits
+(`combine`, `split_combine`, `combine_split`), so a sampled output can be split without losing the
+part the adversary sees. Adapted from leanVM's OtsPrefixOracle.
 -/
 
 open OracleComp OracleSpec
@@ -16,14 +15,6 @@ namespace LeanForest.Security.Prefix
 
 variable [Params]
 open Concrete
-
-structure Segment where
-  parameter : PublicParameter
-  lay : Layer
-  tree : TreeIndex
-  leaf : LeafIndex
-  chainIdx : ChainIndex
-  digit : Digit
 
 abbrev High := BitVec (hashOutputBits - digestBits)
 

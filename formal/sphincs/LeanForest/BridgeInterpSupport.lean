@@ -245,8 +245,6 @@ theorem interp_reveals {allowed : ι → Prop} {α : Type} (computation : Oracle
         rw [hout] at hc
         cases hc
 
-/-! ### Presampling only helps monotone final values -/
-
 /-! ### Decomposing a sequential run -/
 
 omit [Fintype ι] in

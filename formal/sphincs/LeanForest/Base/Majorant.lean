@@ -1,9 +1,8 @@
 import LeanForest.Base.Virtual
 import Mathlib
 
-/-! Poisson domination of the joint factorial moments of the virtual future by a product of
-Charlier polynomials (`chProd`), which satisfies the slot and creation recursions with `≤`. Generic
-in the view type `V` and the index map `idx`. -/
+/-! The count of views per index (`cnt`) and the statement that a fresh view has a uniform index
+(`UniformIndex`). Generic in the view type `V` and the index map `idx`. -/
 
 open ENNReal
 

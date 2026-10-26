@@ -282,8 +282,4 @@ theorem checkSmallF_sound {H b N qh : ℕ} {ρ cthr B c : ℚ} (h : checkSmallF 
     Rat.cast_ofNat, Rat.cast_one] at r1 r2 r3 r4 r5 r8 r11 r12
   exact ⟨⟨r1, r2, r3, r4, r5⟩, h6, h7, r8, h9, h10, r11, r12⟩
 
-/-! ### A chain of covers -/
-
-/-! ### Both routes -/
-
 end LeanForest.Security.ForestPotential

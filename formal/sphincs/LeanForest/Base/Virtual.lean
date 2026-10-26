@@ -112,8 +112,6 @@ theorem itemCoins_cons (w : V) (items : List V) :
 
 end Items
 
-/-! ### What a signing call discloses -/
-
 /-! ### Linearity and order in the base function -/
 
 section Linear

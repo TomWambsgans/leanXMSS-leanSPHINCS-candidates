@@ -156,20 +156,7 @@ theorem eLowQ_le : (eLowQ : ℝ) ≤ Real.exp 1 := by
   norm_num at h ⊢
   linarith
 
-/-! ### The Poisson table -/
-
-/-- The Poisson table of a certificate: rate bound `μ̄ = m / 2^64`, weight bounds `pm[n] / 2^P`
-for `n ≤ n1 + 1` (`n1 + 2 = pm.length`), `J` series terms for `e^μ̄`, and the tail bound `T`. -/
-structure PoisTable where
-  m : ℕ
-  P : ℕ
-  J : ℕ
-  pm : List ℕ
-  T : ℚ
-
-namespace PoisTable
-
-end PoisTable
+/-! ### The Poisson weight -/
 
 /-- The Poisson weight as a real number. -/
 noncomputable def pR (μ : ℝ) (n : ℕ) : ℝ := Real.exp (-μ) * μ ^ n / n.factorial
@@ -185,22 +172,7 @@ theorem pR_succ (μ : ℝ) (n : ℕ) : pR μ (n + 1) = pR μ n * μ / (n + 1) :=
 
 theorem poisW_eq_pR (μ : ℝ≥0) (n : ℕ) : poisW μ n = ENNReal.ofReal (pR μ n) := rfl
 
-/-! ### Evaluating one-leaf Poisson means -/
-
 /-! ### Options -/
-
-/-- An option: cap `c1`, Chernoff parameter `θ`, `s` squarings for the exponential bounds, the
-threshold `cthr` it is valid above, a bound `eC` for `e^{θ c1}`, and the claimed bounds `Eh` for
-`E[(κ K^24 - c1)^+]`, `Ee` for `E[e^{θ min(κ K^24, c1)}] - 1` and `B` for the H-term. -/
-structure OptS where
-  c1 : ℚ
-  θ : ℚ
-  s : ℕ
-  cthr : ℚ
-  eC : ℚ
-  Eh : ℚ
-  Ee : ℚ
-  B : ℚ
 
 /-- `ofReal x ^ (2^b) ≤ ofReal (sqUp P b x)`. -/
 theorem ofReal_pow_le_sqUp (P b : ℕ) (x : ℚ) :
@@ -212,7 +184,5 @@ theorem ofReal_pow_le_sqUp (P b : ℕ) (x : ℚ) :
   · have hx' : (x : ℝ) ≤ 0 := by exact_mod_cast hx
     rw [ENNReal.ofReal_of_nonpos hx', zero_pow (by positivity)]
     exact bot_le
-
-/-! ### The forest H-term at a general threshold -/
 
 end LeanForest.Base.H0

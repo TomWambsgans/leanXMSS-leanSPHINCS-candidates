@@ -44,8 +44,6 @@ theorem list_sum_ne_top (values : List ℝ≥0∞) (h : ∀ v ∈ values, v ≠ 
       rw [List.sum_cons]
       exact ENNReal.add_ne_top.2 ⟨h _ (List.mem_cons_self ..), ih fun v hv => h v (List.mem_cons_of_mem _ hv)⟩
 
-/-! ### Gains -/
-
 /-! ### Averages over fresh views -/
 
 section Slot

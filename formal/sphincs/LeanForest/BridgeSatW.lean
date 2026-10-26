@@ -391,8 +391,6 @@ theorem saturationW_start (total : ℕ) (htotal : (total : ℝ) + 1 < spaceReal)
 
 end SatW
 
-/-! ### Two reads, weighted -/
-
 /-! ### The weighted baseline -/
 
 /-- The weighted baseline payment per digest query for a total budget `q`:

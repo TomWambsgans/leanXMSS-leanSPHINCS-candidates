@@ -17,8 +17,6 @@ set_option linter.unusedSectionVars false
 
 variable {ι : Type} [DecidableEq ι] [Fintype ι]
 
-/-! ### The excess as a count function -/
-
 /-! ### The pointwise split majorant -/
 
 /-- **Chernoff.** `M - c ≤ e^{-θ c} / (e θ) e^{θ M}` for `θ > 0`. -/
@@ -144,7 +142,5 @@ theorem poisIID_sepProd (a : ℝ≥0) (g : ℕ → ℝ≥0∞) :
   rw [poisList_sepProd a _ (Finset.nodup_toList _) (fun _ => g)]
   simp only [Finset.mem_toList, Finset.mem_univ, if_true, Pi.zero_apply, pois1_zero, Finset.prod_const,
     Finset.card_univ]
-
-/-! ### The split bound of the one-coin H-term -/
 
 end LeanForest.Base.H0
