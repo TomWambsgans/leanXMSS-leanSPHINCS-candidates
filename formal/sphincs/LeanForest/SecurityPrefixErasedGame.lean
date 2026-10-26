@@ -10,7 +10,7 @@ namespace LeanForest.Security.Prefix
 variable [Params]
 open Concrete Completeness SeedModel PreparedScheme MaterialGameCoupling
 open SeedCoupling
-open SphincsSecurity.QueryCap
+open QueryCap
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxHeartbeats 40000

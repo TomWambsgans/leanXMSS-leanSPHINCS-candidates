@@ -1,5 +1,4 @@
 import LeanForest.Base.Majorant
-import SphincsSecurity.Proof.Base.BinomialMoments
 
 /-! The count price `Z(D) = Σ_l κ cnt_l^24` of a multiset of views, generic in the view type, and
 the Touchard polynomials `T_n(μ) = E[Poisson(μ)^n]`. -/

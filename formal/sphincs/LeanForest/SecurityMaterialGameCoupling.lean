@@ -116,7 +116,7 @@ theorem sourceRun_bind {α β : Type} (first : OracleComp OracleWorld α)
       let a ← sourceRun first cache
       let b ← sourceRun (next a.1.1) a.2
       return ((b.1.1, a.1.2 + b.1.2), b.2)) := by
-  simp only [sourceRun, countHashQueries, SphincsSecurity.QueryCap.counted_bind,
+  simp only [sourceRun, countHashQueries, QueryCap.counted_bind,
     simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure]
 
 theorem targetRun_bind {α β : Type} (first : OracleComp PreparedWorld α)
@@ -125,7 +125,7 @@ theorem targetRun_bind {α β : Type} (first : OracleComp PreparedWorld α)
       let a ← targetRun first cache
       let b ← targetRun (next a.1.1) a.2
       return ((b.1.1, a.1.2 + b.1.2), b.2)) := by
-  simp only [targetRun, countPreparedQueries, SphincsSecurity.QueryCap.counted_bind,
+  simp only [targetRun, countPreparedQueries, QueryCap.counted_bind,
     simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure]
 
 theorem Related.pure' {α : Type} (known : QueryCache HashSpec) (value : α) :
@@ -243,7 +243,7 @@ theorem targetRun_map {α β : Type} (f : α → β) (computation : OracleComp P
     (cache : QueryCache HashSpec) :
     targetRun (f <$> computation) cache =
       (fun result => ((f result.1.1, result.1.2), result.2)) <$> targetRun computation cache := by
-  simp only [targetRun, countPreparedQueries, SphincsSecurity.QueryCap.counted_map,
+  simp only [targetRun, countPreparedQueries, QueryCap.counted_map,
     simulateQ_map, StateT.run_map]
 
 theorem Related.bind_on_support {α β : Type} {known : QueryCache HashSpec}

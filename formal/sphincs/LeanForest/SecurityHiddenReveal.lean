@@ -1,6 +1,6 @@
 import LeanForest.Uniform
 import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
-import SphincsSecurity.Proof.Base.QueryCap
+import LeanForest.Base.Prelude
 
 /-! Reveal/guess experiments on independently sampled candidate digest coordinates. The exposed
 coordinates form a knowledge cache and `completion` samples the others uniformly; revealing a

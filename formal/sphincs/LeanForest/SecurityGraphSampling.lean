@@ -1,5 +1,5 @@
 import LeanForest.SecurityGraphCache
-import SphincsSecurity.Proof.Hypertree.FiniteGraphReplay
+import LeanForest.Base.Prelude
 
 /-! Actual lazy-oracle graph preparation equals independent full-output labels followed by
 canonical cache programming. Pruned positions keep their initial boundary labels. -/
@@ -117,7 +117,7 @@ theorem evalDist_samplePrepare_eq_uniform (positions : List Position) (hnodup : 
         ($ᵗ CanonicalGraphLabels) (by simp) (pure (labels, cache))).symm
   | cons position rest ih =>
       obtain ⟨hposition, hrest⟩ := List.nodup_cons.mp hnodup
-      have hextract := SphincsSecurity.Concrete.FiniteGraphSampling.evalDist_table_extract position
+      have hextract := FiniteGraphSampling.evalDist_table_extract position
         (fun answers output => pure (replayPrepare parameter otsSecret ftsSecret answers rest
           (Function.update labels position output)
           (cache.cacheQuery (canonicalGraphInput parameter otsSecret ftsSecret position labels) output)))

@@ -1,5 +1,5 @@
 import LeanForest.SecurityPrefixOracle
-import SphincsSecurity.Proof.Base.UniformTableSplit
+import LeanForest.Base.Prelude
 
 /-!
 Chain addresses, secret tables indexed by them, the address of a selected prefix segment, and
@@ -11,7 +11,7 @@ open OracleComp OracleSpec
 namespace LeanForest.Security.Prefix
 
 variable [Params]
-open SphincsSecurity.Concrete.UniformTableSplit
+open UniformTableSplit
 
 attribute [local instance] Classical.propDecidable
 

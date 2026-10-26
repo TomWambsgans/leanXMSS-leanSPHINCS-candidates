@@ -1,5 +1,5 @@
 import LeanForest.SecurityHiddenGraphRows
-import SphincsSecurity.Proof.Base.UniformTableSplit
+import LeanForest.Base.Prelude
 
 /-! Exact independent-coordinate decomposition of the material secret table and the graph's
 full-output labels. Every hidden digest is extracted from a distinct actual sampled answer;
@@ -9,7 +9,7 @@ open OracleComp OracleSpec
 namespace LeanForest.Security.HiddenGraph
 
 variable [Params]
-open Graph SeedModel SphincsSecurity.Concrete.UniformTableSplit
+open Graph SeedModel UniformTableSplit
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 set_option maxHeartbeats 100000

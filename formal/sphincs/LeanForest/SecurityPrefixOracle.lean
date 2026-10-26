@@ -4,7 +4,7 @@ import LeanForest.SecurityTreeWitness
 import LeanForest.SecuritySignatureWitness
 import LeanForest.SecurityDomains
 import LeanForest.Uniform
-import SphincsSecurity.Proof.Chains.PartialChainEndpoint
+import LeanForest.Base.Prelude
 
 /-!
 An exact candidate-byte oracle split for one hidden WOTS prefix. Adapted from leanVM's

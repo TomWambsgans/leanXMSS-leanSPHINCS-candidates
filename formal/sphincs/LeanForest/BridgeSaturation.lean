@@ -1,6 +1,5 @@
 import LeanForest.BridgeDebt
 import LeanForest.SecurityHiddenCost
-import SphincsSecurity.Proof.Fts.PrimitiveMessagePotential
 
 /-! A saturating potential on the lazy comparison. Every hash input has at most one target:
 none, a fixed digest, or the table value of a hidden coordinate. A guess at an unexposed

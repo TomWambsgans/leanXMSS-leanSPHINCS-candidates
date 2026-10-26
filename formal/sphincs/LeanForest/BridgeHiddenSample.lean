@@ -11,7 +11,7 @@ namespace LeanForest.Security.HiddenBridge
 variable [Params]
 
 open Completeness SeedModel Graph Assembly Reduce HiddenGraph
-open SphincsSecurity.Concrete.UniformTableSplit
+open UniformTableSplit
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000

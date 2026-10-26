@@ -646,7 +646,7 @@ theorem run_compileWorld {α : Type} (seed : MasterSeed) (material : Material)
 /-- Both ordinary hash queries and virtual derivation queries count; private draws do not. -/
 noncomputable def countPreparedQueries {α : Type} (computation : OracleComp PreparedWorld α) :
     OracleComp PreparedWorld (α × Nat) :=
-  SphincsSecurity.QueryCap.counted
+  QueryCap.counted
     (fun input : PreparedWorld.Domain => input matches .inr _) computation
 
 noncomputable def preparedCountedOracle := preparedRom.withAddCost
@@ -654,7 +654,7 @@ noncomputable def preparedCountedOracle := preparedRom.withAddCost
 
 theorem counted_query {I : Type} {spec : OracleSpec I} (selected : I → Prop)
     [DecidablePred selected] (input : spec.Domain) :
-    SphincsSecurity.QueryCap.counted selected (liftM (spec.query input)) =
+    QueryCap.counted selected (liftM (spec.query input)) =
       (fun answer => (answer, if selected input then 1 else 0)) <$>
         (liftM (spec.query input) : OracleComp spec _) := by
   change (do
@@ -670,7 +670,7 @@ theorem countPrepared_compileWorld_query (seed : MasterSeed) (material : Materia
         compileWorld seed material input := by
   cases input with
   | inl input =>
-      change SphincsSecurity.QueryCap.counted _
+      change QueryCap.counted _
         (liftM (PreparedWorld.query (.inl input))) = _
       exact counted_query (spec := PreparedWorld) _ (.inl input)
   | inr input =>
@@ -679,15 +679,15 @@ theorem countPrepared_compileWorld_query (seed : MasterSeed) (material : Materia
       unfold compileHash
       cases htable : programCache ∅ seed material input with
       | none =>
-          change SphincsSecurity.QueryCap.counted _
+          change QueryCap.counted _
             (liftM (PreparedWorld.query (.inr (.inl input)))) = _
           exact counted_query (spec := PreparedWorld) _ (.inr (.inl input))
       | some output =>
           simp only [liftM_bind, liftM_pure]
-          change SphincsSecurity.QueryCap.counted _
+          change QueryCap.counted _
             (liftM (PreparedWorld.query (.inr (.inr ()))) >>= fun _ => pure output) = _
-          rw [SphincsSecurity.QueryCap.counted_query_bind]
-          simp only [SphincsSecurity.QueryCap.counted_pure, pure_bind, Nat.add_zero, map_bind, map_pure]
+          rw [QueryCap.counted_query_bind]
+          simp only [QueryCap.counted_pure, pure_bind, Nat.add_zero, map_bind, map_pure]
           rfl
 
 /-- Compiling an instrumented computation equals instrumenting the compiled computation.
@@ -701,7 +701,7 @@ theorem countPrepared_compileWorld {α : Type} (seed : MasterSeed) (material : M
   | query_bind input next ih =>
       simp only [simulateQ_bind, simulateQ_spec_query, countHashQueries_query_bind,
         simulateQ_pure]
-      rw [countPreparedQueries, SphincsSecurity.QueryCap.counted_bind]
+      rw [countPreparedQueries, QueryCap.counted_bind]
       change (countPreparedQueries (compileWorld seed material input) >>= _) = _
       rw [countPrepared_compileWorld_query, bind_map_left]
       apply bind_congr
@@ -713,7 +713,7 @@ theorem countPrepared_compileWorld {α : Type} (seed : MasterSeed) (material : M
 theorem simulateQ_countPreparedQueries {α : Type} (computation : OracleComp PreparedWorld α) :
     simulateQ preparedRom (countPreparedQueries computation) =
       (simulateQ preparedCountedOracle computation).run := by
-  rw [countPreparedQueries, SphincsSecurity.QueryCap.simulate_withCost]
+  rw [countPreparedQueries, QueryCap.simulate_withCost]
   congr 2
   funext input
   cases input <;> rfl

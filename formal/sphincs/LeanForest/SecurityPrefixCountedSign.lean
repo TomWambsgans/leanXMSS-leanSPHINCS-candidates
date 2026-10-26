@@ -9,7 +9,7 @@ open OracleComp OracleSpec
 namespace LeanForest.Security.Prefix
 
 variable [Params]
-open Concrete SphincsSecurity.QueryCap
+open Concrete QueryCap
 
 attribute [local irreducible] encodingAttemptLimit digestAttemptLimit Randomized.finishSign
   Seeded.signAttempt

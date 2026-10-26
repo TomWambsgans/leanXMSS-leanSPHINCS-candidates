@@ -1,7 +1,7 @@
 import LeanForest.SecuritySeedModel
 import LeanForest.World
 import LeanForest.Statement
-import SphincsSecurity.Proof.Base.QueryCap
+import LeanForest.Base.Prelude
 import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 
 /-! Finite fresh-table preparation and the candidate's parameter-dependent derivation table.
@@ -562,11 +562,11 @@ theorem evalDist_prepared_continuation {α : Type} (computation : OracleComp Ora
 /-- Pure instrumentation counts all hash calls, including cached calls, and no private draws. -/
 noncomputable def countHashQueries {α : Type} (computation : OracleComp OracleWorld α) :
     OracleComp OracleWorld (α × Nat) :=
-  SphincsSecurity.QueryCap.counted (fun input : OracleWorld.Domain => input matches .inr _) computation
+  QueryCap.counted (fun input : OracleWorld.Domain => input matches .inr _) computation
 
 theorem simulateQ_countHashQueries {α : Type} (computation : OracleComp OracleWorld α) :
     simulateQ romImpl (countHashQueries computation) = (simulateQ countedOracle computation).run := by
-  rw [countHashQueries, SphincsSecurity.QueryCap.simulate_withCost]
+  rw [countHashQueries, QueryCap.simulate_withCost]
   congr 2
   funext input
   cases input <;> rfl
@@ -608,7 +608,7 @@ theorem countHashQueries_sampling_bind {α β : Type} (sampling : ProbComp α)
     (next : α → OracleComp OracleWorld β) :
     countHashQueries ((liftM sampling : OracleComp OracleWorld α) >>= next) =
       (liftM sampling : OracleComp OracleWorld α) >>= fun value => countHashQueries (next value) := by
-  rw [countHashQueries, SphincsSecurity.QueryCap.counted_bind]
+  rw [countHashQueries, QueryCap.counted_bind]
   change (countHashQueries (liftM sampling : OracleComp OracleWorld α) >>= _) = _
   rw [countHashQueries_lift_prob, bind_map_left]
   simp only [Nat.zero_add, Prod.mk.eta, bind_pure]
