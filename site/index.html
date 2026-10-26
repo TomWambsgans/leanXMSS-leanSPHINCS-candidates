@@ -145,7 +145,7 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
 }
-#tip.w { white-space: normal; width: max-content; max-width: 32rem; }
+#tip.w { white-space: pre-line; width: max-content; max-width: 32rem; }
 #tip a { color: #fff; text-decoration: underline; }
 .cmp tbody th { font-weight: 500; }
 .cmp tbody tr:first-child > * { padding-top: 0.45rem; }
@@ -310,7 +310,7 @@ footer a + a { margin-left: 1.25rem; }
       <div class="toggles" id="toggles">
         <span class="sl" id="tl-h">Lifetime</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-h" data-key="h"><button type="button" role="radio" data-val="22" aria-label="2 to the 26">2<sup>26</sup></button><button type="button" role="radio" data-val="24" aria-label="2 to the 28">2<sup>28</sup></button><button type="button" role="radio" data-val="26" aria-label="2 to the 30">2<sup>30</sup></button><button type="button" role="radio" data-val="28" aria-label="2 to the 32">2<sup>32</sup></button></div>
-        <span class="sl" id="tl-shape">Mode<span class="info w dn" tabindex="0" data-tip="Pruning: keygen builds only a subtree of 2ᵇ leaves, pseudorandom nodes stand in for the rest, and the signer grinds until its index lands in it (idea: [conduition](https://conduition.io/cryptography/hypertree-pruning/)). A forger must land there too, so the lifetime drops by less than the pruning factor. Security: never reuse a seed under different pruning parameters; derive it as H(seed ‖ parameters). Privacy: the indices reveal the subtree size, hence the kind of signer.">i</span></span>
+        <span class="sl" id="tl-shape">Mode<span class="info w dn" tabindex="0" data-tip="Pruning: Use a single, large, XMSS tree. Weak devices only construct a subtree of 2ᵇ leaves, and use pseudorandom nodes for the rest, and signing grinds until its index lands in it (An idea from [conduition](https://conduition.io/cryptography/hypertree-pruning/)). Verifier algo is unaffected.&#10;&#10;Security: never reuse a seed under different pruning parameters; derive it as H(seed ‖ parameters).&#10;&#10;Privacy: one can always select the leaf indexes of the non-pruned FTS at (pseudo)random, but signing a lot will always eventually leak the pruning size. Partial remediation: keep a semi-trusted state S of the previously signed FTS, and never reuse a FTS of S while |S| &lt; 2ᵇ⁻¹. This essentially gives 2ᵇ⁻¹ signatures with no privacy leak. The state is semi-trusted, because an adversary controlling it can: leak the pruning size, and reduce the lifetime by a factor of 2.">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-shape" data-key="shape"><button type="button" role="radio" data-val="layered">Uniform</button><button type="button" role="radio" data-val="pruned">Pruning</button></div>
         <span class="sl" id="tl-hash">Hash</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-hash" data-key="hash"><button type="button" role="radio" data-val="Keccak-256">Keccak-256</button><button type="button" role="radio" data-val="BLAKE2s">BLAKE2s</button><button type="button" role="radio" data-val="SHA-256">SHA-256</button></div>
