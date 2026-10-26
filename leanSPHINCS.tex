@@ -220,21 +220,21 @@ and its surrogates of a pruned key. It never builds a few-time signature.
         tree in the clear
 \end{enumerate}
 
-\paragraph{Preprocessing (before the message).} Pick 16 instances (indices) uniformly at random, in the kept subtree of
+\paragraph{Preprocessing (before the message).} Pick an instance (index) uniformly at random, in the kept subtree of
 a pruned key, from randomness the operators generate securely together (inside the MPC), so that no coalition can bias
-or predict it. For each, the MPC generates its forest, publishes the masked chain values as above, and builds in the clear its
+or predict it. The MPC generates its forest, publishes the masked chain values as above, and builds in the clear its
 forest key, the WOTS$^+$C signatures that link it to the top layer (with the trees of the lower layers of a layered key)
-and the authentication paths. A signature consumes one prepared instance, which is then replaced by a fresh one drawn the same way,
-so the preprocessing is one instance per signature.
+and the authentication path. A signature consumes the prepared instance, which is then replaced by a fresh one drawn the
+same way, so the preprocessing is one instance per signature.
 
 \paragraph{Signing (any $t$).}
 \begin{enumerate}
   \item agree on $m$
   \item reveal $F(\mathit{rand}, m)$ (as below); $R_0$ and $\Delta$ are the two halves of
-        $\hash(F(\mathit{rand}, m), m)$, the lowest bit of $\Delta$ set. $R$ depends only on $m$ and the prepared set, so
+        $\hash(F(\mathit{rand}, m), m)$, the lowest bit of $\Delta$ set. $R$ depends only on $m$ and the prepared instance, so
         nobody can bias it, and a retry of $m$ opens the same values
-  \item grind in the clear: the first $R = R_0 + i\Delta$ whose index is one of the 16 prepared instances, about
-        $2^h/16$ attempts
+  \item grind in the clear: the first $R = R_0 + i\Delta$ whose index is the prepared instance, about $2^h$
+        attempts, cheap in the clear
   \item open $F$ at the addresses of the forest chain values the message selects, and only those; check each against
         the published chain
   \item output $R$, the forest opening and the prepared WOTS$^+$C signatures and paths
@@ -280,7 +280,11 @@ output skips most of the last one), $22.6\cdot10^3$ for SHA-256 (the Bristol cir
   \bottomrule
 \end{tabular}
 \end{center}
-Online, signing grinds about $2^h/16$ digests in the clear ($1.05\cdot10^6$ at $h=24$) and opens 44 forest chain values
+Each layer of AND gates costs one communication round: 24 per Keccak-f permutation, and, with ripple-carry adders,
+884 per BLAKE2s and 1\,607 per SHA-256 compression. The chains of every key run in parallel, their steps one after
+another: 3 at key generation and 4 for the forest in preprocessing, then one round opens them, so 73, 2\,653 and
+4\,822 rounds at key generation and 97, 3\,537 and 6\,429 per preprocessing (Keccak-256, BLAKE2s, SHA-256).
+Online, signing grinds about $2^h$ digests in the clear ($1.68\cdot10^7$ at $h=24$) and opens 44 forest chain values
 on average, at most 64: each signer sends one part per value.
 
 \paragraph{Remarks.}

@@ -276,24 +276,27 @@ def site_data():
                 lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
                 prep = C.forest_sign + lower + len(ls) * (V // 2 * C.derive + T * C.step)
                 out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
-                                             keygen=round(keygen), prep=round(prep), grind=2**h // PREPARED,
+                                             keygen=round(keygen), prep=round(prep), grind=2**h // THRESHOLD_PREPARED,
+                                             and_depth=and_depth(H.name), keygen_rounds=rounds(H.name, Q - 1), prep_rounds=rounds(H.name, STEPS),
                                              ledger_prep=round(prep + C.counters(h, shape)),
                                              keygen_gb=keygen * ands * BITS_PER_AND / 8 / 1e9,
                                              prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6))
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
     out["rates"] = DEVICES
-    out["wallet"] = dict(prepared=PREPARED, ledger_prepared={h: wallet_prepared(h) for h in HEIGHTS},
+    out["wallet"] = dict(prepared=THRESHOLD_PREPARED, ledger_prepared={h: wallet_prepared(h) for h in HEIGHTS},
                          ledger_grind={h: 2**h // wallet_prepared(h) for h in HEIGHTS}, stark_verify=STARK_VERIFY, stark_verify_s=STARK_VERIFY_SECONDS, host_rate=HOST_RATE, device_rate=DEVICE_RATE,
                          opened_avg=COORDS * SUBS * sum(nonzero) / len(nonzero), opened_max=COORDS * SUBS * max(nonzero))
     return out
 
 
 # Threshold signing (DKG, no dealer) and hardware wallets, with Keccak-256. The MPC builds the XMSS part only
-# (the top layer, or the kept subtree); before a message it prepares random instances (their forest keys,
-# WOTS+C signatures, lower trees and paths), one per signature, and online the signers grind onto one of
-# PREPARED instances in the clear and open only the forest chain values the message selects.
+# (the top layer, or the kept subtree); before a message it prepares a random instance (its forest key,
+# WOTS+C signatures, lower trees and path), one per signature, and online the signers grind onto it in the
+# clear, about 2^h attempts (cheap in the clear), and open only the forest chain values the message selects.
+THRESHOLD_PREPARED = 1
+# The hardware wallet prepares at least PREPARED instances, and enough that the host grinds and proves at most
+# HOST_GRIND digests.
 PREPARED = 16
-# The hardware wallet prepares enough instances that the host grinds and proves at most HOST_GRIND digests.
 HOST_GRIND = 2**20
 
 
@@ -308,6 +311,53 @@ ANDS = {"Keccak-256": KECCAK_ANDS, "SHA-256": 22_573, "BLAKE2s": 10 * 8 * 6 * 31
 # the semi-honest cost of replicated sharing among three parties (Araki et al., CCS 2016), the malicious check
 # being sublinear (Boyle et al., CCS 2019; Goyal and Song, CRYPTO 2020).
 BITS_PER_AND = 1
+
+
+def and_depth(name):
+    """AND-depth of one compression in the circuits counted in ANDS (XOR and rotations are free): Keccak-f has
+    one layer of AND gates per round; for BLAKE2s and SHA-256, the depth of every bit is followed through the
+    ripple-carry adders, c[i+1] = c[i] ^ ((a[i] ^ c[i]) & (b[i] ^ c[i]))."""
+    if name == "Keccak-256":
+        return 24
+    z = [0] * 32
+    def add(a, b):
+        out, c = [], 0
+        for i in range(32):
+            out.append(max(a[i], b[i], c))
+            c = max(a[i], b[i], c) + 1
+        return out
+    def xor(*ws): return [max(t) for t in zip(*ws)]
+    def rot(w, r): return w[r:] + w[:r]
+    def shr(w, r): return w[r:] + [0] * r
+    def and_(a, b): return [max(x, y) + 1 for x, y in zip(a, b)]
+    if name == "BLAKE2s":
+        v = [z] * 16
+        def g(a, b, c, d):
+            for r1, r2 in ((16, 12), (8, 7)):
+                v[a] = add(add(v[a], v[b]), z); v[d] = rot(xor(v[d], v[a]), r1)
+                v[c] = add(v[c], v[d]); v[b] = rot(xor(v[b], v[c]), r2)
+        for _ in range(10):
+            for q in ((0, 4, 8, 12), (1, 5, 9, 13), (2, 6, 10, 14), (3, 7, 11, 15),
+                      (0, 5, 10, 15), (1, 6, 11, 12), (2, 7, 8, 13), (3, 4, 9, 14)):
+                g(*q)
+        return max(map(max, v))
+    w = [z] * 16
+    for t in range(16, 64):
+        s0 = xor(rot(w[t - 15], 7), rot(w[t - 15], 18), shr(w[t - 15], 3))
+        s1 = xor(rot(w[t - 2], 17), rot(w[t - 2], 19), shr(w[t - 2], 10))
+        w.append(add(add(add(s1, w[t - 7]), s0), w[t - 16]))
+    a = b = c = d = e = f = g_ = h = z
+    for t in range(64):
+        t1 = add(add(add(h, xor(rot(e, 6), rot(e, 11), rot(e, 25))), xor(g_, and_(e, xor(f, g_)))), w[t])
+        t2 = add(xor(rot(a, 2), rot(a, 13), rot(a, 22)), xor(and_(xor(a, b), xor(a, c)), a))
+        h, g_, f, e, d, c, b, a = g_, f, e, add(d, t1), c, b, a, add(t1, t2)
+    return max(map(max, (a, b, c, d, e, f, g_, h)))
+
+
+# Communication rounds of the MPC: one per layer of AND gates, the hash chains of every key in parallel and their
+# steps one after another (Q - 1 at key generation, STEPS for the forest in preprocessing), then one to open.
+def rounds(name, steps):
+    return steps * and_depth(name) + 1
 STARK_VERIFY = 10_000  # compressions to verify the STARK of a least grinding index on the device
 STARK_VERIFY_SECONDS = 3  # assumed time of that verification on the device, whatever the hash
 HOST_RATE = 2**19  # hashes per second the host proves in a STARK (the hash of the configuration): 2 s per 2^20
@@ -344,7 +394,7 @@ def threshold(heights):
             label = f"pruned b={b}" if shape == "pruned" else "layered"
             print(f"  h={h} {label}: keygen MPC {fmt(keygen)} permutations ({gb:.3g} GB per operator); "
                   f"preprocessing {fmt(prep)} per signature ({pm:.0f} MB; on a hardware wallet, which also searches the "
-                  f"WOTS+C counters, {fmt(prep + C.counters(h, shape))}); online grinding {fmt(2 ** h / PREPARED)} attempts")
+                  f"WOTS+C counters, {fmt(prep + C.counters(h, shape))}); online grinding {fmt(2 ** h / THRESHOLD_PREPARED)} attempts")
     print(f"hardware wallet: the device prepares max({PREPARED}, 2^h / 2^{HOST_GRIND.bit_length() - 1}) instances and the host grinds "
           f"2^h / that many digests ({', '.join(f'h={h}: {wallet_prepared(h)} prepared, {fmt(2 ** h / wallet_prepared(h))} digests, '
           f'{2 ** h / wallet_prepared(h) / HOST_RATE:.2g} s to prove' for h in heights)});"
