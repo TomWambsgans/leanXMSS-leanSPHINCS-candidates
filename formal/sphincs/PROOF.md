@@ -182,6 +182,9 @@ for pruned keys ([README.md](README.md)). The remaining loss is structural:
 
 ## Modeling differences and obligations
 
+- For SHA-256, Rust pads P with zeros to a full 64-byte block, so that its compression is computed once
+  per key: the input is P ‖ 0^48 ‖ A ‖ payload instead of P ‖ A ‖ payload. This map from the model's
+  inputs is injective, so distinct model inputs stay distinct; it is argued here, not proved in Lean.
 - Rust's key generation builds the key from one hash of a tag, the configuration and the seed
   (configured_seed in crates/sphincs), so that one seed never gives two configurations the same one-time keys. The model's seed
   is that value, uniform in the random-oracle model; the extra hash is outside the hash-call counts.
