@@ -1148,7 +1148,7 @@ document.addEventListener('pointerdown', function (e) {
     // the Ledger with the host: offline, it prepares np FTS; online, the host grinds onto one of them and proves it in a STARK
     var np = W.ledger_prepared[S.h], g = W.ledger_grind[S.h];
     var assist = function (tt) {
-      return 'Offline: the Ledger prepares ' + np + ' FTS (' + fmt(tt.prep * np) + ' ' + unit() + '); each signature uses one. ' +
+      return 'Offline: the Ledger prepares ' + np + ' FTS (' + fmt(tt.ledger_prep * np) + ' ' + unit() + '); each signature uses one. ' +
         'Online: the host finds the randomizer that lands on one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes) and proves it in a STARK (≈ ' +
         time(g / W.host_rate) + '), which the Ledger verifies (≈ ' + time(W.stark_verify_s) + '). Idea from Riva (riva.xyz).';
     };
@@ -1170,7 +1170,7 @@ document.addEventListener('pointerdown', function (e) {
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
-      set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.prep * np / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
+      set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.ledger_prep * np / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
         time(g / W.host_rate + W.stark_verify_s) + '</span><span class="m-only"><span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span></span></div>');
       document.getElementById('assist-tip').setAttribute('data-tip', assist(tt).replace(/&nbsp;/g, '\u00a0'));
     });

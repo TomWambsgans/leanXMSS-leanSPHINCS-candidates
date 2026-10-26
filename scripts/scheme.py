@@ -140,6 +140,10 @@ class Costs:
         _, fixed, per = self.encoding(self.message_len(layer))
         return fixed + per / ALPHA + V // 2 * self.derive + T * self.step
 
+    def counters(self, h, shape):
+        """The WOTS+C counter searches of a signature (done in the clear by a threshold signer)."""
+        return sum(self.wots_sign(layer) - V // 2 * self.derive - T * self.step for layer in range(len(layers(h, shape))))
+
     def keygen(self, h, shape, b):
         top, bb = layers(h, shape)[0], kept(h, shape, b)
         return (2 * self.H.per_key + self.derive + 2**bb * self.leaf + (2**bb - 1) * self.node
@@ -273,6 +277,7 @@ def site_data():
                 prep = C.forest_sign + lower + len(ls) * (V // 2 * C.derive + T * C.step)
                 out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
                                              keygen=round(keygen), prep=round(prep), grind=2**h // PREPARED,
+                                             ledger_prep=round(prep + C.counters(h, shape)),
                                              keygen_gb=keygen * ands * BITS_PER_AND / 8 / 1e9,
                                              prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6))
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
@@ -338,7 +343,8 @@ def threshold(heights):
             pm = prep * KECCAK_ANDS * BITS_PER_AND / 8 / 1e6
             label = f"pruned b={b}" if shape == "pruned" else "layered"
             print(f"  h={h} {label}: keygen MPC {fmt(keygen)} permutations ({gb:.3g} GB per operator); "
-                  f"preprocessing {fmt(prep)} per signature ({pm:.0f} MB); online grinding {fmt(2 ** h / PREPARED)} attempts")
+                  f"preprocessing {fmt(prep)} per signature ({pm:.0f} MB; on a hardware wallet, which also searches the "
+                  f"WOTS+C counters, {fmt(prep + C.counters(h, shape))}); online grinding {fmt(2 ** h / PREPARED)} attempts")
     print(f"hardware wallet: the device prepares max({PREPARED}, 2^h / 2^{HOST_GRIND.bit_length() - 1}) instances and the host grinds "
           f"2^h / that many digests ({', '.join(f'h={h}: {wallet_prepared(h)} prepared, {fmt(2 ** h / wallet_prepared(h))} digests, '
           f'{2 ** h / wallet_prepared(h) / HOST_RATE:.2g} s to prove' for h in heights)});"
