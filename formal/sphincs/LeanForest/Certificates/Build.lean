@@ -2,8 +2,7 @@ import LeanForest.H0Fill
 import LeanForest.Certificates.Moments
 
 /-! **Certificates checked by construction.** `buildOpt` and `buildOptN` rebuild an option and a near
-certificate from their scalars, as `fillOpt` and `fillOptN` (`H0Fill.lean`) do, but compute the leaf
-tables in integers: the numerators over `2^P` of the rounded-up bounds, from the numerators of the
+certificate from their scalars, computing the leaf tables in integers: the numerators over `2^P` of the rounded-up bounds, from the numerators of the
 moment tables (`Moments.lean`), made convex (`convexZ`), and the Poisson mean of a table as one
 integer sum. Their outputs pass `checkOptF` and `checkOptN` by construction (`checkOptF_build`,
 `checkOptN_build`): the leaf tables are convex majorants of the bounds, the means and the bound are
@@ -26,7 +25,7 @@ def convexGoZ : ℤ → ℤ → List ℤ → List ℤ
   | _, _, [] => []
   | a, b, x :: xs => max x (2 * b - a) :: convexGoZ b (max x (2 * b - a)) xs
 
-/-- `convexify` on numerators: the least convex increasing list above a list (from the left). -/
+/-- The least convex increasing list above a list (from the left). -/
 def convexZ : List ℤ → List ℤ
   | [] => []
   | [x] => [x]
@@ -314,7 +313,7 @@ theorem expLow_eq {u : ℚ} {un ud J P : ℕ} (hd : 0 < ud) (hu : u = (un : ℚ)
 
 /-! ### Options -/
 
-/-- The option with cap `c1`, Chernoff parameter `θ`, `s` squarings and threshold `cthr` (`fillOpt`). -/
+/-- The option with cap `c1`, Chernoff parameter `θ`, `s` squarings and threshold `cthr`. -/
 def buildOpt (H b : ℕ) (t : PoisT) (c1 θ : ℚ) (s : ℕ) (cthr : ℚ) : OptF :=
   let eC := expUp (θ * c1) s t.P
   let A2 := rup ((eC - 1 - θ * c1) / c1 ^ 2) (2 * 127 + 64)
@@ -384,7 +383,7 @@ theorem checkOptB_build {H b : ℕ} {t : PoisT} {c1 θ : ℚ} {s : ℕ} {cthr : 
 
 /-! ### Near certificates -/
 
-/-- The near certificate of a Poisson table (`fillOptN`). -/
+/-- The near certificate of a Poisson table. -/
 def buildOptN (H b : ℕ) (t : PoisT) : OptN :=
   let nk := convexZ (nZ H t.n1)
   let nt := overP 191 nk
@@ -435,8 +434,8 @@ theorem poisGo_step (m : ℕ) : ∀ (k n p i : ℕ), i < k →
       rwa [show n + (i + 1) + 1 = n + 1 + i + 1 by omega]
 
 /-- The Poisson table of rate `m / 2^64` with entries `0, …, n1 + 1`, precision `P`, `J + 1` terms
-of the exponential series and first weight `p0` (`fillPoisT`, with `p0 ≥ 2^P / expLow μ̄ J P` given
-instead of computed: `checkPT` checks it). -/
+of the exponential series and first weight `p0` (with `p0 ≥ 2^P / expLow μ̄ J P` given instead of
+computed: `checkPT` checks it). -/
 def poisOf (m P J n1 p0 : ℕ) : PoisT := ⟨m, P, J, p0 :: poisGo m (n1 + 1) 0 p0⟩
 
 /-- What `checkPT` needs beyond the construction: the first weight, through `expLowN`. -/
