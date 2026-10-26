@@ -20,8 +20,12 @@ For each parameter set (b, N, lx), with qh = floor(2^(128 + lx)):
   * the large route: a cover of every budget q' in [qh + 1, 2^127] at the survival-weighted baseline
     (checkCoverW, BridgeDetW.lean).
 Everything below mirrors the Lean checkers exactly (Fractions); floats only choose parameters.
-The Lean file stores the scalars of each table, option and near certificate; H0Fill.lean rebuilds
-their lists (fillPoisT, fillOpt, fillOptN) as fill_poisT, fill_opt and make_optN do here.
+The Lean file stores the scalars of each table, option and near certificate; the Lean functions poisOf,
+buildOpt and buildOptN (Certificates/Build.lean) rebuild their lists as fill_poisT, fill_opt and make_optN
+do here (in integers: Certificates/Moments.lean holds the numerators of the moment tables), and a rebuilt
+table, option or near certificate passes its checker by construction (checkPT_poisOf, checkOptF_build,
+checkOptN_build): the kernel evaluates the construction and a few scalar conditions.
+A layered configuration whose certificate is the full key's but for the keygen credit reuses it (`reuses`).
 The moment tables P1tab, P2tab (H0PTab.lean) and PHtab (H0NTab.lean) come from scripts/forest_table.py
 (the codeword table) and are compared with the Lean sources.
 """
@@ -118,7 +122,7 @@ def rateH_of(b, N, qtop): return Fr(N + 1, 2 ** b) + Fr((2 * scanMb(b) - 1) * qt
 def checkRateH(b, N, qtop, t): return fairH_ok(b, qtop) and rateH_of(b, N, qtop) <= t.mu
 
 def fill_poisT(m, P, J, n1):
-    """the table of rate m / 2^64 from its scalars (fillPoisT, H0Fill.lean)"""
+    """the table of rate m / 2^64 from its scalars (poisOf, Certificates/Build.lean, is given pm[0])"""
     x = Fr(2 ** P) / expLow(Fr(m, 2 ** 64), J, P)
     pm = [-((-x.numerator) // x.denominator)]
     for n in range(n1 + 1):
@@ -195,7 +199,7 @@ def checkOptF(b, t, o):
 PG = 64
 
 def fill_opt(b, t, c1, th, s, cthr):
-    """the option from its scalars (fillOpt, H0Fill.lean)"""
+    """the option from its scalars (buildOpt, Certificates/Build.lean)"""
     o = OptF()
     o.c1, o.th, o.s, o.cthr = c1, th, s, cthr
     n1 = t.n1
@@ -203,8 +207,8 @@ def fill_opt(b, t, c1, th, s, cthr):
     o.A2 = rup((o.eC - 1 - th * c1) / c1 ** 2, 2 * 127 + PG)
     gs = [gBound(o, n) for n in range(n1 + 1)]
     hs = [hBound(o, n) for n in range(n1 + 1)]
-    o.gt = convexify([rup(x, PG + 127) for x in convexify(gs)])
-    o.ht = convexify([rup(x, PG + 64) for x in convexify(hs)])
+    o.gt = convexify([rup(x, PG + 127) for x in gs])
+    o.ht = convexify([rup(x, PG + 64) for x in hs])
     o.Jg = max(o.gt[-1] - o.gt[-2], KQ - o.gt[-1], Fr(0))
     o.Jh = max(o.ht[-1] - o.ht[-2], o.eC - 1 - o.ht[-1], Fr(0))
     o.Eg = rup(tailSum(t, o.gt, o.Jg), PG + 127 + 2 * b)
@@ -264,10 +268,10 @@ class OptN:
 def nBound(n): return 16 * KQ * getD(PH, n) * getD(P1, n) ** 7
 
 def make_optN(b, t):
-    """the near certificate of a table (fillOptN, H0Fill.lean)"""
+    """the near certificate of a table (buildOptN, Certificates/Build.lean)"""
     o = OptN()
     n1 = t.n1
-    o.nt = convexify([rup(x, PG + 127) for x in convexify([nBound(n) for n in range(n1 + 1)])])
+    o.nt = convexify([rup(x, PG + 127) for x in [nBound(n) for n in range(n1 + 1)]])
     o.Jn = max(o.nt[-1] - o.nt[-2], 16 * KQ - o.nt[-1], Fr(0))
     o.En = rup(tailSum(t, o.nt, o.Jn), PG + 127 + 2 * b)
     return o
@@ -436,25 +440,25 @@ def q(x):
     x = Fr(x)
     return str(x.numerator) if x.denominator == 1 else '%d / %d' % (x.numerator, x.denominator)
 
-# The Lean file stores only the scalars of a table, an option and a near certificate: `fillPoisT`,
-# `fillOpt` and `fillOptN` (H0Fill.lean) rebuild the lists, as fill_poisT, fill_opt and make_optN do here.
+# The Lean file stores only the scalars of a table, an option and a near certificate: `poisOf`,
+# `buildOpt` and `buildOptN` (Certificates/Build.lean) rebuild the lists, as fill_poisT, fill_opt and make_optN do here.
 
 OPT_FIELDS = ('c1', 'th', 'cthr', 's', 'eC', 'A2', 'gt', 'Jg', 'ht', 'Jh', 'Eg', 'Ee', 'B')
 
 def lean_opt(b, tab, t, o):
     again = fill_opt(b, t, o.c1, o.th, o.s, o.cthr)
     assert all(getattr(again, f) == getattr(o, f) for f in OPT_FIELDS), 'the scalars do not rebuild the option'
-    return 'fillOpt %d %d %s\n    (%s) %s %d\n    (%s)' % (TOTAL, b, tab, q(o.c1), q(o.th), o.s, q(o.cthr))
+    return 'buildOpt %d %d %s\n    (%s) %s %d\n    (%s)' % (TOTAL, b, tab, q(o.c1), q(o.th), o.s, q(o.cthr))
 
 def lean_optN(b, tab, t, on):
     again = make_optN(b, t)
     assert (again.nt, again.Jn, again.En) == (on.nt, on.Jn, on.En), 'the table does not rebuild the near certificate'
-    return 'fillOptN %d %d %s' % (TOTAL, b, tab)
+    return 'buildOptN %d %d %s' % (TOTAL, b, tab)
 
 def lean_tab(t):
     again = fill_poisT(t.m, t.P, t.J, t.n1)
     assert (again.m, again.P, again.J, again.pm) == (t.m, t.P, t.J, t.pm), 'the scalars do not rebuild the table'
-    return 'fillPoisT %d %d %d %d' % (t.m, t.P, t.J, t.n1)
+    return 'poisOf %d %d %d %d\n    %d' % (t.m, t.P, t.J, t.n1, t.pm[0])
 
 def tag_of(c):
     return 'h%d_%s' % (c['h'], 'L' if c['shape'] == 'layered' else 'b%d' % c['b'])
@@ -466,15 +470,17 @@ def describe(c):
         return 'height %d, full key, %s signatures' % (c['h'], format(c['N'], ','))
     return 'height %d, kept subtree height %d, %s signatures' % (c['h'], c['b'], format(c['N'], ','))
 
-HEADER = '''import LeanForest.H0Fill
+HEADER = '''import LeanForest.Certificates.Build
 
 /-! Certificates for the proved forest lifetimes at total height %d (generated by
 `scripts/forest_certificates.py`, checked by the kernel with `decide +kernel`, exact rational
 arithmetic, no `native_decide`). For each configuration: a Poisson table, the small-route option at
 baseline `ρ / 2^128`, the near certificate and `checkSmallF` at `qh ≈ 2^(128 + lx)`, and a cover of
 every larger budget up to `2^127` at the survival-weighted baseline. The tables, the options and the
-near certificates are rebuilt from their scalars (`fillPoisT`, `fillOpt`, `fillOptN`, `H0Fill.lean`),
-and the options of a cover are checked one by one (`checkOptB`, `checkCoverW_of`). -/
+near certificates are rebuilt from their scalars (`poisOf`, `buildOpt`, `buildOptN`) and pass their
+checkers by construction (`checkPT_poisOf`, `checkOptB_build`, `checkOptN_build`, `Build.lean`); a cover
+is checked from its options and its table (`checkCoverW_of_pt`). The layered key reuses the full key's
+certificate and checks again only its cover chains, where its keygen credit enters. -/
 
 namespace LeanForest.Security.H0
 
@@ -484,66 +490,112 @@ set_option maxHeartbeats 0
 set_option Elab.async false
 '''
 
+def same_cover(a, b):
+    """Two covers with the same budgets, table and options (their entries may differ)."""
+    return (a['qtop'], a['qstart'], a['t'].pm, a['t'].m, a['t'].P, a['t'].J) == \
+        (b['qtop'], b['qstart'], b['t'].pm, b['t'].m, b['t'].P, b['t'].J) and len(a['opts']) == len(b['opts']) and \
+        all(getattr(x, f) == getattr(y, f) for x, y in zip(a['opts'], b['opts']) for f in OPT_FIELDS)
+
+def reuses(c, f):
+    """A layered configuration whose certificate is the full key's but for the keygen credit K, which enters
+    only the cover chains (checkEntryF): the same table, small-route option, near certificate and covers."""
+    return f is not None and (c['b'], c['N'], c['qh'], c['rho']) == (f['b'], f['N'], f['qh'], f['rho']) and \
+        (c['t'].m, c['t'].P, c['t'].J, c['t'].pm) == (f['t'].m, f['t'].P, f['t'].J, f['t'].pm) and \
+        all(getattr(c['o'], x) == getattr(f['o'], x) for x in OPT_FIELDS) and \
+        (c['on'].nt, c['on'].Jn, c['on'].En) == (f['on'].nt, f['on'].Jn, f['on'].En) and \
+        len(c['covers']) == len(f['covers']) and len(c['heavy']) == len(f['heavy']) and \
+        all(same_cover(a, b) for a, b in zip(c['covers'] + c['heavy'], f['covers'] + f['heavy']))
+
+def cover_def(name, qtop, tab, opts, entries, base=None):
+    ents = ',\n    '.join('(%d, %d, %d)' % e for e in entries)
+    if base is not None:
+        return 'def %s : CoverW := { %s with\n  entries := [\n    %s] }\n' % (name, base, ents)
+    return 'def %s : CoverW where\n  qtop := %d\n  tab := %s\n  opts := [%s]\n  entries := [\n    %s]\n' % (
+        name, qtop, tab, ', '.join(opts), ents)
+
 def emit(certs, path):
-    """The certificates of the configurations of one height."""
+    """The certificates of the configurations of one height. A layered configuration that `reuses` the full key's
+    certificate gets only its cover chains (and the full key's names in Lifetimes.lean: c['base'], c['cover_names'])."""
     out = [HEADER % certs[0]['h']]
+    full = None
     for c in certs:
         set_config(c['h'], c['shape'])
         b, N, K, H = c['b'], c['N'], c['K'], c['h']
         tag = tag_of(c)
-        out.append('/-- Poisson table of the small route, %s. -/' % describe(c))
-        out.append('def tab_%s : PoisT := %s\n' % (tag, lean_tab(c['t'])))
-        out.append('theorem tab_%s_ok : checkPT tab_%s = true := by decide +kernel\n' % (tag, tag))
-        out.append('theorem rate_%s_ok : checkRate %d %d %d %d tab_%s = true := by decide +kernel\n'
-                   % (tag, H, b, N, c['qh'], tag))
-        out.append('/-- The small-route option at baseline `ρ / 2^128`. -/')
-        out.append('def small_%s : OptF := %s\n' % (tag, lean_opt(b, 'tab_' + tag, c['t'], c['o'])))
-        out.append('theorem small_%s_ok : checkOptF %d %d tab_%s small_%s = true := by decide +kernel\n'
-                   % (tag, H, b, tag, tag))
-        on = c['on']
-        out.append('/-- The near certificate. -/')
-        out.append('def near_%s : OptN := %s\n' % (tag, lean_optN(b, 'tab_' + tag, c['t'], on)))
-        out.append('theorem near_%s_ok : checkOptN %d tab_%s near_%s = true := by decide +kernel\n' % (tag, H, tag, tag))
-        out.append('/-- The plain rate `ρ`. -/')
-        out.append('def rho_%s : ℚ := %s\n' % (tag, q(c['rho'])))
-        out.append('theorem check_%s_ok : ForestPotential.checkSmallF %d %d %d %d rho_%s small_%s.cthr small_%s.B\n'
-                   '    ((2 ^ %d * near_%s.En : ℚ) / 2) = true := by decide +kernel\n'
-                   % (tag, H, b, N, c['qh'], tag, tag, tag, b, tag))
-        for kind, lst, chk, of in (('', c['covers'], 'checkCoverW', 'checkCoverW_of'),
-                                   ('h', c['heavy'], 'checkCoverH', 'checkCoverH_of')):
+        base = full if c['shape'] == 'layered' and reuses(c, full) else None
+        c['base'] = tag_of(base) if base else tag
+        if base is None:
+            out.append('/-- Poisson table of the small route, %s. -/' % describe(c))
+            out.append('def tab_%s : PoisT := %s\n' % (tag, lean_tab(c['t'])))
+            out.append('theorem tab_%s_ok : checkPT tab_%s = true := checkPT_poisOf (by decide +kernel)\n' % (tag, tag))
+            out.append('theorem rate_%s_ok : checkRate %d %d %d %d tab_%s = true := by decide +kernel\n'
+                       % (tag, H, b, N, c['qh'], tag))
+            out.append('/-- The small-route option at baseline `ρ / 2^128`. -/')
+            out.append('def small_%s : OptF := %s\n' % (tag, lean_opt(b, 'tab_' + tag, c['t'], c['o'])))
+            out.append('theorem small_%s_ok : checkOptF %d %d tab_%s small_%s = true :=\n    checkOptF_build (by decide +kernel)\n'
+                       % (tag, H, b, tag, tag))
+            on = c['on']
+            out.append('/-- The near certificate. -/')
+            out.append('def near_%s : OptN := %s\n' % (tag, lean_optN(b, 'tab_' + tag, c['t'], on)))
+            out.append('theorem near_%s_ok : checkOptN %d tab_%s near_%s = true :=\n    checkOptN_build (by decide +kernel)\n' % (tag, H, tag, tag))
+            out.append('/-- The plain rate `ρ`. -/')
+            out.append('def rho_%s : ℚ := %s\n' % (tag, q(c['rho'])))
+            out.append('theorem check_%s_ok : ForestPotential.checkSmallF %d %d %d %d rho_%s small_%s.cthr small_%s.B\n'
+                       '    ((2 ^ %d * near_%s.En : ℚ) / 2) = true := by decide +kernel\n'
+                       % (tag, H, b, N, c['qh'], tag, tag, tag, b, tag))
+        else:
+            out.append('/-! %s: the certificate of the %s (table, small-route option, near certificate, '
+                       'cover tables and options), checked again only where the keygen credit `K = %d` enters: the '
+                       'cover chains. -/\n' % (describe(c).capitalize(), describe(base), K))
+        names = {'': [], 'h': []}
+        for kind, lst, chk, of in (('', c['covers'], 'checkCoverW', 'checkCoverW_of_pt'),
+                                   ('h', c['heavy'], 'checkCoverH', 'checkCoverH_of_pt')):
             for ci, cv in enumerate(lst):
-                out.append('/-- Poisson table of %scover %d (budgets up to %d). -/' % ('heavy ' if kind else '', ci, cv['qtop']))
-                out.append('def tabc%s_%s_%d : PoisT := %s\n' % (kind, tag, ci, lean_tab(cv['t'])))
-                for k, o in enumerate(cv['opts']):
-                    out.append('/-- Option %d of %scover %d. -/' % (k, 'heavy ' if kind else '', ci))
-                    name, tabn = 'large%s_%s_%d_%d' % (kind, tag, ci, k), 'tabc%s_%s_%d' % (kind, tag, ci)
-                    out.append('def %s : OptF := %s\n' % (name, lean_opt(b, tabn, cv['t'], o)))
-                    out.append('/-- Its threshold and its bound. -/')
-                    out.append('def %s_cB : ℚ × ℚ :=\n    (%s,\n     %s)\n' % (name, q(o.cthr), q(o.B)))
-                    out.append('theorem %s_ok : checkOptB %d %d %s %s %s_cB = true := by decide +kernel\n'
-                               % (name, H, b, tabn, name, name))
-                opts = ', '.join('large%s_%s_%d_%d' % (kind, tag, ci, k) for k in range(len(cv['opts'])))
-                ents = ',\n    '.join('(%d, %d, %d)' % e for e in cv['entries'])
-                out.append('/-- %s %d: every budget from %d to %d. -/' % (
-                    'Heavy cover (one heavy message, one spare slot)' if kind else 'Cover', ci, cv['qstart'], cv['qtop']))
-                out.append('def cover%s_%s_%d : CoverW where\n  qtop := %d\n  tab := tabc%s_%s_%d\n  opts := [%s]\n'
-                           '  entries := [\n    %s]\n' % (kind, tag, ci, cv['qtop'], kind, tag, ci, opts, ents))
-                names = ['large%s_%s_%d_%d' % (kind, tag, ci, k) for k in range(len(cv['opts']))]
-                out.append('theorem cover%s_%s_%d_ok : %s %d %d %d %d %d cover%s_%s_%d = true :=' %
-                           (kind, tag, ci, chk, H, b, K, N, cv['qstart'], kind, tag, ci))
-                out.append('  %s [%s]\n    (%s)\n    (by decide +kernel)\n' %
-                           (of, ', '.join(n + '_cB' for n in names),
-                            ' <| '.join(['.cons %s_ok' % n for n in names] + ['.nil'])))
+                own = 'cover%s_%s_%d' % (kind, tag, ci)
+                if base is None:
+                    otag = tag
+                    out.append('/-- Poisson table of %scover %d (budgets up to %d). -/' % ('heavy ' if kind else '', ci, cv['qtop']))
+                    out.append('def tabc%s_%s_%d : PoisT := %s\n' % (kind, tag, ci, lean_tab(cv['t'])))
+                    out.append('theorem tabc%s_%s_%d_ok : checkPT tabc%s_%s_%d = true := checkPT_poisOf (by decide +kernel)\n'
+                               % (kind, tag, ci, kind, tag, ci))
+                    for k, o in enumerate(cv['opts']):
+                        out.append('/-- Option %d of %scover %d. -/' % (k, 'heavy ' if kind else '', ci))
+                        name, tabn = 'large%s_%s_%d_%d' % (kind, tag, ci, k), 'tabc%s_%s_%d' % (kind, tag, ci)
+                        out.append('def %s : OptF := %s\n' % (name, lean_opt(b, tabn, cv['t'], o)))
+                        out.append('/-- Its threshold and its bound. -/')
+                        out.append('def %s_cB : ℚ × ℚ :=\n    (%s,\n     %s)\n' % (name, q(o.cthr), q(o.B)))
+                        out.append('theorem %s_ok : checkOptB %d %d %s %s %s_cB = true :=\n    checkOptB_build (by decide +kernel)\n'
+                                   % (name, H, b, tabn, name, name))
+                    opts = ['large%s_%s_%d_%d' % (kind, tag, ci, k) for k in range(len(cv['opts']))]
+                    out.append('/-- %s %d: every budget from %d to %d. -/' % (
+                        'Heavy cover (one heavy message, one spare slot)' if kind else 'Cover', ci, cv['qstart'], cv['qtop']))
+                    out.append(cover_def(own, cv['qtop'], 'tabc%s_%s_%d' % (kind, tag, ci), opts, cv['entries']))
+                    cname = own
+                else:
+                    otag = c['base']
+                    bcv = (base['heavy'] if kind else base['covers'])[ci]
+                    cname = 'cover%s_%s_%d' % (kind, otag, ci)
+                    if cv['entries'] != bcv['entries']:
+                        out.append('/-- %s %d with the entries of this keygen credit. -/' % ('Heavy cover' if kind else 'Cover', ci))
+                        out.append(cover_def(own, None, None, None, cv['entries'], base=cname))
+                        cname = own
+                onames = ['large%s_%s_%d_%d' % (kind, otag, ci, k) for k in range(len(cv['opts']))]
+                names[kind].append(cname)
+                out.append('theorem %s_ok : %s %d %d %d %d %d %s = true :=' % (own, chk, H, b, K, N, cv['qstart'], cname))
+                out.append('  %s [%s]\n    (%s)\n    tabc%s_%s_%d_ok\n    (by decide +kernel)\n' %
+                           (of, ', '.join(n + '_cB' for n in onames),
+                            ' <| '.join(['.cons %s_ok' % n for n in onames] + ['.nil']), kind, otag, ci))
         assert c['complete'], tag
-        names = ', '.join('cover_%s_%d' % (tag, ci) for ci in range(len(c['covers'])))
-        hnames = ', '.join('coverh_%s_%d' % (tag, ci) for ci in range(len(c['heavy'])))
+        c['cover_names'] = names
         out.append('/-- The covers reach every budget below `2^127`. -/')
         out.append('theorem covers_%s_ok : ForestPotential.checkCoversH %d %d %d %d %d [%s] [%s] = true := by'
-                   % (tag, H, b, K, N, c['qh'] + 1, names, hnames))
+                   % (tag, H, b, K, N, c['qh'] + 1, ', '.join(names['']), ', '.join(names['h'])))
         lems = ', '.join(['cover_%s_%d_ok' % (tag, ci) for ci in range(len(c['covers']))] +
                          ['coverh_%s_%d_ok' % (tag, ci) for ci in range(len(c['heavy']))])
         out.append('  simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]')
         out.append('  exact ⟨%s, by decide +kernel⟩\n' % lems)
+        if c['shape'] == 'pruned' and b == H:
+            full = c
     out.append('end LeanForest.Security.H0\n')
     open(path, 'w').write('\n'.join(out))
 
@@ -579,6 +631,31 @@ namespace LeanForest.Lifetimes
 open Security ForestPotential
 '''
 
+MOMENTS = '''import LeanForest.H0PTab
+import LeanForest.H0NTab
+
+/-! The numerators over `2^128` of the moment tables `P1tab`, `P2tab` (`H0PTab.lean`) and `PHtab`
+(`H0NTab.lean`), checked once by the kernel (generated by `scripts/forest_certificates.py`). `buildOpt`
+and `buildOptN` (`Build.lean`) compute the leaf tables from them in integers. -/
+
+namespace LeanForest.Security.H0
+
+set_option maxRecDepth 100000
+
+%s
+end LeanForest.Security.H0
+'''
+
+def emit_moments(path):
+    out = []
+    for name, tab in (('P1', P1), ('P2', P2), ('PH', PH)):
+        nums = [x * 2 ** 128 for x in tab]
+        assert all(x.denominator == 1 for x in nums)
+        out.append('/-- The numerators of `%stab` over `2^128`. -/' % name)
+        out.append('def %sL : List ℕ := [\n    %s]\n' % (name, ',\n    '.join(str(x.numerator) for x in nums)))
+        out.append('theorem %sL_eq : %sL.map (fun x : ℕ => (x : ℚ) / 2 ^ 128) = %stab := by decide +kernel\n' % (name, name, name))
+    open(path, 'w').write(MOMENTS % '\n'.join(out))
+
 def emit_lifetimes(certs, path):
     heights = sorted({c['h'] for c in certs})
     out = [LIFETIMES_HEADER % '\n'.join('import LeanForest.Certificates.H%d' % h for h in heights)]
@@ -591,13 +668,14 @@ def emit_lifetimes(certs, path):
         out.append('abbrev %s : Params := ⟨%d, %d, %d, %d, %d, by decide, by decide, by decide, by decide, by decide, by decide⟩\n'
                    % (name, H, d, lower, b, N))
         out.append('/-- **127 bits for the deterministic signer**, %s. -/' % describe(c))
-        names = ', '.join('H0.cover_%s_%d' % (tag, ci) for ci in range(len(c['covers'])))
-        hnames = ', '.join('H0.coverh_%s_%d' % (tag, ci) for ci in range(len(c['heavy'])))
+        bt = c['base']
+        names = ', '.join('H0.' + n for n in c['cover_names'][''])
+        hnames = ', '.join('H0.' + n for n in c['cover_names']['h'])
         out.append('theorem %s_bits : @Det.HasClassicalSecurityBitsDet %s 127 :=' % (name, name))
         out.append('  @det_bitsFH %s (by decide) %d %d %d %d (by decide) (by decide) (by decide) (by decide) %d\n'
                    '    H0.rho_%s H0.tab_%s H0.small_%s H0.near_%s H0.tab_%s_ok H0.rate_%s_ok H0.small_%s_ok\n'
                    '    H0.near_%s_ok H0.check_%s_ok [%s] [%s] H0.covers_%s_ok\n'
-                   % (name, H, b, K, N, c['qh'], tag, tag, tag, tag, tag, tag, tag, tag, tag, names, hnames, tag))
+                   % (name, H, b, K, N, c['qh'], bt, bt, bt, bt, bt, bt, bt, bt, bt, names, hnames, tag))
     out.append('/-- **The forest lifetimes**: 127 bits at every configuration. -/')
     out.append('theorem requestedSecurity :\n    ' + ' ∧\n    '.join(
         '@Det.HasClassicalSecurityBitsDet %s 127' % pname(c) for c in certs) + ' :=')
@@ -745,6 +823,7 @@ if __name__ == '__main__':
         os.makedirs(os.path.join(ROOT, 'LeanForest', 'Certificates'), exist_ok=True)
         for h in sorted({c['h'] for c in certs}):
             emit([c for c in certs if c['h'] == h], os.path.join(ROOT, 'LeanForest', 'Certificates', 'H%d.lean' % h))
+        emit_moments(os.path.join(ROOT, 'LeanForest', 'Certificates', 'Moments.lean'))
         emit_lifetimes(certs, os.path.join(ROOT, 'LeanForest', 'Lifetimes.lean'))
         print('written')
     else:

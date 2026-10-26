@@ -85,8 +85,8 @@ abbrev h22_layered : Params := ⟨22, 3, 6, 22, 81860000, by decide, by decide, 
 /-- **127 bits for the deterministic signer**, height 22, layered (10 + 6 + 6), 81,860,000 signatures. -/
 theorem h22_layered_bits : @Det.HasClassicalSecurityBitsDet h22_layered 127 :=
   @det_bitsFH h22_layered (by decide) 22 22 231424 81860000 (by decide) (by decide) (by decide) (by decide) 512487451133699472151040029945233408
-    H0.rho_h22_L H0.tab_h22_L H0.small_h22_L H0.near_h22_L H0.tab_h22_L_ok H0.rate_h22_L_ok H0.small_h22_L_ok
-    H0.near_h22_L_ok H0.check_h22_L_ok [H0.cover_h22_L_0] [] H0.covers_h22_L_ok
+    H0.rho_h22_b22 H0.tab_h22_b22 H0.small_h22_b22 H0.near_h22_b22 H0.tab_h22_b22_ok H0.rate_h22_b22_ok H0.small_h22_b22_ok
+    H0.near_h22_b22_ok H0.check_h22_b22_ok [H0.cover_h22_b22_0] [] H0.covers_h22_L_ok
 
 /-- Height 24, full key, 336,700,000 signatures (93.5% of the cover attack's 3.599e+08). -/
 abbrev h24_full : Params := ⟨24, 1, 6, 24, 336700000, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -157,8 +157,8 @@ abbrev h24_layered : Params := ⟨24, 3, 6, 24, 336700000, by decide, by decide,
 /-- **127 bits for the deterministic signer**, height 24, layered (12 + 6 + 6), 336,700,000 signatures. -/
 theorem h24_layered_bits : @Det.HasClassicalSecurityBitsDet h24_layered 127 :=
   @det_bitsFH h24_layered (by decide) 24 24 925696 336700000 (by decide) (by decide) (by decide) (by decide) 332306998946228968225951765070086144
-    H0.rho_h24_L H0.tab_h24_L H0.small_h24_L H0.near_h24_L H0.tab_h24_L_ok H0.rate_h24_L_ok H0.small_h24_L_ok
-    H0.near_h24_L_ok H0.check_h24_L_ok [H0.cover_h24_L_0] [] H0.covers_h24_L_ok
+    H0.rho_h24_b24 H0.tab_h24_b24 H0.small_h24_b24 H0.near_h24_b24 H0.tab_h24_b24_ok H0.rate_h24_b24_ok H0.small_h24_b24_ok
+    H0.near_h24_b24_ok H0.check_h24_b24_ok [H0.cover_h24_b24_0] [] H0.covers_h24_L_ok
 
 /-- Height 26, full key, 1,381,000,000 signatures (95.9% of the cover attack's 1.44e+09). -/
 abbrev h26_full : Params := ⟨26, 1, 6, 26, 1381000000, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -229,8 +229,8 @@ abbrev h26_layered : Params := ⟨26, 3, 7, 26, 1381000000, by decide, by decide
 /-- **127 bits for the deterministic signer**, height 26, layered (12 + 7 + 7), 1,381,000,000 signatures. -/
 theorem h26_layered_bits : @Det.HasClassicalSecurityBitsDet h26_layered 127 :=
   @det_bitsFH h26_layered (by decide) 26 26 925696 1381000000 (by decide) (by decide) (by decide) (by decide) 234976532390629421868243188067598336
-    H0.rho_h26_L H0.tab_h26_L H0.small_h26_L H0.near_h26_L H0.tab_h26_L_ok H0.rate_h26_L_ok H0.small_h26_L_ok
-    H0.near_h26_L_ok H0.check_h26_L_ok [H0.cover_h26_L_0] [] H0.covers_h26_L_ok
+    H0.rho_h26_b26 H0.tab_h26_b26 H0.small_h26_b26 H0.near_h26_b26 H0.tab_h26_b26_ok H0.rate_h26_b26_ok H0.small_h26_b26_ok
+    H0.near_h26_b26_ok H0.check_h26_b26_ok [H0.cover_h26_b26_0] [] H0.covers_h26_L_ok
 
 /-- Height 28, full key, 5,634,000,000 signatures (97.8% of the cover attack's 5.759e+09). -/
 abbrev h28_full : Params := ⟨28, 1, 6, 28, 5634000000, by decide, by decide, by decide, by decide, by decide, by decide⟩
@@ -301,8 +301,8 @@ abbrev h28_layered : Params := ⟨28, 3, 8, 28, 5634000000, by decide, by decide
 /-- **127 bits for the deterministic signer**, height 28, layered (12 + 8 + 8), 5,634,000,000 signatures. -/
 theorem h28_layered_bits : @Det.HasClassicalSecurityBitsDet h28_layered 127 :=
   @det_bitsFH h28_layered (by decide) 28 28 925696 5634000000 (by decide) (by decide) (by decide) (by decide) 181191675984824164237263828385005568
-    H0.rho_h28_L H0.tab_h28_L H0.small_h28_L H0.near_h28_L H0.tab_h28_L_ok H0.rate_h28_L_ok H0.small_h28_L_ok
-    H0.near_h28_L_ok H0.check_h28_L_ok [H0.cover_h28_L_0] [] H0.covers_h28_L_ok
+    H0.rho_h28_b28 H0.tab_h28_b28 H0.small_h28_b28 H0.near_h28_b28 H0.tab_h28_b28_ok H0.rate_h28_b28_ok H0.small_h28_b28_ok
+    H0.near_h28_b28_ok H0.check_h28_b28_ok [H0.cover_h28_b28_0] [] H0.covers_h28_L_ok
 
 /-- **The forest lifetimes**: 127 bits at every configuration. -/
 theorem requestedSecurity :
