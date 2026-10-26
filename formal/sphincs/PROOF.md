@@ -182,6 +182,9 @@ for pruned keys ([README.md](README.md)). The remaining loss is structural:
 
 ## Modeling differences and obligations
 
+- Rust's key generation builds the key from one hash of a tag, the configuration and the seed
+  (configured_seed in crates/sphincs), so that one seed never gives two configurations the same one-time keys. The model's seed
+  is that value, uniform in the random-oracle model; the extra hash is outside the hash-call counts.
 - The signer of the security statement is `Seeded.sign`, which derives the base randomizer and the
   step from the seed and the message, as Rust does; a successful signature verifies
   (`Completeness.correct`).

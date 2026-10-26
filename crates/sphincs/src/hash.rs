@@ -306,7 +306,7 @@ impl Midstate {
     }
 }
 
-/// One-shot hash of `data` with `hash`, for tests.
+/// One-shot hash of `data` with `hash`, for the configured seed and tests (not counted).
 pub fn hash_bytes(hash: HashFn, data: &[u8]) -> [u8; 32] {
     match hash {
         HashFn::Keccak256 => keccak::hash(data),

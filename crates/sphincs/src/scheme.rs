@@ -267,9 +267,26 @@ impl SecretKey {
     }
 }
 
-/// `Gen`: the public parameter is derived from the seed; for a pruned key its low bits place the
-/// kept subtree, and the surrogates are derived from the seed. A layered key builds its top layer.
+/// The seed a key is built from, `H(tag | configuration | seed)`: one seed used under two
+/// configurations (in particular two pruning heights `b`) gives unrelated keys, which share no
+/// one-time key and no few-time signature. One hash, outside the cost model.
+pub fn configured_seed(cfg: &Config, seed: &MasterSecret) -> MasterSecret {
+    let (shape, b) = match cfg.shape {
+        Shape::Pruned { b } => (0, b),
+        Shape::Layered => (1, cfg.h),
+    };
+    let hash = HashFn::ALL.iter().position(|&f| f == cfg.hash).unwrap() as u8;
+    let mut input = b"leanSPHINCS seed".to_vec();
+    input.extend_from_slice(&[hash, cfg.h as u8, shape, b as u8]);
+    input.extend_from_slice(seed);
+    hash_bytes(cfg.hash, &input)
+}
+
+/// `Gen`: the key is built from the configured seed. The public parameter is derived from it; for a
+/// pruned key its low bits place the kept subtree, and the surrogates are derived from it. A layered
+/// key builds its top layer.
 pub fn key_gen(cfg: &Config, seed: &MasterSecret) -> (SecretKey, PublicKey) {
+    let seed = &configured_seed(cfg, seed);
     let public_param = th(&Pp::new(cfg.hash(), [0; PUBLIC_PARAM_LEN]), &tweak(TWEAK_PARAMETER, 0, 0), seed);
     let pp = Pp::new(cfg.hash, public_param);
     let layers = cfg.layers();
@@ -543,20 +560,20 @@ mod tests {
 
     /// Pins the key and the signature bytes of one small pruned key per hash, and of a layered
     /// key, so that a change to the addresses, the hash inputs or the serialization cannot pass
-    /// unnoticed. The Keccak-256 answer is the one of the one-layer scheme before the toggles.
+    /// unnoticed.
     #[test]
     fn known_answers() {
         let m: Message = std::array::from_fn(|i| (7 * i) as u8);
         let pinned = [
-            (HashFn::Keccak256, "bca067181df522e8f72775a93784f8082e582128e480149accc2ed4f19edcd00",
-             "841f5a7f3bdbd25912f955b90384ed999a79cb2cb9db364b0e82be1da59d43c7", 679),
-            (HashFn::Blake2s, "5270d92efe366b967f5d32e29509c06af39e809c5482e50b8b8b76a66fab6507",
-             "5c4e99695040c60026fd304aa02e4eeeafdfc29772611628de71855ab20291f4", 2702),
-            (HashFn::Sha256, "0429ffe2c7415e6d8399b466638aeda26224f5a6c9b31aa0491e564ef67b649e",
-             "476faebb68a92bb0aaf42c9319fc77b37b418fd7a939077965838c25ee2669f3", 267),
+            (HashFn::Keccak256, "ca5d2198161c54565a817acef82364c483b407ccd90523fd2028c5e231630627",
+             "db1533be5b33d880ac7700ab2b10400280b9ef2fb4fb14d4f85bbbe2d5d3965b", 4730),
+            (HashFn::Blake2s, "0dd21226f6aef081f5e48b2e8a40bb49bf624b042ba32a5b376f524acba3e0e2",
+             "c988a80bffd8a4ee4d447128372bd35ca12fa148910e109a98f445069e8fa02b", 2228),
+            (HashFn::Sha256, "90fc4935641952d106f2310f409c07eca88e97561ea87aa49165698d5742a942",
+             "b03ecd9a64b7a6f0b7947c00afff99b7225b64b46ef02cafc0e2dab8ab8654ec", 125),
         ];
         for (hash, pk_hex, sig_hex, counter) in pinned {
-            // `b = 11` is not in `PRUNED`, but keeps the answers of the one-layer scheme.
+            // `b = 11` is not in `PRUNED`: a small key, quick to build.
             let cfg = Config { hash, h: 24, shape: Shape::Pruned { b: 11 } };
             let (sk, pk) = key_gen(&cfg, &seed(1));
             let sig = sign(&sk, &m);
@@ -568,8 +585,18 @@ mod tests {
         let cfg = Config::new(HashFn::Keccak256, 22, Shape::Layered);
         let (sk, pk) = key_gen(&cfg, &seed(1));
         let digest = keccak::hash(&sign(&sk, &m).to_bytes());
-        assert_eq!(hex(&pk.to_bytes()), "6de30da455914e574ec62bef3a4cd7032e582128e480149accc2ed4f19edcd00");
-        assert_eq!(hex(&digest), "959d9ab85e7eeecea9524186b77c4a074b6640e6c92b4000420f449873a85b3d");
+        assert_eq!(hex(&pk.to_bytes()), "a430976f5ddc4c423caf10bb18be21e2696d5390f3f72562b8bcf51965ecaf81");
+        assert_eq!(hex(&digest), "4e9b1918c5fdf6f2dd482a880b563fd8cb218898896913d426577323dee22d70");
+    }
+
+    /// One seed under two configurations gives unrelated keys: two pruning heights, or two heights.
+    #[test]
+    fn configurations_do_not_share_keys() {
+        let a = configured_seed(&keccak(24, 12), &seed(5));
+        assert_ne!(a, configured_seed(&keccak(24, 13), &seed(5)));
+        assert_ne!(a, configured_seed(&keccak(22, 12), &seed(5)));
+        assert_ne!(a, configured_seed(&Config::new(HashFn::Keccak256, 24, Shape::Layered), &seed(5)));
+        assert_ne!(a, configured_seed(&Config::new(HashFn::Blake2s, 24, Shape::Pruned { b: 12 }), &seed(5)));
     }
 
     /// The signature's randomizer is the first attempt of the message's walk that lands, and the

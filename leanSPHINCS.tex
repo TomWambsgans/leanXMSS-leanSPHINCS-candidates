@@ -54,7 +54,8 @@ differences are:
 \paragraph{The toggles.}
 \begin{description}[leftmargin=1.2em]
   \item[T1, lifetime.] The height $h\in\{22,24,26,28\}$ of the index, for lifetimes of about $2^{26}$, $2^{28}$,
-        $2^{30}$ and $2^{32}$ signatures: the full key lasts $N\approx21.45\cdot2^h$ signatures (\cref{sec:lifetimes}).
+        $2^{30}$ and $2^{32}$ signatures: the full key lasts $N\approx20\cdot2^h$ signatures, proved, 91 to 98\% of the
+        $21.45\cdot2^h$ of the best known attack (\cref{sec:lifetimes}).
   \item[T2, shape.] \emph{Pruned}: one tree of height $h$. Key generation builds only a kept subtree of $2^b$ leaves
         and replaces the $h-b$ siblings above it by pseudorandom surrogate nodes~\cite{conduition}; the signer
         grinds the randomizer until the index lands in the kept subtree, $2^{h-b}$ attempts on average
@@ -126,7 +127,7 @@ the verification cost of the full key of its height.
 \end{tabular}
 \end{center}
 Security: NIST level 1~\cite{FIPS205} in every configuration: 127 bits of SUF-CMA security in the ROM up to the
-lifetimes of \cref{sec:lifetimes}, and $\approx 64$ bits in the QROM.
+lifetimes of \cref{sec:lifetimes}, and $\approx 64$ bits in the QROM (TODO proof).
 
 \section{Lifetimes}
 \label{sec:lifetimes}
