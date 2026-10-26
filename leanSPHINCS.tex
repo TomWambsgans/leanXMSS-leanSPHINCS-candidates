@@ -228,8 +228,9 @@ so the preprocessing is one instance per signature.
 \paragraph{Signing (any $t$).}
 \begin{enumerate}
   \item agree on $m$
-  \item each signer commits to a random $r_i$, then reveals it; $R_0$ and $\Delta$ are the two halves of
-        $\hash(r_1,\dots,r_t,m)$, the lowest bit of $\Delta$ set
+  \item reveal $F(\mathit{rand}, m)$ (as below); $R_0$ and $\Delta$ are the two halves of
+        $\hash(F(\mathit{rand}, m), m)$, the lowest bit of $\Delta$ set. $R$ depends only on $m$ and the prepared set, so
+        nobody can bias it, and a retry of $m$ opens the same values
   \item grind in the clear: the first $R = R_0 + i\Delta$ whose index is one of the 16 prepared instances, about
         $2^h/16$ attempts
   \item open $F$ at the addresses of the forest chain values the message selects, and only those; check each against
@@ -254,7 +255,10 @@ $i\in J$ sends a part, and the parts combine into $F(x)$:
         plus a rounded share of zero evaluated at $(x,m,J)$; the sum is $F(x)$ up to $\pm t$, and the
         candidates are checked against the published chain
 \end{itemize}
-Parts from signings of different $(m,J)$ don't combine, so aborted signings reveal no secret.
+Parts from signings of different $(m,J)$ don't combine, so an aborted signing reveals at most its own signature. The last
+signer to send can still complete it alone (fairness is impossible against $t-1$ of $t$~\cite{Cle86}), so a signing that
+reaches step 4 consumes its instance and counts as a signature; a missing or wrong part is checked against the
+published chain, which identifies its sender.
 
 
 \paragraph{Threshold costs.} Honest-majority MPC with malicious security (with abort) costs essentially the
@@ -491,6 +495,7 @@ encoding, then one chain preimage): for the forest it is the cover figure, excep
 \bibitem{BGIN19} E.~Boyle, N.~Gilboa, Y.~Ishai, A.~Nof. \emph{Practical Fully Secure Three-Party
   Computation via Sublinear Distributed Zero-Knowledge Proofs}. ACM CCS, 2019.
   \url{https://eprint.iacr.org/2019/1390}.
+\bibitem{Cle86} R.~Cleve. \emph{Limits on the Security of Coin Flips when Half the Processors Are Faulty}. STOC 1986.
 \bibitem{PRAWNS} D.~Boneh, B.~B\"unz, J.~D., Y.~Litchev, K.~Nazirkhanova. \emph{PRAWNS: Threshold Hash-Based
   Signatures from Threshold PRFs}, 2026. \url{https://eprint.iacr.org/2026/2142}.
 \bibitem{siggolf} J.~Nick (Blockstream). \emph{WCT-9: a WOTS-child forest replaces BPORS}, sig.golf
