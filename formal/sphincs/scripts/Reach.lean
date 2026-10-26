@@ -28,9 +28,11 @@ def reachFrom (env : Environment) (roots : Array Name) : NameSet := Id.run do
       if !visited.contains c then stack := stack.push c
   return visited
 
+/-- The suffixes of a name, joined with `appendCore`: `++` would read a suffix like `_hyg.42` of a
+hygienic name as a name with macro scopes, and panic. -/
 def nameSuffixes (n : Name) : List Name :=
   (List.range n.getNumParts).map fun k =>
-    (n.componentsRev.take (k + 1)).reverse.foldl (fun acc c => acc ++ c) Name.anonymous
+    (n.componentsRev.take (k + 1)).reverse.foldl Name.appendCore Name.anonymous
 
 open Elab Command in
 run_cmd do
