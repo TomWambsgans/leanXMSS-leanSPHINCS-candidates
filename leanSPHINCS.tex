@@ -255,7 +255,8 @@ knowing $s$ after the first, choosing the second message.
   \item hash-based, for small $\binom{n}{t-1}$: replicated seeds~\cite{CDI05}, one seed $k_T$ per set $T$ of $t-1$
         operators, held by the others; $F(x)=\bigoplus_T\hash(k_T,x)$. Hash only
   \item lattice-based, for large $\binom{n}{t-1}$: the threshold PRF of PRAWNS~\cite{PRAWNS},
-        $F(x)=\lfloor\langle\hash(x),\mathit{msk}\rangle\rceil_p$, $\mathit{msk}$ Shamir-shared. LWE
+        $F(x)=\lfloor\langle\hash(x),\mathit{msk}\rangle\rceil_p$, $\mathit{msk}$ Shamir-shared. LWE. The MPC then
+        converts its shares mod $q$ to bits, a few percent more traffic that we neglect for simplicity
 \end{itemize}
 \paragraph{Context-awareness~\cite{PRAWNS}.} To reveal $F(x)$ when a quorum $J$ signs $m$, each signer
 $i\in J$ sends a part, and the parts combine into $F(x)$:
