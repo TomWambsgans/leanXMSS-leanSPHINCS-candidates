@@ -270,8 +270,8 @@ $i\in J$ sends a part, and the parts combine into $F(x)$:
 Parts from signings of different $(m,J)$ don't combine, so an aborted signing reveals at most its own signature. The last
 signer to send can still complete it alone (fairness is impossible against $t-1$ of $t$~\cite{Cle86}), so a signing that
 reaches step 2 consumes its instance and counts as a signature (else, knowing $s$, a coalition could abort and pick
-the message whose opening suits it); a missing or wrong part is checked against the
-published chain, which identifies its sender.
+the message whose opening suits it); a wrong part makes the check against the published chain fail, and the
+signing aborts.
 
 
 \paragraph{Threshold costs.} Honest-majority MPC with malicious security (with abort) costs essentially the
