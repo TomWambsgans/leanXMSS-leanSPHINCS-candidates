@@ -120,7 +120,7 @@ pub enum VerifyError {
 /// randomizer the input is 80 bytes, one block of Keccak-256; with BLAKE2s and SHA-256 the
 /// randomizer is alone in the last block. Grinding costs one compression per attempt.
 pub fn digest_midstate(pp: &Pp, m: &Message) -> Midstate {
-    Midstate::new(pp, &tweak(TWEAK_MSG, 0, 0), &[m, &[0u8; 16][..pp.hash.digest_pad()]])
+    Midstate::new(pp, &tweak(TWEAK_MSG, 0, 0), &[m, &[0u8; 16][..pp.hash().digest_pad()]])
 }
 
 /// The message digest call, `P | address | m | rho`, untruncated. `P` binds the key, so the root is
@@ -167,18 +167,16 @@ pub fn xmss_node(pp: &Pp, layer: usize, tree: u32, level: usize, j: u64, left: &
 /// A tree of one layer: its kept subtree's levels and the surrogates above it.
 #[derive(Clone, Debug)]
 pub struct XmssTree {
-    pub layer: usize,
-    pub tree: u32,
-    pub height: usize,
+    height: usize,
     /// Height of the kept subtree; `b = height` keeps the whole tree.
-    pub b: usize,
+    b: usize,
     /// The first leaf of the kept subtree.
-    pub start: u64,
+    start: u64,
     /// The kept subtree, level 0 being its `2^b` leaves.
     levels: Vec<Vec<Digest>>,
     /// The siblings of the path at levels `b..height`, surrogates (no secret below them).
-    pub surrogates: Vec<Digest>,
-    pub root: Digest,
+    surrogates: Vec<Digest>,
+    root: Digest,
 }
 
 impl XmssTree {
@@ -205,7 +203,11 @@ impl XmssTree {
             let (left, right) = if j & 1 == 0 { (node, *sibling) } else { (*sibling, node) };
             xmss_node(pp, layer, tree, level + 1, j >> 1, &left, &right)
         });
-        Self { layer, tree, height, b, start, levels, surrogates, root }
+        Self { height, b, start, levels, surrogates, root }
+    }
+
+    pub fn root(&self) -> Digest {
+        self.root
     }
 
     pub fn contains(&self, leaf: u64) -> bool {
@@ -241,26 +243,34 @@ pub fn layer_tree(pp: &Pp, master: &MasterSecret, key: &OtsKey, height: usize) -
     XmssTree::from_leaves(pp, key.layer, key.tree, height, height, 0, leaves, Vec::new())
 }
 
-/// A non-threshold secret key.
+/// A secret key, made by [`key_gen`] only.
 #[derive(Clone)]
 pub struct SecretKey {
-    pub cfg: Config,
-    pub pp: Pp,
-    pub master: MasterSecret,
+    cfg: Config,
+    pp: Pp,
+    master: MasterSecret,
     /// The top layer's tree (the only one for a pruned key).
-    pub top: XmssTree,
+    top: XmssTree,
 }
 
 impl SecretKey {
+    pub fn cfg(&self) -> &Config {
+        &self.cfg
+    }
+
+    pub fn pp(&self) -> &Pp {
+        &self.pp
+    }
+
     pub fn public_key(&self) -> PublicKey {
-        PublicKey { root: self.top.root, public_param: self.pp.bytes }
+        PublicKey { root: self.top.root, public_param: self.pp.bytes() }
     }
 }
 
 /// `Gen`: the public parameter is derived from the seed; for a pruned key its low bits place the
 /// kept subtree, and the surrogates are derived from the seed. A layered key builds its top layer.
 pub fn key_gen(cfg: &Config, seed: &MasterSecret) -> (SecretKey, PublicKey) {
-    let public_param = th(&Pp::new(cfg.hash, [0; PUBLIC_PARAM_LEN]), &tweak(TWEAK_PARAMETER, 0, 0), seed);
+    let public_param = th(&Pp::new(cfg.hash(), [0; PUBLIC_PARAM_LEN]), &tweak(TWEAK_PARAMETER, 0, 0), seed);
     let pp = Pp::new(cfg.hash, public_param);
     let layers = cfg.layers();
     let (layer, height, b) = (layers.len() - 1, layers[layers.len() - 1], cfg.kept());
@@ -324,7 +334,7 @@ pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
     let (idx, marks) = message_digest(pp, cfg.h, &rho, m);
     let forest = Forest::new(pp, &sk.master, idx);
     let opening = forest.open(pp, idx, &marks);
-    let mut message = forest_key_bytes(&forest.key);
+    let mut message = forest_key_bytes(forest.key());
     let mut signed = Vec::with_capacity(layers.len());
     for (layer, &height) in layers.iter().enumerate() {
         let key = OtsKey::at(layer, height, idx >> cfg.below(layer));
@@ -389,15 +399,15 @@ mod tests {
             + (height - b) as u64 * (c(MASTER_SECRET_LEN) + c(2 * N))
     }
 
-    /// Every hash, height and shape (pruned at `b = h / 2`, so that key generation and grinding
-    /// both stay small, and layered): a signature has the configuration's size, verifies at the
+    /// Every hash, height and shape (pruned at `b = max(h / 2, 12)`, so that key generation and
+    /// grinding both stay small, and layered): a signature has the configuration's size, verifies at the
     /// configuration's cost, and is rejected under another message, a tampered value, or another
     /// public parameter.
     #[test]
     fn every_configuration_signs_and_verifies() {
         for hash in HashFn::ALL {
             for h in HEIGHTS {
-                for shape in [Shape::Pruned { b: h / 2 }, Shape::Layered] {
+                for shape in [Shape::Pruned { b: (h / 2).max(12) }, Shape::Layered] {
                     let cfg = Config::new(hash, h, shape);
                     let before = compressions();
                     let (sk, pk) = key_gen(&cfg, &seed(h as u8));
@@ -465,6 +475,15 @@ mod tests {
             (HashFn::Blake2s, 301, 475),
             (HashFn::Sha256, 302, 476),
         ]);
+    }
+
+    /// Only the heights and the kept subtrees of the note make a configuration.
+    #[test]
+    fn unsupported_configurations_are_rejected() {
+        for (h, b) in [(24, 11), (24, 25), (20, 10), (22, 22), (28, 20)] {
+            let ok = HEIGHTS.contains(&h) && (b == h || PRUNED.contains(&b));
+            assert_eq!(std::panic::catch_unwind(|| keccak(h, b)).is_ok(), ok, "h = {h}, b = {b}");
+        }
     }
 
     #[test]
@@ -537,7 +556,8 @@ mod tests {
              "476faebb68a92bb0aaf42c9319fc77b37b418fd7a939077965838c25ee2669f3", 267),
         ];
         for (hash, pk_hex, sig_hex, counter) in pinned {
-            let cfg = Config::new(hash, 24, Shape::Pruned { b: 11 });
+            // `b = 11` is not in `PRUNED`, but keeps the answers of the one-layer scheme.
+            let cfg = Config { hash, h: 24, shape: Shape::Pruned { b: 11 } };
             let (sk, pk) = key_gen(&cfg, &seed(1));
             let sig = sign(&sk, &m);
             let digest = keccak::hash(&sig.to_bytes());
@@ -601,7 +621,7 @@ mod tests {
         let pp = Pp::new(HashFn::Keccak256, [3u8; PUBLIC_PARAM_LEN]);
         let m = [5u8; MESSAGE_LEN];
         let walk = randomizer_walk(&pp, &seed(2), &m);
-        let input = [&pp.bytes[..], &address(&tweak(TWEAK_RANDOMIZER, 0, 0)), &seed(2), &m].concat();
+        let input = [&pp.bytes()[..], &address(&tweak(TWEAK_RANDOMIZER, 0, 0)), &seed(2), &m].concat();
         let output = keccak::hash(&input);
         assert_eq!(walk.base[..], output[..N]);
         assert_eq!(walk.step[0], output[N] | 1, "the step is odd");
@@ -620,15 +640,15 @@ mod tests {
         let rho = randomizer(&walk, 7);
         let (base, step) = (u128::from_le_bytes(walk.base), u128::from_le_bytes(walk.step));
         assert_eq!(rho, base.wrapping_add(step.wrapping_mul(7)).to_le_bytes(), "R_0 + 7 delta");
-        let input = [&pp.bytes[..], &address(&tweak(TWEAK_MSG, 0, 0)), &m, &rho].concat();
+        let input = [&pp.bytes()[..], &address(&tweak(TWEAK_MSG, 0, 0)), &m, &rho].concat();
         assert_eq!(input.len(), 80, "one block");
         assert_eq!(digest_block(&pp, &rho, &m), keccak::hash(&input));
         // BLAKE2s: `P | A | m` is one block, the randomizer alone in the second; SHA-256: the block
         // of `P`, then `A | m | 0^16`, then the randomizer.
-        let blake = Pp::new(HashFn::Blake2s, pp.bytes);
+        let blake = Pp::new(HashFn::Blake2s, pp.bytes());
         assert_eq!(digest_block(&blake, &rho, &m), blake2s::hash(&input));
-        let sha = Pp::new(HashFn::Sha256, pp.bytes);
-        let input = [&pp.bytes[..], &[0; 48], &address(&tweak(TWEAK_MSG, 0, 0)), &m, &[0; 16], &rho].concat();
+        let sha = Pp::new(HashFn::Sha256, pp.bytes());
+        let input = [&pp.bytes()[..], &[0; 48], &address(&tweak(TWEAK_MSG, 0, 0)), &m, &[0; 16], &rho].concat();
         assert_eq!(input.len(), 64 + 64 + 16);
         assert_eq!(digest_block(&sha, &rho, &m), sha256::hash(&input));
     }
@@ -667,7 +687,7 @@ mod tests {
     fn encoding_absorbs_the_message_and_the_counter() {
         let key: ForestKey = std::array::from_fn(|c| std::array::from_fn(|half| [(2 * c + half) as u8; N]));
         let pp = Pp::new(HashFn::Keccak256, [3u8; PUBLIC_PARAM_LEN]);
-        let input = [&pp.bytes[..], &address(&tweak(TWEAK_ENC, 0, 77)), &forest_key_bytes(&key), &5u32.to_le_bytes()].concat();
+        let input = [&pp.bytes()[..], &address(&tweak(TWEAK_ENC, 0, 77)), &forest_key_bytes(&key), &5u32.to_le_bytes()].concat();
         assert_eq!(input.len(), 292);
         assert_eq!(encode(&pp, &OtsKey { layer: 0, tree: 0, leaf: 77 }, &forest_key_bytes(&key), 5), codeword(keccak::hash(&input)[..N].try_into().unwrap()));
         for hash in HashFn::ALL {

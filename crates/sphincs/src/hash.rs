@@ -6,8 +6,8 @@
 //! - Keccak-256: `P` inline; `n` bytes cost `n / 136 + 1` permutations.
 //! - BLAKE2s-256: `P` inline; `n` bytes cost `ceil(n / 64)` compressions (no padding byte), so
 //!   `P | address | left | right` is exactly one 64-byte block.
-//! - SHA-256: `P` alone in its own zero-padded 64-byte block, compressed once per key
-//!   ([`Pp::new`]); a call then costs `ceil((n + 9) / 64)` compressions for its `n` bytes after
+//! - SHA-256: `P` alone in its own zero-padded 64-byte block, compressed once by [`Pp::new`] (once
+//!   per key for the signer, once per verification for the verifier); a call then costs `ceil((n + 9) / 64)` compressions for its `n` bytes after
 //!   that block, the 9 being the padding byte and the length.
 
 use std::cell::Cell;
@@ -27,14 +27,14 @@ pub const TWEAK_RANDOMIZER: u8 = 7;
 pub const TWEAK_MSG: u8 = 12;
 /// A pruned key's surrogate siblings (the kept subtree's position comes from the low bits of `P`).
 pub const TWEAK_SURROGATE: u8 = 13;
-// The forest: seed derivation, chains, child leaves, sub-tree and top-tree nodes, super-children.
+// The forest: seed derivation, chains, child leaves, sub-tree nodes, super-children, top-tree nodes.
 pub const TWEAK_FOREST_PRF: u8 = 14;
 pub const TWEAK_FCHAIN: u8 = 15;
 pub const TWEAK_CHILD_LEAF: u8 = 16;
 pub const TWEAK_SUB_NODE: u8 = 17;
 pub const TWEAK_SUPER_CHILD: u8 = 18;
 pub const TWEAK_TOP_NODE: u8 = 19;
-// Type 20 (the former forest key hash) is unused: the encoding absorbs the sixteen nodes.
+// Type 20 is unused: the forest key is not hashed, the encoding absorbs its sixteen nodes.
 
 /// The hash function of a configuration.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -103,8 +103,8 @@ impl HashFn {
 /// zero-padded block of `P`, compressed once.
 #[derive(Clone)]
 pub struct Pp {
-    pub hash: HashFn,
-    pub bytes: PublicParam,
+    hash: HashFn,
+    bytes: PublicParam,
     sha: sha256::Hasher,
 }
 
@@ -118,6 +118,14 @@ impl Pp {
             count_blocks(1);
         }
         Self { hash, bytes, sha }
+    }
+
+    pub fn hash(&self) -> HashFn {
+        self.hash
+    }
+
+    pub fn bytes(&self) -> PublicParam {
+        self.bytes
     }
 }
 
@@ -134,14 +142,14 @@ pub struct Tweak {
 }
 
 pub fn tweak(t: u8, hi: u32, lo: u32) -> Tweak {
-    debug_assert!(t < 32 && hi < 1 << 24);
+    assert!(t < 32 && hi < 1 << 24);
     Tweak { t, step: 0, layer: 0, tree: 0, hi, lo }
 }
 
 impl Tweak {
     /// The same address at chain step `step < 8`.
     pub fn step(self, step: usize) -> Self {
-        debug_assert!(step < 8);
+        assert!(step < 8);
         Self { step: step as u8, ..self }
     }
 
@@ -298,7 +306,7 @@ impl Midstate {
     }
 }
 
-/// One-shot hash of `data` with `hash`, for tests and serialization digests.
+/// One-shot hash of `data` with `hash`, for tests.
 pub fn hash_bytes(hash: HashFn, data: &[u8]) -> [u8; 32] {
     match hash {
         HashFn::Keccak256 => keccak::hash(data),

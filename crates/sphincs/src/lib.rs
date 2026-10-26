@@ -27,7 +27,7 @@ pub type Digest = [u8; N];
 pub const PUBLIC_PARAM_LEN: usize = 16;
 pub type PublicParam = [u8; PUBLIC_PARAM_LEN];
 
-/// The master secret of a (non-threshold) key.
+/// The master secret of a key.
 pub const MASTER_SECRET_LEN: usize = 32;
 pub type MasterSecret = [u8; MASTER_SECRET_LEN];
 
@@ -51,6 +51,9 @@ pub const TARGET_SUM: usize = 123;
 pub const HEIGHTS: [usize; 4] = [22, 24, 26, 28];
 /// The tallest height: the digest's index field and the address fields are sized for it.
 pub const MAX_H: usize = 28;
+/// The kept subtree heights `b < h` of a pruned key besides the full key `b = h`: those whose
+/// lifetime is proved in Lean (`PRUNED` in scripts/scheme.py).
+pub const PRUNED: [usize; 6] = [8, 10, 12, 13, 14, 20];
 
 /// The layer heights of a layered key of height `h`, top layer first: three layers, a top layer of at
 /// most 12 and two equal bottom layers of at least 6.
@@ -101,18 +104,31 @@ pub enum Shape {
 /// One of the configurations: a hash, a height and a shape.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Config {
-    pub hash: HashFn,
-    pub h: usize,
-    pub shape: Shape,
+    hash: HashFn,
+    h: usize,
+    shape: Shape,
 }
 
 impl Config {
+    /// Panics unless `h` is one of [`HEIGHTS`] and a pruned key keeps `b = h` or `b` in [`PRUNED`].
     pub fn new(hash: HashFn, h: usize, shape: Shape) -> Self {
         assert!(HEIGHTS.contains(&h), "h = {h}");
         if let Shape::Pruned { b } = shape {
-            assert!(b <= h);
+            assert!(b == h || PRUNED.contains(&b), "b = {b}");
         }
         Self { hash, h, shape }
+    }
+
+    pub fn hash(&self) -> HashFn {
+        self.hash
+    }
+
+    pub fn h(&self) -> usize {
+        self.h
+    }
+
+    pub fn shape(&self) -> Shape {
+        self.shape
     }
 
     /// The layer heights, bottom layer first; one layer for a pruned key.
@@ -183,3 +199,4 @@ const _: () = assert!(TARGET_SUM < V * (CHAIN_LEN - 1));
 const _: () = assert!(RANDOMIZER_LEN + FOREST_SIZE + LAYER_SIZE + 24 * N == BASELINE_SIG_SIZE);
 const _: () = assert!(digest_bits(24) == 232 && digest_bits(MAX_H) <= 8 * 32);
 const _: () = assert!(PUB_KEY_SIZE == 32);
+const _: () = assert!(PRUNED[PRUNED.len() - 1] < HEIGHTS[0]);

@@ -70,19 +70,19 @@ pub fn lut(t: u8) -> [u8; CHILD_CHAINS] {
 
 /// `c + 8 s + 128 j`, a sub-tree of the instance.
 fn sub_slot(c: usize, s: usize, j: usize) -> u32 {
-    debug_assert!(c < COORDS && s < SUPERS && j < SUBS);
+    assert!(c < COORDS && s < SUPERS && j < SUBS);
     (c + 8 * s + 128 * j) as u32
 }
 
 /// `c + 8 s + 128 j + 256 a`, a child of the instance.
 fn child_slot(c: usize, s: usize, j: usize, a: usize) -> u32 {
-    debug_assert!(a < CHILDREN);
+    assert!(a < CHILDREN);
     sub_slot(c, s, j) + 256 * a as u32
 }
 
 /// `c + 8 s + 128 j + 256 a + 2048 i`, a chain of the instance.
 fn chain_slot(c: usize, s: usize, j: usize, a: usize, i: usize) -> u32 {
-    debug_assert!(i < CHILD_CHAINS);
+    assert!(i < CHILD_CHAINS);
     child_slot(c, s, j, a) + 2048 * i as u32
 }
 
@@ -161,13 +161,13 @@ fn order_tops(bit: bool, current: Digest, sibling: Digest) -> [Digest; 2] {
 
 /// A forest instance whose children are known: every level, kept for the openings.
 pub struct Forest {
-    /// `chains[c][s][j][a][i]`: the start of every chain.
+    /// `starts[c][s][j][a][i]`: the start of every chain.
     starts: Vec<Digest>,
     /// `sub[c][s][j][level][node]`, level 0 being the 8 child leaves and level 2 the two top nodes.
     sub: Vec<Levels>,
     /// `top[c][level][node]`, level 0 being the 16 super-children and level 3 the two top nodes.
     top: Vec<Levels>,
-    pub key: ForestKey,
+    key: ForestKey,
 }
 
 /// `(((c * SUPERS + s) * SUBS + j) * CHILDREN + a) * CHILD_CHAINS + i`.
@@ -218,6 +218,10 @@ impl Forest {
             top[c] = levels;
         }
         Self { starts, sub, top, key }
+    }
+
+    pub fn key(&self) -> &ForestKey {
+        &self.key
     }
 
     /// The opening of every coordinate at the digest's marks.
