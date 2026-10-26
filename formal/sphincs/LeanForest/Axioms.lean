@@ -10897,11 +10897,11 @@ import LeanForest.World
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.φF_le_one
 
-/-- info: 'LeanForest.Security.H0.f2Tab_eq' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.f2Tab_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.f2Tab_eq
 
-/-- info: 'LeanForest.Security.H0.fTab_eq' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'LeanForest.Security.H0.fTab_eq' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Security.H0.fTab_eq
 
