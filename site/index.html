@@ -1092,8 +1092,8 @@ footer a + a { margin-left: 1.25rem; }
     // traffic per operator at about 1 bit per AND gate
     var MPC = '<th>Traffic<span class="info" tabindex="0" data-tip="Honest-majority MPC with malicious security&#10;costs about 1 bit per AND gate per operator&#10;(Araki et al., CCS 2016; the malicious check is&#10;sublinear: Boyle et al., CCS 2019; Goyal and Song,&#10;CRYPTO 2020)">i</span></th>';
     var th = lay_ ? thr('layered') : thr('pruned', devs[0].b);
-    set('th-life', fmt(th.lifetime) + ' signatures' + (lay_ ? '' : ' <span class="note">(subtree of ' + pow2(devs[0].b) + ', as the Ledger)</span>') +
-      LIFE_TIP + ' &middot; traffic per operator');
+    set('th-life', fmt(th.lifetime) + ' signatures' + (lay_ ? '' : ' <span class="note">(subtree of height ' + devs[0].b + ', as the Ledger)</span>') +
+      LIFE_TIP + '<br>Traffic per operator:');
     set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + bytes(th.prep_mb / 1000) + '</td></tr>');
     set('th-online', 'Online at <i>h</i> = ' + S.h + ': about ' + fmt(th.grind) +
       ' grinding attempts in the clear (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared + (S.shape === 'layered' ? '' : ', onto instances of the kept subtree') +
