@@ -281,6 +281,8 @@ footer a + a { margin-left: 1.25rem; }
   .thr .cmp th, .thr .cmp td { padding-right: 0.4rem; }
   .thr .pair .cmp { width: 100%; }
   .thr .pre-t .life { display: none; }
+  .thr .pre-t tr > :first-child { display: none; }     /* below the keygen table: no empty label column, no rule beside it */
+  .tables .thr .pre-t tr > :nth-child(2) { border-left: 0; padding-left: 0; }
 
   footer { margin-top: 2rem; }
 }
@@ -326,7 +328,7 @@ footer a + a { margin-left: 1.25rem; }
     <div class="params">
       <div class="toggles" id="toggles">
         <span class="sl" id="tl-h">Lifetime</span>
-        <div class="seg" role="radiogroup" aria-labelledby="tl-h" data-key="h"><button type="button" role="radio" data-val="22">2<sup>26</sup></button><button type="button" role="radio" data-val="24">2<sup>28</sup></button><button type="button" role="radio" data-val="26">2<sup>30</sup></button><button type="button" role="radio" data-val="28">2<sup>32</sup></button></div>
+        <div class="seg" role="radiogroup" aria-labelledby="tl-h" data-key="h"><button type="button" role="radio" data-val="22" aria-label="2 to the 26">2<sup>26</sup></button><button type="button" role="radio" data-val="24" aria-label="2 to the 28">2<sup>28</sup></button><button type="button" role="radio" data-val="26" aria-label="2 to the 30">2<sup>30</sup></button><button type="button" role="radio" data-val="28" aria-label="2 to the 32">2<sup>32</sup></button></div>
         <span class="sl" id="tl-shape">Mode</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-shape" data-key="shape"><button type="button" role="radio" data-val="layered">Uniform</button><button type="button" role="radio" data-val="pruned">Pruning</button></div>
         <span class="sl" id="tl-hash">Hash</span>
@@ -1084,7 +1086,7 @@ document.addEventListener('pointerdown', function (e) {
     if (s >= 3600) return sig2(s / 3600) + '&nbsp;h';
     if (s >= 60) return sig2(s / 60) + '&nbsp;min';
     if (s >= 1) return sig2(s) + '&nbsp;s';
-    if (s >= 9.5e-5) return sig2(s * 1e3) + '&nbsp;ms';
+    if (s >= 1e-3) return sig2(s * 1e3) + '&nbsp;ms';
     return sig2(s * 1e6) + '&nbsp;&micro;s';
   }
   function bytes(gb) {
@@ -1092,7 +1094,7 @@ document.addEventListener('pointerdown', function (e) {
     if (gb >= 0.9995) return gb.toPrecision(3) + '&nbsp;GB';
     return (gb * 1000).toPrecision(3) + '&nbsp;MB';
   }
-  function pow2(e) { return '2<sup>' + e + '</sup>'; }
+  function pow2(e) { return '<span role="img" aria-label="2 to the ' + e + '">2<sup>' + e + '</sup></span>'; }
   function pow2t(e) { return '2' + String(e).replace(/\d/g, function (d) { return '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]; }); }   // in a tip
   function keccak() { return S.hash === 'Keccak-256'; }
   function unit() { return keccak() ? 'permutations' : 'compressions'; }
