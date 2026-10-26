@@ -44,8 +44,7 @@ One scheme with three toggles, 24 configurations in all. It starts from SLH-DSA-
 SP~800-230~\cite{SP800230}, which is the full key at $h=22$ (one tree of few-time signatures); besides the toggles, the
 differences are:
 \begin{itemize}
-  \item a \emph{two-level WOTS forest} (\cref{sec:twolevel}; credit: Jonas Nick, sig.golf~\cite{siggolf}) instead of FORS as the few-time signature (FTS):
-        signatures are 25\% smaller and verification 25\% cheaper, at about the same signing cost and slightly longer lifetimes
+  \item a \emph{two-level WOTS forest} (\cref{sec:twolevel}; credit: Jonas Nick, sig.golf~\cite{siggolf}) instead of FORS as the few-time signature (FTS)
   \item WOTS$^+$C~\cite{HK22C} instead of WOTS$^+$: 64 chains of length $w=4$, with a target sum of 123
   \item the WOTS$^+$C encoding absorbs the FTS: it hashes the two nodes below the root of each of the 8 trees of
         the forest, then the counter; there is no FTS public key and no tree of the forest has a root hash
@@ -340,21 +339,8 @@ instance, and the first $p$ are prepared once (about 2.3~h for the layered key a
 \section{The few-time signature: a two-level WOTS forest}
 \label{sec:twolevel}
 
-The few-time signature (FTS) under each tree leaf is built from small WOTS keys instead of FORS. Against
-FORS with $k=24$ trees of height $a=10$, at the same parameters otherwise ($h=24$), signatures are 25\% smaller and
-verification 25\% cheaper, for about the same signing cost and slightly longer lifetimes.
+The few-time signature (FTS) under each tree leaf is built from small WOTS keys instead of FORS.
 The idea is inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
-
-\begin{center}
-\begin{tabular}{lrrr}
-  \toprule
-  FTS & size & verification & FTS signing \\
-  \midrule
-  FORS, $k=24$, $a=10$ & 5\,652 bytes & 352 permutations & $61\cdot10^3$ permutations \\
-  two-level WOTS forest & 4\,244 bytes & 265 permutations & $59\cdot10^3$ permutations \\
-  \bottomrule
-\end{tabular}
-\end{center}
 
 \paragraph{WOTS keys.} The FTS is built from small WOTS keys: 6 chains of length 5, with leaf
 $\hash(\text{6 chain tops})$. A codeword is a vector $d\in\{0,\dots,4\}^6$ with $\sum_i d_i=5$; there are 246 of them.
@@ -473,8 +459,7 @@ the signatures spread over the $2^b$ instances of the kept subtree, and a forger
 The factor $2^{b-h}$ is what hypertree pruning~\cite{conduition} does not charge the forger: its rule reduces
 the lifetime by the full pruning factor $2^{h-b}$, which is the signer's grinding cost, but the forger pays that
 same cost per attempt. Here the credit is worth about $2^{(h-b)/18}$, from $+17\%$ at $h=24$, $b=20$ to a factor 1.8 at $b=8$.
-At $h=24$, the same cover rule applied to FORS gives the first row, and the two-level forest is about 19\%
-ahead at every subtree height. The best known attack also uses the WOTS$^+$C key (a counter search for a neighbouring
+The table is at $h=24$. The best known attack also uses the WOTS$^+$C key (a counter search for a neighbouring
 encoding, then one chain preimage): for the forest it is the cover figure, except at $b=8$ where it is 2\% lower~\cite{proofs}. Every figure is rounded down; the last row repeats the proved lifetimes of \cref{sec:lifetimes}.
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
@@ -482,7 +467,6 @@ encoding, then one chain preimage): for the forest it is the cover figure, excep
   \toprule
   $b$ & 24 & 20 & 14 & 13 & 12 & 10 & 8 \\
   \midrule
-  FORS, cover & $3.00\cdot10^8$ & $2.20\cdot10^7$ & $4.33\cdot10^5$ & $2.24\cdot10^5$ & $1.16\cdot10^5$ & $3.14\cdot10^4$ & $8.4\cdot10^3$ \\
   forest, cover & $3.59\cdot10^8$ & $2.63\cdot10^7$ & $5.18\cdot10^5$ & $2.68\cdot10^5$ & $1.39\cdot10^5$ & $3.74\cdot10^4$ & $1.00\cdot10^4$ \\
   \midrule
   forest, proved & $3.36\cdot10^8$ & $2.38\cdot10^7$ & $4.41\cdot10^5$ & $2.26\cdot10^5$ & $1.16\cdot10^5$ & $3.08\cdot10^4$ & $8.15\cdot10^3$ \\
