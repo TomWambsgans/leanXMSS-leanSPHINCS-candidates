@@ -1359,15 +1359,15 @@ document.addEventListener('pointerdown', function (e) {
   var cur = null;
   function clear(g) { while (g.firstChild) g.removeChild(g.firstChild); }
   function pick() {
-    // the pruned tree: a leaf among the 64 of the last level drawn, and the path to it
-    var py = [-108, -30.5, 31.5, 81.2, 120.8, 152.6, 178], pp = [[256, -108]], on = pruned.querySelector('g.on');
+    // the pruned tree: a leaf of its bottom row (below the 6 levels drawn, the 2 of the faded body), and the path to it
+    var py = [-108, -30.5, 31.5, 81.2, 120.8, 152.6, 178, 192, 204], pp = [[256, -108]], on = pruned.querySelector('g.on'), pl = py.length - 1;
     for (var j = 1; j < py.length; j++) pp.push([pp[j - 1][0] + coin() * 240 / Math.pow(2, j), py[j]]);
     pruned.querySelector('polyline.path').setAttribute('points', pts(pp));
     clear(on);
-    pp.forEach(function (q, j) { if (j) el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j === 6 ? 2.2 : 2.6 }, on); });
+    pp.forEach(function (q, j) { if (j && (j < 6 || j === pl)) el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j === pl ? 1.6 : 2.6 }, on); });   // in the body, the leaf only
     el('circle', { cx: 256, cy: -108, r: 4.2 }, on);
     var dash = pruned.querySelector('line.path.dash');
-    dash.setAttribute('x1', n1(pp[6][0])); dash.setAttribute('y1', n1(pp[6][1])); dash.setAttribute('x2', X); dash.setAttribute('y2', WT - 1);
+    dash.setAttribute('x1', n1(pp[pl][0])); dash.setAttribute('y1', n1(pp[pl][1])); dash.setAttribute('x2', X); dash.setAttribute('y2', WT - 1);
     // the forest: the path to a leaf of each tree, and to a leaf of each of the two subtrees under it
     clear(fts.conn); clear(fts.paths); clear(fts.dot); clear(fts.on);
     forest = { trees: [], subs: [], key: [], wc: [] };
