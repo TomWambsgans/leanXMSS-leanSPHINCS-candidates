@@ -16,38 +16,6 @@ open Concrete LeanForest.Base.H0
 set_option linter.unusedSectionVars false
 attribute [local irreducible] lut codewordCodes
 
-/-! ### The codeword-level sums are probabilities -/
-
-theorem Hm_nonneg (m : FChain → FPos) : 0 ≤ Hm m := by
-  unfold Hm avgR
-  exact mul_nonneg (inv_nonneg.2 (Nat.cast_nonneg _)) (Finset.sum_nonneg fun w _ => by split_ifs <;> norm_num)
-
-theorem Hm_le_one (m : FChain → FPos) : Hm m ≤ 1 := by
-  unfold Hm
-  calc (avgR fun w : LutIdx => if ∀ i, (lut w i).val ≤ (m i).val then (1 : ℝ) else 0)
-      ≤ avgR fun _ : LutIdx => (1 : ℝ) := by
-        unfold avgR
-        exact mul_le_mul_of_nonneg_left (Finset.sum_le_sum fun w _ => by split_ifs <;> norm_num)
-          (inv_nonneg.2 (Nat.cast_nonneg _))
-    _ = 1 := avgR_const 1
-
-theorem avgR_mem_unit {α : Type} [Fintype α] [Nonempty α] (g : α → ℝ) (h0 : ∀ a, 0 ≤ g a) (h1 : ∀ a, g a ≤ 1) :
-    0 ≤ avgR g ∧ avgR g ≤ 1 := by
-  unfold avgR
-  have hc : (0 : ℝ) < Fintype.card α := by exact_mod_cast Fintype.card_pos
-  refine ⟨mul_nonneg (inv_nonneg.2 hc.le) (Finset.sum_nonneg fun a _ => h0 a), ?_⟩
-  calc (Fintype.card α : ℝ)⁻¹ * ∑ a, g a ≤ (Fintype.card α : ℝ)⁻¹ * ∑ _a : α, (1 : ℝ) :=
-        mul_le_mul_of_nonneg_left (Finset.sum_le_sum fun a _ => h1 a) (inv_nonneg.2 hc.le)
-    _ = 1 := by rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one, inv_mul_cancel₀ hc.ne']
-
-theorem fR_unit (u : ℕ) : 0 ≤ fR u ∧ fR u ≤ 1 := by
-  rw [fR_eq_max]
-  exact avgR_mem_unit _ (fun c => Hm_nonneg _) (fun c => Hm_le_one _)
-
-theorem f2R_unit (u : ℕ) : 0 ≤ f2R u ∧ f2R u ≤ 1 := by
-  rw [f2R_eq_max]
-  exact avgR_mem_unit _ (fun c => sq_nonneg _) (fun c => pow_le_one₀ (Hm_nonneg _) (Hm_le_one _))
-
 /-! ### The tables as upper bounds -/
 
 /-- Upper bound of `f(u)`: exact for `u ≤ 40`, one beyond. -/
