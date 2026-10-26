@@ -1026,7 +1026,6 @@ footer a + a { margin-left: 1.25rem; }
 
   function render() {
     var W = D.wallet, main = cfg(S.shape), full = cfg('pruned'), lay = cfg('layered');
-    var verifyUnit = keccak() ? 'Keccak-f[1600] permutations' : S.hash + ' compressions';
 
     // the toggles
     [].forEach.call(document.querySelectorAll('.seg'), function (g) {
@@ -1040,7 +1039,7 @@ footer a + a { margin-left: 1.25rem; }
     // the parameter table
     set('h', S.shape === 'layered' ? split(main) : String(main.h));
     set('size', comma(main.size) + ' bytes');
-    set('verify', comma(main.verify) + ' ' + unit() + '<span class="info" tabindex="0" data-tip="' + verifyUnit + '">i</span>');
+    set('verify', comma(main.verify) + ' ' + unit());
     set('dia-h', String(S.h));
 
     [].forEach.call(document.querySelectorAll('[data-shape]'), function (e) { e.hidden = e.dataset.shape !== S.shape; });
