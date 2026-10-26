@@ -218,10 +218,11 @@ and its surrogates of a pruned key. It never builds a few-time signature.
         tree in the clear
 \end{enumerate}
 
-\paragraph{Preprocessing (before the message).} Pick 16 instances (indices) at random, in the kept subtree of a pruned
-key. For each, the MPC generates its forest, publishes the masked chain values as above, and builds in the clear its
+\paragraph{Preprocessing (before the message).} Pick 16 instances (indices) uniformly at random, in the kept subtree of
+a pruned key, from randomness the operators generate securely together (inside the MPC), so that no coalition can bias
+or predict it. For each, the MPC generates its forest, publishes the masked chain values as above, and builds in the clear its
 forest key, the WOTS$^+$C signatures that link it to the top layer (with the trees of the lower layers of a layered key)
-and the authentication paths. A signature consumes one prepared instance, which is then replaced by a fresh random one,
+and the authentication paths. A signature consumes one prepared instance, which is then replaced by a fresh one drawn the same way,
 so the preprocessing is one instance per signature.
 
 \paragraph{Signing (any $t$).}
@@ -293,7 +294,7 @@ on average, at most 64: each signer sends one part per value.
 A hardware wallet keeps the secret key and signs, but grinding $2^h/p$ randomizers is too slow there. The idea of
 delegating that work to the untrusted host and proving it with a STARK comes from Riva~\cite{riva}.
 \begin{enumerate}
-  \item the device prepares $p=\max(16, 2^{h-20})$ random instances in advance, as in \cref{sec:threshold} (in its
+  \item the device prepares $p=\max(16, 2^{h-20})$ uniformly random instances (from its secure randomness) in advance, as in \cref{sec:threshold} (in its
         idle time), so that the host grinds $\approx2^{20}$ digests or fewer: 16 at $h\le24$, 64 at $h=26$, 256 at $h=28$
   \item to sign $m$, it derives $R_0$ and $\Delta$ in one hash of its secret key and $m$, and sends $m$, $R_0$,
         $\Delta$ and the $p$ indices to the host
