@@ -298,7 +298,7 @@ on average, at most 64: each signer sends one part per value.
 \label{sec:ledger}
 
 A hardware wallet keeps the secret key and signs, but grinding $2^h/p$ randomizers is too slow there. The idea of
-delegating that work to the untrusted host and proving it with a STARK comes from Riva~\cite{riva}.
+delegating that work to the untrusted host and proving it with a STARK comes from Riva Labs~\cite{riva}.
 \begin{enumerate}
   \item the device prepares $p=\max(16, 2^{h-20})$ uniformly random instances (from its secure randomness) in advance, as in \cref{sec:threshold} (in its
         idle time), so that the host grinds $\approx2^{20}$ digests or fewer: 16 at $h\le24$, 64 at $h=26$, 256 at $h=28$
@@ -503,7 +503,7 @@ encoding, then one chain preimage): for the forest it is the cover figure, excep
   Signatures from Threshold PRFs}, 2026. \url{https://eprint.iacr.org/2026/2142}.
 \bibitem{siggolf} J.~Nick (Blockstream). \emph{WCT-9: a WOTS-child forest replaces BPORS}, sig.golf
   submission, 2026. \url{https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0}.
-\bibitem{riva} Riva. \url{https://www.riva.xyz/}.
+\bibitem{riva} Riva Labs. \url{https://www.riva.xyz/}.
 \end{thebibliography}
 
 \end{document}
