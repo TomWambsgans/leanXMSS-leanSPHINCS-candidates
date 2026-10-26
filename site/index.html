@@ -1169,9 +1169,11 @@ document.addEventListener('pointerdown', function (e) {
       set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="note">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
-      var tt = lay_ ? thr('layered') : thr('pruned', d.b);
+      // shown only when it beats signing alone
+      var tt = lay_ ? thr('layered') : thr('pruned', d.b), online = g / W.host_rate + W.stark_verify_s;
+      document.querySelector('[data-f="assist-' + k + '"]').closest('tr').classList.toggle('gone', online >= c.sign[d.kib] / d.rate);
       set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.ledger_prep * np / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
-        time(g / W.host_rate + W.stark_verify_s) + '</span><span class="m-only"><span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span></span></div>');
+        time(online) + '</span><span class="m-only"><span class="info w" tabindex="0" data-tip="' + assist(tt) + '">i</span></span></span></div>');
       document.getElementById('assist-tip').setAttribute('data-tip', assist(tt).replace(/&nbsp;/g, '\u00a0'));
     });
 
