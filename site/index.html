@@ -1087,7 +1087,7 @@ footer a + a { margin-left: 1.25rem; }
 
     // threshold, with the chosen hash, for the chosen shape: the layered key, or a pruned key with the Ledger's subtree
     // traffic per operator at about 1 bit per AND gate
-    var MPC = '<th>Traffic<span class="info" tabindex="0" data-tip="Honest-majority MPC with malicious security&#10;costs about 1 bit per AND gate per operator&#10;(Araki et al., CCS 2016; the malicious check is&#10;sublinear: Boyle et al., CCS 2019; Goyal and Song,&#10;CRYPTO 2020)">i</span></th>';
+    var MPC = '<th>Traffic<span class="info" tabindex="0" data-tip="Thanks to honest-majority MPC with replicated&#10;sharing (Araki et al., CCS 2016), each AND gate&#10;costs roughly 1 bit of bandwidth per operator,&#10;with malicious security (Boyle et al., CCS 2019;&#10;Goyal and Song, CRYPTO 2020)">i</span></th>';
     var th = lay_ ? thr('layered') : thr('pruned', devs[0].b);
     var ROUNDS = '<th>Rounds<span class="info" tabindex="0" data-tip="One communication round per layer of AND gates&#10;(' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + ')">i</span></th>';
     // with pruning, the Ledger's subtree; the layered key needs no sentence

@@ -277,19 +277,25 @@ signing aborts.
 
 
 \paragraph{Threshold costs.} Honest-majority MPC with malicious security (with abort) costs essentially the
-semi-honest price: about 1 bit per AND gate per operator with three operators~\cite{AFLNO16}, the malicious check
-adding sublinear traffic~\cite{BGIN19,GS20}. A compression is
+semi-honest price: about 1 bit per AND gate per operator with three operators (2-of-3)~\cite{AFLNO16}, the malicious
+check adding sublinear traffic~\cite{BGIN19,GS20}. Replicated sharing over $\mathrm{GF}(2)$ generalizes to $n=2t-1$:
+each AND gate is computed locally and reshared through one collector, $(n-1)+t-1$ bits in all, i.e.\ 1, 1.2 and 1.29
+bits per operator for 2-of-3, 3-of-5 and 4-of-7 (the local work grows with the $\binom{n-1}{t-1}$ shares an operator
+holds, which is fine for small committees). The MPC hashes only the chain steps: the
+chain secrets are outputs of $F$, which the operators share locally, and the WOTS public keys, the trees and the
+forest key are hashed in the clear once the chain ends are open. So key generation is $2^b\cdot64\cdot3$ steps and
+preprocessing $2\,048\cdot6\cdot4=49\,152$ (with the chains of the lower trees for a layered key). A compression is
 $36.3\cdot10^3$ AND gates for Keccak-f[1600] (1\,600 per round; part of the first round is public, and the truncated
 output skips most of the last one), $22.6\cdot10^3$ for SHA-256 (the Bristol circuit) and $14.9\cdot10^3$ for BLAKE2s
-(10 rounds of 8 functions of 6 additions modulo $2^{32}$, 31 AND gates each). Traffic per operator at $h=24$, at 1 bit per AND gate:
+(10 rounds of 8 functions of 6 additions modulo $2^{32}$, 31 AND gates each). Traffic per operator at $h=24$, 2-of-3:
 \begin{center}
 \begin{tabular}{lrrr}
   \toprule
   & Keccak-256 & BLAKE2s & SHA-256 \\
   \midrule
-  keygen, layered or pruned $b=12$ (as on the Ledger) & 4.3~GB & 1.8~GB & 2.8~GB \\
-  preprocessing, pruned (one instance) & 268~MB & 114~MB & 173~MB \\
-  preprocessing, layered (and two lower trees) & 404~MB & 172~MB & 260~MB \\
+  keygen, layered or pruned $b=12$ (as on the Ledger) & 3.6~GB & 1.5~GB & 2.2~GB \\
+  preprocessing, pruned (one instance) & 223~MB & 91~MB & 139~MB \\
+  preprocessing, layered (and two lower trees) & 335~MB & 137~MB & 208~MB \\
   \bottomrule
 \end{tabular}
 \end{center}

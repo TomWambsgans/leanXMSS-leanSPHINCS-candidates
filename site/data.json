@@ -1952,15 +1952,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 7514,
-   "keygen": 59676,
-   "prep": 59120,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 0.27077985,
-   "prep_mb": 268.257
+   "keygen_gb": 0.2230272,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -1968,15 +1968,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 28410,
-   "keygen": 238616,
-   "prep": 59120,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 1.0827201,
-   "prep_mb": 268.257
+   "keygen_gb": 0.8921088,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -1984,15 +1984,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 107200,
-   "keygen": 954388,
-   "prep": 59120,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 4.33053555,
-   "prep_mb": 268.257
+   "keygen_gb": 3.5684352,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2000,15 +2000,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 208500,
-   "keygen": 1908754,
-   "prep": 59120,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 8.660971275,
-   "prep_mb": 268.257
+   "keygen_gb": 7.1368704,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2016,15 +2016,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 405300,
-   "keygen": 3817488,
-   "prep": 59120,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 17.3218518,
-   "prep_mb": 268.257
+   "keygen_gb": 14.2737408,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2032,15 +2032,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 21760000,
-   "keygen": 244318212,
-   "prep": 59120,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 1108.59388695,
-   "prep_mb": 268.257
+   "keygen_gb": 913.5194112,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2048,15 +2048,15 @@
    "shape": "layered",
    "b": 22,
    "lifetime": 81860000,
-   "keygen": 238592,
-   "prep": 88942,
+   "keygen": 196608,
+   "prep": 73729,
    "grind": 4194304,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 96000,
-   "keygen_gb": 1.0826112,
-   "prep_mb": 403.574325
+   "keygen_gb": 0.8921088,
+   "prep_mb": 334.5453375
   },
   {
    "hash": "Keccak-256",
@@ -2064,15 +2064,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 8154,
-   "keygen": 59680,
-   "prep": 59120,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 0.270798,
-   "prep_mb": 268.257
+   "keygen_gb": 0.2230272,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2080,15 +2080,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 30810,
-   "keygen": 238620,
-   "prep": 59120,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 1.08273825,
-   "prep_mb": 268.257
+   "keygen_gb": 0.8921088,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2096,15 +2096,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 116600,
-   "keygen": 954392,
-   "prep": 59120,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 4.3305537,
-   "prep_mb": 268.257
+   "keygen_gb": 3.5684352,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2112,15 +2112,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 226800,
-   "keygen": 1908758,
-   "prep": 59120,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 8.660989425,
-   "prep_mb": 268.257
+   "keygen_gb": 7.1368704,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2128,15 +2128,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 441500,
-   "keygen": 3817492,
-   "prep": 59120,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 17.32186995,
-   "prep_mb": 268.257
+   "keygen_gb": 14.2737408,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2144,15 +2144,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 23830000,
-   "keygen": 244318216,
-   "prep": 59120,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 1108.5939051,
-   "prep_mb": 268.257
+   "keygen_gb": 913.5194112,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2160,15 +2160,15 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 336700000,
-   "keygen": 954368,
-   "prep": 88942,
+   "keygen": 786432,
+   "prep": 73729,
    "grind": 16777216,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 96000,
-   "keygen_gb": 4.3304448,
-   "prep_mb": 403.574325
+   "keygen_gb": 3.5684352,
+   "prep_mb": 334.5453375
   },
   {
    "hash": "Keccak-256",
@@ -2176,15 +2176,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 8830,
-   "keygen": 59684,
-   "prep": 59120,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 0.27081615,
-   "prep_mb": 268.257
+   "keygen_gb": 0.2230272,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2192,15 +2192,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 33480,
-   "keygen": 238624,
-   "prep": 59120,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 1.0827564,
-   "prep_mb": 268.257
+   "keygen_gb": 0.8921088,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2208,15 +2208,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 126900,
-   "keygen": 954396,
-   "prep": 59120,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 4.33057185,
-   "prep_mb": 268.257
+   "keygen_gb": 3.5684352,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2224,15 +2224,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 246900,
-   "keygen": 1908762,
-   "prep": 59120,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 8.661007575,
-   "prep_mb": 268.257
+   "keygen_gb": 7.1368704,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2240,15 +2240,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 480100,
-   "keygen": 3817496,
-   "prep": 59120,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 17.3218881,
-   "prep_mb": 268.257
+   "keygen_gb": 14.2737408,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2256,15 +2256,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 26030000,
-   "keygen": 244318220,
-   "prep": 59120,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 1108.59392325,
-   "prep_mb": 268.257
+   "keygen_gb": 913.5194112,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2272,15 +2272,15 @@
    "shape": "layered",
    "b": 26,
    "lifetime": 1381000000,
-   "keygen": 954368,
-   "prep": 118766,
+   "keygen": 786432,
+   "prep": 98305,
    "grind": 67108864,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 125824,
-   "keygen_gb": 4.3304448,
-   "prep_mb": 538.900725
+   "keygen_gb": 3.5684352,
+   "prep_mb": 446.0589375
   },
   {
    "hash": "Keccak-256",
@@ -2288,15 +2288,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 9541,
-   "keygen": 59688,
-   "prep": 59120,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 0.2708343,
-   "prep_mb": 268.257
+   "keygen_gb": 0.2230272,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2304,15 +2304,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 36190,
-   "keygen": 238628,
-   "prep": 59120,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 1.08277455,
-   "prep_mb": 268.257
+   "keygen_gb": 0.8921088,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2320,15 +2320,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 137400,
-   "keygen": 954400,
-   "prep": 59120,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 4.33059,
-   "prep_mb": 268.257
+   "keygen_gb": 3.5684352,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2336,15 +2336,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 267900,
-   "keygen": 1908766,
-   "prep": 59120,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 8.661025725,
-   "prep_mb": 268.257
+   "keygen_gb": 7.1368704,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2352,15 +2352,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 522000,
-   "keygen": 3817500,
-   "prep": 59120,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 17.32190625,
-   "prep_mb": 268.257
+   "keygen_gb": 14.2737408,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2368,15 +2368,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 28350000,
-   "keygen": 244318224,
-   "prep": 59120,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 61474,
-   "keygen_gb": 1108.5939414,
-   "prep_mb": 268.257
+   "keygen_gb": 913.5194112,
+   "prep_mb": 223.0317375
   },
   {
    "hash": "Keccak-256",
@@ -2384,15 +2384,15 @@
    "shape": "layered",
    "b": 28,
    "lifetime": 5634000000,
-   "keygen": 954368,
-   "prep": 178414,
+   "keygen": 786432,
+   "prep": 147457,
    "grind": 268435456,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
    "ledger_prep": 185472,
-   "keygen_gb": 4.3304448,
-   "prep_mb": 809.553525
+   "keygen_gb": 3.5684352,
+   "prep_mb": 669.0861375
   },
   {
    "hash": "BLAKE2s",
@@ -2400,15 +2400,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 7514,
-   "keygen": 61980,
-   "prep": 61296,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 0.1152828,
-   "prep_mb": 114.01056
+   "keygen_gb": 0.09142272,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2416,15 +2416,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 28410,
-   "keygen": 247832,
-   "prep": 61296,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 0.46096752,
-   "prep_mb": 114.01056
+   "keygen_gb": 0.36569088,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2432,15 +2432,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 107200,
-   "keygen": 991252,
-   "prep": 61296,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 1.84372872,
-   "prep_mb": 114.01056
+   "keygen_gb": 1.46276352,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2448,15 +2448,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 208500,
-   "keygen": 1982482,
-   "prep": 61296,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 3.68741652,
-   "prep_mb": 114.01056
+   "keygen_gb": 2.92552704,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2464,15 +2464,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 405300,
-   "keygen": 3964944,
-   "prep": 61296,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 7.37479584,
-   "prep_mb": 114.01056
+   "keygen_gb": 5.85105408,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2480,15 +2480,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 21760000,
-   "keygen": 253755396,
-   "prep": 61296,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 471.98503656,
-   "prep_mb": 114.01056
+   "keygen_gb": 374.46746112,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2496,15 +2496,15 @@
    "shape": "layered",
    "b": 22,
    "lifetime": 81860000,
-   "keygen": 247808,
-   "prep": 92270,
+   "keygen": 196608,
+   "prep": 73729,
    "grind": 4194304,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 99330,
-   "keygen_gb": 0.46092288,
-   "prep_mb": 171.6222
+   "keygen_gb": 0.36569088,
+   "prep_mb": 137.13594
   },
   {
    "hash": "BLAKE2s",
@@ -2512,15 +2512,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 8154,
-   "keygen": 61984,
-   "prep": 61296,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 0.11529024,
-   "prep_mb": 114.01056
+   "keygen_gb": 0.09142272,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2528,15 +2528,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 30810,
-   "keygen": 247836,
-   "prep": 61296,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 0.46097496,
-   "prep_mb": 114.01056
+   "keygen_gb": 0.36569088,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2544,15 +2544,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 116600,
-   "keygen": 991256,
-   "prep": 61296,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 1.84373616,
-   "prep_mb": 114.01056
+   "keygen_gb": 1.46276352,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2560,15 +2560,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 226800,
-   "keygen": 1982486,
-   "prep": 61296,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 3.68742396,
-   "prep_mb": 114.01056
+   "keygen_gb": 2.92552704,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2576,15 +2576,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 441500,
-   "keygen": 3964948,
-   "prep": 61296,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 7.37480328,
-   "prep_mb": 114.01056
+   "keygen_gb": 5.85105408,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2592,15 +2592,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 23830000,
-   "keygen": 253755400,
-   "prep": 61296,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 471.985044,
-   "prep_mb": 114.01056
+   "keygen_gb": 374.46746112,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2608,15 +2608,15 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 336700000,
-   "keygen": 991232,
-   "prep": 92270,
+   "keygen": 786432,
+   "prep": 73729,
    "grind": 16777216,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 99330,
-   "keygen_gb": 1.84369152,
-   "prep_mb": 171.6222
+   "keygen_gb": 1.46276352,
+   "prep_mb": 137.13594
   },
   {
    "hash": "BLAKE2s",
@@ -2624,15 +2624,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 8830,
-   "keygen": 61988,
-   "prep": 61296,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 0.11529768,
-   "prep_mb": 114.01056
+   "keygen_gb": 0.09142272,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2640,15 +2640,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 33480,
-   "keygen": 247840,
-   "prep": 61296,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 0.4609824,
-   "prep_mb": 114.01056
+   "keygen_gb": 0.36569088,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2656,15 +2656,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 126900,
-   "keygen": 991260,
-   "prep": 61296,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 1.8437436,
-   "prep_mb": 114.01056
+   "keygen_gb": 1.46276352,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2672,15 +2672,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 246900,
-   "keygen": 1982490,
-   "prep": 61296,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 3.6874314,
-   "prep_mb": 114.01056
+   "keygen_gb": 2.92552704,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2688,15 +2688,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 480100,
-   "keygen": 3964952,
-   "prep": 61296,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 7.37481072,
-   "prep_mb": 114.01056
+   "keygen_gb": 5.85105408,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2704,15 +2704,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 26030000,
-   "keygen": 253755404,
-   "prep": 61296,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 471.98505144,
-   "prep_mb": 114.01056
+   "keygen_gb": 374.46746112,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2720,15 +2720,15 @@
    "shape": "layered",
    "b": 26,
    "lifetime": 1381000000,
-   "keygen": 991232,
-   "prep": 123246,
+   "keygen": 786432,
+   "prep": 98305,
    "grind": 67108864,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 130306,
-   "keygen_gb": 1.84369152,
-   "prep_mb": 229.23756
+   "keygen_gb": 1.46276352,
+   "prep_mb": 182.8473
   },
   {
    "hash": "BLAKE2s",
@@ -2736,15 +2736,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 9541,
-   "keygen": 61992,
-   "prep": 61296,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 0.11530512,
-   "prep_mb": 114.01056
+   "keygen_gb": 0.09142272,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2752,15 +2752,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 36190,
-   "keygen": 247844,
-   "prep": 61296,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 0.46098984,
-   "prep_mb": 114.01056
+   "keygen_gb": 0.36569088,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2768,15 +2768,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 137400,
-   "keygen": 991264,
-   "prep": 61296,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 1.84375104,
-   "prep_mb": 114.01056
+   "keygen_gb": 1.46276352,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2784,15 +2784,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 267900,
-   "keygen": 1982494,
-   "prep": 61296,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 3.68743884,
-   "prep_mb": 114.01056
+   "keygen_gb": 2.92552704,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2800,15 +2800,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 522000,
-   "keygen": 3964956,
-   "prep": 61296,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 7.37481816,
-   "prep_mb": 114.01056
+   "keygen_gb": 5.85105408,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2816,15 +2816,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 28350000,
-   "keygen": 253755408,
-   "prep": 61296,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 63652,
-   "keygen_gb": 471.98505888,
-   "prep_mb": 114.01056
+   "keygen_gb": 374.46746112,
+   "prep_mb": 91.42458
   },
   {
    "hash": "BLAKE2s",
@@ -2832,15 +2832,15 @@
    "shape": "layered",
    "b": 28,
    "lifetime": 5634000000,
-   "keygen": 991232,
-   "prep": 185198,
+   "keygen": 786432,
+   "prep": 147457,
    "grind": 268435456,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
    "ledger_prep": 192258,
-   "keygen_gb": 1.84369152,
-   "prep_mb": 344.46828
+   "keygen_gb": 1.46276352,
+   "prep_mb": 274.27002
   },
   {
    "hash": "SHA-256",
@@ -2848,15 +2848,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 7514,
-   "keygen": 61982,
-   "prep": 61296,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 0.17488996075,
-   "prep_mb": 172.954326
+   "keygen_gb": 0.138688512,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -2864,15 +2864,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 28410,
-   "keygen": 247834,
-   "prep": 61296,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 0.69929461025,
-   "prep_mb": 172.954326
+   "keygen_gb": 0.554754048,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -2880,15 +2880,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 107200,
-   "keygen": 991254,
-   "prep": 61296,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 2.79694706775,
-   "prep_mb": 172.954326
+   "keygen_gb": 2.219016192,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -2896,15 +2896,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 208500,
-   "keygen": 1982484,
-   "prep": 61296,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 5.5938264165,
-   "prep_mb": 172.954326
+   "keygen_gb": 4.438032384,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -2912,15 +2912,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 405300,
-   "keygen": 3964946,
-   "prep": 61296,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 11.18759075725,
-   "prep_mb": 172.954326
+   "keygen_gb": 8.876064768,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -2928,15 +2928,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 21760000,
-   "keygen": 253755398,
-   "prep": 61296,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 4194304,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 716.00257488175,
-   "prep_mb": 172.954326
+   "keygen_gb": 568.068145152,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -2944,15 +2944,15 @@
    "shape": "layered",
    "b": 22,
    "lifetime": 81860000,
-   "keygen": 247810,
-   "prep": 92270,
+   "keygen": 196608,
+   "prep": 73729,
    "grind": 4194304,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 99330,
-   "keygen_gb": 0.69922689125,
-   "prep_mb": 260.35133875
+   "keygen_gb": 0.554754048,
+   "prep_mb": 208.035589625
   },
   {
    "hash": "SHA-256",
@@ -2960,15 +2960,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 8154,
-   "keygen": 61986,
-   "prep": 61296,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 0.17490124725,
-   "prep_mb": 172.954326
+   "keygen_gb": 0.138688512,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -2976,15 +2976,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 30810,
-   "keygen": 247838,
-   "prep": 61296,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 0.69930589675,
-   "prep_mb": 172.954326
+   "keygen_gb": 0.554754048,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -2992,15 +2992,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 116600,
-   "keygen": 991258,
-   "prep": 61296,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 2.79695835425,
-   "prep_mb": 172.954326
+   "keygen_gb": 2.219016192,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3008,15 +3008,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 226800,
-   "keygen": 1982488,
-   "prep": 61296,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 5.593837703,
-   "prep_mb": 172.954326
+   "keygen_gb": 4.438032384,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3024,15 +3024,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 441500,
-   "keygen": 3964950,
-   "prep": 61296,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 11.18760204375,
-   "prep_mb": 172.954326
+   "keygen_gb": 8.876064768,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3040,15 +3040,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 23830000,
-   "keygen": 253755402,
-   "prep": 61296,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 16777216,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 716.00258616825,
-   "prep_mb": 172.954326
+   "keygen_gb": 568.068145152,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3056,15 +3056,15 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 336700000,
-   "keygen": 991234,
-   "prep": 92270,
+   "keygen": 786432,
+   "prep": 73729,
    "grind": 16777216,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 99330,
-   "keygen_gb": 2.79689063525,
-   "prep_mb": 260.35133875
+   "keygen_gb": 2.219016192,
+   "prep_mb": 208.035589625
   },
   {
    "hash": "SHA-256",
@@ -3072,15 +3072,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 8830,
-   "keygen": 61990,
-   "prep": 61296,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 0.17491253375,
-   "prep_mb": 172.954326
+   "keygen_gb": 0.138688512,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3088,15 +3088,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 33480,
-   "keygen": 247842,
-   "prep": 61296,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 0.69931718325,
-   "prep_mb": 172.954326
+   "keygen_gb": 0.554754048,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3104,15 +3104,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 126900,
-   "keygen": 991262,
-   "prep": 61296,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 2.79696964075,
-   "prep_mb": 172.954326
+   "keygen_gb": 2.219016192,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3120,15 +3120,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 246900,
-   "keygen": 1982492,
-   "prep": 61296,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 5.5938489895,
-   "prep_mb": 172.954326
+   "keygen_gb": 4.438032384,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3136,15 +3136,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 480100,
-   "keygen": 3964954,
-   "prep": 61296,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 11.18761333025,
-   "prep_mb": 172.954326
+   "keygen_gb": 8.876064768,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3152,15 +3152,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 26030000,
-   "keygen": 253755406,
-   "prep": 61296,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 67108864,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 716.00259745475,
-   "prep_mb": 172.954326
+   "keygen_gb": 568.068145152,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3168,15 +3168,15 @@
    "shape": "layered",
    "b": 26,
    "lifetime": 1381000000,
-   "keygen": 991234,
-   "prep": 123246,
+   "keygen": 786432,
+   "prep": 98305,
    "grind": 67108864,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 130306,
-   "keygen_gb": 2.79689063525,
-   "prep_mb": 347.75399475
+   "keygen_gb": 2.219016192,
+   "prep_mb": 277.379845625
   },
   {
    "hash": "SHA-256",
@@ -3184,15 +3184,15 @@
    "shape": "pruned",
    "b": 8,
    "lifetime": 9541,
-   "keygen": 61994,
-   "prep": 61296,
+   "keygen": 49152,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 0.17492382025,
-   "prep_mb": 172.954326
+   "keygen_gb": 0.138688512,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3200,15 +3200,15 @@
    "shape": "pruned",
    "b": 10,
    "lifetime": 36190,
-   "keygen": 247846,
-   "prep": 61296,
+   "keygen": 196608,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 0.69932846975,
-   "prep_mb": 172.954326
+   "keygen_gb": 0.554754048,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3216,15 +3216,15 @@
    "shape": "pruned",
    "b": 12,
    "lifetime": 137400,
-   "keygen": 991266,
-   "prep": 61296,
+   "keygen": 786432,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 2.79698092725,
-   "prep_mb": 172.954326
+   "keygen_gb": 2.219016192,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3232,15 +3232,15 @@
    "shape": "pruned",
    "b": 13,
    "lifetime": 267900,
-   "keygen": 1982496,
-   "prep": 61296,
+   "keygen": 1572864,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 5.593860276,
-   "prep_mb": 172.954326
+   "keygen_gb": 4.438032384,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3248,15 +3248,15 @@
    "shape": "pruned",
    "b": 14,
    "lifetime": 522000,
-   "keygen": 3964958,
-   "prep": 61296,
+   "keygen": 3145728,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 11.18762461675,
-   "prep_mb": 172.954326
+   "keygen_gb": 8.876064768,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3264,15 +3264,15 @@
    "shape": "pruned",
    "b": 20,
    "lifetime": 28350000,
-   "keygen": 253755410,
-   "prep": 61296,
+   "keygen": 201326592,
+   "prep": 49153,
    "grind": 268435456,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 63652,
-   "keygen_gb": 716.00260874125,
-   "prep_mb": 172.954326
+   "keygen_gb": 568.068145152,
+   "prep_mb": 138.691333625
   },
   {
    "hash": "SHA-256",
@@ -3280,15 +3280,15 @@
    "shape": "layered",
    "b": 28,
    "lifetime": 5634000000,
-   "keygen": 991234,
-   "prep": 185198,
+   "keygen": 786432,
+   "prep": 147457,
    "grind": 268435456,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
    "ledger_prep": 192258,
-   "keygen_gb": 2.79689063525,
-   "prep_mb": 522.55930675
+   "keygen_gb": 2.219016192,
+   "prep_mb": 416.068357625
   }
  ],
  "wallet": {

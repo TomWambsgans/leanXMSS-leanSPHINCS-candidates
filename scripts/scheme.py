@@ -149,6 +149,18 @@ class Costs:
         return (2 * self.H.per_key + self.derive + 2**bb * self.leaf + (2**bb - 1) * self.node
                 + (top - bb) * (self.derive + self.node))
 
+    # Threshold signing: what the MPC itself hashes. The chain secrets are outputs of F, which the operators
+    # share locally (hash-based F); the WOTS public keys, the tree nodes and the forest key are hashed in the
+    # clear once the chain ends are open, and the surrogates come from coin tossing. So the MPC runs only
+    # the chain steps: Q - 1 per WOTS+C chain, STEPS per forest chain, and the commitment H(s).
+    def mpc_keygen(self, h, shape, b):
+        return 2 ** kept(h, shape, b) * V * (Q - 1) * self.step
+
+    def mpc_prep(self, h, shape):
+        forest = COORDS * SUPERS * SUBS * CHILDREN * CHAINS * STEPS * self.step
+        lower = sum(2**hl * V * (Q - 1) * self.step for hl in layers(h, shape)[1:])
+        return forest + lower + self.step
+
     def tree_cost(self, height, cache_nodes):
         """Per-signature work in a tree of 2^height leaves: the best of keeping one level c (rebuild the 2^c
         leaves below the cached node, hash the cached level up) or keeping every level >= c."""
@@ -272,14 +284,14 @@ def site_data():
         for h in HEIGHTS:
             for shape, b in [("pruned", bb) for bb in PRUNED] + [("layered", h)]:
                 ls = layers(h, shape)
-                keygen = C.keygen(h, shape, b)
+                keygen, prep = C.mpc_keygen(h, shape, b), C.mpc_prep(h, shape)
+                # the hardware wallet computes the whole instance, and signs it with WOTS+C
                 lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
-                # in the MPC, the forest and the lower trees; the WOTS+C signatures are openings of masked values
-                prep = C.forest_sign + lower
+                ledger = C.forest_sign + lower + sum(C.wots_sign(layer) for layer in range(len(ls)))
                 out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
                                              keygen=round(keygen), prep=round(prep), grind=2**h // THRESHOLD_PREPARED,
                                              and_depth=and_depth(H.name), keygen_rounds=rounds(H.name, Q - 1), prep_rounds=rounds(H.name, STEPS),
-                                             ledger_prep=round(prep + sum(C.wots_sign(layer) for layer in range(len(ls)))),
+                                             ledger_prep=round(ledger),
                                              keygen_gb=keygen * ands * BITS_PER_AND / 8 / 1e9,
                                              prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6))
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
@@ -387,15 +399,15 @@ def threshold(heights):
     for h in heights:
         for shape, b in (("pruned", 12), ("layered", None)):
             ls = layers(h, shape)
-            keygen = C.keygen(h, shape, b)
+            keygen, prep = C.mpc_keygen(h, shape, b), C.mpc_prep(h, shape)
             lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
-            prep = C.forest_sign + lower
+            ledger = C.forest_sign + lower + sum(C.wots_sign(layer) for layer in range(len(ls)))
             gb = keygen * KECCAK_ANDS * BITS_PER_AND / 8 / 1e9
             pm = prep * KECCAK_ANDS * BITS_PER_AND / 8 / 1e6
             label = f"pruned b={b}" if shape == "pruned" else "layered"
             print(f"  h={h} {label}: keygen MPC {fmt(keygen)} permutations ({gb:.3g} GB per operator); "
                   f"preprocessing {fmt(prep)} per signature ({pm:.0f} MB; on a hardware wallet, which also signs with "
-                  f"WOTS+C, {fmt(prep + sum(C.wots_sign(layer) for layer in range(len(ls))))}); online grinding {fmt(2 ** h / THRESHOLD_PREPARED)} attempts")
+                  f"WOTS+C, {fmt(ledger)}); online grinding {fmt(2 ** h / THRESHOLD_PREPARED)} attempts")
     print(f"hardware wallet: the device prepares max({PREPARED}, 2^h / 2^{HOST_GRIND.bit_length() - 1}) instances and the host grinds "
           f"2^h / that many digests ({', '.join(f'h={h}: {wallet_prepared(h)} prepared, {fmt(2 ** h / wallet_prepared(h))} digests, '
           f'{2 ** h / wallet_prepared(h) / HOST_RATE:.2g} s to prove' for h in heights)});"
