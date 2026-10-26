@@ -169,7 +169,6 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .cards .br::after { content: "\A"; white-space: pre; }
 .plain { font-variant-numeric: tabular-nums; }
 .plain td { white-space: nowrap; }
-.tables .after { margin: 0.5rem 0 0; }
 .thr { margin-top: 0.5rem; }
 .thr .bn { margin: 0.1rem 0 0.3rem; }
 .thr .cmp { width: auto; table-layout: auto; }
@@ -902,7 +901,6 @@ footer a + a { margin-left: 1.25rem; }
         </table>
         </div>
       </div>
-      <p class="after" data-f="th-online">&nbsp;</p>
     </div>
   </section>
 </div>
@@ -1097,9 +1095,6 @@ footer a + a { margin-left: 1.25rem; }
       fmt(th.lifetime) + ' signatures' + LIFE_TIP + ':');
     document.querySelector('[data-f="th-life"]').hidden = lay_;
     set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + bytes(th.prep_mb / 1000) + '</td></tr>');
-    set('th-online', 'Online at <i>h</i> = ' + S.h + ': about ' + fmt(th.grind) +
-      ' grinding attempts in the clear (' + pow2(S.h) + '&thinsp;/&thinsp;' + W.prepared + (S.shape === 'layered' ? '' : ', onto instances of the kept subtree') +
-      '), then about ' + Math.round(W.opened_avg) + ' forest chain values opened (at most ' + W.opened_max + ').');
     set('prepared', String(W.prepared));
 
     // the diagram: one pruned tree, or the layers
