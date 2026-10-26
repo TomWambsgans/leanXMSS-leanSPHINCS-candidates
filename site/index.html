@@ -1387,7 +1387,7 @@ document.addEventListener('pointerdown', function (e) {
     });
     // the WOTS key under one subtree leaf: 6 chains of 5, its codeword's digits the steps to the top
     var kl = forest.subs[KI][3];
-    el('line', { x1: n1(kl[0]), y1: n1(kl[1] + 2), x2: n1(KX), y2: KT - 21, 'class': 'path thin dash' }, fts.paths);
+    el('line', { x1: n1(kl[0]), y1: n1(kl[1]), x2: n1(KX), y2: KT - 21 }, fts.conn);
     codeword().forEach(function (p, j) {
       var cx = KX + (j - 2.5) * KS;
       for (var m = 0; m < 5; m++) el('circle', { cx: n1(cx), cy: KT + KP * m, r: 1.6 }, fts.dot);
@@ -1437,7 +1437,8 @@ document.addEventListener('pointerdown', function (e) {
     // the bottom leaf of the hypertree
     var fo = forest, ks = fo.subs[KI][3];
     stage(700, fo.key.map(function (c) { return [c, [c[0], KT]]; }), true, 2.2);
-    stage(450, fo.key.map(function (c) { return [[c[0], KT], [KX, KT - 21], ks]; }), false, 1.8);
+    stage(300, fo.key.map(function (c) { return [[c[0], KT], [KX, KT - 21]]; }), false, 1.8);
+    stage(200, [[[KX, KT - 21], ks]], true, 1.8, 'conn');   // the link appears, in grey
     stage(600, fo.subs.map(function (q) { return q.slice().reverse(); }), true, 1.6, 'thin');
     stage(300, fo.subs.map(function (q, i) { return [q[0], fo.trees[i >> 1][4]]; }), true, 1.6, 'conn');   // the link appears, in grey
     stage(750, fo.trees.map(function (q) { return q.slice().reverse(); }), true, 2, 'thin');
