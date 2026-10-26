@@ -13,8 +13,8 @@ codeword number `t mod 214`. `scripts/forest_certificates.py` imports this modul
 
 The tables mirror the Lean definitions exactly (Fractions):
   fTab, f2Tab    H0Tables.lean (`sumTL … KT DK`, `sumTL … KT DK2`), `u ≤ 40`
-  P1tab, P2tab   H0MomCert.lean (`P1Q`, `P2Q`), `n ≤ 150`
-  PHtab          H0NTab.lean (`PHQ`), `n ≤ 150`
+  P1tab, P2tab   H0MomCert.lean (`P1Q`, `P2Q`), `n ≤ 150`; H0PTab.lean holds their numerators over 2^128 (`P1L`, `P2L`)
+  PHtab          H0NTab.lean (`PHQ`), `n ≤ 150`; H0NTab.lean holds its numerators over 2^128 (`PHL`)
 """
 
 from fractions import Fraction as Fr
@@ -117,11 +117,6 @@ LIT = max(lit_counts())     # the constant of the reveal rate (litCount_le_all)
 
 # ---------------- Lean literals ----------------
 
-def q(x):
-    x = Fr(x)
-    return str(x.numerator) if x.denominator == 1 else '%d / %d' % (x.numerator, x.denominator)
-
-
 def lean_codes(codes=CODES):
     rows = [', '.join(str(c) for c in codes[i:i + 16]) for i in range(0, len(codes), 16)]
     return '[' + ',\n   '.join(rows) + ']'
@@ -131,17 +126,18 @@ def lean_ints(xs):
     return '[\n    ' + ', '.join(str(x) for x in xs) + ']'
 
 
-def lean_rats(xs):
-    return '[\n    ' + ',\n    '.join(q(x) for x in xs) + ']'
+def lean_nums(xs):
+    """The numerators over 2^128, one per line."""
+    return '[\n    ' + ',\n    '.join(str(x * 2 ** 128) for x in xs) + ']'
 
 
 FILES = {
     'codewordCodes': ('Scheme.lean', 'def codewordCodes : List Nat :=\n  '),
     'fTab': ('H0FTab.lean', 'def fTab : List ℤ := '),
     'f2Tab': ('H0FTab.lean', 'def f2Tab : List ℤ := '),
-    'P1tab': ('H0PTab.lean', 'def P1tab : List ℚ := '),
-    'P2tab': ('H0PTab.lean', 'def P2tab : List ℚ := '),
-    'PHtab': ('H0NTab.lean', 'def PHtab : List ℚ := '),
+    'P1L': ('H0PTab.lean', 'def P1L : List ℕ := '),
+    'P2L': ('H0PTab.lean', 'def P2L : List ℕ := '),
+    'PHL': ('H0NTab.lean', 'def PHL : List ℕ := '),
 }
 
 
@@ -150,7 +146,7 @@ def literals(codes=CODES):
     f, f2 = f_tabs(codes)
     P1, P2, PH = moment_tabs(f, f2)
     return {'codewordCodes': lean_codes(codes), 'fTab': lean_ints(f), 'f2Tab': lean_ints(f2),
-            'P1tab': lean_rats(P1), 'P2tab': lean_rats(P2), 'PHtab': lean_rats(PH)}
+            'P1L': lean_nums(P1), 'P2L': lean_nums(P2), 'PHL': lean_nums(PH)}
 
 
 def span(src, head):

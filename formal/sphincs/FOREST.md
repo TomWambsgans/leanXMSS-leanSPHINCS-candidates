@@ -80,7 +80,8 @@ proof uses the table through that lemma, through `litCount_le_all` (`BridgeRevea
 through the counts `pmfT` of `H0Tables.lean` (a fold over the 256 indices: a repeated codeword is a
 count of 2); nothing uses that the entries are distinct. `scripts/forest_table.py` holds the table
 and computes from it the Lean literal and the kernel-checked tables `fTab`, `f2Tab` (`H0FTab.lean`),
-`P1tab`, `P2tab` (`H0PTab.lean`) and `PHtab` (`H0NTab.lean`); `scripts/forest_certificates.py` imports
+`P1tab`, `P2tab` (`H0PTab.lean`) and `PHtab` (`H0NTab.lean`), stored as their numerators over 2^128
+(`P1L`, `P2L`, `PHL`, which the certificates read); `scripts/forest_certificates.py` imports
 it and refuses to run if the Lean sources hold other tables.
 
 No `sorry`, no `native_decide`, no new axioms: `LeanForest/Axioms.lean` checks every declaration

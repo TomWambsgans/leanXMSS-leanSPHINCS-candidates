@@ -1,9 +1,10 @@
 import LeanForest.H0Fill
-import LeanForest.Certificates.Moments
+import LeanForest.H0PTab
+import LeanForest.H0NTab
 
 /-! **Certificates checked by construction.** `buildOpt` and `buildOptN` rebuild an option and a near
 certificate from their scalars, computing the leaf tables in integers: the numerators over `2^P` of the rounded-up bounds, from the numerators of the
-moment tables (`Moments.lean`), made convex (`convexZ`), and the Poisson mean of a table as one
+moment tables (`P1L`, `P2L`, `H0PTab.lean`; `PHL`, `H0NTab.lean`), made convex (`convexZ`), and the Poisson mean of a table as one
 integer sum. Their outputs pass `checkOptF` and `checkOptN` by construction (`checkOptF_build`,
 `checkOptN_build`): the leaf tables are convex majorants of the bounds, the means and the bound are
 rounded up. A Poisson table rebuilt by `poisOf` passes the steps of `checkPT` by construction
