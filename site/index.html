@@ -1072,8 +1072,8 @@ footer a + a { margin-left: 1.25rem; }
         (d.bench ? ' ([benchmark](' + d.bench + '))' : '') + '">i</span>';
       set('head-' + k, '<div class="hd"><span>' + dev + '</span></div>');
       if (c.shape === 'layered') what = '';
-      else if (c.b === c.h) what = 'full tree of ' + pow2(c.h);
-      else what = 'subtree of ' + pow2(c.b);
+      else if (c.b === c.h) what = 'full tree of height ' + c.h;
+      else what = 'subtree of height ' + c.b;
       var t = function (n, r) { return '<span class="ex">' + time(n / (r || d.rate)) + '</span>'; };
       set('life-' + k, '<div>' + fmt(c.lifetime) + ' signatures' + (what ? ' <span class="note">(' + what + ')</span>' : '') + '</div>');
       set('keygen-' + k, '<div class="hd"><span>' + fmt(c.keygen) + '&nbsp;' + unit() + '</span>' + t(c.keygen) + '</div>');
