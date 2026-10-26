@@ -16,9 +16,9 @@ For each parameter set (b, N, lx), with qh = floor(2^(128 + lx)):
   * a Poisson table at rate N/2^b + (2M - 1) qtop / (M denB 2^b), M = 2^(TOTAL - b), qtop the largest budget
     it serves (rate_of; checkPT, checkRate);
   * the small route at qh: a Chernoff option at baseline rho/2^128 (checkOptF), the near certificate
-    (checkOptN) and the rational check checkSmallF (BridgeDetCloseF.lean);
+    (checkOptN) and the rational check checkSmallF (SmallBudget/Closing.lean);
   * the large route: a cover of every budget q' in [qh + 1, 2^127] at the survival-weighted baseline
-    (checkCoverW, BridgeDetW.lean).
+    (checkCoverW, LargeBudget/Covers.lean).
 Everything below mirrors the Lean checkers exactly (Fractions); floats only choose parameters.
 The Lean file stores the scalars of each table, option and near certificate; the Lean functions poisOf,
 buildOpt and buildOptN (Certificates/Build.lean) rebuild their lists as fill_poisT, fill_opt and make_optN
@@ -26,7 +26,7 @@ do here (in integers, from the numerators P1L, P2L, PHL of the moment tables), a
 table, option or near certificate passes its checker by construction (checkPT_poisOf, checkOptF_build,
 checkOptN_build): the kernel evaluates the construction and a few scalar conditions.
 A layered configuration whose certificate is the full key's but for the keygen credit reuses it (`reuses`).
-The moment tables P1tab, P2tab (H0PTab.lean) and PHtab (H0NTab.lean), given by their numerators over 2^128
+The moment tables P1tab, P2tab (CoverBound/MomentTable.lean) and PHtab (CoverBound/NearMomentTable.lean), given by their numerators over 2^128
 P1L, P2L, PHL, come from scripts/forest_table.py (the codeword table) and are compared with the Lean sources.
 """
 
@@ -38,7 +38,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
-# ---------------- exact helpers (H0SplitCert.lean) ----------------
+# ---------------- exact helpers (Base/SplitCert.lean) ----------------
 
 def rdown(x, P): return Fr((x.numerator * 2 ** P) // x.denominator, 2 ** P)
 def rup(x, P): return Fr(-((-x.numerator * 2 ** P) // x.denominator), 2 ** P)
@@ -87,10 +87,10 @@ def betaWQ(qb): return Fr(2 * (2 ** 128 - qb) + 1, 2 ** 256)
 # ---------------- the moment tables ----------------
 
 # The tables are computed from the codeword table (scripts/forest_table.py) and must be the ones of the
-# Lean sources (H0PTab.lean, H0NTab.lean), which the kernel checks against the same table.
+# Lean sources (CoverBound/MomentTable.lean, CoverBound/NearMomentTable.lean), which the kernel checks against the same table.
 import forest_table
 
-LIT = 123   # the reveal-rate constant of the Lean proof (BridgeRevealRate.litCount_le_all, checkSmallF)
+LIT = 123   # the reveal-rate constant of the Lean proof (litCount_le_all in SmallBudget/Contact/RevealRate.lean, checkSmallF)
 assert max(forest_table.lit_counts()) <= LIT
 P1, P2, PH = forest_table.moment_tabs(*forest_table.f_tabs())
 for _name, _tab in (('P1L', P1), ('P2L', P2), ('PHL', PH)):
@@ -100,7 +100,7 @@ assert len(P1) == 151 and len(P2) == 151 and len(PH) == 151
 
 def getD(lst, n): return lst[n] if 0 <= n < len(lst) else Fr(0)
 
-# ---------------- the Poisson table (H0ForestCert.lean) ----------------
+# ---------------- the Poisson table (CoverBound/HTermCertificate.lean) ----------------
 
 class PoisT:
     def __init__(self, m, P, J, pm):
@@ -168,7 +168,7 @@ def convexify(xs):
         else: h.append(max(xs[n], 2 * h[-1] - h[-2]))
     return h
 
-# ---------------- options (H0ForestOpt.lean) ----------------
+# ---------------- options (CoverBound/HTermOption.lean) ----------------
 
 class OptF:
     pass
@@ -260,7 +260,7 @@ def make_opt(b, t, fm, cthr):
     s = max(0, math.ceil(math.log2(u + 1e-300)) + 12)
     return fill_opt(b, t, c1, th, s, cthr), H
 
-# ---------------- the near certificate (H0NearOpt.lean) ----------------
+# ---------------- the near certificate (CoverBound/NearOption.lean) ----------------
 
 class OptN:
     pass
@@ -284,7 +284,7 @@ def checkOptN(t, o):
     if not 16 * KQ <= o.nt[n1] + o.Jn: return False
     return tailSum(t, o.nt, o.Jn) <= o.En
 
-# ---------------- the small route (BridgeDetCloseF.lean) ----------------
+# ---------------- the small route (SmallBudget/Closing.lean) ----------------
 
 def checkSmallF(b, N, qh, rho, cthr, B, c):
     x = Fr(qh, 2 ** 128)
@@ -309,7 +309,7 @@ def choose_rho(qh):
         rho += Fr(1, 2 ** 40)
     return rho
 
-# ---------------- the large route (BridgeDetW.lean) ----------------
+# ---------------- the large route (LargeBudget/Covers.lean) ----------------
 
 def entry_ok(b, N, o, qa, qb):
     if not (2 * qb <= 2 ** 128): return False

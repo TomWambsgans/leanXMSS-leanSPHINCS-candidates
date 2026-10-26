@@ -12,74 +12,99 @@ layered key, k = b for a pruned one). K = 226·2^k + 2(t − k) is the key-gener
 (`keygenCost`, `Prefix.keygenHashCost`, `Prefix.hashCalls_keygenFromSeed`) and q' = q − K. The
 landing probability of a digest is p = 2^-(h−b).
 
+## Map of the files
+
+The statement is three files: [Main.lean](LeanForest/Main.lean) (the configurations and the main
+theorem), [Scheme.lean](LeanForest/Scheme.lean) (the scheme) and
+[Statement.lean](LeanForest/Statement.lean) (the game). The proof follows the steps below, one
+directory each:
+
+| Step | Directory | Contents |
+| --- | --- | --- |
+| | [Scheme/](LeanForest/Scheme) | facts about the scheme: lemmas of the specification, correctness, byte layout, sizes and costs, digest fields, encoding searches |
+| | [Base/](LeanForest/Base) | generic probability: sampling lemmas, virtual futures, Poisson domination, the split majorant |
+| 0 | [Seed/](LeanForest/Seed) | secrets as independent material; guessing the seed |
+| 1 | [Reduction/](LeanForest/Reduction) | from the game to the seed-free game of a memoizing adversary |
+| 1 | [ScanSigner/](LeanForest/ScanSigner) | the randomizer walk of the signer, the group of a message |
+| 2 | [GraphView/](LeanForest/GraphView) | the graph of the honest values, its signer and its exact hash costs |
+| 2 | [LazyRun/](LeanForest/LazyRun) | the interpreted lazy run over the hidden coordinates |
+| 3 | [Classification/](LeanForest/Classification) | accepted forgeries, from the verifier's trace to the events of a win |
+| 4, 5 | [CoverPotential/](LeanForest/CoverPotential) | the one-coin forest cover potential, used by both routes |
+| 4, 5 | [CoverBound/](LeanForest/CoverBound) | its H-term: mark averages, per-tree moments, certificates |
+| 4 | [SmallBudget/](LeanForest/SmallBudget) | the linear potential (`SmallBudget/Linear/`), the contact bound A4 (`SmallBudget/Contact/`), the closing |
+| 5 | [LargeBudget/](LeanForest/LargeBudget) | the survival weight, the covers, the heavy message |
+| 6 | [Certificates/](LeanForest/Certificates) | the closing theorem, the certificate checkers and the generated certificates; [Lifetimes.lean](LeanForest/Lifetimes.lean) applies them |
+
+## Steps
+
 0. **Secrets.** One hash of the seed gives two secrets, the two halves of its 32-byte output: two
    chain starts of a one-time key or of a forest WOTS key ([Scheme](LeanForest/Scheme.lean):
-   `keygenDomainFields`; [SecuritySeedModel](LeanForest/SecuritySeedModel.lean): `secretHalf`). The proof keeps one uniform 256-bit value per
+   `keygenDomainFields`; [Seed/Model](LeanForest/Seed/Model.lean): `secretHalf`). The proof keeps one uniform 256-bit value per
    secret, of which the low half is the secret (`SeedModel.Material`), and programs the answer of
    each such hash as the two low halves joined (`SeedModel.derivedOutput`). Distinct derivations have
    distinct inputs and read distinct secrets, and a table of answers comes from the same number of
    materials whatever the table, so the programmed answers are independent uniform outputs and the
    game is unchanged (`SeedCoupling.evalDist_prepared_continuation`,
-   [SecuritySeedCoupling](LeanForest/SecuritySeedCoupling.lean)). Every secret is then read only
+   [Seed/Coupling](LeanForest/Seed/Coupling.lean)). Every secret is then read only
    through a hash input that contains the 256-bit seed, guessed with probability 2^-256 per query
-   ([SecuritySeedGuess](LeanForest/SecuritySeedGuess.lean)).
+   ([Seed/Guess](LeanForest/Seed/Guess.lean)).
 
 1. **Statement and memo reduction.** [Statement](LeanForest/Statement.lean) is the SUF-CMA game,
    with the signing oracle `Seeded.sign`.
-   `Det.forgeAdvantage_le_seedFree` ([BridgeDet](LeanForest/BridgeDet.lean)) bounds the advantage
+   `Det.forgeAdvantage_le_seedFree` ([Reduction/SeedElimination](LeanForest/Reduction/SeedElimination.lean)) bounds the advantage
    by the seed-free win of the memoizing adversary, which never asks for the same message twice, plus
    2q/2^256: the randomizer hash of each message is replaced by a uniform value, split into a table of
    steps and an independent table of starts R0 (`Det.evalDist_rtable_split`). The steps are fixed (the
    seed-free game takes them as a parameter, `PublicData.steps`, and is bounded for every table) and
-   the starts averaged (`DetValue.avg_advDet`, [BridgeDetValue](LeanForest/BridgeDetValue.lean)).
+   the starts averaged (`DetValue.avg_advDet`, [Reduction/WinValue](LeanForest/Reduction/WinValue.lean)).
    - **The walk.** The signer tries R0, R0 + δ, … with the odd step δ of the message
      (`walk_iterate_ne`). For one unsigned message a randomizer is fresh, cached and rejected, or cached
-     and landing; the law of the signed pair is the walk value of [LoopWalk](LeanForest/LoopWalk.lean)
-     over these statuses (`GraphView.scan_boundW`, [BridgeScan](LeanForest/BridgeScan.lean)), and one digest query raises the selection mass of
+     and landing; the law of the signed pair is the walk value of [ScanSigner/LoopWalk](LeanForest/ScanSigner/LoopWalk.lean)
+     over these statuses (`GraphView.scan_boundW`, [ScanSigner/Scan](LeanForest/ScanSigner/Scan.lean)), and one digest query raises the selection mass of
      the adversary's pairs by at most (2 − p)/2^128 (`LoopWalk.creation_le`).
    - **One group per message.** The potentials keep the cached pairs of each unsigned message as one
-     exclusive group (`LoopWalk.grp`, [GroupFuture](LeanForest/GroupFuture.lean); `ForestPotential.grpAll`) applied to a one-coin future of the
-     pairs still to come: a new pair is paid by one coin `H0.wbarOf` ([H0Fair](LeanForest/H0Fair.lean))
+     exclusive group (`LoopWalk.grp`, [ScanSigner/Group](LeanForest/ScanSigner/Group.lean); `ForestPotential.grpAll`) applied to a one-coin future of the
+     pairs still to come: a new pair is paid by one coin `H0.wbarOf` ([CoverPotential/FairCoin](LeanForest/CoverPotential/FairCoin.lean))
      while the group of its message keeps enough mass on the identity (`FairS`); the number of cached
      landed pairs is capped by an exact martingale (`lam`, at most (64/65)^(2^15) at the start,
      `H0.lam_start`); a signing call is paid by one fresh slot and the group of its message
-     (`ForestPotential.sign_term`, [BridgeGroups](LeanForest/BridgeGroups.lean)). A message with more than half of the budget is heavy
-     ([BridgeHeavy](LeanForest/BridgeHeavy.lean)) and uses one spare slot instead
-     (`BridgeHeavyRoutes.det_largeH`).
+     (`ForestPotential.sign_term`, [CoverPotential/Groups](LeanForest/CoverPotential/Groups.lean)). A message with more than half of the budget is heavy
+     ([LargeBudget/HeavyTerm](LeanForest/LargeBudget/HeavyTerm.lean)) and uses one spare slot instead
+     (`ForestPotential.det_largeH`).
 
 2. **Graph view and lazy comparison.** The seed-free game is rewritten over a graph of all the honest
-   values ([SecurityGraph](LeanForest/SecurityGraph.lean),
-   [SecurityPrunedGraph](LeanForest/SecurityPrunedGraph.lean)): the kept subtree and the spine of the
+   values ([GraphView/Graph](LeanForest/GraphView/Graph.lean),
+   [GraphView/Pruned](LeanForest/GraphView/Pruned.lean)): the kept subtree and the spine of the
    top layer, every tree of a lower layer on the path of a landed index (`TreeActive`), every WOTS+C
    key of such a tree that a landed index uses (`KeyActive`, `keyActive_iff`), and every forest
    instance. The signer of the graph view (`GraphView.finishSource`,
-   [SecurityGraphView](LeanForest/SecurityGraphView.lean)) searches the WOTS+C counters of all
+   [GraphView/Signer](LeanForest/GraphView/Signer.lean)) searches the WOTS+C counters of all
    layers first (`layerSearch`), each key signing its message read from the public data (the root of
    the tree below, or the forest key at the bottom: `PublicData.keyMessage`), and reveals its chain
    values only once every layer succeeded; its hash calls are ticked exactly
-   (`hashCalls_finishSign_exact`, [SecurityGraphCost](LeanForest/SecurityGraphCost.lean)). It is then
+   (`hashCalls_finishSign_exact`, [GraphView/Cost](LeanForest/GraphView/Cost.lean)). It is then
    one interpreted lazy run over the hidden chain coordinates
-   ([BridgeInterp](LeanForest/BridgeInterp.lean), [BridgeDebt](LeanForest/BridgeDebt.lean)). The
+   ([LazyRun/Interpreter](LeanForest/LazyRun/Interpreter.lean), [LazyRun/Debt](LeanForest/LazyRun/Debt.lean)). The
    preparation searches the counter of every WOTS+C key before the run (`searchAll`,
-   [BridgeEncodingPrep](LeanForest/BridgeEncodingPrep.lean)), and the chain values at and above the
+   [LazyRun/PreparedEncodings](LeanForest/LazyRun/PreparedEncodings.lean)), and the chain values at and above the
    prepared word of every retained key are exposed at the start (`AboveWord`,
-   [BridgeExpose](LeanForest/BridgeExpose.lean)). An index whose search fails at any of its layers is
+   [LazyRun/Expose](LeanForest/LazyRun/Expose.lean)). An index whose search fails at any of its layers is
    charged as failing (`failSet`); all searches together fail with probability at most 2^-201
-   (`expectedFail_le`, [BridgeForestAssembly](LeanForest/BridgeForestAssembly.lean)).
+   (`expectedFail_le`, [LazyRun/PreparedRun](LeanForest/LazyRun/PreparedRun.lean)).
 
 3. **Classification.** The verifier walks the layers from the top
-   (`verified_layers`, [SecurityVerifier](LeanForest/SecurityVerifier.lean)).
-   `SignatureWitness.accepted_full_classification` ([BridgeClassify](LeanForest/BridgeClassify.lean))
+   (`verified_layers`, [Classification/Verifier](LeanForest/Classification/Verifier.lean)).
+   `SignatureWitness.accepted_full_classification` ([Classification/Accepted](LeanForest/Classification/Accepted.lean))
    classifies an accepted forgery layer by layer, from the top: at each layer either the layer's key
    is opened canonically at the canonical message of its key, or the tree of the layer has a hit (a
    Merkle match against a retained reference leaf, or, in the top layer, a match at the boundary of a
    surrogate), or the key has a WOTS exception (an encoding match, a leaf output match or a chain
    exception). When every layer is canonical, the bottom key signed the canonical forest key and the
    forest opening is classified (`Forest.recover_classification`,
-   [SecurityForestWitness](LeanForest/SecurityForestWitness.lean)). Every target sits at a fixed
+   [Classification/Forest](LeanForest/Classification/Forest.lean)). Every target sits at a fixed
    address; the encoding target of a key reads its message off the graph labels
    (`labelMessage`), which is the canonical message of every retained key. `win_implies_badA`
-   ([BridgeImplicationA](LeanForest/BridgeImplicationA.lean)) shows a win is one of:
+   ([Classification/WinRefined](LeanForest/Classification/WinRefined.lean)) shows a win is one of:
    - a first-order target hit or a correct guess of a hidden value;
    - a WOTS second-order event at a retained key: a two-edge completion, a contact with a
      unit-neighbour encoding marker, or two contacts;
@@ -88,42 +113,43 @@ landing probability of a digest is p = 2^-(h−b).
    - a near cover or a cover of a cached, landed, unsigned digest.
 
 4. **Small budgets (q' ≤ q_h).**
-   - **Linear potential** ([BridgePotentialA](LeanForest/BridgePotentialA.lean)–A8,
-     [BridgeFleafA3](LeanForest/BridgeFleafA3.lean)): charges ρ/2^128 per query, with
+   - **Linear potential** ([SmallBudget/Linear](LeanForest/SmallBudget/Linear), from
+     [Potential](LeanForest/SmallBudget/Linear/Potential.lean) to
+     [ForestSteps](LeanForest/SmallBudget/Linear/ForestSteps.lean)): charges ρ/2^128 per query, with
      ρ = max(3/2, 2 − 1/(1 + 4032x), 1 + 66x). It pays first-order hits, WOTS events, unrecorded and
      paired contacts and correct guesses, passes ρ/2^128 per digest query to the cover potential and
      leaves (ρ − 1 − x)/2^128 per forest step query (`smallRoute_potentialF`).
    - **Cover potential:** the one-coin forest potential at baseline ρ/2^128 with the exact cover
-     indicator as witness ([BridgeForestPotentialOnce](LeanForest/BridgeForestPotentialOnce.lean),
-     [BridgeForestGameOnce](LeanForest/BridgeForestGameOnce.lean)); its H-term is certified by
+     indicator as witness ([CoverPotential/OneCoin](LeanForest/CoverPotential/OneCoin.lean),
+     [CoverPotential/OneCoinGame](LeanForest/CoverPotential/OneCoinGame.lean)); its H-term is certified by
      Poissonization, splitting into independent indices and moments of the per-tree cover fraction
-     ([H0Forest](LeanForest/H0Forest.lean), [H0ForestOpt](LeanForest/H0ForestOpt.lean),
+     ([CoverBound/HTerm](LeanForest/CoverBound/HTerm.lean), [CoverBound/HTermOption](LeanForest/CoverBound/HTermOption.lean),
      [Base/Split](LeanForest/Base/Split.lean)), with the per-index weight 2^-h.
-   - **Contact bound A4** ([BridgeA4F](LeanForest/BridgeA4F.lean),
-     [BridgeA4Sign](LeanForest/BridgeA4Sign.lean), [BridgeA4Final](LeanForest/BridgeA4Final.lean)): a
+   - **Contact bound A4** ([SmallBudget/Contact/Potential](LeanForest/SmallBudget/Contact/Potential.lean),
+     [SmallBudget/Contact/Signing](LeanForest/SmallBudget/Contact/Signing.lean), [SmallBudget/Contact/Bound](LeanForest/SmallBudget/Contact/Bound.lean)): a
      recorded contact is settled once a reveal opens its chain at or below its step; a signing call
      opens a given chain with chance at most 123·2^-b·2^-15 plus the coin per cached pair of its
-     message (`reveal_le_all`, [BridgeRevealRate](LeanForest/BridgeRevealRate.lean)), and the near
-     forecast is capped at one ([BridgeForestNear](LeanForest/BridgeForestNear.lean),
-     [H0NearOpt](LeanForest/H0NearOpt.lean)). A forest step query costs 2^-128(N·rate + 1 − κ), paid by
+     message (`reveal_le_all`, [SmallBudget/Contact/RevealRate](LeanForest/SmallBudget/Contact/RevealRate.lean)), and the near
+     forecast is capped at one ([SmallBudget/Contact/NearWitness](LeanForest/SmallBudget/Contact/NearWitness.lean),
+     [CoverBound/NearOption](LeanForest/CoverBound/NearOption.lean)). A forest step query costs 2^-128(N·rate + 1 − κ), paid by
      the slack of the linear potential once κ ≥ 2 − ρ + x + N·rate (`arm_paysF`).
-   - **Closing:** `sample_boundF` ([BridgeSampleBoundF](LeanForest/BridgeSampleBoundF.lean)),
+   - **Closing:** `sample_boundF` ([SmallBudget/SampleBound](LeanForest/SmallBudget/SampleBound.lean)),
      `det_smallF` and the rational check `checkSmallF`
-     ([BridgeDetCloseF](LeanForest/BridgeDetCloseF.lean)):
+     ([SmallBudget/Closing](LeanForest/SmallBudget/Closing.lean)):
      ρ + 2^128·B + (2M − 1)·q_h/(M·2^129) + κ·q_h·c + 2^-60 ≤ 2, with M = 2^(h−b), B and c the
      certified cover and near terms.
 
 5. **Large budgets (q' > q_h).** Every digest query pays the baseline times the current survival
-   weight ([BridgeSatW](LeanForest/BridgeSatW.lean), [BridgeSatWForest](LeanForest/BridgeSatWForest.lean)),
+   weight ([LargeBudget/SurvivalWeight](LeanForest/LargeBudget/SurvivalWeight.lean), [LargeBudget/WeightedPotential](LeanForest/LargeBudget/WeightedPotential.lean)),
    so the baseline is about 2^-127(1 − x); hits cost at most 1 − (1 − x)^2 in total
-   (`det_largeW`, [BridgeSatWRoutes](LeanForest/BridgeSatWRoutes.lean)). Chernoff-split covers
-   (`checkCoverW`, [BridgeDetW](LeanForest/BridgeDetW.lean)) bound every budget from q_h: for the full
+   (`det_largeW`, [LargeBudget/Route](LeanForest/LargeBudget/Route.lean)). Chernoff-split covers
+   (`checkCoverW`, [LargeBudget/Covers](LeanForest/LargeBudget/Covers.lean)) bound every budget from q_h: for the full
    and layered keys one cover reaches 2^127; for a pruned key they reach about 0.249·2^128, then one
-   heavy cover (`checkCoverH`, N + 1 signatures, [BridgeHeavyCert](LeanForest/BridgeHeavyCert.lean))
+   heavy cover (`checkCoverH`, N + 1 signatures, [Certificates/Closing](LeanForest/Certificates/Closing.lean))
    bounds the rest. The keygen credit K enters the
    entries of a cover: q' + K is the actual budget.
 
-6. **Closing.** `ForestPotential.det_bitsFH` ([BridgeHeavyCert](LeanForest/BridgeHeavyCert.lean))
+6. **Closing.** `ForestPotential.det_bitsFH` ([Certificates/Closing](LeanForest/Certificates/Closing.lean))
    combines the two routes from checks parameterized by the total height H, the kept subtree height b,
    the keygen credit K and the limit N (hypotheses `totalHeight = H`, `subtreeHeight = b`,
    `keygenHashCost = K`, `signatureLimit = N`). The certificates
@@ -168,7 +194,7 @@ for pruned keys ([README.md](README.md)). The remaining loss is structural:
 - Verification does not enforce membership in the retained subtree. The proof accounts for forgeries
   entering through a surrogate sibling.
 - The random oracle stands for the hash: its outputs are uniform 32-byte strings, of which the scheme
-  keeps 16 bytes. `VerificationCost.lean` counts compressions on the model inputs
+  keeps 16 bytes. `Scheme/VerificationCost.lean` counts compressions on the model inputs
   `P ‖ A ‖ payload`: Keccak-256 `n / 136 + 1`, BLAKE2s `⌈n / 64⌉`, SHA-256 `⌈(n − 16 + 9) / 64⌉` plus
   one block of P per key. Rust absorbs the fixed part of the digest input and of the encoding input
   once and pays one compression per grinding attempt and per counter, as the cost model
@@ -176,12 +202,12 @@ for pruned keys ([README.md](README.md)). The remaining loss is structural:
 - Every hash input is P ‖ A ‖ payload, with the 16-byte address
   A = `lo` ‖ `hi` ‖ (type + 32·step) ‖ layer ‖ tree ‖ 0^3 (`fieldBytes`), the layer counted from the
   bottom (`layerByte`). An input determines P, the address and the payload (`fieldInput_injective`,
-  [SecurityDomains](LeanForest/SecurityDomains.lean)), and in-range domains have distinct addresses
-  (`hashFields_injective`, [SecurityPosition](LeanForest/SecurityPosition.lean)), so separating
+  [Scheme/Domains](LeanForest/Scheme/Domains.lean)), and in-range domains have distinct addresses
+  (`hashFields_injective`, [GraphView/Position](LeanForest/GraphView/Position.lean)), so separating
   inputs costs no probability term. The root is not hashed in the digest (P binds the key).
 - The digest is one output, read as h + 208 bits whose fields are disjoint and none across two
   64-bit words: the index and the 26-bit field of each of the 8 trees are a bijection of them
-  (`fullDigestView_bijective`, [ForestCoverage](LeanForest/ForestCoverage.lean)), so a uniform output
+  (`fullDigestView_bijective`, [Scheme/DigestView](LeanForest/Scheme/DigestView.lean)), so a uniform output
   gives a uniform index and 8 independent uniform fields.
 
 `Axioms.lean` pins the main theorems to their exact axiom lists with `#guard_msgs` and checks that

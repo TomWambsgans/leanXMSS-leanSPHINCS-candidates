@@ -17,7 +17,7 @@ PROSE = {'propext', 'Classical.choice', 'Quot.sound', 'sorry', 'native_decide', 
 
 
 def module_names(span, modules):
-    """The LeanForest modules a span names: `BridgeDet`, `Certificates.H24` or `H24`, or a glob `H0*`."""
+    """The LeanForest modules a span names: `SeedElimination`, `Certificates.H24` or `H24`, or a glob `Cover*`."""
     pat = re.compile(r'(.*\.)?' + re.escape(span).replace('\\*', '[^.]*') + '$')
     return {m for m in modules if pat.match(m[len('LeanForest.'):])}
 

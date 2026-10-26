@@ -32,7 +32,7 @@ secret, so a signature does not tell which randomizers were rejected before it. 
 queries (keygen, signing and verification included), forges with probability at most q / 2^127.
 
 The proof is the same for every hash: the random oracle stands for Keccak-256, BLAKE2s or SHA-256,
-and only the costs depend on the hash ([VerificationCost.lean](LeanForest/VerificationCost.lean),
+and only the costs depend on the hash ([Scheme/VerificationCost.lean](LeanForest/Scheme/VerificationCost.lean),
 [Configurations.lean](LeanForest/Configurations.lean)). So the 24 configurations of the candidate
 (4 heights, 2 shapes, 3 hashes) take 32 lifetime theorems (per height: the full key, six kept subtree
 heights and the layered key, below), 8 size theorems and 24 cost theorems.
@@ -77,15 +77,15 @@ for every table of steps, as if the forger knew them.
 | Claim | Theorem / file |
 | --- | --- |
 | **127-bit SUF-CMA security at the limits above** | `requestedSecurity`, [Main](LeanForest/Main.lean) |
-| The bound follows from rational checks on two budget routes, for any height, shape and hash | `ForestPotential.det_bitsFH`, [BridgeHeavyCert](LeanForest/BridgeHeavyCert.lean); certificates in [Certificates](LeanForest/Certificates) |
-| The deterministic signer reduces to a seed-free game of an adversary that never repeats a message | `Det.forgeAdvantage_le_seedFree`, [BridgeDet](LeanForest/BridgeDet.lean) |
-| An accepted forgery is classified layer by layer, from the top | `SignatureWitness.accepted_full_classification`, [BridgeClassify](LeanForest/BridgeClassify.lean) |
-| Key generation makes exactly 226·2^k + 2(t − k) hash calls (top layer of height t, kept height k) | `Prefix.hashCalls_keygenFromSeed`, [SecurityPrefixErasedKeygen](LeanForest/SecurityPrefixErasedKeygen.lean) |
-| The digest's index and the 26-bit field of each of the 8 trees are a bijection of its h + 208 bits | `fullDigestView_bijective`, [ForestCoverage](LeanForest/ForestCoverage.lean) |
-| A successful seeded signature verifies | `Completeness.correct`, [Correctness](LeanForest/Correctness.lean) |
-| Computed subtree and surrogate path recover the root, at every layer | `Completeness.eval_treeFold_pruned_path`, [Pruning](LeanForest/Pruning.lean) |
-| Serialized signature length = 2832 + 1028·d + 16·h bytes | `signature_size`, [Layout](LeanForest/Layout.lean) |
-| An accepted verification costs exactly `verifyCost` compressions of each hash (at most that for any signature) | `Cost.verification_compressions`, [VerificationCost](LeanForest/VerificationCost.lean) |
+| The bound follows from rational checks on two budget routes, for any height, shape and hash | `ForestPotential.det_bitsFH`, [Certificates/Closing](LeanForest/Certificates/Closing.lean); certificates in [Certificates](LeanForest/Certificates) |
+| The deterministic signer reduces to a seed-free game of an adversary that never repeats a message | `Det.forgeAdvantage_le_seedFree`, [Reduction/SeedElimination](LeanForest/Reduction/SeedElimination.lean) |
+| An accepted forgery is classified layer by layer, from the top | `SignatureWitness.accepted_full_classification`, [Classification/Accepted](LeanForest/Classification/Accepted.lean) |
+| Key generation makes exactly 226·2^k + 2(t − k) hash calls (top layer of height t, kept height k) | `Prefix.hashCalls_keygenFromSeed`, [GraphView/HashCalls](LeanForest/GraphView/HashCalls.lean) |
+| The digest's index and the 26-bit field of each of the 8 trees are a bijection of its h + 208 bits | `fullDigestView_bijective`, [Scheme/DigestView](LeanForest/Scheme/DigestView.lean) |
+| A successful seeded signature verifies | `Completeness.correct`, [Scheme/Correctness](LeanForest/Scheme/Correctness.lean) |
+| Computed subtree and surrogate path recover the root, at every layer | `Completeness.eval_treeFold_pruned_path`, [Scheme/Pruning](LeanForest/Scheme/Pruning.lean) |
+| Serialized signature length = 2832 + 1028·d + 16·h bytes | `signature_size`, [Scheme/Layout](LeanForest/Scheme/Layout.lean) |
+| An accepted verification costs exactly `verifyCost` compressions of each hash (at most that for any signature) | `Cost.verification_compressions`, [Scheme/VerificationCost](LeanForest/Scheme/VerificationCost.lean) |
 | The size and the three verification costs of each of the 8 shapes | [Configurations](LeanForest/Configurations.lean) |
 
 ## Build

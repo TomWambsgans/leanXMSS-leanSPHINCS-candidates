@@ -4,7 +4,7 @@
 Usage (from formal/sphincs):
     python3 scripts/forest_table.py info     # composition of the table, f(1..6), digit counts
     python3 scripts/forest_table.py check    # the Lean sources hold exactly the tables computed here
-    python3 scripts/forest_table.py write    # rewrite the literals in Scheme.lean, H0FTab.lean, H0PTab.lean, H0NTab.lean
+    python3 scripts/forest_table.py write    # rewrite the literals in Scheme.lean, CoverBound/CodewordSums.lean, CoverBound/MomentTable.lean, CoverBound/NearMomentTable.lean
 
 CODES is the table: entry `t` (the 8-bit digest field) is the codeword `d ∈ {0..4}^6`, digit sum 5,
 written as the base-5 number with `d_0` the most significant digit. The table is a rule (`rule_codes`):
@@ -12,9 +12,9 @@ the codewords sorted by decreasing sum of squared digits, then lexicographically
 codeword number `t mod 214`. `scripts/forest_certificates.py` imports this module.
 
 The tables mirror the Lean definitions exactly (Fractions):
-  fTab, f2Tab    H0Tables.lean (`sumTL … KT DK`, `sumTL … KT DK2`), `u ≤ 40`
-  P1tab, P2tab   H0MomCert.lean (`P1Q`, `P2Q`), `n ≤ 150`; H0PTab.lean holds their numerators over 2^128 (`P1L`, `P2L`)
-  PHtab          H0NTab.lean (`PHQ`), `n ≤ 150`; H0NTab.lean holds its numerators over 2^128 (`PHL`)
+  fTab, f2Tab    CoverBound/CodewordTables.lean (`sumTL … KT DK`, `sumTL … KT DK2`), `u ≤ 40`
+  P1tab, P2tab   CoverBound/MomentBounds.lean (`P1Q`, `P2Q`), `n ≤ 150`; CoverBound/MomentTable.lean holds their numerators over 2^128 (`P1L`, `P2L`)
+  PHtab          CoverBound/NearMomentTable.lean (`PHQ`), `n ≤ 150`; CoverBound/NearMomentTable.lean holds its numerators over 2^128 (`PHL`)
 """
 
 from fractions import Fraction as Fr
@@ -54,7 +54,7 @@ def validate(codes=CODES):
     assert all(sum(d * 5 ** (D - 1 - i) for i, d in enumerate(digits(c))) == c for c in codes)
 
 
-# ---------------- the codeword-level numerators (H0Tables.lean) ----------------
+# ---------------- the codeword-level numerators (CoverBound/CodewordTables.lean) ----------------
 
 def f_tabs(codes=CODES, U=UMAX):
     """fTab[u] = sum_m K(m)^u (Delta* K)(m), f2Tab[u] = sum_m K(m)^u (Delta* K^2)(m), K(m) = #{w : lut w <= m}."""
@@ -80,7 +80,7 @@ def f_tabs(codes=CODES, U=UMAX):
     return f, f2
 
 
-# ---------------- the per-tree moments (H0MomCert.lean, H0NTab.lean) ----------------
+# ---------------- the per-tree moments (CoverBound/MomentBounds.lean, CoverBound/NearMomentTable.lean) ----------------
 
 def rup(x, P):
     return Fr(-((-x.numerator * 2 ** P) // x.denominator), 2 ** P)
@@ -109,7 +109,7 @@ def moment_tabs(f, f2, N=NMAX, U=UMAX):
 
 
 def lit_counts(codes=CODES):
-    """codewords with digit i at least one (BridgeRevealRate.litCount)"""
+    """codewords with digit i at least one (litCount, SmallBudget/Contact/RevealRate.lean)"""
     return [sum(1 for w in table(codes) if w[i] >= 1) for i in range(D)]
 
 
@@ -133,11 +133,11 @@ def lean_nums(xs):
 
 FILES = {
     'codewordCodes': ('Scheme.lean', 'def codewordCodes : List Nat :=\n  '),
-    'fTab': ('H0FTab.lean', 'def fTab : List ℤ := '),
-    'f2Tab': ('H0FTab.lean', 'def f2Tab : List ℤ := '),
-    'P1L': ('H0PTab.lean', 'def P1L : List ℕ := '),
-    'P2L': ('H0PTab.lean', 'def P2L : List ℕ := '),
-    'PHL': ('H0NTab.lean', 'def PHL : List ℕ := '),
+    'fTab': ('CoverBound/CodewordSums.lean', 'def fTab : List ℤ := '),
+    'f2Tab': ('CoverBound/CodewordSums.lean', 'def f2Tab : List ℤ := '),
+    'P1L': ('CoverBound/MomentTable.lean', 'def P1L : List ℕ := '),
+    'P2L': ('CoverBound/MomentTable.lean', 'def P2L : List ℕ := '),
+    'PHL': ('CoverBound/NearMomentTable.lean', 'def PHL : List ℕ := '),
 }
 
 

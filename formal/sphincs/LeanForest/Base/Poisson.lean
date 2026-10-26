@@ -1,4 +1,4 @@
-import LeanForest.Base.Majorant
+import LeanForest.Base.Virtual
 import LeanForest.Base.VirtualOnce
 
 /-! Poisson domination of the one-coin H-term at the level of count functions

@@ -48,7 +48,7 @@ base `S || m`: the randomizer, which changes between two grinding attempts, come
 The model is one random oracle on these inputs. Keccak-256 and BLAKE2s hash them as they are;
 SHA-256 hashes `P` alone in a zero-padded first block and puts 16 zero bytes before the randomizer of
 the digest, a fixed injective re-encoding of the same inputs, so the random-oracle statements are
-the same for the three hashes and only the costs (`VerificationCost.lean`) depend on the hash.
+the same for the three hashes and only the costs (`Scheme/VerificationCost.lean`) depend on the hash.
 -/
 
 open OracleComp OracleSpec ENNReal

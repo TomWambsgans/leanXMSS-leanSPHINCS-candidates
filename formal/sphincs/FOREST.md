@@ -76,11 +76,11 @@ Two earlier tables, for comparison (measured at `h = 26`, where the ratios were 
 
 Every entry has digit sum 5 (`Completeness.lut_sum`, `Cost.lut_sum`), so a WOTS key is verified
 with exactly 5 chain steps: the verification cost and the signature size below do not depend on the table. The
-proof uses the table through that lemma, through `litCount_le_all` (`BridgeRevealRate.lean`) and
-through the counts `pmfT` of `H0Tables.lean` (a fold over the 256 indices: a repeated codeword is a
+proof uses the table through that lemma, through `litCount_le_all` (`SmallBudget/Contact/RevealRate.lean`) and
+through the counts `pmfT` of `CoverBound/CodewordTables.lean` (a fold over the 256 indices: a repeated codeword is a
 count of 2); nothing uses that the entries are distinct. `scripts/forest_table.py` holds the table
-and computes from it the Lean literal and the kernel-checked tables `fTab`, `f2Tab` (`H0FTab.lean`),
-`P1tab`, `P2tab` (`H0PTab.lean`) and `PHtab` (`H0NTab.lean`), stored as their numerators over 2^128
+and computes from it the Lean literal and the kernel-checked tables `fTab`, `f2Tab` (`CoverBound/CodewordSums.lean`),
+`P1tab`, `P2tab` (`CoverBound/MomentTable.lean`) and `PHtab` (`CoverBound/NearMomentTable.lean`), stored as their numerators over 2^128
 (`P1L`, `P2L`, `PHL`, which the certificates read); `scripts/forest_certificates.py` imports
 it and refuses to run if the Lean sources hold other tables.
 
@@ -160,7 +160,7 @@ The signer derives the base `R0` and the step `δ` of a message from one hash,
 `H(P ‖ A(7, 0, 0) ‖ seed ‖ message)` (one hash query), and attempt `i` uses the randomizer `R0 + i δ`
 (arithmetic modulo `2^128`, `Seeded.signDigestLoop`); it keeps the first attempt whose digest index
 lands in the kept subtree. `δ` is odd, so the scan does not come back within `2^128` attempts
-(`walk_iterate_ne`, `BridgeScan.nextRand_pow_ne`), and secret, so a signature does not tell which
+(`walk_iterate_ne`, `GraphView.nextRand_pow_ne`), and secret, so a signature does not tell which
 randomizers were rejected before it.
 The randomizer comes last in the digest payload: a grinding attempt changes only the last block of
 the digest hash. The digest input is 80 bytes, `P ‖ A ‖ message ‖ randomizer`, within one 136-byte
@@ -184,21 +184,21 @@ subtree:
 Bits `h + 208` to 255 are unused. No field lies across two 64-bit words: the children, the leaves and
 the index are laid out in that order, which is what makes the three groups fall inside words.
 The proof reads a digest as its
-index and one 26-bit field per tree (`ForestCoverage.lean`): `coordField` gathers the 26 bits of a
+index and one 26-bit field per tree (`Scheme/DigestView.lean`): `coordField` gathers the 26 bits of a
 tree from the three places that hold them (leaf, then per subtree WOTS key and table index), and
 `fullDigestView_bijective` states that the index and the 8 fields are a bijection of the `h + 208` bits,
 so a uniform digest gives a uniform index and 8 independent uniform fields
-(`evalDist_fullDigestView_uniform`), each a uniform mark (`H0Mark.markEquiv`). The index of a
+(`evalDist_fullDigestView_uniform`), each a uniform mark (`Concrete.markEquiv`). The index of a
 uniform hash output is uniform (`evalDist_blockIndex_uniform`, from
 `evalDist_hashOutput_extractAt_uniform`: the bits at any offset of a uniform output are uniform).
 
 Separation is unconditional. An input determines its parameter, its address and its payload
-(`fieldBytes_injective` in `Bytes.lean`, `fieldInput_injective` in `SecurityDomains.lean`), two
+(`fieldBytes_injective` in `Scheme/Bytes.lean`, `fieldInput_injective` in `Scheme/Domains.lean`), two
 inputs of different types differ whatever their parameters (`fieldInput_ne_of_tag_ne_across` and
 `keygenInput_ne_hashInput`, same file), and an address determines the call:
-`hashFields_injective` and `Position.input_separated` (`SecurityPosition.lean`) for verification,
+`hashFields_injective` and `Position.input_separated` (`GraphView/Position.lean`) for verification,
 `deriveFields_injective` and `keygenInput_injective` for the seed derivations,
-`randomizerHashInput_injective` (`BridgeDet.lean`) for the randomizer base. The layer and the tree of a
+`randomizerHashInput_injective` (`Reduction/SeedElimination.lean`) for the randomizer base. The layer and the tree of a
 call are part of its address (`layerByte_injective`, `fieldBytes_injective`), so the calls of distinct
 trees of distinct layers are separated as well.
 
@@ -213,8 +213,8 @@ The key is not hashed. Each further layer adds 1 for the encoding of a root, 69 
 the leaf; the path nodes of all layers are `h` in total. `Configurations.lean` states the size
 and the three costs of each of the 8 shapes.
 
-Hash calls of the signer (`SecurityPrefixCost.lean`, `SecurityGraphCost.lean`,
-`SecurityPrefixErasedKeygen.lean`; exact counts on any oracle):
+Hash calls of the signer (`GraphView/HashCalls.lean`, `GraphView/Cost.lean`; exact
+counts on any oracle):
 
 | computation | hash calls |
 | --- | ---: |
@@ -251,7 +251,7 @@ layers.
 
 **Two secrets per derivation.** The seed is removed as before: the answers of all derivations are
 sampled before the seed and programmed at the seed's inputs, and the adversary sees them only by
-querying an input that contains the seed (`SecuritySeedGuess`, a `2^-256` guess per query). The
+querying an input that contains the seed (`Seed/Guess.lean`, a `2^-256` guess per query). The
 prepared material is unchanged: one independent uniform 256-bit value per secret
 (`SeedModel.Material`), the secret being its first 16 bytes. What is programmed at the input of a
 derivation is `SeedModel.derivedOutput`: the two secrets of its pair of chains side by side, or the
@@ -267,13 +267,13 @@ key-generation credit of the certificates is `Prefix.keygenHashCost = 226 · 2^k
 (`keygenCost`), passed to the checkers as `K`.
 
 After the deterministic
-signer is replaced by a seed-free one (`BridgeDet*`), a forgery is a first-order hit, a WOTS
+signer is replaced by a seed-free one (`Reduction/*.lean`), a forgery is a first-order hit, a WOTS
 second-order event, or one of the forest events of the refined classification
-(`BridgeImplicationA`): a contact without guess record, two contacts at different chains of one
+(`Classification/WinRefined.lean`): a contact without guess record, two contacts at different chains of one
 index, a recorded contact at a chain opened at or below its step, a near cover with a recorded
 contact, or a cover. Budgets are split at `qh ≈ 2^(128 + lx)`.
 
-**No root hashes.** The graph of hashed values (`SecurityPosition.lean`) keeps its positions; only
+**No root hashes.** The graph of hashed values (`GraphView/Position.lean`) keeps its positions; only
 the children of two kinds of position change: a tree leaf (`superChild`) reads the four level-2
 nodes of its two subtrees and the position `roots` the sixteen level-3 nodes of the trees. The root
 of a subtree, the root of a tree and `roots` remain positions that nothing reads (the key is not
@@ -282,7 +282,7 @@ over-approximates what is hashed, every position is prepared, and an address sti
 position, so a query has one target as before. The values a signature reveals are unchanged
 (`GraphView.publicData`: the subtree path at levels 0 to 2 and the tree path at levels 0 to 3, the
 last of each being the other top node, which was already a path element). In the forest witness
-(`SecurityForestWitness.lean`) an opening gives two top nodes per tree, the one its fold reaches and
+(`Classification/Forest.lean`) an opening gives two top nodes per tree, the one its fold reaches and
 its last path element (`opSubTops`, `opTops`). An opening that recovers the honest key has the
 sixteen honest level-3 nodes, since the key is those nodes (a different key is a different encoding
 input, which the WOTS+C classification handles). So each tree has the honest last path element and its fold of 3
@@ -299,35 +299,35 @@ independent start and step (`Det.evalDist_rtable_split`). The proof fixes the st
 (the seed-free game takes them as a parameter, `PublicData.steps`, and is bounded for every table of
 steps, as if the forger knew them) and averages the starts. The start `R0` of a message is uniform and
 hidden, and the signature of a message uses the first landing randomizer of the scan
-`R0, R0 + δ, …` (`BridgeScan.nextRand`). For one unsigned message a randomizer is
+`R0, R0 + δ, …` (`GraphView.nextRand`). For one unsigned message a randomizer is
 fresh, cached and rejected, or cached and landing; the law of the signed pair is the walk value of
-`LoopWalk.lean` over these statuses (`BridgeScan.scan_boundW`). A cached landed pair is selected
+`ScanSigner/LoopWalk.lean` over these statuses (`GraphView.scan_boundW`). A cached landed pair is selected
 with a probability that depends on the cache (the run of rejected values before it), not `1/(n + R)`,
 and one digest query raises the selection mass of the adversary's pairs by at most `(2 − p)/2^128`
 (`LoopWalk.creation_le`, `p = 2^-(h−b)`; attained by scanning forward from random starts), against
 `1/2^128` for independent attempts. The potentials therefore keep the cached pairs of each unsigned
-message as one exclusive group (`GroupFuture.grp`, `BridgeGroups.grpAll`) applied to the one-coin
+message as one exclusive group (`LoopWalk.grp`, `ForestPotential.grpAll`) applied to the one-coin
 future of the pairs still to come:
 
-- a new pair is paid by one future coin (`GroupFuture.probe_step`, `termO_newPair`) as long as the
+- a new pair is paid by one future coin (`LoopWalk.probe_step`, `termO_newPair`) as long as the
   group of its message keeps mass `1 − τ` on the identity; the witness is only monotone, so the
-  coin is `(2 − p)/(2^128 p (1 − τ))` (`H0Fair.wbarOf`, `FairS`), with `τ` from the numbers of cached
+  coin is `(2 − p)/(2^128 p (1 − τ))` (`H0.wbarOf`, `FairS`), with `τ` from the numbers of cached
   digests and of cached landed pairs (`LoopWalk.mass_le`);
 - the number of cached landed pairs of unsigned messages is capped by an exact martingale
-  (`lam` in `BridgeForestPotentialOnce`): above the cap the bound is trivial, and the cap term is
-  at most `(64/65)^(2^15)` at the start (`H0Fair.lam_start`);
+  (`lam` in `CoverPotential/OneCoin.lean`): above the cap the bound is trivial, and the cap term is
+  at most `(64/65)^(2^15)` at the start (`H0.lam_start`);
 - a signing call is paid by one fresh slot and the group of its message (`sign_term`): no coupling
   and no fair share;
 - for the largest budgets one message can hold almost all the mass (its signature is then a known
-  pair with certainty). A message with more than half of the budget is *heavy* (`BridgeHeavy`): it
-  acts by the law of its signed view (`GroupHeavy.sgn`, exact under its own digest queries) and uses
+  pair with certainty). A message with more than half of the budget is *heavy* (`LargeBudget/HeavyTerm.lean`): it
+  acts by the law of its signed view (`LoopWalk.sgn`, exact under its own digest queries) and uses
   one spare fresh slot; the other messages have at most half of the budget
-  (`BridgeHeavyW`, `BridgeHeavyRoutes.det_largeH`, certificates with `N + 1` signatures in
-  `BridgeHeavyCert`).
+  (`LargeBudget/HeavyPotential.lean`, `ForestPotential.det_largeH`, certificates with `N + 1` signatures in
+  `Certificates/Closing.lean`).
 
 ### Small budgets (`q - keygenCost ≤ qh`)
 
-- **Linear potential** (`BridgePotentialA`..`A8`, `BridgeFleafA3`). A forest step whose written
+- **Linear potential** (`SmallBudget/Linear/*.lean`). A forest step whose written
   coordinate is still unexposed is *latent*: it becomes a contact with chance `2^-128` when that
   coordinate is exposed. Contacts carry the weight `cw` (one if decided, `2^-128` while latent);
   exposures keep every multilinear expression of the weights in the mean (`mean_cw`, `mean_cw2`) and
@@ -335,40 +335,40 @@ future of the pairs still to come:
   pays guesses, first-order hits, WOTS second-order events, unrecorded forest contacts and pairs of
   contacts, and leaves `(ρ - 1 - x) 2^-128` per forest step query unused (`smallRoute_potentialF`).
 - **One-coin cover potential** at baseline `ρ / 2^128` with the exact cover indicator as witness
-  (`BridgeForestPotentialOnce`, `BridgeForestGameOnce`), and its H-term certificate (`H0*`: Poissonization,
+  (`CoverPotential/OneCoin.lean`, `CoverPotential/OneCoinGame.lean`), and its H-term certificate (`CoverBound/*.lean`: Poissonization,
   splitting into independent indices, first and second moments of the per-tree cover fraction from
-  the distribution of the componentwise maximum of codewords, `H0ForestOpt`).
-- **Contact bound A4** (`BridgeA4F`, `BridgeA4Sign`, `BridgeA4Final` on the game framework
-  `BridgeGameF`). A recorded contact is *settled* once a reveal opens its chain at or below its step;
+  the distribution of the componentwise maximum of codewords, `CoverBound/HTermOption.lean`).
+- **Contact bound A4** (`SmallBudget/Contact/Potential.lean`, `SmallBudget/Contact/Signing.lean`, `SmallBudget/Contact/Bound.lean` on the game framework
+  `SmallBudget/Contact/PaidPotential.lean`). A recorded contact is *settled* once a reveal opens its chain at or below its step;
   settled contacts pay one, unsettled ones pay the reveal rate of the remaining signatures, the coin
   part and the capped near potential:
   `Ψ = Σ_recorded cw · (settled ? 1 : sig + coin + min(1, potN(y))) + y 2^-128 coin + κ 2^-128 Σ_{j<y} potN(j)`.
-  The weighted sums keep their mean through ordinary queries (`BridgeWsum.wsum_ordinary`). Through a
+  The weighted sums keep their mean through ordinary queries (`PotentialA.Ctx.wsum_ordinary`). Through a
   signing call (`sign_contact`): the signer asks no forest step input, so it records no forest step,
   keeps every step answer and exposes a written coordinate only by revealing its chain
-  (`BridgeRunFacts`); a completed call reveals upward-closed chains (`closedRuns_loop`); a call opens
+  (`SmallBudget/Contact/RunFacts.lean`); a completed call reveals upward-closed chains (`closedRuns_loop`); a call opens
   a given chain at or below `min(t + 1, 3)` with chance at most `123 · 2^-b · 2^-15` plus `wbar` per
-  cached pair of the message, over every run (`reveal_le_all`, `BridgeRevealAll`, `BridgeRevealRate`:
+  cached pair of the message, over every run (`reveal_le_all`, `ScanSigner/ScanReveals.lean`, `SmallBudget/Contact/RevealRate.lean`:
   at most 123 of the 256 table entries have a given digit at least one; with the scan signer the second
   part is `hitMass`, the probability that the signature uses a cached landed pair, and the coin
   part of the potential is `ν (budget · offSum + C(budget, 2) · rateS)` with
   `rateS = (2 − p)/2^128`: a unit of budget is a contact attempt or a digest query, not both);
   a latent contact exposed by the
-  call is decided with chance `2^-128` whatever the call does (`BridgeExposeMean.interp_value_le`).
-  The near potential uses the subtree-free near witness (`BridgeForestNear`, certificate `H0NearOpt`).
+  call is decided with chance `2^-128` whatever the call does (`HiddenDebt.interp_value_le`).
+  The near potential uses the subtree-free near witness (`SmallBudget/Contact/NearWitness.lean`, certificate `CoverBound/NearOption.lean`).
   A forest step query costs `2^-128 (N rate + 1 - κ)`, paid by the slack of the linear potential once
   `κ ≥ 2 - ρ + x + N rate` (`arm_paysF`).
-- Assembly: `sample_boundF` (`BridgeSampleBoundF`), `det_smallF` and the closed form `small_closeFF`
-  with the rational check `checkSmallF` (`BridgeDetCloseF`).
+- Assembly: `sample_boundF` (`SmallBudget/SampleBound.lean`), `det_smallF` and the closed form `small_closeFF`
+  with the rational check `checkSmallF` (`SmallBudget/Closing.lean`).
 
 ### Large budgets
 
-The one-coin bound at the survival-weighted baseline (`BridgeSatW*`, `det_largeW`) with forest covers
-(`BridgeDetW.checkCoverW`, `H0ForestOpt`).
+The one-coin bound at the survival-weighted baseline (`LargeBudget/*.lean`, `det_largeW`) with forest covers
+(`H0.checkCoverW`, `CoverBound/HTermOption.lean`).
 
 ### Both routes
 
-`BridgeHeavyCert.det_bitsFH`: 127 bits from the small-route table (rate at `qh`), the small-route
+`ForestPotential.det_bitsFH`: 127 bits from the small-route table (rate at `qh`), the small-route
 option, the near certificate, `checkSmallF` at `qh` (coin summand `(2 − p) qh / 2^129`), and a chain
 of covers of `[qh + 1, 2^127)`, each with its own Poisson table: light covers (`checkCoverW`, coin
 `wbarOf`) up to about `0.249 · 2^128`, then one heavy cover (`checkCoverH`, `N + 1` signatures, coin

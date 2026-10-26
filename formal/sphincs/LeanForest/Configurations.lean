@@ -1,4 +1,4 @@
-import LeanForest.VerificationCost
+import LeanForest.Scheme.VerificationCost
 
 /-! **The 24 configurations: sizes and verification costs.** A configuration is a height `h` (22, 24,
 26, 28, for lifetimes of about `2^26` to `2^32` signatures), a shape (pruned: one tree of height `h`,
