@@ -1,9 +1,7 @@
 import LeanForest.BridgeHeavyCert
 
-/-! **Certificates rebuilt from their scalars.** A Poisson table, an option and a near certificate
-are deterministic functions of a few scalars: the functions below rebuild them, as
-`scripts/forest_certificates.py` does (`fill_poisT`, `fill_opt`, `make_optN`). Nothing is proved
-about these functions: the checkers `checkPT`, `checkOptF` and `checkOptN` check what they return.
+/-! **Helpers for the certificates rebuilt from their scalars** (`Certificates/Build.lean`): the
+entries of a Poisson table (`poisGo`) and the extension slope of a leaf table (`leafJ`).
 
 **Covers checked option by option.** The chain of a cover reads only the threshold and the bound of
 each option: `checkOptB` checks one option and these two numbers, `checkCoverQ` checks the rest of the
@@ -12,10 +10,9 @@ evaluates one option at a time. -/
 
 namespace LeanForest.Security.H0
 
-
 open LeanForest.Base.H0
 
-/-! ### Rebuilding -/
+/-! ### Tables -/
 
 /-- The entries of a Poisson table after the first: `p (n + 1) = ⌈p n · m / ((n + 1) 2^64)⌉`. -/
 def poisGo (m : ℕ) : ℕ → ℕ → ℕ → List ℕ
@@ -24,55 +21,9 @@ def poisGo (m : ℕ) : ℕ → ℕ → ℕ → List ℕ
       ((p * m + ((n + 1) * 2 ^ 64 - 1)) / ((n + 1) * 2 ^ 64)) ::
         poisGo m k (n + 1) ((p * m + ((n + 1) * 2 ^ 64 - 1)) / ((n + 1) * 2 ^ 64))
 
-/-- The Poisson table of rate `m / 2^64` with entries `0, …, n1 + 1`, precision `P` and `J + 1` terms
-of the exponential series. -/
-def fillPoisT (m P J n1 : ℕ) : PoisT :=
-  ⟨m, P, J, ⌈(2 : ℚ) ^ P / expLow ((m : ℚ) / 2 ^ 64) J P⌉.toNat ::
-    poisGo m (n1 + 1) 0 ⌈(2 : ℚ) ^ P / expLow ((m : ℚ) / 2 ^ 64) J P⌉.toNat⟩
-
-/-- `convexify` after the first two entries: `a`, `b` are the last two entries. -/
-def convexGo : ℚ → ℚ → List ℚ → List ℚ
-  | _, _, [] => []
-  | a, b, x :: xs => (max x (2 * b - a)) :: convexGo b (max x (2 * b - a)) xs
-
-/-- The least convex increasing list above a list (from the left). -/
-def convexify : List ℚ → List ℚ
-  | [] => []
-  | [x] => [x]
-  | x :: y :: xs => x :: max y x :: convexGo x (max y x) xs
-
-/-- The leaf table above the bounds `f 0, …, f n1`, on the grid `2^-P`. -/
-def leafTab (n1 P : ℕ) (f : ℕ → ℚ) : List ℚ :=
-  convexify ((convexify ((List.range (n1 + 1)).map f)).map (rup · P))
-
 /-- The extension slope of a leaf table with cap `cap`. -/
 def leafJ (n1 : ℕ) (tab : List ℚ) (cap : ℚ) : ℚ :=
   max (max (tab.getD n1 0 - tab.getD (n1 - 1) 0) (cap - tab.getD n1 0)) 0
-
-/-- The bound of the Poisson mean of a leaf table extended with slope `J`. -/
-def leafMean (t : PoisT) (tab : List ℚ) (J : ℚ) : ℚ :=
-  ((List.range (t.n1 + 1)).map fun n => t.pb n * tab.getD n 0).sum +
-    t.pb (t.n1 + 1) * (tab.getD t.n1 0 / (1 - t.r) + J / (1 - t.r) ^ 2)
-
-/-- The option with cap `c1`, Chernoff parameter `θ`, `s` squarings and threshold `cthr`. -/
-def fillOpt (H b : ℕ) (t : PoisT) (c1 θ : ℚ) (s : ℕ) (cthr : ℚ) : OptF :=
-  let eC := expUp (θ * c1) s t.P
-  let A2 := rup ((eC - 1 - θ * c1) / c1 ^ 2) (2 * 127 + 64)
-  let o0 : OptF := ⟨c1, θ, cthr, s, eC, A2, [], 0, [], 0, 0, 0, 0⟩
-  let gt := leafTab t.n1 (64 + 127) (gBound H o0)
-  let ht := leafTab t.n1 (64 + 64) (hBound H o0)
-  let Jg := leafJ t.n1 gt (κQ H)
-  let Jh := leafJ t.n1 ht (eC - 1)
-  let Eg := rup (leafMean t gt Jg) (64 + 127 + 2 * b)
-  let Ee := rup (leafMean t ht Jh) (64 + 2 * b)
-  let B := rup (2 ^ b * Eg + sqUp t.P b (1 + Ee) / (expLow (θ * cthr) t.J t.P * eLowQ * θ)) (64 + 127)
-  ⟨c1, θ, cthr, s, eC, A2, gt, Jg, ht, Jh, Eg, Ee, B⟩
-
-/-- The near certificate of a Poisson table. -/
-def fillOptN (H b : ℕ) (t : PoisT) : OptN :=
-  let nt := leafTab t.n1 (64 + 127) (nBound H)
-  let Jn := leafJ t.n1 nt (16 * κQ H)
-  ⟨nt, Jn, rup (leafMean t nt Jn) (64 + 127 + 2 * b)⟩
 
 /-! ### Covers option by option -/
 

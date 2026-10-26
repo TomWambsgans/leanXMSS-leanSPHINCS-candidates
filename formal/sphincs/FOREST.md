@@ -86,9 +86,9 @@ it and refuses to run if the Lean sources hold other tables.
 No `sorry`, no `native_decide`, no new axioms: `LeanForest/Axioms.lean` checks every declaration
 (`propext`, `Classical.choice`, `Quot.sound` only). Certificates are exact rationals checked by the
 kernel (`decide +kernel`). `Certificates/H*.lean` store only the scalars of each Poisson table
-(`m`, `P`, `J`, `n1`), option (`c1`, `θ`, `s`, `cthr`) and near certificate: `H0Fill.lean` rebuilds
-their lists (`fillPoisT`, `fillOpt`, `fillOptN`, the same functions as in the script) and the
-unchanged checkers check the result. The options of a cover are checked one by one with their bound
+(`m`, `P`, `J`, `n1`), option (`c1`, `θ`, `s`, `cthr`) and near certificate: `Certificates/Build.lean`
+rebuilds the tables and options from them in integers (`poisOf`, `buildOpt`, `buildOptN`) and proves
+that what it builds passes the unchanged checkers. The options of a cover are checked one by one with their bound
 `B` (`checkOptB`), and the chain of the cover is checked on these bounds (`checkCoverW_of`,
 `checkCoverH_of`).
 
@@ -101,7 +101,7 @@ env LEAN_NUM_THREADS=1 nice -n 19 lake build LeanForest
 Table: `python3 scripts/forest_table.py info` (composition), `check` (the Lean sources hold the tables
 of the script), `write` (rewrite them). Certificates: `python3 scripts/forest_certificates.py emit`
 (writes `LeanForest/Certificates/H*.lean` and `LeanForest/Lifetimes.lean`; the kernel checks one height
-in about 10 minutes and 8 GB of memory);
+in about 30–50 s and 1 GB of memory);
 `python3 scripts/forest_certificates.py check H SHAPE B N LX` checks one set in Python with the same exact
 arithmetic; `maxn H SHAPE B N0 [STEP LXLO LXHI]` searches the largest `N` over a grid of splits `lx`.
 The axiom guards (`LeanForest/Axioms.lean`) are part of the build.

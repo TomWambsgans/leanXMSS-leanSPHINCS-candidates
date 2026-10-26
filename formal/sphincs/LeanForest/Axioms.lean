@@ -269,10 +269,10 @@ run_cmd do
   let env ← getEnv
   let allowed := [``propext, ``Classical.choice, ``Quot.sound]
   let mut bad : Array (Name × Name) := #[]
-  for (name, _) in env.constants.map₁.toList do
-    let some index := env.getModuleIdxFor? name | continue
-    unless (`LeanForest).isPrefixOf env.header.moduleNames[index.toNat]! do continue
-    for axiomName in ← collectAxioms name do
-      unless allowed.contains axiomName do bad := bad.push (name, axiomName)
+  for h : i in [0:env.header.moduleNames.size] do
+    unless (`LeanForest).isPrefixOf env.header.moduleNames[i] do continue
+    for name in env.header.moduleData[i]!.constNames do
+      for axiomName in ← collectAxioms name do
+        unless allowed.contains axiomName do bad := bad.push (name, axiomName)
   unless bad.isEmpty do
     throwError m!"declarations with axioms outside propext, Classical.choice, Quot.sound: {bad.toList}"

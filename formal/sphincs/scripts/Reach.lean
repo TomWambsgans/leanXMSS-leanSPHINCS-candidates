@@ -45,12 +45,12 @@ run_cmd do
       if i % 2 == 1 then spans := spans.insert pieces[i]!.toName
   let mut decls : Array (Name × Name) := #[]
   let mut cited : Array Name := #[]
-  for (name, _) in env.constants.toList do
-    let some index := env.getModuleIdxFor? name | continue
-    let moduleName := env.header.moduleNames[index.toNat]!
+  for h : i in [0:env.header.moduleNames.size] do
+    let moduleName := env.header.moduleNames[i]
     if !(`LeanForest).isPrefixOf moduleName then continue
-    decls := decls.push (moduleName, name)
-    if (nameSuffixes name).any spans.contains then cited := cited.push name
+    for name in env.header.moduleData[i]!.constNames do
+      decls := decls.push (moduleName, name)
+      if (nameSuffixes name).any spans.contains then cited := cited.push name
   let fromPinned := reachFrom env pinned
   let fromAll := reachFrom env (pinned ++ cited)
   let mut out : String := ""
