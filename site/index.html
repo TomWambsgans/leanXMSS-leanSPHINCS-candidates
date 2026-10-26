@@ -1140,10 +1140,10 @@ document.addEventListener('pointerdown', function (e) {
     // one signer: the pruned key at three sizes, or the layered key, on three devices; the Ledger with the help of the host
     var lay_ = S.shape === 'layered', ledger = rate('Ledger Nano S+');
     var devs = [
-      { name: 'Light', b: 13, rate: ledger, kib: '16', cache: '16&nbsp;KiB', host: true,
+      { b: 13, rate: ledger, kib: '16', cache: '16&nbsp;KiB', host: true,
         dev: '<a href="https://github.com/TomWambsgans/hardware-wallet-benchmark">Ledger Nano S+</a>' },
-      { name: 'Standard', b: 20, rate: rate('laptop'), kib: '1024', cache: '1&nbsp;MiB', dev: lay_ ? 'Laptop' : 'laptop' },
-      { name: 'Full', b: S.h, rate: rate('server'), kib: '16384', cache: '16&nbsp;MiB', dev: lay_ ? 'Server' : 'server' }
+      { b: 20, rate: rate('laptop'), kib: '1024', cache: '1&nbsp;MiB', dev: 'Laptop' },
+      { b: S.h, rate: rate('server'), kib: '16384', cache: '16&nbsp;MiB', dev: 'Server' }
     ];
     // the Ledger with the host: offline, it prepares np FTS; online, the host grinds onto one of them and proves it in a STARK
     var np = W.ledger_prepared[S.h], g = W.ledger_grind[S.h];
@@ -1157,9 +1157,9 @@ document.addEventListener('pointerdown', function (e) {
     lifeRow.classList.toggle('gone', lay_);
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
-      var dev = d.dev + '<span class="info' + (lay_ && k > 0 ? ' r' : '') + '" tabindex="0" data-tip="' + (d.host ? fmt(d.rate) : pow2t(Math.round(Math.log2(d.rate)))) +
+      var dev = d.dev + '<span class="info' + (k > 0 ? ' r' : '') + '" tabindex="0" data-tip="' + (d.host ? fmt(d.rate) : pow2t(Math.round(Math.log2(d.rate)))) +
         ' ' + units() + ' per second' + (!d.host && S.hash === 'SHA-256' ? ' (counted at the BLAKE2s rate)' : '') + '">i</span>';
-      set('head-' + k, lay_ ? '<div class="hd"><span>' + dev + '</span></div>' : '<div class="hd">' + d.name + '<span class="dev">' + dev + '</span></div>');
+      set('head-' + k, '<div class="hd"><span>' + dev + '</span></div>');
       if (c.shape === 'layered') what = '';
       else if (c.b === c.h) what = 'full tree of ' + pow2(c.h);
       else what = 'subtree of ' + pow2(c.b);
