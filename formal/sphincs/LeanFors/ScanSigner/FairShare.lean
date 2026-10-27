@@ -1,10 +1,13 @@
 import LeanFors.ScanSigner.LazySigner
 
-/-! The grinding signer's view of message-digest blocks, and its fair share. Its encoding search
-and its reveals never query a message-digest input, so after the digest call of the final assembly
-the selected pair's block is what the signature discloses. A cached landed pair of the signed
-message is selected with probability at most `1 / (n + R)` when the message has `n` cached landed
-pairs: every trial picks each of them with probability `2^-128` and a fresh landed pair with
+/-! The grinding signer's view of message-digest blocks, and its fair share. A pair is a message
+with a randomizer, and its blocks are the inputs of the `digestCalls` digest calls (`pblk`). A trial
+reads only the block that carries the index (`blk`, the `firstCall` block) and tests landing on it;
+the rest of the pair follows in the final assembly, and only if it landed. The encoding search and
+the reveals never query a message-digest input, so after those calls the selected pair's blocks are
+what the signature discloses (`all_read_bound`, `finish_boundAll`). A cached landed pair of the
+signed message is selected with probability at most `1 / (n + R)` when the message has `n` cached
+landed pairs: every trial picks each of them with probability `2^-128` and a fresh landed pair with
 probability at least `R · 2^-128`. -/
 
 open OracleComp OracleSpec ENNReal
