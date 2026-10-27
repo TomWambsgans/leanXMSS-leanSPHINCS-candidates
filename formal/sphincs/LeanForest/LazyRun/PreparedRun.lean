@@ -55,33 +55,10 @@ theorem start_prepared (known : Knowledge Coordinate) : Prepared initial (DebtSt
 
 end Rest
 
-section Tick
+section Start
 
 variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate)
   (initial : HiddenOutside.Cache HashInput HashOutput) (model : HiddenRows.Model HashInput HashOutput A Coordinate)
-
-/-- A leading tick only shortens the budget. -/
-theorem interp_tick_bind {β : Type} (amount : ℕ) (next : Unit → OracleComp CostSpec β) (budget : ℕ) (s : State)
-    (h : amount ≤ budget) :
-    interp tg initial model (HiddenCost.tick amount >>= next) budget s =
-      (fun out => ((out.1.1, out.1.2.1, Sum.inr amount :: out.1.2.2.1, out.1.2.2.2), out.2)) <$>
-        interp tg initial model (next ()) (budget - amount) s := by
-  unfold HiddenCost.tick
-  rw [interp_query_bind]
-  split_ifs with hc
-  · change (pure ((), s) : ProbComp _) >>= _ = _
-    rw [pure_bind]
-    rfl
-  · exact absurd h hc
-
-theorem interp_tick_bind_abort {β : Type} (amount : ℕ) (next : Unit → OracleComp CostSpec β) (budget : ℕ) (s : State)
-    (h : ¬amount ≤ budget) :
-    interp tg initial model (HiddenCost.tick amount >>= next) budget s = pure ((none, [], [], []), s) := by
-  unfold HiddenCost.tick
-  rw [interp_query_bind]
-  split_ifs with hc
-  · exact absurd hc h
-  · rfl
 
 /-- No hit is decided at the start, and nothing is owed. -/
 theorem not_hit_start (known : Knowledge Coordinate) (table : Coordinate → Digest) :
@@ -93,7 +70,7 @@ theorem not_hit_start (known : Knowledge Coordinate) (table : Coordinate → Dig
     · rw [debts_start] at hv; exact hv
   · rw [debts_start] at hc; exact hc
 
-end Tick
+end Start
 
 section Chain
 
@@ -364,42 +341,16 @@ theorem layerCostSearch_fail (parameterOutput : HashOutput) (fixed : HiddenGraph
         index lay) budget s1))
     (hnone : out.1.1 = some none) : prepared.1 (keyAt index lay) = none := by
   set model := sampleModel parameterOutput highs
-  unfold layerCostSearch at hout
-  obtain ⟨o1, ho1, h1⟩ := interp_bind_mem tg prepared.2 model _ _ budget s1 out hout
-  rcases h1 with ⟨_, hn, _⟩ | ⟨_, _, o2, ho2, hres2, _, _⟩
-  · rw [hnone] at hn; cases hn
-  have hext1 := interp_extends tg prepared.2 model _ budget s1 o1 ho1
-  obtain ⟨o3, ho3, h3⟩ := interp_bind_mem tg prepared.2 model _ _ _ _ o2 ho2
-  rcases h3 with ⟨_, hn, _⟩ | ⟨found, hfound, o4, ho4, hres4, _, _⟩
-  · rw [hres2, hn] at hnone; cases hnone
-  rcases found with _ | pair
-  · obtain ⟨c0, r, hr, hr1, hr2⟩ := preparation_parts parameterOutput fixed highs remaining prepared hprepared
-      (keyAt index lay)
-    have ho3' : o3 ∈ support (interp tg prepared.2 model
-        (liftM (ReferenceChoice.search (truncateHash parameterOutput) lay (treeIndexAt index lay)
-          (leafIndexAt index lay) (keyMessages (sampleData parameterOutput fixed highs remaining) (keyAt index lay))
-          encodingAttemptLimit 0) : OracleComp CostSpec _) (budget - traceCost o1.1.2.2.1) o1.2) := ho3
-    have hrow := noQ_search (bad := fun x => model.parse x ≠ none)
-      (truncateHash parameterOutput) lay (treeIndexAt index lay) (leafIndexAt index lay)
-      (keyMessages (sampleData parameterOutput fixed highs remaining) (keyAt index lay))
-      (fun payload h => h (not_row_encoding parameterOutput highs _ _ _ _ payload)) encodingAttemptLimit 0
-    have hstep := interp_liftHash_replay (D := HashInput) (R := HashOutput) tg prepared.2 model
-      (ReferenceChoice.search (truncateHash parameterOutput) lay (treeIndexAt index lay) (leafIndexAt index lay)
-        (keyMessages (sampleData parameterOutput fixed highs remaining) (keyAt index lay)) encodingAttemptLimit 0 :
-          OracleComp HashSpec (Option (Counter × Encoding)))
-    have hreplay := hstep hrow c0 r hr _ o1.2 (fun x v hx => hext1.1 x v (hprep x v (hr2 x v hx))) o3 ho3'
-      none hfound
-    rw [← hr1, ← hreplay]
-  · exfalso
-    have hmem := interp_result_mem tg prepared.2 model _ _ _ o4 ho4 none (by rw [← hres4, ← hres2, hnone])
-    revert hmem
-    dsimp only
-    intro hmem
-    refine post_bind (fun v => v ≠ none) _ (fun _ => ?_) none hmem rfl
-    intro v hv
-    rw [support_pure, Set.mem_singleton_iff] at hv
-    rw [hv]
-    exact fun h => by cases h
+  obtain ⟨c0, r, hr, hr1, hr2⟩ := preparation_parts parameterOutput fixed highs remaining prepared hprepared
+    (keyAt index lay)
+  have hrow := noQ_search (bad := fun x => model.parse x ≠ none)
+    (truncateHash parameterOutput) lay (treeIndexAt index lay) (leafIndexAt index lay)
+    (keyMessages (sampleData parameterOutput fixed highs remaining) (keyAt index lay))
+    (fun payload h => h (not_row_encoding parameterOutput highs _ _ _ _ payload)) encodingAttemptLimit 0
+  have hfine := fine_honestLift_replay (D := HashInput) (R := HashOutput) model IsMsgInput _ hrow c0 r hr s1
+    (fun x v hx => hprep x v (hr2 x v hx))
+  have hpost := interp_fine_post tg prepared.2 model _ _ _ budget s1 hfine out hout none hnone
+  rw [← hr1, ← hpost.1]
 
 /-- **A failed final assembly is at a failing index.** -/
 theorem finishRest_fail (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
@@ -419,13 +370,9 @@ theorem finishRest_fail (parameterOutput : HashOutput) (fixed : HiddenGraph.Tabl
   rw [Finset.mem_filter]
   refine ⟨Finset.mem_univ _, digestIndex digest, rfl, ?_⟩
   unfold finishRest at hout
-  obtain ⟨o1, ho1, h1⟩ := interp_bind_mem tg prepared.2 model _ _ budget s1 out hout
-  rcases h1 with ⟨_, hn, _⟩ | ⟨_, _, o2, ho2, hres2, _, _⟩
-  · rw [hnone] at hn; cases hn
-  have hext1 := interp_extends tg prepared.2 model _ budget s1 o1 ho1
-  obtain ⟨o3, ho3, h3⟩ := interp_bind_mem tg prepared.2 model _ _ _ _ o2 ho2
+  obtain ⟨o3, ho3, h3⟩ := interp_bind_mem tg prepared.2 model _ _ _ _ out hout
   rcases h3 with ⟨_, hn, _⟩ | ⟨found, hfound, o4, ho4, hres4, _, _⟩
-  · rw [hres2, hn] at hnone; cases hnone
+  · rw [hn] at hnone; cases hnone
   rcases found with _ | found
   · exact interp_sequenceDep_none tg prepared.2 model (Prepared prepared.2)
       (layerCostSearch (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining steps)
@@ -435,9 +382,9 @@ theorem finishRest_fail (parameterOutput : HashOutput) (fixed : HiddenGraph.Tabl
         (interp_extends tg prepared.2 model _ budget s out hout).1 x v (hs x v hx))
       (fun lay budget s hs out hout hnone => layerCostSearch_fail parameterOutput fixed highs remaining steps
         prepared hprepared tg (digestIndex digest) lay budget s hs out hout hnone)
-      _ o1.2 (fun x v hx => hext1.1 x v (hprep x v hx)) o3 ho3 hfound
+      _ s1 hprep o3 ho3 hfound
   · exfalso
-    have hmem := interp_result_mem tg prepared.2 model _ _ _ o4 ho4 none (by rw [← hres4, ← hres2, hnone])
+    have hmem := interp_result_mem tg prepared.2 model _ _ _ o4 ho4 none (by rw [← hres4, hnone])
     revert hmem
     dsimp only
     intro hmem

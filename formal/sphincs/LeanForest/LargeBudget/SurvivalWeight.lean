@@ -105,8 +105,22 @@ theorem meanWeight_costStep_leW (input : (SourceCostSpec D R ι).Domain) (state 
         · exact meanWeight_le_of_supportW tg initial _ _ (readOutside_weight_leW tg initial bytes state)
   · change meanWeight tg initial (sampleCoordinate coordinate state) ≤ _
     rw [meanWeight_sample tg initial coordinate state (debts_finiteW tg initial state _)]
-  · change meanWeight tg initial (pure ((), state) : ProbComp _) ≤ _
-    rw [meanWeight, tsum_probOutput_pure_mul]
+  · rw [costStep_honest_eq, costStep_ordinary]
+    generalize amount.input = bytes
+    unfold ordinaryStep
+    split
+    · exact meanWeight_le_of_supportW tg initial _ _ (readOutside_weight_leW tg initial bytes state)
+    · split
+      · refine meanWeight_le_of_supportW tg initial _ _ fun r hr => ?_
+        rcases readOutside_support bytes _ r hr with h | ⟨hc, h⟩
+        · rw [h]
+          exact weight_le_of_extendsW tg initial (extends_record state _) rfl
+        · rw [h]
+          exact weight_le_of_extendsW tg initial
+            ((extends_record state _).trans (extends_store _ bytes r.1 hc)) rfl
+      · split
+        · rw [meanWeight_map, meanWeight_sample tg initial _ state (debts_finiteW tg initial state _)]
+        · exact meanWeight_le_of_supportW tg initial _ _ (readOutside_weight_leW tg initial bytes state)
 
 /-- **Supermartingale.** The expected final weight of an interpreted run is at most the initial
 weight. -/
@@ -213,7 +227,8 @@ theorem step_goodW (total : ℕ) (htotal : (total : ℝ) + 1 < spaceReal) (payme
     (hpayment : ∀ probes remaining, probes + remaining + 1 ≤ total →
       payment ≤ budget probes remaining - budget probes (remaining + 1))
     (input : (SourceCostSpec D R ι).Domain) (state : DebtState D R ι) (probes remaining : ℕ)
-    (hinv : Inv tg initial state probes) (hcost : sourceCost input ≤ remaining) (hsum : probes + remaining ≤ total) :
+    (hinv : Inv tg initial state probes) (hcost : sourceCost input ≤ remaining) (hsum : probes + remaining ≤ total)
+    (hok : ∀ query, input = .inr query → HonestOk model tg.digest query.input state) :
     ∃ probes', probes' + (remaining - sourceCost input) ≤ total ∧
       (∀ result ∈ support (costStep model input state), Inv tg initial result.2 probes') ∧
       budget probes remaining * weight tg initial state + payment * wpays tg initial state input ≤
@@ -223,17 +238,26 @@ theorem step_goodW (total : ℕ) (htotal : (total : ℝ) + 1 < spaceReal) (payme
     push_cast at h
     linarith
   cases input with
-  | inr amount =>
+  | inr query =>
+      obtain ⟨hp, hquery⟩ := hok query rfl
+      have hstep : costStep model (.inr query) state = readOutside query.input state := by
+        rw [costStep_honest_eq, costStep_inl, lazyStep_unparsed model _ state hp]
       refine ⟨probes, by simp only [sourceCost]; omega, ?_, ?_⟩
       · intro result hresult
-        change result ∈ support (pure ((), state) : ProbComp _) at hresult
-        rw [support_pure, Set.mem_singleton_iff] at hresult
-        subst hresult
-        exact hinv
-      · change _ + payment * 0 ≤ _ * meanWeight tg initial (pure ((), state) : ProbComp _)
-        rw [meanWeight, tsum_probOutput_pure_mul, mul_zero, add_zero]
-        gcongr
-        exact budget_le_of_le probes _ _ (Nat.sub_le _ _) (by linarith)
+        rw [hstep] at hresult
+        rcases hquery with hmsg | ⟨answer, hanswer⟩
+        · exact inv_readOutside_none tg initial _ state probes hinv (hcompat.digestKind _ hmsg) result hresult
+        · rw [readOutside_cached _ state answer hanswer, support_pure, Set.mem_singleton_iff] at hresult
+          subst hresult
+          exact hinv
+      · change _ + payment * 0 ≤ _
+        rw [mul_zero, add_zero, hstep]
+        have hmean : meanWeight tg initial (readOutside query.input state) = weight tg initial state := by
+          rcases hquery with hmsg | ⟨answer, hanswer⟩
+          · exact meanWeight_readOutside_none tg initial _ state (hcompat.digestKind _ hmsg) hinv.prepared
+          · rw [meanWeight, readOutside_cached _ state answer hanswer, tsum_probOutput_pure_mul]
+        rw [hmean]
+        simp only [sourceCost, Nat.sub_zero, le_refl]
   | inl input =>
       cases input with
       | inl draw =>
@@ -347,23 +371,25 @@ theorem saturationW (total : ℕ) (htotal : (total : ℝ) + 1 < spaceReal) (paym
     {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) :
     ∀ (remaining : ℕ) (state : DebtState D R ι) (probes : ℕ),
       Inv tg initial state probes → probes + remaining ≤ total →
+      Fine model (HonestOk model tg.digest) (fun _ _ => True) computation state →
       budget probes remaining * weight tg initial state +
           payment * wflag tg initial model computation remaining state ≤
         ∑' out, Pr[= out | interp tg initial model computation remaining state] * weight tg initial out.2 := by
   induction computation using OracleComp.inductionOn with
   | pure value =>
-      intro remaining state probes _ hsum
+      intro remaining state probes _ hsum _
       rw [wflag_pure, interp_pure, tsum_probOutput_pure_mul, mul_zero, add_zero]
       refine mul_le_of_le_one_left' (budget_le_one probes remaining ?_)
       have h : ((probes + remaining : ℕ) : ℝ) ≤ total := by exact_mod_cast hsum
       push_cast at h
       linarith
   | query_bind input next ih =>
-      intro remaining state probes hinv hsum
+      intro remaining state probes hinv hsum hfine
+      rw [fine_query_bind] at hfine
       rw [wflag_query_bind, interp_query_bind]
       split_ifs with hcost
       · obtain ⟨probes', hsum', hsupport, hstep⟩ := step_goodW tg initial model hcompat htrunc total htotal
-          payment hpayment input state probes remaining hinv hcost hsum
+          payment hpayment input state probes remaining hinv hcost hsum hfine.1
         rw [tsum_probOutput_bind_mul]
         simp only [tsum_probOutput_map_mul]
         exact combine (costStep model input state) (fun result => weight tg initial result.2)
@@ -371,6 +397,7 @@ theorem saturationW (total : ℕ) (htotal : (total : ℝ) + 1 < spaceReal) (paym
           (fun result => ∑' out, Pr[= out | interp tg initial model (next result.1)
             (remaining - sourceCost input) result.2] * weight tg initial out.2) _ payment _ _ hstep
           fun result hresult => ih result.1 _ result.2 probes' (hsupport result hresult) hsum'
+            (hfine.2 result hresult)
       · rw [tsum_probOutput_pure_mul, mul_zero, add_zero]
         refine mul_le_of_le_one_left' (budget_le_one probes remaining ?_)
         have h : ((probes + remaining : ℕ) : ℝ) ≤ total := by exact_mod_cast hsum
@@ -381,12 +408,13 @@ theorem saturationW (total : ℕ) (htotal : (total : ℝ) + 1 < spaceReal) (paym
 theorem saturationW_start (total : ℕ) (htotal : (total : ℝ) + 1 < spaceReal) (payment : ℝ≥0∞)
     (hpayment : ∀ probes remaining, probes + remaining + 1 ≤ total →
       payment ≤ budget probes remaining - budget probes (remaining + 1))
-    {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) (known : Knowledge ι) :
+    {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) (known : Knowledge ι)
+    (hfine : Fine model (HonestOk model tg.digest) (fun _ _ => True) computation (DebtState.start initial known)) :
     budget 0 total + payment * wflag tg initial model computation total (DebtState.start initial known) ≤
       ∑' out, Pr[= out | interp tg initial model computation total (DebtState.start initial known)] *
         weight tg initial out.2 := by
   have h := saturationW tg initial model hcompat htrunc total htotal payment hpayment computation total
-    (DebtState.start initial known) 0 (inv_start tg initial known) (by omega)
+    (DebtState.start initial known) 0 (inv_start tg initial known) (by omega) hfine
   rwa [weight_start, mul_one] at h
 
 end SatW

@@ -89,29 +89,24 @@ theorem one_read_bound {β : Type} (x0 : D) (hp0 : model.parse x0 = none)
     (state : DebtState D R ι) (u0 : R) (hc0 : state.cache x0 = some u0)
     (rest : R → OracleComp (SourceCostSpec D R ι) β)
     (havoid : ∀ a, Avoids (fun x => x = x0) (rest a)) (g : R → ℝ≥0∞) (budget : ℕ) :
-    ∑' out, Pr[= out | interp tg initial model
-        (liftM ((SourceCostSpec D R ι).query (.inl (.inr (.inl x0)))) >>= fun a => rest a) budget state] *
+    ∑' out, Pr[= out | interp tg initial model (honest x0 >>= fun a => rest a) budget state] *
         (if out.1.1.isSome then (out.2.cache x0).elim 0 g else 0) ≤ g u0 := by
-  rw [interp_ordinary]
-  split_ifs with h0
-  · rw [ordinaryStep, hp0]
-    simp only
-    rw [readOutside_cached x0 state u0 hc0, pure_bind, tsum_probOutput_map_mul]
-    simp only
-    calc _ ≤ ∑' out, Pr[= out | interp tg initial model (rest u0) (budget - 1) state] * g u0 := by
-          refine ENNReal.tsum_le_tsum fun out => ?_
-          by_cases hout : out ∈ support (interp tg initial model (rest u0) (budget - 1) state)
-          · have hk0 := interp_avoids_cache tg initial model _ (rest u0) (havoid u0) _ state out hout x0 rfl
-            gcongr
-            split_ifs
-            · rw [hk0, hc0]; rfl
-            · exact bot_le
-          · rw [probOutput_eq_zero_of_not_mem_support hout, zero_mul, zero_mul]
-      _ ≤ g u0 := by
-          rw [ENNReal.tsum_mul_right]
-          exact mul_le_of_le_one_left' tsum_probOutput_le_one
-  · rw [tsum_probOutput_pure_mul]
-    simp
+  rw [interp_honest, ordinaryStep, hp0]
+  simp only
+  rw [readOutside_cached x0 state u0 hc0, pure_bind, tsum_probOutput_map_mul]
+  simp only
+  calc _ ≤ ∑' out, Pr[= out | interp tg initial model (rest u0) budget state] * g u0 := by
+        refine ENNReal.tsum_le_tsum fun out => ?_
+        by_cases hout : out ∈ support (interp tg initial model (rest u0) budget state)
+        · have hk0 := interp_avoids_cache tg initial model _ (rest u0) (havoid u0) _ state out hout x0 rfl
+          gcongr
+          split_ifs
+          · rw [hk0, hc0]; rfl
+          · exact bot_le
+        · rw [probOutput_eq_zero_of_not_mem_support hout, zero_mul, zero_mul]
+    _ ≤ g u0 := by
+        rw [ENNReal.tsum_mul_right]
+        exact mul_le_of_le_one_left' tsum_probOutput_le_one
 
 end LeanForest.Security.HiddenDebt
 
@@ -127,7 +122,6 @@ attribute [local instance] Classical.propDecidable
 /-- The final assembly after its digest call. -/
 noncomputable def finishRest (parameter : PublicParameter) (data : PublicData) (_message : Message)
     (randomness : Randomness) (digest : MessageDigest) : OracleComp CostSpec (Option Signature) := do
-  HiddenCost.tick 58960
   let index := digestIndex digest
   let some found ← sequenceDep (α := fun _ => Counter × Encoding) (layerCostSearch parameter data index)
     | return none
@@ -139,11 +133,8 @@ noncomputable def finishRest (parameter : PublicParameter) (data : PublicData) (
 theorem finishCostSource_eq (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) :
     finishCostSource parameter data message randomness =
-      liftM (CostSpec.query (.inl (.inr (.inl (Security.digestInput parameter data.root message randomness))))) >>=
-        fun first => finishRest parameter data message randomness (truncateMessageDigest first) := by
-  unfold finishCostSource finishRest messageDigest messageDigestCall
-  simp only [liftM_bind, bind_assoc, liftM_pure, pure_bind]
-  rfl
+      HiddenCost.honest (Security.digestInput parameter data.root message randomness) >>=
+        fun first => finishRest parameter data message randomness (truncateMessageDigest first) := rfl
 
 theorem msgInput_digestInput (parameter : PublicParameter) (root : Digest) (message : Message)
     (randomness : Randomness) :
@@ -177,18 +168,13 @@ theorem avoids_sequenceDep (avoid : HashInput → Prop) : ∀ {n : Nat} {α : Fi
 theorem avoids_layerCostSearch (parameter : PublicParameter) (data : PublicData) (index : Index)
     (lay : Layer) : Avoids IsMsgInput (layerCostSearch parameter data index lay) := by
   unfold layerCostSearch layerSearch
-  refine avoids_bind _ (avoids_tick _ _) fun _ => ?_
-  refine avoids_bind _ (avoids_liftHash _ _ (NoMsg.search _ _ _ _ _ _ _)) fun found => ?_
-  rcases found with _ | pair
-  · exact avoids_pure _ _
-  · exact avoids_bind _ (avoids_tick _ _) fun _ => avoids_pure _ _
+  exact avoids_honestLift _ _ (NoMsg.search _ _ _ _ _ _ _)
 
 /-- The rest of the final assembly never queries a message-digest input. -/
 theorem avoids_finishRest (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) (digest : MessageDigest) :
     Avoids IsMsgInput (finishRest parameter data message randomness digest) := by
   unfold finishRest
-  refine avoids_bind _ (avoids_tick _ _) fun _ => ?_
   refine avoids_bind _ (avoids_sequenceDep _ fun lay => avoids_layerCostSearch _ _ _ lay) fun found => ?_
   rcases found with _ | found
   · exact avoids_pure _ _
@@ -213,7 +199,7 @@ theorem finish_randomness (parameter : PublicParameter) (data : PublicData) (mes
   rw [finishCostSource_eq]
   refine post_bind _ _ fun a => ?_
   unfold finishRest
-  refine post_bind _ _ fun _ => post_bind _ _ fun found => ?_
+  refine post_bind _ _ fun found => ?_
   rcases found with _ | found
   · intro v hv sig hsig
     rw [support_pure, Set.mem_singleton_iff] at hv
@@ -450,17 +436,12 @@ theorem finish_keeps_msg (hparse : ∀ ρ, model.parse (blk parameter data messa
     (out : Run HashInput Coordinate (Option Signature) × DebtState HashInput HashOutput Coordinate)
     (hout : out ∈ support (interp tg initial model (finishCostSource parameter data message ρ) b s')) :
     ∀ x, IsMsgInput x → out.2.cache x = s'.cache x := by
-  rw [finishCostSource_eq, interp_ordinary] at hout
-  split_ifs at hout with h1
-  · rw [ordinaryStep, hparse ρ] at hout
-    simp only at hout
-    rw [readOutside_cached _ s' u0 hc0, pure_bind, support_map] at hout
-    obtain ⟨o, ho, rfl⟩ := hout
-    exact interp_avoids_cache tg initial model IsMsgInput _
-      (avoids_finishRest parameter data message ρ (truncateMessageDigest u0)) _ s' o ho
-  · rw [support_pure, Set.mem_singleton_iff] at hout
-    rw [hout]
-    exact fun _ _ => rfl
+  rw [finishCostSource_eq, interp_honest, ordinaryStep, hparse ρ] at hout
+  simp only at hout
+  rw [readOutside_cached _ s' u0 hc0, pure_bind, support_map] at hout
+  obtain ⟨o, ho, rfl⟩ := hout
+  exact interp_avoids_cache tg initial model IsMsgInput _
+    (avoids_finishRest parameter data message ρ (truncateMessageDigest u0)) _ s' o ho
 
 end Loop
 

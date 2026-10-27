@@ -99,10 +99,33 @@ theorem inv_step (input : (SourceCostSpec HashInput HashOutput Coordinate).Domai
               cases hk'
   · rw [costStep_inl, lazyStep_reveal] at hr
     exact K.inv_sample hinv c r hr
-  · change r ∈ support (pure ((), s) : ProbComp _) at hr
-    rw [support_pure, Set.mem_singleton_iff] at hr
-    rw [hr]
-    exact hinv
+  · rw [costStep_honest_eq, costStep_inl] at hr
+    generalize amount.input = bytes at hr
+    cases hp : M.parse bytes with
+    | none =>
+        rw [lazyStep_unparsed M bytes s hp] at hr
+        refine K.inv_read hinv bytes (fun q hq _ => ?_) r hr
+        rw [← hMp, hp] at hq
+        cases hq
+    | some q =>
+        have hq : HiddenGraph.parse K.p (candidateActive K.p) bytes = some q := by rw [← hMp, hp]
+        have huniq : ∀ q', HiddenGraph.parse K.p (candidateActive K.p) bytes = some q' → q' = q :=
+          fun q' hq' => Option.some.inj (hq'.symm.trans hq)
+        cases hk : s.known (M.incoming q.1) with
+        | none =>
+            rw [lazyStep_guess M bytes s q hp hk, hMi] at hr
+            refine K.inv_read (hinv.record _) bytes (fun q' hq' _ => ?_) r hr
+            rw [huniq q' hq']
+            exact List.mem_cons_self
+        | some canonical =>
+            by_cases heq : q.2 = canonical
+            · rw [lazyStep_canonical M bytes s q hp canonical hk heq, support_map] at hr
+              obtain ⟨r', hr', rfl⟩ := hr
+              exact K.inv_sample hinv _ r' hr'
+            · rw [lazyStep_other M bytes s q hp canonical hk heq] at hr
+              refine K.inv_read hinv bytes (fun q' hq' hk' => ?_) r hr
+              rw [huniq q' hq', ← hMi, hk] at hk'
+              cases hk'
 
 theorem digestCount_bytes (tg' : Targeting HashInput HashOutput Coordinate) (bytes : HashInput) :
     (digestCount tg' (recorded (D := HashInput) (R := HashOutput) (ι := Coordinate) (.inl (.inr (.inl bytes))))
@@ -117,7 +140,8 @@ theorem step (tg' : Targeting HashInput HashOutput Coordinate) (hdig : tg'.diges
     (hsec : ∀ x, SecondOrderInput K.p K.R x → K.tg.kind x = .none)
     (hmsg : ∀ x, ForestSigner.IsMsgInput x → K.tg.kind x = .none)
     (input : (SourceCostSpec HashInput HashOutput Coordinate).Domain) (budget : ℕ) (s : St) (hinv : K.Inv s)
-    (hcost : sourceCost input ≤ budget) :
+    (hcost : sourceCost input ≤ budget)
+    (hok : ∀ query, input = .inr query → HonestOk M ForestSigner.IsMsgInput query.input s) :
     ∑' r, Pr[= r | costStep M input s] * K.potCap total (budget - sourceCost input) r.2 +
       ENNReal.ofReal (K.ρ / 2 ^ 128) * digestCount tg' (recorded input) ≤ K.potCap total budget s := by
   unfold potCap
@@ -200,9 +224,22 @@ theorem step (tg' : Targeting HashInput HashOutput Coordinate) (hdig : tg'.diges
   · have hrec : digestCount tg' (recorded (D := HashInput) (R := HashOutput) (ι := Coordinate) (.inr amount)) = 0 :=
       rfl
     rw [hrec, Nat.cast_zero, mul_zero, add_zero]
-    change ∑' r, Pr[= r | (pure ((), s) : ProbComp _)] * _ ≤ _
-    rw [tsum_probOutput_pure_mul]
-    exact K.pot_mono (Nat.sub_le _ _) s
+    simp only [sourceCost, Nat.sub_zero]
+    obtain ⟨hp, hquery⟩ := hok amount rfl
+    rw [costStep_honest_eq, costStep_inl, lazyStep_unparsed M _ s hp]
+    rcases hquery with hd | ⟨u, hc⟩
+    · cases hc : s.cache amount.input with
+      | some u => rw [readOutside_cached _ s u hc, tsum_probOutput_pure_mul]
+      | none =>
+          have hi := initial_none_of_fresh K.initial s hinv.prepared _ hc
+          have h := K.step_other budget hc hi (fun l _ => ⟨fun i h => ?_, fun i v h => ?_⟩)
+            (fun l msg ctr _ h => msg_ne_enc hd h) (fun f h => msg_ne_fchain hd h)
+          · rwa [K.kindUnit_none (hmsg _ hd), mul_zero, add_zero] at h
+          · obtain ⟨st, pay, -, h⟩ := h
+            exact msg_ne_chain hd h
+          · obtain ⟨st, -, h⟩ := h
+            exact msg_ne_chain hd h
+    · rw [readOutside_cached _ s u hc, tsum_probOutput_pure_mul]
 
 end Model
 

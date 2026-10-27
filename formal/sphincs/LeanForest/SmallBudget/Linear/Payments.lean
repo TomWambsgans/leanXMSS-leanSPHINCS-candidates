@@ -108,53 +108,6 @@ theorem fleafCount_recorded_eq_zero (IsFleaf : D → Prop) (input : (SourceCostS
   · rfl
   · simp [fleafCount, recorded]
 
-/-- Along every lazy path of the computation from the state, every honest query satisfies `ok`
-in the state it is made in, and every final value and state satisfy `post`. -/
-def Fine (ok : D → DebtState D R ι → Prop) {α : Type} (post : α → DebtState D R ι → Prop)
-    (computation : OracleComp (SourceCostSpec D R ι) α) : DebtState D R ι → Prop :=
-  OracleComp.construct (C := fun _ => DebtState D R ι → Prop) (fun value state => post value state)
-    (fun input _ next state => (∀ query, input = .inr query → ok query.input state) ∧
-      ∀ result ∈ support (costStep model input state), next result.1 result.2)
-    computation
-
-omit [Fintype ι] in
-theorem fine_pure (ok : D → DebtState D R ι → Prop) {α : Type} (post : α → DebtState D R ι → Prop)
-    (value : α) (state : DebtState D R ι) :
-    Fine model ok post (pure value) state ↔ post value state := Iff.rfl
-
-omit [Fintype ι] in
-theorem fine_query_bind (ok : D → DebtState D R ι → Prop) {α : Type} (post : α → DebtState D R ι → Prop)
-    (input : (SourceCostSpec D R ι).Domain)
-    (next : (SourceCostSpec D R ι).Range input → OracleComp (SourceCostSpec D R ι) α) (state : DebtState D R ι) :
-    Fine model ok post (liftM ((SourceCostSpec D R ι).query input) >>= next) state ↔
-      (∀ query, input = .inr query → ok query.input state) ∧
-        ∀ result ∈ support (costStep model input state), Fine model ok post (next result.1) result.2 :=
-  Iff.rfl
-
-omit [Fintype ι] in
-theorem fine_bind (ok : D → DebtState D R ι → Prop) {α β : Type} (post : β → DebtState D R ι → Prop)
-    (first : OracleComp (SourceCostSpec D R ι) α) (next : α → OracleComp (SourceCostSpec D R ι) β)
-    (state : DebtState D R ι) :
-    Fine model ok post (first >>= next) state ↔
-      Fine model ok (fun value state' => Fine model ok post (next value) state') first state := by
-  induction first using OracleComp.inductionOn generalizing state with
-  | pure value => rw [pure_bind]; rfl
-  | query_bind input rest ih =>
-      rw [bind_assoc, fine_query_bind, fine_query_bind]
-      exact and_congr Iff.rfl (forall₂_congr fun result _ => ih result.1 result.2)
-
-omit [Fintype ι] in
-theorem fine_mono (ok : D → DebtState D R ι → Prop) {α : Type} {post post' : α → DebtState D R ι → Prop}
-    (hpost : ∀ value state, post value state → post' value state)
-    (computation : OracleComp (SourceCostSpec D R ι) α) :
-    ∀ state, Fine model ok post computation state → Fine model ok post' computation state := by
-  induction computation using OracleComp.inductionOn with
-  | pure value => exact hpost value
-  | query_bind input next ih =>
-      intro state h
-      rw [fine_query_bind] at h ⊢
-      exact ⟨h.1, fun result hresult => ih result.1 result.2 (h.2 result hresult)⟩
-
 /-- Interpreted runs lose no mass. -/
 theorem interp_mass {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) (budget : ℕ)
     (state : DebtState D R ι) :

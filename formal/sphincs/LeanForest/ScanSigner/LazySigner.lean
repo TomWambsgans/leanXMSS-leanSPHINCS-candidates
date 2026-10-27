@@ -237,6 +237,20 @@ theorem interp_ordinary {β : Type} (x : D) (next : R → OracleComp (SourceCost
   rw [interp_query_bind]
   rfl
 
+omit [Fintype ι] in
+/-- One honest query in the interpreter: an ordinary step, free and untouched. -/
+theorem interp_honest {β : Type} (x : D) (next : R → OracleComp (SourceCostSpec D R ι) β)
+    (budget : ℕ) (state : DebtState D R ι) :
+    interp tg initial model (honest x >>= next) budget state =
+      ordinaryStep model x state.known state >>= fun result =>
+        (fun out => ((out.1.1, out.1.2.1, Sum.inr x :: out.1.2.2.1, out.1.2.2.2), out.2)) <$>
+          interp tg initial model (next result.1) budget result.2 := by
+  unfold honest
+  rw [interp_query_bind, if_pos (show sourceCost (D := D) (R := R) (ι := ι) (.inr ⟨x⟩) ≤ budget from
+    Nat.zero_le _)]
+  erw [costStep_honest]
+  rfl
+
 omit [Fintype ι] [SampleableType R] in
 theorem avoids_mono {avoid avoid' : D → Prop} (hsub : ∀ x, avoid' x → avoid x) {α : Type}
     {computation : OracleComp (SourceCostSpec D R ι) α} (h : Avoids avoid computation) :

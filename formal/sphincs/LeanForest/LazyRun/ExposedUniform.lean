@@ -98,10 +98,24 @@ theorem costStep_value_le (input : (SourceCostSpec D R ι).Domain) (s : DebtStat
               exact le_of_eq_of_le (hzero _ fun r hr => congrFun (readOutside_known bytes s r hr) c) bot_le
   · rw [costStep_inl, lazyStep_reveal]
     exact sample_value_le c coordinate s hc t0
-  · refine le_of_eq_of_le (hzero _ fun r hr => ?_) bot_le
-    change r ∈ support (pure ((), s) : ProbComp _) at hr
-    rw [support_pure, Set.mem_singleton_iff] at hr
-    rw [hr]
+  · rw [costStep_honest_eq, costStep_inl]
+    generalize amount.input = bytes
+    cases hp : model.parse bytes with
+    | none =>
+        rw [lazyStep_unparsed model bytes s hp]
+        exact le_of_eq_of_le (hzero _ fun r hr => congrFun (readOutside_known bytes s r hr) c) bot_le
+    | some q =>
+        cases hk : s.known (model.incoming q.1) with
+        | none =>
+            rw [lazyStep_guess model bytes s q hp hk]
+            exact le_of_eq_of_le (hzero _ fun r hr => congrFun (readOutside_known bytes _ r hr) c) bot_le
+        | some canonical =>
+            by_cases heq : q.2 = canonical
+            · rw [lazyStep_canonical model bytes s q hp canonical hk heq, tsum_probOutput_map_mul,
+                tsum_probOutput_map_mul]
+              exact sample_value_le c (model.outgoing q.1) s hc t0
+            · rw [lazyStep_other model bytes s q hp canonical hk heq]
+              exact le_of_eq_of_le (hzero _ fun r hr => congrFun (readOutside_known bytes s r hr) c) bot_le
 
 /-- **An exposed value is uniform**, over a whole interpreted run. -/
 theorem interp_value_le {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) (c : ι) (t0 : Digest) :

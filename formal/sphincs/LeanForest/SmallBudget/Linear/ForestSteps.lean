@@ -278,7 +278,8 @@ theorem stepF (tg' : Targeting HashInput HashOutput Coordinate) (hdig : tg'.dige
     (hsec : ∀ x, SecondOrderInput K.p K.R x → K.tg.kind x = .none)
     (hmsg : ∀ x, ForestSigner.IsMsgInput x → K.tg.kind x = .none)
     (input : (SourceCostSpec HashInput HashOutput Coordinate).Domain) (budget : ℕ) (s : St) (hinv : K.Inv s)
-    (hcost : sourceCost input ≤ budget) :
+    (hcost : sourceCost input ≤ budget)
+    (hok : ∀ query, input = .inr query → HonestOk M ForestSigner.IsMsgInput query.input s) :
     ∑' r, Pr[= r | costStep M input s] * K.potCap total (budget - sourceCost input) r.2 +
       ENNReal.ofReal (K.ρ / 2 ^ 128) * digestCount tg' (recorded input) +
       ENNReal.ofReal ((K.ρ - 1 - (total : ℝ) / 2 ^ 128) / 2 ^ 128) * fleafCount (IsFchainIn K.p) (recorded input) ≤
@@ -294,7 +295,7 @@ theorem stepF (tg' : Targeting HashInput HashOutput Coordinate) (hdig : tg'.dige
   · have hfc : fleafCount (IsFchainIn K.p) (recorded input) = 0 :=
       fleafCount_recorded_eq_zero _ input fun bytes h hb => hF ⟨bytes, h, hb⟩
     rw [hfc, Nat.cast_zero, mul_zero, add_zero]
-    exact K.step M hMp hMi hMo tg' hdig hN hsec hmsg input budget s hinv hcost
+    exact K.step M hMp hMi hMo tg' hdig hN hsec hmsg input budget s hinv hcost hok
 
 end Model
 
@@ -314,7 +315,9 @@ theorem smallRoute_potentialF
       (knownOf (truncateHash parameterOutput) fixed)))
     (tg : Targeting HashInput HashOutput Coordinate) (hdigest : tg.digest = ForestSigner.IsMsgInput)
     (total : ℕ) (hN : Numeric ρ ((total : ℝ) / 2 ^ 128))
-    {α : Type} (comp : OracleComp (SourceCostSpec HashInput HashOutput Coordinate) α) :
+    {α : Type} (comp : OracleComp (SourceCostSpec HashInput HashOutput Coordinate) α)
+    (hfine : Fine (sampleModel parameterOutput highs) (HonestOk (sampleModel parameterOutput highs)
+      ForestSigner.IsMsgInput) (fun _ _ => True) comp (DebtState.start prepared.2 known)) :
     ∑' out, Pr[= out | interp tg prepared.2 (sampleModel parameterOutput highs) comp total
         (DebtState.start prepared.2 known)] *
       (endValue (payoffA parameterOutput fixed highs remaining prepared known ρ) out.2 +
@@ -328,15 +331,15 @@ theorem smallRoute_potentialF
   have hMi := sampleModel_incoming parameterOutput highs
   have hMo := sampleModel_outgoing parameterOutput highs
   have h := interp_potential2 tg prepared.2 (sampleModel parameterOutput highs) (IsFchainIn K.p) K.Inv
-    (K.potCap total) K.payoff (ENNReal.ofReal (K.ρ / 2 ^ 128))
+    (HonestOk (sampleModel parameterOutput highs) ForestSigner.IsMsgInput) (K.potCap total) K.payoff (ENNReal.ofReal (K.ρ / 2 ^ 128))
     (ENNReal.ofReal ((K.ρ - 1 - (total : ℝ) / 2 ^ 128) / 2 ^ 128))
     (fun budget state _ => K.endValue_le_cap total budget state)
-    (fun input budget state hinv hcost => K.stepF (sampleModel parameterOutput highs) hMp hMi hMo tg hdigest hN
+    (fun input budget state hinv hcost hok => K.stepF (sampleModel parameterOutput highs) hMp hMi hMo tg hdigest hN
       (ctxA_sec parameterOutput fixed highs remaining prepared known ρ)
-      (ctxA_msg parameterOutput fixed highs remaining prepared known ρ) input budget state hinv hcost)
+      (ctxA_msg parameterOutput fixed highs remaining prepared known ρ) input budget state hinv hcost hok)
     (fun input state hinv => K.inv_step (sampleModel parameterOutput highs) hMp hMi input state hinv)
     comp total (DebtState.start prepared.2 known)
-    (inv_start parameterOutput fixed highs remaining prepared known ρ hknown)
+    (inv_start parameterOutput fixed highs remaining prepared known ρ hknown) hfine
   refine h.trans (le_of_eq ?_)
   unfold Ctx.potCap
   rw [if_pos le_rfl]

@@ -60,18 +60,13 @@ theorem revealsIn_layerCostSearch (P : Coordinate → Prop) (parameter : PublicP
     (data : PublicData) (index : Index) (lay : Layer) :
     RevealsIn (D := HashInput) (R := HashOutput) P (layerCostSearch parameter data index lay) := by
   unfold layerCostSearch
-  refine revealsIn_bind _ (revealsIn_tick _ _) fun _ => ?_
-  refine revealsIn_bind _ (revealsIn_liftHash _ _) fun found => ?_
-  rcases found with _ | pair
-  · exact revealsIn_pure _ _
-  · exact revealsIn_bind _ (revealsIn_tick _ _) fun _ => revealsIn_pure _ _
+  exact revealsIn_honestLift _ _
 
 theorem revealsIn_finishRest (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) (digest : MessageDigest) :
     RevealsIn (D := HashInput) (R := HashOutput) (ForestOk digest)
       (finishRest parameter data message randomness digest) := by
   unfold finishRest
-  refine revealsIn_bind _ (revealsIn_tick _ _) fun _ => ?_
   refine revealsIn_bind _ (revealsIn_sequenceDep _ fun lay => revealsIn_layerCostSearch _ _ _ _ lay)
     fun found => ?_
   rcases found with _ | found
@@ -83,10 +78,6 @@ theorem revealsIn_finishRest (parameter : PublicParameter) (data : PublicData) (
     refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun c => revealsIn_coordCostSource digest data c)
       fun _ => ?_
     exact revealsIn_pure _ _
-
-theorem revealsIn_false_tick (amount : ℕ) :
-    RevealsIn (D := HashInput) (R := HashOutput) (ι := Coordinate) (fun _ => False) (tick amount) :=
-  revealsIn_tick _ _
 
 section Finish
 
@@ -110,23 +101,18 @@ theorem finishRest_none (randomness : Randomness) (digest : MessageDigest) (budg
     (hout : out ∈ support (interp tg initial model (finishRest parameter data message randomness digest) budget state))
     (hnone : out.1.1 = some none) : out.1.2.1 = [] := by
   unfold finishRest at hout
-  obtain ⟨o1, ho1, h1⟩ := interp_bind_mem tg initial model _ _ budget state out hout
-  have hr1 := no_reveals_of_false tg initial model _ (revealsIn_false_tick _) _ _ o1 ho1
-  rcases h1 with ⟨_, hn, _⟩ | ⟨_, _, o2, ho2, hres2, hrev2, _⟩
-  · rw [hnone] at hn; cases hn
-  rw [hrev2, hr1, List.nil_append]
-  obtain ⟨o3, ho3, h3⟩ := interp_bind_mem tg initial model _ _ _ _ o2 ho2
+  obtain ⟨o3, ho3, h3⟩ := interp_bind_mem tg initial model _ _ _ _ out hout
   have hr3 := no_reveals_of_false tg initial model _
     (revealsIn_sequenceDep _ fun lay => revealsIn_layerCostSearch _ _ _ _ lay) _ _ o3 ho3
   rcases h3 with ⟨_, hn, _⟩ | ⟨found, hfound, o4, ho4, hres4, hrev4, _⟩
-  · rw [hres2, hnone] at *; simp_all
+  · rw [hnone] at hn; cases hn
   rw [hrev4, hr3, List.nil_append]
   rcases found with _ | found
   · change o4 ∈ support (interp tg initial model (pure none) _ _) at ho4
     rw [interp_pure, support_pure, Set.mem_singleton_iff] at ho4
     rw [ho4]
   · exfalso
-    have hmem := interp_result_mem tg initial model _ _ _ o4 ho4 none (by rw [← hres4, ← hres2, hnone])
+    have hmem := interp_result_mem tg initial model _ _ _ o4 ho4 none (by rw [← hres4, hnone])
     revert hmem
     dsimp only
     intro hmem
@@ -156,27 +142,21 @@ theorem finish_post (hparse : ∀ ρ, model.parse (blk parameter data message ρ
     intro sig hsig
     have hmem := interp_result_mem tg initial model _ budget s1 out hout r hr
     exact finish_randomness parameter data message ρ r hmem sig hsig
-  rw [finishCostSource_eq] at hout
-  rw [interp_ordinary] at hout
-  split_ifs at hout with h1
-  · rw [ordinaryStep, hparse ρ] at hout
-    simp only at hout
-    rw [readOutside_cached _ s1 u0 hc0, pure_bind, support_map] at hout
-    obtain ⟨o, ho, rfl⟩ := hout
-    simp only at hr ⊢
-    have havoid := interp_avoids_cache tg initial model IsMsgInput _
-      (avoids_finishRest parameter data message ρ (truncateMessageDigest u0)) _ s1 o ho
-    refine ⟨?_, fun x hx => havoid x hx, ?_, hsig, ?_⟩
-    · rw [havoid _ (msgInput_digestInput parameter data.root message ρ), hc0]
-    · intro c hc
-      exact interp_reveals tg initial model _ (revealsIn_finishRest parameter data message ρ _) _ _ o ho c hc
-    · intro hnone
-      rw [hnone] at hr
-      exact ⟨finishRest_none tg initial model parameter data message ρ _ _ _ o ho hr,
-        hfail ρ _ _ s1 hprep o ho hr⟩
-  · rw [support_pure, Set.mem_singleton_iff] at hout
-    rw [hout] at hr
-    cases hr
+  rw [finishCostSource_eq, interp_honest, ordinaryStep, hparse ρ] at hout
+  simp only at hout
+  rw [readOutside_cached _ s1 u0 hc0, pure_bind, support_map] at hout
+  obtain ⟨o, ho, rfl⟩ := hout
+  simp only at hr ⊢
+  have havoid := interp_avoids_cache tg initial model IsMsgInput _
+    (avoids_finishRest parameter data message ρ (truncateMessageDigest u0)) _ s1 o ho
+  refine ⟨?_, fun x hx => havoid x hx, ?_, hsig, ?_⟩
+  · rw [havoid _ (msgInput_digestInput parameter data.root message ρ), hc0]
+  · intro c hc
+    exact interp_reveals tg initial model _ (revealsIn_finishRest parameter data message ρ _) _ _ o ho c hc
+  · intro hnone
+    rw [hnone] at hr
+    exact ⟨finishRest_none tg initial model parameter data message ρ _ _ _ o ho hr,
+      hfail ρ _ _ s1 hprep o ho hr⟩
 
 end Finish
 

@@ -104,6 +104,59 @@ theorem interp_liftHash_replay [DecidableEq D] {α : Type} (c : OracleComp (D �
         rw [hout] at hv
         cases hv
 
+omit [Fintype ι] in
+/-- **Honest replay.** Run by honest queries, a recorded computation whose answers are all cached
+keeps the state, makes only cached honest queries and returns the recorded result. -/
+theorem fine_honestLift_replay [DecidableEq D] (msg : D → Prop) {α : Type} (c : OracleComp (D →ₒ R) α)
+    (hrow : c.IsQueryBoundP (fun x => model.parse x ≠ none) 0) :
+    ∀ (cache0 : QueryCache (D →ₒ R)), ∀ r ∈ support ((simulateQ (randomOracle (spec := D →ₒ R)) c).run cache0),
+      ∀ (s : DebtState D R ι), (∀ x v, r.2 x = some v → s.cache x = some v) →
+        Fine model (HonestOk model msg) (fun value state => value = r.1 ∧ state = s)
+          (simulateQ (fun x => honest (D := D) (R := R) (ι := ι) x) c) s := by
+  induction c using OracleComp.inductionOn with
+  | pure a =>
+      intro cache0 r hr s _
+      rw [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hr
+      rw [simulateQ_pure, fine_pure, hr]
+      exact ⟨rfl, rfl⟩
+  | query_bind t next ih =>
+      intro cache0 r hr s hcache
+      rw [isQueryBoundP_query_bind_iff] at hrow
+      have hparse : model.parse t = none := by
+        rcases hrow.1 with h | h
+        · exact Classical.not_not.mp h
+        · exact absurd h (lt_irrefl 0)
+      have hnext : ∀ u, (next u).IsQueryBoundP (fun x => model.parse x ≠ none) 0 := by
+        intro u
+        have := hrow.2 u
+        split_ifs at this with hq
+        · exact absurd hparse hq
+        · exact this
+      rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, support_bind] at hr
+      obtain ⟨a, ha, hr⟩ := Set.mem_iUnion₂.1 hr
+      change a ∈ support ((randomOracle (spec := D →ₒ R) t).run cache0) at ha
+      have hans : a.2 t = some a.1 := by
+        cases hc : cache0 t with
+        | some u =>
+            rw [QueryImpl.withCaching_run_some _ hc, support_pure, Set.mem_singleton_iff] at ha
+            subst ha; exact hc
+        | none =>
+            rw [QueryImpl.withCaching_run_none _ hc, support_map] at ha
+            obtain ⟨u, _, rfl⟩ := ha
+            simp
+      have hst : s.cache t = some a.1 := hcache t a.1 (randomOracle_run_grows (next a.1) a.2 r hr t a.1 hans)
+      rw [simulateQ_bind, simulateQ_spec_query]
+      change Fine model _ _ (liftM ((SourceCostSpec D R ι).query (.inr ⟨t⟩)) >>= fun u =>
+        simulateQ (fun x => honest (D := D) (R := R) (ι := ι) x) (next u)) s
+      rw [fine_query_bind]
+      refine ⟨fun query hq => ?_, fun result hresult => ?_⟩
+      · cases hq
+        exact ⟨hparse, Or.inr ⟨a.1, hst⟩⟩
+      · rw [costStep_honest_eq, costStep_inl, lazyStep_unparsed model t s hparse, readOutside_cached t s a.1 hst,
+          support_pure, Set.mem_singleton_iff] at hresult
+        subst hresult
+        exact ih a.1 (hnext a.1) a.2 r hr s hcache
+
 /-- Every part of a recorded sequence was recorded from some cache, inside the final cache. -/
 theorem sequenceFin_parts [DecidableEq D] {α : Type} :
     ∀ {n : ℕ} (f : Fin n → OracleComp (D →ₒ R) α) (cache0 : QueryCache (D →ₒ R)),

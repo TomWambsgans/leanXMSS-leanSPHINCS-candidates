@@ -1006,6 +1006,11 @@ noncomputable def costStep : (input : (SourceCostSpec D R ι).Domain) → DebtSt
   | .inl input, state => (lazyStep model input).run state
   | .inr query, state => (lazyStep model (.inr (.inl query.input))).run state
 
+omit [Fintype ι] in
+/-- An honest query steps as the ordinary query of its input. -/
+theorem costStep_honest_eq (query : Honest D) (state : DebtState D R ι) :
+    costStep model (.inr query) state = costStep model (.inl (.inr (.inl query.input))) state := rfl
+
 /-- A digest query pays the baseline exactly when no hit is decided yet. -/
 noncomputable def pays (state : DebtState D R ι) : (SourceCostSpec D R ι).Domain → ℕ
   | .inl (.inr (.inl bytes)) => if tg.digest bytes ∧ ¬Realized tg initial state then 1 else 0

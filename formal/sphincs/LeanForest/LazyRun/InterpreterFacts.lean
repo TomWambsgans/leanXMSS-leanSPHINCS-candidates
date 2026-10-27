@@ -101,10 +101,17 @@ theorem extends_costStep (input : (SourceCostSpec D R ι).Domain) (state : DebtS
           exact extends_sampleCoordinate _ state r' hr'
         · exact extends_readOutside bytes state r hr
   · exact extends_sampleCoordinate coordinate state r hr
-  · change r ∈ support (pure ((), state) : ProbComp _) at hr
-    rw [support_pure, Set.mem_singleton_iff] at hr
-    rw [hr]
-    exact Extends.refl state
+  · rw [costStep_honest] at hr
+    unfold ordinaryStep at hr
+    split at hr
+    · exact extends_readOutside _ state r hr
+    · split at hr
+      · exact (extends_record state _).trans (extends_readOutside _ _ r hr)
+      · split at hr
+        · rw [support_map] at hr
+          obtain ⟨r', hr', rfl⟩ := hr
+          exact extends_sampleCoordinate _ state r' hr'
+        · exact extends_readOutside _ state r hr
 
 omit [Fintype ι] in
 /-- Interpreted runs only grow the state. -/
@@ -177,11 +184,20 @@ theorem revealsIn_bind (allowed : ι → Prop) {α β : Type} {first : OracleCom
       exact ⟨hin, fun value => ih value (hrest value)⟩
 
 omit [Fintype ι] [SampleableType R] in
-theorem revealsIn_tick (allowed : ι → Prop) (amount : ℕ) :
-    RevealsIn allowed (tick (D := D) (R := R) (ι := ι) amount) := by
-  unfold tick
-  rw [← bind_pure (liftM ((SourceCostSpec D R ι).query (.inr amount)))]
+theorem revealsIn_honest (allowed : ι → Prop) (x : D) :
+    RevealsIn allowed (honest (D := D) (R := R) (ι := ι) x) := by
+  unfold honest
+  rw [← bind_pure (liftM ((SourceCostSpec D R ι).query (.inr ⟨x⟩)))]
   exact (revealsIn_query_bind allowed _ _).2 ⟨fun c h => (by cases h), fun _ => trivial⟩
+
+omit [Fintype ι] [SampleableType R] in
+theorem revealsIn_honestLift (allowed : ι → Prop) {α : Type} (computation : OracleComp (D →ₒ R) α) :
+    RevealsIn allowed (simulateQ (fun x => honest (D := D) (R := R) (ι := ι) x) computation) := by
+  induction computation using OracleComp.inductionOn with
+  | pure value => exact revealsIn_pure allowed value
+  | query_bind query rest ih =>
+      rw [simulateQ_bind, simulateQ_spec_query]
+      exact revealsIn_bind allowed (revealsIn_honest allowed _) ih
 
 omit [Fintype ι] [SampleableType R] in
 theorem revealsIn_reveal (allowed : ι → Prop) (coordinate : ι) (h : allowed coordinate) :
@@ -310,7 +326,8 @@ theorem card_filter_store_le (T : Finset D) (state : DebtState D R ι) (x : D) (
 omit [Fintype ι] in
 theorem costStep_card_le (T : Finset D) (input : (SourceCostSpec D R ι).Domain) (state : DebtState D R ι) :
     ∀ r ∈ support (costStep model input state),
-      (T.filter fun y => r.2.cache y ≠ none).card ≤ (T.filter fun y => state.cache y ≠ none).card + sourceCost input := by
+      (T.filter fun y => r.2.cache y ≠ none).card ≤
+        (T.filter fun y => state.cache y ≠ none).card + (recorded input).length := by
   intro r hr
   have hread : ∀ (bytes : D) (s' : DebtState D R ι), s'.cache = state.cache → ∀ r ∈ support (readOutside bytes s'),
       (T.filter fun y => r.2.cache y ≠ none).card ≤ (T.filter fun y => state.cache y ≠ none).card + 1 := by
@@ -342,17 +359,26 @@ theorem costStep_card_le (T : Finset D) (input : (SourceCostSpec D R ι).Domain)
   · change r ∈ support (sampleCoordinate coordinate state) at hr
     rw [sampleCoordinate_expose _ state r hr]
     exact Nat.le_add_right _ _
-  · change r ∈ support (pure ((), state) : ProbComp _) at hr
-    rw [support_pure, Set.mem_singleton_iff] at hr
-    rw [hr]
-    exact Nat.le_add_right _ _
+  · rw [costStep_honest] at hr
+    unfold ordinaryStep at hr
+    change _ ≤ _ + 1
+    split at hr
+    · exact hread _ state rfl r hr
+    · split at hr
+      · exact hread _ (state.record _) rfl r hr
+      · split at hr
+        · rw [support_map] at hr
+          obtain ⟨r', hr', rfl⟩ := hr
+          rw [sampleCoordinate_expose _ state r' hr']
+          exact Nat.le_succ _
+        · exact hread _ state rfl r hr
 
 omit [Fintype ι] in
-/-- Each unit of cost adds at most one cache entry. -/
+/-- Each recorded query adds at most one cache entry. -/
 theorem interp_card_le (T : Finset D) {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) :
     ∀ budget (state : DebtState D R ι), ∀ out ∈ support (interp tg initial model computation budget state),
       (T.filter fun y => out.2.cache y ≠ none).card ≤
-        (T.filter fun y => state.cache y ≠ none).card + traceCost out.1.2.2.1 := by
+        (T.filter fun y => state.cache y ≠ none).card + out.1.2.2.1.length := by
   induction computation using OracleComp.inductionOn with
   | pure value =>
       intro budget state out hout
@@ -365,7 +391,7 @@ theorem interp_card_le (T : Finset D) {α : Type} (computation : OracleComp (Sou
       · rw [support_bind] at hout
         simp only [Set.mem_iUnion, support_map, Set.mem_image] at hout
         obtain ⟨result, hresult, inner, hinner, rfl⟩ := hout
-        simp only [traceCost_append, recorded_cost]
+        simp only [List.length_append]
         have h1 := ih result.1 _ result.2 inner hinner
         have h2 := costStep_card_le model T input state result hresult
         omega

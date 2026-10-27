@@ -96,6 +96,87 @@ theorem lazyRun_wrapped {α : Type} (computation : OracleComp (SourceCostSpec D 
           Functor.map_map, Functor.map_map]
       · rfl
 
+/-! ### Honest queries along the lazy paths -/
+
+/-- Along every lazy path of the computation from the state, every honest query satisfies `ok`
+in the state it is made in, and every final value and state satisfy `post`. -/
+def Fine (ok : D → DebtState D R ι → Prop) {α : Type} (post : α → DebtState D R ι → Prop)
+    (computation : OracleComp (SourceCostSpec D R ι) α) : DebtState D R ι → Prop :=
+  OracleComp.construct (C := fun _ => DebtState D R ι → Prop) (fun value state => post value state)
+    (fun input _ next state => (∀ query, input = .inr query → ok query.input state) ∧
+      ∀ result ∈ support (costStep model input state), next result.1 result.2)
+    computation
+
+omit [Fintype ι] in
+theorem fine_pure (ok : D → DebtState D R ι → Prop) {α : Type} (post : α → DebtState D R ι → Prop)
+    (value : α) (state : DebtState D R ι) :
+    Fine model ok post (pure value) state ↔ post value state := Iff.rfl
+
+omit [Fintype ι] in
+theorem fine_query_bind (ok : D → DebtState D R ι → Prop) {α : Type} (post : α → DebtState D R ι → Prop)
+    (input : (SourceCostSpec D R ι).Domain)
+    (next : (SourceCostSpec D R ι).Range input → OracleComp (SourceCostSpec D R ι) α) (state : DebtState D R ι) :
+    Fine model ok post (liftM ((SourceCostSpec D R ι).query input) >>= next) state ↔
+      (∀ query, input = .inr query → ok query.input state) ∧
+        ∀ result ∈ support (costStep model input state), Fine model ok post (next result.1) result.2 :=
+  Iff.rfl
+
+omit [Fintype ι] in
+theorem fine_bind (ok : D → DebtState D R ι → Prop) {α β : Type} (post : β → DebtState D R ι → Prop)
+    (first : OracleComp (SourceCostSpec D R ι) α) (next : α → OracleComp (SourceCostSpec D R ι) β)
+    (state : DebtState D R ι) :
+    Fine model ok post (first >>= next) state ↔
+      Fine model ok (fun value state' => Fine model ok post (next value) state') first state := by
+  induction first using OracleComp.inductionOn generalizing state with
+  | pure value => rw [pure_bind]; rfl
+  | query_bind input rest ih =>
+      rw [bind_assoc, fine_query_bind, fine_query_bind]
+      exact and_congr Iff.rfl (forall₂_congr fun result _ => ih result.1 result.2)
+
+omit [Fintype ι] in
+theorem fine_mono (ok : D → DebtState D R ι → Prop) {α : Type} {post post' : α → DebtState D R ι → Prop}
+    (hpost : ∀ value state, post value state → post' value state)
+    (computation : OracleComp (SourceCostSpec D R ι) α) :
+    ∀ state, Fine model ok post computation state → Fine model ok post' computation state := by
+  induction computation using OracleComp.inductionOn with
+  | pure value => exact hpost value
+  | query_bind input next ih =>
+      intro state h
+      rw [fine_query_bind] at h ⊢
+      exact ⟨h.1, fun result hresult => ih result.1 result.2 (h.2 result hresult)⟩
+
+omit [Fintype ι] in
+/-- The final values and states of interpreted runs satisfy the postcondition of `Fine`. -/
+theorem interp_fine_post (ok : D → DebtState D R ι → Prop) {α : Type} (post : α → DebtState D R ι → Prop)
+    (computation : OracleComp (SourceCostSpec D R ι) α) :
+    ∀ budget state, Fine model ok post computation state →
+      ∀ out ∈ support (interp tg initial model computation budget state), ∀ value, out.1.1 = some value →
+        post value out.2 := by
+  induction computation using OracleComp.inductionOn with
+  | pure value =>
+      intro budget state h out hout v hv
+      rw [interp_pure, support_pure, Set.mem_singleton_iff] at hout
+      subst hout
+      cases hv
+      exact h
+  | query_bind input next ih =>
+      intro budget state h out hout v hv
+      rw [fine_query_bind] at h
+      rw [interp_query_bind] at hout
+      split_ifs at hout with hcost
+      · rw [support_bind] at hout
+        simp only [Set.mem_iUnion, support_map, Set.mem_image] at hout
+        obtain ⟨result, hresult, inner, hinner, rfl⟩ := hout
+        exact ih result.1 _ result.2 (h.2 result hresult) inner hinner v hv
+      · rw [support_pure, Set.mem_singleton_iff] at hout
+        rw [hout] at hv
+        cases hv
+
+/-- An honest query that changes nothing but a fresh message digest: its input is no hidden row,
+and it is a message digest (`msg`) or already cached. -/
+def HonestOk (msg : D → Prop) (x : D) (state : DebtState D R ι) : Prop :=
+  model.parse x = none ∧ (msg x ∨ ∃ answer, state.cache x = some answer)
+
 /-! ### The saturation payments in the interpreter -/
 
 /-- Flagged digest touches: digest queries made before any hit was decided. -/
