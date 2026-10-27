@@ -29,24 +29,28 @@ theorem allSome_of_eq {n : Nat} {α : Type} (values : Fin n → Option α) (u : 
   rw [Option.some_get, h index]
 
 omit [Fintype ι] in
-/-- **A family of cached entries, read in order and kept, in the support.** The reads disclose
-nothing and leave the state, so a completed outcome of the whole computation is an outcome of its
-rest at the cached answers. -/
+/-- **A family of unparsed entries, read in order, in the support.** The reads disclose nothing and
+touch no other input, so a completed outcome of the whole computation is an outcome of its rest at
+one tuple of answers, from a state that holds them. -/
 theorem all_read_support {β : Type} : ∀ {n : Nat} (x : Fin n → D), Function.Injective x →
-    (∀ index, model.parse (x index) = none) → ∀ (state : DebtState D R ι) (u : Fin n → R),
-    (∀ index, state.cache (x index) = some (u index)) →
-    ∀ (rest : (Fin n → R) → OracleComp (SourceCostSpec D R ι) β) (budget : ℕ)
+    (∀ index, model.parse (x index) = none) → ∀ (state : DebtState D R ι)
+      (rest : (Fin n → R) → OracleComp (SourceCostSpec D R ι) β) (budget : ℕ)
       (out : Run D ι β × DebtState D R ι),
     out ∈ support (interp tg initial model (Concrete.sequenceFin (fun index =>
           (liftM ((SourceCostSpec D R ι).query (.inl (.inr (.inl (x index))))) :
             OracleComp (SourceCostSpec D R ι) R)) >>= rest) budget state) → out.1.1 ≠ none →
-    ∃ b o, o ∈ support (interp tg initial model (rest u) b state) ∧
+    ∃ (u : Fin n → R) (b : ℕ) (s' : DebtState D R ι) (o : Run D ι β × DebtState D R ι),
+      Extends state s' ∧
+      (∀ index, s'.cache (x index) = some (u index)) ∧
+      (∀ index, state.cache (x index) = none ∨ state.cache (x index) = some (u index)) ∧
+      (∀ y, (∀ index, y ≠ x index) → s'.cache y = state.cache y) ∧
+      o ∈ support (interp tg initial model (rest u) b s') ∧
       out.1.1 = o.1.1 ∧ out.1.2.1 = o.1.2.1 ∧ out.2 = o.2
-  | 0, _, _, _, state, u, _, rest, budget, out, hout, _ => by
-      have hu : u = Fin.elim0 := funext fun index => index.elim0
+  | 0, _, _, _, state, rest, budget, out, hout, _ => by
       rw [Concrete.sequenceFin, pure_bind] at hout
-      exact ⟨budget, out, by rw [hu]; exact hout, rfl, rfl, rfl⟩
-  | n + 1, x, hx, hp, state, u, hc, rest, budget, out, hout, hsome => by
+      exact ⟨Fin.elim0, budget, state, out, Extends.refl state, fun index => index.elim0,
+        fun index => index.elim0, fun _ _ => rfl, hout, rfl, rfl, rfl⟩
+  | n + 1, x, hx, hp, state, rest, budget, out, hout, hsome => by
       have hstep : (Concrete.sequenceFin (fun index =>
           (liftM ((SourceCostSpec D R ι).query (.inl (.inr (.inl (x index))))) :
             OracleComp (SourceCostSpec D R ι) R)) >>= rest) =
@@ -58,24 +62,43 @@ theorem all_read_support {β : Type} : ∀ {n : Nat} (x : Fin n → D), Function
         rw [Concrete.sequenceFin]
         simp only [bind_assoc, pure_bind]
         rfl
+      have hzero : ∀ index : Fin n, x index.succ ≠ x 0 := fun index heq =>
+        Fin.succ_ne_zero index (hx heq)
       rw [hstep, interp_ordinary] at hout
       split_ifs at hout with hbudget
       · rw [ordinaryStep, hp 0] at hout
         simp only at hout
-        rw [readOutside_cached (x 0) state (u 0) (hc 0), pure_bind, support_map] at hout
+        rw [support_bind] at hout
+        obtain ⟨res, hres, hout⟩ := Set.mem_iUnion₂.1 hout
+        rw [support_map] at hout
         obtain ⟨o1, ho1, rfl⟩ := hout
-        simp only at hsome ⊢
-        have hcons : (Fin.cases (u 0) fun index : Fin n => u index.succ : Fin (n + 1) → R) = u := by
-          funext index
-          induction index using Fin.cases with
-          | zero => rfl
-          | succ index => rfl
-        obtain ⟨b, o, ho, hres, hrev, hst⟩ := all_read_support (fun index : Fin n => x index.succ)
-          (fun a b heq => Fin.succ_injective n (hx heq)) (fun index => hp index.succ) state
-          (fun index => u index.succ) (fun index => hc index.succ)
-          (fun values => rest (Fin.cases (u 0) values)) (budget - 1) o1 ho1 hsome
-        refine ⟨b, o, ?_, hres, hrev, hst⟩
-        rwa [hcons] at ho
+        simp only at hsome
+        have hhead : res.2.cache (x 0) = some res.1 ∧
+            (state.cache (x 0) = none ∨ state.cache (x 0) = some res.1) ∧
+            (∀ y, y ≠ x 0 → res.2.cache y = state.cache y) ∧ Extends state res.2 := by
+          cases hc0 : state.cache (x 0) with
+          | some v =>
+              rw [readOutside_cached _ state v hc0, support_pure, Set.mem_singleton_iff] at hres
+              rw [hres]
+              exact ⟨hc0, Or.inr rfl, fun _ _ => rfl, Extends.refl state⟩
+          | none =>
+              rw [readOutside_fresh _ state hc0, support_map] at hres
+              obtain ⟨v, _, rfl⟩ := hres
+              exact ⟨by simp [DebtState.store], Or.inl rfl, fun y hy => store_cache_ne state _ y hy v,
+                extends_store state _ v hc0⟩
+        obtain ⟨hhead0, hheads, hheado, hheade⟩ := hhead
+        obtain ⟨ut, b, s', o, hext, hs', hstate', hother', ho, hr1, hr2, hr3⟩ :=
+          all_read_support (fun index : Fin n => x index.succ)
+            (fun a b heq => Fin.succ_injective n (hx heq)) (fun index => hp index.succ) res.2
+            (fun values => rest (Fin.cases res.1 values)) (budget - 1) o1 ho1 hsome
+        refine ⟨Fin.cases res.1 ut, b, s', o, hheade.trans hext, fun index => ?_, fun index => ?_,
+          fun y hy => (hother' y fun index => hy index.succ).trans (hheado y (hy 0)), ho, hr1, hr2, hr3⟩
+        · induction index using Fin.cases with
+          | zero => rw [hother' (x 0) fun index => (hzero index).symm, hhead0]; rfl
+          | succ index => exact hs' index
+        · induction index using Fin.cases with
+          | zero => exact hheads
+          | succ index => rw [← hheado _ (hzero index)]; exact hstate' index
       · rw [support_pure, Set.mem_singleton_iff] at hout
         rw [hout] at hsome
         exact absurd rfl hsome
@@ -202,21 +225,24 @@ theorem finishRest_none (randomness : Randomness) (digest : MessageDigest) (budg
     rw [hv]
     exact fun h => by cases h
 
-/-- **Final assembly, support.** Its digest call reads the blocks of its own pair, which the state
-already holds, so it signs the digest of that pair. -/
+/-- **Final assembly, support.** Its digest call reads the blocks of its own pair — the cached ones
+as they stand, the rest freshly — and it then signs the digest of that pair. -/
 theorem finish_post (hparse : ∀ ρ call, model.parse (pblk parameter data message ρ call) = none)
     (Fail : Finset (Fin (2 ^ subtreeHeight)))
     (hfail : ∀ ρ digest budget (s1 : DebtState HashInput HashOutput Coordinate), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data message ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
     (ρ : Randomness) (budget : ℕ) (s1 : DebtState HashInput HashOutput Coordinate)
-    (hprep : Prepared initial s1) (u : DigestCall → HashOutput)
-    (hc : ∀ call, s1.cache (pblk parameter data message ρ call) = some (u call))
+    (hprep : Prepared initial s1)
     (out : Run HashInput Coordinate (Option Signature) × DebtState HashInput HashOutput Coordinate)
     (hout : out ∈ support (interp tg initial model (finishCostSource parameter data message ρ) budget s1))
     (r : Option Signature) (hr : out.1.1 = some r) :
-    pcache parameter data message out.2 ρ = some u ∧
-      (∀ x, IsMsgInput x → out.2.cache x = s1.cache x) ∧
+    ∃ u : DigestCall → HashOutput,
+      (∀ call, s1.cache (pblk parameter data message ρ call) = none ∨
+        s1.cache (pblk parameter data message ρ call) = some (u call)) ∧
+      pcache parameter data message out.2 ρ = some u ∧
+      (∀ x, IsMsgInput x → (∀ call, x ≠ pblk parameter data message ρ call) →
+        out.2.cache x = s1.cache x) ∧
       (∀ c ∈ out.1.2.1, ForestOk (truncateMessageDigest u) c) ∧
       (∀ sig, r = some sig → sig.randomness = ρ) ∧
       (r = none → out.1.2.1 = [] ∧ (Lifetime.localDigestView (truncateMessageDigest u)).1 ∈ Fail) := by
@@ -224,27 +250,23 @@ theorem finish_post (hparse : ∀ ρ call, model.parse (pblk parameter data mess
     intro sig hsig
     have hmem := interp_result_mem tg initial model _ budget s1 out hout r hr
     exact finish_randomness parameter data message ρ r hmem sig hsig
-  have hcache : ∀ x, IsMsgInput x → out.2.cache x = s1.cache x := by
-    have hkeep := finish_keeps_msg tg initial model parameter data message ρ budget s1 out hout
-    have hext := interp_extends tg initial model _ budget s1 out hout
-    intro x hx
-    by_cases hpair : ∃ call, x = pblk parameter data message ρ call
-    · obtain ⟨call, rfl⟩ := hpair
-      rw [hext.1 _ _ (hc call), hc call]
-    · exact hkeep x hx fun call h => hpair ⟨call, h⟩
+  have hcache := finish_keeps_msg tg initial model parameter data message ρ budget s1 out hout
+  rw [finishCostSource_eq] at hout
+  obtain ⟨u, b, s2, o, hext, hs2, hstate, hother, ho, hres, hrev, hst⟩ :=
+    all_read_support tg initial model _ (pblk_injective parameter data message ρ) (hparse ρ) s1 _
+      budget out hout (by rw [hr]; simp)
+  have hprep2 : Prepared initial s2 := fun input output hin => hext.1 input output (hprep input output hin)
   have hpc : pcache parameter data message out.2 ρ = some u := by
     unfold pcache
-    exact allSome_of_eq _ u fun call => by
-      rw [hcache _ (msgInput_digestInput parameter data.root message ρ call), hc call]
-  rw [finishCostSource_eq] at hout
-  obtain ⟨b, o, ho, hres, hrev, _⟩ := all_read_support tg initial model _
-    (pblk_injective parameter data message ρ) (hparse ρ) s1 u hc _ budget out hout (by rw [hr]; simp)
-  refine ⟨hpc, hcache, fun c hcmem => ?_, hsig, fun hnone => ?_⟩
+    refine allSome_of_eq _ u fun call => ?_
+    rw [hst]
+    exact (interp_extends tg initial model _ b s2 o ho).1 _ _ (hs2 call)
+  refine ⟨u, hstate, hpc, hcache, fun c hcmem => ?_, hsig, fun hnone => ?_⟩
   · rw [hrev] at hcmem
-    exact interp_reveals tg initial model _ (revealsIn_finishRest parameter data message ρ _) b s1 o ho c hcmem
+    exact interp_reveals tg initial model _ (revealsIn_finishRest parameter data message ρ _) b s2 o ho c hcmem
   · have hro : o.1.1 = some none := by rw [← hres, hr, hnone]
-    exact ⟨by rw [hrev]; exact finishRest_none tg initial model parameter data message ρ _ b s1 o ho hro,
-      hfail ρ _ b s1 hprep o ho hro⟩
+    exact ⟨by rw [hrev]; exact finishRest_none tg initial model parameter data message ρ _ b s2 o ho hro,
+      hfail ρ _ b s2 hprep2 o ho hro⟩
 
 end Finish
 
