@@ -23,10 +23,9 @@ def coordinates
       if h : position.val = 0 then otsSecret lay tree leaf chainIdx
       else truncateHash (labels (.chain lay tree leaf chainIdx
         ⟨position.val - 1, by have := position.isLt; simp only [chainLength, winternitzBits] at *; omega⟩))
-  | .fchain index c s j a i position =>
-      if h : position.val = 0 then ftsSecret index c s j a i
-      else truncateHash (labels (.fchain index c s j a i
-        ⟨position.val - 1, by have := position.isLt; simp only [chainTop] at *; omega⟩))
+  | .fors index κ leaf position =>
+      if position.val = 0 then ftsSecret index κ leaf
+      else truncateHash (labels (.fleaf index κ leaf))
 
 def highHalves (labels : CanonicalGraphLabels) (address : Address) : Prefix.High :=
   (splitHashOutput digestBits (labels address.position)).2
@@ -42,8 +41,7 @@ theorem coordinates_outgoing (address : Address) :
   cases address with
   | chain lay tree leaf chainIdx step =>
       fin_cases step <;> rfl
-  | fchain index c s j a i t =>
-      fin_cases t <;> rfl
+  | fleaf index κ leaf => rfl
 
 /-- Canonical inputs are the actual one-digest serialized inputs prepared for the graph. -/
 theorem coordinates_input (address : Address) :
@@ -54,10 +52,9 @@ theorem coordinates_input (address : Address) :
       fin_cases step <;>
         simp [input, Address.inputCoordinate, Address.position, coordinates, canonicalGraphInput,
           canonicalGraphSlots, Position.domain, Position.children, chainLength, winternitzBits]
-  | fchain index c s j a i t =>
-      fin_cases t <;>
-        simp [input, Address.inputCoordinate, Address.position, coordinates, canonicalGraphInput,
-          canonicalGraphSlots, Position.domain, Position.children, chainTop]
+  | fleaf index κ leaf =>
+      simp [input, Address.inputCoordinate, Address.position, coordinates, canonicalGraphInput,
+        canonicalGraphSlots, Position.domain, Position.children]
 
 attribute [local irreducible] canonicalGraphInput canonicalGraphSlots
 
@@ -110,7 +107,7 @@ theorem programGraphCache_preserves_other (positions : List Position) (cache : Q
       rw [ih _ (fun position hp => hmiss position (List.mem_cons_of_mem _ hp))]
       exact QueryCache.cacheQuery_of_ne _ _ (hmiss first List.mem_cons_self)
 
-/-- A noncanonical payload at a parsed chain or forest-step address cannot alias any other
+/-- A noncanonical payload at a parsed chain or FORS leaf address cannot alias any other
 prepared structural input, including the multi-digest tree and leaf-compression inputs. -/
 theorem row_miss_all_inputs (address : Address) (value : Digest)
     (hmiss : value ≠ coordinates otsSecret ftsSecret labels address.inputCoordinate)

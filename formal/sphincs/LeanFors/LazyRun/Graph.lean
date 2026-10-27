@@ -2,9 +2,9 @@ import LeanFors.LazyRun.Rows
 import LeanFors.GraphView.Secrets
 import LeanFors.GraphView.Pruned
 
-/-! A concrete programmed graph for the candidate's one-digest hash inputs. Canonical
-WOTS and forest chain answers are programmed from independent digest coordinates. Ordinary
-queries are monitored before a hidden input can expose its successor. -/
+/-! A concrete programmed graph for the candidate's hash inputs. Canonical WOTS chain and FORS leaf
+answers are programmed from independent digest coordinates. Ordinary queries are monitored before a
+hidden input can expose its successor. -/
 
 open OracleComp OracleSpec ENNReal
 namespace LeanFors.Security.HiddenGraph
@@ -18,16 +18,15 @@ attribute [local instance] Classical.propDecidable
 inductive Coordinate where
   | chain (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (chainIdx : ChainIndex)
       (position : Digit)
-  | fchain (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain)
-      (position : FPos)
+  | fors (index : Index) (κ : FTree) (leaf : FLeaf) (position : Fin 2)
   deriving DecidableEq
 
 instance coordinateFintype : Fintype Coordinate where
   elems :=
     (Finset.univ.image fun x : Layer × TreeIndex × LeafIndex × ChainIndex × Digit =>
       Coordinate.chain x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2) ∪
-    (Finset.univ.image fun x : Index × Coord × SuperIdx × SubIdx × ChildIdx × FChain × FPos =>
-      Coordinate.fchain x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2.1 x.2.2.2.2.2.1 x.2.2.2.2.2.2)
+    (Finset.univ.image fun x : Index × FTree × FLeaf × Fin 2 =>
+      Coordinate.fors x.1 x.2.1 x.2.2.1 x.2.2.2)
   complete := by
     intro p
     cases p <;> simp
@@ -35,35 +34,33 @@ instance coordinateFintype : Fintype Coordinate where
 inductive Address where
   | chain (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (chainIdx : ChainIndex)
       (step : ChainStep)
-  | fchain (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain)
-      (t : FStep)
+  | fleaf (index : Index) (κ : FTree) (leaf : FLeaf)
   deriving DecidableEq
 
 instance addressFintype : Fintype Address where
   elems :=
     (Finset.univ.image fun x : Layer × TreeIndex × LeafIndex × ChainIndex × ChainStep =>
       Address.chain x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2) ∪
-    (Finset.univ.image fun x : Index × Coord × SuperIdx × SubIdx × ChildIdx × FChain × FStep =>
-      Address.fchain x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2.1 x.2.2.2.2.2.1 x.2.2.2.2.2.2)
+    (Finset.univ.image fun x : Index × FTree × FLeaf => Address.fleaf x.1 x.2.1 x.2.2)
   complete := by
     intro p
     cases p <;> simp
 
 def Address.position : Address → Position
   | .chain lay tree leaf chainIdx step => .chain lay tree leaf chainIdx step
-  | .fchain index c s j a i t => .fchain index c s j a i t
+  | .fleaf index κ leaf => .fleaf index κ leaf
 
 def Address.inputCoordinate : Address → Coordinate
   | .chain lay tree leaf chainIdx step =>
       .chain lay tree leaf chainIdx ⟨step.val, by have := step.isLt; omega⟩
-  | .fchain index c s j a i t => .fchain index c s j a i ⟨t.val, by have := t.isLt; omega⟩
+  | .fleaf index κ leaf => .fors index κ leaf 0
 
 def Address.outputCoordinate : Address → Coordinate
   | .chain lay tree leaf chainIdx step =>
       .chain lay tree leaf chainIdx ⟨step.val + 1, by have := step.isLt; omega⟩
-  | .fchain index c s j a i t => .fchain index c s j a i ⟨t.val + 1, by have := t.isLt; omega⟩
+  | .fleaf index κ leaf => .fors index κ leaf 1
 
-/-- Only the retained WOTS chains and the forest chain rows are programmed for a pruned key. -/
+/-- Only the retained WOTS chains and the FORS leaf rows are programmed for a pruned key. -/
 def candidateActive (parameter : PublicParameter) (address : Address) : Prop :=
   PrunedGraph.active parameter address.position
 
@@ -79,7 +76,7 @@ theorem input_injective (parameter : PublicParameter) : Function.Injective (inpu
   have haddress : left.1 = right.1 := by
     cases hleft : left.1 <;> cases hright : right.1 <;>
       simp only [hleft, hright, Address.position, Position.chain.injEq,
-        Position.fchain.injEq, reduceCtorEq] at hposition <;> simp_all
+        Position.fleaf.injEq, reduceCtorEq] at hposition <;> simp_all
   exact Prod.ext haddress (bytesLE_injective hpayload)
 
 noncomputable def parse (parameter : PublicParameter) (active : Address → Prop) (bytes : HashInput) :

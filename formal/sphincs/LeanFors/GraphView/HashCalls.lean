@@ -4,9 +4,9 @@ import LeanFors.Seed.Coupling
 section
 
 /-! Exact hash-call counts (`hashCalls`) of the honest seeded computations on a fixed answer
-function: wrappers, chains, one-time keys, tree and forest nodes, encodings, message digests and
+function: wrappers, chains, one-time keys, tree and FORS nodes, encodings, message digests and
 signing attempts. One seed derivation gives the starts of two chains: a one-time key costs
-`32 + 64 · 3 = 224` calls and a forest child `3 + 6 · 4 + 1 = 28`. -/
+`32 + 64 · 3 = 224` calls, and a FORS leaf `1 + 1 = 2` (its derivation and its hash). -/
 
 open OracleComp OracleSpec
 
@@ -16,8 +16,7 @@ variable [Params]
 open Concrete
 
 attribute [local irreducible] encodingAttemptLimit digestAttemptLimit Seeded.treeNode
-  Seeded.subNode Seeded.topNode Seeded.forsKey Seeded.forsOpen Seeded.treePath Seeded.signLayer chainWalk
-  forestWalk
+  Seeded.forsNode Seeded.forsKey Seeded.forsOpen Seeded.treePath Seeded.signLayer chainWalk
   deriveKey
 set_option backward.isDefEq.respectTransparency false
 
@@ -103,78 +102,38 @@ theorem hashCalls_treeNode (f : QueryImpl HashSpec Id) (parameter : PublicParame
       rw [pow_succ]
       omega
 
-theorem hashCalls_forestWalk (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain)
-    (start steps : Nat) (value : Digest) (hsteps : start + steps ≤ chainTop) :
-    hashCalls f (forestWalk parameter index c s j a i start steps value : OracleComp HashSpec Digest) = steps := by
-  induction steps generalizing start value with
-  | zero => simp only [forestWalk, hashCalls_pure]
-  | succ steps ih =>
-      rw [forestWalk, hashCalls_bind, dif_pos (by omega), hashCalls_tweakableHash, ih _ _ (by omega)]
+theorem hashCalls_forsSecret (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (index : Index) (κ : FTree) (leaf : FLeaf) (seed : MasterSeed) :
+    hashCalls f (Seeded.forsSecret parameter index κ leaf seed : OracleComp HashSpec Digest) = 1 := by
+  simp only [Seeded.forsSecret, hashCalls_bind, hashCalls_deriveOutput, hashCalls_pure]
 
-/-- The 6 chain starts of a forest child cost 3 seed derivations. -/
-theorem hashCalls_forestSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (seed : MasterSeed) :
-    hashCalls f (Seeded.forestSecrets parameter index c s j a seed : OracleComp HashSpec (FChain → Digest)) = 3 := by
-  simp only [Seeded.forestSecrets, hashCalls_bind, hashCalls_sequenceFin, hashCalls_deriveOutput,
-    hashCalls_pure]
-  decide
-
-/-- A forest child costs `3 + 6 · 4 + 1 = 28` calls. -/
-theorem hashCalls_childLeaf (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (seed : MasterSeed) :
-    hashCalls f (Seeded.childLeaf parameter index c s j a seed : OracleComp HashSpec Digest) = 28 := by
-  rw [Seeded.childLeaf, hashCalls_bind, hashCalls_bind, hashCalls_forestSecrets, hashCalls_sequenceFin,
-    childLeafHash, hashCalls_tweakableHash]
-  simp only [hashCalls_forestWalk f parameter index c s j a _ 0 chainTop _ (Nat.le_of_eq (Nat.zero_add _))]
-  decide
-
-theorem hashCalls_subNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (seed : MasterSeed) (level node : Nat)
-    (hlevel : level ≤ subHeight) :
-    hashCalls f (Seeded.subNode parameter index c s j seed level node : OracleComp HashSpec Digest) =
-      29 * 2 ^ level - 1 := by
+/-- A FORS node at level `level` costs `3 · 2^level - 1` calls: per leaf a derivation and a hash. -/
+theorem hashCalls_forsNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (index : Index) (κ : FTree) (seed : MasterSeed) (level node : Nat) (hlevel : level ≤ forsHeight) :
+    hashCalls f (Seeded.forsNode parameter index κ seed level node : OracleComp HashSpec Digest) =
+      3 * 2 ^ level - 1 := by
   induction level generalizing node with
-  | zero => rw [Seeded.subNode, hashCalls_childLeaf]; rfl
+  | zero =>
+      rw [Seeded.forsNode, hashCalls_bind, hashCalls_forsSecret, forsLeafHash, hashCalls_tweakableHash]
+      rfl
   | succ level ih =>
-      rw [Seeded.subNode, hashCalls_bind, hashCalls_bind, dif_pos (by omega), hashCalls_tweakableHash,
+      rw [Seeded.forsNode, hashCalls_bind, hashCalls_bind, dif_pos (by omega), hashCalls_tweakableHash,
         ih _ (by omega), ih _ (by omega)]
       have hp : 0 < 2 ^ level := Nat.two_pow_pos level
       rw [pow_succ]
       omega
 
-/-- A tree leaf costs `2 · 2 · (29 · 4 - 1) + 1 = 461` calls: the two level-2 nodes of each of its two
-subtrees and their hash. A subtree has no root hash. -/
-theorem hashCalls_superNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (c : Coord) (s : SuperIdx) (seed : MasterSeed) :
-    hashCalls f (Seeded.superNode parameter index c s seed : OracleComp HashSpec Digest) = 461 := by
-  rw [Seeded.superNode, hashCalls_bind, hashCalls_sequenceFin, superHash, hashCalls_tweakableHash]
-  simp only [hashCalls_bind, hashCalls_pure,
-    hashCalls_subNode f parameter index c s _ seed (subHeight - 1) _ (by decide)]
-  decide
-
-theorem hashCalls_topNode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (c : Coord) (seed : MasterSeed) (level node : Nat) (hlevel : level ≤ topHeight) :
-    hashCalls f (Seeded.topNode parameter index c seed level node : OracleComp HashSpec Digest) =
-      462 * 2 ^ level - 1 := by
-  induction level generalizing node with
-  | zero => rw [Seeded.topNode, hashCalls_superNode]; rfl
-  | succ level ih =>
-      rw [Seeded.topNode, hashCalls_bind, hashCalls_bind, dif_pos (by omega), hashCalls_tweakableHash,
-        ih _ (by omega), ih _ (by omega)]
-      have hp : 0 < 2 ^ level := Nat.two_pow_pos level
-      rw [pow_succ]
-      omega
-
-/-- Building the FORS key costs `8 · 2 · (462 · 8 - 1) = 59120` hash calls: the two level-3 nodes
-of each of the 8 trees. A tree has no root hash and the key has no hash. -/
-theorem hashCalls_forestKey (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+/-- Building the FORS key costs `k · 2 · (3 · 2^(a - 1) - 1)` hash calls: the two level-`(a - 1)` nodes
+of each of the `k` trees. A tree has no root hash and the key has no hash. -/
+theorem hashCalls_forsKey (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (seed : MasterSeed) :
-    hashCalls f (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey) = 59120 := by
+    hashCalls f (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey) =
+      forsTrees * (2 * (3 * 2 ^ (forsHeight - 1) - 1)) := by
   rw [Seeded.forsKey, hashCalls_sequenceFin]
   simp only [hashCalls_bind, hashCalls_pure,
-    hashCalls_topNode f parameter index _ seed (topHeight - 1) _ (by decide)]
-  decide
+    hashCalls_forsNode f parameter index _ seed (forsHeight - 1) _ (Nat.sub_le _ _), Finset.sum_const,
+    Finset.card_univ, Fintype.card_fin, smul_eq_mul]
+  ring
 
 theorem hashCalls_encode (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (message : HashInput) (counter : Counter) :
@@ -209,13 +168,15 @@ theorem hashCalls_sequenceLayers {α : Layer → Type} (f : QueryImpl HashSpec I
   hashCalls_sequenceDep f computation
 
 theorem hashCalls_messageDigestCall (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (root : Digest) (message : Message) (randomness : Randomness) :
-    hashCalls f (messageDigestCall parameter root message randomness : OracleComp HashSpec HashOutput) = 1 := rfl
+    (root : Digest) (message : Message) (randomness : Randomness) (call : DigestCall) :
+    hashCalls f (messageDigestCall parameter root message randomness call : OracleComp HashSpec HashOutput) = 1 := rfl
 
 theorem hashCalls_messageDigest (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (root : Digest) (message : Message) (randomness : Randomness) :
-    hashCalls f (messageDigest parameter root message randomness : OracleComp HashSpec MessageDigest) = 1 := by
-  simp only [messageDigest, hashCalls_bind, hashCalls_messageDigestCall, hashCalls_pure]
+    hashCalls f (messageDigest parameter root message randomness : OracleComp HashSpec MessageDigest) =
+      digestCalls := by
+  simp only [messageDigest, hashCalls_bind, hashCalls_sequenceFin, hashCalls_messageDigestCall, hashCalls_pure,
+    Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul, mul_one, Nat.add_zero]
 
 theorem hashCalls_signAttempt (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey)
     (message : Message) (randomness : Randomness) :

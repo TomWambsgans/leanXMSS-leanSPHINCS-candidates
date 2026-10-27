@@ -17,8 +17,8 @@ attribute [local instance] Classical.propDecidable
 set_option allowUnsafeReducibility true
 attribute [local reducible] digestBits HashSpec Id
 set_option allowUnsafeReducibility false
-attribute [local irreducible] Seeded.treeNode Seeded.subNode Seeded.topNode Seeded.spineNode chainWalk
-  forestWalk sequenceFin
+attribute [local irreducible] Seeded.treeNode Seeded.forsNode Seeded.spineNode chainWalk
+  sequenceFin
 
 theorem one_lt_leaf_capacity : 1 < 2 ^ maxLayerHeight := Nat.one_lt_two_pow maxLayerHeight_pos.ne'
 
@@ -28,7 +28,7 @@ def otsSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed :
 
 def ftsSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed) :
     ForsSecrets :=
-  fun index c s j a i => Completeness.forestSecret f parameter index c s j a i seed
+  fun index κ leaf => Completeness.forsSecretValue f parameter index κ seed leaf
 
 def surrogates (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed) :
     Fin maxLayerHeight → Digest := fun level =>
@@ -660,230 +660,127 @@ theorem tree_root_value (hboundary : BoundaryCorrect f parameter seed labels)
     rw [hv, Seeded.treeRoot, hkh, Nat.sub_self, Seeded.spineNode, hkh, hkp]
     rfl
 
-/-! ### The forest
+/-! ### FORS
 
-Every forest position is prepared. Its label is the honest value: chain steps the chain values,
-WOTS-key leaves the child leaves, subtree and tree nodes the honest nodes, the tree leaves the
-hashes of the four level-2 nodes of their subtrees, and the roots position the hash of the sixteen
-level-3 nodes of the trees. The scheme does not hash the roots position: the FORS key is the
-sixteen level-3 nodes themselves (`keyLabels`). -/
+Every FORS position is prepared. Its label is the honest value: a leaf the hash of its secret, a
+node the honest node. The scheme does not hash a tree's root: the FORS key is the two level-`(a - 1)`
+nodes of every tree (`keyLabels`). -/
 
-section Forest
+section ForsTrees
 
-variable (index : Index) (c : Coord)
+variable (index : Index) (κ : FTree)
 
 omit hconsistent in
-theorem fchain_input (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (t : FStep)
-    (hprev : ∀ (hpos : 0 < t.val), truncateHash (labels (.fchain index c s j a i ⟨t.val - 1, by omega⟩)) =
-      Forest.honestChain f parameter index c s j a i (Completeness.forestSecret f parameter index c s j a i seed)
-        t.val) :
+theorem fleaf_input (leaf : FLeaf) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (.fchain index c s j a i t) labels =
-    tweakableHashInput parameter (.fchain index c s j a i t)
-      (bytesLE 16 (Forest.honestChain f parameter index c s j a i
-        (Completeness.forestSecret f parameter index c s j a i seed) t.val)) := by
-  obtain ⟨t, ht⟩ := t
-  cases t with
-  | zero =>
-      have hz : Forest.honestChain f parameter index c s j a i
-          (Completeness.forestSecret f parameter index c s j a i seed) 0 =
-          Completeness.forestSecret f parameter index c s j a i seed := by
-        unfold Forest.honestChain
-        rw [forestWalk]
-        rfl
-      rw [hz]
-      simp only [canonicalGraphInput, canonicalGraphSlots, Position.domain, ftsSecrets,
-        ↓reduceIte, List.flatMap_cons, List.flatMap_nil, List.append_nil]
-  | succ t =>
-      have h := hprev (by simp)
-      simp only [canonicalGraphInput, canonicalGraphSlots, Position.children, Position.domain]
-      simp only [show t + 1 ≠ 0 by omega, show 0 < t + 1 by omega,
-        ↓reduceIte, ↓reduceDIte, Nat.add_sub_cancel, List.map_cons, List.map_nil,
-        List.flatMap_cons, List.flatMap_nil, List.append_nil]
-      simp only [Nat.add_sub_cancel] at h
-      rw [h]
+      (.fleaf index κ leaf) labels =
+    tweakableHashInput parameter (.forsLeaf index κ leaf)
+      (bytesLE 16 (Completeness.forsSecretValue f parameter index κ seed leaf)) := by
+  simp only [canonicalGraphInput, canonicalGraphSlots, Position.domain, ftsSecrets,
+    List.flatMap_cons, List.flatMap_nil, List.append_nil]
 
 include hconsistent in
-theorem fchain_value (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (t : FStep) :
-    truncateHash (labels (.fchain index c s j a i t)) =
-      Forest.honestChain f parameter index c s j a i
-        (Completeness.forestSecret f parameter index c s j a i seed) (t.val + 1) := by
-  obtain ⟨t, ht⟩ := t
-  induction t with
-  | zero =>
-      rw [hconsistent (.fchain index c s j a i ⟨0, ht⟩) trivial,
-        fchain_input f parameter seed labels index c s j a i ⟨0, ht⟩ (fun h => absurd h (by simp)),
-        Forest.honestChain_succ _ _ _ _ _ _ _ _ _ _ ht]
-  | succ t ih =>
-      rw [hconsistent (.fchain index c s j a i ⟨t + 1, ht⟩) trivial,
-        fchain_input f parameter seed labels index c s j a i ⟨t + 1, ht⟩ (fun _ => ih (by omega)),
-        Forest.honestChain_succ _ _ _ _ _ _ _ _ _ _ ht]
-
-include hconsistent in
-theorem childLeaf_input (s : SuperIdx) (j : SubIdx) (a : ChildIdx) :
-    canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (.childLeaf index c s j a) labels = tweakableHashInput parameter (.childLeaf index c s j a)
-        (childPayload (Completeness.childEnds f parameter index c s j seed a)) := by
-  unfold canonicalGraphInput canonicalGraphSlots
-  simp only [Position.children, Position.domain, List.map_ofFn]
-  congr 1
-  apply congrArg (fun values : List Digest => values.flatMap (bytesLE 16))
-  apply congrArg List.ofFn
-  funext i
-  simp only [Function.comp_apply]
-  rw [fchain_value f parameter seed labels hconsistent index c s j a i]
+theorem fleaf_value (leaf : FLeaf) :
+    truncateHash (labels (.fleaf index κ leaf)) = Completeness.forsLeafValue f parameter index κ seed leaf := by
+  rw [hconsistent (.fleaf index κ leaf) trivial, fleaf_input]
   rfl
 
-include hconsistent in
-theorem childLeaf_value (s : SuperIdx) (j : SubIdx) (a : ChildIdx) :
-    truncateHash (labels (.childLeaf index c s j a)) = Completeness.childLeafValue f parameter index c s j seed a := by
-  rw [hconsistent (.childLeaf index c s j a) trivial, childLeaf_input f parameter seed labels hconsistent]
-  rfl
-
-/-- Graph location for a subtree node, including the level-zero WOTS-key leaf. -/
-def subPosition (s : SuperIdx) (j : SubIdx) :
-    (level : Nat) → level ≤ subHeight → ChildIdx → Position
-  | 0, _, a => .childLeaf index c s j a
-  | level + 1, hlevel, nd => .subNode index c s j ⟨level, by omega⟩ nd
-
-/-- Graph location for a tree node, including the level-zero tree leaf. -/
-def topPosition :
-    (level : Nat) → level ≤ topHeight → SuperIdx → Position
-  | 0, _, s => .superChild index c s
-  | level + 1, hlevel, nd => .topNode index c ⟨level, by omega⟩ nd
+/-- Graph location for a FORS node, including the level-zero leaf. -/
+def forsPosition : (level : Nat) → level ≤ forsHeight → FLeaf → Position
+  | 0, _, leaf => .fleaf index κ leaf
+  | level + 1, hlevel, nd => .fnode index κ ⟨level, by omega⟩ nd
 
 omit hconsistent in
-theorem sub_input (s : SuperIdx) (j : SubIdx) (level : Nat) (hlevel : level + 1 ≤ subHeight) (nd : ChildIdx)
-    (hindex : 2 * nd.val + 1 < 2 ^ subHeight) :
+theorem fnode_input (level : Nat) (hlevel : level + 1 ≤ forsHeight) (nd : FLeaf)
+    (hindex : 2 * nd.val + 1 < 2 ^ forsHeight) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (subPosition index c s j (level + 1) hlevel nd) labels =
-    tweakableHashInput parameter (.subNode index c s j ⟨level, by omega⟩ nd)
+      (forsPosition index κ (level + 1) hlevel nd) labels =
+    tweakableHashInput parameter (.forsNode index κ ⟨level, by omega⟩ nd)
       (nodePayload
-        (truncateHash (labels (subPosition index c s j level (by omega) ⟨2 * nd.val, by omega⟩)))
-        (truncateHash (labels (subPosition index c s j level (by omega) ⟨2 * nd.val + 1, hindex⟩)))) := by
+        (truncateHash (labels (forsPosition index κ level (by omega) ⟨2 * nd.val, by omega⟩)))
+        (truncateHash (labels (forsPosition index κ level (by omega) ⟨2 * nd.val + 1, hindex⟩)))) := by
   cases level <;>
-    simp [subPosition, canonicalGraphInput, canonicalGraphSlots, Position.children,
-      Position.domain, hindex, nodePayload]
-
-omit hconsistent in
-theorem top_input (level : Nat) (hlevel : level + 1 ≤ topHeight) (nd : SuperIdx)
-    (hindex : 2 * nd.val + 1 < 2 ^ topHeight) :
-    canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (topPosition index c (level + 1) hlevel nd) labels =
-    tweakableHashInput parameter (.topNode index c ⟨level, by omega⟩ nd)
-      (nodePayload
-        (truncateHash (labels (topPosition index c level (by omega) ⟨2 * nd.val, by omega⟩)))
-        (truncateHash (labels (topPosition index c level (by omega) ⟨2 * nd.val + 1, hindex⟩)))) := by
-  cases level <;>
-    simp [topPosition, canonicalGraphInput, canonicalGraphSlots, Position.children,
+    simp [forsPosition, canonicalGraphInput, canonicalGraphSlots, Position.children,
       Position.domain, hindex, nodePayload]
 
 include hconsistent in
-theorem sub_value (s : SuperIdx) (j : SubIdx) (level : Nat) (hlevel : level ≤ subHeight) (nd : ChildIdx)
-    (hindex : nd.val < 2 ^ (subHeight - level)) :
-    truncateHash (labels (subPosition index c s j level hlevel nd)) =
-      Completeness.subNodeValue f parameter index c s j seed level nd.val := by
+theorem fnode_value (level : Nat) (hlevel : level ≤ forsHeight) (nd : FLeaf)
+    (hindex : nd.val < 2 ^ (forsHeight - level)) :
+    truncateHash (labels (forsPosition index κ level hlevel nd)) =
+      Completeness.forsNodeValue f parameter index κ seed level nd.val := by
   induction level generalizing nd with
   | zero =>
-      rw [show subPosition index c s j 0 hlevel nd = .childLeaf index c s j nd from rfl,
-        childLeaf_value f parameter seed labels hconsistent, Completeness.subNodeValue_zero]
+      rw [show forsPosition index κ 0 hlevel nd = .fleaf index κ nd from rfl,
+        fleaf_value f parameter seed labels hconsistent, Completeness.forsNodeValue_zero]
   | succ level ih =>
       have hchildren := child_index_bound hlevel hindex
-      have hglobal : 2 * nd.val + 1 < 2 ^ subHeight :=
+      have hglobal : 2 * nd.val + 1 < 2 ^ forsHeight :=
         hchildren.trans_le (Nat.pow_le_pow_right (by decide) (Nat.sub_le _ _))
-      rw [hconsistent (subPosition index c s j (level + 1) hlevel nd) (by trivial),
-        sub_input f parameter seed labels index c s j level hlevel nd hglobal,
-        Completeness.subNodeValue_succ f parameter index c s j seed level nd.val (by omega)]
+      rw [hconsistent (forsPosition index κ (level + 1) hlevel nd) (by trivial),
+        fnode_input f parameter seed labels index κ level hlevel nd hglobal,
+        Completeness.forsNodeValue_succ f parameter index κ seed level nd.val (by omega)]
       rw [ih (by omega) _ (by change 2 * nd.val < _; omega), ih (by omega) _ hchildren]
       congr 4
       exact Fin.ext (Nat.mod_eq_of_lt nd.isLt).symm
 
-include hconsistent in
-theorem super_input (s : SuperIdx) :
-    canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (.superChild index c s) labels =
-    tweakableHashInput parameter (.superChild index c s)
-      (superPayload (Completeness.subTopsValue f parameter index c seed s)) := by
-  have h : ∀ (j : SubIdx) (nd : ChildIdx) (_ : nd.val < 2 ^ (subHeight - (subHeight - 1))),
-      truncateHash (labels (.subNode index c s j ⟨subHeight - 2, by decide⟩ nd)) =
-        Completeness.subNodeValue f parameter index c s j seed (subHeight - 1) nd.val :=
-    fun j nd hnd => sub_value f parameter seed labels hconsistent index c s j (subHeight - 1) (by decide) nd hnd
-  simp only [canonicalGraphInput, canonicalGraphSlots, Position.children, Position.domain,
-    List.map_cons, List.map_nil, List.flatMap_cons, List.flatMap_nil, List.append_nil, superPayload,
-    nodePayload, Completeness.subTopsValue, List.append_assoc]
-  rw [h 0 ⟨0, by decide⟩ (by decide), h 0 ⟨1, by decide⟩ (by decide), h 1 ⟨0, by decide⟩ (by decide),
-    h 1 ⟨1, by decide⟩ (by decide)]
+/-- The level of a tree's two top nodes as an `fnode` level (`a - 2`: level `a - 1`). -/
+def topNodeLevel : FLevel := ⟨forsHeight - 2, by have := Params.forsHeight_ge; omega⟩
 
-include hconsistent in
-theorem super_value (s : SuperIdx) :
-    truncateHash (labels (.superChild index c s)) = Completeness.superValue f parameter index c seed s := by
-  rw [hconsistent (.superChild index c s) trivial, super_input f parameter seed labels hconsistent,
-    Forest.superValue_eq]
-
-include hconsistent in
-theorem top_value (level : Nat) (hlevel : level ≤ topHeight) (nd : SuperIdx)
-    (hindex : nd.val < 2 ^ (topHeight - level)) :
-    truncateHash (labels (topPosition index c level hlevel nd)) =
-      Completeness.topNodeValue f parameter index c seed level nd.val := by
-  induction level generalizing nd with
-  | zero =>
-      rw [show topPosition index c 0 hlevel nd = .superChild index c nd from rfl,
-        super_value f parameter seed labels hconsistent, Completeness.topNodeValue_zero]
-  | succ level ih =>
-      have hchildren := child_index_bound hlevel hindex
-      have hglobal : 2 * nd.val + 1 < 2 ^ topHeight :=
-        hchildren.trans_le (Nat.pow_le_pow_right (by decide) (Nat.sub_le _ _))
-      rw [hconsistent (topPosition index c (level + 1) hlevel nd) (by trivial),
-        top_input f parameter seed labels index c level hlevel nd hglobal,
-        Completeness.topNodeValue_succ f parameter index c seed level nd.val (by omega)]
-      rw [ih (by omega) _ (by change 2 * nd.val < _; omega), ih (by omega) _ hchildren]
-      congr 4
-      exact Fin.ext (Nat.mod_eq_of_lt nd.isLt).symm
-
-/-- The FORS key as graph labels: the two level-3 nodes of every tree. -/
+/-- The FORS key as graph labels: the two level-`(a - 1)` nodes of every tree. -/
 def keyLabels : ForsKey :=
-  fun c' => (truncateHash (labels (.topNode index c' ⟨topHeight - 2, by decide⟩ ⟨0, by decide⟩)),
-    truncateHash (labels (.topNode index c' ⟨topHeight - 2, by decide⟩ ⟨1, by decide⟩)))
+  fun κ' => (truncateHash (labels (.fnode index κ' topNodeLevel ⟨0, Nat.two_pow_pos _⟩)),
+    truncateHash (labels (.fnode index κ' topNodeLevel ⟨1, Nat.one_lt_two_pow (by
+      have := Params.forsHeight_ge; omega)⟩)))
 
 include hconsistent in
-theorem forest_key_value :
+theorem fors_key_value :
     keyLabels labels index =
       evalWithAnswerFn f (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey) := by
-  have h : ∀ (c' : Coord) (nd : SuperIdx) (_ : nd.val < 2 ^ (topHeight - (topHeight - 1))),
-      truncateHash (labels (.topNode index c' ⟨topHeight - 2, by decide⟩ nd)) =
-        Completeness.topNodeValue f parameter index c' seed (topHeight - 1) nd.val :=
-    fun c' nd hnd => top_value f parameter seed labels hconsistent index c' (topHeight - 1) (by decide) nd hnd
-  rw [Forest.forestKey_eq]
-  funext c'
-  simp only [keyLabels, Forest.canonicalRoots, Completeness.topTopsValue]
-  rw [h c' ⟨0, by decide⟩ (by decide), h c' ⟨1, by decide⟩ (by decide)]
+  have ha := Params.forsHeight_ge
+  have hlevel : forsHeight - 2 + 1 = forsHeight - 1 := by omega
+  have h : ∀ (κ' : FTree) (nd : FLeaf) (_ : nd.val < 2),
+      truncateHash (labels (.fnode index κ' topNodeLevel nd)) =
+        Completeness.forsNodeValue f parameter index κ' seed (forsHeight - 1) nd.val := by
+    intro κ' nd hnd
+    have h1 : truncateHash (labels (.fnode index κ' topNodeLevel nd)) =
+        Completeness.forsNodeValue f parameter index κ' seed (forsHeight - 2 + 1) nd.val :=
+      fnode_value f parameter seed labels hconsistent index κ' (forsHeight - 2 + 1) (by omega) nd
+        (by rw [show forsHeight - (forsHeight - 2 + 1) = 1 by omega]; simpa using hnd)
+    rw [hlevel] at h1
+    exact h1
+  rw [Completeness.forsKey_eq]
+  funext κ'
+  simp only [keyLabels, Completeness.topsValue]
+  rw [h κ' _ (by norm_num), h κ' _ (by norm_num)]
 
 /-! #### Paths -/
 
 omit hconsistent in
-theorem sub_input_ordered (s : SuperIdx) (j : SubIdx) (level : Nat) (hlevel : level + 1 ≤ subHeight)
-    (current : ChildIdx) :
+theorem fors_input_ordered (level : Nat) (hlevel : level + 1 ≤ forsHeight) (current : FLeaf) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (subPosition index c s j (level + 1) hlevel
+      (forsPosition index κ (level + 1) hlevel
         ⟨current.val / 2, (Nat.div_le_self _ _).trans_lt current.isLt⟩) labels =
-    tweakableHashInput parameter (.subNode index c s j ⟨level, by omega⟩
+    tweakableHashInput parameter (.forsNode index κ ⟨level, by omega⟩
         ⟨current.val / 2, (Nat.div_le_self _ _).trans_lt current.isLt⟩)
       (orderedPayload (current.val.testBit 0)
-        (truncateHash (labels (subPosition index c s j level (by omega) current)))
-        (truncateHash (labels (subPosition index c s j level (by omega)
-          ⟨Nat.xor current.val 1, Nat.xor_lt_two_pow current.isLt (by decide)⟩)))) := by
-  have hglobal : 2 * (current.val / 2) + 1 < 2 ^ subHeight := by
+        (truncateHash (labels (forsPosition index κ level (by omega) current)))
+        (truncateHash (labels (forsPosition index κ level (by omega)
+          ⟨Nat.xor current.val 1, Nat.xor_lt_two_pow current.isLt
+            (Nat.one_lt_two_pow (by have := Params.forsHeight_ge; omega))⟩)))) := by
+  have hglobal : 2 * (current.val / 2) + 1 < 2 ^ forsHeight := by
     have hc := current.isLt
-    norm_num [subHeight] at hc ⊢
+    have : 2 ^ forsHeight = 2 * 2 ^ (forsHeight - 1) := by
+      rw [← Nat.pow_succ']; congr 1; have := Params.forsHeight_ge; omega
     omega
-  rw [sub_input f parameter seed labels index c s j level hlevel _ hglobal]
+  rw [fnode_input f parameter seed labels index κ level hlevel _ hglobal]
   cases hb : current.val.testBit 0 with
   | false =>
       have hm := Nat.mod_two_eq_zero_iff_testBit_zero.mpr hb
-      have hcurrent : (⟨2 * (current.val / 2), by omega⟩ : ChildIdx) = current :=
+      have hcurrent : (⟨2 * (current.val / 2), by omega⟩ : FLeaf) = current :=
         Fin.ext (by change 2 * (current.val / 2) = current.val; omega)
-      have hsibling : (⟨2 * (current.val / 2) + 1, hglobal⟩ : ChildIdx) =
-          ⟨Nat.xor current.val 1, Nat.xor_lt_two_pow current.isLt (by decide)⟩ := by
+      have hsibling : (⟨2 * (current.val / 2) + 1, hglobal⟩ : FLeaf) =
+          ⟨Nat.xor current.val 1, Nat.xor_lt_two_pow current.isLt
+            (Nat.one_lt_two_pow (by have := Params.forsHeight_ge; omega))⟩ := by
         apply Fin.ext
         change 2 * (current.val / 2) + 1 = current.val ^^^ 1
         rw [Nat.xor_one_of_even (Nat.even_iff.mpr hm)]
@@ -891,50 +788,11 @@ theorem sub_input_ordered (s : SuperIdx) (j : SubIdx) (level : Nat) (hlevel : le
       simp only [orderedPayload, Bool.false_eq_true, ↓reduceIte, hcurrent, hsibling]
   | true =>
       have hm := Nat.mod_two_eq_one_iff_testBit_zero.mpr hb
-      have hcurrent : (⟨2 * (current.val / 2) + 1, hglobal⟩ : ChildIdx) = current :=
+      have hcurrent : (⟨2 * (current.val / 2) + 1, hglobal⟩ : FLeaf) = current :=
         Fin.ext (by change 2 * (current.val / 2) + 1 = current.val; omega)
-      have hsibling : (⟨2 * (current.val / 2), by omega⟩ : ChildIdx) =
-          ⟨Nat.xor current.val 1, Nat.xor_lt_two_pow current.isLt (by decide)⟩ := by
-        apply Fin.ext
-        change 2 * (current.val / 2) = current.val ^^^ 1
-        rw [Nat.xor_one_of_odd (Nat.odd_iff.mpr hm)]
-        omega
-      simp only [orderedPayload, ↓reduceIte, hcurrent, hsibling]
-
-omit hconsistent in
-theorem top_input_ordered (level : Nat) (hlevel : level + 1 ≤ topHeight) (current : SuperIdx) :
-    canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (topPosition index c (level + 1) hlevel
-        ⟨current.val / 2, (Nat.div_le_self _ _).trans_lt current.isLt⟩) labels =
-    tweakableHashInput parameter (.topNode index c ⟨level, by omega⟩
-        ⟨current.val / 2, (Nat.div_le_self _ _).trans_lt current.isLt⟩)
-      (orderedPayload (current.val.testBit 0)
-        (truncateHash (labels (topPosition index c level (by omega) current)))
-        (truncateHash (labels (topPosition index c level (by omega)
-          ⟨Nat.xor current.val 1, Nat.xor_lt_two_pow current.isLt (by decide)⟩)))) := by
-  have hglobal : 2 * (current.val / 2) + 1 < 2 ^ topHeight := by
-    have hc := current.isLt
-    norm_num [topHeight] at hc ⊢
-    omega
-  rw [top_input f parameter seed labels index c level hlevel _ hglobal]
-  cases hb : current.val.testBit 0 with
-  | false =>
-      have hm := Nat.mod_two_eq_zero_iff_testBit_zero.mpr hb
-      have hcurrent : (⟨2 * (current.val / 2), by omega⟩ : SuperIdx) = current :=
-        Fin.ext (by change 2 * (current.val / 2) = current.val; omega)
-      have hsibling : (⟨2 * (current.val / 2) + 1, hglobal⟩ : SuperIdx) =
-          ⟨Nat.xor current.val 1, Nat.xor_lt_two_pow current.isLt (by decide)⟩ := by
-        apply Fin.ext
-        change 2 * (current.val / 2) + 1 = current.val ^^^ 1
-        rw [Nat.xor_one_of_even (Nat.even_iff.mpr hm)]
-        omega
-      simp only [orderedPayload, Bool.false_eq_true, ↓reduceIte, hcurrent, hsibling]
-  | true =>
-      have hm := Nat.mod_two_eq_one_iff_testBit_zero.mpr hb
-      have hcurrent : (⟨2 * (current.val / 2) + 1, hglobal⟩ : SuperIdx) = current :=
-        Fin.ext (by change 2 * (current.val / 2) + 1 = current.val; omega)
-      have hsibling : (⟨2 * (current.val / 2), by omega⟩ : SuperIdx) =
-          ⟨Nat.xor current.val 1, Nat.xor_lt_two_pow current.isLt (by decide)⟩ := by
+      have hsibling : (⟨2 * (current.val / 2), by omega⟩ : FLeaf) =
+          ⟨Nat.xor current.val 1, Nat.xor_lt_two_pow current.isLt
+            (Nat.one_lt_two_pow (by have := Params.forsHeight_ge; omega))⟩ := by
         apply Fin.ext
         change 2 * (current.val / 2) = current.val ^^^ 1
         rw [Nat.xor_one_of_odd (Nat.odd_iff.mpr hm)]
@@ -942,119 +800,67 @@ theorem top_input_ordered (level : Nat) (hlevel : level + 1 ≤ topHeight) (curr
       simp only [orderedPayload, ↓reduceIte, hcurrent, hsibling]
 
 include hconsistent in
-theorem sub_path_value (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (level : Nat) (hlevel : level ≤ subHeight) :
-    truncateHash (labels (subPosition index c s j level hlevel
-      ⟨a.val / 2 ^ level, (Nat.div_le_self _ _).trans_lt a.isLt⟩)) =
-    merkleValue f parameter (Forest.subDomain index c s j) a.val
-      (Forest.subPathExt (Forest.canonicalSubPath f parameter index seed c s j a))
-      (Completeness.childLeafValue f parameter index c s j seed a) level := by
-  rw [sub_value f parameter seed labels hconsistent index c s j level hlevel _
-    (quotient_range subHeight level a.val hlevel a.isLt)]
+theorem fors_path_value (leaf : FLeaf) (level : Nat) (hlevel : level ≤ forsHeight) :
+    truncateHash (labels (forsPosition index κ level hlevel
+      ⟨leaf.val / 2 ^ level, (Nat.div_le_self _ _).trans_lt leaf.isLt⟩)) =
+    merkleValue f parameter (Fors.forsDomain index κ) leaf.val
+      (Fors.extendPath (Fors.canonicalPath f parameter index κ seed leaf))
+      (Completeness.forsLeafValue f parameter index κ seed leaf) level := by
+  rw [fnode_value f parameter seed labels hconsistent index κ level hlevel _
+    (quotient_range forsHeight level leaf.val hlevel leaf.isLt)]
   symm
-  rw [merkleValue, Forest.merkleFold_subFold _ _ _ _ _ _ _ _ hlevel, ← Completeness.subNodeValue_zero]
-  exact Completeness.eval_subFold_path f parameter index c s j seed a _ level hlevel (fun _ _ _ => rfl)
+  rw [merkleValue, Fors.merkleFold_forsFold _ _ _ _ _ _ hlevel, ← Completeness.forsNodeValue_zero]
+  exact Completeness.eval_forsFold_path f parameter index κ seed leaf _ level hlevel (fun _ _ _ => rfl)
 
 include hconsistent in
-theorem top_path_value (s : SuperIdx) (level : Nat) (hlevel : level ≤ topHeight) :
-    truncateHash (labels (topPosition index c level hlevel
-      ⟨s.val / 2 ^ level, (Nat.div_le_self _ _).trans_lt s.isLt⟩)) =
-    merkleValue f parameter (Forest.topDomain index c) s.val
-      (Forest.topPathExt (Forest.canonicalTopPath f parameter index seed c s))
-      (Completeness.superValue f parameter index c seed s) level := by
-  rw [top_value f parameter seed labels hconsistent index c level hlevel _
-    (quotient_range topHeight level s.val hlevel s.isLt)]
-  symm
-  rw [merkleValue, Forest.merkleFold_topFold _ _ _ _ _ _ hlevel, ← Completeness.topNodeValue_zero]
-  exact Completeness.eval_topFold_path f parameter index c seed s _ level hlevel (fun _ _ _ => rfl)
-
-include hconsistent in
-theorem sub_path_sibling (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (level : Nat) (hlevel : level < subHeight) :
-    truncateHash (labels (subPosition index c s j level (Nat.le_of_lt hlevel)
-      ⟨Nat.xor (a.val / 2 ^ level) 1,
-        Nat.xor_lt_two_pow ((Nat.div_le_self _ _).trans_lt a.isLt) (by decide)⟩)) =
-      Forest.subPathExt (Forest.canonicalSubPath f parameter index seed c s j a) level := by
-  rw [Forest.subPathExt, dif_pos hlevel, Forest.canonicalSubPath]
-  exact sub_value f parameter seed labels hconsistent index c s j level (Nat.le_of_lt hlevel) _
-    (Nat.xor_lt_two_pow (quotient_range subHeight level a.val (Nat.le_of_lt hlevel) a.isLt)
+theorem fors_path_sibling (leaf : FLeaf) (level : Nat) (hlevel : level < forsHeight) :
+    truncateHash (labels (forsPosition index κ level (Nat.le_of_lt hlevel)
+      ⟨Nat.xor (leaf.val / 2 ^ level) 1,
+        Nat.xor_lt_two_pow ((Nat.div_le_self _ _).trans_lt leaf.isLt)
+          (Nat.one_lt_two_pow (by have := Params.forsHeight_ge; omega))⟩)) =
+      Fors.extendPath (Fors.canonicalPath f parameter index κ seed leaf) level := by
+  rw [Fors.extendPath, dif_pos hlevel, Fors.canonicalPath]
+  exact fnode_value f parameter seed labels hconsistent index κ level (Nat.le_of_lt hlevel) _
+    (Nat.xor_lt_two_pow (quotient_range forsHeight level leaf.val (Nat.le_of_lt hlevel) leaf.isLt)
       (Nat.one_lt_two_pow (by omega)))
 
 include hconsistent in
-theorem top_path_sibling (s : SuperIdx) (level : Nat) (hlevel : level < topHeight) :
-    truncateHash (labels (topPosition index c level (Nat.le_of_lt hlevel)
-      ⟨Nat.xor (s.val / 2 ^ level) 1,
-        Nat.xor_lt_two_pow ((Nat.div_le_self _ _).trans_lt s.isLt) (by decide)⟩)) =
-      Forest.topPathExt (Forest.canonicalTopPath f parameter index seed c s) level := by
-  rw [Forest.topPathExt, dif_pos hlevel, Forest.canonicalTopPath]
-  exact top_value f parameter seed labels hconsistent index c level (Nat.le_of_lt hlevel) _
-    (Nat.xor_lt_two_pow (quotient_range topHeight level s.val (Nat.le_of_lt hlevel) s.isLt)
-      (Nat.one_lt_two_pow (by omega)))
-
-include hconsistent in
-theorem sub_path_input (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (level : Nat) (hlevel : level < subHeight) :
+theorem fors_path_input (leaf : FLeaf) (level : Nat) (hlevel : level < forsHeight) :
     canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (subPosition index c s j (level + 1) hlevel
-        ⟨a.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt a.isLt⟩) labels =
-    merkleInput f parameter (Forest.subDomain index c s j) a.val
-      (Forest.subPathExt (Forest.canonicalSubPath f parameter index seed c s j a))
-      (Completeness.childLeafValue f parameter index c s j seed a) level := by
-  have hparent : (⟨a.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt a.isLt⟩ : ChildIdx) =
-      ⟨(a.val / 2 ^ level) / 2,
-        (Nat.div_le_self _ _).trans_lt ((Nat.div_le_self _ _).trans_lt a.isLt)⟩ := by
+      (forsPosition index κ (level + 1) hlevel
+        ⟨leaf.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt leaf.isLt⟩) labels =
+    merkleInput f parameter (Fors.forsDomain index κ) leaf.val
+      (Fors.extendPath (Fors.canonicalPath f parameter index κ seed leaf))
+      (Completeness.forsLeafValue f parameter index κ seed leaf) level := by
+  have hparent : (⟨leaf.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt leaf.isLt⟩ : FLeaf) =
+      ⟨(leaf.val / 2 ^ level) / 2,
+        (Nat.div_le_self _ _).trans_lt ((Nat.div_le_self _ _).trans_lt leaf.isLt)⟩ := by
     apply Fin.ext
-    change a.val / 2 ^ (level + 1) = (a.val / 2 ^ level) / 2
+    change leaf.val / 2 ^ (level + 1) = (leaf.val / 2 ^ level) / 2
     rw [Nat.pow_succ, Nat.div_div_eq_div_mul]
-  rw [hparent, sub_input_ordered f parameter seed labels index c s j level hlevel
-    ⟨a.val / 2 ^ level, (Nat.div_le_self _ _).trans_lt a.isLt⟩,
-    sub_path_value f parameter seed labels hconsistent index c s j a level (Nat.le_of_lt hlevel),
-    sub_path_sibling f parameter seed labels hconsistent index c s j a level hlevel]
+  rw [hparent, fors_input_ordered f parameter seed labels index κ level hlevel
+    ⟨leaf.val / 2 ^ level, (Nat.div_le_self _ _).trans_lt leaf.isLt⟩,
+    fors_path_value f parameter seed labels hconsistent index κ leaf level (Nat.le_of_lt hlevel),
+    fors_path_sibling f parameter seed labels hconsistent index κ leaf level hlevel]
   simp only [merkleInput]
-  have hbit : (a.val / 2 ^ level).testBit 0 = a.val.testBit level := by
-    simpa only [Nat.zero_add] using (Nat.testBit_add a.val 0 level).symm
+  have hbit : (leaf.val / 2 ^ level).testBit 0 = leaf.val.testBit level := by
+    simpa only [Nat.zero_add] using (Nat.testBit_add leaf.val 0 level).symm
   rw [hbit]
   congr 1
-  rw [Forest.subDomain, dif_pos ⟨by omega, by omega⟩]
+  rw [Fors.forsDomain, dif_pos ⟨by omega, by omega⟩]
   congr 1
   apply Fin.ext
-  change a.val / 2 ^ level / 2 = a.val / 2 ^ (level + 1) % 2 ^ subHeight
-  rw [Nat.mod_eq_of_lt ((Nat.div_le_self _ _).trans_lt a.isLt), Nat.pow_succ, Nat.div_div_eq_div_mul]
+  change leaf.val / 2 ^ level / 2 = leaf.val / 2 ^ (level + 1) % 2 ^ forsHeight
+  rw [Nat.mod_eq_of_lt ((Nat.div_le_self _ _).trans_lt leaf.isLt), Nat.pow_succ, Nat.div_div_eq_div_mul]
 
-include hconsistent in
-theorem top_path_input (s : SuperIdx) (level : Nat) (hlevel : level < topHeight) :
-    canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (topPosition index c (level + 1) hlevel
-        ⟨s.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt s.isLt⟩) labels =
-    merkleInput f parameter (Forest.topDomain index c) s.val
-      (Forest.topPathExt (Forest.canonicalTopPath f parameter index seed c s))
-      (Completeness.superValue f parameter index c seed s) level := by
-  have hparent : (⟨s.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt s.isLt⟩ : SuperIdx) =
-      ⟨(s.val / 2 ^ level) / 2,
-        (Nat.div_le_self _ _).trans_lt ((Nat.div_le_self _ _).trans_lt s.isLt)⟩ := by
-    apply Fin.ext
-    change s.val / 2 ^ (level + 1) = (s.val / 2 ^ level) / 2
-    rw [Nat.pow_succ, Nat.div_div_eq_div_mul]
-  rw [hparent, top_input_ordered f parameter seed labels index c level hlevel
-    ⟨s.val / 2 ^ level, (Nat.div_le_self _ _).trans_lt s.isLt⟩,
-    top_path_value f parameter seed labels hconsistent index c s level (Nat.le_of_lt hlevel),
-    top_path_sibling f parameter seed labels hconsistent index c s level hlevel]
-  simp only [merkleInput]
-  have hbit : (s.val / 2 ^ level).testBit 0 = s.val.testBit level := by
-    simpa only [Nat.zero_add] using (Nat.testBit_add s.val 0 level).symm
-  rw [hbit]
-  congr 1
-  rw [Forest.topDomain, dif_pos ⟨by omega, by omega⟩]
-  congr 1
-  apply Fin.ext
-  change s.val / 2 ^ level / 2 = s.val / 2 ^ (level + 1) % 2 ^ topHeight
-  rw [Nat.mod_eq_of_lt ((Nat.div_le_self _ _).trans_lt s.isLt), Nat.pow_succ, Nat.div_div_eq_div_mul]
-
-end Forest
+end ForsTrees
 
 /-- Material tables with their full hash outputs truncated exactly as key derivation does. -/
 def materialOts (material : SeedModel.Material) : Layer → TreeIndex → LeafIndex → ChainIndex → Digest :=
   fun lay tree leaf chain => truncateHash (material.2 (.inl (lay, tree, leaf, chain)))
 
 def materialFts (material : SeedModel.Material) : ForsSecrets :=
-  fun index c s j a i => truncateHash (material.2 (.inr (.inl (index, c, s, j, a, i))))
+  fun index κ leaf => truncateHash (material.2 (.inr (.inl (index, κ, leaf))))
 
 def materialSurrogates (material : SeedModel.Material) : Fin maxLayerHeight → Digest :=
   fun level => truncateHash (material.2 (.inr (.inr level)))
@@ -1068,8 +874,8 @@ theorem materialOts_eq (material : SeedModel.Material) (hagrees : SeedModel.Prep
 omit parameter labels hconsistent in
 theorem materialFts_eq (material : SeedModel.Material) (hagrees : SeedModel.PreparedAgreement f seed material) :
     materialFts material = ftsSecrets f (SeedModel.parameter material) seed := by
-  funext index c s j a i
-  exact (SeedModel.eval_forest_prepared f seed material hagrees index c s j a i).symm
+  funext index κ leaf
+  exact (SeedModel.eval_fors_prepared f seed material hagrees index κ leaf).symm
 
 omit parameter labels hconsistent in
 theorem materialSurrogates_eq (material : SeedModel.Material)
