@@ -1098,9 +1098,13 @@ footer a + a { margin-left: 1.25rem; }
     set('k', vs(String(V.k), '8'));
     set('a', vs(String(V.a), '4 + 3'));
     set('size', vs(comma(V.size), comma(main.size)) + ' bytes');
-    // aggregation: a prover proving 500K hashes per second verifies that many signatures per second (rounded down)
+    // aggregation: signatures verified per second by a prover of 500K Keccak-f permutations, 750K SHA-256 or 1M BLAKE2s
+    // compressions per second (rounded down)
     var ver = isForest() ? main.verify : V.verify;
-    set('verify', comma(ver) + ' ' + unit() + info(comma(Math.floor(500000 / ver)) + ' signatures aggregated per second, at 500K hashes proven per second, neglecting glue overhead'));
+    var prover = { 'Keccak-256': [500000, '500K Keccak-f permutations'], 'SHA-256': [750000, '750K SHA-256 compressions'],
+                   'BLAKE2s': [1000000, '1M BLAKE2s compressions'] }[S.hash];
+    set('verify', comma(ver) + ' ' + unit() + info(comma(Math.floor(prover[0] / ver)) + ' signatures aggregated per second, at ' + prover[1] +
+      ' proven per second, neglecting glue overhead'));
     set('dia-h', String(S.h));
 
     [].forEach.call(document.querySelectorAll('[data-shape]'), function (e) { e.hidden = e.dataset.shape !== S.shape; });
