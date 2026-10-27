@@ -882,7 +882,7 @@ footer a + a { margin-left: 1.25rem; }
     <div class="tables">
       <h2>One signer</h2>
       <p class="lead" data-f="signer-lead" hidden></p>
-      <div class="scroll">
+      <div class="scroll" data-stable>
       <table class="cmp cards">
         <colgroup><col class="label"><col><col><col></colgroup>
         <thead>
@@ -899,8 +899,8 @@ footer a + a { margin-left: 1.25rem; }
       </div>
 
       <h2>Threshold, <i>t</i>-of-(2<i>t</i>&nbsp;&minus;&nbsp;1)</h2>
-      <div class="thr-pair">
-      <p class="lead">As in <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>, the secret values are XOR-encrypted under a context-aware threshold PRF. Unlike PRAWNS, key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick a FTS leaf at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate its <span class="forest-only">WOTS forest</span><span class="fors-only">FORS key</span><span data-shape="layered" hidden> and the trees of the lower layers</span> (an idea from <a href="https://www.riva.xyz/">Riva Labs</a>). Online: they grind the randomizer in the clear onto it (about 2<sup><i>h</i></sup> hashes), and open via the context-aware threshold PRF only the <span class="forest-only">forest chain values</span><span class="fors-only"><i>k</i> FORS secrets</span> the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort). Key generation and preprocessing need all 2<i>t</i>&nbsp;&minus;&nbsp;1 operators online; signing needs only <i>t</i>. An arbitrary number of signatures can be preprocessed in advance.</p>
+      <div class="thr-pair" data-stable>
+      <p class="lead" data-stable>As in <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>, the secret values are XOR-encrypted under a context-aware threshold PRF. Unlike PRAWNS, key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick a FTS leaf at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate its <span class="forest-only">WOTS forest</span><span class="fors-only">FORS key</span><span data-shape="layered" hidden> and the trees of the lower layers</span> (an idea from <a href="https://www.riva.xyz/">Riva Labs</a>). Online: they grind the randomizer in the clear onto it (about 2<sup><i>h</i></sup> hashes), and open via the context-aware threshold PRF only the <span class="forest-only">forest chain values</span><span class="fors-only"><i>k</i> FORS secrets</span> the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort). Key generation and preprocessing need all 2<i>t</i>&nbsp;&minus;&nbsp;1 operators online; signing needs only <i>t</i>. An arbitrary number of signatures can be preprocessed in advance.</p>
       <div class="thr">
         <p class="bn" data-f="th-life">&nbsp;</p>
         <div class="scroll">
@@ -1082,7 +1082,7 @@ footer a + a { margin-left: 1.25rem; }
   function set(f, html) { [].forEach.call(document.querySelectorAll('[data-f="' + f + '"]'), function (e) { e.innerHTML = html; }); }
   function split(c) { return c.layers.join(' + '); }
 
-  function render() {
+  function render(quiet) {
     var W = D.wallet, main = cfg(S.shape), lay = cfg('layered'), V = main.fors;
     document.body.dataset.v = S.v;
 
@@ -1164,9 +1164,11 @@ footer a + a { margin-left: 1.25rem; }
     var th = lay_ ? thr('layered') : thr('pruned', devs[0].b);
     var ROUNDS = '<th>Rounds' + info('One communication round per layer of AND gates&#10;(' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + '), for 2-of-3') + '</th>';
     // with pruning, the Ledger's subtree; the layered key needs no sentence
-    set('th-life', lay_ ? '' : 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for a lifetime of ' +
+    set('th-life', 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for a lifetime of ' +
       life1(isForest() ? th.lifetime : th.fors.lifetime) + ' signatures:');
-    document.querySelector('[data-f="th-life"]').hidden = lay_;
+    // hidden for a layered key but keeping its place, so that switching the shape does not move the page
+    var thLife = document.querySelector('[data-f="th-life"]');
+    thLife.style.visibility = lay_ ? 'hidden' : ''; thLife.setAttribute('aria-hidden', lay_ ? 'true' : 'false');
     set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + vs(bytes(th.fors.prep_mb / 1000), bytes(th.prep_mb / 1000)) + '</td></tr>' +
       '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + vs(comma(th.fors.prep_rounds), comma(th.prep_rounds)) + '</td></tr>');
 
@@ -1178,11 +1180,33 @@ footer a + a { margin-left: 1.25rem; }
       '− novel\n' +
       '− ' + String(Math.ceil(10 * th.prep / th.fors.prep - 1e-9) / 10) + '× slower threshold signing');
 
+    if (quiet) return;
+    stabilize();
+
     // the diagram: one pruned tree, or the layers
     if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers, S.v, V.k, V.a);
 
     window.dispatchEvent(new Event('resize'));   // the sphinx finds its place again
   }
+
+  // The shape changes the text of the device table and of the threshold section: each [data-stable] block takes the
+  // height of its taller shape, so that switching the shape does not move what is below it. Both shapes are rendered
+  // and measured in one go, before the browser paints.
+  function stabilize() {
+    var els = [].slice.call(document.querySelectorAll('[data-stable]')), keep = S.shape, hs = els.map(function () { return 0; });
+    els.forEach(function (e) { e.style.minHeight = ''; });
+    ['pruned', 'layered'].forEach(function (sh) {
+      S.shape = sh; render(true);
+      els.forEach(function (e, i) { hs[i] = Math.max(hs[i], e.getBoundingClientRect().height); });
+    });
+    S.shape = keep; render(true);
+    els.forEach(function (e, i) { e.style.minHeight = Math.ceil(hs[i]) + 'px'; });
+  }
+  var stableTimer = null;
+  window.addEventListener('resize', function (e) {
+    if (!e.isTrusted || !D) return;            // the event render dispatches itself is not a resize
+    clearTimeout(stableTimer); stableTimer = setTimeout(stabilize, 150);
+  });
 
   function choose(key, val) {
     S[key] = key === 'h' ? +val : val;
