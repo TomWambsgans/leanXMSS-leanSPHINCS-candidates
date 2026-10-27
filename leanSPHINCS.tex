@@ -215,7 +215,7 @@ thousand~\cite{hwbench}.
   \item $t$-of-$n$ with $n=2t-1$ (2-of-3, 3-of-5, \dots), malicious security (with abort) against $t-1$ operators
   \item distributed key generation (DKG), no trusted dealer
   \item key generation and preprocessing are honest-majority MPCs, so they need all $2t-1$ operators online; signing
-        needs only $t$
+        needs only $t$. An arbitrary number of signatures can be preprocessed in advance
   \item any configuration with a small kept subtree or top layer (not the full key, whose $2^h$ leaves would all go
         through the MPC); the MPC never builds the few-time signatures of the whole key
 \end{itemize}
