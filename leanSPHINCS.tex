@@ -348,26 +348,28 @@ preprocessing over the lifetime.
 Grinding about $2^h$ randomizers onto a few prepared instances is too slow on a hardware wallet. Following Riva
 Labs~\cite{riva}, the device delegates it to the untrusted host, which proves it with a STARK:
 \begin{enumerate}
-  \item in its idle time, the device prepares $p=\max(16, 2^{h-20})$ uniformly random instances (from its secure
-        randomness), as in \cref{sec:threshold}: 16 at $h\le24$, 64 at $h=26$, 256 at $h=28$
+  \item in its idle time, the device prepares $p$ uniformly random instances (from its secure randomness), as in
+        \cref{sec:threshold}: 16 at $h\le24$, 64 at $h=26$ and $h=28$
   \item to sign $m$, it derives $R_0$ and $\Delta$ in one hash of its secret key and $m$, and sends $m$, $R_0$,
         $\Delta$ and the $p$ indices to the host
-  \item the host finds the least $i$ such that the index of $R_0 + i\Delta$ is one of the $p$, $\approx2^h/p\le2^{20}$
-        digest hashes on average, and returns $R = R_0 + i\Delta$ with a STARK that $i$ is the least
+  \item the host finds the least $i$ such that the index of $R_0 + i\Delta$ is one of the $p$, $\approx2^h/p$
+        digest hashes on average ($2^{20}$ at $h=24,26$, $2^{22}$ at $h=28$), and returns $R = R_0 + i\Delta$ with
+        a STARK that $i$ is the least
   \item the device verifies the STARK and finishes the signature from the prepared instance
 \end{enumerate}
 The STARK needs no zero knowledge; $\Delta$ is no longer secret against the host. The host holds the public data of
 each instance (forest trees, WOTS$^+$C signatures and paths); the device keeps only its index and a hash of its FTS
-key (16 top nodes for the forest, 50 for FORS), recomputes from its seed the chain values it opens, and checks the host's nodes against that hash.
+key (16 top nodes for the forest, 50 for FORS), recomputes from its seed the chain values (FORS: secrets) it opens,
+and checks the host's nodes against that hash.
 Minimality makes $R$ a function of $(m, \text{secret key})$ and the prepared set, as for the deterministic signer;
 this flow is not covered by the Lean proof.
 
-\paragraph{Costs.} At $h\ge24$ the host hashes $\approx2^{20}$ digests and proves them at about $2^{19}$ hashes per
-second, 2~s. The device verifies the STARK in about $10^4$ compressions, counted as 3~s on a Ledger Nano S+ (1.7~s
-with Keccak-256 at 5.8 thousand per second~\cite{hwbench}): about 5~s in all. Preparing an instance costs the device
-$76\cdot10^3$ Keccak-f permutations for a pruned key and $136\cdot10^3$ for a layered one at $h=24$ ($225\cdot10^3$ at
-$h=28$), WOTS$^+$C counter searches and the path included; the first $p$ are prepared once (about 2.8~h for the layered key at
-$h=28$).
+\paragraph{Costs.} At $h=24$ and $26$ the host hashes $\approx2^{20}$ digests and proves them at about $2^{19}$ hashes
+per second, 2~s (8~s at $h=28$). The device verifies the STARK in about $10^4$ compressions, counted as 3~s on a Ledger
+Nano S+ (1.7~s with Keccak-256 at 5.8 thousand per second~\cite{hwbench}): about 5~s in all (11~s at $h=28$).
+Preparing an instance costs the device $76\cdot10^3$ Keccak-f permutations for a pruned key and $136\cdot10^3$ for a
+layered one at $h=24$ ($225\cdot10^3$ at $h=28$), WOTS$^+$C counter searches and the path included; the first $p$ are
+prepared once (about 41~min for the layered key at $h=28$).
 
 \section{The few-time signature: a two-level WOTS forest}
 \label{sec:twolevel}
@@ -377,11 +379,11 @@ sig.golf submission~\cite{siggolf}.
 
 \paragraph{Against FORS.} The FORS variant (T4) uses FORS~\cite{FIPS205} with no root hash (the WOTS$^+$C key signs
 the $2k$ nodes below the roots), $k=25$ trees of height $a=10$ in every configuration, so that verification does
-not depend on the pruning. 25 is the fewest trees for which FORS lasts as long as the forest under the cover attack
-with the full key; over all configurations its cover lifetime is 97.8--100.7\% of the forest's
-(\texttt{scripts/scheme.py}). Its proved lifetimes (\cref{sec:lifetimes}) are 84--98\% of its cover attack, and
-1--6\% above the forest's in every configuration. At $h=26$, full key, Keccak-256,
-in permutations (preprocessing: the hashes of the FTS inside the threshold MPC):
+not depend on the pruning; its digest is $h+250$ bits, from two hash calls. 25 is the fewest trees for which FORS
+lasts as long as the forest under the cover attack with the full key; over all configurations its cover lifetime is
+97.8--100.7\% of the forest's (\texttt{scripts/scheme.py}). Its proved lifetimes (\cref{sec:lifetimes}) are
+84--98\% of its cover attack, and 1--6\% above the forest's in every configuration. At $h=26$, full key,
+Keccak-256, in permutations (preprocessing: the hashes of the FTS inside the threshold MPC):
 \begin{center}
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{lrrrrr}

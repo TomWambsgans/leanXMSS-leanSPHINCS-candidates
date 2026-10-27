@@ -15,7 +15,7 @@ earlier signatures of instance i. E[Y] = 1 at the cover lifetime. This script gi
           entry; a key reveals the componentwise max of its codewords). Monte Carlo, pinned to the exact mean.
 The loads are iid Poisson(N / 2^b), so Y is compound Poisson: its variance is exact, its law by FFT.
 
-Usage: key_variance.py [--h 24] [--b 24,20,14,8] [--samples 100000]
+Usage: python3 scripts/key_variance.py [--h 24] [--b 24,20,14,8] [--samples 100000]   (needs numpy and scipy)
 Prints, per kept height b and variant: sd/mean of Y, the share of the variance that comes from the cover
 given the load (the rest is the load), and log2(Y / E[Y]) at the quantiles 1e-2, 1e-3 and 1e-6 (how many
 bits weaker than the mean the weakest key in 100, 1000, 10^6 is).

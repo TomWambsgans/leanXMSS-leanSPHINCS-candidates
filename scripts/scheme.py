@@ -396,13 +396,14 @@ def site_data():
 # clear, about 2^h attempts (cheap in the clear), and open only the forest chain values the message selects.
 THRESHOLD_PREPARED = 1
 # The hardware wallet prepares at least PREPARED instances, and enough that the host grinds and proves at most
-# HOST_GRIND digests.
+# HOST_GRIND digests (HOST_GRIND_TOP at the largest height, so that the device prepares 4 times fewer instances).
 PREPARED = 16
 HOST_GRIND = 2**20
+HOST_GRIND_TOP = 2**22
 
 
 def wallet_prepared(h):
-    return max(PREPARED, 2**h // HOST_GRIND)
+    return max(PREPARED, 2**h // (HOST_GRIND_TOP if h == max(HEIGHTS) else HOST_GRIND))
 
 KECCAK_ANDS = 36_300  # AND gates of one Keccak-f[1600] call with a public part and a truncated output
 # AND gates of one compression in a binary MPC: Keccak-f as above; SHA-256, the Bristol-format circuit (22,573);
@@ -504,7 +505,7 @@ def threshold(heights):
         # rounded against the alternative: its cost up, the preprocessing it saves down
         print(f"threshold, every forest at keygen (h=24, b=12, {H.name}): {math.ceil(forests * 100) / 100:.2f} TB per operator "
               f"once, against {math.floor(lifetime * 10) / 10:.1f} TB of preprocessing over the lifetime")
-    print(f"hardware wallet: the device prepares max({PREPARED}, 2^h / 2^{HOST_GRIND.bit_length() - 1}) instances and the host grinds "
+    print(f"hardware wallet: the device prepares max({PREPARED}, 2^h / 2^{HOST_GRIND.bit_length() - 1}) instances (2^h / 2^{HOST_GRIND_TOP.bit_length() - 1} at h = {max(HEIGHTS)}) and the host grinds "
           f"2^h / that many digests ({', '.join(f'h={h}: {wallet_prepared(h)} prepared, {fmt(2 ** h / wallet_prepared(h))} digests, '
           f'{2 ** h / wallet_prepared(h) / HOST_RATE:.2g} s to prove' for h in heights)});"
           f" the device verifies the STARK in about {fmt(STARK_VERIFY)} compressions, counted as {STARK_VERIFY_SECONDS} s")
