@@ -48,7 +48,7 @@ in [FORS.md](FORS.md).
 ## Proved lifetimes
 
 Signature limits N with 127 bits (one theorem each in [Main.lean](LeanForest/Main.lean), e.g.
-`h24_pruned12`); layered keys: 10 + 6 + 6, 12 + 6 + 6, 12 + 7 + 7 and 12 + 8 + 8.
+`h24_pruned12`); layered keys: 10 + 6 + 6, 10 + 7 + 7, 10 + 8 + 8 and 10 + 9 + 9.
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |

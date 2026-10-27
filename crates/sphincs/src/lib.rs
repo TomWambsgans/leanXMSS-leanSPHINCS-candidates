@@ -61,9 +61,9 @@ pub const PRUNED: [usize; 6] = [8, 10, 12, 13, 14, 20];
 pub fn layered_heights(h: usize) -> &'static [usize] {
     match h {
         22 => &[10, 6, 6],
-        24 => &[12, 6, 6],
-        26 => &[12, 7, 7],
-        28 => &[12, 8, 8],
+        24 => &[10, 7, 7],
+        26 => &[10, 8, 8],
+        28 => &[10, 9, 9],
         _ => panic!("no layered split for h = {h}"),
     }
 }

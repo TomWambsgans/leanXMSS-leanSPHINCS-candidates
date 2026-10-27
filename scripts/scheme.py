@@ -44,7 +44,7 @@ from fors_security import forgery_bits_exact
 N = 16  # bytes per hash value
 P_LEN, ADDR = 16, 16
 HEIGHTS = (22, 24, 26, 28)
-LAYERED = {22: (10, 6, 6), 24: (12, 6, 6), 26: (12, 7, 7), 28: (12, 8, 8)}  # top layer first
+LAYERED = {22: (10, 6, 6), 24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}  # top layer first
 PRUNED = (8, 10, 12, 13, 14, 20)  # kept subtree heights b < h with a certificate, besides b = h
 
 

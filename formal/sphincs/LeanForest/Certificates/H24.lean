@@ -1660,16 +1660,16 @@ theorem covers_h24_b8_ok : ForestPotential.checkCoversH 24 8 57888 8154 20499498
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h24_b8_0_ok, cover_h24_b8_1_ok, coverh_h24_b8_0_ok, by decide +kernel⟩
 
-/-! Height 24, layered (12 + 6 + 6), 336,700,000 signatures: the certificate of the height 24, full key, 336,700,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 925696` enters: the cover chains. -/
+/-! Height 24, layered (10 + 7 + 7), 336,700,000 signatures: the certificate of the height 24, full key, 336,700,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 231424` enters: the cover chains. -/
 
-theorem cover_h24_L_0_ok : checkCoverW 24 24 925696 336700000 332306998946228968225951765070086145 cover_h24_b24_0 = true :=
+theorem cover_h24_L_0_ok : checkCoverW 24 24 231424 336700000 332306998946228968225951765070086145 cover_h24_b24_0 = true :=
   checkCoverW_of_pt [large_h24_b24_0_0_cB, large_h24_b24_0_1_cB, large_h24_b24_0_2_cB, large_h24_b24_0_3_cB, large_h24_b24_0_4_cB, large_h24_b24_0_5_cB, large_h24_b24_0_6_cB, large_h24_b24_0_7_cB, large_h24_b24_0_8_cB, large_h24_b24_0_9_cB]
     (.cons large_h24_b24_0_0_ok <| .cons large_h24_b24_0_1_ok <| .cons large_h24_b24_0_2_ok <| .cons large_h24_b24_0_3_ok <| .cons large_h24_b24_0_4_ok <| .cons large_h24_b24_0_5_ok <| .cons large_h24_b24_0_6_ok <| .cons large_h24_b24_0_7_ok <| .cons large_h24_b24_0_8_ok <| .cons large_h24_b24_0_9_ok <| .nil)
     tabc_h24_b24_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h24_L_ok : ForestPotential.checkCoversH 24 24 925696 336700000 332306998946228968225951765070086145 [cover_h24_b24_0] [] = true := by
+theorem covers_h24_L_ok : ForestPotential.checkCoversH 24 24 231424 336700000 332306998946228968225951765070086145 [cover_h24_b24_0] [] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h24_L_0_ok, by decide +kernel⟩
 

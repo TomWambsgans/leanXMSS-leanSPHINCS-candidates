@@ -67,7 +67,7 @@ FA = 10             # a: the height of a FORS tree, the same in every configurat
 FK = 25             # k: the number of FORS trees, the same in every configuration
 
 # The layer split of a layered key, top layer first (crates/sphincs `layered_heights`).
-SPLITS = {22: (10, 6, 6), 24: (12, 6, 6), 26: (12, 7, 7), 28: (12, 8, 8)}
+SPLITS = {22: (10, 6, 6), 24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}
 
 def set_config(h, shape='pruned', b=None):
     """Select the height and the shape every function below works at."""

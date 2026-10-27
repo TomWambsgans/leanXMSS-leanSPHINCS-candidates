@@ -136,11 +136,11 @@ section h24_layered_k25
 variable (hH : totalHeight = 24) (hd : numLayers = 3) (hk : forsTrees = 25) (ha : forsHeight = 10)
 include hH hd hk ha
 
-/-- Signature size, height 24, layers 12 + 6 + 6, `k = 25`: 7,884 bytes. -/
+/-- Signature size, height 24, layers 10 + 7 + 7, `k = 25`: 7,884 bytes. -/
 theorem size_h24_layered_k25 (signature : Signature) : (serializeSignature signature).length = 7884 := by
   rw [signature_size, hH, hd, hk, ha]
 
-/-- Keccak-256, height 24, layers 12 + 6 + 6, `k = 25`: an accepted signature costs 501 Keccak-f permutations. -/
+/-- Keccak-256, height 24, layers 10 + 7 + 7, `k = 25`: an accepted signature costs 501 Keccak-f permutations. -/
 theorem keccak256_h24_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
@@ -149,7 +149,7 @@ theorem keccak256_h24_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (
     messageDigestBits, hH, hd, hk, ha]
   rfl
 
-/-- BLAKE2s, height 24, layers 12 + 6 + 6, `k = 25`: an accepted signature costs 537 compressions. -/
+/-- BLAKE2s, height 24, layers 10 + 7 + 7, `k = 25`: an accepted signature costs 537 compressions. -/
 theorem blake2s_h24_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
@@ -158,7 +158,7 @@ theorem blake2s_h24_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (me
     messageDigestBits, hH, hd, hk, ha]
   rfl
 
-/-- SHA-256, height 24, layers 12 + 6 + 6, `k = 25`: an accepted signature costs 537 compressions. -/
+/-- SHA-256, height 24, layers 10 + 7 + 7, `k = 25`: an accepted signature costs 537 compressions. -/
 theorem sha256_h24_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
@@ -212,11 +212,11 @@ section h26_layered_k25
 variable (hH : totalHeight = 26) (hd : numLayers = 3) (hk : forsTrees = 25) (ha : forsHeight = 10)
 include hH hd hk ha
 
-/-- Signature size, height 26, layers 12 + 7 + 7, `k = 25`: 7,916 bytes. -/
+/-- Signature size, height 26, layers 10 + 8 + 8, `k = 25`: 7,916 bytes. -/
 theorem size_h26_layered_k25 (signature : Signature) : (serializeSignature signature).length = 7916 := by
   rw [signature_size, hH, hd, hk, ha]
 
-/-- Keccak-256, height 26, layers 12 + 7 + 7, `k = 25`: an accepted signature costs 503 Keccak-f permutations. -/
+/-- Keccak-256, height 26, layers 10 + 8 + 8, `k = 25`: an accepted signature costs 503 Keccak-f permutations. -/
 theorem keccak256_h26_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
@@ -225,7 +225,7 @@ theorem keccak256_h26_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (
     messageDigestBits, hH, hd, hk, ha]
   rfl
 
-/-- BLAKE2s, height 26, layers 12 + 7 + 7, `k = 25`: an accepted signature costs 539 compressions. -/
+/-- BLAKE2s, height 26, layers 10 + 8 + 8, `k = 25`: an accepted signature costs 539 compressions. -/
 theorem blake2s_h26_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
@@ -234,7 +234,7 @@ theorem blake2s_h26_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (me
     messageDigestBits, hH, hd, hk, ha]
   rfl
 
-/-- SHA-256, height 26, layers 12 + 7 + 7, `k = 25`: an accepted signature costs 539 compressions. -/
+/-- SHA-256, height 26, layers 10 + 8 + 8, `k = 25`: an accepted signature costs 539 compressions. -/
 theorem sha256_h26_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
@@ -288,11 +288,11 @@ section h28_layered_k25
 variable (hH : totalHeight = 28) (hd : numLayers = 3) (hk : forsTrees = 25) (ha : forsHeight = 10)
 include hH hd hk ha
 
-/-- Signature size, height 28, layers 12 + 8 + 8, `k = 25`: 7,948 bytes. -/
+/-- Signature size, height 28, layers 10 + 9 + 9, `k = 25`: 7,948 bytes. -/
 theorem size_h28_layered_k25 (signature : Signature) : (serializeSignature signature).length = 7948 := by
   rw [signature_size, hH, hd, hk, ha]
 
-/-- Keccak-256, height 28, layers 12 + 8 + 8, `k = 25`: an accepted signature costs 505 Keccak-f permutations. -/
+/-- Keccak-256, height 28, layers 10 + 9 + 9, `k = 25`: an accepted signature costs 505 Keccak-f permutations. -/
 theorem keccak256_h28_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
@@ -301,7 +301,7 @@ theorem keccak256_h28_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (
     messageDigestBits, hH, hd, hk, ha]
   rfl
 
-/-- BLAKE2s, height 28, layers 12 + 8 + 8, `k = 25`: an accepted signature costs 541 compressions. -/
+/-- BLAKE2s, height 28, layers 10 + 9 + 9, `k = 25`: an accepted signature costs 541 compressions. -/
 theorem blake2s_h28_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :
@@ -310,7 +310,7 @@ theorem blake2s_h28_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (me
     messageDigestBits, hH, hd, hk, ha]
   rfl
 
-/-- SHA-256, height 28, layers 12 + 8 + 8, `k = 25`: an accepted signature costs 541 compressions. -/
+/-- SHA-256, height 28, layers 10 + 9 + 9, `k = 25`: an accepted signature costs 541 compressions. -/
 theorem sha256_h28_layered_k25 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
       : OracleComp HashSpec Bool) = true) :

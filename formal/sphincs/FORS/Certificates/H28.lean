@@ -1776,16 +1776,16 @@ theorem covers_h28_b8_ok : ForsPotential.checkCoversH 28 8 25 10 57896 9721 2658
   simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h28_b8_0_ok, cover_h28_b8_1_ok, coverh_h28_b8_0_ok, by decide +kernel⟩
 
-/-! Height 28, layered (12 + 8 + 8), 5,707,000,000 signatures: the certificate of the height 28, full key, 5,707,000,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 925696` enters: the cover chains. -/
+/-! Height 28, layered (10 + 9 + 9), 5,707,000,000 signatures: the certificate of the height 28, full key, 5,707,000,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 231424` enters: the cover chains. -/
 
-theorem cover_h28_L_0_ok : checkCoverW 28 28 25 10 925696 5707000000 98795461878014301928930083709386753 cover_h28_b28_0 = true :=
+theorem cover_h28_L_0_ok : checkCoverW 28 28 25 10 231424 5707000000 98795461878014301928930083709386753 cover_h28_b28_0 = true :=
   checkCoverW_of_pt [large_h28_b28_0_0_cB, large_h28_b28_0_1_cB, large_h28_b28_0_2_cB, large_h28_b28_0_3_cB, large_h28_b28_0_4_cB, large_h28_b28_0_5_cB, large_h28_b28_0_6_cB, large_h28_b28_0_7_cB, large_h28_b28_0_8_cB, large_h28_b28_0_9_cB, large_h28_b28_0_10_cB, large_h28_b28_0_11_cB, large_h28_b28_0_12_cB, large_h28_b28_0_13_cB, large_h28_b28_0_14_cB, large_h28_b28_0_15_cB, large_h28_b28_0_16_cB]
     (.cons large_h28_b28_0_0_ok <| .cons large_h28_b28_0_1_ok <| .cons large_h28_b28_0_2_ok <| .cons large_h28_b28_0_3_ok <| .cons large_h28_b28_0_4_ok <| .cons large_h28_b28_0_5_ok <| .cons large_h28_b28_0_6_ok <| .cons large_h28_b28_0_7_ok <| .cons large_h28_b28_0_8_ok <| .cons large_h28_b28_0_9_ok <| .cons large_h28_b28_0_10_ok <| .cons large_h28_b28_0_11_ok <| .cons large_h28_b28_0_12_ok <| .cons large_h28_b28_0_13_ok <| .cons large_h28_b28_0_14_ok <| .cons large_h28_b28_0_15_ok <| .cons large_h28_b28_0_16_ok <| .nil)
     tabc_h28_b28_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h28_L_ok : ForsPotential.checkCoversH 28 28 25 10 925696 5707000000 98795461878014301928930083709386753 [cover_h28_b28_0] [] = true := by
+theorem covers_h28_L_ok : ForsPotential.checkCoversH 28 28 25 10 231424 5707000000 98795461878014301928930083709386753 [cover_h28_b28_0] [] = true := by
   simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h28_L_0_ok, by decide +kernel⟩
 

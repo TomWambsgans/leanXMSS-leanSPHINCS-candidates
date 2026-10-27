@@ -57,7 +57,7 @@ theorem h22_pruned8 : Secure127 (.pruned (h := 22) (b := 8) (N := 7_514)) := Lif
 /-- Layered key, 10 + 6 + 6: 81,860,000 signatures. -/
 theorem h22_layered : Secure127 (.layered (h := 22) (d := 3) (ℓ := 6) (N := 81_860_000)) := Lifetimes.h22_layered_bits
 
-/-! ## h = 24 (layered: 12 + 6 + 6) -/
+/-! ## h = 24 (layered: 10 + 7 + 7) -/
 
 /-- Full key: 336,700,000 signatures. -/
 theorem h24_full : Secure127 (.pruned (h := 24) (b := 24) (N := 336_700_000)) := Lifetimes.h24_full_bits
@@ -73,10 +73,10 @@ theorem h24_pruned12 : Secure127 (.pruned (h := 24) (b := 12) (N := 116_600)) :=
 theorem h24_pruned10 : Secure127 (.pruned (h := 24) (b := 10) (N := 30_810)) := Lifetimes.h24_pruned10_bits
 /-- Pruned key, kept subtree of height 8: 8,154 signatures. -/
 theorem h24_pruned8 : Secure127 (.pruned (h := 24) (b := 8) (N := 8_154)) := Lifetimes.h24_pruned8_bits
-/-- Layered key, 12 + 6 + 6: 336,700,000 signatures. -/
-theorem h24_layered : Secure127 (.layered (h := 24) (d := 3) (ℓ := 6) (N := 336_700_000)) := Lifetimes.h24_layered_bits
+/-- Layered key, 10 + 7 + 7: 336,700,000 signatures. -/
+theorem h24_layered : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (N := 336_700_000)) := Lifetimes.h24_layered_bits
 
-/-! ## h = 26 (layered: 12 + 7 + 7) -/
+/-! ## h = 26 (layered: 10 + 8 + 8) -/
 
 /-- Full key: 1,381,000,000 signatures. -/
 theorem h26_full : Secure127 (.pruned (h := 26) (b := 26) (N := 1_381_000_000)) := Lifetimes.h26_full_bits
@@ -92,10 +92,10 @@ theorem h26_pruned12 : Secure127 (.pruned (h := 26) (b := 12) (N := 126_900)) :=
 theorem h26_pruned10 : Secure127 (.pruned (h := 26) (b := 10) (N := 33_480)) := Lifetimes.h26_pruned10_bits
 /-- Pruned key, kept subtree of height 8: 8,830 signatures. -/
 theorem h26_pruned8 : Secure127 (.pruned (h := 26) (b := 8) (N := 8_830)) := Lifetimes.h26_pruned8_bits
-/-- Layered key, 12 + 7 + 7: 1,381,000,000 signatures. -/
-theorem h26_layered : Secure127 (.layered (h := 26) (d := 3) (ℓ := 7) (N := 1_381_000_000)) := Lifetimes.h26_layered_bits
+/-- Layered key, 10 + 8 + 8: 1,381,000,000 signatures. -/
+theorem h26_layered : Secure127 (.layered (h := 26) (d := 3) (ℓ := 8) (N := 1_381_000_000)) := Lifetimes.h26_layered_bits
 
-/-! ## h = 28 (layered: 12 + 8 + 8) -/
+/-! ## h = 28 (layered: 10 + 9 + 9) -/
 
 /-- Full key: 5,634,000,000 signatures. -/
 theorem h28_full : Secure127 (.pruned (h := 28) (b := 28) (N := 5_634_000_000)) := Lifetimes.h28_full_bits
@@ -111,8 +111,8 @@ theorem h28_pruned12 : Secure127 (.pruned (h := 28) (b := 12) (N := 137_400)) :=
 theorem h28_pruned10 : Secure127 (.pruned (h := 28) (b := 10) (N := 36_190)) := Lifetimes.h28_pruned10_bits
 /-- Pruned key, kept subtree of height 8: 9,541 signatures. -/
 theorem h28_pruned8 : Secure127 (.pruned (h := 28) (b := 8) (N := 9_541)) := Lifetimes.h28_pruned8_bits
-/-- Layered key, 12 + 8 + 8: 5,634,000,000 signatures. -/
-theorem h28_layered : Secure127 (.layered (h := 28) (d := 3) (ℓ := 8) (N := 5_634_000_000)) := Lifetimes.h28_layered_bits
+/-- Layered key, 10 + 9 + 9: 5,634,000,000 signatures. -/
+theorem h28_layered : Secure127 (.layered (h := 28) (d := 3) (ℓ := 9) (N := 5_634_000_000)) := Lifetimes.h28_layered_bits
 
 /-! ## All together -/
 
@@ -121,11 +121,11 @@ def configurations : List Params := [
   .pruned 22 22 81_860_000, .pruned 22 20 21_760_000, .pruned 22 14 405_300, .pruned 22 13 208_500,
   .pruned 22 12 107_200, .pruned 22 10 28_410, .pruned 22 8 7_514, .layered 22 3 6 81_860_000,
   .pruned 24 24 336_700_000, .pruned 24 20 23_830_000, .pruned 24 14 441_500, .pruned 24 13 226_800,
-  .pruned 24 12 116_600, .pruned 24 10 30_810, .pruned 24 8 8_154, .layered 24 3 6 336_700_000,
+  .pruned 24 12 116_600, .pruned 24 10 30_810, .pruned 24 8 8_154, .layered 24 3 7 336_700_000,
   .pruned 26 26 1_381_000_000, .pruned 26 20 26_030_000, .pruned 26 14 480_100, .pruned 26 13 246_900,
-  .pruned 26 12 126_900, .pruned 26 10 33_480, .pruned 26 8 8_830, .layered 26 3 7 1_381_000_000,
+  .pruned 26 12 126_900, .pruned 26 10 33_480, .pruned 26 8 8_830, .layered 26 3 8 1_381_000_000,
   .pruned 28 28 5_634_000_000, .pruned 28 20 28_350_000, .pruned 28 14 522_000, .pruned 28 13 267_900,
-  .pruned 28 12 137_400, .pruned 28 10 36_190, .pruned 28 8 9_541, .layered 28 3 8 5_634_000_000]
+  .pruned 28 12 137_400, .pruned 28 10 36_190, .pruned 28 8 9_541, .layered 28 3 9 5_634_000_000]
 
 /-- **Main theorem**: every configuration has 127 bits of SUF-CMA security. -/
 theorem requestedSecurity : ∀ P ∈ configurations, Secure127 P := by
