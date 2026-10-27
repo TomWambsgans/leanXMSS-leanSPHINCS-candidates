@@ -24,19 +24,19 @@ for the deterministic Lean signer in every configuration of [README.md](README.m
 | b | proved N | cover attack | best known attack | proved / best known |
 | ---: | ---: | ---: | ---: | ---: |
 | 24 (full tree, and layered) | 336,700,000 | 3.59915e8 | 3.60e8 | 94% |
-| 20 | 23,830,000 | 2.63862e7 | 2.64e7 | 90% |
-| 14 | 441,500 | 5.18006e5 | 5.18e5 | 85% |
-| 13 | 226,800 | 2.68735e5 | 2.69e5 | 84% |
-| 12 | 116,600 | 1.39374e5 | 1.39e5 | 84% |
-| 10 | 30,810 | 3.74550e4 | 3.74e4 | 82% |
-| 8 | 8,154 | 1.00543e4 | 9.85e3 | 83% |
+| 20 | 23,830,000 | 2.63862e7 | 2.62e7 | 91% |
+| 14 | 441,500 | 5.18006e5 | 5.00e5 | 88% |
+| 13 | 226,800 | 2.68735e5 | 2.56e5 | 89% |
+| 12 | 116,600 | 1.39374e5 | 1.32e5 | 88% |
+| 10 | 30,810 | 3.74550e4 | 3.49e4 | 88% |
+| 8 | 8,154 | 1.00543e4 | 9.19e3 | 89% |
 
 The cover attack column is the lifetime in the cover model: the number of signatures at which a
 digest query covers a forest with probability `2^-127` (Poisson loads of the kept indices). The best
 known attack also uses the WOTS+C unit-neighbour route, which applies unchanged: a forger that sees
 the realized key takes the better of the cover rate `Y` and the rate `r` of that route, and the
-lifetime is the largest `N` with `E[max(Y, r)] ≤ 1`. It is 100% of the cover lifetime except at
-`b = 8`, where it is 98% (`b = 24 … 8`). `scripts/forest_attack.py` computes both columns
+lifetime is the largest `N` with `E[max(Y, r)] ≤ 1`. It is 100, 99, 96, 95, 95, 93 and 91% of the
+cover lifetime (`b = 24 … 8`). `scripts/forest_attack.py` computes both columns
 (`forest_attack.py cover H` the cover model at height `H`). `Y` comes from a
 Monte Carlo of the realized key (loads, leaves, WOTS keys, codewords), with about 0.3% of noise on `N`
 and 0.6% at `b = 8`: the column has three digits and the ratios are good to about a point. The rate is

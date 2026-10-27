@@ -1,6 +1,6 @@
 name = "sphincs-security"
 version = "0.1.0"
-defaultTargets = ["LeanForest"]
+defaultTargets = ["LeanForest", "FORS"]
 
 [[require]]
 name = "VCVio"

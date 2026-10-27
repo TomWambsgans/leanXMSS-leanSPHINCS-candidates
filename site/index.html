@@ -262,7 +262,8 @@ footer a + a { margin-left: 1.25rem; }
 
   /* The toggles fit the width of a phone */
   .toggles { font-size: 0.924rem; column-gap: 0.6rem; }
-  .seg button { padding: 0.16rem 0.48rem; }
+  .toggles .sl.two { max-width: 4.6rem; line-height: 1.15; }   /* "FTS variant" on two lines, so the hashes stay on one */
+  .seg button { padding: 0.16rem 0.4rem; }
 
   /* Threshold: small tables that fit as they are */
   .tables .plain { width: 100%; font-size: 0.95rem; }
@@ -318,7 +319,7 @@ footer a + a { margin-left: 1.25rem; }
         <div class="seg" role="radiogroup" aria-labelledby="tl-shape" data-key="shape"><button type="button" role="radio" data-val="pruned">Pruning</button><button type="button" role="radio" data-val="layered">Uniform</button></div>
         <span class="sl" id="tl-hash">Hash</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-hash" data-key="hash"><button type="button" role="radio" data-val="BLAKE2s">BLAKE2s</button><button type="button" role="radio" data-val="SHA-256">SHA-256</button><button type="button" role="radio" data-val="Keccak-256">Keccak-256</button></div>
-        <span class="sl"><span id="tl-v">FTS variant</span><span class="info w dn" id="v-tip" tabindex="0" role="button" aria-label="More information" data-tip="">i</span></span>
+        <span class="sl two"><span id="tl-v">FTS variant</span><span class="info w dn" id="v-tip" tabindex="0" role="button" aria-label="More information" data-tip="">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-v" data-key="v"><button type="button" role="radio" data-val="forest">WOTS forest</button><button type="button" role="radio" data-val="fors">FORS</button></div>
       </div>
       <div class="scroll">
@@ -338,7 +339,7 @@ footer a + a { margin-left: 1.25rem; }
     </div>
   </div>
   <figure>
-      <svg viewBox="10 -123 572 603" preserveAspectRatio="xMaxYMid meet" role="img" aria-label="A leanSphincs signature">
+      <svg viewBox="0 -123 582 603" preserveAspectRatio="xMaxYMid meet" role="img" aria-label="A leanSphincs signature">
         <defs><linearGradient id="fade" gradientUnits="userSpaceOnUse" x1="0" y1="178" x2="0" y2="204"><stop offset="0" class="f0"/><stop offset="1" class="f1"/></linearGradient></defs>
         <g class="part xmss pruned">
           <g class="tree">
@@ -949,6 +950,8 @@ footer a + a { margin-left: 1.25rem; }
     var i = cur, r = i.getBoundingClientRect(), t = tip.getBoundingClientRect(), W = document.documentElement.clientWidth;
     var x = i.classList.contains('r') ? r.right - t.width : r.left;
     var y = i.classList.contains('dn') || r.top - t.height - 8 < 0 ? r.bottom + 8 : r.top - t.height - 8;
+    // below its (i) but past the bottom of the window: above it, if it fits there
+    if (y > r.top && y + t.height > innerHeight - 8 && r.top - t.height - 8 >= 0) y = r.top - t.height - 8;
     tip.style.left = Math.max(8, Math.min(x, W - t.width - 8)) + 'px';
     tip.style.top = y + 'px';
   }
