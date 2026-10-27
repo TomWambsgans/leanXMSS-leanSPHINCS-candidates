@@ -69,8 +69,8 @@ h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height:
 figure { margin: 0; position: relative; min-height: 18rem; }
 figure svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .titlerow { position: relative; }
-/* the versions, under the title: v1 (later a link), v2 (this page), v3? (a tip asking for feedback) */
-.versions { display: flex; gap: 0.4rem; margin-top: 0.5rem; font-size: 0.85rem; }
+/* the versions, at the bottom: v1 (later a link), v2 (this page), v3? (a tip asking for feedback) */
+.versions { display: flex; gap: 0.4rem; font-size: 0.85rem; }
 .ver { border: 1px solid var(--tree); border-radius: 6px; padding: 0.05rem 0.55rem; line-height: 1.5; color: var(--muted); }
 .ver.cur { background: var(--ink); border-color: var(--ink); color: #fff; }
 .ver.info { display: inline-block; width: auto; height: auto; margin-left: 0; border: 1px dashed var(--tree); border-radius: 6px;
@@ -291,7 +291,7 @@ footer a + a { margin-left: 1.25rem; }
 .sphinx-line.inflow .sphinx { position: relative; left: 0; top: 0; transform: none; display: block; width: min(108%, 100% + 2rem); margin-left: max(-4%, -1rem); height: auto; }   /* its faded ends reach into the margins */
 @media (max-width: 600px) {
   header { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.9rem; align-items: center; }
-  h1, .sphinx-line, .versions { grid-column: 1 / -1; }
+  h1, .sphinx-line { grid-column: 1 / -1; }
   .sphinx-line.inflow { order: 4; margin-top: 1rem; }
 }
 </style>
@@ -302,9 +302,7 @@ footer a + a { margin-left: 1.25rem; }
 <div class="page">
   <div class="text">
     <header>
-      <div class="titlerow"><h1>leanSphincs exploration</h1>
-        <div class="versions" aria-label="Versions"><span class="ver">v1</span><span class="ver cur" aria-current="page">v2</span><span class="ver info dn" tabindex="0" role="button" aria-label="v3?" data-tip="Feedback welcome, please open an issue in [TomWambsgans/sphincs.art](https://github.com/TomWambsgans/sphincs.art/issues).">v3?</span></div>
-      </div>
+      <div class="titlerow"><h1>leanSphincs exploration</h1></div>
     </header>
     <div class="params">
       <div class="toggles" id="toggles">
@@ -911,6 +909,7 @@ footer a + a { margin-left: 1.25rem; }
 
 <footer>
   <p><a href="https://github.com/TomWambsgans/sphincs.art/blob/v2/leanSPHINCS.tex">Note</a><a href="https://github.com/TomWambsgans/sphincs.art/tree/v2">Code</a><a href="https://github.com/TomWambsgans/sphincs.art/tree/v2/formal/sphincs">Proofs</a></p>
+  <div class="versions" aria-label="Versions"><span class="ver">v1</span><span class="ver cur" aria-current="page">v2</span><span class="ver info" tabindex="0" role="button" aria-label="v3?" data-tip="Feedback welcome, please open an issue in [TomWambsgans/sphincs.art](https://github.com/TomWambsgans/sphincs.art/issues).">v3?</span></div>
 </footer>
 
 </main>
