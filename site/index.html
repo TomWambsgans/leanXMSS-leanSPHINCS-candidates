@@ -310,7 +310,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
 }
 </style>
 </head>
-<body data-v="vanilla">
+<body data-v="spicy">
 <main>
 
 <div class="page">
@@ -327,7 +327,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
         <span class="sl" id="tl-hash">Hash</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-hash" data-key="hash"><button type="button" role="radio" data-val="BLAKE2s">BLAKE2s</button><button type="button" role="radio" data-val="SHA-256">SHA-256</button><button type="button" role="radio" data-val="Keccak-256">Keccak-256</button></div>
         <span class="sl"><span id="tl-v">Variant</span><span class="info w dn" id="v-tip" tabindex="0" role="button" aria-label="More information" data-tip="">i</span></span>
-        <div class="seg" role="radiogroup" aria-labelledby="tl-v" data-key="v"><button type="button" role="radio" data-val="vanilla">vanilla</button><button type="button" role="radio" data-val="spicy">spicy</button></div>
+        <div class="seg" role="radiogroup" aria-labelledby="tl-v" data-key="v"><button type="button" role="radio" data-val="spicy">spicy</button><button type="button" role="radio" data-val="vanilla">vanilla</button></div>
       </div>
       <div class="scroll">
       <table>
@@ -1006,7 +1006,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
 // The figures: every number comes from data.json (python3 scripts/scheme.py --json > site/data.json),
 // for the configuration chosen with the three toggles (height, shape, hash).
 (function () {
-  var S = { h: 26, shape: 'layered', hash: 'Keccak-256', v: 'vanilla' }, D = null, KEY = 'leanSphincs.config';
+  var S = { h: 26, shape: 'layered', hash: 'Keccak-256', v: 'spicy' }, D = null, KEY = 'leanSphincs.config';
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (saved) ['h', 'shape', 'hash', 'v'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
@@ -1215,7 +1215,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
   }).then(function (d) {
     D = d;
     // a saved choice that the data no longer has falls back to the default
-    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256', v: 'vanilla' }; }
+    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256', v: 'spicy' }; }
     render();
   }).catch(function (e) {
     console.error(e);
@@ -1233,7 +1233,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
   var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 239;   // the column of the path, the tip of the forest brace
   var pruned = svg.querySelector('.xmss.pruned'), layered = svg.querySelector('.xmss.layered');
   var motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var shown = 'pruned', shownV = 'vanilla', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
+  var shown = 'pruned', shownV = 'spicy', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
 
   function el(name, attrs, parent) {
     var e = document.createElementNS(NS, name);
