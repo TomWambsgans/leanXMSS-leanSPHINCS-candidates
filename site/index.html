@@ -1013,7 +1013,7 @@ footer a + a { margin-left: 1.25rem; }
     var e = b === 20 ? 24 : Math.round(Math.log2(n));   // "about", and the exact count, only when it is below 2^e
     if (n >= Math.pow(2, e)) return pow2(e) + ' signatures';
     return '&asymp;&thinsp;' + pow2(e) + ' signatures' +
-      info('[Proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/v2/formal/sphincs): ' + comma(n) + ' signatures, at 127 bits of security (ROM)');
+      info('[Proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/v2/formal/sphincs): ≥ 2^' + (Math.floor(Math.log2(n) * 10) / 10).toFixed(1) + ' signatures');
   }
   function life(x) {
     var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(x)) - 2);
