@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Serve the site with caching disabled: python3 site/serve.py [port]  (default 8000)
 
-leanSPHINCS at http://localhost:8000/, leanXMSS at http://localhost:8000/xmss/
+leanSPHINCS at http://localhost:8000/
 """
 
 import functools
