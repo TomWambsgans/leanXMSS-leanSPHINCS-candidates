@@ -1,130 +1,104 @@
 import LeanFors.Classification.Accepted
 
-/-! The forest part of the classification that keeps the recovered FORS key
-(`accepted_recovered_classification`, `Classification/Accepted.lean`). A recovered canonical FORS key is a
-structural match (WOTS-key leaf, subtree node, tree leaf or tree node), or every path is canonical
-and every opened chain value is canonical or walks into its chain through a match. A tree has no
-root hash and the key is not hashed: the key is the two level-3 nodes of every tree, and a tree leaf
-hashes the two level-2 nodes of each of its subtrees, one reached by the fold and one the last path
-element. -/
+/-! The FORS part of the classification that keeps the recovered FORS key
+(`accepted_recovered_classification`, `Classification/Accepted.lean`), refined tree by tree. A
+recovered canonical FORS key either has a node match at a hashed level — a first-order hit — or, in
+every tree, the canonical path and a secret that is canonical or a leaf match. It is
+`Fors.tree_classification` (`Classification/Forest.lean`) with the canonical path kept in the leaf
+branch, where only the secret differs. -/
 
 open OracleComp OracleSpec
 
-namespace LeanFors.Security.Forest
+namespace LeanFors.Security.Fors
 
 variable [Params]
 open Concrete
 
 section Refined
 
-variable (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index) (seed : MasterSeed)
+variable (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index) (κ : FTree)
+  (seed : MasterSeed)
 
-/-- The exceptional branches other than a chain match: a WOTS-key leaf, a subtree node, a tree leaf
-or a tree node. A node match is at a hashed level: subtree levels 1 and 2, tree levels 1 to 3. -/
-def StructException (marks : Coord → CoordMark) (opening : Coord → CoordOpening) : Prop :=
-  (∃ c j, ChildLeafMatch f parameter index seed c (marks c) j ((opening c).sub j).values) ∨
-  (∃ c j level, level < subHeight - 1 ∧
-    SubNodeMatch f parameter index seed c (marks c) j ((opening c).sub j) level) ∨
-  (∃ c, SuperMatch f parameter index seed c (marks c) (opening c)) ∨
-  (∃ c level, level < topHeight - 1 ∧ TopNodeMatch f parameter index seed c (marks c) (opening c) level)
-
-/-- One subtree with the two canonical level-2 nodes: a WOTS-key leaf match, a node match, or a
-canonical path with every chain canonical or a chain match. -/
-theorem sub_refined (c : Coord) (mark : CoordMark) (j : SubIdx) (opening : SubOpening)
-    (htops : opSubTops f parameter index c mark j opening =
-      Completeness.subTopsValue f parameter index c seed mark.super j) :
-    ChildLeafMatch f parameter index seed c mark j opening.values ∨
-    (∃ level, level < subHeight - 1 ∧ SubNodeMatch f parameter index seed c mark j opening level) ∨
-    (opening.path = canonicalSubPath f parameter index seed c mark.super j (mark.child j) ∧
-      ∀ i, opening.values i = Completeness.chainValueOf f parameter index c mark.super j (mark.child j) i seed
-          (chainTop - (lut (mark.word j) i).val) ∨
-        ChainMatch f parameter index seed c mark j opening.values i) := by
-  classical
-  rcases sub_fold_classification f parameter index seed c mark j opening htops with
-    ⟨hleaf, hpath'⟩ | ⟨level, hlevel, hmatch⟩
-  · by_cases hends : opEnds f parameter index c mark j opening.values =
-        Completeness.childEnds f parameter index c mark.super j seed (mark.child j)
-    · refine Or.inr (Or.inr ⟨hpath', fun i => ?_⟩)
-      by_cases hi : opening.values i = Completeness.chainValueOf f parameter index c mark.super j
-          (mark.child j) i seed (chainTop - (lut (mark.word j) i).val)
-      · exact Or.inl hi
-      · refine Or.inr ?_
-        have hd : (lut (mark.word j) i).val ≤ chainTop := Nat.le_of_lt_succ (lut (mark.word j) i).isLt
-        have hwalk : walkValue f parameter index c mark.super j (mark.child j) i
-            (chainTop - (lut (mark.word j) i).val) (opening.values i) (lut (mark.word j) i).val =
-          honestChain f parameter index c mark.super j (mark.child j) i
-            (Completeness.forestSecret f parameter index c mark.super j (mark.child j) i seed)
-            (chainTop - (lut (mark.word j) i).val + (lut (mark.word j) i).val) := by
-          rw [Nat.sub_add_cancel hd]
-          exact congrFun hends i
-        rcases forestWalk_extract_above f parameter index c mark.super j (mark.child j) i
-            (Completeness.forestSecret f parameter index c mark.super j (mark.child j) i seed)
-            (chainTop - (lut (mark.word j) i).val) (opening.values i) (lut (mark.word j) i).val 0
-            (by omega) (Nat.zero_le _) hwalk with h0 | ⟨offset, hoffset, _, hlt, hhit⟩
-        · exact False.elim (hi (by simpa only [walkValue, forestWalk, evalWithAnswerFn_pure,
-            Nat.add_zero, chainValueOf_eq_honest] using h0))
-        · exact ⟨offset, hoffset, hlt, hhit⟩
-    · exact Or.inl ⟨hends, hleaf⟩
-  · exact Or.inr (Or.inl ⟨level, hlevel, hmatch⟩)
-
-/-- One tree with the two canonical level-3 nodes: a tree-leaf match, a tree-node match, or a
-canonical top path with the level-2 nodes of both subtrees canonical. -/
-theorem coord_refined (c : Coord) (mark : CoordMark) (opening : CoordOpening)
-    (htops : opTops f parameter index c mark opening = Completeness.topTopsValue f parameter index c seed) :
-    SuperMatch f parameter index seed c mark opening ∨
-    (∃ level, level < topHeight - 1 ∧ TopNodeMatch f parameter index seed c mark opening level) ∨
-    (opening.top = canonicalTopPath f parameter index seed c mark.super ∧
-      ∀ j, opSubTops f parameter index c mark j (opening.sub j) =
-        Completeness.subTopsValue f parameter index c seed mark.super j) := by
-  classical
-  rcases top_fold_classification f parameter index seed c mark opening htops with
-    ⟨hsuper, hpath'⟩ | ⟨level, hlevel, hmatch⟩
-  · by_cases hpayload : superPayload (fun j => opSubTops f parameter index c mark j (opening.sub j)) =
-        superPayload (Completeness.subTopsValue f parameter index c seed mark.super)
-    · exact Or.inr (Or.inr ⟨hpath', fun j => congrFun (superPayload_injective hpayload) j⟩)
-    · exact Or.inl ⟨hpayload, hsuper⟩
-  · exact Or.inr (Or.inl ⟨level, hlevel, hmatch⟩)
-
-/-- **Chain-by-chain classification of a recovered canonical FORS key.** -/
-theorem recovered_classification (marks : Coord → CoordMark) (opening : Coord → CoordOpening)
-    (hrecover : evalWithAnswerFn f (forsRecover parameter index marks opening : OracleComp HashSpec ForsKey) =
-      evalWithAnswerFn f (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey)) :
-    StructException f parameter index seed marks opening ∨
-    ∀ c, (opening c).top = canonicalTopPath f parameter index seed c (marks c).super ∧
-      (∀ j, ((opening c).sub j).path = canonicalSubPath f parameter index seed c (marks c).super j ((marks c).child j)) ∧
-      ∀ j i, ((opening c).sub j).values i = Completeness.chainValueOf f parameter index c (marks c).super j
-          ((marks c).child j) i seed (chainTop - (lut ((marks c).word j) i).val) ∨
-        ChainMatch f parameter index seed c (marks c) j ((opening c).sub j).values i := by
-  classical
-  by_cases hS : StructException f parameter index seed marks opening
-  · exact Or.inl hS
-  right
-  unfold StructException at hS
-  push Not at hS
-  obtain ⟨hleafS, hsubS, hsuperS, htopS⟩ := hS
-  have hroots : roots f parameter index marks opening = canonicalRoots f parameter index seed := by
-    rw [← eval_forestRecover, hrecover, forestKey_eq]
-  intro c
-  have htops : opTops f parameter index c (marks c) (opening c) =
-      Completeness.topTopsValue f parameter index c seed := congrFun hroots c
-  rcases coord_refined f parameter index seed c (marks c) (opening c) htops with hsup | ⟨level, hlevel, htop⟩ |
-      ⟨htop, hsubs⟩
-  · exact (hsuperS c hsup).elim
-  · exact (htopS c level hlevel htop).elim
-  have hsub : ∀ j, ((opening c).sub j).path = canonicalSubPath f parameter index seed c (marks c).super j
-      ((marks c).child j) ∧ ∀ i, ((opening c).sub j).values i = Completeness.chainValueOf f parameter index c
-        (marks c).super j ((marks c).child j) i seed (chainTop - (lut ((marks c).word j) i).val) ∨
-      ChainMatch f parameter index seed c (marks c) j ((opening c).sub j).values i := by
-    intro j
-    rcases sub_refined f parameter index seed c (marks c) j ((opening c).sub j) (hsubs j) with hl | ⟨level, hlevel, hn⟩ | h
-    · exact (hleafS c j hl).elim
-    · exact (hsubS c j level hlevel hn).elim
-    · exact h
-  exact ⟨htop, fun j => (hsub j).1, fun j => (hsub j).2⟩
+/-- One tree with the two canonical top nodes, keeping the path: the path is canonical and the
+secret is canonical or a leaf match, or a node query hits a canonical value. -/
+theorem tree_refined (leaf : FLeaf) (secret : Digest) (path : Fin forsHeight → Digest)
+    (htops : orderTops (leaf.val.testBit (forsHeight - 1)) (topValue f parameter index κ leaf secret path)
+      (topSibling path) = Completeness.topsValue f parameter index seed κ) :
+    (path = canonicalPath f parameter index κ seed leaf ∧
+      (secret = Completeness.forsSecretValue f parameter index κ seed leaf ∨
+        LeafMatch f parameter index κ seed leaf secret)) ∨
+    ∃ level, level < forsHeight - 1 ∧ NodeMatch f parameter index κ seed leaf secret path level := by
+  have ha := Params.forsHeight_ge
+  have hhalf : leaf.val / 2 ^ (forsHeight - 1) < 2 := by
+    have hl := leaf.isLt
+    have : 2 ^ forsHeight = 2 * 2 ^ (forsHeight - 1) := by
+      rw [← Nat.pow_succ']; congr 1; omega
+    exact Nat.div_lt_of_lt_mul (by omega)
+  obtain ⟨htop, hsibling⟩ := (Completeness.orderTops_eq_iff
+    (Completeness.forsNodeValue f parameter index κ seed (forsHeight - 1)) leaf.val (forsHeight - 1)
+      hhalf _ _).mp htops
+  have hfold : merkleValue f parameter (forsDomain index κ) leaf.val (extendPath path)
+      (leafValue f parameter index κ leaf secret) (forsHeight - 1) =
+    merkleValue f parameter (forsDomain index κ) leaf.val
+      (extendPath (canonicalPath f parameter index κ seed leaf))
+      (leafValue f parameter index κ leaf (Completeness.forsSecretValue f parameter index κ seed leaf))
+      (forsHeight - 1) := by
+    simp only [merkleValue, merkleFold_forsFold _ _ _ _ _ _ (Nat.sub_le _ _)]
+    exact htop.trans (canonical_top f parameter index κ seed leaf).symm
+  rcases merkleFold_same_index f parameter _ leaf.val _ _ _ _ (forsHeight - 1) hfold with
+    ⟨hleaf, hpath⟩ | hmatch
+  · refine Or.inl ⟨?_, ?_⟩
+    · funext level
+      by_cases hlevel : level.val < forsHeight - 1
+      · have hp := hpath level.val hlevel
+        simpa only [extendPath, dif_pos level.isLt] using hp
+      · have hlast : level = topLevel := by
+          apply Fin.ext
+          have := level.isLt
+          simp only [topLevel]
+          omega
+        rw [hlast]
+        exact hsibling
+    · by_cases hsecret : secret = Completeness.forsSecretValue f parameter index κ seed leaf
+      · exact Or.inl hsecret
+      · exact Or.inr ⟨hsecret, hleaf⟩
+  · exact Or.inr hmatch
 
 end Refined
 
-end LeanFors.Security.Forest
+section Key
+
+variable (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (index : Index) (seed : MasterSeed)
+
+/-- The exceptional branch of a recovered key that is a first-order hit: a node match at a hashed
+level. The leaf match is left in the refined classification, since it is a contact at a hidden
+secret. -/
+def NodeException (leaves : FTree → FLeaf) (opening : FTree → TreeOpening) : Prop :=
+  ∃ κ level, level < forsHeight - 1 ∧
+    NodeMatch f parameter index κ seed (leaves κ) (opening κ).secret (opening κ).path level
+
+/-- **Tree-by-tree classification of a recovered canonical FORS key.** -/
+theorem recovered_classification (leaves : FTree → FLeaf) (opening : FTree → TreeOpening)
+    (hrecover : evalWithAnswerFn f (forsRecover parameter index leaves opening : OracleComp HashSpec ForsKey) =
+      evalWithAnswerFn f (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey)) :
+    NodeException f parameter index seed leaves opening ∨
+    ∀ κ, (opening κ).path = canonicalPath f parameter index κ seed (leaves κ) ∧
+      ((opening κ).secret = Completeness.forsSecretValue f parameter index κ seed (leaves κ) ∨
+        LeafMatch f parameter index κ seed (leaves κ) (opening κ).secret) := by
+  classical
+  have htops : tops f parameter index leaves opening = fun κ => Completeness.topsValue f parameter index seed κ := by
+    rw [← eval_forsRecover, hrecover, Completeness.forsKey_eq]
+  by_cases hN : NodeException f parameter index seed leaves opening
+  · exact Or.inl hN
+  refine Or.inr fun κ => ?_
+  rcases tree_refined f parameter index κ seed (leaves κ) (opening κ).secret (opening κ).path
+    (congrFun htops κ) with h | ⟨level, hlevel, hnode⟩
+  · exact h
+  · exact absurd ⟨κ, level, hlevel, hnode⟩ hN
+
+end Key
+
+end LeanFors.Security.Fors
 
 
 namespace LeanFors.Security.SignatureWitness
@@ -136,34 +110,30 @@ attribute [local irreducible] messageDigest forsRecover otsLeaf treeFold
   Seeded.forsKey Seeded.treeRoot Seeded.treePath chainWalk encode
 
 
-/-- A recovered opening whose forest part is the canonical opening is a canonical opening. -/
+/-- A recovered opening whose FORS part is the canonical opening is a canonical opening. -/
 theorem RecoveredOpening.canonical {f : QueryImpl HashSpec Id} {pk : PublicKey} {seed : MasterSeed}
     {message : Message} {signature : Signature} {counter : Layer → Counter}
     (h : RecoveredOpening f pk seed message signature counter)
-    (hopening : Forest.Opening f pk.parameter (index f pk message signature) seed
+    (hopening : Fors.Opening f pk.parameter (index f pk message signature) seed
       (digestLeaves (verificationDigest f pk message signature)) signature.fors) :
     CanonicalOpening f pk seed message signature counter
       (chosenWord f pk.parameter seed (index f pk message signature)) :=
   ⟨h.1, h.2.1, hopening⟩
 
-/-- **The refined forest case.** -/
-theorem RecoveredOpening.forest_classification {f : QueryImpl HashSpec Id} {pk : PublicKey}
+/-- **The refined FORS case.** -/
+theorem RecoveredOpening.fors_classification {f : QueryImpl HashSpec Id} {pk : PublicKey}
     {seed : MasterSeed} {message : Message} {signature : Signature} {counter : Layer → Counter}
     (h : RecoveredOpening f pk seed message signature counter) :
-    Forest.StructException f pk.parameter (index f pk message signature) seed
+    Fors.NodeException f pk.parameter (index f pk message signature) seed
         (digestLeaves (verificationDigest f pk message signature)) signature.fors ∨
-    ∀ c, (signature.fors c).top = Forest.canonicalTopPath f pk.parameter (index f pk message signature) seed c
-        (digestLeaves (verificationDigest f pk message signature) c).super ∧
-      (∀ j, ((signature.fors c).sub j).path = Forest.canonicalSubPath f pk.parameter (index f pk message signature)
-        seed c (digestLeaves (verificationDigest f pk message signature) c).super j
-        ((digestLeaves (verificationDigest f pk message signature) c).child j)) ∧
-      ∀ j i, ((signature.fors c).sub j).values i = Completeness.chainValueOf f pk.parameter
-          (index f pk message signature) c (digestLeaves (verificationDigest f pk message signature) c).super j
-          ((digestLeaves (verificationDigest f pk message signature) c).child j) i seed
-          (chainTop - (lut ((digestLeaves (verificationDigest f pk message signature) c).word j) i).val) ∨
-        Forest.ChainMatch f pk.parameter (index f pk message signature) seed c
-          (digestLeaves (verificationDigest f pk message signature) c) j ((signature.fors c).sub j).values i :=
-  Forest.recovered_classification f pk.parameter (index f pk message signature) seed
+    ∀ κ, (signature.fors κ).path = Fors.canonicalPath f pk.parameter (index f pk message signature) κ seed
+        (digestLeaves (verificationDigest f pk message signature) κ) ∧
+      ((signature.fors κ).secret = Completeness.forsSecretValue f pk.parameter
+          (index f pk message signature) κ seed
+          (digestLeaves (verificationDigest f pk message signature) κ) ∨
+        Fors.LeafMatch f pk.parameter (index f pk message signature) κ seed
+          (digestLeaves (verificationDigest f pk message signature) κ) (signature.fors κ).secret) :=
+  Fors.recovered_classification f pk.parameter (index f pk message signature) seed
     (digestLeaves (verificationDigest f pk message signature)) signature.fors h.2.2
 
 end LeanFors.Security.SignatureWitness
