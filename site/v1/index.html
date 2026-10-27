@@ -199,6 +199,12 @@ svg .fors polygon { fill: none; stroke: var(--tree); stroke-width: 1; stroke-lin
 footer { display: flex; justify-content: space-between; gap: 2rem; margin-top: 1.5rem; color: var(--muted); }
 footer p { margin: 0; }
 footer a + a { margin-left: 1.25rem; }
+/* the versions: v1 (this page), v2 (the current page, at the root) */
+.versions { display: flex; gap: 0.4rem; font-size: 0.85rem; }
+.ver { border: 1px solid var(--tree); border-radius: 6px; padding: 0.05rem 0.55rem; line-height: 1.5; color: var(--muted); }
+a.ver { text-decoration: none; }
+a.ver:hover { color: var(--ink); border-color: var(--ink); }
+.ver.cur { background: var(--ink); border-color: var(--ink); color: #fff; }
 
 @media (hover: none), (max-width: 600px) {
   .info::after, .cmp .dev .info::after, .info.r::after, .info.w::after {
@@ -775,6 +781,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
 
 <footer>
   <p><a href="https://github.com/TomWambsgans/sphincs.art/blob/1562b956626a58f690faea788b64702675475839/leanSPHINCS.tex">Note</a><a class="hk" href="https://github.com/TomWambsgans/sphincs.art/tree/keccak">Code</a><a class="hb" href="https://github.com/TomWambsgans/sphincs.art/tree/1562b956626a58f690faea788b64702675475839">Code</a><a class="hk" href="https://github.com/TomWambsgans/sphincs.art/tree/keccak/formal/sphincs">Proofs</a><a class="hb" href="https://github.com/TomWambsgans/sphincs.art/tree/1562b956626a58f690faea788b64702675475839/formal/sphincs">Proofs</a></p>
+  <div class="versions" aria-label="Versions"><span class="ver cur" aria-current="page">v1</span><a class="ver" href="/">v2</a></div>
 </footer>
 
 </main>
