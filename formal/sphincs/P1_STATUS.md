@@ -1,6 +1,7 @@
 # P1 status (CoverBound and FORS certificates)
 
-## Builds (checked on h1, `/root/fors-p1`)
+## Builds (checked on h1, `/root/fors-p1`; the whole of `CoverBound` is green against the real
+tree, 0 errors and 0 warnings)
 - `Moments`, `FirstMoment`, `SecondMoment`, `IndexFactor`, `MarkAverage`: unchanged, green.
   `coverR t X` (`t ∈ X`), `Ψ1R_eq : Ψ1R n = 1 - (1 - 1/A)^n`,
   `Ψ2R_eq : Ψ2R n = 1 - 2(1-1/A)^n + ((1-1/A)^n + (A-1)(1-2/A)^n)/A`, `A = leavesR = 2^forsHeight`.
@@ -22,8 +23,11 @@
   after `hH hb` and `subst` them. Exponents `8 → forsTrees`, tables `P1tab a`, `P2tab a`.
 - `NearMomentTable`: emptied (FORS has no half-cover moment). **It can be deleted together with its
   import in `LeanFors.lean` (the lead's file); nothing imports it any more.**
-- `PerIndex`, `NearMoment`: unchanged (already FORS), green against a **scratch stub** of
-  `CoverPotential/Basic` (`ForestPotential.excess`), since the real one does not build yet.
+- `PerIndex`, `NearMoment`: unchanged (already FORS), green.
+- `NearOption` (rewritten): `nBound H k a n := k * κQ H * (P1tab a).getD n 0 ^ (k - 1)`, cap
+  `(k : ℚ) * κQ H`, `checkOptN H k a t o`, `avgN_near_le hH hb hk ha ho`,
+  `hNearOf_le H b k a N qtop hH hb hk ha hN t o hr ht ho q hq`. Green since `LargeBudget/Route`
+  landed (ef5da94).
 
 - `Certificates/Build.lean` (ported): `checkOptB H b k a`, `checkCoverW_of`/`checkCoverH_of`(`_pt`)
   with `{H b k a K N qstart}`, `gZ H k a n1 c1`, `hZ H k a n1 θ A2 E`, `nZ H k a n1`,
@@ -40,16 +44,14 @@
   `hNearOf_le`) has never been elaborated: those two imports do not build yet.
 
 ## Not verified against the real tree yet
-- `NearOption`: blocked by its import of `LargeBudget/Covers` (→ `LargeBudget/Route` →
-  `WeightedPotential`, and `CoverPotential/StartValue`, 7 errors, not mine). Its arithmetic half
-  (`nBound`, `OptN`, `checkOptN`, `checkOptN_parts`, `SepGood.one`, `avgN_near_le`) is green as a
-  scratch module; the rest (`hTermO_near_le`, `hNearOf`, `hNearOf_le`) is the forest's text with
-  `k a` threaded and has only been read.
-- `Certificates/{Build, H22, H24, H26, H28}` and `Lifetimes.lean`: green against scratch copies of
-  `LargeBudget/Covers`, `Certificates/Closing` (including `ForestPotential.checkSmallF`, copied from
-  5983874) and `NearOption` that hold exactly the checker definitions of the real files. Kernel
-  times with `decide +kernel`: H22 83 s, H24 105 s, H26 116 s, H28 116 s (the forest's are 30–50 s;
-  the entries are raised to the power `k = 25` or `26` instead of 8).
+
+Only `Certificates/{Build, H22, H24, H26, H28}` (and `Lifetimes.lean`, which sits on them). They are
+green and kernel-checked against a **single** scratch copy of `Certificates/Closing` holding the
+four checker definitions that file and `SmallBudget/Closing` own — `denHB`, `checkRateH`,
+`checkCoverH`, `checkCoversHeavy`, `checkCoversH` and `ForestPotential.checkSmallF` — copied
+verbatim. Everything else they read (`LargeBudget/Covers`, `CoverBound/*`) is the real tree.
+Kernel times with `decide +kernel`, 12 GB cap: Build 4 s, H22 89 s, H24 84 s, H26 93 s, H28 93 s
+(the forest's are 30–50 s; the entries are raised to the power `k = 25` or `26` instead of 8).
 
 ## The proved lifetimes (`maxn`, then rounded down to four significant digits)
 
@@ -72,5 +74,4 @@ rising to 98.4 / 96.7 / 91.9 / 91.1 / 90.2 / 88.5 / 86.7 % at h = 28. The splits
 
 ## Build practice
 `scratchpad/fb.sh h1 /root/fors-p1 12 <targets>`; `scratchpad/sb.sh` is the same with the scratch
-`CoverPotential/{Basic,FairCoin}` stubs overlaid (never committed) for `PerIndex`, `NearMoment`,
-`HTerm*`.
+`Certificates/Closing` overlaid (never committed) for `Certificates/{Build, H*}`.
