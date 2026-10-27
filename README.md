@@ -1,6 +1,6 @@
-[leanSPHINCS website](https://tomwambsgans.github.io/leanXMSS-leanSPHINCS-candidates/sphincs/)
+[leanSPHINCS website](https://sphincs.art/)
 
-[leanSPHINCS.pdf](https://github.com/TomWambsgans/leanXMSS-leanSPHINCS-candidates/releases/download/doc-latest/leanSPHINCS.pdf)
+[leanSPHINCS.pdf](https://github.com/TomWambsgans/sphincs.art/releases/download/doc-latest/leanSPHINCS.pdf)
 
 [leanSPHINCS security proofs in Lean 4](formal/sphincs/README.md)
 
