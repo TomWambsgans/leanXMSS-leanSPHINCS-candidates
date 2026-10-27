@@ -1007,7 +1007,14 @@ footer a + a { margin-left: 1.25rem; }
   // a lifetime: the same, rounded down (never more than proved)
   // the lifetime of a configuration: as a power of two (rounded down) for the full and layered keys, as the
   // toggle names them, and as a number for a pruned key
-  function lifeOf(c) { return c.shape === 'layered' || c.b === c.h ? pow2(Math.floor(Math.log2(c.lifetime))) : life(c.lifetime); }
+  // a lifetime, rounded down to one significant digit (100K, 20M, 1B): never above what is proved
+  function lifeOf(c) { return life1(c.lifetime); }
+  function life1(n) {
+    var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(n)));
+    n = Math.floor(n / q) * q;
+    for (var i = 0; i < u.length; i++) if (n >= u[i][0]) return (n / u[i][0]) + u[i][1];
+    return String(n);
+  }
   function life(x) {
     var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(x)) - 2);
     x = q >= 1 ? Math.floor(x / q + 1e-9) * q : Math.floor(x);
@@ -1124,7 +1131,7 @@ footer a + a { margin-left: 1.25rem; }
     var ROUNDS = '<th>Rounds' + info('One communication round per layer of AND gates&#10;(' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + ')') + '</th>';
     // with pruning, the Ledger's subtree; the layered key needs no sentence
     set('th-life', lay_ ? '' : 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for a lifetime of ' +
-      life(th.lifetime) + ' signatures:');
+      life1(th.lifetime) + ' signatures:');
     document.querySelector('[data-f="th-life"]').hidden = lay_;
     set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + bytes(th.prep_mb / 1000) + '</td></tr>' +
       '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + comma(th.prep_rounds) + '</td></tr>');
