@@ -1010,8 +1010,9 @@ footer a + a { margin-left: 1.25rem; }
   function lifeOf(c) { return c.shape === 'layered' || c.b === c.h ? pow2(Math.floor(Math.log2(c.lifetime))) : life(c.lifetime); }
   // a pruned key: about 2^17 (b = 12) or 2^24 (b = 20) signatures, the proved count in a tip
   function approx(n, b) {
-    var e = b === 20 ? 24 : Math.round(Math.log2(n));   // "about" only when the proved count is below 2^e
-    return (n < Math.pow(2, e) ? '&asymp;&thinsp;' : '') + pow2(e) + ' signatures' +
+    var e = b === 20 ? 24 : Math.round(Math.log2(n));   // "about", and the exact count, only when it is below 2^e
+    if (n >= Math.pow(2, e)) return pow2(e) + ' signatures';
+    return '&asymp;&thinsp;' + pow2(e) + ' signatures' +
       info('[Proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/v2/formal/sphincs): ' + comma(n) + ' signatures, at 127 bits of security (ROM)');
   }
   function life(x) {
