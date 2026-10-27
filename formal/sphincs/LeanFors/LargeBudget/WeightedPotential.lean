@@ -107,9 +107,10 @@ theorem walk_avg_le_grpM {X : Multiset View → ℝ≥0∞} (hX : Monotone' X) (
 /-- **One signing call, one term, weighted** (the weighted `sign_term`). Averaged over the uniform
 start and the scan, the weighted upper value of a monotone function of the disclosures is at most the
 initial weight times the group of the message applied to that function after one fresh slot. -/
-theorem upper_expectW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none)
-    (hkind : ∀ ρ, tg.kind (blk parameter data m ρ) = .none)
-    {X : Multiset View → ℝ≥0∞} (hX : Monotone' X) (s : State) (d : Multiset View)
+theorem upper_expectW (hparse : ∀ ρ call, model.parse (GraphView.pblk parameter data m ρ call) = none)
+    (hkind : ∀ ρ call, tg.kind (GraphView.pblk parameter data m ρ call) = .none)
+    {X : Multiset View → ℝ≥0∞} (hX : Monotone' X) (s : State)
+    (hinv : PairInv parameter data m s) (d : Multiset View)
     (excl : Pair → Prop) (budget : ℕ) :
     ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
         (weight tg initial out.2 *
@@ -135,7 +136,8 @@ theorem upper_expectW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = 
     rw [ENNReal.tsum_mul_left, tsum_fintype]
     refine le_trans (mul_le_mul' le_rfl (Finset.sum_le_sum fun start _ =>
       loop_bound_combSW tg initial model parameter data m hparse hkind s gf gp digestAttemptLimit
-        (by unfold digestAttemptLimit; norm_num) budget s start (fun _ => Or.inl rfl) (fun _ _ => rfl)))
+        (by unfold digestAttemptLimit; norm_num) budget s start (fun _ => Or.inl rfl) hinv
+          (fun _ _ _ => rfl)))
       (le_of_eq ?_)
     rw [← Finset.mul_sum, mul_left_comm]
   rw [mul_add]
@@ -145,8 +147,9 @@ theorem upper_expectW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = 
   exact tsum_congr fun out => by ring
 
 /-- The fresh pair completed by a signing call weighs at most its fresh average, weighted. -/
-theorem fresh_expectW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none)
-    (hkind : ∀ ρ, tg.kind (blk parameter data m ρ) = .none) (s : State) (gf : View → ℝ≥0∞) (budget : ℕ) :
+theorem fresh_expectW (hparse : ∀ ρ call, model.parse (GraphView.pblk parameter data m ρ call) = none)
+    (hkind : ∀ ρ call, tg.kind (GraphView.pblk parameter data m ρ call) = .none) (s : State)
+    (hinv : PairInv parameter data m s) (gf : View → ℝ≥0∞) (budget : ℕ) :
     ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
         (weight tg initial out.2 * freshNewWeight parameter data m s gf out) ≤
       weight tg initial s * freshAvg Finset.univ gf := by
@@ -159,12 +162,12 @@ theorem fresh_expectW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = 
     intro start
     have h := loop_bound_combSW tg initial model parameter data m hparse hkind s gf (fun _ _ => 0)
       digestAttemptLimit (by unfold digestAttemptLimit; norm_num) budget s start (fun _ => Or.inl rfl)
-      (fun _ _ => rfl)
+      hinv (fun _ _ _ => rfl)
     refine le_trans (ENNReal.tsum_le_tsum fun out => mul_le_mul' le_rfl (mul_le_mul' le_rfl le_self_add))
       (le_trans h (mul_le_mul' le_rfl ?_))
     refine walk_le landing_le_one _ (fun ρ => ?_) le_rfl bot_le _ start
     unfold poolValue
-    cases s.cache (blk parameter data m ρ) <;> simp
+    cases pcache parameter data m s ρ <;> simp
   calc _ ≤ ∑' start, Pr[= start | ($ᵗ Randomness : ProbComp Randomness)] *
         (weight tg initial s * freshAvg Finset.univ gf) :=
         ENNReal.tsum_le_tsum fun start => mul_le_mul' le_rfl (hstart start)
@@ -180,8 +183,9 @@ variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : 
   {d : Multiset View} {f : Multiset View → ℝ≥0∞}
 
 /-- **A dominated term, weighted.** -/
-theorem term_expectW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none)
-    (hkind : ∀ ρ, tg.kind (blk parameter data m ρ) = .none)
+theorem term_expectW (hparse : ∀ ρ call, model.parse (GraphView.pblk parameter data m ρ call) = none)
+    (hkind : ∀ ρ call, tg.kind (GraphView.pblk parameter data m ρ call) = .none)
+    (hinv : PairInv parameter data m s)
     (hf : MonoFin f) (rest : List Message) (excl : Pair → Prop) (budget k : ℕ) :
     ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
         (weight tg initial out.2 *
@@ -194,7 +198,7 @@ theorem term_expectW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = n
   simp only [mul_assoc]
   have hX : Monotone' (restBase parameter data w s n f rest excl J) :=
     grpAll_mono s excl (virtualOnce_mono hf.1 n J) rest
-  refine le_trans (upper_expectW tg initial model parameter data m hparse hkind hX s d excl budget)
+  refine le_trans (upper_expectW tg initial model parameter data m hparse hkind hX s hinv d excl budget)
     (mul_le_mul' le_rfl (le_of_eq ?_))
   simp only [grpAll]
   refine grp_congr _ _ (fun e => ?_) d
@@ -215,10 +219,11 @@ variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : 
   (Qtot : ℕ) (m : Message)
 
 /-- **The signing step in expectation, weighted**, for a message signed for the first time. -/
-theorem sign_expectW (hparse : ∀ p, model.parse (pblk parameter data p) = none)
-    (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
+theorem sign_expectW (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     (budget : ℕ) (s : State) (P : List Pair) (Ms : List Message)
-    (L : QueryLog SigningSpec) (hm : MsgLive L m) (d : Multiset View) (hM : MInv parameter data s Ms) :
+    (L : QueryLog SigningSpec) (hm : MsgLive L m) (d : Multiset View)
+    (hP : PInv parameter data s P) (hM : MInv parameter data s Ms) :
     ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
         (weight tg initial out.2 * (if Realized tg initial s ∨ signatureLimit ≤ L.length then 0
           else canonO parameter data w b0 Fail m s P Ms L d (signatureLimit - (L.length + 1)) budget out)) ≤
@@ -234,14 +239,20 @@ theorem sign_expectW (hparse : ∀ p, model.parse (pblk parameter data p) = none
   set n := signatureLimit - (L.length + 1) with hn
   have hn1 : signatureLimit - L.length = n + 1 := by omega
   rw [hn1]
-  have hparse' : ∀ ρ, model.parse (blk parameter data m ρ) = none := fun ρ => hparse (m, ρ)
-  have hkind' : ∀ ρ, tg.kind (blk parameter data m ρ) = .none := fun ρ => hkind (m, ρ)
+  have hparse' : ∀ ρ call, model.parse (GraphView.pblk parameter data m ρ call) = none :=
+    fun ρ call => hparse (m, ρ) call
+  have hkind' : ∀ ρ call, tg.kind (GraphView.pblk parameter data m ρ call) = .none :=
+    fun ρ call => hkind (m, ρ) call
+  -- the pair invariant of the state, from `PInv.first` and `PInv.all` at `(m, ρ)`
+  have hinv : PairInv parameter data m s := fun ρ =>
+    ⟨fun h call => hP.first (m, ρ) h call,
+      fun u0 h hl call => Option.ne_none_iff_isSome.1 (hP.all (m, ρ) ⟨u0, h, hl⟩ call)⟩
   have hconst := fun c => interp_weight_constW tg initial model (s := s)
     (signCostSource parameter data m) budget c
   have hFN : ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
       (weight tg initial out.2 * freshNewWeight parameter data m s (fun v => if v.1 ∈ Fail then 1 else 0) out) ≤
       weight tg initial s * failMass Fail :=
-    fresh_expectW tg initial model parameter data m hparse' hkind' s _ budget
+    fresh_expectW tg initial model parameter data m hparse' hkind' s hinv _ budget
   have hT : ∀ q ∈ P, ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
       (weight tg initial out.2 * (if Unsigned L q then (if (pview parameter data s q).1 ∈ Fail then 1 else
         creations Finset.univ landing (fun J => upperO parameter data w m s n d (witnessFn (pview parameter data s q))
@@ -253,7 +264,7 @@ theorem sign_expectW (hparse : ∀ p, model.parse (pblk parameter data p) = none
     · exact hconst 1
     · unfold candValueO
       rw [termO_eq_cons hm hM]
-      exact term_expectW tg initial model hparse' hkind' (witness_props _) _ _ budget budget
+      exact term_expectW tg initial model hparse' hkind' hinv (witness_props _) _ _ budget budget
     · exact hconst 0
   have hH : ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
       (weight tg initial out.2 * creations Finset.univ landing (fun J => upperO parameter data w m s n d (excess b0)
@@ -261,7 +272,7 @@ theorem sign_expectW (hparse : ∀ p, model.parse (pblk parameter data p) = none
       weight tg initial s * hValueO parameter data w b0 s Ms L d (n + 1) budget := by
     unfold hValueO
     rw [termO_eq_cons hm hM]
-    exact term_expectW tg initial model hparse' hkind' (excess_props b0) _ _ budget budget
+    exact term_expectW tg initial model hparse' hkind' hinv (excess_props b0) _ _ budget budget
   have hLS : ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
       (weight tg initial out.2 * (P.map fun q => if Unsigned L q then (if (pview parameter data s q).1 ∈ Fail then 1
         else creations Finset.univ landing (fun J => upperO parameter data w m s n d
@@ -464,7 +475,7 @@ theorem new_pair_core (hw : w ≤ 1) (L : QueryLog SigningSpec)
     · exact le_rfl
 
 /-- A new pair: its block is read fresh, weighted. -/
-theorem new_pair_boundW (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
+theorem new_pair_boundW (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤ Cmax) (L : QueryLog SigningSpec)
     (next : HashOutput → OracleComp CostSpec HiddenBridge.Outcome)
     (h : ∀ v, GoodW parameter data w b0 Fail Qtot Lmax tg initial model L (next v))
@@ -533,8 +544,8 @@ theorem new_pair_boundW (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
   · simp only [mul_left_comm _ b0, ENNReal.tsum_mul_left]
 
 /-- **One ordinary query, weighted.** -/
-theorem goodW_ordinary (hparse : ∀ p, model.parse (pblk parameter data p) = none)
-    (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
+theorem goodW_ordinary (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     (hdigest : ∀ p, tg.digest (pblk parameter data p))
     {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤ Cmax) (L : QueryLog SigningSpec) (x : HashInput)
     (next : HashOutput → OracleComp CostSpec HiddenBridge.Outcome)
@@ -617,8 +628,8 @@ theorem goodW_pure (hw : w ≤ 1) (L : QueryLog SigningSpec) (forgery : Forgery)
   exact mul_le_mul_right h _
 
 /-- Lifted hash computations are sequences of ordinary queries. -/
-theorem goodW_liftHash (hparse : ∀ p, model.parse (pblk parameter data p) = none)
-    (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
+theorem goodW_liftHash (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     (hdigest : ∀ p, tg.digest (pblk parameter data p))
     {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤ Cmax) (L : QueryLog SigningSpec) {α : Type}
     (computation : OracleComp HashSpec α)
@@ -634,8 +645,8 @@ theorem goodW_liftHash (hparse : ∀ p, model.parse (pblk parameter data p) = no
         query _ ih
 
 /-- **One signing call, weighted**, on a message that was never signed before. -/
-theorem goodW_sign (hparse : ∀ p, model.parse (pblk parameter data p) = none)
-    (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
+theorem goodW_sign (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
@@ -716,11 +727,11 @@ theorem goodW_sign (hparse : ∀ p, model.parse (pblk parameter data p) = none)
         unfold potO
         rw [mul_add]
         exact add_le_add (add_le_add
-          (sign_expectW tg initial model parameter data w b0 Fail m hparse hkind budget s P Ms L hm d hM)
+          (sign_expectW tg initial model parameter data w b0 Fail m hparse hkind budget s P Ms L hm d hP hM)
           (interp_weight_constW tg initial model (s := s) sign budget _)) (mul_le_mul_right hflag _)
 
-theorem goodW_finish (hparse : ∀ p, model.parse (pblk parameter data p) = none)
-    (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
+theorem goodW_finish (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     (hdigest : ∀ p, tg.digest (pblk parameter data p))
     {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤ Cmax) (L : QueryLog SigningSpec) (forgery : Forgery) :
     GoodW parameter data w b0 Fail Qtot Lmax tg initial model L (finishGame parameter data L forgery) := by
@@ -730,8 +741,8 @@ theorem goodW_finish (hparse : ∀ p, model.parse (pblk parameter data p) = none
 
 /-- **The weighted one-coin potential of the scan signer through any adversary that never repeats a
 message.** -/
-theorem goodW_advProg (hparse : ∀ p, model.parse (pblk parameter data p) = none)
-    (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
+theorem goodW_advProg (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     (hdigest : ∀ p, tg.digest (pblk parameter data p))
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
