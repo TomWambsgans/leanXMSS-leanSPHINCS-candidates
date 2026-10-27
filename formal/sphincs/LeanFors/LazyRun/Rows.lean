@@ -48,7 +48,7 @@ theorem KnownAgrees.reveal {table : (ι → Digest)} {known : (HiddenReveal.Know
     exact h other value hvalue
 
 /-- Privileged disclosures are explicit operations, so honest calls can reveal a signature's
-frontier or forest secret without being mistaken for an adversarial equality guess. -/
+frontier or FORS secret without being mistaken for an adversarial equality guess. -/
 abbrev SourceSpec (D R ι : Type) := unifSpec + ((D →ₒ R) + (ι →ₒ Digest))
 
 /-- Execute the actual programmed oracle, stopping immediately before an ordinary query

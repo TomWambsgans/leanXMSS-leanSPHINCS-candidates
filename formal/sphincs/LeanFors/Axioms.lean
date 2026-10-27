@@ -1,7 +1,7 @@
 import LeanFors
 
 /-!
-Axiom guards. The `#print axioms` below pin the main theorem, the 32 size and cost theorems of
+Axiom guards. The `#print axioms` below pin the main theorem, the 48 size and cost theorems of
 `Configurations` and the theorems the documentation cites. The last command checks
 every declaration of every `LeanFors` module (`LeanFors.lean` imports all of them) and fails if
 one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound`, such as the
@@ -204,9 +204,9 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms LeanFors.Configurations.size_h28_pruned_k26
 
-/-- info: 'LeanFors.Security.ForestPotential.det_bitsFH' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanFors.Security.ForsPotential.det_bitsFH' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanFors.Security.ForestPotential.det_bitsFH
+#print axioms LeanFors.Security.ForsPotential.det_bitsFH
 
 /-- info: 'LeanFors.Security.Det.forgeAdvantage_le_seedFree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -256,17 +256,17 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms LeanFors.Security.H0.lam_start
 
-/-- info: 'LeanFors.Security.ForestPotential.sign_term' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanFors.Security.ForsPotential.sign_term' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanFors.Security.ForestPotential.sign_term
+#print axioms LeanFors.Security.ForsPotential.sign_term
 
 /-- info: 'LeanFors.Security.PrunedGraph.keyActive_iff' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanFors.Security.PrunedGraph.keyActive_iff
 
-/-- info: 'LeanFors.Security.ForestPotential.expectedFail_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanFors.Security.ForsPotential.expectedFail_le' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanFors.Security.ForestPotential.expectedFail_le
+#print axioms LeanFors.Security.ForsPotential.expectedFail_le
 
 /-- info: 'LeanFors.Security.verified_layers' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -276,25 +276,25 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms LeanFors.Security.PotentialA.smallRoute_potentialF
 
-/-- info: 'LeanFors.Security.ForestPotential.reveal_le_all' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanFors.Security.ForsPotential.reveal_le_all' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanFors.Security.ForestPotential.reveal_le_all
+#print axioms LeanFors.Security.ForsPotential.reveal_le_all
 
-/-- info: 'LeanFors.Security.ForestPotential.arm_paysF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanFors.Security.ForsPotential.arm_paysF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanFors.Security.ForestPotential.arm_paysF
+#print axioms LeanFors.Security.ForsPotential.arm_paysF
 
-/-- info: 'LeanFors.Security.ForestPotential.sample_boundF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanFors.Security.ForsPotential.sample_boundF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanFors.Security.ForestPotential.sample_boundF
+#print axioms LeanFors.Security.ForsPotential.sample_boundF
 
-/-- info: 'LeanFors.Security.ForestPotential.det_smallF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanFors.Security.ForsPotential.det_smallF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanFors.Security.ForestPotential.det_smallF
+#print axioms LeanFors.Security.ForsPotential.det_smallF
 
-/-- info: 'LeanFors.Security.ForestPotential.det_largeW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'LeanFors.Security.ForsPotential.det_largeW' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
-#print axioms LeanFors.Security.ForestPotential.det_largeW
+#print axioms LeanFors.Security.ForsPotential.det_largeW
 
 /-- info: 'LeanFors.Concrete.fullDigestView_bijective' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

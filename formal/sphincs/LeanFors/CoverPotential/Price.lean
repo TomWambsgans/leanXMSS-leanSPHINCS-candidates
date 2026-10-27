@@ -8,7 +8,7 @@ over a uniform landed digest. -/
 
 open ENNReal
 
-namespace LeanFors.Security.ForestPrice
+namespace LeanFors.Security.ForsPrice
 
 variable [Params]
 
@@ -85,4 +85,4 @@ theorem price_ne_top (disclosed : Multiset View) : price disclosed ≠ ⊤ :=
 theorem excess_mono {V : Type} {g : Multiset V → ℝ≥0∞} (hmono : Monotone' g) (b : ℝ≥0∞) :
     Monotone' fun d => g d - b := fun _ _ hle => tsub_le_tsub_right (hmono _ _ hle) b
 
-end LeanFors.Security.ForestPrice
+end LeanFors.Security.ForsPrice

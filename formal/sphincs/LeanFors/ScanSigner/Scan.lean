@@ -14,7 +14,7 @@ namespace LeanFors.Security.GraphView
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenCost HiddenDebt HiddenGraph ForestSigner LeanFors.LoopWalk
+open Concrete HiddenCost HiddenDebt HiddenGraph ForsSigner LeanFors.LoopWalk
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -331,7 +331,7 @@ theorem scan_boundW
         reference.cache (pblk parameter data message ((nextRand (data.steps message) ^ i) ρ) call)) →
       ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts ρ) budget state] *
           W out.1.1 out.2 ≤
-        walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
+        walk (nextRand (data.steps message)) ForsPrice.landing (stOf parameter data message reference)
           (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts ρ := by
   intro attempts
   induction attempts with
@@ -349,7 +349,7 @@ theorem scan_boundW
           (∀ x, (∀ call, x ≠ pblk parameter data message ρ call) → s'.cache x = state.cache x) → ∀ b,
           ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts (nextRand (data.steps message) ρ)) b s'] *
             W out.1.1 out.2 ≤
-          walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
+          walk (nextRand (data.steps message)) ForsPrice.landing (stOf parameter data message reference)
             (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts
             (nextRand (data.steps message) ρ) := by
         intro s' hrel' hinv' hsame b
@@ -369,7 +369,7 @@ theorem scan_boundW
           have hst : stOf parameter data message reference ρ = .fresh := by simp [stOf, hc]
           rw [walk_succ_fresh _ _ _ _ hst]
           simp only [Option.elim]
-          set bound := walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
+          set bound := walk (nextRand (data.steps message)) ForsPrice.landing (stOf parameter data message reference)
             (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts
             (nextRand (data.steps message) ρ)
           have hsplit : (∑' u, Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *

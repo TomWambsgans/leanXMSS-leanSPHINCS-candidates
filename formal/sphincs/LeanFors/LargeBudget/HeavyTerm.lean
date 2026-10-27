@@ -115,12 +115,12 @@ theorem sgn_stop_le (hp : p ≤ 1) (hU : U.Nonempty) (st : α → St) (ext : α 
 
 end LeanFors.LoopWalk
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner
   LeanFors.Base.Domination LeanFors.LoopWalk
 
 set_option backward.isDefEq.respectTransparency false
@@ -1290,4 +1290,4 @@ theorem post_term_leH (hw : w ≤ 1) {f : Multiset View → ℝ≥0∞} (hf : Mo
 
 end SignPointH
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

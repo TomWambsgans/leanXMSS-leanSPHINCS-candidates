@@ -344,7 +344,7 @@ namespace LeanFors.Security.GraphView
 variable [Params]
 
 open LeanFors.Base
-open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForestSigner LeanFors.LoopWalk
+open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForsSigner LeanFors.LoopWalk
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -405,7 +405,7 @@ and the scan goes on otherwise. -/
 theorem trials_sum_le (gf : Lifetime.KeptDigestView → ℝ≥0∞) (bound : ℝ≥0∞) :
     ∑' u, Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *
         (if Landed parameter (blockIndex (u firstCall)) then gf (viewOf u) else bound) ≤
-      ForestPrice.landing * Domination.freshAvg Finset.univ gf + (1 - ForestPrice.landing) * bound := by
+      ForsPrice.landing * Domination.freshAvg Finset.univ gf + (1 - ForsPrice.landing) * bound := by
   have hsplit : (∑' u, Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *
       (if Landed parameter (blockIndex (u firstCall)) then gf (viewOf u) else bound)) =
       (∑' u, Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *
@@ -571,7 +571,7 @@ theorem loop_boundSW
         reference.cache (pblk parameter data message ((nextRand (data.steps message) ^ i) ρ) call)) →
       ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts ρ) budget state] *
           (weight tg initial out.2 * V out.1.1 out.2) ≤
-        weight tg initial state * walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
+        weight tg initial state * walk (nextRand (data.steps message)) ForsPrice.landing (stOf parameter data message reference)
           (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts ρ := by
   intro attempts
   induction attempts with
@@ -590,7 +590,7 @@ theorem loop_boundSW
           (∀ x, (∀ call, x ≠ pblk parameter data message ρ call) → s'.cache x = state.cache x) → ∀ b,
           ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts (nextRand (data.steps message) ρ)) b s'] *
             (weight tg initial out.2 * V out.1.1 out.2) ≤
-          weight tg initial s' * walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
+          weight tg initial s' * walk (nextRand (data.steps message)) ForsPrice.landing (stOf parameter data message reference)
             (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts
             (nextRand (data.steps message) ρ) := by
         intro s' hrel' hinv' hsame b
@@ -751,7 +751,7 @@ theorem loop_bound_combSW
       ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts ρ) budget state] *
           (weight tg initial out.2 * (freshNewWeight parameter data message reference gf out +
             outWeight parameter data message reference 0 gp out)) ≤
-        weight tg initial state * walk (nextRand (data.steps message)) ForestPrice.landing (stOf parameter data message reference)
+        weight tg initial state * walk (nextRand (data.steps message)) ForsPrice.landing (stOf parameter data message reference)
           (poolValue parameter data message reference gp) (Domination.freshAvg Finset.univ gf) 0 attempts ρ :=
   loop_boundSW tg initial model parameter data message hparse hkind reference gf gp
     (fun r s' => freshNewWeight parameter data message reference gf ((r, [], [], []), s') +

@@ -36,7 +36,7 @@ def verificationDigest (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : M
     OracleComp HashSpec MessageDigest)
 
 /-- The candidate FORS key recovered before WOTS verification. -/
-def verificationForest (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
+def verificationFors (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) : ForsKey :=
   let digest := verificationDigest f pk message signature
   evalWithAnswerFn f (forsRecover pk.parameter (digestIndex digest) (digestLeaves digest)
@@ -61,40 +61,40 @@ def layerFold (lay : Layer) (value : Digest) : Digest :=
 
 /-- The message the verifier gives the key of the layer `k` steps above the bottom: the FORS key
 at the bottom, then the fold of the layer below. -/
-def walkMessage (forest : ForsKey) : Nat → HashInput
-  | 0 => rootsPayload forest
+def walkMessage (key : ForsKey) : Nat → HashInput
+  | 0 => rootsPayload key
   | k + 1 => rootPayload (layerFold f parameter index signature (layerUp k)
-      ((layerLeaf f parameter index signature (layerUp k) (walkMessage forest k)).getD 0))
+      ((layerLeaf f parameter index signature (layerUp k) (walkMessage key k)).getD 0))
 
 /-- The fold of the layer `k` steps above the bottom. -/
-def walkFold (forest : ForsKey) (k : Nat) : Digest :=
+def walkFold (key : ForsKey) (k : Nat) : Digest :=
   layerFold f parameter index signature (layerUp k)
-    ((layerLeaf f parameter index signature (layerUp k) (walkMessage f parameter index signature forest k)).getD 0)
+    ((layerLeaf f parameter index signature (layerUp k) (walkMessage f parameter index signature key k)).getD 0)
 
-theorem walkMessage_succ (forest : ForsKey) (k : Nat) :
-    walkMessage f parameter index signature forest (k + 1) =
-      rootPayload (walkFold f parameter index signature forest k) := rfl
+theorem walkMessage_succ (key : ForsKey) (k : Nat) :
+    walkMessage f parameter index signature key (k + 1) =
+      rootPayload (walkFold f parameter index signature key k) := rfl
 
 /-- An accepted walk from the layer `k` steps above the bottom succeeds at every layer above, ends at
 the top layer's fold, and runs the leaf recovery and the fold of every layer in its trace. -/
-theorem walk_spec (forest : ForsKey) (trace : List HashInput) :
+theorem walk_spec (key : ForsKey) (trace : List HashInput) :
     ∀ n k, k + n = numLayers → 0 < n → ∀ root,
       evalWithAnswerFn f (verifyLayers parameter index signature n
-        (walkMessage f parameter index signature forest k) : OracleComp HashSpec (Option Digest)) =
+        (walkMessage f parameter index signature key k) : OracleComp HashSpec (Option Digest)) =
           some root →
       ContainsRun f trace (verifyLayers parameter index signature n
-        (walkMessage f parameter index signature forest k) : OracleComp HashSpec (Option Digest)) →
-      root = walkFold f parameter index signature forest (numLayers - 1) ∧
+        (walkMessage f parameter index signature key k) : OracleComp HashSpec (Option Digest)) →
+      root = walkFold f parameter index signature key (numLayers - 1) ∧
       ∀ j, k ≤ j → j < numLayers →
         (∃ value, layerLeaf f parameter index signature (layerUp j)
-            (walkMessage f parameter index signature forest j) = some value) ∧
+            (walkMessage f parameter index signature key j) = some value) ∧
         ContainsRun f trace (otsLeaf parameter (layerUp j) (treeIndexAt index (layerUp j))
-          (leafIndexAt index (layerUp j)) (walkMessage f parameter index signature forest j)
+          (leafIndexAt index (layerUp j)) (walkMessage f parameter index signature key j)
           (signature.layers (layerUp j)).counter (signature.layers (layerUp j)).chainValues) ∧
         ContainsRun f trace (treeFold parameter (layerUp j) (treeIndexAt index (layerUp j))
           (leafIndexAt index (layerUp j)) (signaturePath signature (layerUp j)) (layerHeight (layerUp j))
           ((layerLeaf f parameter index signature (layerUp j)
-            (walkMessage f parameter index signature forest j)).getD 0)) := by
+            (walkMessage f parameter index signature key j)).getD 0)) := by
   intro n
   induction n with
   | zero => intro k _ hn; exact absurd hn (Nat.lt_irrefl 0)
@@ -109,7 +109,7 @@ theorem walk_spec (forest : ForsKey) (trace : List HashInput) :
       have hrunLeaf := hrun.bind_left
       have hrest := hrun.bind_right
       cases hleaf : layerLeaf f parameter index signature (layerUp k)
-          (walkMessage f parameter index signature forest k) with
+          (walkMessage f parameter index signature key k) with
       | none =>
           simp only [layerLeaf] at hleaf
           rw [hleaf] at hroot
@@ -121,22 +121,22 @@ theorem walk_spec (forest : ForsKey) (trace : List HashInput) :
           simp only [evalWithAnswerFn_bind] at hroot
           have hrunFold := hrest.bind_left
           have hrest2 := hrest.bind_right
-          have hfoldEq : walkFold f parameter index signature forest k =
+          have hfoldEq : walkFold f parameter index signature key k =
               evalWithAnswerFn f (treeFold parameter (layerUp k) (treeIndexAt index (layerUp k))
                 (leafIndexAt index (layerUp k)) (signaturePath signature (layerUp k))
                 (layerHeight (layerUp k)) value : OracleComp HashSpec Digest) := by
             simp only [walkFold, layerFold, hleaf, Option.getD_some]
           have hcur : ∀ j, k ≤ j → j < k + 1 → j < numLayers →
               (∃ value, layerLeaf f parameter index signature (layerUp j)
-                  (walkMessage f parameter index signature forest j) = some value) ∧
+                  (walkMessage f parameter index signature key j) = some value) ∧
               ContainsRun f trace (otsLeaf parameter (layerUp j) (treeIndexAt index (layerUp j))
-                (leafIndexAt index (layerUp j)) (walkMessage f parameter index signature forest j)
+                (leafIndexAt index (layerUp j)) (walkMessage f parameter index signature key j)
                 (signature.layers (layerUp j)).counter (signature.layers (layerUp j)).chainValues) ∧
               ContainsRun f trace (treeFold parameter (layerUp j) (treeIndexAt index (layerUp j))
                 (leafIndexAt index (layerUp j)) (signaturePath signature (layerUp j))
                 (layerHeight (layerUp j))
                 ((layerLeaf f parameter index signature (layerUp j)
-                  (walkMessage f parameter index signature forest j)).getD 0)) := by
+                  (walkMessage f parameter index signature key j)).getD 0)) := by
             intro j hj1 hj2 _
             have hj : j = k := by omega
             subst hj
@@ -154,7 +154,7 @@ theorem walk_spec (forest : ForsKey) (trace : List HashInput) :
                 (treeIndexAt index (layerUp k)) (leafIndexAt index (layerUp k))
                 (signaturePath signature (layerUp k)) (layerHeight (layerUp k)) value
                   : OracleComp HashSpec Digest)) =
-                walkMessage f parameter index signature forest (k + 1) := by
+                walkMessage f parameter index signature key (k + 1) := by
               rw [walkMessage_succ, hfoldEq]
             rw [hmsg] at hroot hrest2
             obtain ⟨hr, hall⟩ := ih (k + 1) (by omega) (Nat.pos_of_ne_zero hzero) root hroot hrest2
@@ -174,7 +174,7 @@ def verificationIndex (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Me
 def verificationMessage (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) (k : Nat) : HashInput :=
   walkMessage f pk.parameter (verificationIndex f pk message signature) signature
-    (verificationForest f pk message signature) k
+    (verificationFors f pk message signature) k
 
 /-- Successful verification recovers a leaf at every layer, folds the top layer's leaf to the
 public root, and runs every layer's leaf recovery and fold in its trace. -/
@@ -182,7 +182,7 @@ theorem verified_layers (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : 
     (signature : Signature)
     (hverified : evalWithAnswerFn f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = true) :
     walkFold f pk.parameter (verificationIndex f pk message signature) signature
-        (verificationForest f pk message signature) (numLayers - 1) = pk.root ∧
+        (verificationFors f pk message signature) (numLayers - 1) = pk.root ∧
     ∀ k, k < numLayers →
       (∃ value, layerLeaf f pk.parameter (verificationIndex f pk message signature) signature
           (layerUp k) (verificationMessage f pk message signature k) = some value) ∧
@@ -205,28 +205,28 @@ theorem verified_layers (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : 
   rw [verify_eq_layers] at hrun hverified
   simp only [evalWithAnswerFn_bind] at hverified
   have htail := hrun.bind_right.bind_right
-  have hstart : rootsPayload (verificationForest f pk message signature) =
+  have hstart : rootsPayload (verificationFors f pk message signature) =
       walkMessage f pk.parameter (verificationIndex f pk message signature) signature
-        (verificationForest f pk message signature) 0 := rfl
+        (verificationFors f pk message signature) 0 := rfl
   change ContainsRun f _ (verifyLayers pk.parameter (verificationIndex f pk message signature) signature
-    numLayers (rootsPayload (verificationForest f pk message signature)) >>= _) at htail
+    numLayers (rootsPayload (verificationFors f pk message signature)) >>= _) at htail
   rw [hstart] at htail
   have hwalkRun := htail.bind_left
   cases hwalk : evalWithAnswerFn f (verifyLayers pk.parameter (verificationIndex f pk message signature)
       signature numLayers (walkMessage f pk.parameter (verificationIndex f pk message signature) signature
-        (verificationForest f pk message signature) 0) : OracleComp HashSpec (Option Digest)) with
+        (verificationFors f pk message signature) 0) : OracleComp HashSpec (Option Digest)) with
   | none =>
       have hwalk' := hwalk
-      simp only [walkMessage, verificationIndex, verificationForest] at hwalk'
+      simp only [walkMessage, verificationIndex, verificationFors] at hwalk'
       simp only [verificationDigest] at hwalk'
       simp only [hwalk', evalWithAnswerFn_pure, Bool.false_eq_true] at hverified
   | some root =>
       have hwalk' := hwalk
-      simp only [walkMessage, verificationIndex, verificationForest] at hwalk'
+      simp only [walkMessage, verificationIndex, verificationFors] at hwalk'
       simp only [verificationDigest] at hwalk'
       simp only [hwalk', evalWithAnswerFn_pure, decide_eq_true_eq] at hverified
       obtain ⟨hr, hall⟩ := walk_spec f pk.parameter (verificationIndex f pk message signature) signature
-        (verificationForest f pk message signature) _ numLayers 0 (Nat.zero_add _) numLayers_pos root hwalk
+        (verificationFors f pk message signature) _ numLayers 0 (Nat.zero_add _) numLayers_pos root hwalk
         (by simpa only [← verify_eq_layers pk message signature] using hwalkRun)
       exact ⟨hr.symm.trans hverified, fun k hk => hall k (Nat.zero_le k) hk⟩
 

@@ -1,7 +1,7 @@
 import LeanFors.Classification.WinRefined
 
 /-! The refined classification keeps the finished, valid outcome of a winning run, as the bounds
-on forest contacts require. -/
+on FORS contacts require. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -22,11 +22,11 @@ def badAV (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : Co
 
 end LeanFors.Security.HiddenBridge
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal LeanFors.Base.Domination
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenReveal LeanFors.Base.Domination
 open HiddenBridge Completeness SeedModel Graph Assembly Reduce Internalize
 
 set_option backward.isDefEq.respectTransparency false
@@ -181,4 +181,4 @@ theorem stopped_le_interp_exposeV (hb : 0 < keptHeight topLayer) (adversary : Ad
   stopped_le_interpV hb adversary q hq parameterOutput fixed highs remaining steps prepared hprepared tg known
     (expose_known_support _ fixed prepared.1 known hk).1 (expose_known_support _ fixed prepared.1 known hk).2
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

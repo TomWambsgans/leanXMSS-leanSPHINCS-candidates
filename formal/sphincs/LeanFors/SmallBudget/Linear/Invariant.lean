@@ -258,7 +258,8 @@ theorem mean_cw (s : St) (c : Coordinate) (hc : s.known c = none) (f : FIn) :
   · simp only [K.cw_expose_ne s c _ f hf]
     rw [← Finset.sum_mul, sum_nu_digest, one_mul]
 
-/-- Exposure keeps the product of the weights of steps writing different coordinates in the mean. -/
+/-- Exposure keeps the product of the weights of FORS leaf queries writing different coordinates in
+the mean. -/
 theorem mean_cw2 (s : St) (c : Coordinate) (hc : s.known c = none) (f g : FIn) (hfg : f.outC ≠ g.outC) :
     ∑ v : Digest, ν * (K.cw (s.expose c v) f * K.cw (s.expose c v) g) = K.cw s f * K.cw s g := by
   by_cases hg : g.outC = c
@@ -396,7 +397,7 @@ theorem pot_expose_mean (y : ℕ) (s : St) (c : Coordinate) (hc : s.known c = no
         ring
 
 /-- A guess record that is no new record of a fresh FORS leaf query keeps the FORS aggregates. -/
-theorem forest_record (s : St) (g : Coordinate × Digest)
+theorem fors_record (s : St) (g : Coordinate × Digest)
     (h : ∀ f : FIn, g = (f.inC, f.v) → K.FE s f → g ∈ s.guesses) :
     K.ng (s.record g) = K.ng s ∧ K.kf (s.record g) = K.kf s ∧ K.pp (s.record g) = K.pp s ∧
       K.latent (s.record g) = K.latent s := by
@@ -441,7 +442,7 @@ theorem forest_record (s : St) (g : Coordinate × Digest)
 theorem pot_record (y : ℕ) (s : St) (g : Coordinate × Digest) (hg : s.known g.1 = none)
     (hF : ∀ f : FIn, g = (f.inC, f.v) → K.FE s f → g ∈ s.guesses) :
     K.pot y (s.record g) ≤ K.pot y s + ν := by
-  obtain ⟨-, hkf, -, hlat⟩ := K.forest_record s g hF
+  obtain ⟨-, hkf, -, hlat⟩ := K.fors_record s g hF
   have hD : K.done (s.record g) ≤ K.done s := by
     have := K.done_le (s := s) (s' := s.record g) False (by
       rintro (hr | hw)

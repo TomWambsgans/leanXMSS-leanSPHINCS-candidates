@@ -261,10 +261,10 @@ theorem stepFleaf {total : ℕ} (hN : Numeric K.ρ ((total : ℝ) / 2 ^ 128))
                 exact h
 
 theorem digestCount_fleaf (tg' : Targeting HashInput HashOutput Coordinate)
-    (hdig : tg'.digest = ForestSigner.IsMsgInput) (bytes : HashInput) (hF : IsFleafIn K.p bytes) :
+    (hdig : tg'.digest = ForsSigner.IsMsgInput) (bytes : HashInput) (hF : IsFleafIn K.p bytes) :
     digestCount tg' (recorded (D := HashInput) (R := HashOutput) (ι := Coordinate) (.inl (.inr (.inl bytes)))) =
       0 := by
-  have hnm : ¬ForestSigner.IsMsgInput bytes := by
+  have hnm : ¬ForsSigner.IsMsgInput bytes := by
     obtain ⟨f, rfl⟩ := hF
     exact fun hd => msg_ne_fleaf hd rfl
   have h := digestCount_bytes tg' bytes
@@ -273,10 +273,10 @@ theorem digestCount_fleaf (tg' : Targeting HashInput HashOutput Coordinate)
 
 include hMp hMi hMo in
 /-- **One step with both payments.** -/
-theorem stepF (tg' : Targeting HashInput HashOutput Coordinate) (hdig : tg'.digest = ForestSigner.IsMsgInput)
+theorem stepF (tg' : Targeting HashInput HashOutput Coordinate) (hdig : tg'.digest = ForsSigner.IsMsgInput)
     {total : ℕ} (hN : Numeric K.ρ ((total : ℝ) / 2 ^ 128))
     (hsec : ∀ x, SecondOrderInput K.p K.R x → K.tg.kind x = .none)
-    (hmsg : ∀ x, ForestSigner.IsMsgInput x → K.tg.kind x = .none)
+    (hmsg : ∀ x, ForsSigner.IsMsgInput x → K.tg.kind x = .none)
     (input : (SourceCostSpec HashInput HashOutput Coordinate).Domain) (budget : ℕ) (s : St) (hinv : K.Inv s)
     (hcost : sourceCost input ≤ budget) :
     ∑' r, Pr[= r | costStep M input s] * K.potCap total (budget - sourceCost input) r.2 +
@@ -312,7 +312,7 @@ digest baseline `ρ / 2^128`, every FORS leaf query of the trace (fresh or cache
 theorem smallRoute_potentialF
     (hknown : known ∈ support (exposeR (aboveList (truncateHash parameterOutput) prepared.1)
       (knownOf (truncateHash parameterOutput) fixed)))
-    (tg : Targeting HashInput HashOutput Coordinate) (hdigest : tg.digest = ForestSigner.IsMsgInput)
+    (tg : Targeting HashInput HashOutput Coordinate) (hdigest : tg.digest = ForsSigner.IsMsgInput)
     (total : ℕ) (hN : Numeric ρ ((total : ℝ) / 2 ^ 128))
     {α : Type} (comp : OracleComp (SourceCostSpec HashInput HashOutput Coordinate) α) :
     ∑' out, Pr[= out | interp tg prepared.2 (sampleModel parameterOutput highs) comp total

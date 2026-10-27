@@ -17,21 +17,21 @@ set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
 
 
-theorem msg_ne_chain {x : HashInput} (hx : ForestSigner.IsMsgInput x) {p : PublicParameter} {l : OtsKey}
+theorem msg_ne_chain {x : HashInput} (hx : ForsSigner.IsMsgInput x) {p : PublicParameter} {l : OtsKey}
     {i : ChainIndex} {st : ChainStep} {v : Digest} : x ≠ chainInput p l i st v := by
   obtain ⟨p', call, payload, rfl⟩ := hx
   intro h
   have hd := (domain_eq_of_input h trivial trivial).1
   cases hd
 
-theorem msg_ne_enc {x : HashInput} (hx : ForestSigner.IsMsgInput x) {p : PublicParameter} {l : OtsKey}
+theorem msg_ne_enc {x : HashInput} (hx : ForsSigner.IsMsgInput x) {p : PublicParameter} {l : OtsKey}
     {m : HashInput} {c : Counter} : x ≠ Wots.encodingInput p l.1 l.2.1 l.2.2 m c := by
   obtain ⟨p', call, payload, rfl⟩ := hx
   intro h
   have hd := (domain_eq_of_input h trivial trivial).1
   cases hd
 
-theorem msg_ne_fleaf {x : HashInput} (hx : ForestSigner.IsMsgInput x) {p : PublicParameter} {f : FIn} :
+theorem msg_ne_fleaf {x : HashInput} (hx : ForsSigner.IsMsgInput x) {p : PublicParameter} {f : FIn} :
     x ≠ f.input p := by
   obtain ⟨p', call, payload, rfl⟩ := hx
   intro h
@@ -97,8 +97,8 @@ theorem fresh_zero {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = n
 
 include hN in
 /-- **A fresh message-digest query** pays the baseline from the rate. -/
-theorem fresh_digest (hmsg : ∀ x, ForestSigner.IsMsgInput x → K.tg.kind x = .none) {s : St} (hinv : K.Inv s)
-    {x : HashInput} (hx : s.cache x = none) (hd : ForestSigner.IsMsgInput x) :
+theorem fresh_digest (hmsg : ∀ x, ForsSigner.IsMsgInput x → K.tg.kind x = .none) {s : St} (hinv : K.Inv s)
+    {x : HashInput} (hx : s.cache x = none) (hd : ForsSigner.IsMsgInput x) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y' r.2 + ν * ENNReal.ofReal K.ρ ≤ K.pot (y' + 1) s := by
   refine K.fresh_other hN hinv hx (fun l _ => ⟨fun i h => ?_, fun i v h => ?_⟩)
     (fun l msg ctr _ h => msg_ne_enc hd h) (fun f h => msg_ne_fleaf hd h)

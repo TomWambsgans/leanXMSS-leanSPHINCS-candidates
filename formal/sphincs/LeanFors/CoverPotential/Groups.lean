@@ -8,12 +8,12 @@ live messages applied to the one-coin virtual future of the future pairs. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner
   LeanFors.Base.Domination LeanFors.LoopWalk
 
 set_option backward.isDefEq.respectTransparency false
@@ -586,4 +586,4 @@ theorem sign_term (hparse : ∀ ρ call, model.parse (GraphView.pblk parameter d
 
 end SignScan
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

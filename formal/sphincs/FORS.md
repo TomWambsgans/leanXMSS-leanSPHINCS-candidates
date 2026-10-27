@@ -20,9 +20,10 @@ tree's root exists and no algorithm uses it; a `forsNode` at level j is the node
 j + 1 (`HashDomain`). FORS addresses pack the tree, the level and the node in `hi`
 (`forsSlot`, `nodePosition`) and the instance in `lo`: type byte 15 for a leaf, 17 for a node.
 
-An opening is one secret and its path of `a - 1` nodes per tree, so the signature carries `k`
-openings (`signature_size`). Key generation costs `forsKeyCost` hashes and one opening costs
-`treeOpenCost`.
+An opening is one secret and its path of `a` nodes per tree, the last one the other node of level
+`a - 1`, so the signature carries `k` openings (`signature_size`). Key generation costs `forsKeyCost` hashes and one opening costs
+`treeOpenCost`: the model derives a pair's secrets once per leaf (`forsSecret`), a fifth more FORS
+hashes than the scheme, which only loosens the bound.
 
 ## The digest
 
@@ -58,8 +59,7 @@ trees; `scripts/scheme.py`, `fors_log2_lifetime`):
 | 28 | 98.4% | 96.7% | 91.9% | 91.1% | 90.2% | 88.5% | 86.7% | 98.4% |
 
 Every limit is a larger share of its own cover attack than the forest's is of the forest's
-(80.2–97.8%, [README.md](README.md)): FORS has no codeword structure for a forger to exploit
-between trees, so the proof loses less to it.
+(80.2–97.8%, [README.md](README.md)).
 
 ## What the proof changes
 

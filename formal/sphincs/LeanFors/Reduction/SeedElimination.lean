@@ -388,7 +388,7 @@ theorem per_sampleDet (adversary : Adversary) (q : Nat) (material : Material) (s
 theorem noRepeat_internalize_memoAdv (adversary : Adversary) :
     (Memo.memoAdv (internalize adversary)).NoRepeat := by
   rw [← Memo.internalize_memoAdv]
-  exact ForestPotential.noRepeat_internalize_adversary _ (Memo.memoAdv_noRepeat adversary)
+  exact ForsPotential.noRepeat_internalize_adversary _ (Memo.memoAdv_noRepeat adversary)
 
 attribute [local irreducible] experiment sampleMasterSeed
 

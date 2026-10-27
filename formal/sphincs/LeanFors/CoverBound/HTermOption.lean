@@ -2,10 +2,10 @@ import LeanFors.CoverBound.HTermCertificate
 import LeanFors.CoverBound.MomentTable
 import LeanFors.CoverPotential.FairCoin
 
-/-! **One option of the forest H-term certificate.** An option fixes the cap `c1`, the Chernoff
+/-! **One option of the FORS H-term certificate.** An option fixes the cap `c1`, the Chernoff
 parameter `θ` and the threshold `cthr`, and carries the leaf tables `ḡ` (the excess part) and
-`h̄ - 1` (the Chernoff factor), checked against the moment tables, with their Poisson means `Eg`,
-`Ee` and the resulting bound `B ≥ L Eg + A (1 + Ee)^L` of the H-term. -/
+`h̄ - 1` (the Chernoff factor), checked against the `k`-th powers of the moment tables, with their
+Poisson means `Eg`, `Ee` and the resulting bound `B ≥ L Eg + A (1 + Ee)^L` of the H-term. -/
 
 open ENNReal NNReal
 
@@ -13,7 +13,7 @@ namespace LeanFors.Security.H0
 
 variable [Params]
 
-open Concrete ForestPrice LeanFors.Base.H0 LeanFors.Base.Domination H0Avg
+open Concrete ForsPrice LeanFors.Base.H0 LeanFors.Base.Domination H0Avg
 
 set_option linter.unusedSectionVars false
 
@@ -281,14 +281,14 @@ theorem pref_le (θ cthr : ℚ) (J P : ℕ) (hθ : 0 < θ) (hc : 0 ≤ cthr) :
   calc (expLow (θ * cthr) J P : ℝ) * eLowQ * θ ≤ Real.exp ((θ : ℝ) * cthr) * Real.exp 1 * θ := by gcongr
     _ = _ := by ring
 
-/-- **One option bounds the forest H-term**: `H ≤ B` whenever the rate `N / 2^b + q λ w / 2^b` is
+/-- **One option bounds the FORS H-term**: `H ≤ B` whenever the rate `N / 2^b + q λ w / 2^b` is
 below the table rate and the base `b0` is at least the threshold `cthr`. -/
 theorem hTermO_le_optF {H b k a : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b)
     (hk : forsTrees = k) (ha : forsHeight = a) (t : PoisT) (o : OptF) (ht : checkPT t = true)
     (ho : checkOptF H b k a t o = true) (w lam : ℝ≥0∞) (hw : w ≤ 1) (hlam : lam ≤ 1) (N q : ℕ)
     (hrate : (N : ℝ) / 2 ^ b + (q : ℝ) * (lam * w).toReal / 2 ^ b ≤ (t.mu : ℝ))
     (b0 : ℝ≥0∞) (hb0 : ENNReal.ofReal (o.cthr : ℝ) ≤ b0) :
-    hTermO (Finset.univ : Finset View) w lam N q (ForestPotential.excess b0) ≤ ENNReal.ofReal (o.B : ℝ) := by
+    hTermO (Finset.univ : Finset View) w lam N q (ForsPotential.excess b0) ≤ ENNReal.ofReal (o.B : ℝ) := by
   obtain ⟨hc1, hθ, hcthr, -, -, -, -, hgl, hhl, hlg, hlh, -, -, -, -, hEg, hEe, hB, hEg0, hEe0⟩ := checkOptF_parts ho
   have hθ' : (0 : ℝ) < (o.θ : ℝ) := by exact_mod_cast hθ
   have hlw : lam * w ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top (mul_le_one' hlam hw)
@@ -314,7 +314,7 @@ theorem hTermO_le_optF {H b k a : ℕ} (hH : totalHeight = H) (hb : subtreeHeigh
     calc (N : ℝ) * ((2 : ℝ) ^ b)⁻¹ + (q : ℝ) * ((lam * w).toReal / 2 ^ b)
         = (N : ℝ) / 2 ^ b + (q : ℝ) * (lam * w).toReal / 2 ^ b := by ring
       _ ≤ _ := hrate
-  have hmain := hTermO_forest_le w lam hw hlam N q b0 (o.cthr : ℝ) (o.c1 : ℝ) (o.θ : ℝ) hb0 hθ'
+  have hmain := hTermO_fors_le w lam hw hlam N q b0 (o.cthr : ℝ) (o.c1 : ℝ) (o.θ : ℝ) hb0 hθ'
     (fun n => ENNReal.ofReal (leafQ o.gt o.Jg n : ℝ)) (fun n => 1 + ENNReal.ofReal (leafQ o.ht o.Jh n : ℝ))
     (leaf_sepGood hlg) (SepGood.one_add (leaf_sepGood hlh)) (avgN_gS_le hH hb hk ha ho) (avgN_hS_le hH hb hk ha ho) α γ hα hγ μ hμ
   rw [poisMean_one_add] at hmain
@@ -337,7 +337,7 @@ theorem hTermO_le_optF {H b k a : ℕ} (hH : totalHeight = H) (hb : subtreeHeigh
     have h0 : (0 : ℝ) ≤ ((1 + o.Ee : ℚ) : ℝ) ^ (2 ^ b) := by push_cast; positivity
     exact_mod_cast le_trans h0 h
   rw [hL, hcard] at hmain
-  calc hTermO (Finset.univ : Finset View) w lam N q (ForestPotential.excess b0)
+  calc hTermO (Finset.univ : Finset View) w lam N q (ForsPotential.excess b0)
       ≤ (2 : ℝ≥0∞) ^ b * ENNReal.ofReal (o.Eg : ℝ) +
           ENNReal.ofReal (prefQ : ℝ) * ENNReal.ofReal ((1 + o.Ee : ℚ) : ℝ) ^ (2 ^ b) := by
         refine le_trans hmain (add_le_add (mul_le_mul_right hEg' _) (mul_le_mul' (ENNReal.ofReal_le_ofReal hp) ?_))

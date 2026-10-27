@@ -1,6 +1,6 @@
 import LeanFors.CoverBound.PerIndex
 
-/-! **The forest H-term.** With per-index majorants `ḡ ≥ E[g(y) | n]` and `h̄ ≥ E[h(y) | n]` that
+/-! **The FORS H-term.** With per-index majorants `ḡ ≥ E[g(y) | n]` and `h̄ ≥ E[h(y) | n]` that
 are increasing and convex in the number of views `n`, the separable count function
 `Σ_l ḡ(k_l) + A Π_l h̄(k_l)` is a good count function; averaging out the marks and the Poisson
 domination of the one-coin H-term give
@@ -12,7 +12,7 @@ namespace LeanFors.Security.H0
 
 variable [Params]
 
-open Concrete ForestPrice LeanFors.Base.Domination LeanFors.Base.H0 H0Avg
+open Concrete ForsPrice LeanFors.Base.Domination LeanFors.Base.H0 H0Avg
 
 set_option linter.unusedSectionVars false
 
@@ -168,18 +168,18 @@ theorem cnt_id (e : Multiset ι) (l : ι) : cnt id e l = e.count l := by
   congr 1
   exact Multiset.filter_congr fun x _ => by simp [eq_comm]
 
-/-- **The forest H-term.** -/
-theorem hTermO_forest_le (w lam : ℝ≥0∞) (hw : w ≤ 1) (hlam : lam ≤ 1) (N q : ℕ) (b0 : ℝ≥0∞) (c c1 θ : ℝ)
+/-- **The FORS H-term.** -/
+theorem hTermO_fors_le (w lam : ℝ≥0∞) (hw : w ≤ 1) (hlam : lam ≤ 1) (N q : ℕ) (b0 : ℝ≥0∞) (c c1 θ : ℝ)
     (hc : ENNReal.ofReal c ≤ b0) (hθ : 0 < θ) (gbar hbar : ℕ → ℝ≥0∞) (hgG : SepGood gbar) (hhG : SepGood hbar)
     (hg : ∀ n, avgN (gS c1) n 0 ≤ gbar n) (hh : ∀ n, avgN (hS c1 θ) n 0 ≤ hbar n)
     (α γ : ℝ≥0) (hα : (Fintype.card (Fin (2 ^ subtreeHeight)) : ℝ≥0∞) * α = 1)
     (hγ : (Fintype.card (Fin (2 ^ subtreeHeight)) : ℝ≥0∞) * γ = lam * w) (μ : ℝ≥0)
     (hμ : (N : ℝ≥0) * α + (q : ℝ≥0) * γ ≤ μ) :
-    hTermO (Finset.univ : Finset View) w lam N q (ForestPotential.excess b0) ≤
+    hTermO (Finset.univ : Finset View) w lam N q (ForsPotential.excess b0) ≤
       (Fintype.card (Fin (2 ^ subtreeHeight)) : ℝ≥0∞) * poisMean μ gbar +
         ENNReal.ofReal (Real.exp (-θ * c) / (Real.exp 1 * θ)) * poisMean μ hbar ^ Fintype.card (Fin (2 ^ subtreeHeight)) := by
   set A := ENNReal.ofReal (Real.exp (-θ * c) / (Real.exp 1 * θ)) with hAdef
-  have hdom : Dominated (ForestPotential.excess b0) (fun e : Multiset (Fin (2 ^ subtreeHeight)) =>
+  have hdom : Dominated (ForsPotential.excess b0) (fun e : Multiset (Fin (2 ^ subtreeHeight)) =>
       ∑ l, gbar (e.count l) + A * ∏ l, hbar (e.count l)) :=
     dominated_of_split (gS c1) (hS c1 θ) A (fun d => excess_le_split b0 c c1 θ hc hθ d) gbar hbar hg hh
   refine le_trans (hTermO_le_of_dominated w lam N q hdom) ?_

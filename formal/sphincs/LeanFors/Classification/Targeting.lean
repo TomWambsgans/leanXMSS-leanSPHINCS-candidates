@@ -77,7 +77,7 @@ theorem output_ne_input (address : Address) : address.outputCoordinate ≠ addre
 
 /-! ### Message-digest fields carry no target -/
 
-theorem msg_fields (parameter : PublicParameter) (input : HashInput) (h : ForestSigner.IsMsgInput input)
+theorem msg_fields (parameter : PublicParameter) (input : HashInput) (h : ForsSigner.IsMsgInput input)
     (fields : TweakFields) (hf : parseFields parameter input = some fields) :
     ∃ call : DigestCall, fields = hashDomainFields (.message call) := by
   obtain ⟨parameter', call, payload, rfl⟩ := h
@@ -118,7 +118,7 @@ theorem compTable_message (parameterOutput : HashOutput) (fixed : HiddenGraph.Ta
   simp only [encTable, encodingAt_message, Option.map_none]
 
 theorem parse_msg_none (parameter : PublicParameter) (active : Address → Prop) (input : HashInput)
-    (h : ForestSigner.IsMsgInput input) : HiddenGraph.parse parameter active input = none := by
+    (h : ForsSigner.IsMsgInput input) : HiddenGraph.parse parameter active input = none := by
   obtain ⟨parameter', call, payload, rfl⟩ := h
   cases hparse : HiddenGraph.parse parameter active
       (tweakableHashInput parameter' (.message call) payload) with
@@ -216,7 +216,7 @@ noncomputable def sampleTargeting (results : OtsKey → Option (Counter × Encod
     HiddenDebt.Targeting HashInput HashOutput Coordinate where
   trunc := truncateHash
   kind := sampleKind parameterOutput fixed highs remaining results
-  digest := ForestSigner.IsMsgInput
+  digest := ForsSigner.IsMsgInput
 
 theorem sampleTargeting_kind_eq (results : OtsKey → Option (Counter × Encoding)) :
     (sampleTargeting parameterOutput fixed highs remaining results).kind =
@@ -248,7 +248,7 @@ theorem kindAt_nonrow (results : OtsKey → Option (Counter × Encoding)) (field
   exact Option.elim_none _ _
 
 theorem sampleTargeting_msg (results : OtsKey → Option (Counter × Encoding)) (input : HashInput)
-    (h : ForestSigner.IsMsgInput input) :
+    (h : ForsSigner.IsMsgInput input) :
     (sampleTargeting parameterOutput fixed highs remaining results).kind input = .none := by
   cases hf : parseFields (truncateHash parameterOutput) input with
   | none =>
@@ -523,7 +523,7 @@ theorem exists_targeting (hb : 0 < keptHeight topLayer) (parameterOutput : HashO
     ∃ tg : HiddenDebt.Targeting HashInput HashOutput HiddenGraph.Coordinate,
       tg.trunc = truncateHash ∧
       HiddenDebt.Compatible tg (sampleModel parameterOutput highs) ∧
-      (∀ x, ForestSigner.IsMsgInput x → tg.kind x = .none ∧ tg.digest x) ∧
+      (∀ x, ForsSigner.IsMsgInput x → tg.kind x = .none ∧ tg.digest x) ∧
       ∀ (table : HiddenGraph.Table),
         tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table →
         ∀ (s : HiddenDebt.DebtState HashInput HashOutput HiddenGraph.Coordinate),

@@ -13,7 +13,7 @@ namespace LeanFors.Security.H0
 
 variable [Params]
 
-open Concrete ForestPrice ForestPotential LeanFors.Base.H0 LeanFors.Base.Domination
+open Concrete ForsPrice ForsPotential LeanFors.Base.H0 LeanFors.Base.Domination
 
 set_option linter.unusedSectionVars false
 set_option exponentiation.threshold 512
@@ -182,17 +182,17 @@ theorem rate_le_tableH (H b N qtop : ℕ) (t : PoisT) (ht : checkRateH H b N qto
         rw [div_div]
     _ ≤ _ := h2'
 
-/-- **A checked table and option bound the forest H-term with the spare slot** at every budget
+/-- **A checked table and option bound the FORS H-term with the spare slot** at every budget
 `q ≤ qtop` and every base `β ≥ cthr`. -/
 theorem startExcessH_le_opt (H b k a N qtop : ℕ) (t : PoisT) (o : OptF) (hr : checkRateH H b N qtop t = true)
     (ht : checkPT t = true)
     (ho : checkOptF H b k a t o = true) (hH : totalHeight = H) (hb : subtreeHeight = b)
     (hk : forsTrees = k) (ha : forsHeight = a) (hN : signatureLimit = N) (q : ℕ)
     (hq : q ≤ qtop) (β : ℝ≥0∞) (hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ β) :
-    ForestPotential.startExcessH (wbarH q) β q ≤ ENNReal.ofReal (o.B : ℝ) := by
+    ForsPotential.startExcessH (wbarH q) β q ≤ ENNReal.ofReal (o.B : ℝ) := by
   have h := hTermO_le_optF hH hb hk ha t o ht ho (wbarH q) landing
     (wbarH_le_one q (fair_of_rateH H b N qtop t hr hH hb q hq))
-    ForestPotential.landing_le_one
+    ForsPotential.landing_le_one
     (signatureLimit + 1) q (rate_le_tableH H b N qtop t hr hH hb hN q hq) β hβc
   exact h
 
@@ -216,7 +216,7 @@ theorem bound_of_entryX (H b k a K N : ℕ) (t : PoisT) (opts : List OptF)
     omega
   have hB0 : (0 : ℝ) ≤ (o.B : ℝ) := by exact_mod_cast optF_B_nonneg hoc
   have hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ HiddenDebt.baselineW q :=
-    le_trans (ENNReal.ofReal_le_ofReal (by exact_mod_cast hcthr)) (ForestPotential.baselineW_ge q qb hqb)
+    le_trans (ENNReal.ofReal_le_ofReal (by exact_mod_cast hcthr)) (ForsPotential.baselineW_ge q qb hqb)
   have hH : X ≤ ENNReal.ofReal (o.B : ℝ) := hX o ho hβc
   have hmainR : (qb : ℝ) * (o.B : ℝ) * ((1 / 2 : ℝ) / (1 - 1 / 2)) + ((qb : ℝ) + (K : ℝ) + N) / 2 ^ 200 ≤
       ((qa : ℝ) / 2 ^ 128) ^ 2 + (K : ℝ) / 2 ^ 127 := by
@@ -275,14 +275,14 @@ theorem bound_of_entryH (H b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) 
     (hb : subtreeHeight = b) (hk : forsTrees = k) (ha : forsHeight = a) (hK : Prefix.keygenHashCost = K)
     (hN : signatureLimit = N) (e : EntryF) (he : checkEntryF K N opts e = true) (q : ℕ) (hqa : e.1 ≤ q)
     (hqb : q ≤ e.2.1) (hqt : q ≤ qtop) :
-    (1 - HiddenDebt.budget 0 q) + (q : ℝ≥0∞) * ForestPotential.startExcessH (wbarH q) (HiddenDebt.baselineW q) q +
+    (1 - HiddenDebt.budget 0 q) + (q : ℝ≥0∞) * ForsPotential.startExcessH (wbarH q) (HiddenDebt.baselineW q) q +
         ((q + Prefix.keygenHashCost + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
       ((q + Prefix.keygenHashCost : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
   bound_of_entryX H b k a K N t opts hopts hK hN e he q hqa hqb _ fun o ho hβc =>
     startExcessH_le_opt H b k a N qtop t o hr ht (hopts o ho) hH hb hk ha hN q hqt _ hβc
 
-/-- **The forest H-term bound with the spare slot at the weighted baseline from a heavy cover
+/-- **The FORS H-term bound with the spare slot at the weighted baseline from a heavy cover
 certificate**, for every budget `qstart ≤ q' ≤ qtop`. -/
 theorem h0H_bound_of_cover (H b k a K N qstart : ℕ) (cover : CoverW)
     (hcov : checkCoverH H b k a K N qstart cover = true)
@@ -290,7 +290,7 @@ theorem h0H_bound_of_cover (H b k a K N qstart : ℕ) (cover : CoverW)
     (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N) (q' : ℕ) (hq0 : qstart ≤ q')
     (hq : q' ≤ cover.qtop) :
     (1 - HiddenDebt.budget 0 q') +
-        (q' : ℝ≥0∞) * ForestPotential.startExcessH (wbarH q') (HiddenDebt.baselineW q') q' +
+        (q' : ℝ≥0∞) * ForsPotential.startExcessH (wbarH q') (HiddenDebt.baselineW q') q' +
         ((q' + Prefix.keygenHashCost + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
       ((q' + Prefix.keygenHashCost : ℕ) : ℝ≥0∞) / 2 ^ 127 := by
@@ -310,11 +310,11 @@ theorem fair_of_coverH (H b k a K N qstart : ℕ) (cover : CoverW)
 
 end LeanFors.Security.H0
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenReveal
   LeanFors.Base.Domination
 open HiddenBridge PotentialA
 
@@ -457,4 +457,4 @@ theorem det_bitsFH (hb0 : 0 < keptHeight topLayer) (H b k a K N : ℕ) (hH : tot
       refine le_trans h (le_of_eq ?_)
       rw [Nat.cast_pow, Nat.cast_ofNat]
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

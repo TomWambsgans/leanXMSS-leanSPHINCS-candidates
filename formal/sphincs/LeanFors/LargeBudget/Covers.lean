@@ -1,7 +1,7 @@
 import LeanFors.CoverBound.HTermOption
 import LeanFors.LargeBudget.Route
 
-/-! Forest split-bound covers at the survival-weighted baseline `baselineW` (thresholds `betaWQ`): a
+/-! FORS split-bound covers at the survival-weighted baseline `baselineW` (thresholds `betaWQ`): a
 successful cover check bounds the large-route term at every budget it covers. -/
 
 open ENNReal NNReal
@@ -10,12 +10,12 @@ namespace LeanFors.Security.H0
 
 variable [Params]
 
-open Concrete ForestPrice LeanFors.Base.H0 LeanFors.Base.Domination
+open Concrete ForsPrice LeanFors.Base.H0 LeanFors.Base.Domination
 
 /-- A cover entry: budgets `[qa, qb]` and the index of its option. -/
 abbrev EntryF := ℕ × ℕ × ℕ
 
-/-- A forest cover: a Poisson table, options, entries. -/
+/-- A cover certificate: a Poisson table, options, entries. -/
 structure CoverW where
   qtop : ℕ
   tab : PoisT
@@ -42,7 +42,7 @@ def checkEntryF (K N : ℕ) (opts : List OptF) (e : EntryF) : Bool :=
   match opts[e.2.2]? with
   | none => false
   | some o =>
-      decide (2 * e.2.1 ≤ 2 ^ 128) && decide (o.cthr ≤ ForestPotential.betaWQ e.2.1) &&
+      decide (2 * e.2.1 ≤ 2 ^ 128) && decide (o.cthr ≤ ForsPotential.betaWQ e.2.1) &&
         decide ((e.2.1 : ℚ) * o.B + ((e.2.1 : ℚ) + K + N) / 2 ^ 200 ≤
           ((e.1 : ℚ) / 2 ^ 128) ^ 2 + (K : ℚ) / 2 ^ 127)
 
@@ -71,7 +71,7 @@ theorem chainF_sound (K N qtop : ℕ) (opts : List OptF) : ∀ (cover : List Ent
         exact ⟨e', List.mem_cons_of_mem _ he', h1, h2, h3⟩
 
 theorem checkEntryF_sound {K N : ℕ} {opts : List OptF} {e : EntryF} (h : checkEntryF K N opts e = true) :
-    ∃ o ∈ opts, 2 * e.2.1 ≤ 2 ^ 128 ∧ o.cthr ≤ ForestPotential.betaWQ e.2.1 ∧
+    ∃ o ∈ opts, 2 * e.2.1 ≤ 2 ^ 128 ∧ o.cthr ≤ ForsPotential.betaWQ e.2.1 ∧
       (e.2.1 : ℚ) * o.B + ((e.2.1 : ℚ) + K + N) / 2 ^ 200 ≤
         ((e.1 : ℚ) / 2 ^ 128) ^ 2 + (K : ℚ) / 2 ^ 127 := by
   unfold checkEntryF at h
@@ -152,16 +152,16 @@ theorem rate_le_tableF (H b N qtop : ℕ) (t : PoisT) (ht : checkRate H b N qtop
         rw [div_div]
     _ ≤ _ := h2'
 
-/-- **A checked table and option bound the one-coin forest H-term** at every budget `q ≤ qtop` and
+/-- **A checked table and option bound the one-coin FORS H-term** at every budget `q ≤ qtop` and
 every base `β ≥ cthr`. -/
 theorem startExcessO_le_opt (H b k a N qtop : ℕ) (t : PoisT) (o : OptF) (hr : checkRate H b N qtop t = true)
     (ht : checkPT t = true)
     (ho : checkOptF H b k a t o = true) (hH : totalHeight = H) (hb : subtreeHeight = b)
     (hk : forsTrees = k) (ha : forsHeight = a) (hN : signatureLimit = N) (q : ℕ)
     (hq : q ≤ qtop) (β : ℝ≥0∞) (hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ β) :
-    ForestPotential.startExcessO (wbarOf q) β q ≤ ENNReal.ofReal (o.B : ℝ) := by
+    ForsPotential.startExcessO (wbarOf q) β q ≤ ENNReal.ofReal (o.B : ℝ) := by
   have h := hTermO_le_optF hH hb hk ha t o ht ho (wbarOf q) landing
-    (wbar_le_one q (fair_of_rate H b N qtop t hr hH hb q hq)) ForestPotential.landing_le_one
+    (wbar_le_one q (fair_of_rate H b N qtop t hr hH hb q hq)) ForsPotential.landing_le_one
     signatureLimit q (rate_le_tableF H b N qtop t hr hH hb hN q hq) β hβc
   exact h
 
@@ -172,7 +172,7 @@ theorem bound_of_entryF (H b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) 
     (hb : subtreeHeight = b) (hk : forsTrees = k) (ha : forsHeight = a) (hK : Prefix.keygenHashCost = K)
     (hN : signatureLimit = N) (e : EntryF) (he : checkEntryF K N opts e = true) (q : ℕ) (hqa : e.1 ≤ q)
     (hqb : q ≤ e.2.1) (hqt : q ≤ qtop) :
-    (1 - HiddenDebt.budget 0 q) + (q : ℝ≥0∞) * ForestPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q +
+    (1 - HiddenDebt.budget 0 q) + (q : ℝ≥0∞) * ForsPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q +
         ((q + Prefix.keygenHashCost + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
       ((q + Prefix.keygenHashCost : ℕ) : ℝ≥0∞) / 2 ^ 127 := by
@@ -186,8 +186,8 @@ theorem bound_of_entryF (H b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) 
   have hq2 : 2 * q ≤ 2 ^ 128 := by omega
   have hB0 : (0 : ℝ) ≤ (o.B : ℝ) := by exact_mod_cast optF_B_nonneg hoc
   have hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ HiddenDebt.baselineW q :=
-    le_trans (ENNReal.ofReal_le_ofReal (by exact_mod_cast hcthr)) (ForestPotential.baselineW_ge q qb hqb)
-  have hH : ForestPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q ≤ ENNReal.ofReal (o.B : ℝ) :=
+    le_trans (ENNReal.ofReal_le_ofReal (by exact_mod_cast hcthr)) (ForsPotential.baselineW_ge q qb hqb)
+  have hH : ForsPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q ≤ ENNReal.ofReal (o.B : ℝ) :=
     startExcessO_le_opt H b k a N qtop t o hr ht hoc hH hb hk ha hN q hqt _ hβc
   have hmainR : (qb : ℝ) * (o.B : ℝ) * ((1 / 2 : ℝ) / (1 - 1 / 2)) + ((qb : ℝ) + (K : ℝ) + N) / 2 ^ 200 ≤
       ((qa : ℝ) / 2 ^ 128) ^ 2 + (K : ℝ) / 2 ^ 127 := by
@@ -227,7 +227,7 @@ theorem bound_of_entryF (H b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) 
     have h1 : ((2 : ℝ) ^ 128 - 0 - q) / ((2 : ℝ) ^ 128 - 0) ≤ 1 := by
       rw [div_le_one (by norm_num)]; linarith [show (0 : ℝ) ≤ q from Nat.cast_nonneg _]
     nlinarith
-  calc 1 - HiddenDebt.budget 0 q + (q : ℝ≥0∞) * ForestPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q +
+  calc 1 - HiddenDebt.budget 0 q + (q : ℝ≥0∞) * ForsPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q +
         ((q + K + N : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200
       ≤ ENNReal.ofReal (1 - (((2 : ℝ) ^ 128 - 0 - q) / ((2 : ℝ) ^ 128 - 0)) ^ 2) +
           ENNReal.ofReal ((q : ℝ) * (o.B : ℝ)) +
@@ -240,7 +240,7 @@ theorem bound_of_entryF (H b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) 
     _ ≤ ENNReal.ofReal (((q : ℝ) + K) / 2 ^ 127) := ENNReal.ofReal_le_ofReal hfinal
     _ = _ := hrhs.symm
 
-/-- **The one-coin forest H-term bound at the weighted baseline from a cover certificate**, for every
+/-- **The one-coin FORS H-term bound at the weighted baseline from a cover certificate**, for every
 budget `qstart ≤ q' ≤ qtop`. -/
 theorem h0W_bound_of_cover (H b k a K N qstart : ℕ) (cover : CoverW)
     (hcov : checkCoverW H b k a K N qstart cover = true)
@@ -248,7 +248,7 @@ theorem h0W_bound_of_cover (H b k a K N qstart : ℕ) (cover : CoverW)
     (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N) (q' : ℕ) (hq0 : qstart ≤ q')
     (hq : q' ≤ cover.qtop) :
     (1 - HiddenDebt.budget 0 q') +
-        (q' : ℝ≥0∞) * ForestPotential.startExcessO (wbarOf q') (HiddenDebt.baselineW q') q' +
+        (q' : ℝ≥0∞) * ForsPotential.startExcessO (wbarOf q') (HiddenDebt.baselineW q') q' +
         ((q' + Prefix.keygenHashCost + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
       ((q' + Prefix.keygenHashCost : ℕ) : ℝ≥0∞) / 2 ^ 127 := by

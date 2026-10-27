@@ -7,11 +7,11 @@ potential, the coin part of A4, and `κ` times its near term, once
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenReveal
   LeanFors.Base.Domination
 open HiddenBridge PotentialA
 
@@ -309,4 +309,4 @@ theorem sample_boundF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hn
 
 end SampleF
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

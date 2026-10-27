@@ -112,10 +112,10 @@ theorem digestCount_bytes (tg' : Targeting HashInput HashOutput Coordinate) (byt
 
 include hMp hMi hMo in
 /-- **One step.** -/
-theorem step (tg' : Targeting HashInput HashOutput Coordinate) (hdig : tg'.digest = ForestSigner.IsMsgInput)
+theorem step (tg' : Targeting HashInput HashOutput Coordinate) (hdig : tg'.digest = ForsSigner.IsMsgInput)
     {total : ℕ} (hN : Numeric K.ρ ((total : ℝ) / 2 ^ 128))
     (hsec : ∀ x, SecondOrderInput K.p K.R x → K.tg.kind x = .none)
-    (hmsg : ∀ x, ForestSigner.IsMsgInput x → K.tg.kind x = .none)
+    (hmsg : ∀ x, ForsSigner.IsMsgInput x → K.tg.kind x = .none)
     (input : (SourceCostSpec HashInput HashOutput Coordinate).Domain) (budget : ℕ) (s : St) (hinv : K.Inv s)
     (hcost : sourceCost input ≤ budget) :
     ∑' r, Pr[= r | costStep M input s] * K.potCap total (budget - sourceCost input) r.2 +
@@ -153,19 +153,19 @@ theorem step (tg' : Targeting HashInput HashOutput Coordinate) (hdig : tg'.diges
             rw [readOutside_cached bytes s u hc, tsum_probOutput_pure_mul]
             show K.pot y' s + _ ≤ _
             have h := K.pot_same hN.high (by linarith [hN.low]) y' s
-              (if ForestSigner.IsMsgInput bytes then 1 else 0) (by split_ifs <;> simp)
-            calc K.pot y' s + ν * ENNReal.ofReal K.ρ * (if ForestSigner.IsMsgInput bytes then 1 else 0)
-                = K.pot y' s + ν * ((if ForestSigner.IsMsgInput bytes then 1 else 0) * ENNReal.ofReal K.ρ) := by ring
+              (if ForsSigner.IsMsgInput bytes then 1 else 0) (by split_ifs <;> simp)
+            calc K.pot y' s + ν * ENNReal.ofReal K.ρ * (if ForsSigner.IsMsgInput bytes then 1 else 0)
+                = K.pot y' s + ν * ((if ForsSigner.IsMsgInput bytes then 1 else 0) * ENNReal.ofReal K.ρ) := by ring
               _ ≤ _ := h
         | none =>
-            by_cases hd : ForestSigner.IsMsgInput bytes
+            by_cases hd : ForsSigner.IsMsgInput bytes
             · rw [if_pos hd, mul_one]
               exact K.fresh_digest hN hmsg hinv hc hd
             · rw [if_neg hd, mul_zero, add_zero]
               exact K.fresh_zero hN hxr hY hsec hinv hc
     | some q =>
         have hq : HiddenGraph.parse K.p (candidateActive K.p) bytes = some q := by rw [← hMp, hp]
-        have hd : ¬ForestSigner.IsMsgInput bytes := fun hd => by
+        have hd : ¬ForsSigner.IsMsgInput bytes := fun hd => by
           rw [parse_msg_none _ _ bytes hd] at hq
           cases hq
         rw [if_neg hd, mul_zero, add_zero]
@@ -443,7 +443,7 @@ theorem tsum_ind (μ : ProbComp (Coordinate → Digest)) (E : (Coordinate → Di
   split_ifs <;> simp
 
 /-- **Final payoff.** The expected payoff is at most the decided events, the pending debts and the
-forest part. -/
+FORS part. -/
 theorem endValue_le (s : St) (y : ℕ) : endValue K.payoff s ≤ K.pot y s := by
   have hHW : ∑' T, Pr[= T | completion s.known] * (if Hit K.tg K.initial T s ∨ K.WotsBad s then 1 else 0) ≤
       K.done s + K.pend s := by

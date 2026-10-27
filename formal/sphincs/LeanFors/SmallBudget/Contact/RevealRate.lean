@@ -9,12 +9,12 @@ probability that the scan from a uniform start signs with one of them (`hitMass`
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenBridge
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenBridge
 open LeanFors.LoopWalk
 open LeanFors.Base.Domination
 
@@ -152,7 +152,7 @@ theorem finish_reveals_ok (ρ : Randomness) (b : ℕ) (s' : State) (u : DigestCa
     (hc : ∀ call, s'.cache (pblk parameter data (m, ρ) call) = some (u call))
     (out : Run HashInput Coordinate (Option Signature) × State)
     (hout : out ∈ support (interp tg initial model (finishCostSource parameter data m ρ) b s')) :
-    ∀ c ∈ out.1.2.1, ForestOk (truncateMessageDigest u) c := by
+    ∀ c ∈ out.1.2.1, ForsOk (truncateMessageDigest u) c := by
   rw [finishCostSource_eq] at hout
   rcases cached_reads_reveals tg initial model (pblk parameter data (m, ρ)) u s' hparse hc _ b out hout with
     h | ⟨b', o, ho, heq⟩
@@ -253,4 +253,4 @@ theorem reveal_le_all (hparse : ∀ p call, model.parse (pblk parameter data p c
 
 end Reveal
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

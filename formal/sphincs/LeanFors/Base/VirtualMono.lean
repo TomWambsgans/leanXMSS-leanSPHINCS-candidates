@@ -1,6 +1,6 @@
 import LeanFors.Base.VirtualOnce
 
-/-! The one-coin virtual future for monotone base functions. The forest witness (a cover
+/-! The one-coin virtual future for monotone base functions. The FORS witness (a cover
 indicator) is monotone but not supermodular, so the lemmas that add coins by their gains do
 not apply. Instead a list of `ℓ` coins of probability `w` dominates any disclosure of a single item
 of the list with probability `e` per item, `e (1 + w ℓ) ≤ w`, together with the base value: a coin

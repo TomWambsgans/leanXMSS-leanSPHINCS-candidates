@@ -1,11 +1,11 @@
 import LeanFors.Base.Poisson
 
-/-! The split majorant of the excess of the count price `Σ_l κ k_l^24` over a threshold. With
-`y_l = κ k_l^24`, `m_l = min(y_l, c1)` and `M = Σ_l m_l`,
+/-! The split majorant of the excess of a price `Σ_l y_l` over a threshold (for FORS, `y_l` is the
+cover probability at index `l`, `excess_le_split`). With `m_l = min(y_l, c1)` and `M = Σ_l m_l`,
 `(Σ_l y_l - β)^+ ≤ Σ_l (y_l - c1)^+ + (M - c)^+` for any real `c` with `c ≤ β`, and the last
 term is bounded by the Chernoff majorant `e^{θ (M - c)} / (e θ) = e^{-θ c} / (e θ) Π_l e^{θ m_l}`.
-The excess is a good count function, so the one-coin H-term is below its iid Poisson mean, which
-factorizes over the leaves: `L E[(κ K^24 - c1)^+] + e^{-θ c} / (e θ) E[e^{θ min(κ K^24, c1)}]^L`. -/
+Iid Poisson means of the separable sum and product factorize over the leaves:
+`L E[g(K)]` and `E[h(K)]^L`. -/
 
 open ENNReal NNReal
 

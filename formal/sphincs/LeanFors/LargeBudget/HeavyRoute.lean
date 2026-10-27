@@ -1,7 +1,7 @@
 import LeanFors.LargeBudget.HeavyPotential
 import LeanFors.LargeBudget.Route
 
-/-! The large-budget route with the weighted baseline and one heavy message. The one-coin forest
+/-! The large-budget route with the weighted baseline and one heavy message. The one-coin FORS
 potential is the one of `LargeBudget/HeavyPotential`: the coin only pays the rate of a message with at most half of
 the budget in cached digests, so the fair-rate hypothesis is needed at `(q - keygenCost) / 2` cached
 digests, and the start value of the potential is the excess forecast with one spare slot
@@ -9,11 +9,11 @@ digests, and the start value of the potential is the excess forecast with one sp
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal LeanFors.Base.Domination
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenReveal LeanFors.Base.Domination
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -73,8 +73,8 @@ variable (parameter : PublicParameter) (data : PublicData) (wbar : ℝ≥0∞) (
   (initial : HiddenOutside.Cache HashInput HashOutput) (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
 /-- **The rest of the game with the weighted baseline and one heavy message.** For an adversary that
-never repeats a message, a decided hit or a forest cover has probability at most the weighted
-saturation budget plus the one-coin forest potential with one heavy message at the baseline
+never repeats a message, a decided hit or a FORS cover has probability at most the weighted
+saturation budget plus the one-coin FORS potential with one heavy message at the baseline
 `baselineW total`. The coin pays the rate at `total / 2` cached digests. -/
 theorem rest_boundH (hcompat : Compatible tg model) (htrunc : UniformTruncation (R := HashOutput) tg)
     (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
@@ -102,7 +102,7 @@ theorem rest_boundH (hcompat : Compatible tg model) (htrunc : UniformTruncation 
   have htotal2 : (total : ℝ) ≤ spaceReal := by
     have : (0 : ℝ) ≤ total := Nat.cast_nonneg _
     linarith
-  -- the weighted forest potential
+  -- the weighted FORS potential
   have hgood := goodHW_advProg parameter data total wbar b0 Fail Lmax tg initial model hparse hkind hdigest hfail hfair
     le_rfl M [] hnr total start [] [] 0 [] (start_prepared initial known)
     (start_pinv parameter data initial hclean known) (start_minv parameter data initial hclean known)
@@ -376,4 +376,4 @@ theorem det_largeH (hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : �
 
 end ChainH
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

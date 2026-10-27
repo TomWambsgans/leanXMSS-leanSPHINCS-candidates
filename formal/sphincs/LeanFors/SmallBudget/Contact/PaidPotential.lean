@@ -11,12 +11,12 @@ the pair and count invariants, guesses backed by cached queries, and exposed rev
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenBridge
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenBridge
 open PotentialA
 
 set_option backward.isDefEq.respectTransparency false
@@ -533,4 +533,4 @@ theorem final_le_startF (hMp : model.parse = HiddenGraph.parse K.p (candidateAct
 
 end Steps
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

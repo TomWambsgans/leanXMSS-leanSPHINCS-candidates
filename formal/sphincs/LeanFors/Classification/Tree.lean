@@ -96,7 +96,7 @@ theorem orderedPayload_cross {bit bit' : Bool} (hne : bit ≠ bit')
   · exact nodePayload_injective h
   · exact (nodePayload_injective h).symm
 
-/-- The shared binary fold used by the XMSS tree and each forest tree. -/
+/-- The shared binary fold used by the XMSS tree and each FORS tree. -/
 def merkleFold (parameter : PublicParameter) (domain : Nat → Nat → HashDomain)
     (index : Nat) (path : Nat → Digest) : Nat → Digest → OracleComp HashSpec Digest
   | 0, value => pure value

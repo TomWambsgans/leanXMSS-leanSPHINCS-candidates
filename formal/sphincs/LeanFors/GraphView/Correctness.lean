@@ -1,5 +1,5 @@
 import LeanFors.GraphView.Pruned
-import LeanFors.Classification.Forest
+import LeanFors.Classification.Fors
 
 /-! Canonical graph labels agree with actual seeded computations. The only graph hypotheses are
 its query-response consistency and untouched surrogate boundary, which `Reduction/PreparedSample` supplies

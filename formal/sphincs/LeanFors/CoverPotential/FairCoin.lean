@@ -12,7 +12,7 @@ namespace LeanFors.Security.H0
 
 variable [Params]
 
-open Concrete ForestPrice ForestPotential
+open Concrete ForsPrice ForsPotential
 
 set_option linter.unusedSectionVars false
 set_option exponentiation.threshold 512

@@ -13,12 +13,12 @@ ordinary queries and signing calls that the one-coin potentials of `CoverPotenti
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner LeanFors.Base.Domination
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner LeanFors.Base.Domination
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -166,7 +166,7 @@ end Defs
 
 section Mean
 
-theorem landing_le_one : landing ≤ 1 := ForestPrice.landing_le_one
+theorem landing_le_one : landing ≤ 1 := ForsPrice.landing_le_one
 
 /-- **Mean over a fresh pair.** Only the block of `firstCall` decides landing. -/
 theorem pair_mean (parameter : PublicParameter) (F : View → ℝ≥0∞) (C : ℝ≥0∞) :
@@ -417,7 +417,7 @@ variable (parameter : PublicParameter) (data : PublicData) (Qtot : ℕ) {A : Typ
 noncomputable def finalValue (R : List Coordinate) (out : Run HashInput Coordinate HiddenBridge.Outcome × State) :
     ℝ≥0∞ :=
   out.1.1.elim 0 fun outcome =>
-    if HiddenBridge.ForestCover parameter data.root outcome (R ++ out.1.2.1) out.2.cache ∧ ¬Realized tg initial out.2
+    if HiddenBridge.ForsCover parameter data.root outcome (R ++ out.1.2.1) out.2.cache ∧ ¬Realized tg initial out.2
     then 1 else 0
 
 /-- Cached digest entries of every message, plus the remaining budget, stay bounded. -/
@@ -870,4 +870,4 @@ theorem interpThen_none {α β : Type} (next : α → OracleComp CostSpec β) (b
 
 end SignGood
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

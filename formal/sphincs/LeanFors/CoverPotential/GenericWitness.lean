@@ -1,6 +1,6 @@
 import LeanFors.CoverPotential.OneCoin
 
-/-! The one-coin forest potential of the scan signer with a generic monotone witness. A witness `W`
+/-! The one-coin FORS potential of the scan signer with a generic monotone witness. A witness `W`
 assigns to a target view and a multiset of disclosed views a monotone, finite value; the fresh-digest
 price is `landing` times its average over a uniform target. The potential and its new-pair, order and
 signing lemmas are those of `CoverPotential/OneCoin` (terms through `termO`, lists of touched
@@ -10,12 +10,12 @@ free of the run's budget. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner LeanFors.Base.Domination
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner LeanFors.Base.Domination
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -474,4 +474,4 @@ theorem sign_expectG_level (hW : WitnessProps W) (gate : State → Prop)
 
 end SignPointMainG
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

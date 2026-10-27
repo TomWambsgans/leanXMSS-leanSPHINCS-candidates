@@ -202,7 +202,7 @@ theorem row_le {α : Type} (E : α → Prop) (parameter : PublicParameter) (data
 
 /-! ### The adversary's interaction as a cost program -/
 
-open Internalize ForestPotential
+open Internalize ForsPotential
 
 noncomputable def finishBool (parameter : PublicParameter) (data : PublicData) (L : QueryLog SigningSpec)
     (forgery : Forgery) : OracleComp CostSpec Bool := do

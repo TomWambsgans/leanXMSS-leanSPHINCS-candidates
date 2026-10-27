@@ -5,7 +5,7 @@ section
 
 open OracleComp
 
-/-! The virtual future used by the forest forecast potentials. A slot is one future signature:
+/-! The virtual future used by the FORS forecast potentials. A slot is one future signature:
 a fresh uniform view, disclosed and kept as an item, and an independent coin of probability `wbar`
 for every existing item, disclosing that item's view again. All potentials are expectations of a
 monotone supermodular base function of the final multiset of disclosures. -/

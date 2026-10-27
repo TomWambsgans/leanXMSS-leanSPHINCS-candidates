@@ -28,11 +28,11 @@ theorem rate_eq_of {s s' : St} (hA : K.Armed s' ↔ K.Armed s) (hC : K.contactCo
   simp only [rate, vrate, hA, hC, hK]
 
 /-- A store of an input that is no FORS leaf query keeps every FORS aggregate. -/
-theorem forest_same_store {s : St} {x : HashInput} (u : HashOutput) (hx : s.cache x = none)
+theorem fors_same_store {s : St} {x : HashInput} (u : HashOutput) (hx : s.cache x = none)
     (hi : K.initial x = none) (hF : ∀ f : FIn, x ≠ f.input K.p) :
     K.ng (s.store x u) = K.ng s ∧ K.kf (s.store x u) = K.kf s ∧ K.pp (s.store x u) = K.pp s ∧
       K.latent (s.store x u) = K.latent s :=
-  K.forest_same (K.cw_congr (fun f v => by
+  K.fors_same (K.cw_congr (fun f v => by
       rw [K.fr_store u hx hi]; exact ⟨fun h => h.resolve_right fun h' => hF f h'.1.symm, Or.inl⟩)
     (fun _ => rfl)) rfl
 
@@ -110,7 +110,7 @@ theorem step_other (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none) (h
     have hsame : ∀ l, Retained K.p l → K.SameLeaf s s' l := fun l hl =>
       K.sameLeaf_store u hx hi l (hAB l hl).1 (hAB l hl).2 (fun msg ctr => hE l msg ctr hl)
     obtain ⟨hW, hA, hC⟩ := K.wots_of_allSame hsame
-    obtain ⟨-, hKF, -, hLt⟩ := K.forest_same_store u hx hi hF
+    obtain ⟨-, hKF, -, hLt⟩ := K.fors_same_store u hx hi hF
     have hL : K.latent s' ≤ K.latent s + 0 := by rw [add_zero, hLt]
     have hreal := realized_store K.tg K.initial s x u hx hi
     rw [K.trunc_eq] at hreal
@@ -359,7 +359,7 @@ theorem step_A (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.cac
         exact Or.inl (Or.inr (Or.inl ⟨i₀, hne, (hMk i₀).1 hm⟩))
       · rw [hCB] at h1 h2
         exact Or.inl (Or.inr (Or.inr ⟨i₁, i₂, hne, h1, h2⟩))
-    obtain ⟨-, hKF, -, hLt⟩ := K.forest_same_store u hx hi hnotF
+    obtain ⟨-, hKF, -, hLt⟩ := K.fors_same_store u hx hi hnotF
     have hL : K.latent s' ≤ K.latent s + 0 := by rw [add_zero, hLt]
     have hreal := realized_store_of_none K.tg K.initial s x u hx hi hk
     have hD := K.done_le (s := s) (s' := s') (t ∈ K.ContactB s l i) (by
@@ -479,7 +479,7 @@ theorem step_enc (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.c
         · exact Or.inr (K.markSet_subset l i₀ hm)
       · rw [hCB] at hc
         exact Or.inl ⟨hn', Or.inr ⟨i₀, hc⟩⟩
-    obtain ⟨-, hKF, -, hLt⟩ := K.forest_same_store u hx hi hnotF
+    obtain ⟨-, hKF, -, hLt⟩ := K.fors_same_store u hx hi hnotF
     have hL : K.latent s' ≤ K.latent s + 0 := by rw [add_zero, hLt]
     have hreal := realized_store K.tg K.initial s x u hx hi
     rw [K.trunc_eq] at hreal
@@ -564,7 +564,7 @@ theorem step_B (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.cac
       exact ⟨fun ⟨h1, h2⟩ => ⟨(isB_unique h1 hB).2.2, h2⟩, fun ⟨h1, h2⟩ => ⟨h1 ▸ hB, h2⟩⟩
     have hvCB : v ∉ K.ContactB s l i := fun h => not_mem_bPay hx hB (K.contactB_subset_bPay l i h)
     have hmono : K.BadLeaf s l → K.BadLeaf s' l := K.badLeaf_store_of u hx hi
-    obtain ⟨-, hKF, -, hLt⟩ := K.forest_same_store u hx hi hnotF
+    obtain ⟨-, hKF, -, hLt⟩ := K.fors_same_store u hx hi hnotF
     have hL : K.latent s' ≤ K.latent s + 0 := by rw [add_zero, hLt]
     have hreal := realized_store_of_none K.tg K.initial s x u hx hi hk
     have hP : K.pend s' ≤ K.pend s + 0 := by rw [add_zero, K.pend_store_none u hx hi hk]

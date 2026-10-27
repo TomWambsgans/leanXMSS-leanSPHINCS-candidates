@@ -42,7 +42,7 @@ theorem near_h26_b26_ok : checkOptN 26 25 10 tab_h26_b26 near_h26_b26 = true :=
 /-- The plain rate `ρ`. -/
 def rho_h26_b26 : ℚ := 501383132659 / 274877906944
 
-theorem check_h26_b26_ok : ForestPotential.checkSmallF 26 26 10 1426000000 395181847512057207715720334837547008 rho_h26_b26 small_h26_b26.cthr small_h26_b26.B
+theorem check_h26_b26_ok : ForsPotential.checkSmallF 26 26 10 1426000000 395181847512057207715720334837547008 rho_h26_b26 small_h26_b26.cthr small_h26_b26.B
     ((2 ^ 26 * near_h26_b26.En : ℚ) / 2) = true := by decide +kernel
 
 /-- Poisson table of cover 0 (budgets up to 170141183460469231731687303715884105728). -/
@@ -248,8 +248,8 @@ theorem cover_h26_b26_0_ok : checkCoverW 26 26 25 10 15166603264 1426000000 3951
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b26_ok : ForestPotential.checkCoversH 26 26 25 10 15166603264 1426000000 395181847512057207715720334837547009 [cover_h26_b26_0] [] = true := by
-  simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
+theorem covers_h26_b26_ok : ForsPotential.checkCoversH 26 26 25 10 15166603264 1426000000 395181847512057207715720334837547009 [cover_h26_b26_0] [] = true := by
+  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b26_0_ok, by decide +kernel⟩
 
 /-- Poisson table of the small route, height 26, kept subtree height 20, 31,810,000 signatures. -/
@@ -277,7 +277,7 @@ theorem near_h26_b20_ok : checkOptN 26 26 10 tab_h26_b20 near_h26_b20 = true :=
 /-- The plain rate `ρ`. -/
 def rho_h26_b20 : ℚ := 2100962992921 / 1099511627776
 
-theorem check_h26_b20_ok : ForestPotential.checkSmallF 26 20 10 31810000 861897721041682210145346061961527296 rho_h26_b20 small_h26_b20.cthr small_h26_b20.B
+theorem check_h26_b20_ok : ForsPotential.checkSmallF 26 20 10 31810000 861897721041682210145346061961527296 rho_h26_b20 small_h26_b20.cthr small_h26_b20.B
     ((2 ^ 20 * near_h26_b20.En : ℚ) / 2) = true := by decide +kernel
 
 /-- Poisson table of cover 0 (budgets up to 21267647932558653966460912964485513216). -/
@@ -492,8 +492,8 @@ theorem coverh_h26_b20_0_ok : checkCoverH 26 20 26 10 236978188 31810000 8473957
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b20_ok : ForestPotential.checkCoversH 26 20 26 10 236978188 31810000 861897721041682210145346061961527297 [cover_h26_b20_0, cover_h26_b20_1] [coverh_h26_b20_0] = true := by
-  simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
+theorem covers_h26_b20_ok : ForsPotential.checkCoversH 26 20 26 10 236978188 31810000 861897721041682210145346061961527297 [cover_h26_b20_0, cover_h26_b20_1] [coverh_h26_b20_0] = true := by
+  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b20_0_ok, cover_h26_b20_1_ok, coverh_h26_b20_0_ok, by decide +kernel⟩
 
 /-- Poisson table of the small route, height 26, kept subtree height 14, 579,400 signatures. -/
@@ -521,7 +521,7 @@ theorem near_h26_b14_ok : checkOptN 26 26 10 tab_h26_b14 near_h26_b14 = true :=
 /-- The plain rate `ρ`. -/
 def rho_h26_b14 : ℚ := 1073852346925 / 549755813888
 
-theorem check_h26_b14_ok : ForestPotential.checkSmallF 26 14 10 579400 1723795442083364420290692123923054592 rho_h26_b14 small_h26_b14.cthr small_h26_b14.B
+theorem check_h26_b14_ok : ForsPotential.checkSmallF 26 14 10 579400 1723795442083364420290692123923054592 rho_h26_b14 small_h26_b14.cthr small_h26_b14.B
     ((2 ^ 14 * near_h26_b14.En : ℚ) / 2) = true := by decide +kernel
 
 /-- Poisson table of cover 0 (budgets up to 21267647932558653966460912964485513216). -/
@@ -750,8 +750,8 @@ theorem coverh_h26_b14_0_ok : checkCoverH 26 14 26 10 3702808 579400 84739577754
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b14_ok : ForestPotential.checkCoversH 26 14 26 10 3702808 579400 1723795442083364420290692123923054593 [cover_h26_b14_0, cover_h26_b14_1] [coverh_h26_b14_0] = true := by
-  simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
+theorem covers_h26_b14_ok : ForsPotential.checkCoversH 26 14 26 10 3702808 579400 1723795442083364420290692123923054593 [cover_h26_b14_0, cover_h26_b14_1] [coverh_h26_b14_0] = true := by
+  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b14_0_ok, cover_h26_b14_1_ok, coverh_h26_b14_0_ok, by decide +kernel⟩
 
 /-- Poisson table of the small route, height 26, kept subtree height 13, 296,700 signatures. -/
@@ -779,7 +779,7 @@ theorem near_h26_b13_ok : checkOptN 26 26 10 tab_h26_b13 near_h26_b13 = true :=
 /-- The plain rate `ρ`. -/
 def rho_h26_b13 : ℚ := 268972615249 / 137438953472
 
-theorem check_h26_b13_ok : ForestPotential.checkSmallF 26 13 10 296700 1879812259125035374945945504540786688 rho_h26_b13 small_h26_b13.cthr small_h26_b13.B
+theorem check_h26_b13_ok : ForsPotential.checkSmallF 26 13 10 296700 1879812259125035374945945504540786688 rho_h26_b13 small_h26_b13.cthr small_h26_b13.B
     ((2 ^ 13 * near_h26_b13.En : ℚ) / 2) = true := by decide +kernel
 
 /-- Poisson table of cover 0 (budgets up to 21267647932558653966460912964485513216). -/
@@ -994,8 +994,8 @@ theorem coverh_h26_b13_0_ok : checkCoverH 26 13 26 10 1851418 296700 84739577754
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b13_ok : ForestPotential.checkCoversH 26 13 26 10 1851418 296700 1879812259125035374945945504540786689 [cover_h26_b13_0, cover_h26_b13_1] [coverh_h26_b13_0] = true := by
-  simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
+theorem covers_h26_b13_ok : ForsPotential.checkCoversH 26 13 26 10 1851418 296700 1879812259125035374945945504540786689 [cover_h26_b13_0, cover_h26_b13_1] [coverh_h26_b13_0] = true := by
+  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b13_0_ok, cover_h26_b13_1_ok, coverh_h26_b13_0_ok, by decide +kernel⟩
 
 /-- Poisson table of the small route, height 26, kept subtree height 12, 151,900 signatures. -/
@@ -1023,7 +1023,7 @@ theorem near_h26_b12_ok : checkOptN 26 26 10 tab_h26_b12 near_h26_b12 = true :=
 /-- The plain rate `ρ`. -/
 def rho_h26_b12 : ℚ := 1077773402553 / 549755813888
 
-theorem check_h26_b12_ok : ForestPotential.checkSmallF 26 12 10 151900 2049949804534797888604160119780933632 rho_h26_b12 small_h26_b12.cthr small_h26_b12.B
+theorem check_h26_b12_ok : ForsPotential.checkSmallF 26 12 10 151900 2049949804534797888604160119780933632 rho_h26_b12 small_h26_b12.cthr small_h26_b12.B
     ((2 ^ 12 * near_h26_b12.En : ℚ) / 2) = true := by decide +kernel
 
 /-- Poisson table of cover 0 (budgets up to 21267647932558653966460912964485513216). -/
@@ -1238,8 +1238,8 @@ theorem coverh_h26_b12_0_ok : checkCoverH 26 12 26 10 925724 151900 847395777546
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b12_ok : ForestPotential.checkCoversH 26 12 26 10 925724 151900 2049949804534797888604160119780933633 [cover_h26_b12_0, cover_h26_b12_1] [coverh_h26_b12_0] = true := by
-  simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
+theorem covers_h26_b12_ok : ForsPotential.checkCoversH 26 12 26 10 925724 151900 2049949804534797888604160119780933633 [cover_h26_b12_0, cover_h26_b12_1] [coverh_h26_b12_0] = true := by
+  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b12_0_ok, cover_h26_b12_1_ok, coverh_h26_b12_0_ok, by decide +kernel⟩
 
 /-- Poisson table of the small route, height 26, kept subtree height 10, 39,850 signatures. -/
@@ -1267,7 +1267,7 @@ theorem near_h26_b10_ok : checkOptN 26 26 10 tab_h26_b10 near_h26_b10 = true :=
 /-- The plain rate `ρ`. -/
 def rho_h26_b10 : ℚ := 1081116303253 / 549755813888
 
-theorem check_h26_b10_ok : ForestPotential.checkSmallF 26 10 10 39850 2437814892951219046425945785967312896 rho_h26_b10 small_h26_b10.cthr small_h26_b10.B
+theorem check_h26_b10_ok : ForsPotential.checkSmallF 26 10 10 39850 2437814892951219046425945785967312896 rho_h26_b10 small_h26_b10.cthr small_h26_b10.B
     ((2 ^ 10 * near_h26_b10.En : ℚ) / 2) = true := by decide +kernel
 
 /-- Poisson table of cover 0 (budgets up to 21267647932558653966460912964485513216). -/
@@ -1482,8 +1482,8 @@ theorem coverh_h26_b10_0_ok : checkCoverH 26 10 26 10 231456 39850 8473957775463
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b10_ok : ForestPotential.checkCoversH 26 10 26 10 231456 39850 2437814892951219046425945785967312897 [cover_h26_b10_0, cover_h26_b10_1] [coverh_h26_b10_0] = true := by
-  simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
+theorem covers_h26_b10_ok : ForsPotential.checkCoversH 26 10 26 10 231456 39850 2437814892951219046425945785967312897 [cover_h26_b10_0, cover_h26_b10_1] [coverh_h26_b10_0] = true := by
+  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b10_0_ok, cover_h26_b10_1_ok, coverh_h26_b10_0_ok, by decide +kernel⟩
 
 /-- Poisson table of the small route, height 26, kept subtree height 8, 10,430 signatures. -/
@@ -1511,7 +1511,7 @@ theorem near_h26_b8_ok : checkOptN 26 26 10 tab_h26_b8 near_h26_b8 = true :=
 /-- The plain rate `ρ`. -/
 def rho_h26_b8 : ℚ := 67662254017 / 34359738368
 
-theorem check_h26_b8_ok : ForestPotential.checkSmallF 26 8 10 10430 2658455991569831745807614120560689152 rho_h26_b8 small_h26_b8.cthr small_h26_b8.B
+theorem check_h26_b8_ok : ForsPotential.checkSmallF 26 8 10 10430 2658455991569831745807614120560689152 rho_h26_b8 small_h26_b8.cthr small_h26_b8.B
     ((2 ^ 8 * near_h26_b8.En : ℚ) / 2) = true := by decide +kernel
 
 /-- Poisson table of cover 0 (budgets up to 21267647932558653966460912964485513216). -/
@@ -1712,8 +1712,8 @@ theorem coverh_h26_b8_0_ok : checkCoverH 26 8 26 10 57892 10430 8473957775463059
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b8_ok : ForestPotential.checkCoversH 26 8 26 10 57892 10430 2658455991569831745807614120560689153 [cover_h26_b8_0, cover_h26_b8_1] [coverh_h26_b8_0] = true := by
-  simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
+theorem covers_h26_b8_ok : ForsPotential.checkCoversH 26 8 26 10 57892 10430 2658455991569831745807614120560689153 [cover_h26_b8_0, cover_h26_b8_1] [coverh_h26_b8_0] = true := by
+  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b8_0_ok, cover_h26_b8_1_ok, coverh_h26_b8_0_ok, by decide +kernel⟩
 
 /-! Height 26, layered (12 + 7 + 7), 1,426,000,000 signatures: the certificate of the height 26, full key, 1,426,000,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 925696` enters: the cover chains. -/
@@ -1725,8 +1725,8 @@ theorem cover_h26_L_0_ok : checkCoverW 26 26 25 10 925696 1426000000 39518184751
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_L_ok : ForestPotential.checkCoversH 26 26 25 10 925696 1426000000 395181847512057207715720334837547009 [cover_h26_b26_0] [] = true := by
-  simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
+theorem covers_h26_L_ok : ForsPotential.checkCoversH 26 26 25 10 925696 1426000000 395181847512057207715720334837547009 [cover_h26_b26_0] [] = true := by
+  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_L_0_ok, by decide +kernel⟩
 
 end LeanFors.Security.H0

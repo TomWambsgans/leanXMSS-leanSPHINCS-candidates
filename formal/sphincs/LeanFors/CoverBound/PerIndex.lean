@@ -15,7 +15,7 @@ namespace LeanFors.Security.H0
 
 variable [Params]
 
-open Concrete ForestPrice LeanFors.Base.Domination H0Avg
+open Concrete ForsPrice LeanFors.Base.Domination H0Avg
 
 set_option linter.unusedSectionVars false
 
@@ -222,9 +222,9 @@ noncomputable def hS (c1 θ : ℝ) (Ms : Multiset (FTree → FLeaf)) : ℝ≥0�
 
 /-- **The pointwise split** of the excess of the FORS price over a threshold. -/
 theorem excess_le_split (b0 : ℝ≥0∞) (c c1 θ : ℝ) (hc : ENNReal.ofReal c ≤ b0) (hθ : 0 < θ) (d : Multiset View) :
-    ForestPotential.excess b0 d ≤ ∑ l : Fin (2 ^ subtreeHeight), gS c1 (marksAt l d) +
+    ForsPotential.excess b0 d ≤ ∑ l : Fin (2 ^ subtreeHeight), gS c1 (marksAt l d) +
       ENNReal.ofReal (Real.exp (-θ * c) / (Real.exp 1 * θ)) * ∏ l : Fin (2 ^ subtreeHeight), hS c1 θ (marksAt l d) := by
-  unfold ForestPotential.excess
+  unfold ForsPotential.excess
   rw [price_decomp]
   set y : Fin (2 ^ subtreeHeight) → ℝ := fun l => κE.toReal * (yM (marksAt l d)).toReal with hy
   have hsum : ∑ l : Fin (2 ^ subtreeHeight), (landing * (Fintype.card (Fin (2 ^ subtreeHeight)) : ℝ≥0∞)⁻¹) *

@@ -12,11 +12,11 @@ linear potential leaves `(ρ - 1 - x) 2^-128` per FORS leaf query unused; A4 tak
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenReveal
   LeanFors.Base.Domination
 open HiddenBridge PotentialA
 
@@ -265,4 +265,4 @@ theorem rateS_eqF : rateS = ENNReal.ofReal ((2 - 1 / (H0.scanM : ℝ)) / 2 ^ 128
 
 end Helpers
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

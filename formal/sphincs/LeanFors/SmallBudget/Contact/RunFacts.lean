@@ -1,5 +1,5 @@
 import LeanFors.LazyRun.ExposedUniform
-import LeanFors.SmallBudget.Linear.ForestSteps
+import LeanFors.SmallBudget.Linear.ForsSteps
 import LeanFors.ScanSigner.Scan
 
 /-! Facts about interpreted runs used by the FORS contact potential: recorded guesses come from
@@ -8,12 +8,12 @@ reveal; and the signing loop queries no FORS leaf input. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView ForestSigner HiddenBridge
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView ForsSigner HiddenBridge
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -301,4 +301,4 @@ theorem avoids_loop_fleaf (p : PublicParameter) (parameter : PublicParameter) (d
 
 end Avoid
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

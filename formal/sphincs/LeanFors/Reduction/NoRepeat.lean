@@ -5,7 +5,7 @@ definitions only, so that their users do not depend on the potential modules). -
 
 open OracleComp OracleSpec
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
@@ -25,6 +25,6 @@ theorem noRepeat_sign {α : Type} (m : Message)
 
 /-- An adversary that never requests a signature on the same message twice. -/
 def _root_.LeanFors.Security.Adversary.NoRepeat (adversary : Adversary) : Prop :=
-  ∀ pk, ForestPotential.NoRepeat (adversary.main pk) []
+  ∀ pk, ForsPotential.NoRepeat (adversary.main pk) []
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

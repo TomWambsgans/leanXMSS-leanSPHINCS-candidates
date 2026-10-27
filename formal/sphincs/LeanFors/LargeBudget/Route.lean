@@ -6,18 +6,18 @@ import LeanFors.CoverPotential.FairCoin
 import LeanFors.Classification.Targeting
 
 /-! The large-budget route with the weighted baseline. The saturation pays each digest query the
-baseline times the current survival weight, and the one-coin forest potential is weighted by the
+baseline times the current survival weight, and the one-coin FORS potential is weighted by the
 same survival weight, so the baseline is the plain budget decrement `(2 (N - q) + 1) / N^2`
-instead of `(2 (N - q) + 1) (N - 2q) / (N (N - q)^2)`. A hit or a forest cover then has probability
+instead of `(2 (N - q) + 1) (N - 2q) / (N (N - q)^2)`. A hit or a FORS cover then has probability
 at most `E[(1 - w_end) + w_end 1[cover]]`, which both sides pay. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal LeanFors.Base.Domination
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenReveal LeanFors.Base.Domination
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -57,7 +57,7 @@ variable (parameter : PublicParameter) (data : PublicData) (wbar : ℝ≥0∞) (
   {A : Type} (tg : Targeting HashInput HashOutput Coordinate)
   (initial : HiddenOutside.Cache HashInput HashOutput) (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
-/-- A hit or a forest cover of one interpreted outcome has probability at most the missing survival
+/-- A hit or a FORS cover of one interpreted outcome has probability at most the missing survival
 weight plus the weighted final value. -/
 theorem hit_or_cover_le (out : Run HashInput Coordinate HiddenBridge.Outcome × State) :
     Pr[fun r => Hit tg initial r.1 r.2.2 ∨ CoverOf parameter data r.2 |
@@ -91,8 +91,8 @@ theorem hit_or_cover_le (out : Run HashInput Coordinate HiddenBridge.Outcome × 
       _ ≤ _ := tsub_le_tsub_left hle _
 
 /-- **The rest of the game with the weighted baseline.** For an adversary that never repeats a
-message, a decided hit or a forest cover has probability at most the weighted saturation budget plus
-the one-coin forest potential at the baseline `baselineW total`. -/
+message, a decided hit or a FORS cover has probability at most the weighted saturation budget plus
+the one-coin FORS potential at the baseline `baselineW total`. -/
 theorem rest_boundW (hcompat : Compatible tg model) (htrunc : UniformTruncation (R := HashOutput) tg)
     (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
     (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
@@ -119,7 +119,7 @@ theorem rest_boundW (hcompat : Compatible tg model) (htrunc : UniformTruncation 
   have htotal2 : (total : ℝ) ≤ spaceReal := by
     have : (0 : ℝ) ≤ total := Nat.cast_nonneg _
     linarith
-  -- the weighted forest potential
+  -- the weighted FORS potential
   have hgood := goodW_advProg parameter data wbar b0 Fail total Lmax tg initial model hparse hkind hdigest hfail hfair
     (Nat.le_add_right _ _) M [] hnr total start [] [] 0 [] (start_prepared initial known)
     (start_pinv parameter data initial hclean known) (start_minv parameter data initial hclean known)
@@ -410,4 +410,4 @@ theorem det_largeW (hb : 0 < keptHeight topLayer) (hN : signatureLimit ≤ 2 ^ 7
 
 end ChainW
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

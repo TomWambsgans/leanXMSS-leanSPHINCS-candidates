@@ -32,7 +32,7 @@ def WotsException (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSee
     (chosenWord f pk.parameter seed leaf lay)
     (Completeness.otsSecret f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay) seed) inputs
 
-/-- A canonical WOTS and tree opening at every layer of a landed index whose forest part recovers
+/-- A canonical WOTS and tree opening at every layer of a landed index whose FORS openings recover
 the canonical FORS key. -/
 def RecoveredOpening (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
     (message : Message) (signature : Signature) (referenceCounter : Layer → Counter) : Prop :=
@@ -40,7 +40,7 @@ def RecoveredOpening (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : Master
   Landed pk.parameter leaf ∧
     (∀ lay, CanonicalLayer f pk seed leaf signature lay (referenceCounter lay)
       (chosenWord f pk.parameter seed leaf lay)) ∧
-    verificationForest f pk message signature = canonicalFors f pk.parameter seed leaf
+    verificationFors f pk message signature = canonicalFors f pk.parameter seed leaf
 
 /-- At a crossing above the top layer's kept subtree, the forged path enters at the boundary node. -/
 theorem crossing_boundary (parameter : PublicParameter) (leaf reference : LeafIndex)
@@ -162,7 +162,7 @@ theorem layer_step (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSe
     (hverified : evalWithAnswerFn f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = true)
     (hland : Landed pk.parameter (index f pk message signature)) (j : Nat) (hj : j < numLayers)
     (hfold : walkFold f pk.parameter (index f pk message signature) signature
-        (verificationForest f pk message signature) j =
+        (verificationFors f pk message signature) j =
       evalWithAnswerFn f (Seeded.treeRoot pk.parameter (layerUp j)
         (keyTree (index f pk message signature) (layerUp j)) seed : OracleComp HashSpec Digest)) :
     (ChosenLayer f pk seed message signature (layerUp j) ∧
@@ -245,11 +245,11 @@ theorem walk_classification (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed :
     (hland : Landed pk.parameter (index f pk message signature)) :
     ∀ j, j < numLayers →
       walkFold f pk.parameter (index f pk message signature) signature
-          (verificationForest f pk message signature) j =
+          (verificationFors f pk message signature) j =
         evalWithAnswerFn f (Seeded.treeRoot pk.parameter (layerUp j)
           (keyTree (index f pk message signature) (layerUp j)) seed : OracleComp HashSpec Digest) →
       ((∀ j', j' ≤ j → ChosenLayer f pk seed message signature (layerUp j')) ∧
-          verificationForest f pk message signature = canonicalFors f pk.parameter seed
+          verificationFors f pk message signature = canonicalFors f pk.parameter seed
             (index f pk message signature)) ∨
         (∃ j', j' ≤ j ∧ TreeHit f pk seed message signature j') ∨
         (∃ j', j' ≤ j ∧ WotsException f pk seed message signature (layerUp j')) := by
@@ -271,11 +271,11 @@ theorem walk_classification (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed :
         ⟨hchosen, hmsg⟩ | htree | hwots
       · rw [canonicalMessage_succ f pk.parameter seed _ j hj] at hmsg
         have hbelow : walkFold f pk.parameter (index f pk message signature) signature
-            (verificationForest f pk message signature) j =
+            (verificationFors f pk message signature) j =
             evalWithAnswerFn f (Seeded.treeRoot pk.parameter (layerUp j)
               (keyTree (index f pk message signature) (layerUp j)) seed : OracleComp HashSpec Digest) := by
           have h : rootPayload (walkFold f pk.parameter (index f pk message signature) signature
-              (verificationForest f pk message signature) j) = _ := hmsg
+              (verificationFors f pk message signature) j) = _ := hmsg
           exact bytesLE_injective h
         rcases ih (by omega) hbelow with ⟨hall, hfors⟩ | ⟨j', hj', htree⟩ | ⟨j', hj', hwots⟩
         · refine Or.inl ⟨fun j' hj' => ?_, hfors⟩
@@ -307,7 +307,7 @@ theorem accepted_recovered_classification (f : QueryImpl HashSpec Id) (pk : Publ
   set leaf := index f pk message signature with hleafdef
   have htop : layerUp (numLayers - 1) = topLayer := layerUp_top
   have hd : numLayers - 1 < numLayers := Nat.sub_lt numLayers_pos Nat.one_pos
-  have hfoldTop : walkFold f pk.parameter leaf signature (verificationForest f pk message signature)
+  have hfoldTop : walkFold f pk.parameter leaf signature (verificationFors f pk message signature)
       (numLayers - 1) = evalWithAnswerFn f (Seeded.treeRoot pk.parameter (layerUp (numLayers - 1))
         (keyTree leaf (layerUp (numLayers - 1))) seed : OracleComp HashSpec Digest) := by
     rw [htop]

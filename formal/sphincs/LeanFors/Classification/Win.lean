@@ -1,7 +1,7 @@
 import LeanFors.Classification.Accepted
 
 /-! Deterministic core: a winning non-stopped run of the rich program yields a cached hit of
-a fixed target or a covered forest digest. -/
+a fixed target or a covered FORS digest. -/
 
 open OracleComp OracleSpec
 
@@ -113,7 +113,7 @@ noncomputable def revealedSet (reveals : List HiddenGraph.Coordinate) : Disclosu
 
 /-- A cached, landed digest of an unsigned message-randomizer pair whose FORS secrets were all
 revealed by the run. -/
-def ForestCover (parameter : PublicParameter) (root : Digest) (outcome : Outcome)
+def ForsCover (parameter : PublicParameter) (root : Digest) (outcome : Outcome)
     (reveals : List HiddenGraph.Coordinate) (cache : QueryCache HashSpec) : Prop :=
   SigningTranscript.Valid outcome.2.1 ∧
   ∃ digest, cachedDigest cache parameter root outcome.1.message outcome.1.signature.randomness = some digest ∧
@@ -852,7 +852,7 @@ theorem labelMessage_eq (parameterOutput : HashOutput) (fixed : HiddenGraph.Tabl
   exact h
 
 /-- **Case analysis.** For any answer function consistent with the sample and agreeing with the
-final cache on the run's queries, an accepted fresh forgery yields a cached target hit or forest
+final cache on the run's queries, an accepted fresh forgery yields a cached target hit or FORS
 coverage. -/
 theorem bad_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
     (highs : CoordinateHighs) (remaining : RemainingOutputs) (steps : Message → Randomness) (table : HiddenGraph.Table)
@@ -888,7 +888,7 @@ theorem bad_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashOu
     (hvalid : SigningTranscript.Valid log) (hnotContains : ¬SigningTranscript.Contains log forgery) :
     CacheMatch.Bad (targets (truncateHash parameterOutput)
         (compTable parameterOutput fixed highs remaining table results)) cacheF ∨
-      ForestCover (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).root
+      ForsCover (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).root
         (forgery, log, true) reveals cacheF := by
   have hhit : ∀ input ∈ SignatureWitness.trace f ⟨(sampleData parameterOutput fixed highs remaining).root,
       truncateHash parameterOutput⟩ forgery.message forgery.signature,
@@ -941,7 +941,7 @@ theorem bad_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashOu
         (treeIndexAt (SignatureWitness.index f _ forgery.message forgery.signature) lay)
         (leafIndexAt (SignatureWitness.index f _ forgery.message forgery.signature) lay) :=
       fun lay => ⟨_, hland, rfl, rfl⟩
-    rcases hexc with ⟨lay, henc | hleafMatch | hchain⟩ | ⟨hforestExc, -⟩
+    rcases hexc with ⟨lay, henc | hleafMatch | hchain⟩ | ⟨hforsExc, -⟩
     · left
       have hmsg := labelMessage_eq parameterOutput fixed highs remaining steps table f seed hdata
         (keyAt (SignatureWitness.index f ⟨(sampleData parameterOutput fixed highs remaining).root,
@@ -976,7 +976,7 @@ theorem bad_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashOu
         exact hhit input hinput (graph_targets_subset _ _ _ _ _ hmem)
     · left
       obtain ⟨input, hinput, hmem⟩ := forsException_hit f (truncateHash parameterOutput) seed _ hcons _ _ _
-        hforestExc
+        hforsExc
       exact hhit input (SignatureWitness.verification_fors_run f _ forgery.message forgery.signature input hinput)
         (graph_targets_subset _ _ _ _ _ hmem)
 
@@ -1040,7 +1040,7 @@ theorem sampleFn_final (parameterOutput : HashOutput) (fixed : HiddenGraph.Table
 
 /-- **Win implication.** In every non-stopped lazy run of the rich program whose outcome wins
 the original game, either a cached answer hits one of the sample's fixed targets, or the run's
-reveals cover the forest openings of a cached, landed, unsigned forgery digest. -/
+reveals cover the FORS openings of a cached, landed, unsigned forgery digest. -/
 theorem win_implies_bad (hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : Nat) (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
     (remaining : RemainingOutputs) (steps : Message → Randomness)
@@ -1058,7 +1058,7 @@ theorem win_implies_bad (hb : 0 < keptHeight topLayer) (adversary : Adversary) (
     (hwin : outcomeWins outcome = true) :
     CacheMatch.Bad (targets (truncateHash parameterOutput)
         (compTable parameterOutput fixed highs remaining table prepared.1)) cacheF ∨
-      ForestCover (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).root
+      ForsCover (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).root
         outcome reveals cacheF := by
   obtain ⟨hgrow, hrun, hguess⟩ := lazy_support (sampleModel parameterOutput highs) table _
     (knownOf (truncateHash parameterOutput) fixed) prepared.2 cacheF _ entries hstop

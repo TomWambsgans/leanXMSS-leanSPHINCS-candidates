@@ -103,7 +103,7 @@ theorem childTree_path_above (index : Index) (lay : Layer) (hbelow : lay.val + 1
   simp only [treeIndexAt]
   rw [heightBelow_succ lay hbelow]
 
-/-- At the bottom layer, the key on the path signs the index's own forest instance. -/
+/-- At the bottom layer, the key on the path signs the index's own FORS instance. -/
 theorem childTree_path_bottom (index : Index) :
     childTree bottomLayer (treeIndexAt index bottomLayer) (leafIndexAt index bottomLayer) = index := by
   apply Fin.ext

@@ -100,12 +100,12 @@ def RevealedContact (reveals : List Coordinate) : Prop :=
   ∃ index κ leaf, Coordinate.fors index κ leaf 0 ∈ reveals ∧ FContactAt parameter table cache index κ leaf
 
 /-- Two FORS leaf contacts at different leaves of one index. -/
-def TwoForestContacts : Prop :=
+def TwoForsContacts : Prop :=
   ∃ index κ leaf κ' leaf', (κ, leaf) ≠ (κ', leaf') ∧
     FContactAt parameter table cache index κ leaf ∧ FContactAt parameter table cache index κ' leaf'
 
 /-- A cached, landed, unsigned forgery digest covered at every tree but one, which is contacted. -/
-def ForestNear (root : Digest) (outcome : Outcome) (reveals : List Coordinate) : Prop :=
+def ForsNear (root : Digest) (outcome : Outcome) (reveals : List Coordinate) : Prop :=
   SigningTranscript.Valid outcome.2.1 ∧
   ∃ digest, cachedDigest cache parameter root outcome.1.message outcome.1.signature.randomness = some digest ∧
     Landed parameter (digestIndex digest) ∧
@@ -125,11 +125,11 @@ def badA (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : Coo
       (compTable parameterOutput fixed highs remaining table results)) v.2 ∨
     WotsEvent (truncateHash parameterOutput) results table v.2 ∨
     RevealedContact (truncateHash parameterOutput) table v.2 v.1.1.2 ∨
-    TwoForestContacts (truncateHash parameterOutput) table v.2 ∨
+    TwoForsContacts (truncateHash parameterOutput) table v.2 ∨
     ∃ outcome, v.1.1.1 = some outcome ∧
-      (ForestNear (truncateHash parameterOutput) table v.2 (sampleData parameterOutput fixed highs remaining).root
+      (ForsNear (truncateHash parameterOutput) table v.2 (sampleData parameterOutput fixed highs remaining).root
           outcome v.1.1.2 ∨
-        ForestCover (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).root
+        ForsCover (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).root
           outcome v.1.1.2 v.2)
 
 end LeanFors.Security.HiddenBridge

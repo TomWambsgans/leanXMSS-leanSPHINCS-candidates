@@ -1,7 +1,7 @@
 import LeanFors.LargeBudget.HeavyTerm
 import LeanFors.LargeBudget.WeightedPotential
 
-/-! The survival-weighted one-coin forest potential of the scan signer with one heavy message. Every
+/-! The survival-weighted one-coin FORS potential of the scan signer with one heavy message. Every
 term of the potential is a `termH`: the live message that received more than half of the budget, if
 any, acts through the law of its signed view, which needs no coin; while there is none, the future
 keeps one spare fresh slot. The rate of the coin is then needed only for the messages with at most
@@ -9,12 +9,12 @@ keeps one spare fresh slot. The rate of the coin is then needed only for the mes
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner
   LeanFors.Base.Domination LeanFors.LoopWalk
 
 set_option backward.isDefEq.respectTransparency false
@@ -805,7 +805,7 @@ theorem new_pair_boundHW {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot / 2
         simp only [Option.elim]
         split_ifs with h1 h2
         · exact le_rfl
-        · exact absurd ⟨forestCover_mono parameter data.root outcome _ hgrow h1.1, fun hreal =>
+        · exact absurd ⟨forsCover_mono parameter data.root outcome _ hgrow h1.1, fun hreal =>
             h1.2 ((realized_store_untargeted tg initial out.2 _ v (hkind i)).1 hreal)⟩ h2
         · exact bot_le
         · exact le_rfl
@@ -941,7 +941,7 @@ theorem goodHW_ordinary (hparse : ∀ p call, model.parse (pblk parameter data p
           · refine le_add_left (le_of_eq ?_)
             simp only [mul_left_comm _ b0, ENNReal.tsum_mul_left]
 
-/-- **Leaf, weighted.** A forest cover with no decided hit is paid by the potential. -/
+/-- **Leaf, weighted.** A FORS cover with no decided hit is paid by the potential. -/
 theorem goodHW_pure (hw : w ≤ 1) (L : QueryLog SigningSpec) (forgery : Forgery) (verified : Bool) :
     GoodHW parameter data Qtot w b0 Fail Lmax tg initial model L (pure (forgery, L, verified)) := by
   intro budget s P Ms d R hprep hP hM hD hT
@@ -1148,4 +1148,4 @@ theorem goodHW_advProg (hparse : ∀ p call, model.parse (pblk parameter data p 
 
 end GoodHW
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

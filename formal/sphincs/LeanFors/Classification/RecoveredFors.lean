@@ -4,7 +4,7 @@ import LeanFors.Classification.Accepted
 (`accepted_recovered_classification`, `Classification/Accepted.lean`), refined tree by tree. A
 recovered canonical FORS key either has a node match at a hashed level — a first-order hit — or, in
 every tree, the canonical path and a secret that is canonical or a leaf match. It is
-`Fors.tree_classification` (`Classification/Forest.lean`) with the canonical path kept in the leaf
+`Fors.tree_classification` (`Classification/Fors.lean`) with the canonical path kept in the leaf
 branch, where only the secret differs. -/
 
 open OracleComp OracleSpec

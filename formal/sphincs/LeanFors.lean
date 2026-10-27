@@ -90,9 +90,9 @@ import LeanFors.LazyRun.UntilHidden
 import LeanFors.Classification.Accepted
 import LeanFors.Classification.Chain
 import LeanFors.Classification.Encoding
-import LeanFors.Classification.Forest
+import LeanFors.Classification.Fors
 import LeanFors.Classification.Hidden
-import LeanFors.Classification.RecoveredForest
+import LeanFors.Classification.RecoveredFors
 import LeanFors.Classification.Reference
 import LeanFors.Classification.RefinedEvents
 import LeanFors.Classification.RefinedOutcome
@@ -136,7 +136,7 @@ import LeanFors.SmallBudget.Contact.RevealRate
 import LeanFors.SmallBudget.Contact.RunFacts
 import LeanFors.SmallBudget.Contact.Signing
 import LeanFors.SmallBudget.Contact.Weights
-import LeanFors.SmallBudget.Linear.ForestSteps
+import LeanFors.SmallBudget.Linear.ForsSteps
 import LeanFors.SmallBudget.Linear.FreshAnswer
 import LeanFors.SmallBudget.Linear.Invariant
 import LeanFors.SmallBudget.Linear.Payments

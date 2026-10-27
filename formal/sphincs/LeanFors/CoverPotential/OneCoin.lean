@@ -1,6 +1,6 @@
 import LeanFors.CoverPotential.Groups
 
-/-! The forest potential of the scan signer `R = R0 + i δ`, for adversaries that never request a
+/-! The FORS potential of the scan signer `R = R0 + i δ`, for adversaries that never request a
 signature on the same message twice. A term with base function `f` is forecast by
 `creations … (fun I => grpAll s excl (live messages) (virtualOnce … f n I) d) k []`: the future pairs
 are independent coins on uniform views, the cached pairs of the messages not yet signed act through
@@ -9,12 +9,12 @@ by one fresh slot (`sign_term`). -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner
   LeanFors.Base.Domination LeanFors.LoopWalk
 
 set_option backward.isDefEq.respectTransparency false
@@ -705,10 +705,10 @@ theorem goodO_draw (L : QueryLog SigningSpec) (draw : ℕ)
         simp only [mul_left_comm _ b0, ENNReal.tsum_mul_left]
 
 /-- The cover of a forgery only needs cached blocks, so it survives a growing cache. -/
-theorem forestCover_mono (parameter : PublicParameter) (root : Digest) (outcome : HiddenBridge.Outcome)
+theorem forsCover_mono (parameter : PublicParameter) (root : Digest) (outcome : HiddenBridge.Outcome)
     (reveals : List Coordinate) {cc cc' : QueryCache HashSpec} (hgrow : ∀ x v, cc x = some v → cc' x = some v)
-    (hc : HiddenBridge.ForestCover parameter root outcome reveals cc) :
-    HiddenBridge.ForestCover parameter root outcome reveals cc' := by
+    (hc : HiddenBridge.ForsCover parameter root outcome reveals cc) :
+    HiddenBridge.ForsCover parameter root outcome reveals cc' := by
   obtain ⟨hvalid, digest, hdig, hrest⟩ := hc
   refine ⟨hvalid, digest, ?_, hrest⟩
   unfold HiddenBridge.cachedDigest at hdig ⊢
@@ -760,7 +760,7 @@ theorem new_pair_boundO {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤ 
         simp only [Option.elim]
         split_ifs with h1 h2
         · exact le_rfl
-        · exact absurd ⟨forestCover_mono parameter data.root outcome _ hgrow h1.1, fun hreal =>
+        · exact absurd ⟨forsCover_mono parameter data.root outcome _ hgrow h1.1, fun hreal =>
             h1.2 ((realized_store_untargeted tg initial out.2 _ v (hkind i)).1 hreal)⟩ h2
         · exact bot_le
         · exact le_rfl
@@ -920,7 +920,7 @@ theorem goodO_ordinary (hparse : ∀ p call, model.parse (pblk parameter data p 
           refine le_add_left (le_of_eq ?_)
           simp only [mul_left_comm _ b0, ENNReal.tsum_mul_left]
 
-/-- **Leaf.** A forest cover with no decided hit is paid by the potential. -/
+/-- **Leaf.** A FORS cover with no decided hit is paid by the potential. -/
 theorem goodO_pure (hw : w ≤ 1) (L : QueryLog SigningSpec) (forgery : Forgery) (verified : Bool) :
     GoodO parameter data w b0 Fail Qtot Lmax tg initial model L (pure (forgery, L, verified)) := by
   intro budget s P Ms d R hprep hP hM hD hC
@@ -1611,4 +1611,4 @@ theorem goodO_sign (Lmax : ℕ) (hparse : ∀ p call, model.parse (pblk paramete
 
 end SignPointMainO
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

@@ -39,7 +39,7 @@ def checkEntryQ (K N : ℕ) (ps : List (ℚ × ℚ)) (e : EntryF) : Bool :=
   match ps[e.2.2]? with
   | none => false
   | some p =>
-      decide (2 * e.2.1 ≤ 2 ^ 128) && decide (p.1 ≤ ForestPotential.betaWQ e.2.1) &&
+      decide (2 * e.2.1 ≤ 2 ^ 128) && decide (p.1 ≤ ForsPotential.betaWQ e.2.1) &&
         decide ((e.2.1 : ℚ) * p.2 + ((e.2.1 : ℚ) + K + N) / 2 ^ 200 ≤
           ((e.1 : ℚ) / 2 ^ 128) ^ 2 + (K : ℚ) / 2 ^ 127)
 
@@ -105,9 +105,10 @@ end
 section
 
 /-! **Certificates checked by construction.** `buildOpt` and `buildOptN` rebuild an option and a near
-certificate from their scalars, computing the leaf tables in integers: the numerators over `2^P` of the rounded-up bounds, from the numerators of the
-moment tables (`P1L`, `P2L`, `CoverBound/MomentTable.lean`; `PHL`, `CoverBound/NearMomentTable.lean`), made convex (`convexZ`), and the Poisson mean of a table as one
-integer sum. Their outputs pass `checkOptF` and `checkOptN` by construction (`checkOptF_build`,
+certificate from their scalars, computing the leaf tables in integers: the numerators over `2^P` of
+the rounded-up bounds, from the numerators of the moment tables (`P1L`, `P2L`,
+`CoverBound/MomentTable.lean`; the near table reads `P1L` alone), made convex (`convexZ`), and the
+Poisson mean of a table as one integer sum. Their outputs pass `checkOptF` and `checkOptN` by construction (`checkOptF_build`,
 `checkOptN_build`): the leaf tables are convex majorants of the bounds, the means and the bound are
 rounded up. A Poisson table rebuilt by `poisOf` passes the steps of `checkPT` by construction
 (`checkPT_poisOf`), and `expLow` is evaluated in integers (`expLow_eq`). The kernel then evaluates the
@@ -333,7 +334,8 @@ theorem nZ_bound {H k a n1 n : ℕ} (hn1 : n1 ≤ 150) (hn : n < n1 + 1) :
 
 /-! ### Means -/
 
-/-- `leafMean` of the table `overP P ks`, the weights times the numerators summed in integers. -/
+/-- The mean `poisMean` of `leafQ` over the table `overP P ks`, the weights times the numerators
+summed in integers. -/
 def meanZ (t : PoisT) (P : ℕ) (ks : List ℤ) (J : ℚ) : ℚ :=
   ((List.zipWith (fun (p : ℕ) (k : ℤ) => (p : ℤ) * k) t.pm ks).sum : ℚ) / 2 ^ (t.P + P) +
     t.pb (t.n1 + 1) * ((overP P ks).getD t.n1 0 / (1 - t.r) + J / (1 - t.r) ^ 2)

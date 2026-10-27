@@ -1,6 +1,6 @@
 import LeanFors.Classification.RefinedEvents
 import LeanFors.Classification.SignedReveals
-import LeanFors.Classification.RecoveredForest
+import LeanFors.Classification.RecoveredFors
 
 /-! Deterministic core of the refined classification: a winning non-stopped run of the rich
 program, started from knowledge that also exposes the chain values at and above the prepared
@@ -406,7 +406,7 @@ attribute [local irreducible] ReferenceChoice.selection encodingAttemptLimit
 set_option maxHeartbeats 1000000 in
 /-- **Refined case analysis.** For any answer function consistent with the sample and agreeing
 with the final cache on the run's queries, an accepted fresh forgery yields a cached first-order
-hit, a WOTS event at a retained key, a forest contact at a revealed leaf, two forest contacts at one
+hit, a WOTS event at a retained key, a FORS contact at a revealed leaf, two FORS contacts at one
 instance, a near cover, or a cover of a cached, landed, unsigned digest. -/
 theorem badA_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
     (highs : CoordinateHighs) (remaining : RemainingOutputs) (steps : Message → Randomness) (table : HiddenGraph.Table)
@@ -706,8 +706,8 @@ theorem win_implies_badA (hb : 0 < keptHeight topLayer) (adversary : Adversary) 
     (hwin : outcomeWins outcome = true) :
     badA parameterOutput fixed highs remaining prepared.1 table (((some outcome, reveals), entries), cacheF) := by
   have htable' : tableExtending (knownOf (truncateHash parameterOutput) fixed) table = table := by
-    have hag := (ForestPotential.agrees_iff_extending known table).2 htable
-    exact (ForestPotential.agrees_iff_extending _ table).1 fun c v hc => hag c v (hknownOf c v hc)
+    have hag := (ForsPotential.agrees_iff_extending known table).2 htable
+    exact (ForsPotential.agrees_iff_extending _ table).1 fun c v hc => hag c v (hknownOf c v hc)
   obtain ⟨hgrow, hrun, hguess⟩ := lazy_support (sampleModel parameterOutput highs) table _
     known prepared.2 cacheF _ entries hstop
   obtain ⟨-, hcached⟩ := lazy_cached (sampleModel parameterOutput highs) table _

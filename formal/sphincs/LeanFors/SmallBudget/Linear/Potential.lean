@@ -859,7 +859,7 @@ theorem cw_congr {s s' : St} (hfr : ∀ (f : FIn) u, K.Fr s' (f.input K.p) u ↔
   simp only [cw, hFC, hLat]
 
 /-- The FORS aggregates follow the contact weights and the guess records. -/
-theorem forest_same {s s' : St} (hcw : ∀ f, K.cw s' f = K.cw s f) (hg : s'.guesses = s.guesses) :
+theorem fors_same {s s' : St} (hcw : ∀ f, K.cw s' f = K.cw s f) (hg : s'.guesses = s.guesses) :
     K.ng s' = K.ng s ∧ K.kf s' = K.kf s ∧ K.pp s' = K.pp s ∧ K.latent s' = K.latent s := by
   have hR : ∀ f, Recd s' f ↔ Recd s f := fun f => by simp only [Recd, hg]
   have h1 : K.ng s' = K.ng s := by simp only [ng, hcw, hR]

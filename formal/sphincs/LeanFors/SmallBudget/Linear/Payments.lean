@@ -45,7 +45,7 @@ section
 
 /-! A linear potential on the interpreted comparison with two payments: a fixed amount per
 message-digest query, and a fixed amount per query whose input lies in a second class (later, the
-forest step inputs, counted whether fresh or cached). If every step keeps the potential in
+FORS leaf inputs, counted whether fresh or cached). If every step keeps the potential in
 expectation while making both payments, the potential at the start bounds the expected final
 payoff plus all payments of the run. Interpreted runs have total mass one. -/
 

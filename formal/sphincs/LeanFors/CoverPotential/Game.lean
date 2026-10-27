@@ -6,11 +6,11 @@ hash computation (`finishGame`). -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner LeanFors.Base.Domination
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner LeanFors.Base.Domination
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -85,4 +85,4 @@ theorem advProg_sign (message : Message) (next : Option Signature → OracleComp
 
 end Program
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

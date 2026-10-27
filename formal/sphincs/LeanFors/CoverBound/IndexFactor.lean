@@ -4,7 +4,7 @@ import LeanFors.CoverBound.MarkAverage
 marks at that index only; averaged over independent uniform marks it becomes a function of the
 number of views at the index. Sums and products of such functions over the indices average
 termwise and factorwise. The same holds one level down, for marks that are tuples of independent
-coordinates. -/
+coordinates (a FORS mark: one leaf per tree). -/
 
 open ENNReal
 

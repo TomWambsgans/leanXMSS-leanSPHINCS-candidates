@@ -1,9 +1,9 @@
 import LeanFors.SmallBudget.Contact.PaidPotential
 
-/-! **Recorded contact weights with coefficients.** The sum `Σ_f [recorded] g(f) cw(f)` over forest
-steps, for any coefficients `g`, keeps its mean through an exposure and through every ordinary query,
-except that a fresh forest step query at an unexposed read coordinate adds at most `2^-128` times
-its coefficient. -/
+/-! **Recorded contact weights with coefficients.** The sum `Σ_f [recorded] g(f) cw(f)` over FORS
+leaf queries, for any coefficients `g`, keeps its mean through an exposure and through every
+ordinary query, except that a fresh FORS leaf query at an unexposed read coordinate adds at most
+`2^-128` times its coefficient. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -106,7 +106,7 @@ theorem wsum_store_other (g : FIn → ℝ≥0∞) {s : St} {x : HashInput} (u : 
   rw [K.cw_store_other u hx hi (hF f)]
   rfl
 
-/-- **A family of fresh stores outside the forest step inputs** keeps the recorded contact
+/-- **A family of fresh stores outside the FORS leaf inputs** keeps the recorded contact
 weights: the digest blocks of a new pair (`storeAll`). -/
 theorem wsum_storeAll_other (g : FIn → ℝ≥0∞) : ∀ {n : ℕ} (x : Fin n → HashInput) (u : Fin n → HashOutput)
     (s : St), Function.Injective x → (∀ i, s.cache (x i) = none) → (∀ i, K.initial (x i) = none) →
@@ -183,7 +183,7 @@ variable (M : HiddenRows.Model HashInput HashOutput Address Coordinate)
   (hMi : M.incoming = Address.inputCoordinate)
 
 include hMp hMi in
-/-- A parsed query reading the coordinate of a forest step with its payload is that step's input. -/
+/-- A parsed query reading the secret of a FORS leaf with its payload is that leaf query's input. -/
 theorem input_of_guess {x : HashInput} {a : Address} {v : Digest} (hp : M.parse x = some (a, v)) {f : FIn}
     (hf : (M.incoming a, v) = (f.inC, f.v)) : x = f.input K.p := by
   rw [hMp] at hp
@@ -198,8 +198,8 @@ theorem input_of_guess {x : HashInput} {a : Address} {v : Digest} (hp : M.parse 
       rfl
 
 include hMp hMi in
-/-- A fresh forest step input carries no guess record. -/
-theorem not_recd_of_fresh {s : St} (hgc : ForestPotential.GuessCached M s) {f : FIn}
+/-- A fresh FORS leaf input carries no guess record. -/
+theorem not_recd_of_fresh {s : St} (hgc : ForsPotential.GuessCached M s) {f : FIn}
     (hx : s.cache (f.input K.p) = none) : ¬Recd s f := by
   intro hr
   obtain ⟨x', a, v, hp, hg, hc⟩ := hgc _ hr
@@ -208,9 +208,9 @@ theorem not_recd_of_fresh {s : St} (hgc : ForestPotential.GuessCached M s) {f : 
   exact hc rfl
 
 include hMp hMi in
-/-- **One ordinary query.** The recorded contact weights keep their mean, except that a fresh forest
-step query at an unexposed read coordinate adds `2^-128` times its coefficient. -/
-theorem wsum_ordinary {s : St} (hinv : K.Inv s) (hgc : ForestPotential.GuessCached M s) (x : HashInput)
+/-- **One ordinary query.** The recorded contact weights keep their mean, except that a fresh FORS
+leaf query at an unexposed read coordinate adds `2^-128` times its coefficient. -/
+theorem wsum_ordinary {s : St} (hinv : K.Inv s) (hgc : ForsPotential.GuessCached M s) (x : HashInput)
     (g : FIn → ℝ≥0∞) (C : ℝ≥0∞) (hC : ∀ f : FIn, x = f.input K.p → s.known f.inC = none → g f ≤ C) :
     ∑' r, Pr[= r | ordinaryStep M x s.known s] * K.wsum g r.2 ≤
       K.wsum g s + ν * C * (if IsFleafIn K.p x then 1 else 0) := by
@@ -287,7 +287,7 @@ theorem wsum_ordinary {s : St} (hinv : K.Inv s) (hgc : ForestPotential.GuessCach
                 refine add_le_add (mul_le_of_le_one_left' tsum_probOutput_le_one) ?_
                 split_ifs
                 · refine mul_le_mul_right (hC f0 hxf ?_) _
-                  -- the read coordinate of the new step is the guessed one
+                  -- the read coordinate of the new query is the guessed one
                   have hp' : M.parse (f0.input K.p) = some (a, v) := by rw [← hxf]; exact hp
                   rw [hMp] at hp'
                   obtain ⟨hxe, -⟩ := (parse_some_iff _ _ _ (a, v)).1 hp'

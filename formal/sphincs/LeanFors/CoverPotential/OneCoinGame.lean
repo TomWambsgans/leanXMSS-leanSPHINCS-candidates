@@ -2,16 +2,16 @@ import LeanFors.CoverPotential.Game
 import LeanFors.Reduction.NoRepeat
 import LeanFors.CoverPotential.OneCoin
 
-/-! The one-coin forest potential through an adversary that never requests a signature on the same
+/-! The one-coin FORS potential through an adversary that never requests a signature on the same
 message twice. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner LeanFors.Base.Domination
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner LeanFors.Base.Domination
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -71,4 +71,4 @@ theorem goodO_advProg (hparse : ∀ p call, model.parse (pblk parameter data p c
 
 end Induction
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

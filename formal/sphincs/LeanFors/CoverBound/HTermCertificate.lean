@@ -2,7 +2,7 @@ import LeanFors.Base.SplitCert
 import LeanFors.CoverBound.MomentBounds
 import LeanFors.CoverBound.HTerm
 
-/-! **Kernel-checkable certificates for the forest H-term.** A Poisson table (rate bound
+/-! **Kernel-checkable certificates for the FORS H-term.** A Poisson table (rate bound
 `μ̄ = m / 2^64`, weight bounds `pm[n] / 2^P` up to `n1 + 1`, geometric tail with ratio
 `r = μ̄ / (n1 + 2)`), and per option the leaf tables `ḡ`, `h̄` (convex, increasing, extended
 linearly beyond `n1`), which dominate the averaged split terms through the moment bounds. -/

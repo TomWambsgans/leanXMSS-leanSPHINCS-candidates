@@ -8,7 +8,7 @@ hash inputs are internalized. -/
 
 open OracleComp OracleSpec
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
@@ -81,7 +81,7 @@ theorem noRepeat_internalize_adversary (adversary : Adversary) (h : adversary.No
   intro pk
   exact noRepeat_map _ _ [] (noRepeat_internalize _ [] ∅ (h pk))
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential
 
 end
 
@@ -97,7 +97,7 @@ namespace LeanFors.Security.Memo
 
 variable [Params]
 
-open Internalize Short ForestPotential
+open Internalize Short ForsPotential
 
 set_option backward.isDefEq.respectTransparency false
 attribute [local instance] Classical.propDecidable

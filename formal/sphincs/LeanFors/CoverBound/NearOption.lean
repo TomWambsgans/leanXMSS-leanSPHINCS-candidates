@@ -12,7 +12,7 @@ namespace LeanFors.Security.H0
 
 variable [Params]
 
-open Concrete ForestPrice LeanFors.Base.H0 LeanFors.Base.Domination H0Avg ForestPotential
+open Concrete ForsPrice LeanFors.Base.H0 LeanFors.Base.Domination H0Avg ForsPotential
 
 set_option linter.unusedSectionVars false
 
@@ -145,7 +145,7 @@ theorem hNearOf_le (H b k a N qtop : ℕ) (hH : totalHeight = H) (hb : subtreeHe
   obtain ⟨-, hl, hleaf, -, -, hEn⟩ := checkOptN_parts ho
   set w := wbarOf q with hwdef
   have hw1 : w ≤ 1 := wbar_le_one q (fair_of_rate H b N qtop t hr hH hb q hq)
-  have hlw : landing * w ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top (mul_le_one' ForestPrice.landing_le_one hw1)
+  have hlw : landing * w ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top (mul_le_one' ForsPrice.landing_le_one hw1)
   have hcard : Fintype.card (Fin (2 ^ subtreeHeight)) = 2 ^ b := by rw [Fintype.card_fin, hb]
   set α : ℝ≥0 := ((2 : ℝ≥0) ^ b)⁻¹ with hαdef
   set γ : ℝ≥0 := (landing * w).toNNReal / (2 : ℝ≥0) ^ b with hγdef
@@ -169,7 +169,7 @@ theorem hNearOf_le (H b k a N qtop : ℕ) (hH : totalHeight = H) (hb : subtreeHe
         = (signatureLimit : ℝ) / 2 ^ b + (q : ℝ) * (landing * w).toReal / 2 ^ b := by ring
       _ ≤ _ := rate_le_tableF H b N qtop t hr hH hb hN q hq
   rw [hNearOf_eq]
-  refine le_trans (hTermO_near_le w landing hw1 ForestPrice.landing_le_one signatureLimit q
+  refine le_trans (hTermO_near_le w landing hw1 ForsPrice.landing_le_one signatureLimit q
     (fun n => ENNReal.ofReal (leafQ o.nt o.Jn n : ℝ)) (leaf_sepGood hleaf)
     (avgN_near_le hH hb hk ha ho) α γ hα hγ μ hμ) ?_
   have hpm := poisMean_leaf_le ht hleaf hl

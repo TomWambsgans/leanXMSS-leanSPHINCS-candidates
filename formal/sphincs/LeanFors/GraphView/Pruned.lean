@@ -61,7 +61,7 @@ section
 /-! The candidate's retained structural positions and off-spine surrogate boundary. A one-time key
 (its chains and its leaf) is retained when it lies on the path of a landed index; a node of the top
 layer's root tree when it is a kept or spine node; a node of a lower layer when it lies above a
-retained key. Forest instances are conservatively prepared as well; exact serialized addresses keep
+retained key. FORS instances are conservatively prepared as well; exact serialized addresses keep
 those extra nodes from adding targets to an individual query. The surrogates are nodes of the top
 layer's root tree. -/
 

@@ -1,10 +1,10 @@
 import LeanFors.ScanSigner.FairShare
 import LeanFors.LazyRun.InterpreterFacts
 
-/-! What a completed signing call leaves behind in the lazy run: at most one selected pair with its
-block cached, every other randomizer of the message unchanged or rejected, forest chain values
-revealed only for the selected digest (at and above the opened positions), and, on failure, no
-reveals and a failing index. -/
+/-! What a completed signing call leaves behind in the lazy run: at most one selected pair, wholly
+cached, every other randomizer of the message unchanged or rejected, FORS coordinates revealed
+only at the leaves the selected digest opens (`ForsOk`), and, on failure, no reveals and a failing
+index. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -109,7 +109,7 @@ namespace LeanFors.Security.GraphView
 
 variable [Params]
 
-open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForestSigner
+open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForsSigner
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -117,11 +117,11 @@ attribute [local instance] Classical.propDecidable
 
 
 /-- A reveal is a FORS position the digest opens, or not a FORS position at all. -/
-def ForestOk (digest : MessageDigest) (x : Coordinate) : Prop :=
+def ForsOk (digest : MessageDigest) (x : Coordinate) : Prop :=
   ∀ i κ l q, x = .fors i κ l q → i = digestIndex digest ∧ l = digestLeaves digest κ
 
 theorem revealsIn_treeCostSource (digest : MessageDigest) (data : PublicData) (κ : FTree) :
-    RevealsIn (D := HashInput) (R := HashOutput) (ForestOk digest)
+    RevealsIn (D := HashInput) (R := HashOutput) (ForsOk digest)
       (treeCostSource data (digestIndex digest) κ (digestLeaves digest κ)) := by
   unfold treeCostSource
   refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun k => revealsIn_reveal _ _ ?_)
@@ -157,7 +157,7 @@ theorem revealsIn_layerCostSearch (P : Coordinate → Prop) (parameter : PublicP
 
 theorem revealsIn_finishRest (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) (digest : MessageDigest) :
-    RevealsIn (D := HashInput) (R := HashOutput) (ForestOk digest)
+    RevealsIn (D := HashInput) (R := HashOutput) (ForsOk digest)
       (finishRest parameter data message randomness digest) := by
   unfold finishRest
   refine revealsIn_bind _ (revealsIn_tick _ _) fun _ => ?_
@@ -243,7 +243,7 @@ theorem finish_post (hparse : ∀ ρ call, model.parse (pblk parameter data mess
       pcache parameter data message out.2 ρ = some u ∧
       (∀ x, IsMsgInput x → (∀ call, x ≠ pblk parameter data message ρ call) →
         out.2.cache x = s1.cache x) ∧
-      (∀ c ∈ out.1.2.1, ForestOk (truncateMessageDigest u) c) ∧
+      (∀ c ∈ out.1.2.1, ForsOk (truncateMessageDigest u) c) ∧
       (∀ sig, r = some sig → sig.randomness = ρ) ∧
       (r = none → out.1.2.1 = [] ∧ (Lifetime.localDigestView (truncateMessageDigest u)).1 ∈ Fail) := by
   have hsig : ∀ sig, r = some sig → sig.randomness = ρ := by
@@ -310,7 +310,7 @@ def SignPost (Fail : Finset (Fin (2 ^ subtreeHeight))) (s s' : DebtState HashInp
     (reveals : List Coordinate) (r : Option Signature) : Prop :=
   (r = none ∧ reveals = [] ∧ ∀ ρ, RelatedAt parameter data message s s' ρ) ∨
   ∃ ρ u, Selected parameter data message s s' ρ u ∧
-    (∀ c ∈ reveals, ForestOk (truncateMessageDigest u) c) ∧
+    (∀ c ∈ reveals, ForsOk (truncateMessageDigest u) c) ∧
     (∀ sig, r = some sig → sig.randomness = ρ) ∧
     (r = none → reveals = [] ∧ (s.cache (blk parameter data message ρ) = none →
       (Lifetime.localDigestView (truncateMessageDigest u)).1 ∈ Fail))

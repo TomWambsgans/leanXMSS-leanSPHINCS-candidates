@@ -5,16 +5,16 @@ at a revealed secret, or a near cover with a recorded contact, against a
 completed table, has probability at most the weighted recorded contacts with their coefficients: a
 contact has the chance of its weight, settled contacts pay one, and a near cover makes the capped
 near potential one. Through the whole game the event is paid by the start potential and
-`2^-128 (N rate) + payB` per forest step query. -/
+`2^-128 (N rate) + payB` per FORS leaf query. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenBridge
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenBridge
 open HiddenReveal PotentialA
 
 set_option backward.isDefEq.respectTransparency false
@@ -31,7 +31,7 @@ near cover with a recorded contact. -/
 def A4ev (K : Ctx) (root : Digest) (T : Coordinate → Digest) (s : State) (outcome : Outcome)
     (R : List Coordinate) : Prop :=
   (∃ index κ leaf, Coordinate.fors index κ leaf 0 ∈ R ∧ RecordedContactAt s T K index κ leaf) ∨
-  ForestNearRecorded s T K root outcome R
+  ForsNearRecorded s T K root outcome R
 
 /-- The final value of A4: the chance of a valid transcript and the event over the completion. -/
 noncomputable def finalA4 (K : Ctx) (root : Digest) : FinalF := fun o R s =>
@@ -102,7 +102,7 @@ theorem potNF_ge_of_near (hw : wbar ≤ 1) {budget : ℕ} {s : State} {P : List 
     {d : Multiset View}
     {R : List Coordinate} (hB : BInvF K data Qtot model s P Ms d R budget) {T : Coordinate → Digest}
     {forgery : Forgery} {L : QueryLog SigningSpec} {verified : Bool}
-    (h : ForestNearRecorded s T K data.root (forgery, L, verified) R) :
+    (h : ForsNearRecorded s T K data.root (forgery, L, verified) R) :
     1 ≤ potNF K data wbar Fail s P Ms L d budget := by
   obtain ⟨hvalid, digest, hdig, hland, hunsigned, κ, -, hcov⟩ := h
   set q : Pair := (forgery.message, forgery.signature.randomness) with hq
@@ -201,7 +201,7 @@ include hMp hMi hMo in
 /-- **The contact bound.** In the lazy run of the rest of the game of an adversary that never
 repeats a message, a valid finished game with the event A4 has chance at most the start potential
 (the coin risk `total (2 − landing)/2^128` per contact, the near forecasts and the cap term
-`lam Lmax 0 total`) plus `2^-128 N rate + payB` per expected forest step query, once
+`lam Lmax 0 total`) plus `2^-128 N rate + payB` per expected FORS leaf query, once
 `2^-128 ≤ payB + κ 2^-128`. -/
 theorem a4F_bound (hparse : ∀ p call, model.parse (pblk K.p data p call) = none)
     (hmsg : ∀ x, IsMsgInput x → K.tg.kind x = .none)
@@ -233,4 +233,4 @@ theorem a4F_bound (hparse : ∀ p call, model.parse (pblk K.p data p call) = non
 
 end Bound
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

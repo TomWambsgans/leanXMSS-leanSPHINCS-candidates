@@ -12,7 +12,7 @@ probability at least `R · 2^-128`. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestSigner
+namespace LeanFors.Security.ForsSigner
 
 variable [Params]
 
@@ -74,7 +74,7 @@ theorem NoMsg.search (parameter : PublicParameter) (lay : Layer) (tree : TreeInd
       | none => exact NoMsg.search parameter lay tree leaf message attempts (start + 1)
       | some _ => exact NoMsg.pure' _
 
-end LeanFors.Security.ForestSigner
+end LeanFors.Security.ForsSigner
 
 namespace LeanFors.Security.HiddenDebt
 
@@ -206,7 +206,7 @@ namespace LeanFors.Security.GraphView
 variable [Params]
 
 open LeanFors.Base
-open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForestSigner
+open Concrete Completeness Prefix HiddenGraph HiddenCost HiddenDebt ForsSigner
 
 attribute [local instance] Classical.propDecidable
 
@@ -371,7 +371,7 @@ probability times the uniform average of the weight. -/
 theorem fresh_view_mean (parameter : PublicParameter) (gf : Lifetime.KeptDigestView → ℝ≥0∞) :
     (∑' u, Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *
       (if Landed parameter (blockIndex (u firstCall)) then gf (viewOf u) else 0)) =
-      ForestPrice.landing * Domination.freshAvg Finset.univ gf := by
+      ForsPrice.landing * Domination.freshAvg Finset.univ gf := by
   classical
   set φ : MessageDigest → ℝ≥0∞ := fun digest =>
     if Landed parameter (digestIndex digest) then gf (Lifetime.localDigestView digest) else 0
@@ -405,7 +405,7 @@ theorem fresh_view_mean (parameter : PublicParameter) (gf : Lifetime.KeptDigestV
   have hterm : ∀ view : Lifetime.KeptDigestView,
       (∑' digest, Pr[= digest | ($ᵗ MessageDigest : ProbComp MessageDigest)] *
         (gf view * if Landed parameter (digestIndex digest) ∧ Lifetime.localDigestView digest = view then 1 else 0)) =
-      gf view * (ForestPrice.landing * (Fintype.card Lifetime.KeptDigestView : ℝ≥0∞)⁻¹) := by
+      gf view * (ForsPrice.landing * (Fintype.card Lifetime.KeptDigestView : ℝ≥0∞)⁻¹) := by
     intro view
     have hp := Lifetime.probEvent_landed_localDigest parameter (fun v => v = view)
     rw [probEvent_eq_tsum_ite] at hp
@@ -525,14 +525,14 @@ theorem card_randomness : Fintype.card Randomness = 2 ^ 128 := HiddenDebt.card_d
 
 theorem landed_mass (parameter : PublicParameter) :
     ∑' u, Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *
-      (if Landed parameter (blockIndex (u firstCall)) then (1 : ℝ≥0∞) else 0) = ForestPrice.landing := by
+      (if Landed parameter (blockIndex (u firstCall)) then (1 : ℝ≥0∞) else 0) = ForsPrice.landing := by
   have h := fresh_view_mean parameter (fun _ => 1)
   rw [Domination.freshAvg_const _ Finset.univ_nonempty, mul_one] at h
   exact h
 
 theorem unlanded_mass (parameter : PublicParameter) :
     ∑' u, Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *
-      (if Landed parameter (blockIndex (u firstCall)) then (0 : ℝ≥0∞) else 1) = 1 - ForestPrice.landing := by
+      (if Landed parameter (blockIndex (u firstCall)) then (0 : ℝ≥0∞) else 1) = 1 - ForsPrice.landing := by
   have htot : (∑' u, Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *
       (if Landed parameter (blockIndex (u firstCall)) then (1 : ℝ≥0∞) else 0)) +
     ∑' u, Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *

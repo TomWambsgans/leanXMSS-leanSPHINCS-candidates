@@ -67,7 +67,7 @@ noncomputable def targetingA (parameterOutput : HashOutput) (fixed : HiddenGraph
   trunc := truncateHash
   kind x := if SecondOrderInput (truncateHash parameterOutput) results x then .none
     else sampleKind parameterOutput fixed highs remaining results x
-  digest := ForestSigner.IsMsgInput
+  digest := ForsSigner.IsMsgInput
 
 /-- The data of the potential for one sample, preparation and exposure. -/
 noncomputable def ctxA (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)
@@ -99,7 +99,7 @@ theorem ctxA_sec : ∀ x, SecondOrderInput (ctxA parameterOutput fixed highs rem
   intro x hx
   exact if_pos hx
 
-theorem ctxA_msg : ∀ x, ForestSigner.IsMsgInput x →
+theorem ctxA_msg : ∀ x, ForsSigner.IsMsgInput x →
     (ctxA parameterOutput fixed highs remaining prepared known ρ).tg.kind x = .none := by
   intro x hx
   change (if SecondOrderInput (truncateHash parameterOutput) prepared.1 x then _ else _) = _

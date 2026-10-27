@@ -1,20 +1,20 @@
 import LeanFors.SmallBudget.Contact.Potential
 
-/-! **The contact potential through a signing call.** The signer queries no forest step input, so
-it records no forest step, keeps every forest step answer, and exposes the coordinate a step writes
-only by revealing its chain. A contact whose chain the call opens at or below `min(t + 1, 3)` (an
-event of chance at most the reveal rate plus the mass off the identity of the message, over every run)
-is paid by the drop of the reveal rate; otherwise its weight does not move. A latent contact
-exposed by the call is decided with chance `2^-128`, whatever the call does. -/
+/-! **The contact potential through a signing call.** The signer queries no FORS leaf input, so
+it records no FORS leaf query, keeps every FORS leaf answer, and exposes the leaf value a query
+writes only by revealing that leaf. A contact whose leaf the call opens (an event of chance at most
+the reveal rate plus the mass off the identity of the message, over every run) is paid by the drop
+of the reveal rate; otherwise its weight does not move. A latent contact exposed by the call is
+decided with chance `2^-128`, whatever the call does. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenBridge
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenBridge
 open PotentialA
 
 set_option backward.isDefEq.respectTransparency false
@@ -24,7 +24,7 @@ set_option linter.constructorNameAsVariable false
 attribute [local instance] Classical.propDecidable
 
 
-/-! ### What a run avoiding forest step inputs does to forest steps -/
+/-! ### What a run avoiding FORS leaf inputs does to FORS leaf queries -/
 
 section Avoid
 
@@ -33,7 +33,7 @@ variable (K : Ctx) (model : HiddenRows.Model HashInput HashOutput Address Coordi
   (hMi : model.incoming = Address.inputCoordinate) (hMo : model.outgoing = Address.outputCoordinate)
 
 include hMp hMi in
-/-- A run avoiding forest step inputs records no forest step. -/
+/-- A run avoiding FORS leaf inputs records no FORS leaf query. -/
 theorem interp_recd_avoid {α : Type} (comp : OracleComp CostSpec α) (h : Avoids (IsFleafIn K.p) comp) :
     ∀ budget (s : State), ∀ out ∈ support (interp K.tg K.initial model comp budget s),
       ∀ f, Ctx.Recd out.2 f → Ctx.Recd s f := by
@@ -83,7 +83,7 @@ theorem interp_recd_avoid {α : Type} (comp : OracleComp CostSpec α) (h : Avoid
         exact hf
 
 include hMp hMo in
-/-- A query writing a forest chain coordinate is a forest step input. -/
+/-- A query writing a FORS coordinate is a FORS leaf input. -/
 theorem writes_fleaf {c : Coordinate} (hc : IsFc c) {x : HashInput} (h : Writes model c x) : IsFleafIn K.p x := by
   obtain ⟨a, v, hp, hout⟩ := h
   rw [hMp] at hp
@@ -99,7 +99,7 @@ theorem writes_fleaf {c : Coordinate} (hc : IsFc c) {x : HashInput} (h : Writes 
 
 end Avoid
 
-/-- The signing call (uniform start, then the scan) queries no forest step input. -/
+/-- The signing call (uniform start, then the scan) queries no FORS leaf input. -/
 theorem avoids_source_fleaf (p : PublicParameter) (parameter : PublicParameter) (data : PublicData)
     (message : Message) : Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate) (IsFleafIn p)
       (signCostSource parameter data message) :=
@@ -113,14 +113,14 @@ variable (K : Ctx) (data : PublicData) (Qtot : ℕ) (model : HiddenRows.Model Ha
   (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
   (hMi : model.incoming = Address.inputCoordinate) (hMo : model.outgoing = Address.outputCoordinate)
 
-/-- The call opens the leaf of a step at one of its two positions. -/
+/-- The call opens the leaf of a query: it reveals the leaf's secret or its value. -/
 def OpensF (f : FIn) (reveals : List Coordinate) : Prop :=
   ∃ q, Coordinate.fors f.index f.κ f.leaf q ∈ reveals
 
 variable {K data Qtot model}
 
 include hMp hMi hMo in
-/-- **Facts about one step through a signing call.** -/
+/-- **Facts about one FORS leaf query through a signing call.** -/
 theorem sign_step_facts {m : Message} {budget : ℕ} {s : State} {R : List Coordinate}
     (o1 : Run HashInput Coordinate (Option Signature) × State)
     (ho1 : o1 ∈ support (interp K.tg K.initial model (signCostSource K.p data m) budget s))
@@ -155,7 +155,7 @@ theorem sign_step_facts {m : Message} {budget : ℕ} {s : State} {R : List Coord
     · exact ⟨0, h⟩
 
 include hMp hMi hMo in
-/-- **The weight of a contact through a signing call**, and its part on runs opening its chain. -/
+/-- **The weight of a contact through a signing call**, and its part on runs opening its leaf. -/
 theorem sign_cw_mean {m : Message} {budget : ℕ} {s : State} {R : List Coordinate} (f : FIn) :
     ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSource K.p data m) budget s] *
         K.cw o1.2 f ≤ K.cw s f ∧
@@ -290,7 +290,7 @@ theorem settled_append {R : List Coordinate} {f : FIn} (h : Settled R f) (L : Li
 
 include hMp hMi hMo in
 /-- **One contact through a signing call.** Its weight times its coefficient after the call is at
-most its weight times the coefficient before: an opening of its chain has chance at most the
+most its weight times the coefficient before: an opening of its leaf has chance at most the
 reveal rate plus the mass off the identity of the message, and costs at most `1 + Cd`. -/
 theorem sign_contact {m : Message} {budget : ℕ} {s : State} {P : List Pair} {Ms : List Message}
     {d : Multiset View} {R : List Coordinate} (hB : BInvF K data Qtot model s P Ms d R budget)
@@ -625,4 +625,4 @@ theorem psiF_sign (hparse : ∀ p call, model.parse (pblk K.p data p call) = non
 
 end SignPays
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

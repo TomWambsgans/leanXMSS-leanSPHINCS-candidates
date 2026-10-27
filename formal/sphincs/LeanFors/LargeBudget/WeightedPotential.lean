@@ -1,20 +1,20 @@
 import LeanFors.LargeBudget.WeightedScan
 import LeanFors.CoverPotential.OneCoinGame
 
-/-! The one-coin forest potential of the scan signer weighted by the survival weight. The final value
-of a run counts a forest cover with weight `w_end`; a new message/randomizer pair costs the baseline
+/-! The one-coin FORS potential of the scan signer weighted by the survival weight. The final value
+of a run counts a FORS cover with weight `w_end`; a new message/randomizer pair costs the baseline
 times the current weight; ordinary queries and signing calls do not raise `w * pot` in expectation,
 since the potential only depends on the views of the message-digest blocks, whose reads keep the
 weight, and the weight is a supermartingale of the run. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner
   LeanFors.Base.Domination LeanFors.LoopWalk
 
 set_option backward.isDefEq.respectTransparency false
@@ -523,7 +523,7 @@ theorem new_pair_boundW {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤ 
         simp only [Option.elim]
         split_ifs with h1 h2
         · exact le_rfl
-        · exact absurd ⟨forestCover_mono parameter data.root outcome _ hgrow h1.1, fun hreal =>
+        · exact absurd ⟨forsCover_mono parameter data.root outcome _ hgrow h1.1, fun hreal =>
             h1.2 ((realized_store_untargeted tg initial out.2 _ v (hkind i)).1 hreal)⟩ h2
         · exact bot_le
         · exact le_rfl
@@ -834,4 +834,4 @@ theorem goodW_advProg (hparse : ∀ p call, model.parse (pblk parameter data p c
 
 end GoodW
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

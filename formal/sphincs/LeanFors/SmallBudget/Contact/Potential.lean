@@ -1,6 +1,6 @@
 import LeanFors.SmallBudget.Contact.Weights
 
-/-! **The contact potential of the forest (A4).** A recorded forest step is a contact with weight
+/-! **The FORS contact potential (A4).** A recorded FORS leaf query is a contact with weight
 `cw` (one if decided, `2^-128` while its written coordinate is unexposed). It is *settled*
 once a reveal opens its secret: the contact then pays one. An unsettled contact pays
 its coefficient: the reveal rate of the remaining signatures, the coin part (the mass off the identity
@@ -11,16 +11,16 @@ near potential. The potential
       κ 2^-128 Σ_{j < y} potN(j) + lam Lmax (live landed pairs) y`
 
 pays, at the end, a recorded contact at a revealed secret, or a near cover with a
-recorded contact; a forest step query costs `2^-128 (N rate + 1 - κ)`. -/
+recorded contact; a FORS leaf query costs `2^-128 (N rate + 1 - κ)`. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenBridge
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenBridge
 open PotentialA
 open LeanFors.LoopWalk
 
@@ -66,7 +66,7 @@ section DefsA4
 
 variable (K : Ctx) (data : PublicData) (wbar κ : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight)))
 
-/-- The leaf of a step is opened by a reveal of its secret. -/
+/-- The leaf of a FORS leaf query is opened by a reveal of its secret. -/
 def Settled (R : List Coordinate) (f : FIn) : Prop := f.inC ∈ R
 
 /-- Coefficient of a contact: one once settled, `C` otherwise. -/
@@ -450,7 +450,7 @@ section Ordinary
 variable (K : Ctx) (data : PublicData) (wbar κ : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight))) (Qtot : ℕ)
   (model : HiddenRows.Model HashInput HashOutput Address Coordinate)
 
-/-- **Any other ordinary query**, paying `2^-128 (N rate) + payB` at a forest step input, once
+/-- **Any other ordinary query**, paying `2^-128 (N rate) + payB` at a FORS leaf input, once
 `2^-128 ≤ payB + κ 2^-128`. -/
 theorem psiF_ordinary (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate) (hw : wbar ≤ 1) {payB : ℝ≥0∞}
@@ -592,4 +592,4 @@ theorem psiF_start (Lmax : ℕ) (known : HiddenReveal.Knowledge Coordinate) (tot
 
 end Start
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

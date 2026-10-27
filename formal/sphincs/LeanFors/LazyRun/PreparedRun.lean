@@ -1,18 +1,18 @@
 import LeanFors.CoverPotential.Game
 import LeanFors.LazyRun.Replay
 
-/-! Shared pieces of the routes that run saturation and the forest potential on the same lazy run:
+/-! Shared pieces of the routes that run saturation and the FORS potential on the same lazy run:
 the start state, from the stopped experiment to the interpreted run, failing indices of the
 prepared encoding searches and their expected share (at most `2^-201`), the prepared cache holding
 no message-digest input, and the targeting facts of one prepared sample. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal LeanFors.Base.Domination
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenReveal LeanFors.Base.Domination
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -26,10 +26,10 @@ variable (parameter : PublicParameter) (data : PublicData) (wbar : ℝ≥0∞) (
   {A : Type} (tg : Targeting HashInput HashOutput Coordinate)
   (initial : HiddenOutside.Cache HashInput HashOutput) (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
-/-- A forest cover of a completed run. -/
+/-- A FORS cover of a completed run. -/
 def CoverOf (out : Run HashInput Coordinate HiddenBridge.Outcome × State) : Prop :=
   ∃ outcome, out.1.1 = some outcome ∧
-    HiddenBridge.ForestCover parameter data.root outcome out.1.2.1 out.2.cache
+    HiddenBridge.ForsCover parameter data.root outcome out.1.2.1 out.2.cache
 
 theorem start_pinv (hclean : ∀ p call, initial (pblk parameter data p call) = none)
     (known : Knowledge Coordinate) : PInv parameter data (DebtState.start initial known) [] := by
@@ -126,7 +126,7 @@ def badFor (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : C
   CacheMatch.Bad (TargetAssignment.targets (truncateHash parameterOutput)
       (compTable parameterOutput fixed highs remaining table results)) v.2 ∨
     ∃ outcome, v.1.1.1 = some outcome ∧
-      ForestCover (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).root outcome v.1.1.2 v.2
+      ForsCover (truncateHash parameterOutput) (sampleData parameterOutput fixed highs remaining).root outcome v.1.1.2 v.2
 
 /-- One table: the stopped run against the comparison run. -/
 theorem stopped_table_le (hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : ℕ) (hq : q < 2 ^ 256)
@@ -313,7 +313,7 @@ theorem preparation_parts (parameterOutput : HashOutput) (fixed : HiddenGraph.Ta
 
 /-- Local indices of some index one of whose prepared searches failed. -/
 noncomputable def failSet (results : OtsKey → Option (Counter × Encoding)) : Finset (Fin (2 ^ subtreeHeight)) :=
-  Finset.univ.filter fun l => ∃ i : Index, ForestPotential.localIdx i = l ∧ ∃ lay, results (keyAt i lay) = none
+  Finset.univ.filter fun l => ∃ i : Index, ForsPotential.localIdx i = l ∧ ∃ lay, results (keyAt i lay) = none
 
 section Dep
 
@@ -785,4 +785,4 @@ theorem div_two_pow (x : ℝ≥0∞) (n : ℕ) : x / 2 ^ n = x * (2 : ℝ≥0∞
 
 end Close
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

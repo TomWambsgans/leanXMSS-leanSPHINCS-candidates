@@ -1,6 +1,6 @@
 import LeanFors.Classification.Verifier
 import LeanFors.Classification.Wots
-import LeanFors.Classification.Forest
+import LeanFors.Classification.Fors
 
 /-!
 The interface of deterministic extraction from an accepted candidate signature: its index and

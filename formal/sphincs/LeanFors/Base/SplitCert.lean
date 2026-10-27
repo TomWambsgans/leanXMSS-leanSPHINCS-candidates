@@ -1,12 +1,9 @@
 import LeanFors.Base.Split
 
-/-! Kernel-checkable rational certificates for the split bound of the one-coin H-term. A
-certificate has a Poisson table (a rate bound `μ̄ = m / 2^64`, upper bounds `pm[n] / 2^P` for the
-Poisson weights `e^{-μ̄} μ̄^n / n!` up to `n1 + 1`, and a geometric bound `T` for
-`Σ_{n > n1} e^{-μ̄} μ̄^n / n! n^24`), a list of options (cap `c1`, Chernoff parameter `θ`, threshold
-`cthr` and the claimed bounds of the two leaf means and of the H-term), and a chain of budget
-intervals, each with an option. Exponentials are bounded by `(1 - u / 2^s)^(-2^s)` (above) and by
-partial sums of the series (below), with dyadic rounding. -/
+/-! Rational bounds for the kernel-checkable certificates of the split bound of the one-coin H-term
+(the FORS certificates are in `CoverBound/HTermCertificate.lean`): dyadic rounding, exponentials
+bounded by `(1 - u / 2^s)^(-2^s)` (above) and by partial sums of the series (below), and the
+Poisson weight `e^{-μ} μ^n / n!`. -/
 
 open ENNReal NNReal
 

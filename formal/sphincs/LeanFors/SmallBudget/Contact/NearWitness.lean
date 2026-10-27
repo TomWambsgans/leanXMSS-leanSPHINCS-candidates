@@ -9,12 +9,12 @@ the index's marks. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
 open LeanFors.Base
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner LeanFors.Base.Domination
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner LeanFors.Base.Domination
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -68,13 +68,13 @@ theorem nearWitness_pos {R : List Coordinate} {d : Multiset View} (hD : DInv R d
     then (1 : ℝ≥0∞) else 0) (fun _ _ => zero_le) (Finset.mem_univ κ))
   rw [if_pos hsub]
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential
 
 namespace LeanFors.Security.H0
 
 variable [Params]
 
-open Concrete ForestPrice LeanFors.Base.Domination H0Avg ForestPotential
+open Concrete ForsPrice LeanFors.Base.Domination H0Avg ForsPotential
 
 
 theorem freshAvg_sum' {V β : Type} (U : Finset V) (s : Finset β) (g : β → V → ℝ≥0∞) :

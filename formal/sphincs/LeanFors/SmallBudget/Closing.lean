@@ -7,11 +7,11 @@ of covers of the budgets above `qh`. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenReveal
   LeanFors.Base.Domination
 open HiddenBridge PotentialA
 
@@ -287,4 +287,4 @@ theorem checkSmallF_sound {H b a N qh : ℕ} {ρ cthr B c : ℚ}
     Rat.cast_ofNat, Rat.cast_one] at r1 r2 r3 r4 r5 r8 r11 r12
   exact ⟨⟨r1, r2, r3, r4, r5⟩, h6, h7, r8, h9, h10, r11, r12⟩
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential

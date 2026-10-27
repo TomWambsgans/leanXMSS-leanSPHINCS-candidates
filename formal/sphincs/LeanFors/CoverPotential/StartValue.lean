@@ -3,15 +3,15 @@ import LeanFors.Reduction.Memo
 import LeanFors.CoverPotential.OneCoinGame
 
 /-! The one-coin excess forecast of a new pair at the start of the run (`startExcessO`), which is
-the start value of the future-pair term of the one-coin forest potential. -/
+the start value of the future-pair term of the one-coin FORS potential. -/
 
 open OracleComp OracleSpec ENNReal
 
-namespace LeanFors.Security.ForestPotential
+namespace LeanFors.Security.ForsPotential
 
 variable [Params]
 
-open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForestPrice ForestSigner HiddenReveal LeanFors.Base.Domination
+open Concrete HiddenGraph HiddenCost HiddenDebt GraphView Domination ForsPrice ForsSigner HiddenReveal LeanFors.Base.Domination
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
@@ -57,4 +57,4 @@ theorem potO_start_le (parameter : PublicParameter) (data : PublicData) (wbar b0
 
 end TotalO
 
-end LeanFors.Security.ForestPotential
+end LeanFors.Security.ForsPotential
