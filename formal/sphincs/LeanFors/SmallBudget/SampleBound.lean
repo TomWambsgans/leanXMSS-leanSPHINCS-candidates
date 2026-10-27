@@ -91,18 +91,19 @@ theorem sample_boundF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hn
   have hQ : q' ≤ q' + 2 ^ 32 := Nat.le_add_right _ _
   have hmsg : ∀ x, IsMsgInput x → tgA.kind x = .none := fun x h =>
     targetingA_msgF parameterOutput fixed highs remaining prepared.1 x h
-  have hparse : ∀ p, model.parse (pblk param data p) = none := fun p => by
+  have hparse : ∀ p call, model.parse (pblk param data p call) = none := fun p call => by
     rw [hmodel, sampleModel_parse]
-    cases h : HiddenGraph.parse param (candidateActive param) (pblk param data p) with
+    cases h : HiddenGraph.parse param (candidateActive param) (pblk param data p call) with
     | none => rfl
     | some qq =>
         exfalso
         obtain ⟨hx, -⟩ := (parse_some_iff _ _ _ qq).1 h
-        exact msg_not_graph param qq.1.position _ _ (msgInput_digestInput param data.root p.1 p.2) hx
-  have hdigest : ∀ p, tgA.digest (pblk param data p) := fun p => msgInput_digestInput param data.root p.1 p.2
-  have hclean : ∀ p, prepared.2 (pblk param data p) = none := fun p =>
+        exact msg_not_graph param qq.1.position _ _ (msgInput_digestInput param data.root p.1 p.2 call) hx
+  have hdigest : ∀ p call, tgA.digest (pblk param data p call) := fun p call =>
+    msgInput_digestInput param data.root p.1 p.2 call
+  have hclean : ∀ p call, prepared.2 (pblk param data p call) = none := fun p call =>
     prepared_clean parameterOutput fixed highs remaining prepared hprepared _
-      (msgInput_digestInput param data.root p.1 p.2)
+      (msgInput_digestInput param data.root p.1 p.2 call)
   have hfail : ∀ m ρ' digest budget (s1 : State), Prepared prepared.2 s1 →
       ∀ out ∈ support (interp tgA prepared.2 model (finishRest param data m ρ' digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fset :=
@@ -149,10 +150,11 @@ theorem sample_boundF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hn
     by_cases hK : keygenCost ≤ q
     · rw [hrunK hK, tsum_probOutput_map_mul, tsum_probOutput_map_mul]
       have hgood := goodO_advProg param data wbar b0 Fset q' Lmax tgA prepared.2 model
-        hparse hdigest hfail hfair hQ ((internalize adversary).main ⟨data.root, param⟩) [] hnr' q' start [] [] 0 []
+        hparse hdigest (fun p call => hmsg _ (msgInput_digestInput param data.root p.1 p.2 call))
+        hfail hfair hQ ((internalize adversary).main ⟨data.root, param⟩) [] hnr' q' start [] [] 0 []
         (start_prepared prepared.2 known) (start_pinv param data prepared.2 hclean known)
         (start_minv param data prepared.2 hclean known)
-        (fun _ _ _ _ _ _ _ h => by cases h) (start_count param data prepared.2 hclean known q')
+        (fun _ _ _ _ h => by cases h) (start_count param data prepared.2 hclean known q')
       have hval : startExcessO wbar b0 q' ≤ ENNReal.ofReal (o.B : ℝ) :=
         H0.startExcessO_le_opt H b k a N qtop t o hrt hpt ho hHH hbb hkk haa hNN q' hqtop b0 (ENNReal.ofReal_le_ofReal hcthr)
       have hpot : potO param data wbar b0 Fset tgA prepared.2 Lmax start [] [] [] 0 q' ≤
@@ -187,7 +189,7 @@ theorem sample_boundF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hn
     by_cases hK : keygenCost ≤ q
     · rw [hrunK hK, tsum_probOutput_map_mul, tsum_probOutput_map_mul]
       have hinv := inv_start parameterOutput fixed highs remaining prepared known ρ hk
-      have hb := a4F_bound K data wbar κE Fset model hMp hMi hMo hparse hclean hfail q' hfair hQ hκspl
+      have hb := a4F_bound K data wbar κE Fset model hMp hMi hMo hparse hmsg hclean hfail q' hfair hQ hκspl
         ((internalize adversary).main ⟨data.root, param⟩) hnr' known hinv
       unfold expCount at hb
       refine le_trans (le_trans (le_of_eq (tsum_congr fun out => rfl)) hb) ?_
