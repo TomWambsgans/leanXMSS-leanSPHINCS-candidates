@@ -140,8 +140,9 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 #tip {
   position: fixed;
   z-index: 10;
-  white-space: pre;
-  max-width: calc(100vw - 2rem);
+  white-space: pre-line;
+  width: max-content;
+  max-width: min(27rem, calc(100vw - 2rem));
   background: var(--ink);
   color: #fff;
   font-size: 0.9rem;
@@ -165,6 +166,7 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .tables h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; margin: 0.9rem 0 0.2rem; }
 .tables h2:first-child { margin-top: 0; }
 .tables .lead { margin: 0 0 0.3rem; color: var(--muted); }
+.tables p, #tip { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }   /* running text: flush left and right */
 .cmp thead .sub { font-weight: 400; color: var(--muted); }
 .m-only { display: none; }
 .cards td .hd > :first-child { flex: 1 1 auto; min-width: 0; }
@@ -202,8 +204,7 @@ footer p { margin: 0; }
 footer a + a { margin-left: 1.25rem; }
 
 @media (hover: none), (max-width: 600px) {
-  #tip, #tip.w { left: 1rem !important; right: 1rem; top: auto !important; bottom: 1.25rem; width: auto; max-width: none; white-space: pre-wrap; text-align: center; }
-  #tip.w { text-align: left; }
+  #tip, #tip.w { left: 1rem !important; right: 1rem; top: auto !important; bottom: 1.25rem; width: auto; max-width: none; white-space: pre-wrap; text-align: justify; }
 }
 @media (max-width: 1150px) {
   main { min-height: 0; }
@@ -328,7 +329,7 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th><i>h</i></th><td data-f="h">&hellip;</td></tr>
           <tr><th><i>k</i></th><td data-f="k">&hellip;</td></tr>
           <tr><th><i>a</i></th><td data-f="a">&hellip;</td></tr>
-          <tr><th>OTS</th><td>WOTS+C<span class="info" tabindex="0" role="button" aria-label="More information" data-tip="v = 64 chains of length w = 4,&#10;target sum T = 128">i</span></td></tr>
+          <tr><th>OTS</th><td>WOTS+C<span class="info" tabindex="0" role="button" aria-label="More information" data-tip="v&#160;=&#160;64 chains of length w&#160;=&#160;4, target sum T&#160;=&#160;128">i</span></td></tr>
         </tbody>
         <tbody class="out">
           <tr><th>Size</th><td data-f="size">&hellip;</td></tr>
@@ -1013,7 +1014,7 @@ footer a + a { margin-left: 1.25rem; }
   var NOTE = 'https://github.com/TomWambsgans/sphincs.art/releases/download/doc-latest/leanSPHINCS.pdf';
   var LIFE_TIP = '127 bits of security (ROM), [proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/main/formal/sphincs)';
   // the two FTS, for the tip of the FTS variant
-  var FOREST_TIP = '# WOTS forest\n8 trees of height 4. Each leaf hashes\nthe top nodes of two subtrees of height 3\nover WOTS keys of 6 chains of length 5,\nwith target sum 5 ([paragraph 4](' + NOTE + '#page=8))\n(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))';
+  var FOREST_TIP = '# WOTS forest\n8 trees of height 4. Each leaf hashes the top nodes of two subtrees of height 3 over WOTS keys of 6 chains of length 5, with target sum 5 ([paragraph 4](' + NOTE + '#page=8))\n(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))';
   function forsTip(v) {
     return '# FORS\nk = ' + v.k + ' trees of height a = ' + v.a;
   }
@@ -1160,9 +1161,9 @@ footer a + a { margin-left: 1.25rem; }
 
     // threshold, with the chosen hash, for the chosen shape: the layered key, or a pruned key with the Ledger's subtree
     // traffic per operator at about 1 bit per AND gate
-    var MPC = '<th>Traffic' + info('Per operator, for 2-of-3.&#10;Thanks to honest-majority MPC with replicated&#10;sharing (Araki et al., CCS 2016), each AND gate&#10;costs roughly 1 bit of bandwidth per operator,&#10;with malicious security (Boyle et al., CCS 2019;&#10;Goyal and Song, CRYPTO 2020)') + '</th>';
+    var MPC = '<th>Traffic' + info('Per operator, for 2-of-3.&#10;Thanks to honest-majority MPC with replicated sharing (Araki et al., CCS 2016), each AND gate costs roughly 1 bit of bandwidth per operator, with malicious security (Boyle et al., CCS 2019; Goyal and Song, CRYPTO 2020)') + '</th>';
     var th = lay_ ? thr('layered') : thr('pruned', devs[0].b);
-    var ROUNDS = '<th>Rounds' + info('One communication round per layer of AND gates&#10;(' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + '), for 2-of-3') + '</th>';
+    var ROUNDS = '<th>Rounds' + info('One communication round per layer of AND gates (' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + '), for 2-of-3') + '</th>';
     // with pruning, the Ledger's subtree; the layered key needs no sentence
     set('th-life', 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for a lifetime of ' +
       life1(isForest() ? th.lifetime : th.fors.lifetime) + ' signatures:');
