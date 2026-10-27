@@ -1166,7 +1166,7 @@ footer a + a { margin-left: 1.25rem; }
       '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + vs(comma(th.vanilla.prep_rounds), comma(th.prep_rounds)) + '</td></tr>');
 
     // what spicy changes, against the vanilla figures of the same configuration (gains rounded down, losses up)
-    document.getElementById('v-tip').setAttribute('data-tip', '[The WOTS forest, against FORS](' + NOTE + '#page=7):\n' +
+    document.getElementById('v-tip').setAttribute('data-tip', 'The WOTS forest, against FORS ([note](' + NOTE + '#page=7)):\n' +
       '+ ' + Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures\n' +
       '+ ' + Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification\n' +
       '− novel\n' +
