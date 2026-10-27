@@ -1160,9 +1160,9 @@ footer a + a { margin-left: 1.25rem; }
 
     // threshold, with the chosen hash, for the chosen shape: the layered key, or a pruned key with the Ledger's subtree
     // traffic per operator at about 1 bit per AND gate
-    var MPC = '<th>Traffic' + info('For 2-of-3 (×1.2 and ×1.29 for 3-of-5 and 4-of-7).&#10;Thanks to honest-majority MPC with replicated&#10;sharing (Araki et al., CCS 2016), each AND gate&#10;costs roughly 1 bit of bandwidth per operator,&#10;with malicious security (Boyle et al., CCS 2019;&#10;Goyal and Song, CRYPTO 2020)') + '</th>';
+    var MPC = '<th>Traffic' + info('Per operator, for 2-of-3.&#10;Thanks to honest-majority MPC with replicated&#10;sharing (Araki et al., CCS 2016), each AND gate&#10;costs roughly 1 bit of bandwidth per operator,&#10;with malicious security (Boyle et al., CCS 2019;&#10;Goyal and Song, CRYPTO 2020)') + '</th>';
     var th = lay_ ? thr('layered') : thr('pruned', devs[0].b);
-    var ROUNDS = '<th>Rounds' + info('One communication round per layer of AND gates&#10;(' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + '), for 2-of-3&#10;(twice as many from 3-of-5 on, through a collector)') + '</th>';
+    var ROUNDS = '<th>Rounds' + info('One communication round per layer of AND gates&#10;(' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + '), for 2-of-3') + '</th>';
     // with pruning, the Ledger's subtree; the layered key needs no sentence
     set('th-life', lay_ ? '' : 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for a lifetime of ' +
       life1(isForest() ? th.lifetime : th.fors.lifetime) + ' signatures:');
