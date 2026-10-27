@@ -75,13 +75,10 @@ body:not([data-v="spicy"]) .s-only, body[data-v="spicy"] .v-only { display: none
 .old { position: relative; display: inline-block; }
 body[data-v="spicy"] .old::after { content: ""; position: absolute; left: -0.2em; right: -0.2em; top: 52%; border-top: 1.5px solid rgba(139, 26, 26, 0.45); transform: rotate(-16deg); pointer-events: none; }
 .new { color: var(--accent); margin-left: 0.45em; }
-.toggle { position: absolute; left: calc(100% + 1.5rem); top: 50%; transform: translateY(-50%); z-index: 2; white-space: nowrap; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 3px; background: #fff; }
-.toggle button { font: inherit; font-size: 1.1rem; border: 0; background: none; color: var(--muted); padding: 0.35rem 1.4rem; border-radius: 999px; cursor: pointer; }
-.toggle button[aria-pressed="true"] { background: var(--ink); color: #fff; }
-.toggle button[data-v="spicy"][aria-pressed="true"] { background: var(--accent); }
-/* what spicy changes, under the toggle, with an arrow from "spicy" */
+.seg button[data-val="spicy"][aria-checked="true"] { background: var(--accent); }
+/* what spicy changes, beside the toggles, with an arrow from "spicy" */
 .notes { position: absolute; z-index: 3; visibility: hidden; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.95rem; color: var(--muted); white-space: nowrap; }
-.notes.flow { position: static; visibility: visible; margin: 1.7rem 0 0.6rem; }
+.notes.flow { position: static; visibility: visible; margin: 0.4rem 0 1.2rem; }
 .notes ul { margin: 0; padding: 0; list-style: none; }
 .notes li::before { display: inline-flex; align-items: center; justify-content: center; width: 1.15em; height: 1.15em; margin-right: 0.5em; border: 1px solid currentColor; border-radius: 50%; font-size: 0.85em; line-height: 1; vertical-align: 0.1em; }
 .notes .pro li::before { content: "+"; color: var(--ink); }
@@ -225,8 +222,7 @@ footer a + a { margin-left: 1.25rem; }
 @media (max-width: 1150px) {
   main { min-height: 0; }
   h1 { white-space: normal; }
-  .toggle { position: static; transform: none; margin: 0.9rem 0 0.2rem; }
-  .notes { position: static; visibility: visible; margin: 1.7rem 0 0.6rem; }
+  .notes { position: static; visibility: visible; margin: 0.4rem 0 1.2rem; }
   .page { grid-template-columns: minmax(0, 1fr); }
   .page > * { min-width: 0; }
   .params p { white-space: normal; }
@@ -322,10 +318,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
   header { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.9rem; align-items: center; }
   h1, .sphinx-line { grid-column: 1 / -1; }
   .sphinx-line.inflow { order: 4; margin-top: 1rem; }
-  /* the toggle, with what spicy changes at its right */
-  .toggle { order: 2; align-self: start; margin: 1.9rem 0 0; }
-  .toggle button { font-size: 1rem; padding: 0.3rem 0.95rem; }
-  .notes, .notes.flow { order: 3; flex-flow: column; gap: 0.1rem; margin: 1.9rem 0 0; font-size: 0.74rem; line-height: 1.4; white-space: normal; }
+  .notes, .notes.flow { gap: 0.3rem; font-size: 0.9rem; white-space: normal; }
 }
 </style>
 </head>
@@ -335,9 +328,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
 <div class="page">
   <div class="text">
     <header>
-      <div class="titlerow"><h1>leanSphincs exploration</h1><div class="toggle" role="group" aria-label="Variant"><button type="button" data-v="vanilla" aria-pressed="true">vanilla</button><button type="button" data-v="spicy" aria-pressed="false">spicy</button></div></div>
-      <div class="notes"><ul class="pro"><li data-f="pro-size">&nbsp;</li><li data-f="pro-verify">&nbsp;</li></ul><ul class="con"><li>more complex</li><li data-f="con-thr">&nbsp;</li></ul></div>
-      <svg class="arrow" aria-hidden="true"><path class="line"/><path class="head"/></svg>
+      <div class="titlerow"><h1>leanSphincs exploration</h1></div>
     </header>
     <div class="params">
       <div class="toggles" id="toggles">
@@ -347,7 +338,11 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
         <div class="seg" role="radiogroup" aria-labelledby="tl-shape" data-key="shape"><button type="button" role="radio" data-val="pruned">Pruning</button><button type="button" role="radio" data-val="layered">Uniform</button></div>
         <span class="sl" id="tl-hash">Hash</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-hash" data-key="hash"><button type="button" role="radio" data-val="BLAKE2s">BLAKE2s</button><button type="button" role="radio" data-val="SHA-256">SHA-256</button><button type="button" role="radio" data-val="Keccak-256">Keccak-256</button></div>
+        <span class="sl" id="tl-v">Variant</span>
+        <div class="seg" role="radiogroup" aria-labelledby="tl-v" data-key="v"><button type="button" role="radio" data-val="vanilla">vanilla</button><button type="button" role="radio" data-val="spicy">spicy</button></div>
       </div>
+      <div class="notes"><ul class="pro"><li data-f="pro-size">&nbsp;</li><li data-f="pro-verify">&nbsp;</li></ul><ul class="con"><li>more complex</li><li data-f="con-thr">&nbsp;</li></ul></div>
+      <svg class="arrow" aria-hidden="true"><path class="line"/><path class="head"/></svg>
       <div class="scroll">
       <table>
         <tbody>
@@ -1107,7 +1102,6 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
   function render() {
     var W = D.wallet, main = cfg(S.shape), lay = cfg('layered'), V = main.vanilla;
     document.body.dataset.v = S.v;
-    [].forEach.call(document.querySelectorAll('.toggle button'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === S.v)); });
 
     // the toggles
     [].forEach.call(document.querySelectorAll('.seg'), function (g) {
@@ -1210,9 +1204,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
     render();
   }
-  [].forEach.call(document.querySelectorAll('.toggle button'), function (b) {
-    b.addEventListener('click', function () { if (D) choose('v', b.dataset.v); });
-  });
+
   [].forEach.call(document.querySelectorAll('.seg'), function (g) {
     var bs = [].slice.call(g.querySelectorAll('button'));
     g.addEventListener('click', function (e) {
@@ -1246,12 +1238,12 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
 })();
 </script>
 <script>
-// What spicy changes: on a wide screen, the notes sit under the toggle, between the parameters and the diagram,
-// with an arrow from "spicy"; narrower, they follow the toggle (on a phone, at its right).
+// What spicy changes: on a wide screen, the notes sit beside the toggles, between the parameters and the diagram,
+// with an arrow from "spicy"; narrower, they follow the toggles.
 (function () {
   var notes = document.querySelector('.notes'), page = document.querySelector('.page');
   var arrow = document.querySelector('.arrow'), line = arrow.querySelector('.line'), head = arrow.querySelector('.head');
-  var spicy = document.querySelector('.toggle button[data-v="spicy"]');
+  var spicy = document.querySelector('.seg[data-key="v"] button[data-val="spicy"]');
   function drawn() {                     // the left edge of the tree(s) the diagram draws, beside the notes
     var left = Infinity;
     [].forEach.call(document.querySelectorAll('figure svg > .part.xmss'), function (g) {
@@ -1265,24 +1257,6 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
     notes.style.left = notes.style.top = '';
     arrow.style.display = 'none';
     var p = page.getBoundingClientRect(), b = spicy.getBoundingClientRect(), w = notes.offsetWidth;
-    if (matchMedia('(max-width: 600px)').matches) {      // phone: an arch from the top of "spicy" to the notes at its right
-      var lo = Infinity, hi = -Infinity, top = Infinity;
-      [].forEach.call(notes.querySelectorAll('li'), function (li) {
-        var rg = document.createRange(); rg.selectNodeContents(li);
-        var r = rg.getBoundingClientRect();
-        lo = Math.min(lo, r.left); hi = Math.max(hi, r.right); top = Math.min(top, r.top);
-      });
-      var x1 = b.left + b.width / 2, y1 = b.top - 6, x2 = (lo + hi) / 2, y2 = top - 4, lift = 30;
-      var x0 = x1 - 10, y0 = Math.min(y1, y2) - lift, ax = 10, ay = y1 - y0, bx = x2 - x0, by = y2 - y0;
-      arrow.style.left = (x0 - p.left) + 'px';
-      arrow.style.top = (y0 - p.top) + 'px';
-      arrow.setAttribute('width', bx + 10);
-      arrow.setAttribute('height', Math.max(ay, by) + 4);
-      line.setAttribute('d', 'M' + ax + ',' + ay + ' C' + (ax + 4) + ',' + (ay - lift) + ' ' + bx + ',' + (by - lift - 6) + ' ' + bx + ',' + (by - 7));
-      head.setAttribute('d', 'M' + (bx - 4.5) + ',' + (by - 8) + ' L' + (bx + 4.5) + ',' + (by - 8) + ' L' + bx + ',' + by + ' Z');
-      arrow.style.display = 'block';
-      return;
-    }
     var flow = matchMedia('(max-width: 1150px)').matches;
     if (!flow) {
       // the parameters in their widest (spicy) state, so that the notes do not move when switching
