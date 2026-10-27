@@ -24,39 +24,39 @@ attribute [local instance] Classical.propDecidable
 /-! ### First-order inputs -/
 
 /-- A second-order tweakable input is a chain input outside the retained keys' above-word steps or a
-forest chain input. -/
+FORS leaf input. -/
 theorem secondOrder_tweakable {parameter : PublicParameter} {results : OtsKey → Option (Counter × Encoding)}
     {domain : HashDomain} {payload : HashInput}
     (h : SecondOrderInput parameter results (tweakableHashInput parameter domain payload)) :
     (∃ lay tree leaf chain step, domain = .chain lay tree leaf chain step ∧
       ¬(PrunedGraph.KeyActive parameter lay tree leaf ∧
         (preparedWord results (lay, tree, leaf) chain).val ≤ step.val)) ∨
-    ∃ index c s j a i t, domain = .fchain index c s j a i t := by
-  rcases h with ⟨lay, tree, leaf, chain, step, payload', heq, hnot⟩ | ⟨index, c, s, j, a, i, t, payload', heq⟩
+    ∃ index κ leaf, domain = .forsLeaf index κ leaf := by
+  rcases h with ⟨lay, tree, leaf, chain, step, payload', heq, hnot⟩ | ⟨index, κ, leaf, payload', heq⟩
   · have hf := (tweakableInput_injective heq).1
     left
     refine ⟨lay, tree, leaf, chain, step, ?_, hnot⟩
     cases domain with
     | chain => exact hashFields_injective trivial trivial hf
     | _ => simp [hashDomainFields, tweakFields, treeFields] at hf
-  · unfold fchainInput at heq
+  · unfold fleafInput at heq
     have hf := (tweakableInput_injective heq).1
     right
-    refine ⟨index, c, s, j, a, i, t, ?_⟩
+    refine ⟨index, κ, leaf, ?_⟩
     cases domain with
-    | fchain => exact hashFields_injective trivial trivial hf
+    | forsLeaf => exact hashFields_injective trivial trivial hf
     | _ => simp [hashDomainFields, tweakFields, treeFields] at hf
 
-/-- A tweakable input outside the chain and forest chain domains is first order. -/
+/-- A tweakable input outside the chain and FORS leaf domains is first order. -/
 theorem not_secondOrder (parameter : PublicParameter) (results : OtsKey → Option (Counter × Encoding))
     (domain : HashDomain) (payload : HashInput)
     (hchain : ∀ lay tree leaf chain step, domain ≠ .chain lay tree leaf chain step)
-    (hfts : ∀ index c s j a i t, domain ≠ .fchain index c s j a i t) :
+    (hfts : ∀ index κ leaf, domain ≠ .forsLeaf index κ leaf) :
     ¬SecondOrderInput parameter results (tweakableHashInput parameter domain payload) := by
   intro h
-  rcases secondOrder_tweakable h with ⟨lay, tree, leaf, chain, step, heq, -⟩ | ⟨index, c, s, j, a, i, t, heq⟩
+  rcases secondOrder_tweakable h with ⟨lay, tree, leaf, chain, step, heq, -⟩ | ⟨index, κ, leaf, heq⟩
   · exact hchain _ _ _ _ _ heq
-  · exact hfts _ _ _ _ _ _ _ heq
+  · exact hfts _ _ _ heq
 
 /-- A chain input of a retained key at or above its prepared word is first order. -/
 theorem not_secondOrder_chain (parameter : PublicParameter) (results : OtsKey → Option (Counter × Encoding))
@@ -65,7 +65,7 @@ theorem not_secondOrder_chain (parameter : PublicParameter) (results : OtsKey �
     ¬SecondOrderInput parameter results (chainInput parameter key chain step payload) := by
   intro hs
   rcases secondOrder_tweakable (domain := .chain key.1 key.2.1 key.2.2 chain step) hs with
-    ⟨lay', tree', leaf', chain', step', heq, hnot⟩ | ⟨index, c, s, j, a, i, t, heq⟩
+    ⟨lay', tree', leaf', chain', step', heq, hnot⟩ | ⟨index, κ, leaf, heq⟩
   · simp only [HashDomain.chain.injEq] at heq
     obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := heq
     exact hnot h
@@ -135,18 +135,18 @@ theorem chain_not_row (key : OtsKey)
   rw [sampleModel_incoming] at hmatch
   exact hne hmatch
 
-/-- A forest chain input whose payload is not the table value is not a correct guess. -/
-theorem fchain_not_row (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain)
-    (t : FStep) (payload : Digest) (hne : payload ≠ table (.fchain index c s j a i ⟨t.val, by omega⟩)) :
+/-- A FORS leaf input whose payload is not the table secret is not a correct guess. -/
+theorem fleaf_not_row (index : Index) (κ : FTree) (leaf : FLeaf) (payload : Digest)
+    (hne : payload ≠ table (.fors index κ leaf 0)) :
     ∀ query, (sampleModel parameterOutput highs).parse
-      (fchainInput (truncateHash parameterOutput) index c s j a i t payload) = some query →
+      (fleafInput (truncateHash parameterOutput) index κ leaf payload) = some query →
       ¬query.2 = table ((sampleModel parameterOutput highs).incoming query.1) := by
   intro query hparse hmatch
   have hp : (sampleModel parameterOutput highs).parse
-      (fchainInput (truncateHash parameterOutput) index c s j a i t payload) =
-      some (.fchain index c s j a i t, payload) := by
+      (fleafInput (truncateHash parameterOutput) index κ leaf payload) =
+      some (.fleaf index κ leaf, payload) := by
     rw [sampleModel_parse]
-    exact parse_input _ _ (.fchain index c s j a i t, payload) trivial
+    exact parse_input _ _ (.fleaf index κ leaf, payload) trivial
   rw [hp, Option.some.injEq] at hparse
   subst hparse
   rw [sampleModel_incoming] at hmatch
@@ -177,32 +177,27 @@ theorem reach_expose (reveals : List Coordinate) {coordinate : Coordinate}
     (fun c hc => .reveal c (List.mem_append_left _ hc)) h
 
 include hknown in
-/-- A queried canonical forest chain value lies above a revealed position: exposure adds no forest
-chain values. -/
-theorem queried_fchain_revealedA (table : HiddenGraph.Table) (reveals : List Coordinate)
+/-- A queried canonical FORS secret was revealed: exposure adds no FORS secrets. -/
+theorem queried_fleaf_revealedA (table : HiddenGraph.Table) (reveals : List Coordinate)
     (entries : List (HiddenCost.Entry HashInput))
     (hguess : NoHiddenGuess (sampleModel parameterOutput highs) table known reveals entries)
-    (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (t : FStep)
-    (hmem : Sum.inl (tweakableHashInput (truncateHash parameterOutput) (.fchain index c s j a i t)
-      (bytesLE 16 (table (.fchain index c s j a i ⟨t.val, by omega⟩)))) ∈ entries) :
-    ∃ q : FPos, q.val ≤ t.val ∧ Coordinate.fchain index c s j a i q ∈ reveals := by
+    (index : Index) (κ : FTree) (leaf : FLeaf)
+    (hmem : Sum.inl (tweakableHashInput (truncateHash parameterOutput) (.forsLeaf index κ leaf)
+      (bytesLE 16 (table (.fors index κ leaf 0)))) ∈ entries) :
+    Coordinate.fors index κ leaf 0 ∈ reveals := by
   have hparse : (sampleModel parameterOutput highs).parse
-      (tweakableHashInput (truncateHash parameterOutput) (.fchain index c s j a i t)
-        (bytesLE 16 (table (.fchain index c s j a i ⟨t.val, by omega⟩)))) =
-      some (.fchain index c s j a i t, table (.fchain index c s j a i ⟨t.val, by omega⟩)) := by
+      (tweakableHashInput (truncateHash parameterOutput) (.forsLeaf index κ leaf)
+        (bytesLE 16 (table (.fors index κ leaf 0)))) =
+      some (.fleaf index κ leaf, table (.fors index κ leaf 0)) := by
     rw [sampleModel_parse]
-    exact parse_input _ _ (.fchain index c s j a i t, _) trivial
+    exact parse_input _ _ (.fleaf index κ leaf, _) trivial
   have hreach := hguess _ hmem _ hparse (by rw [sampleModel_incoming]; rfl)
   rw [sampleModel_incoming] at hreach
-  rcases reach_fchain parameterOutput highs fixed _ _
-      (reach_expose parameterOutput fixed highs results known hknown reveals hreach) index c s j a i _ rfl with
-    htop | ⟨q, hq, hmem'⟩
-  · have := t.isLt
-    simp only [chainTop] at htop this
-    omega
-  · rcases List.mem_append.mp hmem' with h | h
-    · exact ⟨q, hq, h⟩
-    · exact False.elim (mem_aboveList.mp h)
+  have hmem' := reach_fors parameterOutput highs fixed _ _
+    (reach_expose parameterOutput fixed highs results known hknown reveals hreach) index κ leaf rfl
+  rcases List.mem_append.mp hmem' with h | h
+  · exact h
+  · exact False.elim (mem_aboveList.mp h)
 
 include hknown in
 /-- A queried canonical chain value of a retained key is at or above its prepared word. -/
@@ -289,7 +284,7 @@ theorem treeHit_hitA (hboundary : BoundaryCorrect f parameter seed labels) (pk :
       (merkleInput f pk.parameter (fun height index => .node lay tree height index) leaf.val path
         value level) := fun level results => by
     unfold merkleInput
-    exact not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ _ _ _ _ h => by cases h)
+    exact not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
   rcases hcase with ⟨reference, hreference, level, hlevel, hparent, hne, hout⟩ |
     ⟨hlaytop, level, hlevel, ⟨hlower, hpositive, hsurrogate⟩, haddress⟩
   · refine ⟨_, hmem level hlevel, ?_, hnode level⟩
@@ -342,106 +337,67 @@ theorem treeHit_hitA (hboundary : BoundaryCorrect f parameter seed labels) (pk :
     exact hsurrogate
 
 include hconsistent in
-/-- A structural forest match (WOTS-key leaf, subtree node, tree leaf, tree node or roots) hits at a
-queried first-order input. -/
-theorem structException_hitA (index : Index) (marks : Coord → CoordMark) (opening : Coord → CoordOpening)
-    (h : Forest.StructException f parameter index seed marks opening) :
-    ∃ input ∈ queriedInputs f (forsRecover parameter index marks opening : OracleComp HashSpec ForsKey),
+/-- A FORS node match hits at a queried first-order input. -/
+theorem nodeException_hitA (index : Index) (leaves : FTree → FLeaf) (opening : FTree → TreeOpening)
+    (h : Fors.NodeException f parameter index seed leaves opening) :
+    ∃ input ∈ queriedInputs f (forsRecover parameter index leaves opening : OracleComp HashSpec ForsKey),
       truncateHash (f input) ∈ targets parameter (graphTable f parameter seed labels) input ∧
       ∀ results, ¬SecondOrderInput parameter results input := by
-  rcases h with ⟨c, j, hne, heq⟩ | ⟨c, j, level, hlevel, -, hneq, hout⟩ | ⟨c, hne, heq⟩ |
-      ⟨c, level, hlevel, -, hneq, hout⟩
-  · refine ⟨_, Forest.childLeafInput_mem f parameter index marks opening c j,
-      active_hit f parameter seed labels (.childLeaf index c (marks c).super j ((marks c).child j)) trivial _ ?_ ?_,
-      fun results => not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ _ _ _ _ h => by cases h)⟩
-    · rw [childLeaf_input f parameter seed labels hconsistent]
-      intro hinput
-      exact hne (childPayload_injective (tweakableInput_injective hinput).2.2)
-    · rw [childLeaf_value f parameter seed labels hconsistent]
-      exact heq
-  · have hfolded := hlevel
-    have hlevel : level < subHeight := Nat.lt_of_lt_of_le hfolded (by decide)
-    have hl1 : level + 1 ≤ subHeight := hlevel
-    have hdom : Forest.subDomain index c (marks c).super j (level + 1) (((marks c).child j).val / 2 ^ (level + 1)) =
-        HashDomain.subNode index c (marks c).super j ⟨level, by omega⟩
-          ⟨((marks c).child j).val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt ((marks c).child j).isLt⟩ := by
-      rw [Forest.subDomain, dif_pos ⟨by omega, by omega⟩]
-      congr 2
-      exact Nat.mod_eq_of_lt ((Nat.div_le_self _ _).trans_lt ((marks c).child j).isLt)
-    refine ⟨_, Forest.subNodeInput_mem f parameter index marks opening c j level hfolded,
-      active_hit' f parameter seed labels (subPosition index c (marks c).super j (level + 1) hl1
-        ⟨((marks c).child j).val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt ((marks c).child j).isLt⟩)
-        trivial _ ⟨_, by simp only [merkleInput]; rw [hdom]; rfl⟩ ?_ ?_, fun results => ?_⟩
-    · rw [sub_path_input f parameter seed labels hconsistent index c _ j _ level hlevel]
-      exact hneq
-    · rw [sub_path_value f parameter seed labels hconsistent index c _ j _ (level + 1) hl1]
-      exact hout
-    · unfold merkleInput
-      rw [hdom]
-      exact not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ _ _ _ _ h => by cases h)
-  · refine ⟨_, Forest.superInput_mem f parameter index marks opening c,
-      active_hit f parameter seed labels (.superChild index c (marks c).super) trivial _ ?_ ?_,
-      fun results => not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ _ _ _ _ h => by cases h)⟩
-    · rw [super_input f parameter seed labels hconsistent]
-      intro hinput
-      exact hne (tweakableInput_injective hinput).2.2
-    · rw [super_value f parameter seed labels hconsistent]
-      exact heq
-  · have hfolded := hlevel
-    have hlevel : level < topHeight := Nat.lt_of_lt_of_le hfolded (by decide)
-    have hl1 : level + 1 ≤ topHeight := hlevel
-    have hdom : Forest.topDomain index c (level + 1) ((marks c).super.val / 2 ^ (level + 1)) =
-        HashDomain.topNode index c ⟨level, by omega⟩
-          ⟨(marks c).super.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt (marks c).super.isLt⟩ := by
-      rw [Forest.topDomain, dif_pos ⟨by omega, by omega⟩]
-      congr 2
-      exact Nat.mod_eq_of_lt ((Nat.div_le_self _ _).trans_lt (marks c).super.isLt)
-    refine ⟨_, Forest.topNodeInput_mem f parameter index marks opening c level hfolded,
-      active_hit' f parameter seed labels (topPosition index c (level + 1) hl1
-        ⟨(marks c).super.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt (marks c).super.isLt⟩)
-        trivial _ ⟨_, by simp only [merkleInput]; rw [hdom]; rfl⟩ ?_ ?_, fun results => ?_⟩
-    · rw [top_path_input f parameter seed labels hconsistent index c _ level hlevel]
-      exact hneq
-    · rw [top_path_value f parameter seed labels hconsistent index c _ (level + 1) hl1]
-      exact hout
-    · unfold merkleInput
-      rw [hdom]
-      exact not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ _ _ _ _ h => by cases h)
+  obtain ⟨κ, level, hlevel, -, hneq, hout⟩ := h
+  have hcanon : Fors.leafValue f parameter index κ (leaves κ)
+      (Completeness.forsSecretValue f parameter index κ seed (leaves κ)) =
+        Completeness.forsLeafValue f parameter index κ seed (leaves κ) := by
+    rw [Fors.leafValue_canonical, Completeness.forsNodeValue_zero]
+  have hfolded := hlevel
+  have hlevel : level < forsHeight := by omega
+  have hl1 : level + 1 ≤ forsHeight := hlevel
+  rw [hcanon] at hneq hout
+  have hdom : Fors.forsDomain index κ (level + 1) ((leaves κ).val / 2 ^ (level + 1)) =
+      HashDomain.forsNode index κ ⟨level, by omega⟩
+        ⟨(leaves κ).val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt (leaves κ).isLt⟩ := by
+    rw [Fors.forsDomain, dif_pos ⟨by omega, by omega⟩]
+    congr 2
+    exact Nat.mod_eq_of_lt ((Nat.div_le_self _ _).trans_lt (leaves κ).isLt)
+  refine ⟨_, Fors.nodeInput_mem f parameter index leaves opening κ level hfolded,
+    active_hit' f parameter seed labels (forsPosition index κ (level + 1) hl1
+      ⟨(leaves κ).val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt (leaves κ).isLt⟩)
+      trivial _ ⟨_, by simp only [merkleInput]; rw [hdom]; rfl⟩ ?_ ?_, fun results => ?_⟩
+  · rw [fors_path_input f parameter seed labels hconsistent index κ _ level hlevel]
+    exact hneq
+  · rw [fors_path_value f parameter seed labels hconsistent index κ _ (level + 1) hl1]
+    exact hout
+  · unfold merkleInput
+    rw [hdom]
+    exact not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ h => by cases h)
 
 end Hits
 
-/-! ### Forest chain contacts -/
+/-! ### FORS leaf contacts -/
 
-/-- A forest chain match at a recorded input is a forest contact at the step where the walk merges. -/
-theorem chainMatch_contact (parameterOutput : HashOutput) (highs : CoordinateHighs) (table : HiddenGraph.Table)
+/-- A FORS leaf match at a recorded input is a leaf contact at the tree's selected leaf. -/
+theorem leafMatch_contact (parameterOutput : HashOutput) (highs : CoordinateHighs) (table : HiddenGraph.Table)
     (cacheF : QueryCache HashSpec) (f : QueryImpl HashSpec Id) (entries : List (HiddenCost.Entry HashInput))
     (hagree : ∀ input, Sum.inl input ∈ entries →
       f input = finalFn (sampleModel parameterOutput highs) table cacheF input)
     (hcached : CachedQueries (sampleModel parameterOutput highs) table cacheF entries)
     (seed : MasterSeed) (hcoord : GraphView.CoordinatesCorrect f (truncateHash parameterOutput) seed table)
-    (index : Index) (c : Coord) (mark : CoordMark) (j : SubIdx) (values : FChain → Digest) (i : FChain)
-    (hmatch : Forest.ChainMatch f (truncateHash parameterOutput) index seed c mark j values i)
-    (hmem : ∀ offset (hoffset : chainTop - (lut (mark.word j) i).val + offset < chainTop),
-      offset < (lut (mark.word j) i).val →
-      Sum.inl (fchainInput (truncateHash parameterOutput) index c mark.super j (mark.child j) i
-        ⟨chainTop - (lut (mark.word j) i).val + offset, hoffset⟩
-        (Forest.walkValue f (truncateHash parameterOutput) index c mark.super j (mark.child j) i
-          (chainTop - (lut (mark.word j) i).val) (values i) offset)) ∈ entries) :
-    ∃ t : FStep, chainTop - (lut (mark.word j) i).val ≤ t.val ∧
-      FContactAt (truncateHash parameterOutput) table cacheF index c mark.super j (mark.child j) i t := by
-  obtain ⟨offset, hoffset, hlt, hne, heq⟩ := hmatch
-  refine ⟨⟨chainTop - (lut (mark.word j) i).val + offset, hoffset⟩, Nat.le_add_right _ _, ?_⟩
-  have hentry := hmem offset hoffset hlt
-  have htabT : ∀ p (hp : p < chainTop + 1), table (.fchain index c mark.super j (mark.child j) i ⟨p, hp⟩) =
-      Forest.honestChain f (truncateHash parameterOutput) index c mark.super j (mark.child j) i
-        (Completeness.forestSecret f (truncateHash parameterOutput) index c mark.super j (mark.child j) i seed) p :=
-    fun p hp => hcoord.2 index c mark.super j (mark.child j) i ⟨p, hp⟩
-  have hne' := hne
-  rw [← htabT _ (by omega)] at hne'
-  refine ⟨_, _, hne', cached_read parameterOutput highs table cacheF f entries hagree hcached _ hentry
-    (fchain_not_row parameterOutput highs table index c _ j _ i _ _ hne'), ?_⟩
-  rw [htabT _ (by omega)]
-  exact heq
+    (index : Index) (κ : FTree) (leaf : FLeaf) (secret : Digest)
+    (hmatch : Fors.LeafMatch f (truncateHash parameterOutput) index κ seed leaf secret)
+    (hmem : Sum.inl (fleafInput (truncateHash parameterOutput) index κ leaf secret) ∈ entries) :
+    FContactAt (truncateHash parameterOutput) table cacheF index κ leaf := by
+  obtain ⟨hne, heq⟩ := hmatch
+  have hcanon : Fors.leafValue f (truncateHash parameterOutput) index κ leaf
+      (Completeness.forsSecretValue f (truncateHash parameterOutput) index κ seed leaf) =
+        Completeness.forsLeafValue f (truncateHash parameterOutput) index κ seed leaf := by
+    rw [Fors.leafValue_canonical, Completeness.forsNodeValue_zero]
+  have hne' : secret ≠ table (.fors index κ leaf 0) := by
+    rw [(hcoord.2 index κ leaf).1]
+    exact hne
+  refine ⟨secret, f (fleafInput (truncateHash parameterOutput) index κ leaf secret), hne',
+    cached_read parameterOutput highs table cacheF f entries hagree hcached _ hmem
+      (fleaf_not_row parameterOutput highs table index κ leaf secret hne'), ?_⟩
+  rw [(hcoord.2 index κ leaf).2, ← hcanon, ← heq]
+  simp only [fleafInput, Fors.leafValue, forsLeafHash, Completeness.eval_tweakableHash]
 
 /-! ### The refined case analysis -/
 
@@ -543,100 +499,62 @@ theorem badA_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashO
   rcases SignatureWitness.accepted_recovered_classification f pk seed forgery.message forgery.signature hb
       hdata.root hverify with
     ⟨counter, hchosen, hrec⟩ | ⟨j, -, htree⟩ | ⟨hland, lay, hwots⟩
-  · -- the forest part recovers the canonical key
+  · -- the FORS part recovers the canonical key
     set digest := verificationDigest f pk forgery.message forgery.signature with hdigestDef
     set index := SignatureWitness.index f pk forgery.message forgery.signature with hindex
-    set marks := digestLeaves digest with hmarksDef
+    set leaves := digestLeaves digest with hleavesDef
     have hindex' : index = digestIndex digest := rfl
-    have hmarksEq : ∀ c, marks c = decodeMark (coordField digest c) := fun c => digestMarks_eq digest c
-    have hchainMem : ∀ (c : Coord) (j : SubIdx) (i : FChain) offset
-        (hoffset : chainTop - (lut ((marks c).word j) i).val + offset < chainTop),
-        offset < (lut ((marks c).word j) i).val →
-        Sum.inl (fchainInput (truncateHash parameterOutput) index c (marks c).super j ((marks c).child j) i
-          ⟨chainTop - (lut ((marks c).word j) i).val + offset, hoffset⟩
-          (Forest.walkValue f (truncateHash parameterOutput) index c (marks c).super j ((marks c).child j) i
-            (chainTop - (lut ((marks c).word j) i).val) (((forgery.signature.fors c).sub j).values i) offset)) ∈
-          entries := fun c j i offset hoffset hlt =>
+    have hleafMem : ∀ κ, Sum.inl (fleafInput (truncateHash parameterOutput) index κ (leaves κ)
+        (forgery.signature.fors κ).secret) ∈ entries := fun κ =>
       htrace _ (SignatureWitness.verification_fors_run f pk forgery.message forgery.signature _
-        (Forest.chainInput_mem f _ _ _ _ c j i offset hlt hoffset))
-    rcases hrec.forest_classification with hS | hall
-    · obtain ⟨input, hinput, hmem, hnot⟩ := structException_hitA f (truncateHash parameterOutput) seed _ hcons
-        index marks forgery.signature.fors hS
+        (Fors.leafInput_mem f _ index leaves forgery.signature.fors κ))
+    have hcov : ∀ κ, Coordinate.fors index κ (leaves κ) 0 ∈ reveals →
+        TreeCov (revealedSet reveals) (fullDigestView digest) κ := by
+      intro κ h
+      simp only [TreeCov, fullDigestView, revealedSet, Finset.mem_filter, Finset.mem_univ, true_and]
+      rw [← hindex', ← hleavesDef]
+      exact h
+    rcases hrec.fors_classification with hN | hall
+    · obtain ⟨input, hinput, hmem, hnot⟩ := nodeException_hitA f (truncateHash parameterOutput) seed _ hcons
+        index leaves forgery.signature.fors hN
       exact hfirst input (SignatureWitness.verification_fors_run f pk _ _ _ hinput) hmem (hnot results)
-    -- the contacts of the chain matches
-    have hcontact : ∀ c j i, Forest.ChainMatch f (truncateHash parameterOutput) index seed c (marks c) j
-        ((forgery.signature.fors c).sub j).values i →
-        ∃ t : FStep, chainTop - (lut ((marks c).word j) i).val ≤ t.val ∧
-          FContactAt (truncateHash parameterOutput) table cacheF index c (marks c).super j ((marks c).child j) i t :=
-      fun c j i hm => chainMatch_contact parameterOutput highs table cacheF f entries hagree hcached seed hcoord
-        index c (marks c) j _ i hm (hchainMem c j i)
-    -- a canonical chain value is covered
-    have hcanonCov : ∀ c j i, ((forgery.signature.fors c).sub j).values i = Completeness.chainValueOf f
-        (truncateHash parameterOutput) index c (marks c).super j ((marks c).child j) i seed
-        (chainTop - (lut ((marks c).word j) i).val) →
-        ChainCov (revealedSet reveals) (fullDigestView digest) c j i := by
-      intro c j i hval
-      unfold ChainCov
-      simp only [fullDigestView]
-      rw [← hmarksEq c]
-      by_cases hz : (lut ((marks c).word j) i).val = 0
-      · left
-        simp only [chainNeed]
-        rw [← hmarksEq c]
-        exact hz
-      · right
-        have hpos : 0 < (lut ((marks c).word j) i).val := Nat.pos_of_ne_zero hz
-        have hrange : chainTop - (lut ((marks c).word j) i).val + 0 < chainTop := by
-          have := (lut ((marks c).word j) i).isLt
-          simp only [chainTop] at this ⊢
-          omega
-        have hm := hchainMem c j i 0 hrange hpos
-        have hwalk : Forest.walkValue f (truncateHash parameterOutput) index c (marks c).super j ((marks c).child j) i
-            (chainTop - (lut ((marks c).word j) i).val) (((forgery.signature.fors c).sub j).values i) 0 =
-            table (.fchain index c (marks c).super j ((marks c).child j) i
-              ⟨chainTop - (lut ((marks c).word j) i).val + 0, by omega⟩) := by
-          simp only [Forest.walkValue, forestWalk, evalWithAnswerFn_pure, Nat.add_zero]
-          rw [hval, hcoord.2]
-        rw [hwalk] at hm
-        obtain ⟨q, hq, hrev⟩ := queried_fchain_revealedA parameterOutput fixed highs results known hknown table
-          reveals entries hguess index c _ j _ i _ hm
-        refine ⟨q, ?_, ?_⟩
-        · simp only [revealedSet, Finset.mem_filter, Finset.mem_univ, true_and]
-          rw [← hindex']
-          exact hrev
-        · simp only [chainNeed]
-          rw [← hmarksEq c]
-          simpa using hq
-    -- a contact at a revealed position
-    by_cases hrc : ∃ c j i, Forest.ChainMatch f (truncateHash parameterOutput) index seed c (marks c) j
-        ((forgery.signature.fors c).sub j).values i ∧
-        ∀ t : FStep, chainTop - (lut ((marks c).word j) i).val ≤ t.val →
-          FContactAt (truncateHash parameterOutput) table cacheF index c (marks c).super j ((marks c).child j) i t →
-          ∃ q : FPos, q.val ≤ t.val ∧ Coordinate.fchain index c (marks c).super j ((marks c).child j) i q ∈ reveals
-    · obtain ⟨c, j, i, hm, hrev⟩ := hrc
-      obtain ⟨t, ht, hct⟩ := hcontact c j i hm
-      exact Or.inr (Or.inr (Or.inl ⟨index, c, _, j, _, i, t, hrev t ht hct, hct⟩))
+    -- the contacts of the leaf matches
+    have hcontact : ∀ κ, Fors.LeafMatch f (truncateHash parameterOutput) index κ seed (leaves κ)
+        (forgery.signature.fors κ).secret →
+        FContactAt (truncateHash parameterOutput) table cacheF index κ (leaves κ) :=
+      fun κ hm => leafMatch_contact parameterOutput highs table cacheF f entries hagree hcached seed hcoord
+        index κ (leaves κ) _ hm (hleafMem κ)
+    -- a canonical secret was queried, so it was revealed
+    have hcanonRev : ∀ κ, (forgery.signature.fors κ).secret =
+        Completeness.forsSecretValue f (truncateHash parameterOutput) index κ seed (leaves κ) →
+        Coordinate.fors index κ (leaves κ) 0 ∈ reveals := by
+      intro κ hval
+      have hm := hleafMem κ
+      rw [hval, ← (hcoord.2 index κ (leaves κ)).1] at hm
+      exact queried_fleaf_revealedA parameterOutput fixed highs results known hknown table reveals entries
+        hguess index κ (leaves κ) hm
+    -- a contact at a revealed secret
+    by_cases hrc : ∃ κ, Fors.LeafMatch f (truncateHash parameterOutput) index κ seed (leaves κ)
+        (forgery.signature.fors κ).secret ∧ Coordinate.fors index κ (leaves κ) 0 ∈ reveals
+    · obtain ⟨κ, hm, hrev⟩ := hrc
+      exact Or.inr (Or.inr (Or.inl ⟨index, κ, leaves κ, hrev, hcontact κ hm⟩))
     push Not at hrc
     -- a signed pair would be canonical
     by_cases hsignedPair : ∃ entry ∈ log, ∃ honest, entry.2 = some honest ∧ entry.1 = forgery.message ∧
         honest.randomness = forgery.signature.randomness
     · exfalso
       obtain ⟨entry, hentry, honest, hhonest, hmessage, hrandomness⟩ := hsignedPair
-      have hrevAll : ∀ c j i (k : FPos), (GraphView.openedPos (marks c) j i).val ≤ k.val →
-          Coordinate.fchain index c (marks c).super j ((marks c).child j) i k ∈ reveals := by
-        intro c j i k hk
-        have h := SignedRevealed.fchain_mem f hsigned entry hentry honest hhonest c j i k
+      have hrevAll : ∀ κ, Coordinate.fors index κ (leaves κ) 0 ∈ reveals := by
+        intro κ
+        have h := SignedRevealed.fors_mem f hsigned entry hentry honest hhonest κ 0
         rw [hmessage, hrandomness] at h
-        exact h hk
-      have hopen : Forest.Opening f (truncateHash parameterOutput) index seed marks forgery.signature.fors := by
-        intro c
-        refine ⟨fun j i => ?_, (hall c).2.1, (hall c).1⟩
-        rcases (hall c).2.2 j i with hcan | hm
+        exact h
+      have hopen : Fors.Opening f (truncateHash parameterOutput) index seed leaves forgery.signature.fors := by
+        intro κ
+        refine ⟨?_, (hall κ).1⟩
+        rcases (hall κ).2 with hcan | hm
         · exact hcan
-        · exfalso
-          obtain ⟨t, ht, _, hnot⟩ := hrc c j i hm
-          exact hnot ⟨t.val, by omega⟩ le_rfl
-            (hrevAll c j i ⟨t.val, by omega⟩ (by simp only [GraphView.openedPos]; exact ht))
+        · exact absurd (hrevAll κ) (hrc κ hm)
       obtain ⟨randomness, hlandR, hfinish⟩ := hgood.1 entry hentry honest hhonest
       rw [hmessage] at hlandR hfinish
       have heq := canonical_signed_eq f ⟨seed, truncateHash parameterOutput,
@@ -649,29 +567,27 @@ theorem badA_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashO
       fun entry hentry honest hhonest hpair => hsignedPair ⟨entry, hentry, honest, hhonest, hpair.1, hpair.2⟩
     have hdig := cachedDigest_eq parameterOutput highs table cacheF f entries hagree hcached _
       forgery.message forgery.signature htrace
-    by_cases htwo : ∃ c j i c' j' i', (c, j, i) ≠ (c', j', i') ∧
-        Forest.ChainMatch f (truncateHash parameterOutput) index seed c (marks c) j
-          ((forgery.signature.fors c).sub j).values i ∧
-        Forest.ChainMatch f (truncateHash parameterOutput) index seed c' (marks c') j'
-          ((forgery.signature.fors c').sub j').values i'
-    · obtain ⟨c, j, i, c', j', i', hne, hm, hm'⟩ := htwo
-      obtain ⟨t, -, hct⟩ := hcontact c j i hm
-      obtain ⟨t', -, hct'⟩ := hcontact c' j' i' hm'
-      exact Or.inr (Or.inr (Or.inr (Or.inl ⟨index, c, _, j, _, i, t, c', _, j', _, i', t', hne, hct, hct'⟩)))
-    by_cases hone : ∃ c j i, Forest.ChainMatch f (truncateHash parameterOutput) index seed c (marks c) j
-        ((forgery.signature.fors c).sub j).values i
-    · obtain ⟨c, j, i, hm⟩ := hone
-      obtain ⟨t, -, hct⟩ := hcontact c j i hm
+    by_cases htwo : ∃ κ κ', κ ≠ κ' ∧
+        Fors.LeafMatch f (truncateHash parameterOutput) index κ seed (leaves κ)
+          (forgery.signature.fors κ).secret ∧
+        Fors.LeafMatch f (truncateHash parameterOutput) index κ' seed (leaves κ')
+          (forgery.signature.fors κ').secret
+    · obtain ⟨κ, κ', hne, hm, hm'⟩ := htwo
+      exact Or.inr (Or.inr (Or.inr (Or.inl ⟨index, κ, leaves κ, κ', leaves κ',
+        fun h => hne (congrArg Prod.fst h), hcontact κ hm, hcontact κ' hm'⟩)))
+    by_cases hone : ∃ κ, Fors.LeafMatch f (truncateHash parameterOutput) index κ seed (leaves κ)
+        (forgery.signature.fors κ).secret
+    · obtain ⟨κ, hm⟩ := hone
       refine Or.inr (Or.inr (Or.inr (Or.inr ⟨(forgery, log, true), rfl, Or.inl
-        ⟨hvalid, _, hdig, hrec.1, hunsigned, c, j, i, t, hct, fun c' j' i' hne => ?_⟩⟩)))
-      rcases (hall c').2.2 j' i' with hcan | hm'
-      · exact hcanonCov c' j' i' hcan
-      · exact (htwo ⟨c, j, i, c', j', i', fun h => hne h.symm, hm, hm'⟩).elim
+        ⟨hvalid, _, hdig, hrec.1, hunsigned, κ, hcontact κ hm, fun κ' hne => ?_⟩⟩)))
+      rcases (hall κ').2 with hcan | hm'
+      · exact hcov κ' (hcanonRev κ' hcan)
+      · exact (htwo ⟨κ', κ, hne, hm', hm⟩).elim
     · refine Or.inr (Or.inr (Or.inr (Or.inr ⟨(forgery, log, true), rfl, Or.inr
-        ⟨hvalid, _, hdig, hrec.1, hunsigned, fun c j i => ?_⟩⟩)))
-      rcases (hall c).2.2 j i with hcan | hm
-      · exact hcanonCov c j i hcan
-      · exact (hone ⟨c, j, i, hm⟩).elim
+        ⟨hvalid, _, hdig, hrec.1, hunsigned, fun κ => ?_⟩⟩)))
+      rcases (hall κ).2 with hcan | hm
+      · exact hcov κ (hcanonRev κ hcan)
+      · exact (hone ⟨κ, hm⟩).elim
   · obtain ⟨input, hinput, hmem, hnot⟩ := treeHit_hitA f (truncateHash parameterOutput) seed _ hcons hbound pk rfl
       forgery.message forgery.signature j htree
     exact hfirst input hinput hmem (hnot results)
@@ -696,7 +612,7 @@ theorem badA_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashO
       rw [List.mem_singleton] at hinput
       subst hinput
       exact hfirstFull _ hmem hhit
-        (not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ _ _ _ _ h => by cases h))
+        (not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ h => by cases h))
     · obtain ⟨endpoints, hne, hmem, hout⟩ := hleafMatch
       obtain ⟨input, hinput, hhit⟩ := leafOutput_hit f (truncateHash parameterOutput) seed _ hcons _ _ _ hactive
         [tweakableHashInput (truncateHash parameterOutput) (.leaf lay (treeIndexAt idx lay) (leafIndexAt idx lay))
@@ -705,7 +621,7 @@ theorem badA_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashO
       rw [List.mem_singleton] at hinput
       subst hinput
       exact hfirst _ hmem hhit
-        (not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ _ _ _ _ h => by cases h))
+        (not_secondOrder _ _ _ _ (fun _ _ _ _ _ h => by cases h) (fun _ _ _ h => by cases h))
     · have hfrontier : ∀ chain, Wots.frontier f (truncateHash parameterOutput) lay (treeIndexAt idx lay)
           (leafIndexAt idx lay) (SignatureWitness.chosenWord f (truncateHash parameterOutput) seed idx lay)
           (Completeness.otsSecret f (truncateHash parameterOutput) lay (treeIndexAt idx lay) (leafIndexAt idx lay)
