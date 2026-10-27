@@ -1101,7 +1101,9 @@ footer a + a { margin-left: 1.25rem; }
     set('k', vs(String(V.k), '8'));
     set('a', vs(String(V.a), '4 + 3'));
     set('size', vs(comma(V.size), comma(main.size)) + ' bytes');
-    set('verify', vs(comma(V.verify), comma(main.verify)) + ' ' + unit());
+    // aggregation: a prover proving 500K hashes per second verifies that many signatures per second (rounded down)
+    var ver = isForest() ? main.verify : V.verify;
+    set('verify', comma(ver) + ' ' + unit() + info(comma(Math.floor(500000 / ver)) + ' signatures aggregated per second, at 500K hashes proven per second, neglecting glue overhead'));
     set('dia-h', String(S.h));
 
     [].forEach.call(document.querySelectorAll('[data-shape]'), function (e) { e.hidden = e.dataset.shape !== S.shape; });
