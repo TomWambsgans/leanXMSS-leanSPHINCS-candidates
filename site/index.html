@@ -83,13 +83,12 @@ svg .f1 { stop-color: var(--tree); stop-opacity: 0; }
 svg .lbody line { stroke-width: 1; }
 svg .base { stroke: var(--tree); stroke-width: 1; }
 svg .path { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; }
-svg .dash { stroke-dasharray: 2 3; }
 svg .thin, svg .anim .thin { stroke-width: 1.2; }
 svg .anim polyline { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 svg .anim circle { fill: var(--ink); }
 svg .anim .conn { stroke: var(--tree); stroke-width: 1; }
 svg .anim .ring { fill: none; stroke: var(--ink); stroke-width: 1.2; }
-svg.animating .xmss .path:not(.dash), svg.animating .fts .path:not(.dash), svg.animating .fts .conn, svg.animating .on { visibility: hidden; }   /* the animation draws them */
+svg.animating .xmss .path, svg.animating .xmss .conn, svg.animating .fts .path, svg.animating .fts .conn, svg.animating .on { visibility: hidden; }   /* the animation draws them */
 svg .on circle { fill: var(--ink); }
 svg .conn { stroke: var(--tree); stroke-width: 1; }
 svg .chain line { stroke: var(--tree); stroke-width: 1; }
@@ -840,7 +839,7 @@ footer a + a { margin-left: 1.25rem; }
             <line x1="494.05" y1="192.0" x2="494.98" y2="204.0"/>
           </g>
           <polyline points="256.0,-108.0 136.0,-30.5 196.0,31.5 226.0,81.2 241.0,120.8 233.5,152.6 237.2,178.0" class="path"/>
-          <line x1="237.2" y1="178.0" x2="237.2" y2="228" class="path dash"/>
+          <line x1="237.2" y1="204.0" x2="237.2" y2="216" class="conn"/>
           <g class="on">
             <circle cx="136.0" cy="-30.5" r="2.6"/>
             <circle cx="196.0" cy="31.5" r="2.6"/>
@@ -1257,11 +1256,11 @@ footer a + a { margin-left: 1.25rem; }
         l.key.chains.push([cx, yt + 4 * p]);
       });
       el('text', { x: n1(X + 30), y: n1(yb - 1), 'class': 'lb' }, layered).textContent = 'WOTS+C';
-      el('line', { x1: n1(l.leaf[0]), y1: n1(l.leaf[1]), x2: n1(X), y2: n1(yt - 1), 'class': 'path dash' }, layered);
+      el('line', { x1: n1(l.leaf[0]), y1: n1(l.leaf[1]), x2: n1(X), y2: n1(yt - 1), 'class': 'conn' }, layered);
       el('line', { x1: n1(X), y1: n1(yb + 2), x2: n1(X), y2: n1(ls[i + 1].root[1] - 3) , 'class': 'brace' }, layered);
     });
     var last = ls[L - 1].leaf;
-    el('line', { x1: n1(last[0]), y1: n1(last[1]), x2: n1(X), y2: WT - 1, 'class': 'path dash' }, layered);
+    el('line', { x1: n1(last[0]), y1: n1(last[1]), x2: n1(X), y2: WT - 1, 'class': 'conn' }, layered);
     // the paths, and their nodes
     ls.forEach(function (l) { el('polyline', { points: pts(l.nodes), 'class': 'path' }, layered); });
     var dots = el('g', { 'class': 'on' }, layered);
@@ -1381,8 +1380,8 @@ footer a + a { margin-left: 1.25rem; }
     clear(on);
     pp.forEach(function (q, j) { if (j && (j < 6 || j === pl)) el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j === pl ? 1.6 : 2.6 }, on); });   // in the body, the leaf only
     el('circle', { cx: 256, cy: -108, r: 4.2 }, on);
-    var dash = pruned.querySelector('line.path.dash');
-    dash.setAttribute('x1', n1(pp[pl][0])); dash.setAttribute('y1', n1(pp[pl][1])); dash.setAttribute('x2', X); dash.setAttribute('y2', WT - 1);
+    var link = pruned.querySelector('line.conn');   // from the leaf to its WOTS+C key
+    link.setAttribute('x1', n1(pp[pl][0])); link.setAttribute('y1', n1(pp[pl][1])); link.setAttribute('x2', X); link.setAttribute('y2', WT - 1);
     // the forest: the path to a leaf of each tree, and to a leaf of each of the two subtrees under it
     clear(fts.conn); clear(fts.paths); clear(fts.dot); clear(fts.on);
     forest = { trees: [], subs: [], key: [], wc: [] };
@@ -1463,6 +1462,7 @@ footer a + a { margin-left: 1.25rem; }
       stage(300, fo.wc.map(function (c) { return [[X, TIP], c]; }), false, 1.4);
       stage(400, fo.wc.map(function (c) { return [c, [c[0], WT]]; }), true, 1.6);
       stage(300, fo.wc.map(function (c) { return [[c[0], WT], leaf]; }), false, 1.6);
+      t -= 300; stage(300, [[[X, WT - 1], leaf]], true, 0.01, 'conn');   // the link appears, in grey
     }
     var root;
     if (!geo) {
@@ -1483,6 +1483,7 @@ footer a + a { margin-left: 1.25rem; }
         stage(300, k.chains.map(function (c) { return [l.root, c]; }), false, 1.4);
         stage(400, k.chains.map(function (c) { return [c, [c[0], k.top]]; }), true, 1.6);
         stage(300, k.chains.map(function (c) { return [[c[0], k.top], geo[i - 1].leaf]; }), false, 1.6);
+        t -= 300; stage(300, [[[X, k.top - 1], geo[i - 1].leaf]], true, 0.01, 'conn');
       }
       root = geo[0].root;
     }
