@@ -1001,7 +1001,7 @@ footer a + a { margin-left: 1.25rem; }
   // 3 significant digits with K, M, B (as scripts/scheme.py prints them)
   function fmt(x) {
     var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
-    x = Number(x.toPrecision(1));   // one significant digit: 954K is 1M, 244M is 200M
+    x = up(x, 1);   // a cost, rounded up to one significant digit: 954K is 1M, 244M is 300M
     for (var i = 0; i < u.length; i++) if (x >= u[i][0]) return x / u[i][0] + u[i][1];
     return String(x);
   }
@@ -1023,7 +1023,9 @@ footer a + a { margin-left: 1.25rem; }
     return String(x);
   }
   function comma(x) { return Math.round(x).toLocaleString('en-US'); }
-  function sig2(v) { return v >= 9.95 ? String(Math.round(v)) : v.toFixed(1).replace(/\.0$/, ''); }
+  // Costs are rounded up, lifetimes down: never better than the figures.
+  function up(x, d) { var q = Math.pow(10, Math.floor(Math.log10(x)) - d + 1); return Number((Math.ceil(x / q - 1e-9) * q).toPrecision(d + 1)); }
+  function sig2(v) { return v >= 10 ? String(Math.ceil(v - 1e-9)) : (Math.ceil(v * 10 - 1e-9) / 10).toFixed(1).replace(/\.0$/, ''); }
   function time(s) {
     if (s >= 3600) return sig2(s / 3600) + '&nbsp;h';
     if (s >= 60) return sig2(s / 60) + '&nbsp;min';
@@ -1031,8 +1033,8 @@ footer a + a { margin-left: 1.25rem; }
     if (s >= 1e-3) return sig2(s * 1e3) + '&nbsp;ms';
     return sig2(s * 1e6) + '&nbsp;&micro;s';
   }
-  function bytes(gb) {   // two significant digits: 3.6 GB, 220 MB
-    var r = function (v) { return Number(v.toPrecision(2)); };
+  function bytes(gb) {   // two significant digits, rounded up: 3.6 GB, 230 MB
+    var r = function (v) { return up(v, 2); };
     if (gb >= 999.5) return r(gb / 1000) + '&nbsp;TB';
     if (gb >= 0.995) return r(gb) + '&nbsp;GB';
     return r(gb * 1000) + '&nbsp;MB';
