@@ -25,8 +25,9 @@ The forest's sizes and verification costs are also pinned by the Rust tests (cra
 `Config::verify_compressions`).
 
 The FORS FTS has k trees of height a and no root hash (the WOTS+C key signs the 2k nodes below
-the roots), as in leanSphincs v1: a = 10, and for each configuration the fewest trees k whose cover attack
-(fors_security.py) needs at least as many signatures as the forest's.
+the roots): a = 10 and k = 25 in every configuration, so that verification does not
+depend on the pruning. 25 is the fewest trees whose cover attack (fors_security.py) lives as long as the
+forest's for the full key; it reaches 97.8-100.7% of the forest's in every configuration.
 """
 
 import argparse
@@ -120,23 +121,13 @@ def fors_log2_lifetime(h, b, a, k, level=127):
     return lo
 
 
-_FORS = {}
-
-
 FORS_HEIGHT = 10
+FORS_TREES = 25
 
 
 def fors(h, shape, b):
-    """(k, a) of the FORS FTS of a configuration (see above)."""
-    key = (h, shape, b)
-    if key not in _FORS:
-        target = math.log2(fc.attack(h, shape, b))
-        bb = h if shape == "layered" else b
-        k = 1
-        while (fors_log2_lifetime(h, bb, FORS_HEIGHT, k) or -1) < target:
-            k += 1
-        _FORS[key] = (k, FORS_HEIGHT)
-    return _FORS[key]
+    """(k, a) of the FORS FTS, the same in every configuration (see above)."""
+    return FORS_TREES, FORS_HEIGHT
 
 
 def fts_bytes(variant, h, shape, b):

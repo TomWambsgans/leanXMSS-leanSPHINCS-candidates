@@ -3,7 +3,7 @@
 
 A configuration is a total height H (22, 24, 26, 28), a shape (pruned: one tree with a kept subtree
 of height B; layered: the hypertree of SPLITS, nothing pruned, B = H) and a signature limit N. Its
-FTS is FORS with `k` trees of height `a = 10` (`scripts/scheme.py` `fors(h, shape, b)`, FORS_K).
+FTS is FORS with `k = 25` trees of height `a = 10` in every configuration (`scripts/scheme.py` `fors`).
 
 Usage (from formal/sphincs):
     python3 scripts/fors_certificates.py check H SHAPE B N LX   # check one parameter set (exit status 1 if it fails)
@@ -64,25 +64,17 @@ KQ = Fr(1, 2 ** TOTAL)
 LAYERED_TOP = None  # the top layer's height of a layered key, None for a pruned key (set_config)
 SHAPE = "pruned"
 FA = 10             # a: the height of a FORS tree, the same in every configuration
-FK = 25             # k: the number of FORS trees of the configuration (set_config)
-
-# The FORS shape of each configuration (`scripts/scheme.py` `fors(h, shape, b)`, fe57807): the
-# smallest k that reaches the cover attack's lifetime ATTACK at a = 10.
-FORS_K = {(h, shape, b): (25 if (shape == 'layered' or b == h or (h, b) == (22, 20)) else 26)
-          for h in (22, 24, 26, 28) for shape in ('pruned', 'layered')
-          for b in (h, 20, 14, 13, 12, 10, 8)}
+FK = 25             # k: the number of FORS trees, the same in every configuration
 
 # The layer split of a layered key, top layer first (crates/sphincs `layered_heights`).
 SPLITS = {22: (10, 6, 6), 24: (12, 6, 6), 26: (12, 7, 7), 28: (12, 8, 8)}
 
 def set_config(h, shape='pruned', b=None):
     """Select the height, the shape and the FORS shape every function below works at."""
-    global TOTAL, KQ, LAYERED_TOP, SHAPE, FK
+    global TOTAL, KQ, LAYERED_TOP, SHAPE
     assert shape in ('pruned', 'layered')
     TOTAL, KQ, SHAPE = h, Fr(1, 2 ** h), shape
     LAYERED_TOP = SPLITS[h][0] if shape == 'layered' else None
-    if b is not None:
-        FK = FORS_K[(h, shape, b)]
 
 def num_layers():
     return len(SPLITS[TOTAL]) if SHAPE == 'layered' else 1
@@ -631,13 +623,12 @@ def emit(certs, path):
 
 # Attack lifetimes of the FORS FTS in the cover model (one expected cover per 2^127 digest
 # queries), by height and kept subtree height (`scripts/scheme.py` `fors_log2_lifetime(h, b, a, k)` at
-# the configuration's (k, a)). A layered key is attacked as the full key of the same height. FORS_K is
-# the fewest trees for which these reach the forest's attack.
+# k = 25, a = 10). A layered key is attacked as the full key of the same height.
 ATTACK = {
-    22: {22: 90609779, 20: 24410410, 14: 553479, 13: 286324, 12: 148101, 10: 39612, 8: 10595},
-    24: {24: 362439088, 20: 30865956, 14: 592375, 13: 306357, 12: 158418, 10: 42348, 8: 11320},
-    26: {26: 1449756325, 20: 33076204, 14: 633642, 13: 327609, 12: 169363, 10: 45251, 8: 12090},
-    28: {28: 5799025272, 20: 35422057, 14: 677421, 13: 350154, 12: 180972, 10: 48329, 8: 12906},
+    22: {22: 90609779, 20: 24410410, 14: 474947, 13: 246156, 12: 127558, 10: 34240, 8: 9190},
+    24: {24: 362439088, 20: 26282430, 14: 510203, 13: 264337, 12: 136933, 10: 36733, 8: 9853},
+    26: {26: 1449756325, 20: 28275246, 14: 547704, 13: 283674, 12: 146903, 10: 39383, 8: 10558},
+    28: {28: 5799025272, 20: 30396021, 14: 587586, 13: 304237, 12: 157505, 10: 42201, 8: 11307},
 }
 
 HEIGHTS = (22, 24, 26, 28)
@@ -695,38 +686,38 @@ PARAMS = {
     22: [
         (22, 86910000, -8.75),
         (20, 23050000, -8.375),
-        (14, 499600, -7.5),
-        (13, 256100, -7.375),
-        (12, 131200, -7.25),
-        (10, 34420, -7.125),
-        (8, 9041, -6.875),
+        (14, 424100, -7.5),
+        (13, 217700, -7.375),
+        (12, 111800, -7.25),
+        (10, 29440, -7.0),
+        (8, 7759, -6.875),
     ],
     24: [
         (24, 354200000, -9.125),
-        (20, 29540000, -8.5),
-        (14, 537700, -7.5),
-        (13, 275500, -7.375),
-        (12, 141100, -7.25),
-        (10, 37030, -7.125),
-        (8, 9710, -7.0),
+        (20, 24970000, -8.5),
+        (14, 459500, -7.5),
+        (13, 235700, -7.375),
+        (12, 120900, -7.25),
+        (10, 31760, -7.125),
+        (8, 8359, -6.875),
     ],
     26: [
         (26, 1426000000, -9.75),
-        (20, 31810000, -8.625),
-        (14, 579400, -7.625),
-        (13, 296700, -7.5),
-        (12, 151900, -7.375),
-        (10, 39850, -7.125),
-        (8, 10430, -7.0),
+        (20, 27030000, -8.5),
+        (14, 496100, -7.625),
+        (13, 254400, -7.5),
+        (12, 130500, -7.375),
+        (10, 34330, -7.125),
+        (8, 9019, -7.0),
     ],
     28: [
         (28, 5707000000, -11.75),
-        (20, 34270000, -8.625),
-        (14, 622600, -7.75),
-        (13, 319000, -7.5),
-        (12, 163300, -7.375),
-        (10, 42750, -7.25),
-        (8, 11190, -7.0),
+        (20, 29240000, -8.625),
+        (14, 536400, -7.625),
+        (13, 275000, -7.5),
+        (12, 140900, -7.375),
+        (10, 37030, -7.125),
+        (8, 9721, -7.0),
     ],
 }
 

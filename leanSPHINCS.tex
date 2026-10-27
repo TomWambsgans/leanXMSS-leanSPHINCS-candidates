@@ -61,7 +61,7 @@ A SPHINCS-style scheme with four toggles, 48 configurations in all. Its componen
         the signer builds the lower trees on the fly, does not grind, and keeps the full key's lifetime.
   \item[T3, hash.] Keccak-256, BLAKE2s or SHA-256.
   \item[T4, FTS.] The \emph{two-level WOTS forest} of \cref{sec:twolevel}, which is the candidate and which every
-        figure below assumes, or \emph{FORS} ($k$ trees of height $a$, as in leanSphincs v1). Both are proved in
+        figure below assumes, or \emph{FORS} ($k$ trees of height $a$). Both are proved in
         Lean, each with its own 32 lifetimes; FORS trades about 37\% more signature bytes for half the threshold
         preprocessing (\cref{sec:twolevel}).
 \end{description}
@@ -348,13 +348,13 @@ The FTS under each leaf is built from small WOTS keys instead of FORS, an idea f
 sig.golf submission~\cite{siggolf}.
 
 \paragraph{Against FORS.} The site's other variant uses FORS~\cite{FIPS205} instead, with $k$ trees of height $a$ and no
-root hash (the WOTS$^+$C key signs the $2k$ nodes below the roots): as in leanSphincs v1, $a=10$, and the fewest trees
-that live at least as long as the forest under the cover attack, $k=25$ or $26$ depending on the configuration
-(\texttt{scripts/scheme.py}). Its lifetimes are proved in Lean as well, by a second library with the same
-statement and the same axioms, and reach 85--98\% of the FORS cover attack~\cite{proofs} --- a larger share
-of its own attack than the forest reaches of the forest's, so FORS proves slightly \emph{more} signatures
-at the same height. At $h=26$, full key, Keccak-256, in permutations (preprocessing: the hashes of the FTS
-inside the threshold MPC):
+root hash (the WOTS$^+$C key signs the $2k$ nodes below the roots), $a=10$ and $k=25$ in every configuration so
+that verification does not depend on the pruning: the fewest trees that live as long as the forest under the cover
+attack for the full key, and 97.8--100.7\% of it in every configuration (\texttt{scripts/scheme.py}). Its
+lifetimes are proved in Lean as well, by a second library with the same statement and the same axioms, and reach
+84--98\% of the FORS cover attack~\cite{proofs} --- a larger share of its own attack than the forest reaches of
+the forest's, so FORS proves 1--6\% \emph{more} signatures at the same height. At $h=26$, full key, Keccak-256,
+in permutations (preprocessing: the hashes of the FTS inside the threshold MPC):
 \begin{center}
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{lrrrrr}
@@ -371,12 +371,10 @@ once the leaves leave the MPC they are public, and the $k(2^a-2)$ nodes above th
 The forest cannot do the same --- its MPC cost is the WOTS chain steps, and each step consumes the previous
 step's secret output, so none of the chain can leave the MPC early.
 
-The cover attack and the proofs bound the forgery probability averaged over the signer's randomness; a
-given key has its own cover rate, set by how many signatures each instance made and what they revealed. At
-equal mean, the forest's varies about twice as much across keys as FORS's (relative standard deviation 0.079
-against 0.041 for the full key at $h=24$), because its coverage depends on the codewords revealed: the weakest
-key in $10^6$ is 3.6 bits below the mean against 2.3 bits for FORS (7.7 and 6.5 at $b=14$). This matters only to
-an attacker who picks the weakest of many keys. Computed numerically, not in Lean
+For one key, let $Y$ be the chance that a random digest falls on an FTS opening that the key's $N$ signatures have
+already revealed. $Y$ changes from key to key, and its average is the cover attack's rate. With each FTS at its own
+cover lifetime and $h=24$, the standard deviation of $Y$, divided by its average, is 0.079 for the forest and 0.041
+for FORS with the full key, and 0.98 and 0.56 with $b=14$
 (\href{https://github.com/TomWambsgans/sphincs.art/blob/main/scripts/key_variance.py}{\texttt{scripts/key\_variance.py}}).
 
 \paragraph{WOTS keys.} 6 chains of length 5, with leaf $\hash(\text{6 chain tops})$. A codeword is a vector
