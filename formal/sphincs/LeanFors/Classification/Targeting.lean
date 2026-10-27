@@ -3,7 +3,7 @@ import LeanFors.ScanSigner.FairShare
 import LeanFors.LazyRun.InterpreterFacts
 
 /-! Hit inclusion: the sample's fixed targets, read as a `Targeting` of the saturation potential.
-Row addresses (chain steps and forest chain steps) target their output coordinate; every other address
+Row addresses (chain steps and FORS leaves) target their output coordinate; every other address
 keeps a target that does not depend on the hidden table. Prepared cache entries never hit, so a
 cached target hit of the win implication, or a correct recorded guess, is a `Hit` for every
 state that keeps the prepared cache and every table that agrees with its exposed coordinates. -/
@@ -65,9 +65,9 @@ theorem not_row_of_rowAt_none (fields : TweakFields) (position : Position)
       rw [show (Address.chain lay tree leaf chainIdx step).position = .chain lay tree leaf chainIdx step from rfl,
         hfields, hnone] at h
       cases h
-  | fchain index c s j a i t =>
-      have h := rowAt_address (.fchain index c s j a i t)
-      rw [show (Address.fchain index c s j a i t).position = .fchain index c s j a i t from rfl,
+  | fleaf index κ leaf =>
+      have h := rowAt_address (.fleaf index κ leaf)
+      rw [show (Address.fleaf index κ leaf).position = .fleaf index κ leaf from rfl,
         hfields, hnone] at h
       cases h
   | _ => exact hrow.elim
@@ -79,27 +79,29 @@ theorem output_ne_input (address : Address) : address.outputCoordinate ≠ addre
 
 theorem msg_fields (parameter : PublicParameter) (input : HashInput) (h : ForestSigner.IsMsgInput input)
     (fields : TweakFields) (hf : parseFields parameter input = some fields) :
-    fields = hashDomainFields .message := by
-  obtain ⟨parameter', payload, rfl⟩ := h
+    ∃ call : DigestCall, fields = hashDomainFields (.message call) := by
+  obtain ⟨parameter', call, payload, rfl⟩ := h
   obtain ⟨payload', heq⟩ := (parseFields_some_iff _ _ _).1 hf
-  exact (fieldInput_injective heq).1.symm
+  exact ⟨call, (fieldInput_injective heq).1.symm⟩
 
-theorem rowAt_message : rowAt (hashDomainFields .message) = none := by
-  cases h : rowAt (hashDomainFields .message) with
+theorem rowAt_message (call : DigestCall) : rowAt (hashDomainFields (.message call)) = none := by
+  cases h : rowAt (hashDomainFields (.message call)) with
   | none => rfl
   | some address =>
       have hd := hashFields_injective (Position.domain_inRange _) (by trivial) ((rowAt_some_iff _ _).1 h)
       cases address <;> simp [Address.position, Position.domain] at hd
 
-theorem positionAt_message : positionAt (hashDomainFields .message) = none := by
-  cases h : positionAt (hashDomainFields .message) with
+theorem positionAt_message (call : DigestCall) :
+    positionAt (hashDomainFields (.message call)) = none := by
+  cases h : positionAt (hashDomainFields (.message call)) with
   | none => rfl
   | some position =>
       have hd := hashFields_injective (Position.domain_inRange position) (by trivial)
         ((positionAt_some_iff _ position).mp h)
       cases position <;> simp [Position.domain] at hd
 
-theorem encodingAt_message : encodingAt (hashDomainFields .message) = none := by
+theorem encodingAt_message (call : DigestCall) :
+    encodingAt (hashDomainFields (.message call)) = none := by
   unfold encodingAt
   rw [dif_neg]
   rintro ⟨leaf, h⟩
@@ -108,16 +110,18 @@ theorem encodingAt_message : encodingAt (hashDomainFields .message) = none := by
 
 theorem compTable_message (parameterOutput : HashOutput) (fixed : HiddenGraph.Table)
     (highs : CoordinateHighs) (remaining : RemainingOutputs) (table : HiddenGraph.Table)
-    (results : OtsKey → Option (Counter × Encoding)) :
-    compTable parameterOutput fixed highs remaining table results (hashDomainFields .message) = none := by
+    (results : OtsKey → Option (Counter × Encoding)) (call : DigestCall) :
+    compTable parameterOutput fixed highs remaining table results (hashDomainFields (.message call)) =
+      none := by
   unfold compTable
   rw [positionAt_message]
   simp only [encTable, encodingAt_message, Option.map_none]
 
 theorem parse_msg_none (parameter : PublicParameter) (active : Address → Prop) (input : HashInput)
     (h : ForestSigner.IsMsgInput input) : HiddenGraph.parse parameter active input = none := by
-  obtain ⟨parameter', payload, rfl⟩ := h
-  cases hparse : HiddenGraph.parse parameter active (tweakableHashInput parameter' .message payload) with
+  obtain ⟨parameter', call, payload, rfl⟩ := h
+  cases hparse : HiddenGraph.parse parameter active
+      (tweakableHashInput parameter' (.message call) payload) with
   | none => rfl
   | some query =>
       obtain ⟨heq, -⟩ := (parse_some_iff parameter active _ query).mp hparse
@@ -254,8 +258,8 @@ theorem sampleTargeting_msg (results : OtsKey → Option (Counter × Encoding)) 
       exact Option.elim_none _ _
   | some fields =>
       rw [sampleTargeting_kind parameterOutput fixed highs remaining results input fields hf]
-      obtain rfl := msg_fields _ input h fields hf
-      rw [kindAt_nonrow parameterOutput fixed highs remaining results _ rowAt_message,
+      obtain ⟨call, rfl⟩ := msg_fields _ input h fields hf
+      rw [kindAt_nonrow parameterOutput fixed highs remaining results _ (rowAt_message call),
         compTable_message]
       exact Option.elim_none _ _
 
