@@ -40,7 +40,8 @@ theorem tsum_min_leF {α : Type} (mx : ProbComp α) (X : α → ℝ≥0∞) :
     _ = ∑' a, Pr[= a | mx] := by simp only [mul_one]
     _ ≤ 1 := tsum_probOutput_le_one
 
-theorem pairE_min_leF (F : HashOutput → ℝ≥0∞) : pairE (fun a => min 1 (F a)) ≤ min 1 (pairE F) :=
+theorem pairE_min_leF (F : (DigestCall → HashOutput) → ℝ≥0∞) :
+    pairE (fun a => min 1 (F a)) ≤ min 1 (pairE F) :=
   tsum_min_leF _ F
 
 /-- **The split of one contact.** A contact with capped value is paid by `pay` and `κ` times its
@@ -53,7 +54,7 @@ theorem capped_splitF {pay κ : ℝ≥0∞} (hκ : ν ≤ pay + κ * ν) (Q : �
         add_le_add (mul_le_mul_right (min_le_left _ _) _) (mul_le_mul_right (min_le_right _ _) _)
     _ = pay + κ * ν * Q := by rw [mul_one]
 
-theorem pairE_sum_range (n : ℕ) (F : HashOutput → ℕ → ℝ≥0∞) :
+theorem pairE_sum_range (n : ℕ) (F : (DigestCall → HashOutput) → ℕ → ℝ≥0∞) :
     pairE (fun a => ∑ j ∈ Finset.range n, F a j) = ∑ j ∈ Finset.range n, pairE fun a => F a j := by
   unfold pairE
   simp only [Finset.mul_sum]
@@ -164,11 +165,11 @@ theorem coinPotF_succ (data : PublicData) (s : State) (Ms : List Message) (L : Q
   ring
 
 theorem potNF_mono (data : PublicData) (wbar : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight))) (hw : wbar ≤ 1)
-    (s : State) (P : List Pair) (Ms : List Message) (L : QueryLog SigningSpec) (d : Multiset View) {k k' : ℕ}
-    (h : k ≤ k') :
+    (s : State) (P : List Pair) (hPl : ∀ q ∈ P, LandedIn K.p data s q) (Ms : List Message)
+    (L : QueryLog SigningSpec) (d : Multiset View) {k k' : ℕ} (h : k ≤ k') :
     potNF K data wbar Fail s P Ms L d k ≤ potNF K data wbar Fail s P Ms L d k' :=
   potG_grow wbar 0 Fail witnessNear_props (fun _ _ _ h => h) hw ENNReal.zero_ne_top (Extends.refl s)
-    (fun _ => rfl) P Ms L d h
+    (fun _ => rfl) (fun _ _ _ => rfl) hPl Ms L d h
 
 /-- An unexposed read coordinate is not settled. -/
 theorem not_settled_of_unknown {s : State} {R : List Coordinate} (hrinv : ∀ c ∈ R, s.known c ≠ none)
@@ -210,9 +211,9 @@ theorem offMass_congr {s s' : State} {m : Message}
 
 /-- The mass off the identity sees the state only through the digest blocks. -/
 theorem offMass_blocks {s s' : State}
-    (h : ∀ q call, s'.cache (pblk parameter data q call) = s.cache (pblk parameter data q call))
+    (h : ∀ q, s'.cache (pblk parameter data q firstCall) = s.cache (pblk parameter data q firstCall))
     (m : Message) : offMass parameter data s' m = offMass parameter data s m :=
-  offMass_congr fun ρ => h (m, ρ) firstCall
+  offMass_congr fun ρ => h (m, ρ)
 
 /-- A new pair of another message keeps the mass off the identity. -/
 theorem offMass_withPair_other (s : State) (p : Pair) (u : DigestCall → HashOutput) {m : Message}
@@ -478,12 +479,18 @@ theorem psiF_ordinary (hMp : model.parse = HiddenGraph.parse K.p (candidateActiv
     intro r hr
     have hext := ordinaryStep_extends model x s r hr
     have hblocks := same_blocks (parameter := K.p) (data := data) hext (ordinaryStep_cache_ne model x s r hr) hnew
+    have hcalls : ∀ q : Pair, LandedIn K.p data s q → ∀ call,
+        r.2.cache (pblk K.p data q call) = s.cache (pblk K.p data q call) := by
+      intro q hq call
+      obtain ⟨w, hw⟩ := Option.ne_none_iff_exists'.1 (hB.pinv.all q hq call)
+      rw [hw]
+      exact hext.1 _ w hw
     have hcoin : coinRiskF K data r.2 Ms L y = coinRiskF K data s Ms L y := by
       unfold coinRiskF
       simp only [offMass_blocks hblocks]
     have hgrow : ∀ j, potNF K data wbar Fail r.2 P Ms L d j ≤ potNF K data wbar Fail s P Ms L d j := fun j =>
-      potG_grow wbar 0 Fail witnessNear_props (fun _ _ _ h => h) hw ENNReal.zero_ne_top hext hblocks P Ms L d
-        le_rfl
+      potG_grow wbar 0 Fail witnessNear_props (fun _ _ _ h => h) hw ENNReal.zero_ne_top hext hblocks
+        hcalls (fun q hq => (hB.pinv.mem q).1 hq) Ms L d le_rfl
     have hcoinP : coinPotF K data r.2 Ms L y = coinPotF K data s Ms L y := by
       unfold coinPotF
       simp only [offMass_blocks hblocks]
@@ -539,7 +546,8 @@ theorem psiF_ordinary (hMp : model.parse = HiddenGraph.parse K.p (candidateActiv
         rw [hC0]; unfold coefU
         gcongr
         · exact coinRiskF_mono K data s Ms L (Nat.le_succ y)
-        · exact potNF_mono K data wbar Fail hw s P Ms L d (Nat.le_succ y)
+        · exact potNF_mono K data wbar Fail hw s P (fun q hq => (hB.pinv.mem q).1 hq) Ms L d
+            (Nat.le_succ y)
 
 end Ordinary
 
