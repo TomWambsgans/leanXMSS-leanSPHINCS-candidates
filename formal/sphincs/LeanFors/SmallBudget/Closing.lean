@@ -182,11 +182,12 @@ theorem small_seedFree_boundF (hb : 0 < keptHeight topLayer) (adversary : Advers
     (steps : Message → Randomness) (hq : q < 2 ^ 256)
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℚ) (hκ0 : 0 ≤ κ) (hκ1 : κ ≤ 1) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
-      (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ))
-    (H b N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
+      (signatureLimit : ℝ) * (((2 : ℝ) ^ subtreeHeight * 2 ^ forsHeight)⁻¹) ≤ (κ : ℝ))
+    (H b k a N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hkk : forsTrees = k)
+    (haa : forsHeight = a) (hNN : signatureLimit = N)
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
     (hrt : H0.checkRate H b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
-    (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
+    (ho : H0.checkOptF H b k a t o = true) (hon : H0.checkOptN H k a t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
     Pr[Win | seedFreeExperiment (internalize adversary) q steps] ≤
       (smallMainFF ρ q o.B (κ * ((2 ^ b * on.En : ℚ) / 2)) +
         2 * lam (H0.LmaxOf (q - keygenCost)) 0 (q - keygenCost)) + smallFailF q * expectedFail := by
@@ -205,7 +206,8 @@ theorem small_seedFree_boundF (hb : 0 < keptHeight topLayer) (adversary : Advers
         A + C * failMass (failSet prepared.1) := by
     intro parameterOutput fixed highs remaining prepared hprepared known hk
     refine le_trans (sample_boundF hb adversary hnr q hq parameterOutput fixed highs remaining steps prepared
-      hprepared known hk ρ hN (κ : ℝ) hκ hκ1R H b N hHH hbb hNN t o on hpt qtop hrt hqtop ho hon hcthr) (le_of_eq ?_)
+      hprepared known hk ρ hN (κ : ℝ) hκ hκ1R H b k a N hHH hbb hkk haa hNN t o on hpt qtop hrt hqtop ho hon
+      hcthr) (le_of_eq ?_)
     rw [hA, hC]
     unfold smallMainFF smallFailF
     rw [Rat.cast_mul, ENNReal.ofReal_mul (Rat.cast_nonneg.2 hκ0)]
@@ -232,17 +234,19 @@ theorem det_smallF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : �
     (hbound : HasHashQueryBound adversary q) (hq : q < 2 ^ 256)
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℚ) (hκ0 : 0 ≤ κ) (hκ1 : κ ≤ 1) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
-      (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ))
-    (H b N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
+      (signatureLimit : ℝ) * (((2 : ℝ) ^ subtreeHeight * 2 ^ forsHeight)⁻¹) ≤ (κ : ℝ))
+    (H b k a N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hkk : forsTrees = k)
+    (haa : forsHeight = a) (hNN : signatureLimit = N)
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
     (hrt : H0.checkRate H b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
-    (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
+    (ho : H0.checkOptF H b k a t o = true) (hon : H0.checkOptN H k a t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
     forgeAdvantage adversary ≤
       smallMainFF ρ q o.B (κ * ((2 ^ b * on.En : ℚ) / 2)) + smallFailF q * (2 : ℝ≥0∞)⁻¹ ^ 201 +
         2 * lam (H0.LmaxOf (q - keygenCost)) 0 (q - keygenCost) + 2 * ((q : ℝ≥0∞) / 2 ^ 256) := by
   refine le_trans (Det.forgeAdvantage_le_seedFree adversary q hbound _ fun steps =>
     small_seedFree_boundF hb (Memo.memoAdv adversary) (Memo.memoAdv_noRepeat adversary) q steps hq ρ hN
-      κ hκ0 hκ1 hκ H b N hHH hbb hNN t o on hpt qtop hrt hqtop ho hon hcthr) (add_le_add ?_ le_rfl)
+      κ hκ0 hκ1 hκ H b k a N hHH hbb hkk haa hNN t o on hpt qtop hrt hqtop ho hon hcthr)
+    (add_le_add ?_ le_rfl)
   rw [add_right_comm]
   exact add_le_add (add_le_add le_rfl (mul_le_mul_right expectedFail_le _)) le_rfl
 
@@ -252,22 +256,23 @@ end Close
 
 /-- The rational small-route check at the right end `qh` of the small budgets: the coin term is
 `(2 M − 1) qh / (M 2^129)` with `M = 2^(H − b)` (the creation rate of the scan signer), the near term
-is multiplied by `κ = 2 - ρ + qh / 2^128 + N · 123 / (2^b 2^15)`. -/
-def checkSmallF (H b N qh : ℕ) (ρ cthr B c : ℚ) : Bool :=
+is multiplied by `κ = 2 - ρ + qh / 2^128 + N / (2^b 2^a)`. -/
+def checkSmallF (H b a N qh : ℕ) (ρ cthr B c : ℚ) : Bool :=
   decide (3 / 2 ≤ ρ) && decide (ρ ≤ 2) &&
     decide (1 + 4032 * (2 - ρ) * ((qh : ℚ) / 2 ^ 128) ≤ ρ) && decide (1 + 66 * ((qh : ℚ) / 2 ^ 128) ≤ ρ) &&
     decide (64 * ((qh : ℚ) / 2 ^ 128) ≤ 1) && decide (qh ≤ 2 ^ 127) && decide (N ≤ 2 ^ 70) &&
     decide (cthr ≤ ρ / 2 ^ 128) && decide (0 ≤ B) && decide (0 ≤ c) &&
-    decide ((N : ℚ) * 123 / (2 ^ b * 2 ^ 15) ≤ ρ - 1 - (qh : ℚ) / 2 ^ 128) &&
+    decide ((N : ℚ) / (2 ^ b * 2 ^ a) ≤ ρ - 1 - (qh : ℚ) / 2 ^ 128) &&
     decide (ρ + 2 ^ 128 * B + (2 * (H0.scanMb H b : ℚ) - 1) * (qh : ℚ) / ((H0.scanMb H b : ℚ) * 2 ^ 129) +
-      (2 - ρ + (qh : ℚ) / 2 ^ 128 + (N : ℚ) * 123 / (2 ^ b * 2 ^ 15)) * qh * c + 1 / 2 ^ 60 ≤ 2)
+      (2 - ρ + (qh : ℚ) / 2 ^ 128 + (N : ℚ) / (2 ^ b * 2 ^ a)) * qh * c + 1 / 2 ^ 60 ≤ 2)
 
-theorem checkSmallF_sound {H b N qh : ℕ} {ρ cthr B c : ℚ} (h : checkSmallF H b N qh ρ cthr B c = true) :
+theorem checkSmallF_sound {H b a N qh : ℕ} {ρ cthr B c : ℚ}
+    (h : checkSmallF H b a N qh ρ cthr B c = true) :
     Numeric (ρ : ℝ) ((qh : ℝ) / 2 ^ 128) ∧ qh ≤ 2 ^ 127 ∧ N ≤ 2 ^ 70 ∧ (cthr : ℝ) ≤ (ρ : ℝ) / 2 ^ 128 ∧
       0 ≤ B ∧ 0 ≤ c ∧
-      (N : ℝ) * 123 / (2 ^ b * 2 ^ 15) ≤ (ρ : ℝ) - 1 - (qh : ℝ) / 2 ^ 128 ∧
+      (N : ℝ) / (2 ^ b * 2 ^ a) ≤ (ρ : ℝ) - 1 - (qh : ℝ) / 2 ^ 128 ∧
       (ρ : ℝ) + 2 ^ 128 * (B : ℝ) + (2 * (H0.scanMb H b : ℝ) - 1) * (qh : ℝ) / ((H0.scanMb H b : ℝ) * 2 ^ 129) +
-        (2 - (ρ : ℝ) + (qh : ℝ) / 2 ^ 128 + (N : ℝ) * 123 / (2 ^ b * 2 ^ 15)) * qh * (c : ℝ) + 1 / 2 ^ 60 ≤ 2 := by
+        (2 - (ρ : ℝ) + (qh : ℝ) / 2 ^ 128 + (N : ℝ) / (2 ^ b * 2 ^ a)) * qh * (c : ℝ) + 1 / 2 ^ 60 ≤ 2 := by
   simp only [checkSmallF, Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩ := h
   have r1 := (Rat.cast_le (K := ℝ)).mpr h1
