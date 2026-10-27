@@ -38,10 +38,9 @@ def nameSuffixes (n : Name) : List Name :=
 open Elab Command in
 run_cmd do
   let env ← getEnv
-  let guards ← (do
-    let forest ← IO.FS.lines "LeanForest/Axioms.lean"
-    let fors ← IO.FS.lines "LeanFors/Axioms.lean"
-    pure (forest ++ fors))
+  let forestGuards ← IO.FS.lines "LeanForest/Axioms.lean"
+  let forsGuards ← IO.FS.lines "LeanFors/Axioms.lean"
+  let guards := forestGuards ++ forsGuards
   let pinned := guards.filterMap fun line =>
     if line.startsWith "#print axioms " then some (line.drop 14).trimAscii.toString.toName else none
   let mut spans : NameSet := {}
