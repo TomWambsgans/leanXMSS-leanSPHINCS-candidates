@@ -1,12 +1,15 @@
 import LeanFors.ScanSigner.AfterSigning
+import LeanFors.CoverPotential.Presample
 import LeanFors.Base.VirtualMono
 import LeanFors.Classification.Win
 
-/-! Ingredients of the forest potential of the lazy run. Every cached landed message-randomizer
-pair is an item; the unsigned ones are candidates. This file defines the pairs, their views, the
-item and disclosure invariants, the final value (a forest cover) and proves the facts about fresh
-pairs, ordinary queries and signing calls that the one-coin potentials of
-`CoverPotential/OneCoin` and `CoverPotential/GenericWitness` build on. -/
+/-! Ingredients of the FORS potential of the lazy run. Every cached landed message-randomizer pair
+is an item; the unsigned ones are candidates. A pair owns one digest block per call
+(`digestCalls` of them): the block of `firstCall` carries the index and alone decides landing,
+while the kept view needs them all. This file defines the pairs, their views, the item and
+disclosure invariants, the final value (a FORS cover) and proves the facts about fresh pairs,
+ordinary queries and signing calls that the one-coin potentials of `CoverPotential/OneCoin` and
+`CoverPotential/GenericWitness` build on. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -37,29 +40,65 @@ section Defs
 
 variable (parameter : PublicParameter) (data : PublicData)
 
-/-- The digest block of a pair. -/
-abbrev pblk (p : Pair) : HashInput := blk parameter data p.1 p.2
+/-- The digest block of one call of a pair. -/
+abbrev pblk (p : Pair) (call : DigestCall) : HashInput := GraphView.pblk parameter data p.1 p.2 call
 
-theorem pblk_injective {p q : Pair} (h : pblk parameter data p = pblk parameter data q) : p = q := by
-  obtain ⟨-, -, hpayload⟩ := tweakableInput_injective h
+/-- The calls of one pair query distinct blocks (`GraphView.pblk_injective`). -/
+theorem pblk_call_injective (p : Pair) : Function.Injective (pblk parameter data p) :=
+  GraphView.pblk_injective parameter data p.1 p.2
+
+theorem pblk_injective {p q : Pair} {call call' : DigestCall}
+    (h : pblk parameter data p call = pblk parameter data q call') : p = q ∧ call = call' := by
+  obtain ⟨hfields, -, hpayload⟩ := tweakableInput_injective h
   obtain ⟨hm, hρ⟩ := payload_pair_injective data.root hpayload
-  exact Prod.ext hm hρ
+  refine ⟨Prod.ext hm hρ, ?_⟩
+  simpa using hashFields_injective (left := .message call) (right := .message call') trivial trivial hfields
 
-theorem pblk_ne_of_ne {p q : Pair} (h : p ≠ q) : pblk parameter data p ≠ pblk parameter data q := fun heq =>
-  h (pblk_injective parameter data heq)
+theorem pblk_ne_of_ne {p q : Pair} (h : p ≠ q) (call call' : DigestCall) :
+    pblk parameter data p call ≠ pblk parameter data q call' := fun heq =>
+  h (pblk_injective parameter data heq).1
 
-/-- The kept view of a pair whose block is cached. -/
+theorem pblk_ne_call {p : Pair} {call call' : DigestCall} (h : call ≠ call') :
+    pblk parameter data p call ≠ pblk parameter data p call' := fun heq =>
+  h (pblk_injective parameter data heq).2
+
+/-- The blocks of a pair, read through `GraphView.pcache`, when every call is cached. -/
+theorem pcache_of_cached {s : State} {p : Pair} {u : DigestCall → HashOutput}
+    (h : ∀ call, s.cache (pblk parameter data p call) = some (u call)) :
+    pcache parameter data p.1 s p.2 = some u :=
+  allSome_of_eq _ u h
+
+theorem cached_of_pcache {s : State} {p : Pair} {u : DigestCall → HashOutput}
+    (h : pcache parameter data p.1 s p.2 = some u) (call : DigestCall) :
+    s.cache (pblk parameter data p call) = some (u call) :=
+  HiddenBridge.allSome_some h call
+
+theorem pcache_of_uncached {s : State} {p : Pair} {call : DigestCall}
+    (h : s.cache (pblk parameter data p call) = none) : pcache parameter data p.1 s p.2 = none := by
+  unfold pcache Completeness.allSome
+  exact dif_neg fun hall => by simpa [h] using hall call
+
+theorem pcache_congr {s s' : State} {p : Pair}
+    (h : ∀ call, s'.cache (pblk parameter data p call) = s.cache (pblk parameter data p call)) :
+    pcache parameter data p.1 s' p.2 = pcache parameter data p.1 s p.2 :=
+  congrArg _ (funext h)
+
+/-- The kept view of a pair whose blocks are all cached. -/
 noncomputable def pview (s : State) (p : Pair) : View :=
-  (s.cache (pblk parameter data p)).elim default viewOf
+  (pcache parameter data p.1 s p.2).elim default viewOf
 
-/-- The block of the pair is cached and lands. -/
+/-- The block of the first call of the pair is cached and lands. -/
 def LandedIn (s : State) (p : Pair) : Prop :=
-  ∃ u0, s.cache (pblk parameter data p) = some u0 ∧ Landed parameter (blockIndex u0)
+  ∃ u0, s.cache (pblk parameter data p firstCall) = some u0 ∧ Landed parameter (blockIndex u0)
 
-/-- The items are exactly the landed pairs. -/
+/-- The items are exactly the landed pairs; a landed pair has every block; a pair without its
+first block has no block at all. -/
 structure PInv (s : State) (P : List Pair) : Prop where
   nodup : P.Nodup
   mem : ∀ p, p ∈ P ↔ LandedIn parameter data s p
+  all : ∀ p, LandedIn parameter data s p → ∀ call, s.cache (pblk parameter data p call) ≠ none
+  first : ∀ p, s.cache (pblk parameter data p firstCall) = none →
+    ∀ call, s.cache (pblk parameter data p call) = none
 
 /-- The local index of a leaf index. -/
 def localIdx (i : Index) : Fin (2 ^ subtreeHeight) := ⟨i.val % 2 ^ subtreeHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩
@@ -68,14 +107,12 @@ theorem localDigestView_fst (digest : MessageDigest) :
     (Lifetime.localDigestView digest).1 = localIdx (digestIndex digest) := rfl
 
 theorem localDigestView_snd (digest : MessageDigest) :
-    (Lifetime.localDigestView digest).2 = coordField digest := rfl
+    (Lifetime.localDigestView digest).2 = digestLeaves digest := rfl
 
-/-- The disclosed views account for every revealed forest chain value: some disclosed view at its
-index opens its chain at or below its position. -/
+/-- The disclosed views account for every revealed FORS coordinate: some disclosed view at its
+index selects its leaf in its tree. -/
 def DInv (R : List Coordinate) (d : Multiset View) : Prop :=
-  ∀ i c s j a ch (pos : FPos), Coordinate.fchain i c s j a ch pos ∈ R →
-    ∃ v ∈ d, v.1 = localIdx i ∧ (decodeMark (v.2 c)).super = s ∧ (decodeMark (v.2 c)).child j = a ∧
-      chainTop - chainNeed (v.2 c) j ch ≤ pos.val
+  ∀ i κ l q, Coordinate.fors i κ l q ∈ R → ∃ v ∈ d, v.1 = localIdx i ∧ v.2 κ = l
 
 /-- The pair was never signed in the log. -/
 def Unsigned (L : QueryLog SigningSpec) (p : Pair) : Prop :=
@@ -101,17 +138,19 @@ section Mean
 
 theorem landing_le_one : landing ≤ 1 := ForestPrice.landing_le_one
 
-/-- **Mean over a fresh pair.** -/
+/-- **Mean over a fresh pair.** Only the block of `firstCall` decides landing. -/
 theorem pair_mean (parameter : PublicParameter) (F : View → ℝ≥0∞) (C : ℝ≥0∞) :
-    ∑' u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] *
-        (if Landed parameter (blockIndex u0) then F (viewOf u0) else C) =
+    ∑' u, Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *
+        (if Landed parameter (blockIndex (u firstCall)) then F (viewOf u) else C) =
       landing * freshAvg Finset.univ F + (1 - landing) * C := by
-  have hsplit : ∀ u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] *
-      (if Landed parameter (blockIndex u0) then F (viewOf u0) else C) =
-      Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] *
-        (if Landed parameter (blockIndex u0) then F (viewOf u0) else 0) +
-      C * (Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] * (if Landed parameter (blockIndex u0) then 0 else 1)) := by
-    intro u0
+  have hsplit : ∀ u : DigestCall → HashOutput,
+      Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *
+      (if Landed parameter (blockIndex (u firstCall)) then F (viewOf u) else C) =
+      Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *
+        (if Landed parameter (blockIndex (u firstCall)) then F (viewOf u) else 0) +
+      C * (Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] *
+        (if Landed parameter (blockIndex (u firstCall)) then 0 else 1)) := by
+    intro u
     split_ifs <;> ring
   simp only [hsplit, ENNReal.tsum_add, ENNReal.tsum_mul_left]
   rw [fresh_view_mean parameter F, unlanded_mass parameter, mul_comm C]
@@ -126,27 +165,29 @@ theorem tsum_list_sum {β γ : Type} (w : β → ℝ≥0∞) (l : List γ) (f : 
 
 end Mean
 
-/-! ### Expectation over the block of a fresh pair -/
+/-! ### Expectation over the blocks of a fresh pair -/
 
 section PairE
 
-/-- Expectation over a fresh block. -/
-noncomputable def pairE (F : HashOutput → ℝ≥0∞) : ℝ≥0∞ :=
-  ∑' u0, Pr[= u0 | ($ᵗ HashOutput : ProbComp HashOutput)] * F u0
+/-- Expectation over the fresh blocks of a pair, one per digest call. -/
+noncomputable def pairE (F : (DigestCall → HashOutput) → ℝ≥0∞) : ℝ≥0∞ :=
+  ∑' u, Pr[= u | ($ᵗ (DigestCall → HashOutput) : ProbComp (DigestCall → HashOutput))] * F u
 
-theorem pairE_add (F G : HashOutput → ℝ≥0∞) : pairE (fun a => F a + G a) = pairE F + pairE G := by
+theorem pairE_add (F G : (DigestCall → HashOutput) → ℝ≥0∞) :
+    pairE (fun a => F a + G a) = pairE F + pairE G := by
   simp only [pairE, mul_add, ENNReal.tsum_add]
 
-theorem pairE_mono {F G : HashOutput → ℝ≥0∞} (h : ∀ a, F a ≤ G a) : pairE F ≤ pairE G :=
+theorem pairE_mono {F G : (DigestCall → HashOutput) → ℝ≥0∞} (h : ∀ a, F a ≤ G a) : pairE F ≤ pairE G :=
   ENNReal.tsum_le_tsum fun a => mul_le_mul_right (h a) _
 
 theorem pairE_const (c : ℝ≥0∞) : pairE (fun _ => c) = c := by
   simp only [pairE, ENNReal.tsum_mul_right, tsum_probOutput_eq_one' probFailure_eq_zero, one_mul]
 
-theorem pairE_const_mul (c : ℝ≥0∞) (F : HashOutput → ℝ≥0∞) : pairE (fun a => c * F a) = c * pairE F := by
+theorem pairE_const_mul (c : ℝ≥0∞) (F : (DigestCall → HashOutput) → ℝ≥0∞) :
+    pairE (fun a => c * F a) = c * pairE F := by
   simp only [pairE, mul_left_comm _ c, ENNReal.tsum_mul_left]
 
-theorem pairE_list_sum {γ : Type} (l : List γ) (F : HashOutput → γ → ℝ≥0∞) :
+theorem pairE_list_sum {γ : Type} (l : List γ) (F : (DigestCall → HashOutput) → γ → ℝ≥0∞) :
     pairE (fun a => (l.map (F a)).sum) = (l.map fun c => pairE fun a => F a c).sum := by
   induction l with
   | nil => simpa using pairE_const 0
@@ -155,7 +196,7 @@ theorem pairE_list_sum {γ : Type} (l : List γ) (F : HashOutput → γ → ℝ�
       rw [pairE_add, ih]
 
 theorem pairE_landed (parameter : PublicParameter) (F : View → ℝ≥0∞) (C : ℝ≥0∞) :
-    pairE (fun u0 => if Landed parameter (blockIndex u0) then F (viewOf u0) else C) =
+    pairE (fun u => if Landed parameter (blockIndex (u firstCall)) then F (viewOf u) else C) =
       landing * freshAvg Finset.univ F + (1 - landing) * C :=
   pair_mean parameter F C
 
@@ -167,54 +208,74 @@ section NewPair
 
 variable (parameter : PublicParameter) (data : PublicData)
 
-/-- The block of a new pair stored. -/
-noncomputable def withPair (s : State) (p : Pair) (u0 : HashOutput) : State :=
-  s.store (pblk parameter data p) u0
+/-- Every block of a new pair stored at once. -/
+noncomputable def withPair (s : State) (p : Pair) (u : DigestCall → HashOutput) : State :=
+  storeAll (pblk parameter data p) u s
 
 /-- The items after a new pair. -/
-noncomputable def addPair (P : List Pair) (p : Pair) (u0 : HashOutput) : List Pair :=
-  if Landed parameter (blockIndex u0) then p :: P else P
+noncomputable def addPair (P : List Pair) (p : Pair) (u : DigestCall → HashOutput) : List Pair :=
+  if Landed parameter (blockIndex (u firstCall)) then p :: P else P
 
 variable {parameter data}
 
-theorem withPair_other (s : State) (p : Pair) (u0 : HashOutput) (x : HashInput) (h0 : x ≠ pblk parameter data p) :
-    (withPair parameter data s p u0).cache x = s.cache x := by
-  unfold withPair
-  rw [store_cache_ne _ _ _ h0]
+theorem withPair_other (s : State) (p : Pair) (u : DigestCall → HashOutput) (x : HashInput)
+    (h0 : ∀ call, x ≠ pblk parameter data p call) :
+    (withPair parameter data s p u).cache x = s.cache x :=
+  storeAll_cache_other _ u s x fun call heq => h0 call heq.symm
 
-theorem withPair_self (s : State) (p : Pair) (u0 : HashOutput) :
-    (withPair parameter data s p u0).cache (pblk parameter data p) = some u0 := by
-  unfold withPair
-  simp [DebtState.store]
+theorem withPair_self (s : State) (p : Pair) (u : DigestCall → HashOutput) (call : DigestCall) :
+    (withPair parameter data s p u).cache (pblk parameter data p call) = some (u call) :=
+  storeAll_cache_self _ (pblk_call_injective parameter data p) u s call
 
-theorem withPair_other_pair (s : State) (p q : Pair) (hq : q ≠ p) (u0 : HashOutput) :
-    (withPair parameter data s p u0).cache (pblk parameter data q) = s.cache (pblk parameter data q) :=
-  withPair_other s p u0 _ (pblk_ne_of_ne parameter data hq)
+theorem withPair_known (s : State) (p : Pair) (u : DigestCall → HashOutput) :
+    (withPair parameter data s p u).known = s.known ∧
+      (withPair parameter data s p u).guesses = s.guesses :=
+  storeAll_known _ u s
 
-theorem pview_withPair_self (s : State) (p : Pair) (u0 : HashOutput) :
-    pview parameter data (withPair parameter data s p u0) p = viewOf u0 := by
-  simp only [pview, withPair_self, Option.elim]
+theorem withPair_other_pair (s : State) (p q : Pair) (hq : q ≠ p) (u : DigestCall → HashOutput)
+    (call : DigestCall) :
+    (withPair parameter data s p u).cache (pblk parameter data q call) =
+      s.cache (pblk parameter data q call) :=
+  withPair_other s p u _ fun call' => pblk_ne_of_ne parameter data hq call call'
 
-theorem pview_withPair_other (s : State) (p q : Pair) (hq : q ≠ p) (u0 : HashOutput) :
-    pview parameter data (withPair parameter data s p u0) q = pview parameter data s q := by
-  simp only [pview, withPair_other_pair s p q hq]
+theorem pview_withPair_self (s : State) (p : Pair) (u : DigestCall → HashOutput) :
+    pview parameter data (withPair parameter data s p u) p = viewOf u := by
+  simp only [pview, pcache_of_cached parameter data (withPair_self s p u), Option.elim]
+
+theorem pview_withPair_other (s : State) (p q : Pair) (hq : q ≠ p) (u : DigestCall → HashOutput) :
+    pview parameter data (withPair parameter data s p u) q = pview parameter data s q := by
+  simp only [pview, pcache_congr parameter data (withPair_other_pair s p q hq u)]
 
 theorem not_mem_of_fresh {s : State} {P : List Pair} (hP : PInv parameter data s P) {p : Pair}
-    (hp0 : s.cache (pblk parameter data p) = none) : p ∉ P := by
+    (hp0 : s.cache (pblk parameter data p firstCall) = none) : p ∉ P := by
   intro hp
   obtain ⟨u, hu, _⟩ := (hP.mem p).1 hp
   rw [hp0] at hu
   cases hu
 
+/-- Storing a new pair only grows the state: by `PInv.first` none of its blocks was cached. -/
+theorem extends_withPair {s : State} {P : List Pair} (hP : PInv parameter data s P) {p : Pair}
+    (hp0 : s.cache (pblk parameter data p firstCall) = none) (u : DigestCall → HashOutput) :
+    Extends s (withPair parameter data s p u) := by
+  obtain ⟨hk, hg⟩ := withPair_known (parameter := parameter) (data := data) s p u
+  refine ⟨fun x v hx => ?_, fun c v hc => by rw [hk]; exact hc, fun g hg' => by rw [hg]; exact hg'⟩
+  by_cases hcall : ∃ call, x = pblk parameter data p call
+  · obtain ⟨call, rfl⟩ := hcall
+    rw [hP.first p hp0 call] at hx
+    cases hx
+  · push Not at hcall
+    rw [withPair_other s p u x hcall]
+    exact hx
+
 theorem pinv_withPair {s : State} {P : List Pair} (hP : PInv parameter data s P) {p : Pair}
-    (hp0 : s.cache (pblk parameter data p) = none) (u0 : HashOutput) :
-    PInv parameter data (withPair parameter data s p u0) (addPair parameter P p u0) := by
+    (hp0 : s.cache (pblk parameter data p firstCall) = none) (u : DigestCall → HashOutput) :
+    PInv parameter data (withPair parameter data s p u) (addPair parameter P p u) := by
   have hpP := not_mem_of_fresh hP hp0
-  have hland : ∀ q, q ≠ p → (LandedIn parameter data (withPair parameter data s p u0) q ↔
+  have hland : ∀ q, q ≠ p → (LandedIn parameter data (withPair parameter data s p u) q ↔
       LandedIn parameter data s q) := by
     intro q hq
     simp only [LandedIn, withPair_other_pair s p q hq]
-  refine ⟨?_, fun q => ?_⟩
+  refine ⟨?_, fun q => ?_, fun q hq call => ?_, fun q hq call => ?_⟩
   · unfold addPair
     split_ifs
     · exact List.nodup_cons.2 ⟨hpP, hP.nodup⟩
@@ -225,10 +286,10 @@ theorem pinv_withPair {s : State} {P : List Pair} (hP : PInv parameter data s P)
       constructor
       · intro hmem
         split_ifs at hmem with hl
-        · exact ⟨u0, withPair_self s q u0, hl⟩
+        · exact ⟨u firstCall, withPair_self s q u firstCall, hl⟩
         · exact absurd hmem hpP
-      · rintro ⟨u, hu, hl⟩
-        rw [withPair_self] at hu
+      · rintro ⟨u0, hu, hl⟩
+        rw [withPair_self s q u firstCall] at hu
         cases hu
         rw [if_pos hl]
         exact List.mem_cons_self ..
@@ -237,6 +298,18 @@ theorem pinv_withPair {s : State} {P : List Pair} (hP : PInv parameter data s P)
       split_ifs
       · simp [hqp]
       · rfl
+  · by_cases hqp : q = p
+    · subst hqp
+      rw [withPair_self s q u call]
+      exact Option.some_ne_none _
+    · rw [withPair_other_pair s p q hqp]
+      exact hP.all q ((hland q hqp).1 hq) call
+  · by_cases hqp : q = p
+    · subst hqp
+      rw [withPair_self s q u firstCall] at hq
+      cases hq
+    · rw [withPair_other_pair s p q hqp] at hq ⊢
+      exact hP.first q hq call
 
 end NewPair
 
@@ -255,14 +328,6 @@ theorem witnessFn_ne_top (v : View) (D : Multiset View) : witnessFn v D ≠ ⊤ 
 
 end NewPairCore
 
-/-! ### Order and congruence -/
-
-section Order
-
-variable {parameter : PublicParameter} {data : PublicData}
-
-end Order
-
 /-! ### Counting cached randomizers -/
 
 section Count
@@ -275,7 +340,7 @@ theorem blk_injective' (m : Message) : Function.Injective fun ρ : Randomness =>
   exact blk_ne_of_ne parameter data m hne h
 
 variable (parameter data) in
-/-- Digest inputs of a message. -/
+/-- Digest inputs of the first call of a message. -/
 noncomputable def zeroInputs (m : Message) : Finset HashInput :=
   Finset.univ.image fun ρ => blk parameter data m ρ
 
@@ -284,11 +349,29 @@ theorem cachedCount_eq (m : Message) (s : State) :
   unfold cachedCount zeroInputs
   rw [Finset.filter_image, Finset.card_image_of_injective _ (blk_injective' m)]
 
-theorem count_withPair (m : Message) (s : State) (p : Pair) (u0 : HashOutput) :
-    cachedCount parameter data m (withPair parameter data s p u0) ≤ cachedCount parameter data m s + 1 := by
+/-- A state that differs at one input only has at most one more cached entry of a set. -/
+theorem card_filter_le_of_off (T : Finset HashInput) (s s' : State) (x : HashInput)
+    (h : ∀ y ∈ T, y ≠ x → s'.cache y = s.cache y) :
+    (T.filter fun y => s'.cache y ≠ none).card ≤ (T.filter fun y => s.cache y ≠ none).card + 1 := by
+  have hsub : (T.filter fun y => s'.cache y ≠ none) ⊆
+      insert x (T.filter fun y => s.cache y ≠ none) := by
+    intro y hy
+    rw [Finset.mem_filter] at hy
+    by_cases hyx : y = x
+    · rw [hyx]; exact Finset.mem_insert_self _ _
+    · exact Finset.mem_insert_of_mem (Finset.mem_filter.2 ⟨hy.1, by rw [← h y hy.1 hyx]; exact hy.2⟩)
+  exact le_trans (Finset.card_le_card hsub) (Finset.card_insert_le _ _)
+
+theorem count_withPair (m : Message) (s : State) (p : Pair) (u : DigestCall → HashOutput) :
+    cachedCount parameter data m (withPair parameter data s p u) ≤ cachedCount parameter data m s + 1 := by
   rw [cachedCount_eq, cachedCount_eq]
-  unfold withPair
-  exact card_filter_store_le _ _ _ _
+  refine card_filter_le_of_off _ s _ (pblk parameter data p firstCall) fun y hy hyx => ?_
+  obtain ⟨ρ, -, rfl⟩ := Finset.mem_image.1 hy
+  refine withPair_other s p u _ fun call heq => hyx ?_
+  obtain ⟨-, hcall⟩ := pblk_injective parameter data
+    (show pblk parameter data (m, ρ) firstCall = pblk parameter data p call from heq)
+  rw [hcall]
+  exact heq
 
 end Count
 
@@ -300,7 +383,7 @@ variable (parameter : PublicParameter) (data : PublicData) (Qtot : ℕ) {A : Typ
   (tg : Targeting HashInput HashOutput Coordinate) (initial : HiddenOutside.Cache HashInput HashOutput)
   (model : HiddenRows.Model HashInput HashOutput A Coordinate)
 
-/-- The final value: a forest cover with no decided hit. -/
+/-- The final value: a FORS cover with no decided hit. -/
 noncomputable def finalValue (R : List Coordinate) (out : Run HashInput Coordinate HiddenBridge.Outcome × State) :
     ℝ≥0∞ :=
   out.1.1.elim 0 fun outcome =>
@@ -380,27 +463,41 @@ theorem flagged_ordinary (x : HashInput) (next : HashOutput → OracleComp CostS
     ENNReal.tsum_add, ENNReal.tsum_mul_right, interp_mass]
   rw [one_mul, tsum_probOutput_eq_one' probFailure_eq_zero, one_mul]
 
-/-- Without a new pair, an ordinary query keeps the items and their views. -/
+/-- Without a new pair, an ordinary query keeps the items and their views. A query of a later call
+of a pair whose first block is cached changes no item: landing reads the first block alone. -/
 theorem same_items {x : HashInput} {s s' : State} (hext : Extends s s') (hother : ∀ y, y ≠ x → s'.cache y = s.cache y)
-    (hnot : ¬∃ p, x = pblk parameter data p ∧ s.cache (pblk parameter data p) = none)
+    (hnot : ¬∃ (p : Pair) (call : DigestCall), x = pblk parameter data p call ∧
+      s.cache (pblk parameter data p firstCall) = none)
     {P : List Pair} (hP : PInv parameter data s P) :
     PInv parameter data s' P ∧ ∀ q ∈ P, pview parameter data s' q = pview parameter data s q := by
   have hkeep : ∀ y, s.cache y ≠ none → s'.cache y = s.cache y := by
     intro y hy
     obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.1 hy
     rw [hv]; exact hext.1 y v hv
-  have hzero : ∀ q, s'.cache (pblk parameter data q) = s.cache (pblk parameter data q) := by
+  have hfirst : ∀ q : Pair, s'.cache (pblk parameter data q firstCall) =
+      s.cache (pblk parameter data q firstCall) := by
     intro q
-    by_cases hx : x = pblk parameter data q
-    · by_cases hn : s.cache (pblk parameter data q) = none
-      · exact absurd ⟨q, hx, hn⟩ hnot
+    by_cases hx : x = pblk parameter data q firstCall
+    · by_cases hn : s.cache (pblk parameter data q firstCall) = none
+      · exact absurd ⟨q, firstCall, hx, hn⟩ hnot
       · exact hkeep _ hn
     · exact hother _ (Ne.symm hx)
   have hland : ∀ q, LandedIn parameter data s' q ↔ LandedIn parameter data s q := by
-    intro q; simp only [LandedIn, hzero q]
-  refine ⟨⟨hP.nodup, fun q => (hP.mem q).trans (hland q).symm⟩, fun q _ => ?_⟩
-  unfold pview
-  rw [hzero q]
+    intro q; simp only [LandedIn, hfirst q]
+  have hcached : ∀ q : Pair, LandedIn parameter data s q → ∀ call,
+      s'.cache (pblk parameter data q call) = s.cache (pblk parameter data q call) :=
+    fun q hq call => hkeep _ (hP.all q hq call)
+  refine ⟨⟨hP.nodup, fun q => (hP.mem q).trans (hland q).symm, fun q hq call => ?_, fun q hq call => ?_⟩,
+    fun q hq => ?_⟩
+  · rw [hcached q ((hland q).1 hq) call]
+    exact hP.all q ((hland q).1 hq) call
+  · rw [hfirst q] at hq
+    by_cases hxc : x = pblk parameter data q call
+    · exact absurd ⟨q, call, hxc, hq⟩ hnot
+    · rw [hother _ (Ne.symm hxc)]
+      exact hP.first q hq call
+  · unfold pview
+    rw [pcache_congr parameter data (hcached q ((hP.mem q).1 hq))]
 
 end Ordinary
 
@@ -411,24 +508,13 @@ theorem witness_pos_of_covered {R : List Coordinate} {d : Multiset View} (hD : D
     (hcov : Covered (HiddenBridge.revealedSet R) (fullDigestView digest)) :
     1 ≤ witness (Lifetime.localDigestView digest) d := by
   have hall : CoverAll (Lifetime.localDigestView digest) d := by
-    intro c j i
-    rcases hcov c j i with hz | ⟨p, hp, hle⟩
-    · exact Or.inl hz
-    · simp only [fullDigestView, HiddenBridge.revealedSet, Finset.mem_filter, Finset.mem_univ, true_and] at hp
-      obtain ⟨v, hv, h1, h2, h3, h4⟩ := hD _ _ _ _ _ _ _ hp
-      refine Or.inr ⟨v, hv, by rw [localDigestView_fst]; exact h1, ?_⟩
-      refine ⟨by rw [h2]; rfl, by rw [h3]; rfl, ?_⟩
-      have hneed : chainNeed (coordField digest c) j i ≤ chainTop := by
-        have := (lut ((decodeMark (coordField digest c)).word j) i).isLt
-        simp only [chainNeed, chainTop] at this ⊢
-        omega
-      have hneedv : chainNeed (v.2 c) j i ≤ chainTop := by
-        have := (lut ((decodeMark (v.2 c)).word j) i).isLt
-        simp only [chainNeed, chainTop] at this ⊢
-        omega
-      simp only [fullDigestView] at hle
-      change chainNeed (coordField digest c) j i ≤ chainNeed (v.2 c) j i
-      omega
+    intro κ
+    have hκ := hcov κ
+    unfold TreeCov at hκ
+    simp only [fullDigestView, HiddenBridge.revealedSet, Finset.mem_filter, Finset.mem_univ,
+      true_and] at hκ
+    obtain ⟨v, hv, h1, h2⟩ := hD _ _ _ _ hκ
+    exact ⟨v, hv, by rw [localDigestView_fst]; exact h1, by rw [localDigestView_snd]; exact h2⟩
   unfold witness
   rw [if_pos hall]
 
@@ -438,7 +524,7 @@ section SignDefs
 
 variable (parameter : PublicParameter) (data : PublicData) (m : Message) (s : State)
 
-/-- Randomizers of the message whose block is new and lands. -/
+/-- Randomizers of the message whose first block is new and lands. -/
 noncomputable def newRand (s' : State) : Finset Randomness :=
   Finset.univ.filter fun ρ => s.cache (blk parameter data m ρ) = none ∧ LandedIn parameter data s' (m, ρ)
 
@@ -461,7 +547,7 @@ theorem newPairs_nodup (s' : State) : (newPairs parameter data m s s').Nodup :=
   (Finset.nodup_toList _).map fun _ _ h => (Prod.ext_iff.1 h).2
 
 theorem mem_newPairs {s' : State} {q : Pair} :
-    q ∈ newPairs parameter data m s s' ↔ q.1 = m ∧ s.cache (pblk parameter data q) = none ∧
+    q ∈ newPairs parameter data m s s' ↔ q.1 = m ∧ s.cache (pblk parameter data q firstCall) = none ∧
       LandedIn parameter data s' q := by
   unfold newPairs newRand
   simp only [List.mem_map, Finset.mem_toList, Finset.mem_filter, Finset.mem_univ, true_and]
@@ -472,6 +558,28 @@ theorem mem_newPairs {s' : State} {q : Pair} :
     exact ⟨q.2, ⟨by rw [← hm]; exact h0, by rw [← hm]; exact hl⟩, by rw [← hm]⟩
 
 end SignDefs
+
+/-! ### Cached pairs -/
+
+section SignParams
+
+variable {parameter : PublicParameter} {data : PublicData} {m : Message}
+
+theorem pview_of_pcache {s' : State} {q : Pair} {u : DigestCall → HashOutput}
+    (h0 : pcache parameter data q.1 s' q.2 = some u) : pview parameter data s' q = viewOf u := by
+  simp only [pview, h0, Option.elim]
+
+theorem pview_of_cached {s' : State} {q : Pair} {u : DigestCall → HashOutput}
+    (h0 : ∀ call, s'.cache (pblk parameter data q call) = some (u call)) :
+    pview parameter data s' q = viewOf u :=
+  pview_of_pcache (pcache_of_cached parameter data h0)
+
+theorem landed_of_cached {s : State} {P : List Pair} (hP : PInv parameter data s P) {q : Pair}
+    (hq : q ∈ P) : ∃ u0, s.cache (pblk parameter data q firstCall) = some u0 ∧
+      Landed parameter (blockIndex u0) :=
+  (hP.mem q).1 hq
+
+end SignParams
 
 /-! ### The three shapes of a completed signing call -/
 
@@ -521,28 +629,30 @@ theorem newRand_eq_empty_of_pool {s' : State} {ρ : Randomness} (h : ∀ ρ', ρ
       rw [hu'] at hu; cases hu; exact hnl hl'
 
 /-- **Shapes.** A completed signing call adds nothing, one fresh landed pair, or signs a cached
-landed pair. -/
+landed pair. The selected pair has every digest call cached. -/
 theorem sign_shape {reveals : List Coordinate} {r : Option Signature} {s' : State}
     (post : SignPost parameter data m Fail s s' reveals r)
     (out : Run HashInput Coordinate (Option Signature) × State) (hout2 : out.2 = s') (hres : out.1.1 = some r) :
     (newRand parameter data m s s' = ∅ ∧ poolDisc parameter data m s out = 0) ∨
-    (∃ ρ u0, newRand parameter data m s s' = {ρ} ∧ poolDisc parameter data m s out = 0 ∧
-      s'.cache (blk parameter data m ρ) = some u0 ∧ Landed parameter (blockIndex u0) ∧
+    (∃ ρ u, newRand parameter data m s s' = {ρ} ∧ poolDisc parameter data m s out = 0 ∧
+      pcache parameter data m s' ρ = some u ∧
+      Landed parameter (blockIndex (u firstCall)) ∧
       s.cache (blk parameter data m ρ) = none ∧
       (∀ ρ', ρ' ≠ ρ → RelatedAt parameter data m s s' ρ') ∧
-      (r = none → (viewOf u0).1 ∈ Fail) ∧ (∀ sig, r = some sig → sig.randomness = ρ)) ∨
-    (∃ ρ u0 sig, newRand parameter data m s s' = ∅ ∧ poolDisc parameter data m s out = {viewOf u0} ∧
-      r = some sig ∧ sig.randomness = ρ ∧ s.cache (blk parameter data m ρ) = some u0 ∧
-      s'.cache (blk parameter data m ρ) = some u0) := by
+      (r = none → (viewOf u).1 ∈ Fail) ∧ (∀ sig, r = some sig → sig.randomness = ρ)) ∨
+    (∃ ρ u sig, newRand parameter data m s s' = ∅ ∧ poolDisc parameter data m s out = {viewOf u} ∧
+      r = some sig ∧ sig.randomness = ρ ∧ s.cache (blk parameter data m ρ) = some (u firstCall) ∧
+      pcache parameter data m s' ρ = some u) := by
   subst hout2
-  rcases post with ⟨hrn, _, hrel⟩ | ⟨ρ, u0, ⟨hs0, hl, hs0r, hothers⟩, _, hsig, hfl⟩
+  rcases post with ⟨hrn, _, hrel⟩ | ⟨ρ, u, ⟨hs0, hl, hs0r, hothers⟩, _, hsig, hfl⟩
   · left
     refine ⟨newRand_eq_empty parameter data m hrel, ?_⟩
     unfold poolDisc; rw [hres, hrn]; rfl
   · rcases hs0r with hn | he
     · right; left
-      refine ⟨ρ, u0, newRand_eq_single parameter data m hothers hn ⟨u0, hs0, hl⟩, ?_, hs0, hl, hn,
-        hothers, fun hrn => (hfl hrn).2 hn, hsig⟩
+      refine ⟨ρ, u, newRand_eq_single parameter data m hothers hn
+          ⟨u firstCall, cached_of_pcache (p := (m, ρ)) parameter data hs0 firstCall, hl⟩, ?_,
+        hs0, hl, hn, hothers, fun hrn => (hfl hrn).2 hn, hsig⟩
       unfold poolDisc
       rw [hres]
       rcases r with _ | sig
@@ -554,35 +664,16 @@ theorem sign_shape {reveals : List Coordinate} {r : Option Signature} {s' : Stat
         refine ⟨newRand_eq_empty_of_pool parameter data m hothers (by rw [he]; exact Option.some_ne_none _), ?_⟩
         unfold poolDisc; rw [hres]; rfl
       · right; right
-        refine ⟨ρ, u0, sig, newRand_eq_empty_of_pool parameter data m hothers (by rw [he]; exact Option.some_ne_none _),
-          ?_, rfl, hsig sig rfl, he, hs0⟩
+        refine ⟨ρ, u, sig, newRand_eq_empty_of_pool parameter data m hothers
+          (by rw [he]; exact Option.some_ne_none _), ?_, rfl, hsig sig rfl, he, hs0⟩
         unfold poolDisc
         rw [hres]
         simp only [Option.elim]
         rw [hsig sig rfl, if_neg (by rw [he]; exact Option.some_ne_none _)]
         congr 1
-        simp only [pview]
-        change (out.2.cache (blk parameter data m ρ)).elim _ viewOf = _
-        rw [hs0]
-        rfl
+        exact pview_of_pcache (q := (m, ρ)) hs0
 
 end SignShape
-
-/-! ### Cached pairs -/
-
-section SignParams
-
-variable {parameter : PublicParameter} {data : PublicData} {m : Message}
-
-theorem pview_of_cached {s' : State} {q : Pair} {u0 : HashOutput} (h0 : s'.cache (pblk parameter data q) = some u0) :
-    pview parameter data s' q = viewOf u0 := by
-  simp only [pview, h0, Option.elim]
-
-theorem landed_of_cached {s : State} {P : List Pair} (hP : PInv parameter data s P) {q : Pair}
-    (hq : q ∈ P) : ∃ u0, s.cache (pblk parameter data q) = some u0 ∧ Landed parameter (blockIndex u0) :=
-  (hP.mem q).1 hq
-
-end SignParams
 
 /-! ### Signing helpers -/
 
