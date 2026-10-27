@@ -53,7 +53,7 @@ A SPHINCS-style scheme with four toggles, 48 configurations in all. Its componen
 \begin{description}[leftmargin=1.2em]
   \item[T1, lifetime.] The height $h\in\{22,24,26,28\}$ of the index, for lifetimes of about $2^{26}$, $2^{28}$,
         $2^{30}$ and $2^{32}$ signatures: the full key lasts $N\approx20\cdot2^h$ signatures, proved (forest: 91 to 98\% of
-        the $21.45\cdot2^h$ of the best known attack; \cref{sec:lifetimes}).
+        the cover attack's $21.45\cdot2^h$; \cref{sec:lifetimes}).
   \item[T2, shape.] \emph{Pruned}~\cite{conduition}: one tree of height $h$; key generation builds only a kept subtree
         of $2^b$ leaves and replaces the $h-b$ siblings above it by pseudorandom surrogate nodes. The signer grinds
         the randomizer until the index lands in the kept subtree, $2^{h-b}$ attempts on average ($b=h$ is the full
@@ -298,7 +298,7 @@ price: 1 bit per AND gate per operator for 2-of-3~\cite{AFLNO16}, plus sublinear
 check~\cite{BGIN19,GS20}. Replicated sharing over $\mathrm{GF}(2)$ generalizes to $n=2t-1$ with $(n-1)+t-1$ bits per
 AND gate through one collector: 1, 1.2 and 1.29 bits per operator for 2-of-3, 3-of-5 and 4-of-7 (the local work grows
 with $\binom{n-1}{t-1}$, fine for small committees). The MPC hashes only chain steps and FORS leaves (the secrets are outputs
-of $F$; keys, trees and the forest key are hashed in the clear): key generation is $2^k\cdot64\cdot3$ steps, $k$ the
+of $F$; keys, trees and the forest key are hashed in the clear): key generation is $2^b\cdot64\cdot3$ steps, $b$ the
 height of the kept subtree or top layer, and preprocessing $2\,048\cdot6\cdot4=49\,152$ for the forest and
 $k\,2^a=25\,600$ leaf hashes for FORS (plus the lower trees' chains of a layered key, and $\hash(s)$). AND gates
 per compression: $36.3\cdot10^3$ for Keccak-f[1600] (1\,600 per round,
@@ -350,8 +350,9 @@ Grinding about $2^h$ randomizers onto a few prepared instances is too slow on a 
 Labs~\cite{riva}, the device delegates it to the untrusted host, which proves it with a STARK:
 \begin{enumerate}
   \item in its idle time, the device prepares $p$ uniformly random instances (from its secure randomness), as in
-        \cref{sec:threshold}: 16 at $h\le24$, 64 at $h=26$ and $h=28$, doubled where assisted signing would
-        otherwise be slower than signing alone (up to 512, with BLAKE2s or SHA-256; \texttt{scripts/scheme.py})
+        \cref{sec:threshold}: 16 at $h\le24$, 64 at $h=26$ and $h=28$, doubled with BLAKE2s or SHA-256 until
+        assisted signing is faster than signing alone (up to 256 for a pruned key with $b=12$ or a layered key;
+        \texttt{scripts/scheme.py}); where signing alone beats the 3~s of the STARK below, the device signs alone
   \item to sign $m$, it derives $R_0$ and $\Delta$ in one hash of its secret key and $m$, and sends $m$, $R_0$,
         $\Delta$ and the $p$ indices to the host
   \item the host finds the least $i$ such that the index of $R_0 + i\Delta$ is one of the $p$, $\approx2^h/p$
@@ -366,12 +367,13 @@ and checks the host's nodes against that hash.
 Minimality makes $R$ a function of $(m, \text{secret key})$ and the prepared set, as for the deterministic signer;
 this flow is not covered by the Lean proof.
 
-\paragraph{Costs.} At $h=24$ and $26$ the host hashes $\approx2^{20}$ digests and proves them at about $2^{19}$ hashes
-per second, 2~s (8~s at $h=28$). The device verifies the STARK in about $10^4$ compressions, counted as 3~s on a Ledger
-Nano S+ (1.7~s with Keccak-256 at 5.8 thousand per second~\cite{hwbench}): about 5~s in all (11~s at $h=28$), less
-where more instances are prepared. Preparing an instance costs the device $76\cdot10^3$ Keccak-f permutations for a pruned key and $164\cdot10^3$ for a
-layered one at $h=24$ ($343\cdot10^3$ at $h=28$), WOTS$^+$C counter searches and the path included; the first $p$ are
-prepared once (about 63~min for the layered key at $h=28$).
+\paragraph{Costs.} At $h=24$ and $26$ the host hashes $\approx2^{20}$ digests and proves them at 500 thousand Keccak-f
+permutations per second (750 thousand SHA-256, 1 million BLAKE2s compressions), 2.1~s with Keccak-256 (8.4~s at $h=28$). The device verifies the STARK in about $10^4$ compressions (1.7~s with Keccak-256
+at 5.8 thousand per second on a Ledger Nano S+~\cite{hwbench}), counted optimistically as 3~s: about 5~s in all
+(12~s at $h=28$), less where more instances are prepared. Preparing an instance costs the device $76\cdot10^3$
+Keccak-f permutations for a pruned key with $b=12$ and $164\cdot10^3$ for a layered one at $h=24$ ($343\cdot10^3$
+at $h=28$), WOTS$^+$C counter searches and the path included; the first $p$ are prepared once (about 63~min for
+the layered key at $h=28$).
 
 \section{The few-time signature: a two-level WOTS forest}
 \label{sec:twolevel}

@@ -417,7 +417,7 @@ def ledger_prepared(h, name, device_online, alone):
     rate = DEVICES["Ledger Nano S+"][name]
     p = wallet_prepared(h)
     def slower(p):
-        return any(2**h / p / HOST_RATE + STARK_VERIFY_SECONDS + o / rate >= a / rate for o, a in zip(device_online, alone))
+        return any(2**h / p / HOST_RATE[name] + STARK_VERIFY_SECONDS + o / rate >= a / rate for o, a in zip(device_online, alone))
     if all(STARK_VERIFY_SECONDS + o / rate < a / rate for o, a in zip(device_online, alone)):
         while slower(p):
             p *= 2
@@ -480,7 +480,8 @@ def rounds(name, steps):
     return steps * and_depth(name) + 1
 STARK_VERIFY = 10_000  # compressions to verify the STARK of a least grinding index on the device
 STARK_VERIFY_SECONDS = 3  # assumed time of that verification on the device, whatever the hash
-HOST_RATE = 2**19  # hashes per second the host proves in a STARK (the hash of the configuration): 2 s per 2^20
+# hashes per second a STARK prover proves, per hash: the host's proof of the grinding, and signature aggregation
+HOST_RATE = {"Keccak-256": 500_000, "SHA-256": 750_000, "BLAKE2s": 1_000_000}
 DEVICE_RATE = 5.8e3  # Keccak-f permutations per second of a Ledger Nano S+ (hwbench)
 
 # Compressions per second of each device, per hash. The Ledger Nano S+ is measured for each hash (hwbench:
@@ -525,7 +526,7 @@ def threshold(heights):
               f"once, against {math.floor(lifetime * 10) / 10:.1f} TB of preprocessing over the lifetime")
     print(f"hardware wallet: the device prepares max({PREPARED}, 2^h / 2^{HOST_GRIND.bit_length() - 1}) instances (2^h / 2^{HOST_GRIND_TOP.bit_length() - 1} at h = {max(HEIGHTS)}) and the host grinds "
           f"2^h / that many digests ({', '.join(f'h={h}: {wallet_prepared(h)} prepared, {fmt(2 ** h / wallet_prepared(h))} digests, '
-          f'{2 ** h / wallet_prepared(h) / HOST_RATE:.2g} s to prove' for h in heights)});"
+          f'{2 ** h / wallet_prepared(h) / HOST_RATE["Keccak-256"]:.2g} s to prove (Keccak-256)' for h in heights)});"
           f" the device verifies the STARK in about {fmt(STARK_VERIFY)} compressions, counted as {STARK_VERIFY_SECONDS} s")
 
 if __name__ == "__main__":

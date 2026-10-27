@@ -166,6 +166,9 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .tables h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; margin: 0.9rem 0 0.2rem; }
 .tables h2:first-child { margin-top: 0; }
 .tables .lead { margin: 0 0 0.3rem; color: var(--muted); }
+.assist { display: flex; flex-direction: column; gap: 0.15rem; }
+.assist input[type=range] { width: 7rem; max-width: 40vw; vertical-align: middle; accent-color: var(--ink); }
+@media (max-width: 600px) { .assist input[type=range] { width: 5rem; } }
 .tables p, #tip { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }   /* running text: flush left and right */
 .cmp thead .sub { font-weight: 400; color: var(--muted); }
 .m-only { display: none; }
@@ -182,7 +185,7 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
   .thr-pair .lead { margin-top: 0; }
   .thr-pair .thr { margin-top: 0.2rem; }
 }
-.thr .bn { margin: 0.1rem 0 0.3rem; }
+.thr .bn { margin: 0.5rem 0 0; }
 .thr .cmp { width: auto; table-layout: auto; }
 .thr .cmp th, .thr .cmp td { padding-right: 2rem; white-space: nowrap; }
 .thr .cmp tbody th { font-weight: 400; }
@@ -903,13 +906,13 @@ footer a + a { margin-left: 1.25rem; }
       <div class="thr-pair" data-stable>
       <p class="lead" data-stable>As in <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>, the secret values are XOR-encrypted under a context-aware threshold PRF. Unlike PRAWNS, key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick a FTS leaf at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate its <span class="forest-only">WOTS forest</span><span class="fors-only">FORS key</span><span data-shape="layered" hidden> and the trees of the lower layers</span> (an idea from <a href="https://www.riva.xyz/">Riva Labs</a>). Online: they grind the randomizer in the clear onto it (about 2<sup><i>h</i></sup> hashes), and open via the context-aware threshold PRF only the <span class="forest-only">forest chain values</span><span class="fors-only"><i>k</i> FORS secrets</span> the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort). Key generation and preprocessing need all 2<i>t</i>&nbsp;&minus;&nbsp;1 operators online; signing needs only <i>t</i>. An arbitrary number of signatures can be preprocessed in advance.</p>
       <div class="thr">
-        <p class="bn" data-f="th-life">&nbsp;</p>
         <div class="scroll">
         <table class="cmp plain">
           <thead><tr><th><span class="sub">For 2-of-3</span></th><th>Keygen</th><th>Preprocessing<br><span class="sub">(per signature)</span></th></tr></thead>
           <tbody data-f="th-traffic"></tbody>
         </table>
         </div>
+        <p class="bn" data-f="th-life">&nbsp;</p>
       </div>
       </div>
     </div>
@@ -1046,11 +1049,10 @@ footer a + a { margin-left: 1.25rem; }
   function up(x, d) { var q = Math.pow(10, Math.floor(Math.log10(x)) - d + 1); return Number((Math.ceil(x / q - 1e-9) * q).toPrecision(d + 1)); }
   function sig2(v) { return v >= 10 ? String(Math.ceil(v - 1e-9)) : (Math.ceil(v * 10 - 1e-9) / 10).toFixed(1).replace(/\.0$/, ''); }
   function time(s) {
-    if (s >= 3600) return sig2(s / 3600) + '&nbsp;h';
-    if (s >= 60) return sig2(s / 60) + '&nbsp;min';
-    if (s >= 1) return sig2(s) + '&nbsp;s';
-    if (s >= 1e-3) return sig2(s * 1e3) + '&nbsp;ms';
-    return sig2(s * 1e6) + '&nbsp;&micro;s';
+    var u = [[3600, 'h', Infinity], [60, 'min', 60], [1, 's', 60], [1e-3, 'ms', 1000], [1e-6, '&micro;s', 1000]], i = 0;
+    while (i < u.length - 1 && s < u[i][0]) i++;
+    if (i > 0 && +sig2(s / u[i][0]) >= u[i][2]) i--;   // rounded up to the next unit: 1000 µs is 1 ms, 60 s is 1 min
+    return sig2(s / u[i][0]) + '&nbsp;' + u[i][1];
   }
   function bytes(gb) {   // two significant digits, rounded up: 3.6 GB, 230 MB
     var r = function (v) { return up(v, 2); };
@@ -1061,6 +1063,8 @@ footer a + a { margin-left: 1.25rem; }
   function pow2t(e) { return '2' + String(e).replace(/\d/g, function (d) { return '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]; }); }   // in a tip
   function keccak() { return S.hash === 'Keccak-256'; }
   function unit() { return keccak() ? 'permutations' : 'compressions'; }
+  // the STARK prover's rate, as written: 500K Keccak‑f permutations, 750K SHA-256 or 1M BLAKE2s compressions
+  function prover() { return fmt(D.wallet.host_rate[S.hash]) + ' ' + (keccak() ? 'Keccak‑f permutations' : S.hash + ' compressions'); }
   function units() { return keccak() ? 'Keccak-f permutations' : S.hash + ' compressions'; }
   function cfg(shape, b, hash, h) {
     hash = hash || S.hash; h = h || S.h;
@@ -1079,6 +1083,38 @@ footer a + a { margin-left: 1.25rem; }
   }
   function set(f, html) { [].forEach.call(document.querySelectorAll('[data-f="' + f + '"]'), function (e) { e.innerHTML = html; }); }
   function split(c) { return c.layers.join(' + '); }
+
+  // Assisted signing: the viewer chooses the offline time with a slider (log scale, from one prepared instance to 2 h);
+  // the instances that fit in it set the host's grinding, so the online time. Kept across the other toggles.
+  var offChosen = null, OFF_MAX = 2 * 3600;
+  function assistCell(cell, tt, d, W, assist, alone) {
+    var per = tt.ledger_prep / d.rate, lo = per, hi = Math.max(OFF_MAX, 2 * per);
+    var slider = cell.querySelector('input');
+    if (!slider) {
+      cell.innerHTML = '<div class="assist"><label class="nw">Offline: <input type="range" min="0" max="1000" step="10" ' +
+        'aria-label="Offline preparation time"> <span class="ex off"></span></label><span class="nw">Online: ' +
+        '<span class="ex on" aria-live="polite"></span><span class="m-only">' + info('', ' w') + '</span></span></div>';
+      slider = cell.querySelector('input');
+      slider.addEventListener('input', function () { offChosen = cell.timeOf(+slider.value); cell.show(); });
+    }
+    cell.timeOf = function (v) { return lo * Math.pow(hi / lo, v / 1000); };
+    cell.show = function () {
+      var T = Math.min(hi, Math.max(lo, offChosen == null ? per * tt.ledger_prepared : offChosen));
+      var np = Math.max(1, Math.floor(T / per + 1e-9)), g = Math.max(1, Math.round(Math.pow(2, S.h) / np));
+      // the device signs alone when that is faster: the online time is the better of the two
+      var assisted = g / W.host_rate[S.hash] + W.stark_verify_s + tt.device_online / d.rate, online = Math.min(assisted, alone);
+      slider.value = String(Math.round(1000 * Math.log(T / lo) / Math.log(hi / lo)));
+      var off = time(np * per);
+      slider.setAttribute('aria-valuetext', off.replace(/&nbsp;/g, ' ') + ', ' + np + ' FTS prepared');
+      cell.querySelector('.off').innerHTML = off + ' <span class="note">(' + comma(np) + ' FTS)</span>';
+      cell.querySelector('.on').innerHTML = '&asymp;&thinsp;' + time(online) + (alone <= assisted ? ' <span class="note">(signs alone)</span>' : '');
+      var tip = (assist(tt) + (alone <= assisted ? ' Here signing alone is faster (≈ ' + time(alone) + '), so the Ledger signs alone.' : ''))
+        .replace(/&nbsp;/g, '\u00a0');
+      cell.querySelector('.m-only .info').setAttribute('data-tip', tip);   // in place, so that an open tip stays
+      document.getElementById('assist-tip').setAttribute('data-tip', tip);
+    };
+    cell.show();
+  }
 
   function render(quiet) {
     var W = D.wallet, main = cfg(S.shape), lay = cfg('layered'), V = main.fors;
@@ -1101,10 +1137,8 @@ footer a + a { margin-left: 1.25rem; }
     // aggregation: signatures verified per second by a prover of 500K Keccak-f permutations, 750K SHA-256 or 1M BLAKE2s
     // compressions per second (rounded down)
     var ver = isForest() ? main.verify : V.verify;
-    var prover = { 'Keccak-256': [500000, '500K Keccak-f permutations'], 'SHA-256': [750000, '750K SHA-256 compressions'],
-                   'BLAKE2s': [1000000, '1M BLAKE2s compressions'] }[S.hash];
-    set('verify', comma(ver) + ' ' + unit() + info(comma(Math.floor(prover[0] / ver)) + ' signatures aggregated per second, at ' + prover[1] +
-      ' proven per second, neglecting glue overhead'));
+    set('verify', comma(ver) + ' ' + unit() + info(comma(Math.floor(W.host_rate[S.hash] / ver)) + ' signatures aggregated per second, at ' +
+      prover() + ' proven per second, neglecting glue overhead'));
     set('dia-h', String(S.h));
 
     [].forEach.call(document.querySelectorAll('[data-shape]'), function (e) { e.hidden = e.dataset.shape !== S.shape; });
@@ -1119,14 +1153,16 @@ footer a + a { margin-left: 1.25rem; }
     ];
     // a layered key needs no large cache: every device keeps the Ledger's 16 KiB
     if (lay_) devs.forEach(function (d) { d.kib = '16'; d.cache = '16&nbsp;KiB'; });
-    // the Ledger with the host: offline, it prepares np FTS (more where it would otherwise be slower than signing alone);
-    // online, the host grinds onto one of them and proves it in a STARK
+    // the Ledger with the host: offline, it prepares X FTS (the slider); online, the host grinds onto one of them and
+    // proves it in a STARK
+    // the tip names the prepared count X, which the slider sets
     var assist = function (tt) {
-      var np = tt.ledger_prepared, g = tt.ledger_grind;
-      return 'Offline: the Ledger prepares ' + np + ' FTS and their ' + (lay_ ? 'hypertree' : 'authentication') + ' paths once (' + fmt(tt.ledger_prep * np) + ' ' + unit() +
-        '), then one per signature in idle time. ' +
-        'Online: the host finds the randomizer that lands on one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes) and proves it in a STARK (≈ ' +
-        time(g / W.host_rate) + '), which the Ledger verifies (optimistically ≈ ' + time(W.stark_verify_s) + ' after a Ledger OS update; [benchmark](https://github.com/TomWambsgans/hardware-wallet-benchmark)), then opens the ' + (isForest() ? 'forest chain values' : 'FORS secrets') + ' itself. Idea from [Riva Labs](https://www.riva.xyz/).';
+      return 'Offline: the Ledger prepares X FTS and their ' + (lay_ ? 'hypertree' : 'authentication') + ' paths once (' + fmt(tt.ledger_prep) +
+        ' ' + unit() + ' each), then one per signature in idle time. ' +
+        'Online: the host finds the first randomizer that lands on one of them (≈\u00a0' + pow2t(S.h) + '/X hashes) and proves it in a STARK (at ' +
+        prover() + ' proven per second), which the Ledger verifies (optimistically ≈ ' + time(W.stark_verify_s) +
+        ' after a Ledger OS update; [benchmark](https://github.com/TomWambsgans/hardware-wallet-benchmark)), then opens the ' +
+        (isForest() ? 'forest chain values' : 'FORS secrets') + ' itself. Idea from [Riva Labs](https://www.riva.xyz/).';
     };
     // the layered key has the same lifetime on every device: one cell for all
     var lifeTip = LIFE_TIP;
@@ -1153,13 +1189,10 @@ footer a + a { margin-left: 1.25rem; }
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       // always shown
-      // online: the host grinds and proves, the Ledger verifies the STARK and opens the chain values itself (whole seconds)
+      // online: the better of signing alone and the host grinding and proving, the Ledger verifying and opening
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
       if (!isForest()) tt = Object.assign({}, tt, tt.fors);
-      var online = tt.ledger_grind / W.host_rate + W.stark_verify_s + tt.device_online / d.rate;
-      set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.ledger_prep * tt.ledger_prepared / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
-        (online >= 1 ? Math.round(online) + '&nbsp;s' : time(online)) + '</span><span class="m-only">' + info(assist(tt), ' w') + '</span></span></div>');
-      document.getElementById('assist-tip').setAttribute('data-tip', assist(tt).replace(/&nbsp;/g, '\u00a0'));
+      assistCell(document.querySelector('[data-f="assist-' + k + '"]'), tt, d, W, assist, sn / d.rate);
     });
 
     // threshold, with the chosen hash, for the chosen shape: the layered key, or a pruned key with the Ledger's subtree
@@ -1169,7 +1202,7 @@ footer a + a { margin-left: 1.25rem; }
     var ROUNDS = '<th>Rounds' + info('One communication round per layer of AND gates (' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + '), for 2-of-3') + '</th>';
     // with pruning, the Ledger's subtree; the layered key needs no sentence
     set('th-life', 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for a lifetime of ' +
-      life1(isForest() ? th.lifetime : th.fors.lifetime) + ' signatures:');
+      life1(isForest() ? th.lifetime : th.fors.lifetime) + ' signatures.');
     // hidden for a layered key but keeping its place, so that switching the shape does not move the page
     var thLife = document.querySelector('[data-f="th-life"]');
     thLife.style.visibility = lay_ ? 'hidden' : ''; thLife.setAttribute('aria-hidden', lay_ ? 'true' : 'false');
@@ -1239,8 +1272,6 @@ footer a + a { margin-left: 1.25rem; }
     return r.json();
   }).then(function (d) {
     D = d;
-    // a saved choice that the data no longer has falls back to the default
-    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256', v: 'fors' }; }
     render();
   }).catch(function (e) {
     console.error(e);

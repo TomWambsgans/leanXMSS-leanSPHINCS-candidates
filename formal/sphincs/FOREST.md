@@ -232,7 +232,7 @@ counts on any oracle):
 | signature after the scan (`hashCalls_finishSign_exact`) | `1 + 58,960 + Σ_layers (message + counter search + 160 + path)` |
 
 The message of the bottom key is the forest key (59,120 calls); the message of a key above is the root
-of the tree below (`226 · 2^l − 1` calls for a lower layer of height `l`, 6 to 8). Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less, and without the key
+of the tree below (`226 · 2^l − 1` calls for a lower layer of height `l`, 6 to 9). Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less, and without the key
 hash the key costs 1 call less: the forest key went from 59,385 to 59,120 calls, the opening from
 59,200 to 58,960 and the fixed part of a signature from 118,586 to 118,081 (`1 + 58,960 + 59,120`; the
 signer's tick is 118,080 after the digest call). A counter of the encoding search is one hash call,
