@@ -70,15 +70,15 @@ theorem walk_avg_le_grpM {X : Multiset View → ℝ≥0∞} (hX : Monotone' X) (
   · -- a cached landed pair
     refine le_trans ?_ (hUX (d + extOf parameter data s excl m ρ))
     unfold poolValue extOf
-    cases h0 : s.cache (blk parameter data m ρ) with
+    cases h0 : pcache parameter data m s ρ with
     | none =>
         simp only [Option.elim, add_zero]
         exact hX _ _ (Multiset.le_add_right _ _)
-    | some u0 =>
+    | some u =>
         simp only [Option.elim]
         split_ifs with hl hx
         · simp only [hgp, if_pos hx, add_zero, le_refl]
-        · have hv : pview parameter data s (m, ρ) = viewOf u0 := pview_of_cached h0
+        · have hv : pview parameter data s (m, ρ) = viewOf u := pview_of_pcache (q := (m, ρ)) h0
           simp only [hgp, if_neg hx, hv]
           rw [add_tsub_cancel_of_le (hX _ _ (Multiset.le_add_right _ _))]
         · rw [add_zero]
@@ -418,21 +418,21 @@ theorem wflag_ordinary (x : HashInput) (next : HashOutput → OracleComp CostSpe
 theorem new_pair_core (hw : w ≤ 1) (L : QueryLog SigningSpec)
     (budget : ℕ) (hb : 1 ≤ budget) (s : State) (P : List Pair) (Ms : List Message) (d : Multiset View)
     (hP : PInv parameter data s P) (hM : MInv parameter data s Ms) (p : Pair)
-    (hp0 : s.cache (pblk parameter data p) = none)
+    (hp0 : s.cache (pblk parameter data p firstCall) = none)
     (hrate : MsgLive L p.1 → Rate parameter data w s p.1) :
-    ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
-        potO parameter data w b0 Fail tg initial Lmax (withPair parameter data s p u) (addPair parameter P p u)
-          (addMsg Ms p.1) L d (budget - 1) ≤
+    pairE (fun u => potO parameter data w b0 Fail tg initial Lmax (withPair parameter data s p u)
+        (addPair parameter P p u) (addMsg Ms p.1) L d (budget - 1)) ≤
       potO parameter data w b0 Fail tg initial Lmax s P Ms L d budget +
         b0 * (if Realized tg initial s then 0 else 1) := by
   set n := signatureLimit - L.length with hn
   set ℓ := (livePairs L P).length with hℓ
   -- the cap term keeps its mean
-  have hlam : ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
-      lam Lmax (livePairs L (addPair parameter P p u)).length (budget - 1) ≤ lam Lmax ℓ budget := by
+  have hlam : pairE (fun u => lam Lmax (livePairs L (addPair parameter P p u)).length (budget - 1)) ≤
+      lam Lmax ℓ budget := by
     by_cases hlive : MsgLive L p.1
-    · have hl : ∀ u, lam Lmax (livePairs L (addPair parameter P p u)).length (budget - 1) =
-          if Landed parameter (blockIndex u) then lam Lmax (ℓ + 1) (budget - 1)
+    · have hl : ∀ u : DigestCall → HashOutput,
+          lam Lmax (livePairs L (addPair parameter P p u)).length (budget - 1) =
+          if Landed parameter (blockIndex (u firstCall)) then lam Lmax (ℓ + 1) (budget - 1)
           else lam Lmax ℓ (budget - 1) := by
         intro u
         unfold addPair livePairs
@@ -444,61 +444,112 @@ theorem new_pair_core (hw : w ≤ 1) (L : QueryLog SigningSpec)
       have := lam_newPair parameter Lmax ℓ (budget - 1)
       rw [Nat.sub_add_cancel hb] at this
       exact le_of_eq this
-    · have hl : ∀ u, lam Lmax (livePairs L (addPair parameter P p u)).length (budget - 1) = lam Lmax ℓ (budget - 1) := by
+    · have hl : ∀ u : DigestCall → HashOutput,
+          lam Lmax (livePairs L (addPair parameter P p u)).length (budget - 1) =
+            lam Lmax ℓ (budget - 1) := by
         intro u
         unfold addPair livePairs
         split_ifs with hl
         · rw [List.filter_cons, if_neg (by simpa using hlive)]
           rfl
         · rfl
-      simp only [hl, ENNReal.tsum_mul_right]
-      exact le_trans (mul_le_of_le_one_left' tsum_probOutput_le_one) (lam_mono le_rfl (Nat.sub_le _ _))
+      simp only [hl, pairE_const]
+      exact lam_mono le_rfl (Nat.sub_le _ _)
   unfold potO
-  simp only [mul_add, ENNReal.tsum_add]
-  rw [add_right_comm]
+  rw [pairE_add, add_right_comm]
   refine add_le_add ?_ hlam
   by_cases hr : Realized tg initial s ∨ signatureLimit < L.length
-  · refine le_of_eq_of_le (ENNReal.tsum_eq_zero.2 fun u => ?_) bot_le
+  · refine le_of_eq_of_le (?_ : _ = (⊥ : ℝ≥0∞)) bot_le
+    unfold pairE
+    refine ENNReal.tsum_eq_zero.2 fun u => ?_
     have hr' : Realized tg initial (withPair parameter data s p u) ∨ signatureLimit < L.length :=
-      hr.imp (realized_of_extends tg initial (extends_store s (pblk parameter data p) u hp0)) id
-    rw [if_pos hr', mul_zero]
+      hr.imp (realized_of_extends tg initial (extends_withPair hP hp0 u)) id
+    simp only [if_pos hr', mul_zero]
   · have hreal : ¬Realized tg initial s := fun h' => hr (Or.inl h')
     rw [if_neg hreal, mul_one, if_neg hr]
     have hcore : coreO parameter data w b0 Fail s P Ms L d n budget =
         coreO parameter data w b0 Fail s P Ms L d n (budget - 1 + 1) := by rw [Nat.sub_add_cancel hb]
     rw [hcore]
     refine le_trans ?_ (coreO_newPair w b0 Fail hw hP hM hp0 L hrate d n (budget - 1))
-    unfold pairE
-    refine ENNReal.tsum_le_tsum fun u => mul_le_mul_right ?_ _
+    refine pairE_mono fun u => ?_
     split_ifs
     · exact bot_le
     · exact le_rfl
 
-/-- A new pair: its block is read fresh, weighted. -/
-theorem new_pair_boundW (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
-    {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤ Cmax) (L : QueryLog SigningSpec)
+/-- A new pair: one of its blocks is read fresh and the others are presampled, weighted. The blocks
+are untargeted, so the presample keeps both the weight (`weight_storeAllW`) and the weighted
+payments (`wflag_presample_new_eq`). -/
+theorem new_pair_boundW {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤ Cmax) (L : QueryLog SigningSpec)
     (next : HashOutput → OracleComp CostSpec HiddenBridge.Outcome)
     (h : ∀ v, GoodW parameter data w b0 Fail Qtot Lmax tg initial model L (next v))
     (budget : ℕ) (hb : 1 ≤ budget) (s : State) (P : List Pair) (Ms : List Message) (d : Multiset View)
     (R : List Coordinate) (hprep : Prepared initial s) (hP : PInv parameter data s P)
     (hM : MInv parameter data s Ms) (hD : DInv R d)
-    (hC : CountInv parameter data Qtot s budget) (p : Pair)
-    (hp0 : s.cache (pblk parameter data p) = none) :
-    ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
-        ∑' out, Pr[= out | interp tg initial model (next u) (budget - 1)
-          (s.store (pblk parameter data p) u)] * (weight tg initial out.2 * finalValue parameter data tg initial R out) ≤
+    (hC : CountInv parameter data Qtot s budget) (p : Pair) (c : DigestCall)
+    (hkind : ∀ call, tg.kind (pblk parameter data p call) = .none)
+    (hp0 : s.cache (pblk parameter data p firstCall) = none) :
+    ∑' v, Pr[= v | ($ᵗ HashOutput : ProbComp HashOutput)] *
+        ∑' out, Pr[= out | interp tg initial model (next v) (budget - 1)
+          (s.store (pblk parameter data p c) v)] *
+          (weight tg initial out.2 * finalValue parameter data tg initial R out) ≤
       weight tg initial s * potO parameter data w b0 Fail tg initial Lmax s P Ms L d budget +
         b0 * (weight tg initial s +
-          ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
-            wflag tg initial model (next u) (budget - 1) (s.store (pblk parameter data p) u)) := by
-  have hws : ∀ u, weight tg initial (s.store (pblk parameter data p) u) = weight tg initial s := fun u =>
-    weight_store_untargetedW tg initial s _ u (hkind p)
+          ∑' v, Pr[= v | ($ᵗ HashOutput : ProbComp HashOutput)] *
+            wflag tg initial model (next v) (budget - 1) (s.store (pblk parameter data p c) v)) := by
   set ℓ := (livePairs L P).length with hℓ
+  have hfresh : ∀ call, s.cache (pblk parameter data p call) = none := hP.first p hp0
+  have hwall : ∀ u : DigestCall → HashOutput,
+      weight tg initial (withPair parameter data s p u) = weight tg initial s := fun u =>
+    weight_storeAllW tg initial (pblk parameter data p) u s hkind
+  have hpairE : ∀ F : (DigestCall → HashOutput) → ℝ≥0∞,
+      pairE F = ((Fintype.card HashOutput : ℝ≥0∞) ^ digestCalls)⁻¹ * ∑ u, F u := by
+    intro F
+    unfold pairE
+    rw [tsum_uniform_eq, Fintype.card_fun, Fintype.card_fin, Nat.cast_pow]
+  -- the weighted final value only grows when a block of the pair is presampled
+  have hFmono : ∀ (out : Run HashInput Coordinate HiddenBridge.Outcome × State) (i : DigestCall)
+      (v : HashOutput), out.2.cache (pblk parameter data p i) = none →
+      weight tg initial out.2 * finalValue parameter data tg initial R out ≤
+        weight tg initial (out.2.store (pblk parameter data p i) v) *
+          finalValue parameter data tg initial R (out.1, out.2.store (pblk parameter data p i) v) := by
+    intro out i v hc
+    rw [weight_store_untargetedW tg initial out.2 _ v (hkind i)]
+    refine mul_le_mul_right ?_ _
+    have hgrow := (extends_store out.2 (pblk parameter data p i) v hc).1
+    unfold finalValue
+    cases out.1.1 with
+    | none => exact le_rfl
+    | some outcome =>
+        simp only [Option.elim]
+        split_ifs with h1 h2
+        · exact le_rfl
+        · exact absurd ⟨forestCover_mono parameter data.root outcome _ hgrow h1.1, fun hreal =>
+            h1.2 ((realized_store_untargeted tg initial out.2 _ v (hkind i)).1 hreal)⟩ h2
+        · exact bot_le
+        · exact le_rfl
+  have hpre : ∑' v, Pr[= v | ($ᵗ HashOutput : ProbComp HashOutput)] *
+        ∑' out, Pr[= out | interp tg initial model (next v) (budget - 1)
+          (s.store (pblk parameter data p c) v)] *
+          (weight tg initial out.2 * finalValue parameter data tg initial R out) ≤
+      pairE (fun u => ∑' out, Pr[= out | interp tg initial model (next (u c)) (budget - 1)
+        (withPair parameter data s p u)] *
+          (weight tg initial out.2 * finalValue parameter data tg initial R out)) := by
+    rw [hpairE]
+    exact interp_presample_newF tg initial model (pblk parameter data p)
+      (pblk_call_injective parameter data p) hkind c next (budget - 1) s hfresh _ hFmono
+  have hcount : pairE (fun u => wflag tg initial model (next (u c)) (budget - 1)
+        (withPair parameter data s p u)) =
+      ∑' v, Pr[= v | ($ᵗ HashOutput : ProbComp HashOutput)] *
+        wflag tg initial model (next v) (budget - 1) (s.store (pblk parameter data p c) v) := by
+    rw [hpairE]
+    exact (wflag_presample_new_eq tg initial model (pblk parameter data p)
+      (pblk_call_injective parameter data p) hkind c next (budget - 1) s hfresh).symm
   by_cases hcap : 1 ≤ lam Lmax ℓ budget
   · -- more landed pairs than the cap: the cap term pays everything
-    calc _ ≤ ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] * weight tg initial s :=
-          ENNReal.tsum_le_tsum fun u => mul_le_mul_right
-            ((finalW_le parameter data tg initial model (next u) (budget - 1) _ R).trans (hws u).le) _
+    calc _ ≤ ∑' v, Pr[= v | ($ᵗ HashOutput : ProbComp HashOutput)] * weight tg initial s :=
+          ENNReal.tsum_le_tsum fun v => mul_le_mul_right
+            ((finalW_le parameter data tg initial model (next v) (budget - 1) _ R).trans
+              (weight_store_untargetedW tg initial s _ v (hkind c)).le) _
       _ ≤ weight tg initial s := by
           rw [ENNReal.tsum_mul_right]; exact mul_le_of_le_one_left' tsum_probOutput_le_one
       _ ≤ weight tg initial s * lam Lmax ℓ budget := le_mul_of_one_le_right' hcap
@@ -511,42 +562,40 @@ theorem new_pair_boundW (hkind : ∀ p call, tg.kind (pblk parameter data p call
   have hrate : MsgLive L p.1 → Rate parameter data w s p.1 := fun hlive =>
     rate_of_fair hfair s p.1 (by have := hC p.1; omega) (le_trans (landedCount_le hP L hlive) hlen)
   have hC2 : ∀ a, CountInv parameter data Qtot (withPair parameter data s p a) (budget - 1) := by
-    intro a m
-    have h1 := count_withPair (parameter := parameter) (data := data) m s p a
-    have h2 := hC m
+    intro a mm
+    have h1 := count_withPair (parameter := parameter) (data := data) mm s p a
+    have h2 := hC mm
     omega
-  have hone : ∀ u, ∑' out, Pr[= out | interp tg initial model (next u) (budget - 1)
-        (s.store (pblk parameter data p) u)] * (weight tg initial out.2 * finalValue parameter data tg initial R out) ≤
+  have hone : ∀ u, ∑' out, Pr[= out | interp tg initial model (next (u c)) (budget - 1)
+        (withPair parameter data s p u)] *
+          (weight tg initial out.2 * finalValue parameter data tg initial R out) ≤
       weight tg initial s * potO parameter data w b0 Fail tg initial Lmax (withPair parameter data s p u)
           (addPair parameter P p u) (addMsg Ms p.1) L d (budget - 1) +
-        b0 * wflag tg initial model (next u) (budget - 1) (s.store (pblk parameter data p) u) := fun u => by
-    have := h u (budget - 1) _ _ _ d R (prepared_store initial s hprep _ u hp0) (pinv_withPair hP hp0 u)
+        b0 * wflag tg initial model (next (u c)) (budget - 1) (withPair parameter data s p u) := fun u => by
+    have := h (u c) (budget - 1) _ _ _ d R
+      (fun x v hx => (extends_withPair hP hp0 u).1 x v (hprep x v hx)) (pinv_withPair hP hp0 u)
       (minv_withPair hM p u) hD (hC2 u)
-    rwa [hws u] at this
-  refine le_trans (ENNReal.tsum_le_tsum fun u => mul_le_mul_right (hone u) _) ?_
-  simp only [mul_add, ENNReal.tsum_add]
-  rw [← add_assoc]
-  refine add_le_add ?_ (le_of_eq ?_)
-  · calc _ = weight tg initial s * ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
-          potO parameter data w b0 Fail tg initial Lmax (withPair parameter data s p u)
-            (addPair parameter P p u) (addMsg Ms p.1) L d (budget - 1) := by
-          simp only [mul_left_comm _ (weight tg initial s), ENNReal.tsum_mul_left]
-      _ ≤ weight tg initial s * (potO parameter data w b0 Fail tg initial Lmax s P Ms L d budget +
-            b0 * (if Realized tg initial s then 0 else 1)) :=
-          mul_le_mul_right (new_pair_core parameter data w b0 Fail Lmax tg initial hfair.le_one L budget hb s P Ms d
-            hP hM p hp0 hrate) _
-      _ ≤ _ := by
-          rw [mul_add]
-          refine add_le_add le_rfl ?_
-          rw [mul_left_comm]
-          refine mul_le_mul_right ?_ _
-          split_ifs <;> simp
-  · simp only [mul_left_comm _ b0, ENNReal.tsum_mul_left]
+    rwa [hwall u] at this
+  refine le_trans (le_trans hpre (pairE_mono hone)) ?_
+  rw [pairE_add, pairE_const_mul, pairE_const_mul, hcount, mul_add, ← add_assoc]
+  refine add_le_add ?_ le_rfl
+  calc weight tg initial s * pairE (fun u => potO parameter data w b0 Fail tg initial Lmax
+          (withPair parameter data s p u) (addPair parameter P p u) (addMsg Ms p.1) L d (budget - 1))
+      ≤ weight tg initial s * (potO parameter data w b0 Fail tg initial Lmax s P Ms L d budget +
+          b0 * (if Realized tg initial s then 0 else 1)) :=
+        mul_le_mul_right (new_pair_core parameter data w b0 Fail Lmax tg initial hfair.le_one L budget hb s P Ms d
+          hP hM p hp0 hrate) _
+    _ ≤ _ := by
+        rw [mul_add]
+        refine add_le_add le_rfl ?_
+        rw [mul_left_comm]
+        refine mul_le_mul_right ?_ _
+        split_ifs <;> simp
 
 /-- **One ordinary query, weighted.** -/
 theorem goodW_ordinary (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
     (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
-    (hdigest : ∀ p, tg.digest (pblk parameter data p))
+    (hdigest : ∀ p call, tg.digest (pblk parameter data p call))
     {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤ Cmax) (L : QueryLog SigningSpec) (x : HashInput)
     (next : HashOutput → OracleComp CostSpec HiddenBridge.Outcome)
     (h : ∀ v, GoodW parameter data w b0 Fail Qtot Lmax tg initial model L (next v)) :
@@ -559,24 +608,27 @@ theorem goodW_ordinary (hparse : ∀ p call, model.parse (pblk parameter data p 
     exact bot_le
   rw [finalValueW_ordinary parameter data tg initial model R x next budget hb s,
     wflag_ordinary tg initial model x next budget hb s]
-  by_cases hnew : ∃ p, x = pblk parameter data p ∧ s.cache (pblk parameter data p) = none
-  · obtain ⟨p, rfl, hp0⟩ := hnew
-    rw [ordinaryStep, hparse p]
+  by_cases hnew : ∃ (p : Pair) (call : DigestCall), x = pblk parameter data p call ∧
+      s.cache (pblk parameter data p firstCall) = none
+  · obtain ⟨p, c, rfl, hp0⟩ := hnew
+    have hfresh : ∀ call, s.cache (pblk parameter data p call) = none := hP.first p hp0
+    rw [ordinaryStep, hparse p c]
     simp only
-    rw [readOutside_fresh _ s hp0, tsum_probOutput_map_mul, tsum_probOutput_map_mul]
-    have hpay : wpays tg initial s (.inl (.inr (.inl (pblk parameter data p)))) = weight tg initial s := by
-      change (if tg.digest (pblk parameter data p) then weight tg initial s else 0) = _
-      rw [if_pos (hdigest p)]
+    rw [readOutside_fresh _ s (hfresh c), tsum_probOutput_map_mul, tsum_probOutput_map_mul]
+    have hpay : wpays tg initial s (.inl (.inr (.inl (pblk parameter data p c)))) = weight tg initial s := by
+      change (if tg.digest (pblk parameter data p c) then weight tg initial s else 0) = _
+      rw [if_pos (hdigest p c)]
     rw [hpay]
     have hsum : ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
-        (weight tg initial s + wflag tg initial model (next u) (budget - 1) (s.store (pblk parameter data p) u)) =
+        (weight tg initial s +
+          wflag tg initial model (next u) (budget - 1) (s.store (pblk parameter data p c) u)) =
         weight tg initial s + ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
-          wflag tg initial model (next u) (budget - 1) (s.store (pblk parameter data p) u) := by
+          wflag tg initial model (next u) (budget - 1) (s.store (pblk parameter data p c) u) := by
       simp only [mul_add, ENNReal.tsum_add, ENNReal.tsum_mul_right, tsum_probOutput_eq_one' probFailure_eq_zero,
         one_mul]
     rw [hsum]
-    exact new_pair_boundW parameter data w b0 Fail Qtot Lmax tg initial model hkind hfair hQ L next h budget hb
-      s P Ms d R hprep hP hM hD hC p hp0
+    exact new_pair_boundW parameter data w b0 Fail Qtot Lmax tg initial model hfair hQ L next h budget hb
+      s P Ms d R hprep hP hM hD hC p c (hkind p) hp0
   · have hmean : ∑' r, Pr[= r | ordinaryStep model x s.known s] * weight tg initial r.2 ≤ weight tg initial s := by
       have := meanWeight_costStep_leW tg initial model (.inl (.inr (.inl x))) s
       rwa [costStep_ordinary] at this
@@ -597,10 +649,14 @@ theorem goodW_ordinary (hparse : ∀ p call, model.parse (pblk parameter data p 
                 exact costStep_card_le model _ (.inl (.inr (.inl x))) s r (by rw [costStep_ordinary]; exact hr)
               have h2 := hC m
               omega
+            have hland : ∀ q, LandedIn parameter data s q → ∀ call,
+                r.2.cache (pblk parameter data q call) = s.cache (pblk parameter data q call) :=
+              fun q hq call => landed_blocks hext hP hq call
             refine le_trans (h r.1 (budget - 1) r.2 P Ms d R
               (fun i o hi => hext.1 i o (hprep i o hi)) hP' (minv_blocks hblocks hM) hD hcnt) (add_le_add ?_ le_rfl)
             exact mul_le_mul_right
-              (potO_grow w b0 Fail tg initial hfair.le_one Lmax hext hblocks P Ms L d (Nat.sub_le _ _)) _
+              (potO_grow w b0 Fail tg initial hfair.le_one Lmax hext hblocks hland
+                (fun q hq => (hP.mem q).1 hq) Ms L d (Nat.sub_le _ _)) _
           · rw [probOutput_eq_zero_of_not_mem_support hr, zero_mul, zero_mul]
       _ ≤ _ := by
           simp only [mul_add, ENNReal.tsum_add]
@@ -630,7 +686,7 @@ theorem goodW_pure (hw : w ≤ 1) (L : QueryLog SigningSpec) (forgery : Forgery)
 /-- Lifted hash computations are sequences of ordinary queries. -/
 theorem goodW_liftHash (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
     (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
-    (hdigest : ∀ p, tg.digest (pblk parameter data p))
+    (hdigest : ∀ p call, tg.digest (pblk parameter data p call))
     {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤ Cmax) (L : QueryLog SigningSpec) {α : Type}
     (computation : OracleComp HashSpec α)
     (next : α → OracleComp CostSpec HiddenBridge.Outcome)
@@ -732,7 +788,7 @@ theorem goodW_sign (hparse : ∀ p call, model.parse (pblk parameter data p call
 
 theorem goodW_finish (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
     (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
-    (hdigest : ∀ p, tg.digest (pblk parameter data p))
+    (hdigest : ∀ p call, tg.digest (pblk parameter data p call))
     {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤ Cmax) (L : QueryLog SigningSpec) (forgery : Forgery) :
     GoodW parameter data w b0 Fail Qtot Lmax tg initial model L (finishGame parameter data L forgery) := by
   unfold finishGame
@@ -743,7 +799,7 @@ theorem goodW_finish (hparse : ∀ p call, model.parse (pblk parameter data p ca
 message.** -/
 theorem goodW_advProg (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
     (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
-    (hdigest : ∀ p, tg.digest (pblk parameter data p))
+    (hdigest : ∀ p call, tg.digest (pblk parameter data p call))
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
