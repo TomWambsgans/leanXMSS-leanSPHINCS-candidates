@@ -169,10 +169,10 @@ theorem coreG_mono (hW : WitnessProps W) (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) (s
 /-- **A new pair.** Touching a new pair costs one future pair and at most the baseline. -/
 theorem coreG_newPair (hW : WitnessProps W) (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) {s : State} {P : List Pair}
     {Ms : List Message} (hP : PInv parameter data s P) (hM : MInv parameter data s Ms) {p : Pair}
-    (hp0 : s.cache (pblk parameter data p) = none) (L : QueryLog SigningSpec)
+    (hp0 : s.cache (pblk parameter data p firstCall) = none) (L : QueryLog SigningSpec)
     (hrate : MsgLive L p.1 → Rate parameter data wbar s p.1) (d : Multiset View) (n k : ℕ) :
-    pairE (fun u0 => coreG parameter data W wbar b0 Fail (withPair parameter data s p u0)
-      (addPair parameter P p u0) (addMsg Ms p.1) L d n k) ≤
+    pairE (fun u => coreG parameter data W wbar b0 Fail (withPair parameter data s p u)
+      (addPair parameter P p u) (addMsg Ms p.1) L d n k) ≤
       coreG parameter data W wbar b0 Fail s P Ms L d n (k + 1) + b0 := by
   set Ms' := addMsg Ms p.1 with hMs'
   set φ := failMass Fail with hφ
@@ -181,12 +181,12 @@ theorem coreG_newPair (hW : WitnessProps W) (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤)
   set H := hValueG parameter data W wbar b0 s Ms L d n (k + 1) with hH
   set S := (P.map (candG parameter data W wbar Fail s Ms L d n (k + 1))).sum with hS
   -- the candidates of the old pairs
-  have h2 : ∀ q ∈ P, pairE (fun u0 => candG parameter data W wbar Fail (withPair parameter data s p u0) Ms' L d n k q) ≤
+  have h2 : ∀ q ∈ P, pairE (fun u => candG parameter data W wbar Fail (withPair parameter data s p u) Ms' L d n k q) ≤
       candG parameter data W wbar Fail s Ms L d n (k + 1) q := by
     intro q hq
     have hqp : q ≠ p := fun h => hpP (h ▸ hq)
-    have hv : ∀ u0, pview parameter data (withPair parameter data s p u0) q = pview parameter data s q :=
-      fun u0 => pview_withPair_other s p q hqp u0
+    have hv : ∀ u, pview parameter data (withPair parameter data s p u) q = pview parameter data s q :=
+      fun u => pview_withPair_other s p q hqp u
     unfold candG candValueG
     simp only [hv]
     split_ifs
@@ -194,56 +194,56 @@ theorem coreG_newPair (hW : WitnessProps W) (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤)
     · exact termO_newPair hw (hW _) hM p hp0 L _ hrate d n k
     · simp only [pairE_const, le_refl]
   -- the candidate of the new pair
-  have hnew : ∀ u0, Landed parameter (blockIndex u0) →
-      candG parameter data W wbar Fail (withPair parameter data s p u0) Ms' L d n k p ≤
-        (if (viewOf u0).1 ∈ Fail then 1 else 0) + Wp (viewOf u0) := by
-    intro u0 hl
+  have hnew : ∀ u, Landed parameter (blockIndex (u firstCall)) →
+      candG parameter data W wbar Fail (withPair parameter data s p u) Ms' L d n k p ≤
+        (if (viewOf u).1 ∈ Fail then 1 else 0) + Wp (viewOf u) := by
+    intro u hl
     unfold candG candValueG
     rw [pview_withPair_self]
     by_cases hu : Unsigned L p
     · rw [if_pos hu]
-      by_cases hF : (viewOf u0).1 ∈ Fail
+      by_cases hF : (viewOf u).1 ∈ Fail
       · rw [if_pos hF, if_pos hF]
         exact le_self_add
       · rw [if_neg hF, if_neg hF, zero_add]
-        exact termO_stop (hW _) hM p hp0 L (· = p) rfl u0 hl d n k
+        exact termO_stop (hW _) hM p hp0 L (· = p) rfl u hl d n k
     · rw [if_neg hu]
       exact bot_le
-  have hpoint : ∀ u0, coreG parameter data W wbar b0 Fail (withPair parameter data s p u0)
-      (addPair parameter P p u0) Ms' L d n k ≤
-      ((if Landed parameter (blockIndex u0) then (fun v : View => (if v.1 ∈ Fail then 1 else 0) + Wp v) (viewOf u0)
+  have hpoint : ∀ u, coreG parameter data W wbar b0 Fail (withPair parameter data s p u)
+      (addPair parameter P p u) Ms' L d n k ≤
+      ((if Landed parameter (blockIndex (u firstCall)) then (fun v : View => (if v.1 ∈ Fail then 1 else 0) + Wp v) (viewOf u)
           else 0) +
-        (P.map fun q => candG parameter data W wbar Fail (withPair parameter data s p u0) Ms' L d n k q).sum) +
-      k * (hValueG parameter data W wbar b0 (withPair parameter data s p u0) Ms' L d n k + φ) + n * φ := by
-    intro u0
+        (P.map fun q => candG parameter data W wbar Fail (withPair parameter data s p u) Ms' L d n k q).sum) +
+      k * (hValueG parameter data W wbar b0 (withPair parameter data s p u) Ms' L d n k + φ) + n * φ := by
+    intro u
     unfold coreG
     refine add_le_add (add_le_add ?_ le_rfl) le_rfl
     unfold addPair
-    by_cases hl : Landed parameter (blockIndex u0)
+    by_cases hl : Landed parameter (blockIndex (u firstCall))
     · rw [if_pos hl, if_pos hl, List.map_cons, List.sum_cons]
-      exact add_le_add (hnew u0 hl) le_rfl
+      exact add_le_add (hnew u hl) le_rfl
     · rw [if_neg hl, if_neg hl, zero_add]
   refine le_trans (pairE_mono hpoint) ?_
   simp only [pairE_add, pairE_const_mul, pairE_const, pairE_list_sum]
-  have h1 : pairE (fun u0 => if Landed parameter (blockIndex u0) then
-      (fun v : View => (if v.1 ∈ Fail then 1 else 0) + Wp v) (viewOf u0) else 0) =
+  have h1 : pairE (fun u => if Landed parameter (blockIndex (u firstCall)) then
+      (fun v : View => (if v.1 ∈ Fail then 1 else 0) + Wp v) (viewOf u) else 0) =
       landing * (φ + freshAvg Finset.univ Wp) := by
     rw [pairE_landed parameter (fun v => (if v.1 ∈ Fail then 1 else 0) + Wp v) 0, mul_zero, add_zero, freshAvg_add]
     rfl
-  have h3 : pairE (fun u0 => hValueG parameter data W wbar b0 (withPair parameter data s p u0) Ms' L d n k) ≤ H :=
+  have h3 : pairE (fun u => hValueG parameter data W wbar b0 (withPair parameter data s p u) Ms' L d n k) ≤ H :=
     termO_newPair hw (excessW_props hW hb0) hM p hp0 L _ hrate d n k
   have hfresh : landing * freshAvg Finset.univ Wp ≤ b0 + H := by
     refine le_trans (fresh_forecastG wbar b0 hw s Ms L (· = p) d n k) (add_le_add le_rfl ?_)
     refine le_trans (termO_excl_mono (excessW_props hW hb0) s Ms L (fun _ h => False.elim h) d n k) ?_
     exact hValueG_mono wbar b0 hW hw hb0 s Ms L d n (Nat.le_succ k)
   have hφ1 : landing * φ ≤ φ := mul_le_of_le_one_left' landing_le_one
-  have hSle : (P.map fun q => pairE fun u0 => candG parameter data W wbar Fail (withPair parameter data s p u0) Ms' L d n k q).sum ≤
+  have hSle : (P.map fun q => pairE fun u => candG parameter data W wbar Fail (withPair parameter data s p u) Ms' L d n k q).sum ≤
       S := List.sum_le_sum fun q hq => h2 q hq
   rw [h1]
   unfold coreG
   calc landing * (φ + freshAvg Finset.univ Wp) +
-        (P.map fun q => pairE fun u0 => candG parameter data W wbar Fail (withPair parameter data s p u0) Ms' L d n k q).sum +
-        k * (pairE (fun u0 => hValueG parameter data W wbar b0 (withPair parameter data s p u0) Ms' L d n k) + φ) + n * φ
+        (P.map fun q => pairE fun u => candG parameter data W wbar Fail (withPair parameter data s p u) Ms' L d n k q).sum +
+        k * (pairE (fun u => hValueG parameter data W wbar b0 (withPair parameter data s p u) Ms' L d n k) + φ) + n * φ
       ≤ φ + (b0 + H) + S + k * (H + φ) + n * φ := by
         rw [mul_add]
         gcongr
@@ -260,18 +260,26 @@ variable {parameter : PublicParameter} {data : PublicData} {W : View → Multise
   (Fail : Finset (Fin (2 ^ subtreeHeight)))
 
 /-- The potential sees the state only through the digest blocks. -/
-theorem coreG_congr {s s' : State} (h : ∀ q, s'.cache (pblk parameter data q) = s.cache (pblk parameter data q))
-    (P : List Pair) (Ms : List Message) (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ) :
+theorem coreG_congr {s s' : State}
+    (h : ∀ q, s'.cache (pblk parameter data q firstCall) = s.cache (pblk parameter data q firstCall))
+    (hv : ∀ q, LandedIn parameter data s q → ∀ call,
+      s'.cache (pblk parameter data q call) = s.cache (pblk parameter data q call))
+    {P : List Pair} (hPl : ∀ q ∈ P, LandedIn parameter data s q)
+    (Ms : List Message) (L : QueryLog SigningSpec) (d : Multiset View) (n k : ℕ) :
     coreG parameter data W wbar b0 Fail s' P Ms L d n k = coreG parameter data W wbar b0 Fail s P Ms L d n k := by
-  have hv : ∀ q, pview parameter data s' q = pview parameter data s q := fun q => by unfold pview; rw [h q]
+  have hpv : ∀ q ∈ P, pview parameter data s' q = pview parameter data s q :=
+    fun q hq => pview_congr parameter data (hv q (hPl q hq))
   unfold coreG hValueG candG candValueG
-  simp only [hv, termO_blocks wbar h]
+  rw [termO_blocks wbar h hv, List.map_congr_left fun q hq => by rw [hpv q hq, termO_blocks wbar h hv]]
 
 /-- A grown state with the same digest blocks has no larger potential. -/
 theorem potG_grow (hW : WitnessProps W) {gate : State → Prop}
     (hgate : ∀ s s' : State, Extends s s' → gate s → gate s') (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) {s s' : State}
     (hext : Extends s s')
-    (h : ∀ q, s'.cache (pblk parameter data q) = s.cache (pblk parameter data q)) (P : List Pair)
+    (h : ∀ q, s'.cache (pblk parameter data q firstCall) = s.cache (pblk parameter data q firstCall))
+    (hv : ∀ q, LandedIn parameter data s q → ∀ call,
+      s'.cache (pblk parameter data q call) = s.cache (pblk parameter data q call))
+    {P : List Pair} (hPl : ∀ q ∈ P, LandedIn parameter data s q)
     (Ms : List Message) (L : QueryLog SigningSpec) (d : Multiset View) {k k' : ℕ} (hk : k ≤ k') :
     potG parameter data W wbar b0 Fail gate s' P Ms L d k ≤ potG parameter data W wbar b0 Fail gate s P Ms L d k' := by
   unfold potG
@@ -279,7 +287,7 @@ theorem potG_grow (hW : WitnessProps W) {gate : State → Prop}
   · rw [if_pos hr]; exact bot_le
   · have hr' : ¬(gate s ∨ signatureLimit < L.length) := fun h' =>
       hr (h'.imp (hgate s s' hext) id)
-    rw [if_neg hr, if_neg hr', coreG_congr wbar b0 Fail h]
+    rw [if_neg hr, if_neg hr', coreG_congr wbar b0 Fail h hv hPl]
     exact coreG_mono wbar b0 Fail hW hw hb0 s P Ms L d _ hk
 
 end OrderG
@@ -322,7 +330,7 @@ variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : 
 /-- **The potential after one signing outcome.** -/
 theorem sign_pointG_level (hW : WitnessProps W) {gate : State → Prop}
     (hgate : ∀ s s' : State, Extends s s' → gate s → gate s')
-    (hparse : ∀ p, model.parse (pblk parameter data p) = none)
+    (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
     (hfail : ∀ ρ digest budget (s1 : State), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
@@ -332,15 +340,16 @@ theorem sign_pointG_level (hW : WitnessProps W) {gate : State → Prop}
     (hC : CountInv parameter data Qtot s budget)
     (out : Run HashInput Coordinate (Option Signature) × State)
     (hout : out ∈ support (interp tg initial model (signCostSource parameter data m) budget s))
+    (hpinv : PairInv parameter data m out.2)
     (r : Option Signature) (hr : out.1.1 = some r) {k' K : ℕ} (hk : k' ≤ K) :
     potG parameter data W wbar b0 Fail gate out.2 (newPairs parameter data m s out.2 ++ P) (addMsg Ms m)
         (L ++ [⟨m, r⟩]) (discAfter parameter data m s d out) k' ≤
       canonL parameter data W wbar b0 Fail m s P Ms L d gate K out := by
   unfold canonL
   obtain ⟨_, hP', _, _, _, hview⟩ := sign_paramsS tg initial model Fail Qtot hparse hfail budget
-    s P Ms d R hprep hP hM hD hC out hout r hr
+    s P Ms d R hprep hP hM hD hC out hout hpinv r hr
   have hext := interp_extends tg initial model _ budget s out hout
-  have hpost := source_post tg initial model parameter data m (fun ρ => hparse (m, ρ)) Fail hfail
+  have hpost := source_post tg initial model parameter data m (fun ρ call => hparse (m, ρ) call) Fail hfail
     budget s hprep out hout r hr
   have hshape := sign_shape parameter data Fail m hpost out rfl hr
   unfold potG
@@ -360,9 +369,9 @@ theorem sign_pointG_level (hW : WitnessProps W) {gate : State → Prop}
   rw [List.map_append, List.sum_append]
   refine add_le_add (add_le_add (add_le_add ?_ ?_) ?_) le_rfl
   · -- new pairs: only a failed fresh pair stays a candidate
-    rcases hshape with ⟨hnew, _⟩ | ⟨ρ, u0, hnew, _, h0, hl, hs0, _, hfl, hsig⟩ | ⟨_, _, _, hnew, _⟩
+    rcases hshape with ⟨hnew, _⟩ | ⟨ρ, u, hnew, _, h0, hl, hs0, _, hfl, hsig⟩ | ⟨_, _, _, hnew, _⟩
     · unfold newPairs; rw [hnew]; simp
-    · have hv : pview parameter data out.2 (m, ρ) = viewOf u0 := pview_of_cached h0
+    · have hv : pview parameter data out.2 (m, ρ) = viewOf u := pview_of_pcache (q := (m, ρ)) h0
       have hlist : newPairs parameter data m s out.2 = [(m, ρ)] := by
         unfold newPairs; rw [hnew, Finset.toList_singleton]; rfl
       rw [hlist]
@@ -403,9 +412,11 @@ theorem sign_pointG_level (hW : WitnessProps W) {gate : State → Prop}
 
 /-- **The signing step in expectation**, for a message signed for the first time. -/
 theorem sign_expectG_level (hW : WitnessProps W) (gate : State → Prop)
-    (hparse : ∀ p, model.parse (pblk parameter data p) = none)
+    (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     (hb0 : b0 ≠ ⊤) (budget K : ℕ) (s : State) (P : List Pair) (Ms : List Message)
-    (L : QueryLog SigningSpec) (hm : MsgLive L m) (d : Multiset View) (hM : MInv parameter data s Ms) :
+    (L : QueryLog SigningSpec) (hm : MsgLive L m) (d : Multiset View) (hM : MInv parameter data s Ms)
+    (hinv : PairInv parameter data m s) :
     ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
         canonL parameter data W wbar b0 Fail m s P Ms L d gate K out ≤
       potG parameter data W wbar b0 Fail gate s P Ms L d K := by
@@ -421,12 +432,15 @@ theorem sign_expectG_level (hW : WitnessProps W) (gate : State → Prop)
   set n := signatureLimit - (L.length + 1) with hn
   have hn1 : signatureLimit - L.length = n + 1 := by omega
   rw [hn1]
-  have hparse' : ∀ ρ, model.parse (blk parameter data m ρ) = none := fun ρ => hparse (m, ρ)
+  have hparse' : ∀ ρ call, model.parse (GraphView.pblk parameter data m ρ call) = none :=
+    fun ρ call => hparse (m, ρ) call
+  have hkind' : ∀ ρ call, tg.kind (GraphView.pblk parameter data m ρ call) = .none :=
+    fun ρ call => hkind (m, ρ) call
   have hmass : ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] ≤ 1 :=
     tsum_probOutput_le_one
   have hFN : ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
       freshNewWeight parameter data m s (fun v => if v.1 ∈ Fail then 1 else 0) out ≤ failMass Fail :=
-    fresh_expectO tg initial model hparse' _ budget
+    fresh_expectO tg initial model hparse' hkind' hinv _ budget
   have hT : ∀ q ∈ P, ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
       (if Unsigned L q then (if (pview parameter data s q).1 ∈ Fail then 1 else
         creations Finset.univ landing (fun J => upperO parameter data wbar m s n d (W (pview parameter data s q))
@@ -438,14 +452,14 @@ theorem sign_expectG_level (hW : WitnessProps W) (gate : State → Prop)
     · rw [ENNReal.tsum_mul_right, mul_one]; exact hmass
     · unfold candValueG
       rw [termO_eq_cons hm hM]
-      exact term_expectO tg initial model hparse' (hW _) _ _ budget K
+      exact term_expectO tg initial model hparse' hkind' hinv (hW _) _ _ budget K
     · simp
   have hH : ∑' out, Pr[= out | interp tg initial model (signCostSource parameter data m) budget s] *
       creations Finset.univ landing (fun J => upperO parameter data wbar m s n d (excessW W b0)
         (restMsgs m L Ms) (fun _ => False) out J) K [] ≤ hValueG parameter data W wbar b0 s Ms L d (n + 1) K := by
     unfold hValueG
     rw [termO_eq_cons hm hM]
-    exact term_expectO tg initial model hparse' (excessW_props hW hb0) _ _ budget K
+    exact term_expectO tg initial model hparse' hkind' hinv (excessW_props hW hb0) _ _ budget K
   unfold canonG coreG
   simp only [mul_add, ENNReal.tsum_add]
   rw [tsum_list_sum]
