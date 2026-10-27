@@ -157,9 +157,16 @@ theorem evalDist_truncateMessageDigest_uniform :
 /-- The revealed secrets of every FORS tree, by leaf. -/
 abbrev Disclosures := Index → FTree → Finset FLeaf
 
+/-- The leaf the view selects in tree `κ` is disclosed. -/
+def TreeCov (revealed : Disclosures) (view : FullDigestView) (κ : FTree) : Prop :=
+  view.2 κ ∈ revealed view.1 κ
+
+instance (revealed : Disclosures) (view : FullDigestView) : DecidablePred (TreeCov revealed view) :=
+  fun κ => by unfold TreeCov; infer_instance
+
 /-- The leaf the view selects in every tree is disclosed. -/
 def Covered (revealed : Disclosures) (view : FullDigestView) : Prop :=
-  ∀ κ : FTree, view.2 κ ∈ revealed view.1 κ
+  ∀ κ : FTree, TreeCov revealed view κ
 
 instance (revealed : Disclosures) : DecidablePred (Covered revealed) := fun view => by
   unfold Covered; infer_instance

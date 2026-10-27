@@ -131,9 +131,9 @@ theorem eval_signAttempt (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (me
     (randomness : Randomness) :
     evalWithAnswerFn f (Seeded.signAttempt sk message randomness : OracleComp HashSpec (Option Index)) =
       if Landed sk.parameter (blockIndex (evalWithAnswerFn f
-          (messageDigestCall sk.parameter sk.root message randomness : OracleComp HashSpec HashOutput)))
+          (messageDigestCall sk.parameter sk.root message randomness firstCall : OracleComp HashSpec HashOutput)))
       then some (blockIndex (evalWithAnswerFn f
-          (messageDigestCall sk.parameter sk.root message randomness : OracleComp HashSpec HashOutput)))
+          (messageDigestCall sk.parameter sk.root message randomness firstCall : OracleComp HashSpec HashOutput)))
       else none := by
   simp only [Seeded.signAttempt, evalWithAnswerFn_bind]
   split <;> rfl
@@ -167,11 +167,11 @@ theorem fixed_signCostDetLoop (f : QueryImpl HashSpec Id) (parameter : PublicPar
       simp only [evalWithAnswerFn_bind, hashCalls_bind, hashCalls_signAttempt, eval_signAttempt,
         hashCalls_messageDigestCall]
       by_cases hland : Landed parameter (blockIndex (evalWithAnswerFn f
-        (messageDigestCall parameter data.root message start : OracleComp HashSpec HashOutput)))
+        (messageDigestCall parameter data.root message start firstCall : OracleComp HashSpec HashOutput)))
       · have hland' : Landed parameter (digestIndex (evalWithAnswerFn f
             (messageDigest parameter data.root message start : OracleComp HashSpec MessageDigest))) := by
           simpa only [messageDigest, evalWithAnswerFn_bind, evalWithAnswerFn_pure,
-            digestIndex_truncate] using hland
+            Completeness.eval_sequenceFin, digestIndex_truncate] using hland
         apply WriterT.ext
         simp only [WriterT.run_bind, WriterT.run_mk, ← PMF.monad_pure_eq_pure, pure_bind]
         simp only [hland, ↓reduceIte,

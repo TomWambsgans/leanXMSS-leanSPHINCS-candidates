@@ -160,16 +160,10 @@ theorem OnlyC.erase {α : Type} {computation : OracleComp CostSpec α} (h : Only
 attribute [local irreducible] ReferenceChoice.search encodingAttemptLimit digestAttemptLimit
   Concrete.messageDigest Concrete.messageDigestCall
 
-theorem OnlyC.coordCostSource (data : PublicData) (index : Index) (c : Coord) (mark : CoordMark) :
-    OnlyC (GraphView.coordCostSource data index c mark) := by
-  unfold GraphView.coordCostSource
-  refine OnlyC.bind (OnlyC.sequenceFin _ fun j => ?_) (fun _ => OnlyC.pure' _)
-  refine OnlyC.bind (OnlyC.sequenceFin _ fun i => ?_) (fun _ => OnlyC.pure' _)
-  unfold GraphView.revealChainCost
-  refine OnlyC.sequenceFin _ fun k => ?_
-  split
-  · exact OnlyC.reveal _
-  · exact OnlyC.pure' _
+theorem OnlyC.treeCostSource (data : PublicData) (index : Index) (κ : FTree) (leaf : FLeaf) :
+    OnlyC (GraphView.treeCostSource data index κ leaf) := by
+  unfold GraphView.treeCostSource
+  exact OnlyC.bind (OnlyC.sequenceFin _ fun _ => OnlyC.reveal _) (fun _ => OnlyC.pure' _)
 
 theorem OnlyC.sequenceDep : ∀ {n : Nat} {α : Fin n → Type}
     {computation : (i : Fin n) → OracleComp CostSpec (Option (α i))}, (∀ i, OnlyC (computation i)) →
@@ -210,7 +204,7 @@ theorem OnlyC.finishCostSource (parameter : PublicParameter) (data : PublicData)
   · exact OnlyC.pure' _
   · refine OnlyC.bind (OnlyC.sequenceFin _ fun _ => OnlyC.sequenceFin _ fun _ => OnlyC.reveal _)
       (fun _ => ?_)
-    exact OnlyC.bind (OnlyC.sequenceFin _ fun _ => OnlyC.coordCostSource _ _ _ _) (fun _ => OnlyC.pure' _)
+    exact OnlyC.bind (OnlyC.sequenceFin _ fun _ => OnlyC.treeCostSource _ _ _ _) (fun _ => OnlyC.pure' _)
 
 theorem OnlyC.signCostSourceLoop (parameter : PublicParameter) (data : PublicData) (message : Message)
     (step : Randomness) :
@@ -219,7 +213,7 @@ theorem OnlyC.signCostSourceLoop (parameter : PublicParameter) (data : PublicDat
   | 0, _ => OnlyC.pure' _
   | attempts + 1, randomness => by
       rw [GraphView.signCostSourceLoop]
-      refine OnlyC.bind (OnlyC.liftHash (Short.Only.messageDigestCall _ _ _ _)) (fun first => ?_)
+      refine OnlyC.bind (OnlyC.liftHash (Short.Only.messageDigestCall _ _ _ _ _)) (fun first => ?_)
       split
       · exact OnlyC.finishCostSource _ _ _ _
       · exact OnlyC.signCostSourceLoop parameter data message step attempts (randomness + step)

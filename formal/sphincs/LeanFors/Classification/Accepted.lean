@@ -277,8 +277,8 @@ theorem walk_classification (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed :
           have h : rootPayload (walkFold f pk.parameter (index f pk message signature) signature
               (verificationForest f pk message signature) j) = _ := hmsg
           exact bytesLE_injective h
-        rcases ih (by omega) hbelow with ⟨hall, hforest⟩ | ⟨j', hj', htree⟩ | ⟨j', hj', hwots⟩
-        · refine Or.inl ⟨fun j' hj' => ?_, hforest⟩
+        rcases ih (by omega) hbelow with ⟨hall, hfors⟩ | ⟨j', hj', htree⟩ | ⟨j', hj', hwots⟩
+        · refine Or.inl ⟨fun j' hj' => ?_, hfors⟩
           rcases Nat.lt_or_ge j' (j + 1) with hlt | hge
           · exact hall j' (by omega)
           · rw [show j' = j + 1 by omega]; exact hchosen
@@ -315,7 +315,7 @@ theorem accepted_recovered_classification (f : QueryImpl HashSpec Id) (pk : Publ
     exact hpk
   by_cases hland : Landed pk.parameter leaf
   · rcases walk_classification f pk seed message signature hverified hland (numLayers - 1) hd hfoldTop with
-      ⟨hall, hforest⟩ | ⟨j, hj, htree⟩ | ⟨j, hj, hwots⟩
+      ⟨hall, hfors⟩ | ⟨j, hj, htree⟩ | ⟨j, hj, hwots⟩
     · have hchosen : ∀ lay, ChosenLayer f pk seed message signature lay := by
         intro lay
         have hlay : layerUp (numLayers - 1 - lay.val) = lay := by
@@ -323,7 +323,7 @@ theorem accepted_recovered_classification (f : QueryImpl HashSpec Id) (pk : Publ
         rw [← hlay]
         exact hall _ (by omega)
       choose counter hcounter hcanon using hchosen
-      exact Or.inl ⟨counter, hcounter, hland, hcanon, hforest⟩
+      exact Or.inl ⟨counter, hcounter, hland, hcanon, hfors⟩
     · exact Or.inr (Or.inl ⟨j, by omega, htree⟩)
     · exact Or.inr (Or.inr ⟨hland, layerUp j, hwots⟩)
   · obtain ⟨⟨value, hvalue⟩, -, hrunFold⟩ := hlayers (numLayers - 1) hd
@@ -380,16 +380,16 @@ theorem accepted_full_classification (f : QueryImpl HashSpec Id) (pk : PublicKey
     (Landed pk.parameter (index f pk message signature) ∧
       ((∃ lay, WotsException f pk seed message signature lay) ∨ ForsException f pk seed message signature)) := by
   rcases accepted_recovered_classification f pk seed message signature hb hroot hverified with
-    ⟨counter, hcounter, hland, hlayers, hforest⟩ | htree | ⟨hland, hwots⟩
-  · rcases Forest.recover_classification f pk.parameter (index f pk message signature) seed
+    ⟨counter, hcounter, hland, hlayers, hfors⟩ | htree | ⟨hland, hwots⟩
+  · rcases Fors.recover_classification f pk.parameter (index f pk message signature) seed
         (digestLeaves (verificationDigest f pk message signature)) signature.fors
-        hforest with hforestOpening | hforestException
-    · exact Or.inl ⟨counter, hcounter, hland, hlayers, hforestOpening⟩
-    · refine Or.inr (Or.inr ⟨hland, Or.inr ⟨hforestException, ?_⟩⟩)
+        hfors with hforsOpening | hforsException
+    · exact Or.inl ⟨counter, hcounter, hland, hlayers, hforsOpening⟩
+    · refine Or.inr (Or.inr ⟨hland, Or.inr ⟨hforsException, ?_⟩⟩)
       obtain ⟨input, canonicalInput, hinput, hne, hout⟩ :=
-        Forest.Exception.queried_output_match f pk.parameter (index f pk message signature) seed
+        Fors.Exception.queried_output_match f pk.parameter (index f pk message signature) seed
           (digestLeaves (verificationDigest f pk message signature)) signature.fors
-          hforestException
+          hforsException
       exact ⟨input, canonicalInput, verification_fors_run f pk message signature input hinput, hne, hout⟩
   · exact Or.inr (Or.inl htree)
   · exact Or.inr (Or.inr ⟨hland, Or.inl hwots⟩)
@@ -482,83 +482,41 @@ theorem active_hit' (position : Position) (hactive : PrunedGraph.active paramete
   exact active_hit f parameter seed labels position hactive payload hne hout
 
 include hconsistent in
-theorem fchain_input_consistent (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx)
-    (i : FChain) (t : FStep) :
-    canonicalGraphInput parameter (otsSecrets f parameter seed) (ftsSecrets f parameter seed)
-      (.fchain index c s j a i t) labels =
-    tweakableHashInput parameter (.fchain index c s j a i t)
-      (bytesLE 16 (Forest.honestChain f parameter index c s j a i
-        (Completeness.forestSecret f parameter index c s j a i seed) t.val)) := by
-  refine fchain_input f parameter seed labels index c s j a i t (fun hpos => ?_)
-  rw [fchain_value f parameter seed labels hconsistent]
-  congr 1
-  simp only
-  omega
-
-include hconsistent in
-theorem forestException_hit (index : Index) (marks : Coord → CoordMark) (opening : Coord → CoordOpening)
-    (h : Forest.Exception f parameter index seed marks opening) :
-    ∃ input ∈ queriedInputs f (forsRecover parameter index marks opening : OracleComp HashSpec ForsKey),
+theorem forsException_hit (index : Index) (leaves : FTree → FLeaf) (opening : FTree → TreeOpening)
+    (h : Fors.Exception f parameter index seed leaves opening) :
+    ∃ input ∈ queriedInputs f (forsRecover parameter index leaves opening : OracleComp HashSpec ForsKey),
       truncateHash (f input) ∈ targets parameter (graphTable f parameter seed labels) input := by
-  rcases h with ⟨c, j, i, offset, hoffset, hlt, hne, heq⟩ | ⟨c, j, hne, heq⟩ |
-      ⟨c, j, level, hlevel, -, hneq, hout⟩ | ⟨c, hne, heq⟩ | ⟨c, level, hlevel, -, hneq, hout⟩
-  · refine ⟨_, Forest.chainInput_mem f parameter index marks opening c j i offset hlt hoffset,
-      active_hit f parameter seed labels (.fchain index c (marks c).super j ((marks c).child j) i
-        ⟨chainTop - (lut ((marks c).word j) i).val + offset, hoffset⟩) trivial _ ?_ ?_⟩
-    · rw [fchain_input_consistent f parameter seed labels hconsistent]
+  have hcanon : ∀ κ (leaf : FLeaf), Fors.leafValue f parameter index κ leaf
+      (Completeness.forsSecretValue f parameter index κ seed leaf) =
+        Completeness.forsLeafValue f parameter index κ seed leaf := fun κ leaf => by
+    rw [Fors.leafValue_canonical, Completeness.forsNodeValue_zero]
+  rcases h with ⟨κ, hne, heq⟩ | ⟨κ, level, hlevel, -, hneq, hout⟩
+  · refine ⟨_, Fors.leafInput_mem f parameter index leaves opening κ,
+      active_hit f parameter seed labels (.fleaf index κ (leaves κ)) trivial _ ?_ ?_⟩
+    · rw [fleaf_input f parameter seed labels index κ (leaves κ)]
       intro hinput
       exact hne (bytesLE_injective (tweakableInput_injective hinput).2.2)
-    · rw [fchain_value f parameter seed labels hconsistent]
-      exact heq
-  · refine ⟨_, Forest.childLeafInput_mem f parameter index marks opening c j,
-      active_hit f parameter seed labels (.childLeaf index c (marks c).super j ((marks c).child j)) trivial _ ?_ ?_⟩
-    · rw [childLeaf_input f parameter seed labels hconsistent]
-      intro hinput
-      exact hne (childPayload_injective (tweakableInput_injective hinput).2.2)
-    · rw [childLeaf_value f parameter seed labels hconsistent]
-      exact heq
+    · rw [fleaf_value f parameter seed labels hconsistent, ← hcanon, ← heq]
+      simp only [Fors.leafValue, forsLeafHash, Completeness.eval_tweakableHash]
+      rfl
   · have hfolded := hlevel
-    have hlevel : level < subHeight := Nat.lt_of_lt_of_le hfolded (by decide)
-    have hl1 : level + 1 ≤ subHeight := hlevel
-    refine ⟨_, Forest.subNodeInput_mem f parameter index marks opening c j level hfolded,
-      active_hit' f parameter seed labels (subPosition index c (marks c).super j (level + 1) hl1
-        ⟨((marks c).child j).val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt ((marks c).child j).isLt⟩)
+    have hlevel : level < forsHeight := by omega
+    have hl1 : level + 1 ≤ forsHeight := hlevel
+    rw [hcanon] at hneq hout
+    refine ⟨_, Fors.nodeInput_mem f parameter index leaves opening κ level hfolded,
+      active_hit' f parameter seed labels (forsPosition index κ (level + 1) hl1
+        ⟨(leaves κ).val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt (leaves κ).isLt⟩)
         trivial _ ?_ ?_ ?_⟩
-    · have hdom : Forest.subDomain index c (marks c).super j (level + 1) (((marks c).child j).val / 2 ^ (level + 1)) =
-          HashDomain.subNode index c (marks c).super j ⟨level, by omega⟩
-            ⟨((marks c).child j).val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt ((marks c).child j).isLt⟩ := by
-        rw [Forest.subDomain, dif_pos ⟨by omega, by omega⟩]
+    · have hdom : Fors.forsDomain index κ (level + 1) ((leaves κ).val / 2 ^ (level + 1)) =
+          HashDomain.forsNode index κ ⟨level, by omega⟩
+            ⟨(leaves κ).val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt (leaves κ).isLt⟩ := by
+        rw [Fors.forsDomain, dif_pos ⟨by omega, by omega⟩]
         congr 2
-        exact Nat.mod_eq_of_lt ((Nat.div_le_self _ _).trans_lt ((marks c).child j).isLt)
+        exact Nat.mod_eq_of_lt ((Nat.div_le_self _ _).trans_lt (leaves κ).isLt)
       exact ⟨_, by simp only [merkleInput]; rw [hdom]; rfl⟩
-    · rw [sub_path_input f parameter seed labels hconsistent index c _ j _ level hlevel]
+    · rw [fors_path_input f parameter seed labels hconsistent index κ _ level hlevel]
       exact hneq
-    · rw [sub_path_value f parameter seed labels hconsistent index c _ j _ (level + 1) hl1]
-      exact hout
-  · refine ⟨_, Forest.superInput_mem f parameter index marks opening c,
-      active_hit f parameter seed labels (.superChild index c (marks c).super) trivial _ ?_ ?_⟩
-    · rw [super_input f parameter seed labels hconsistent]
-      intro hinput
-      exact hne (tweakableInput_injective hinput).2.2
-    · rw [super_value f parameter seed labels hconsistent]
-      exact heq
-  · have hfolded := hlevel
-    have hlevel : level < topHeight := Nat.lt_of_lt_of_le hfolded (by decide)
-    have hl1 : level + 1 ≤ topHeight := hlevel
-    refine ⟨_, Forest.topNodeInput_mem f parameter index marks opening c level hfolded,
-      active_hit' f parameter seed labels (topPosition index c (level + 1) hl1
-        ⟨(marks c).super.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt (marks c).super.isLt⟩)
-        trivial _ ?_ ?_ ?_⟩
-    · have hdom : Forest.topDomain index c (level + 1) ((marks c).super.val / 2 ^ (level + 1)) =
-          HashDomain.topNode index c ⟨level, by omega⟩
-            ⟨(marks c).super.val / 2 ^ (level + 1), (Nat.div_le_self _ _).trans_lt (marks c).super.isLt⟩ := by
-        rw [Forest.topDomain, dif_pos ⟨by omega, by omega⟩]
-        congr 2
-        exact Nat.mod_eq_of_lt ((Nat.div_le_self _ _).trans_lt (marks c).super.isLt)
-      exact ⟨_, by simp only [merkleInput]; rw [hdom]; rfl⟩
-    · rw [top_path_input f parameter seed labels hconsistent index c _ level hlevel]
-      exact hneq
-    · rw [top_path_value f parameter seed labels hconsistent index c _ (level + 1) hl1]
+    · rw [fors_path_value f parameter seed labels hconsistent index κ _ (level + 1) hl1]
       exact hout
 
 include hconsistent in

@@ -110,51 +110,21 @@ theorem fixedCostSource_sequenceFin_pure (f : QueryImpl HashSpec Id) (table : Hi
       funext index
       cases index using Fin.cases <;> rfl
 
-/-- The cost-level reveal of one opened forest chain, at and above its opened position. -/
-noncomputable def revealChainCost (index : Index) (c : Coord) (mark : CoordMark) (j : SubIdx) (i : FChain) :
-    OracleComp CostSpec (FPos → Digest) :=
-  sequenceFin fun k : FPos =>
-    if (openedPos mark j i).val ≤ k.val then
-      HiddenCost.reveal (D := HashInput) (R := HashOutput) (.fchain index c mark.super j (mark.child j) i k)
-    else pure 0
+/-- One tree's opening at the cost level: its secret and leaf are revealed, the path is public. -/
+noncomputable def treeCostSource (data : PublicData) (index : Index) (κ : FTree) (leaf : FLeaf) :
+    OracleComp CostSpec TreeOpening := do
+  let values ← sequenceFin fun k : Fin 2 =>
+    HiddenCost.reveal (D := HashInput) (R := HashOutput) (.fors index κ leaf k)
+  return ⟨values 0, data.forsPath index κ leaf⟩
 
-/-- One tree's opening at the cost level. -/
-noncomputable def coordCostSource (data : PublicData) (index : Index) (c : Coord) (mark : CoordMark) :
-    OracleComp CostSpec CoordOpening := do
-  let sub ← sequenceFin fun j => do
-    let cols ← sequenceFin fun i => revealChainCost index c mark j i
-    return (⟨fun i => cols i (openedPos mark j i),
-      data.subPath index c mark.super j (mark.child j)⟩ : SubOpening)
-  return ⟨sub, data.topPath index c mark.super⟩
-
-theorem fixed_forestCostSource (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table) (data : PublicData)
-    (index : Index) (marks : Coord → CoordMark) :
-    simulateQ (fixedCostSource f table) (sequenceFin fun c => coordCostSource data index c (marks c)) =
-      pure (assembledForest data table index marks) := by
+theorem fixed_forsCostSource (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table) (data : PublicData)
+    (index : Index) (leaves : FTree → FLeaf) :
+    simulateQ (fixedCostSource f table) (sequenceFin fun κ => treeCostSource data index κ (leaves κ)) =
+      pure (assembledFors data table index leaves) := by
   apply fixedCostSource_sequenceFin_pure
-  intro c
-  have hcols : ∀ (j : SubIdx) (i : FChain), simulateQ (fixedCostSource f table) (revealChainCost index c (marks c) j i) =
-      pure (fun k : FPos => if (openedPos (marks c) j i).val ≤ k.val then
-        table (.fchain index c (marks c).super j ((marks c).child j) i k) else 0) := by
-    intro j i
-    apply fixedCostSource_sequenceFin_pure
-    intro k
-    split
-    · exact fixedCostSource_reveal f table _
-    · exact simulateQ_pure _ _
-  have hsub : ∀ j : SubIdx, simulateQ (fixedCostSource f table) (do
-      let cols ← sequenceFin fun i => revealChainCost index c (marks c) j i
-      return (⟨fun i => cols i (openedPos (marks c) j i),
-        data.subPath index c (marks c).super j ((marks c).child j)⟩ : SubOpening)) =
-      pure (⟨fun i => table (.fchain index c (marks c).super j ((marks c).child j) i (openedPos (marks c) j i)),
-        data.subPath index c (marks c).super j ((marks c).child j)⟩ : SubOpening) := by
-    intro j
-    rw [simulateQ_bind, fixedCostSource_sequenceFin_pure f table _ _ (hcols j), pure_bind, simulateQ_pure]
-    simp only [le_refl, ↓reduceIte]
-  rw [coordCostSource, simulateQ_bind, fixedCostSource_sequenceFin_pure f table _ _ hsub, pure_bind,
-    simulateQ_pure]
+  intro κ
+  rw [treeCostSource, simulateQ_bind, fixedCostSource_sequence_reveal, pure_bind, simulateQ_pure]
   rfl
-
 
 /-- The counter search of one layer at the cost level: the honest cost of the key's message is
 charged first, and on success the chain values and the path. -/
@@ -172,13 +142,13 @@ noncomputable def finishCostSource (parameter : PublicParameter) (data : PublicD
     (message : Message) (randomness : Randomness) : OracleComp CostSpec (Option Signature) := do
   let digest ← liftM (messageDigest parameter data.root message randomness :
     OracleComp HashSpec MessageDigest)
-  HiddenCost.tick 58960
+  HiddenCost.tick (forsTrees * treeOpenCost)
   let index := digestIndex digest
   let some found ← sequenceDep (α := fun _ => Counter × Encoding) (layerCostSearch parameter data index)
     | return none
   let values ← sequenceFin fun lay : Layer => sequenceFin fun chain => HiddenCost.reveal
     (.chain lay (treeIndexAt index lay) (leafIndexAt index lay) chain ((found lay).2 chain))
-  let opening ← sequenceFin fun c => coordCostSource data index c (digestLeaves digest c)
+  let opening ← sequenceFin fun κ => treeCostSource data index κ (digestLeaves digest κ)
   return some ⟨randomness, opening, layerSignatures data index found values⟩
 
 theorem fixed_layerCostSearch (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -300,7 +270,7 @@ theorem fixed_finishCostSource (f : QueryImpl HashSpec Id) (parameter : PublicPa
         apply fixedCostSource_sequenceFin_pure
         intro lay
         exact fixedCostSource_sequence_reveal f table _
-      simp only [simulateQ_bind, hvalues, fixed_forestCostSource, pure_bind,
+      simp only [simulateQ_bind, hvalues, fixed_forsCostSource, pure_bind,
         simulateQ_pure, WriterT.run_pure, pure_bind,
         Option.map_some, map_pure, mul_one]
       simp only [← ofAdd_add, ← Nat.add_assoc]
@@ -324,7 +294,7 @@ noncomputable def signCostSourceLoop (parameter : PublicParameter) (data : Publi
     (message : Message) (step : Randomness) : Nat → Randomness → OracleComp CostSpec (Option Signature)
   | 0, _ => pure none
   | attempts + 1, randomness => do
-      let first ← liftM (messageDigestCall parameter data.root message randomness :
+      let first ← liftM (messageDigestCall parameter data.root message randomness firstCall :
         OracleComp HashSpec HashOutput)
       if Landed parameter (blockIndex first) then
         finishCostSource parameter data message randomness

@@ -423,30 +423,14 @@ theorem fixedCostP_reveal (which : HiddenGraph.Coordinate) :
   rw [HiddenCost.reveal, simulateQ_spec_query]
   rfl
 
-theorem fixedCostP_coord_det (data : PublicData) (index : Index) (marks : Coord → CoordMark) :
-    ∃ x, simulateQ (fixedCostP g c) (Concrete.sequenceFin fun coord => coordCostSource data index coord (marks coord)) =
+theorem fixedCostP_fors_det (data : PublicData) (index : Index) (leaves : FTree → FLeaf) :
+    ∃ x, simulateQ (fixedCostP g c) (Concrete.sequenceFin fun κ => treeCostSource data index κ (leaves κ)) =
       pure x := by
   apply fixedCostP_sequenceFin_pure
-  intro coord
-  have hsub : ∃ x, simulateQ (fixedCostP g c) (Concrete.sequenceFin fun j => do
-      let cols ← Concrete.sequenceFin fun i => revealChainCost index coord (marks coord) j i
-      return (⟨fun i => cols i (openedPos (marks coord) j i),
-        data.subPath index coord (marks coord).super j ((marks coord).child j)⟩ : SubOpening)) = pure x := by
-    apply fixedCostP_sequenceFin_pure
-    intro j
-    have hcols : ∃ x, simulateQ (fixedCostP g c)
-        (Concrete.sequenceFin fun i => revealChainCost index coord (marks coord) j i) = pure x := by
-      apply fixedCostP_sequenceFin_pure
-      intro i
-      apply fixedCostP_sequenceFin_pure
-      intro k
-      split
-      · exact ⟨_, fixedCostP_reveal g c _⟩
-      · exact ⟨_, simulateQ_pure _ _⟩
-    obtain ⟨x, hx⟩ := hcols
-    exact ⟨_, by rw [simulateQ_bind, hx, pure_bind, simulateQ_pure]⟩
-  obtain ⟨x, hx⟩ := hsub
-  exact ⟨_, by rw [coordCostSource, simulateQ_bind, hx, pure_bind, simulateQ_pure]⟩
+  intro κ
+  obtain ⟨x, hx⟩ := fixedCostP_sequenceFin_pure g c _ (fun k : Fin 2 => ⟨_, fixedCostP_reveal g c
+    (.fors index κ (leaves κ) k)⟩)
+  exact ⟨_, by rw [treeCostSource, simulateQ_bind, hx, pure_bind, simulateQ_pure]⟩
 
 theorem fixedCostP_bind_det {α β : Type} (oa : OracleComp CostSpec α) (next : α → OracleComp CostSpec β)
     (h : ∃ x, simulateQ (fixedCostP g c) oa = pure x)
@@ -491,7 +475,7 @@ theorem finishCostSource_det (parameter : PublicParameter) (data : PublicData) (
   · exact ⟨_, simulateQ_pure _ _⟩
   · refine fixedCostP_bind_det g c _ _ (fixedCostP_sequenceFin_pure g c _ (fun lay =>
       fixedCostP_sequenceFin_pure g c _ (fun chain => ⟨_, fixedCostP_reveal g c _⟩))) (fun _ => ?_)
-    refine fixedCostP_bind_det g c _ _ (fixedCostP_coord_det g c data _ _) (fun _ => ?_)
+    refine fixedCostP_bind_det g c _ _ (fixedCostP_fors_det g c data _ _) (fun _ => ?_)
     exact ⟨_, simulateQ_pure _ _⟩
 
 theorem signCostDetLoop_det (parameter : PublicParameter) (data : PublicData)

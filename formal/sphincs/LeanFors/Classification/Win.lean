@@ -102,16 +102,17 @@ end Events
 
 /-- The verifier's message digest of a forgery, read from a cache. -/
 def cachedDigest (cache : QueryCache HashSpec) (parameter : PublicParameter) (root : Digest)
-    (message : Message) (randomness : Randomness) : Option MessageDigest := do
-  let first ← cache (tweakableHashInput parameter .message (messageDigestPayload root message randomness))
-  return truncateMessageDigest first
+    (message : Message) (randomness : Randomness) : Option MessageDigest :=
+  (Completeness.allSome (α := fun _ => HashOutput) fun call : DigestCall =>
+    cache (tweakableHashInput parameter (.message call) (messageDigestPayload root message randomness))).map
+    truncateMessageDigest
 
-/-- Forest chain positions revealed by the run. -/
-noncomputable def revealedSet (reveals : List HiddenGraph.Coordinate) : Disclosures := fun index c s j a i =>
-  Finset.univ.filter fun p => HiddenGraph.Coordinate.fchain index c s j a i p ∈ reveals
+/-- FORS leaves whose secret the run revealed. -/
+noncomputable def revealedSet (reveals : List HiddenGraph.Coordinate) : Disclosures := fun index κ =>
+  Finset.univ.filter fun leaf => HiddenGraph.Coordinate.fors index κ leaf 0 ∈ reveals
 
-/-- A cached, landed digest of an unsigned message-randomizer pair whose forest openings were all
-revealed by the run (at or below the positions it needs). -/
+/-- A cached, landed digest of an unsigned message-randomizer pair whose FORS secrets were all
+revealed by the run. -/
 def ForestCover (parameter : PublicParameter) (root : Digest) (outcome : Outcome)
     (reveals : List HiddenGraph.Coordinate) (cache : QueryCache HashSpec) : Prop :=
   SigningTranscript.Valid outcome.2.1 ∧
@@ -351,35 +352,25 @@ theorem knownOf_known (parameter : PublicParameter) (fixed : HiddenGraph.Table) 
   · assumption
   · cases h
 
-/-- A reachable forest chain value is the public top or lies above a revealed position of its chain. -/
-theorem reach_fchain (parameterOutput : HashOutput) (highs : CoordinateHighs) (fixed : HiddenGraph.Table)
+/-- A reachable FORS secret was revealed: it is neither known nor a row output. -/
+theorem reach_fors (parameterOutput : HashOutput) (highs : CoordinateHighs) (fixed : HiddenGraph.Table)
     (reveals : List Coordinate) (coordinate : Coordinate)
     (h : Reach (sampleModel parameterOutput highs) (knownOf (truncateHash parameterOutput) fixed)
       reveals coordinate) :
-    ∀ index c s j a i (p : FPos), coordinate = .fchain index c s j a i p →
-      p.val = chainTop ∨ ∃ q : FPos, q.val ≤ p.val ∧ Coordinate.fchain index c s j a i q ∈ reveals := by
+    ∀ index κ leaf, coordinate = .fors index κ leaf 0 → Coordinate.fors index κ leaf 0 ∈ reveals := by
   induction h with
   | known coordinate value hvalue =>
-      intro index c s j a i p heq
+      intro index κ leaf heq
       subst heq
-      exact Or.inl (knownOf_known _ fixed _ value hvalue)
+      have := knownOf_known _ fixed _ value hvalue
+      simp [KnownCoordinate] at this
   | reveal coordinate hmem =>
-      intro index c s j a i p heq
+      intro index κ leaf heq
       subst heq
-      exact Or.inr ⟨p, le_rfl, hmem⟩
-  | succ address _ ih =>
-      intro index c s j a i p heq
-      cases address with
-      | chain lay tree leaf' chainIdx step =>
-          simp [sampleModel, rowModel, Address.outputCoordinate] at heq
-      | fchain index' c' s' j' a' i' t =>
-          simp only [sampleModel, rowModel, Address.outputCoordinate, Coordinate.fchain.injEq] at heq
-          obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩ := heq
-          rcases ih _ _ _ _ _ _ ⟨t.val, by have := t.isLt; omega⟩ rfl with htop | ⟨q, hq, hmem⟩
-          · have := t.isLt
-            simp only [chainTop] at htop this
-            omega
-          · exact Or.inr ⟨q, by simp only at hq ⊢; omega, hmem⟩
+      exact hmem
+  | succ address _ _ =>
+      intro index κ leaf heq
+      cases address <;> simp [sampleModel, rowModel, Address.outputCoordinate] at heq
 
 theorem reach_chain (parameterOutput : HashOutput) (highs : CoordinateHighs) (fixed : HiddenGraph.Table)
     (reveals : List Coordinate) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
@@ -413,7 +404,7 @@ theorem reach_chain (parameterOutput : HashOutput) (highs : CoordinateHighs) (fi
           have hprev := ih chainIdx ⟨step.val, by have := step.isLt; omega⟩ rfl
           simp only at hprev ⊢
           omega
-      | fchain index c s j a i t =>
+      | fleaf index κ leaf =>
           simp [sampleModel, rowModel, Address.outputCoordinate] at heq
 
 /-! ### Small helpers -/
@@ -440,16 +431,19 @@ theorem firstEncoding_congr (f g : QueryImpl HashSpec Id) (parameter : PublicPar
       simp only [Prefix.firstEncoding, hencode, ih]
 
 theorem digestInputs_mem (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
-    (signature : Signature) :
-    tweakableHashInput pk.parameter .message
+    (signature : Signature) (call : DigestCall) :
+    tweakableHashInput pk.parameter (.message call)
         (messageDigestPayload pk.root message signature.randomness) ∈
       SignatureWitness.trace f pk message signature := by
   unfold SignatureWitness.trace
   rw [Concrete.verify]
   apply queriedInputs_mono_bind_left
-  unfold messageDigest messageDigestCall
+  unfold messageDigest
+  apply queriedInputs_mono_bind_left
+  apply queriedInputs_sequenceFin_component f _ call
+  unfold messageDigestCall
   simp only [oracleHash, HasQuery.query]
-  rw [queriedInputs_query_bind]
+  rw [← bind_pure (liftM _), queriedInputs_query_bind]
   exact List.mem_cons_self
 
 theorem OnlyC.costGameX (parameter : PublicParameter) (data : GraphView.PublicData) (adversary : Adversary) :
@@ -566,9 +560,9 @@ theorem encoding_not_row (parameterOutput : HashOutput) (highs : CoordinateHighs
   cases hparse
 
 theorem message_not_row (parameterOutput : HashOutput) (highs : CoordinateHighs) (table : HiddenGraph.Table)
-    (payload : HashInput) :
+    (payload : HashInput) (call : DigestCall) :
     ∀ query, (sampleModel parameterOutput highs).parse
-      (tweakableHashInput (truncateHash parameterOutput) .message payload) = some query →
+      (tweakableHashInput (truncateHash parameterOutput) (.message call) payload) = some query →
       ¬query.2 = table ((sampleModel parameterOutput highs).incoming query.1) := by
   intro query hparse
   rw [sampleModel_parse, parse_tweakable_none _ _ _ _
@@ -656,28 +650,24 @@ theorem cached_hit (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (h
   rw [← hvalue]
   exact hmem
 
-/-- A queried honest forest chain value lies above a revealed position of its chain. -/
-theorem queried_fchain_revealed (parameterOutput : HashOutput) (highs : CoordinateHighs)
+/-- A queried honest FORS secret was revealed. -/
+theorem queried_fleaf_revealed (parameterOutput : HashOutput) (highs : CoordinateHighs)
     (fixed table : HiddenGraph.Table) (reveals : List Coordinate) (entries : List (HiddenCost.Entry HashInput))
     (hguess : NoHiddenGuess (sampleModel parameterOutput highs) table
       (knownOf (truncateHash parameterOutput) fixed) reveals entries)
-    (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (t : FStep)
-    (hmem : Sum.inl (tweakableHashInput (truncateHash parameterOutput) (.fchain index c s j a i t)
-      (bytesLE 16 (table (.fchain index c s j a i ⟨t.val, by have := t.isLt; omega⟩)))) ∈ entries) :
-    ∃ q : FPos, q.val ≤ t.val ∧ Coordinate.fchain index c s j a i q ∈ reveals := by
+    (index : Index) (κ : FTree) (leaf : FLeaf)
+    (hmem : Sum.inl (tweakableHashInput (truncateHash parameterOutput) (.forsLeaf index κ leaf)
+      (bytesLE 16 (table (.fors index κ leaf 0)))) ∈ entries) :
+    Coordinate.fors index κ leaf 0 ∈ reveals := by
   have hparse : (sampleModel parameterOutput highs).parse
-      (tweakableHashInput (truncateHash parameterOutput) (.fchain index c s j a i t)
-        (bytesLE 16 (table (.fchain index c s j a i ⟨t.val, by have := t.isLt; omega⟩)))) =
-      some (.fchain index c s j a i t, table (.fchain index c s j a i ⟨t.val, by have := t.isLt; omega⟩)) := by
+      (tweakableHashInput (truncateHash parameterOutput) (.forsLeaf index κ leaf)
+        (bytesLE 16 (table (.fors index κ leaf 0)))) =
+      some (.fleaf index κ leaf, table (.fors index κ leaf 0)) := by
     rw [sampleModel_parse]
-    exact parse_input _ _ (.fchain index c s j a i t, _) trivial
+    exact parse_input _ _ (.fleaf index κ leaf, _) trivial
   have hreach := hguess _ hmem _ hparse (by rw [sampleModel_incoming]; rfl)
   rw [sampleModel_incoming] at hreach
-  rcases reach_fchain parameterOutput highs fixed reveals _ hreach index c s j a i _ rfl with htop | hq
-  · have := t.isLt
-    simp only [chainTop] at htop this
-    omega
-  · exact hq
+  exact reach_fors parameterOutput highs fixed reveals _ hreach index κ leaf rfl
 
 theorem queried_chain_reach (parameterOutput : HashOutput) (highs : CoordinateHighs)
     (fixed table : HiddenGraph.Table) (reveals : List Coordinate) (entries : List (HiddenCost.Entry HashInput))
@@ -750,9 +740,8 @@ theorem revealed_chain_word (f : QueryImpl HashSpec Id) (parameter : PublicParam
           rfl
         rw [hword]
       · obtain ⟨l, hl, hfts'⟩ := List.mem_flatten.mp hfts
-        obtain ⟨c, rfl⟩ := List.mem_ofFn.mp hl
-        obtain ⟨j, ch, k, -, hk⟩ := mem_treeReveals hfts'
-        cases hk
+        obtain ⟨κ, rfl⟩ := List.mem_ofFn.mp hl
+        obtain ⟨k, ⟨⟩⟩ := mem_treeReveals hfts'
 
 /-- A canonical opening sharing an honest signature's message and randomizer is that signature. -/
 theorem canonical_signed_eq (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) (message : Message)
@@ -823,22 +812,24 @@ theorem cachedDigest_eq (parameterOutput : HashOutput) (highs : CoordinateHighs)
       Sum.inl input ∈ entries) :
     cachedDigest cacheF (truncateHash parameterOutput) root message signature.randomness =
       some (verificationDigest f ⟨root, truncateHash parameterOutput⟩ message signature) := by
-  have hread : cacheF (tweakableHashInput (truncateHash parameterOutput) .message
+  have hread : ∀ call : DigestCall, cacheF (tweakableHashInput (truncateHash parameterOutput) (.message call)
       (messageDigestPayload root message signature.randomness)) =
-      some (f (tweakableHashInput (truncateHash parameterOutput) .message
+      some (f (tweakableHashInput (truncateHash parameterOutput) (.message call)
         (messageDigestPayload root message signature.randomness))) := by
-    have hentry := htrace _ (digestInputs_mem f ⟨root, truncateHash parameterOutput⟩ message signature)
+    intro call
+    have hentry := htrace _ (digestInputs_mem f ⟨root, truncateHash parameterOutput⟩ message signature call)
     have hnot := message_not_row parameterOutput highs table
-      (messageDigestPayload root message signature.randomness)
+      (messageDigestPayload root message signature.randomness) call
     obtain ⟨answer, hanswer⟩ := Option.ne_none_iff_exists'.mp (hcached _ hentry hnot)
     have hfin := finalFn_unparsed parameterOutput highs table cacheF _ hnot
     rw [hanswer] at hfin
     rw [hanswer, (hagree _ hentry).trans hfin]
     rfl
   unfold cachedDigest verificationDigest
-  rw [hread]
-  simp only [messageDigest, messageDigestCall, oracleHash, HasQuery.query, evalWithAnswerFn_bind,
-    evalWithAnswerFn_pure]
+  simp only [hread]
+  unfold Completeness.allSome
+  simp only [Option.isSome_some, implies_true, ↓reduceDIte, Option.map_some, Option.get_some, messageDigest, messageDigestCall, oracleHash,
+    HasQuery.query, evalWithAnswerFn_bind, evalWithAnswerFn_pure, Completeness.eval_sequenceFin]
   rfl
 
 /-! ### The win implication -/
@@ -926,27 +917,22 @@ theorem bad_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashOu
       apply hnotContains
       exact ⟨entry, hentry, hmessage, by rw [hhonest, heq]⟩
     · right
-      have hmarks := funext (digestMarks_eq (verificationDigest f ⟨(sampleData parameterOutput fixed highs
-        remaining).root, truncateHash parameterOutput⟩ forgery.message forgery.signature))
       have hopen := hcanon.2.2
       have hrun := SignatureWitness.verification_fors_run f ⟨(sampleData parameterOutput fixed highs
         remaining).root, truncateHash parameterOutput⟩ forgery.message forgery.signature
-      rw [hmarks] at hopen hrun
-      rcases Forest.Opening.covered_or_hidden f (truncateHash parameterOutput) _ seed _
+      rcases Fors.Opening.covered_or_hidden f (truncateHash parameterOutput) _ seed _
           forgery.signature.fors (revealedSet reveals) _ hopen hrun with
-        hcovered | ⟨index, c, s, j, a, i, t, hnot, hmem⟩
+        hcovered | ⟨index, κ, leaf, hnot, hmem⟩
       · refine ⟨hvalid, _, cachedDigest_eq parameterOutput highs table cacheF f entries hagree hcached _
           forgery.message forgery.signature htrace, hcanon.1, ?_, hcovered⟩
         intro entry hentry honest hhonest hpair
         exact hsigned ⟨entry, hentry, honest, hhonest, hpair.1, hpair.2⟩
       · exfalso
-        rw [show Completeness.chainValueOf f (truncateHash parameterOutput) index c s j a i seed t.val =
-          table (.fchain index c s j a i ⟨t.val, by have := t.isLt; omega⟩) from
-          (hcoord.2 index c s j a i ⟨t.val, by have := t.isLt; omega⟩).symm] at hmem
-        obtain ⟨q, hq, hrev⟩ := queried_fchain_revealed parameterOutput highs fixed table reveals entries hguess
-          index c s j a i t (htrace _ hmem)
-        have := hnot q (by simp only [revealedSet, Finset.mem_filter, Finset.mem_univ, true_and]; exact hrev)
-        omega
+        rw [← (hcoord.2 index κ leaf).1] at hmem
+        exact hnot (by
+          simpa only [revealedSet, Finset.mem_filter, Finset.mem_univ, true_and] using
+            queried_fleaf_revealed parameterOutput highs fixed table reveals entries hguess
+              index κ leaf (htrace _ hmem))
   · left
     obtain ⟨input, hinput, hmem⟩ := treeHit_hit f (truncateHash parameterOutput) seed _ hcons hbound _ rfl
       forgery.message forgery.signature j htree
@@ -989,7 +975,7 @@ theorem bad_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashOu
           (hactive lay) _ houtput
         exact hhit input hinput (graph_targets_subset _ _ _ _ _ hmem)
     · left
-      obtain ⟨input, hinput, hmem⟩ := forestException_hit f (truncateHash parameterOutput) seed _ hcons _ _ _
+      obtain ⟨input, hinput, hmem⟩ := forsException_hit f (truncateHash parameterOutput) seed _ hcons _ _ _
         hforestExc
       exact hhit input (SignatureWitness.verification_fors_run f _ forgery.message forgery.signature input hinput)
         (graph_targets_subset _ _ _ _ _ hmem)

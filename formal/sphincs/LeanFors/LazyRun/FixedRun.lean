@@ -242,66 +242,32 @@ theorem costRun_withReveals_bind_pure_det {α β : Type} (x : OracleComp CostSpe
   subst second
   simp
 
-/-- The chain values one tree's opening reveals, in order. -/
-def treeReveals (index : Index) (c : Coord) (mark : CoordMark) : List HiddenGraph.Coordinate :=
-  (List.ofFn fun j : SubIdx => (List.ofFn fun ch : FChain => (List.ofFn fun k : FPos =>
-    if (openedPos mark j ch).val ≤ k.val then [HiddenGraph.Coordinate.fchain index c mark.super j (mark.child j) ch k]
-    else []).flatten).flatten).flatten
+/-- The secret and the leaf one tree's opening reveals, in order. -/
+def treeReveals (index : Index) (κ : FTree) (leaf : FLeaf) : List HiddenGraph.Coordinate :=
+  (List.ofFn fun k : Fin 2 => [HiddenGraph.Coordinate.fors index κ leaf k]).flatten
 
-theorem mem_treeReveals {index : Index} {c : Coord} {mark : CoordMark} {x : HiddenGraph.Coordinate}
-    (h : x ∈ treeReveals index c mark) :
-    ∃ j ch k, (openedPos mark j ch).val ≤ k.val ∧ x = .fchain index c mark.super j (mark.child j) ch k := by
-  simp only [treeReveals, List.mem_flatten, List.mem_ofFn, exists_exists_eq_and] at h
-  obtain ⟨j, ch, k, hk⟩ := h
-  split_ifs at hk with hle
-  · exact ⟨j, ch, k, hle, List.mem_singleton.mp hk⟩
-  · simp at hk
+theorem mem_treeReveals {index : Index} {κ : FTree} {leaf : FLeaf} {x : HiddenGraph.Coordinate}
+    (h : x ∈ treeReveals index κ leaf) : ∃ k, x = .fors index κ leaf k := by
+  simp only [treeReveals, List.mem_flatten, List.mem_ofFn, exists_exists_eq_and,
+    List.mem_singleton] at h
+  exact h
 
-theorem mem_treeReveals_of {index : Index} {c : Coord} {mark : CoordMark} (j : SubIdx) (ch : FChain) (k : FPos)
-    (hk : (openedPos mark j ch).val ≤ k.val) :
-    HiddenGraph.Coordinate.fchain index c mark.super j (mark.child j) ch k ∈ treeReveals index c mark := by
-  simp only [treeReveals, List.mem_flatten, List.mem_ofFn, exists_exists_eq_and]
-  exact ⟨j, ch, k, by rw [if_pos hk]; exact List.mem_singleton_self _⟩
+theorem mem_treeReveals_of {index : Index} {κ : FTree} {leaf : FLeaf} (k : Fin 2) :
+    HiddenGraph.Coordinate.fors index κ leaf k ∈ treeReveals index κ leaf := by
+  simp only [treeReveals, List.mem_flatten, List.mem_ofFn, exists_exists_eq_and, List.mem_singleton]
+  exact ⟨k, rfl⟩
 
-theorem costRun_withReveals_coordCostSource (data : PublicData) (index : Index) (marks : Coord → CoordMark)
-    (c : Coord) (result : RunResult CoordOpening)
-    (hresult : result ∈ support (costRun f table (withReveals (coordCostSource data index c (marks c))))) :
-    result = ((assembledForest data table index marks c, treeReveals index c (marks c)), []) := by
-  unfold coordCostSource at hresult
-  have hchain : ∀ (j : SubIdx) (ch : FChain) r, r ∈ support (costRun f table (withReveals
-      (revealChainCost index c (marks c) j ch))) →
-      r = (((fun k : FPos => if (openedPos (marks c) j ch).val ≤ k.val then
-          table (.fchain index c (marks c).super j ((marks c).child j) ch k) else 0),
-        (List.ofFn fun k : FPos => if (openedPos (marks c) j ch).val ≤ k.val then
-          [HiddenGraph.Coordinate.fchain index c (marks c).super j ((marks c).child j) ch k] else []).flatten), []) := by
-    intro j ch r hr
-    unfold revealChainCost at hr
-    refine costRun_withReveals_sequenceFin_det f table _ _ _ (fun k r' hr' => ?_) r hr
-    split at hr'
-    · rename_i hk
-      rw [costRun_withReveals_reveal f table _ r' hr', if_pos hk, if_pos hk]
-    · rename_i hk
-      rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at hr'
-      rw [hr', if_neg hk, if_neg hk]
-  have hsub : ∀ (j : SubIdx) r, r ∈ support (costRun f table (withReveals (do
-      let cols ← Concrete.sequenceFin fun i => revealChainCost index c (marks c) j i
-      return (⟨fun i => cols i (openedPos (marks c) j i),
-        data.subPath index c (marks c).super j ((marks c).child j)⟩ : SubOpening)))) →
-      r = ((assembledForest data table index marks c |>.sub j,
-        (List.ofFn fun ch : FChain => (List.ofFn fun k : FPos =>
-          if (openedPos (marks c) j ch).val ≤ k.val then
-            [HiddenGraph.Coordinate.fchain index c (marks c).super j ((marks c).child j) ch k]
-          else []).flatten).flatten), []) := by
-    intro j r hr
-    have := costRun_withReveals_bind_pure_det f table _ _ _ _
-      (costRun_withReveals_sequenceFin_det f table _ _ _ (fun ch => hchain j ch)) r hr
-    rw [this]
-    simp [assembledForest]
+theorem costRun_withReveals_treeCostSource (data : PublicData) (index : Index) (leaves : FTree → FLeaf)
+    (κ : FTree) (result : RunResult TreeOpening)
+    (hresult : result ∈ support (costRun f table (withReveals (treeCostSource data index κ (leaves κ))))) :
+    result = ((assembledFors data table index leaves κ, treeReveals index κ (leaves κ)), []) := by
+  unfold treeCostSource at hresult
   have := costRun_withReveals_bind_pure_det f table _ _ _ _
-    (costRun_withReveals_sequenceFin_det f table _ _ _ hsub) result hresult
+    (costRun_withReveals_sequenceFin_det f table _ (fun k => table (.fors index κ (leaves κ) k))
+      (fun k => [HiddenGraph.Coordinate.fors index κ (leaves κ) k])
+      (fun k r hr => costRun_withReveals_reveal f table _ r hr)) result hresult
   rw [this]
   rfl
-
 
 /-- The chain coordinates the signer reveals at the found words of every layer. -/
 def wotsReveals (index : Index) (found : Layer → Counter × Encoding) : List HiddenGraph.Coordinate :=
@@ -317,7 +283,7 @@ noncomputable def revealsOf (parameter : PublicParameter) (data : PublicData) (m
   let index := digestIndex digest
   match assembledEncodings f parameter data index with
   | none => []
-  | some found => wotsReveals index found ++ (List.ofFn fun c => treeReveals index c (digestLeaves digest c)).flatten
+  | some found => wotsReveals index found ++ (List.ofFn fun κ => treeReveals index κ (digestLeaves digest κ)).flatten
 
 attribute [local irreducible] ReferenceChoice.search encodingAttemptLimit Concrete.messageDigest
   Concrete.sequenceFin
@@ -451,7 +417,7 @@ theorem finish_support (parameter : PublicParameter) (data : PublicData) (messag
         (fun lay r hr => costRun_withReveals_sequenceReveal f table _ r hr) r7 h7
       obtain ⟨r9, h9, r10, h10, rfl⟩ := costRun_withReveals_bind f table _ _ r8 h8
       obtain rfl := costRun_withReveals_sequenceFin_det f table _ _ _
-        (fun c => costRun_withReveals_coordCostSource f table data _ _ c) r9 h9
+        (fun κ => costRun_withReveals_treeCostSource f table data _ _ κ) r9 h9
       rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at h10
       subst r10
       refine ⟨rfl, ?_⟩
@@ -501,7 +467,7 @@ theorem signLoop_support (parameter : PublicParameter) (seed : MasterSeed) (data
         have hland' : Landed parameter (digestIndex (Completeness.digestValue f
             ⟨seed, parameter, data.root⟩ message randomness)) := by
           simpa only [Completeness.digestValue, messageDigest, evalWithAnswerFn_bind,
-            evalWithAnswerFn_pure, Completeness.digestIndex_truncate] using hland
+            evalWithAnswerFn_pure, Completeness.eval_sequenceFin, digestIndex_truncate] using hland
         obtain ⟨hvalue, hreveals⟩ := finish_support f table parameter data message randomness r4 h4
         have hsign := eval_finishSign_assembled f parameter seed data table hdata htable message randomness hland'
         refine ⟨fun hnone => ?_, fun signature hsome => ⟨randomness, hland', ?_, hreveals⟩⟩

@@ -1,8 +1,8 @@
 import LeanFors.LazyRun.UntilHidden
 import LeanFors.LazyRun.GraphSampling
 
-/-! The seed-free graph oracle is the candidate hidden-row oracle: canonical WOTS and forest
-chain rows read the coordinate table, every other input reads a structural cache over an
+/-! The seed-free graph oracle is the candidate hidden-row oracle: canonical WOTS chain rows and
+FORS leaf rows read the coordinate table, every other input reads a structural cache over an
 independent short-input table. -/
 
 open OracleComp OracleSpec ENNReal
@@ -17,11 +17,17 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-/-- WOTS and forest chain steps are the hidden rows; every other position is structural. -/
+/-- WOTS chain steps and FORS leaves are the hidden rows; every other position is structural. -/
 def IsRowPosition : Position → Prop
   | .chain .. => True
-  | .fchain .. => True
+  | .fleaf .. => True
   | _ => False
+
+/-- The positions whose labels are fixed before the stopped experiment: all but the WOTS chain steps
+(a FORS leaf's value is known, only its secret is hidden). -/
+def IsPublicPosition : Position → Prop
+  | .chain .. => False
+  | _ => True
 
 def structActive (parameter : PublicParameter) (position : Position) : Prop :=
   PrunedGraph.active parameter position ∧ ¬IsRowPosition position
@@ -85,7 +91,7 @@ theorem graphFn_eq_answer (material : Material) (answers : CanonicalGraphLabels)
           have hrow' : ∃ address : Address, address.position = position := by
             cases position with
             | chain lay tree leaf chainIdx step => exact ⟨.chain lay tree leaf chainIdx step, rfl⟩
-            | fchain index c s j a i t => exact ⟨.fchain index c s j a i t, rfl⟩
+            | fleaf index κ leaf => exact ⟨.fleaf index κ leaf, rfl⟩
             | _ => exact hrow.elim
           obtain ⟨address, rfl⟩ := hrow'
           have hp := parse_input p (candidateActive p)
@@ -121,11 +127,11 @@ theorem graphFn_eq_answer (material : Material) (answers : CanonicalGraphLabels)
 
 /-! ### Independence of the hidden coordinates -/
 
-/-- Coordinates fixed before the stopped experiment: WOTS chain endpoints, forest chain tops, and
+/-- Coordinates fixed before the stopped experiment: WOTS chain endpoints, FORS leaf values, and
 every coordinate at a pruned-away leaf. Only these are read outside the hidden rows. -/
 def KnownCoordinate (parameter : PublicParameter) : Coordinate → Prop
   | .chain lay tree leaf _ position => position.val = chainLength - 1 ∨ ¬PrunedGraph.KeyActive parameter lay tree leaf
-  | .fchain _ _ _ _ _ _ position => position.val = chainTop
+  | .fors _ _ _ position => position.val = 1
 
 noncomputable local instance hiddenSampleCellDecEq : DecidableEq SampleCell := Classical.decEq _
 
@@ -158,14 +164,20 @@ theorem cellKnown_last (parameter : PublicParameter) (lay : Layer) (tree : TreeI
   left
   simp [Position.lastChainStep, chainLength, winternitzBits]
 
-theorem cellKnown_lastForest (parameter : PublicParameter) (index : Index) (c : Coord) (s : SuperIdx)
-    (j : SubIdx) (a : ChildIdx) (i : FChain) :
-    CellKnown parameter (.inr (.fchain index c s j a i Position.lastForestStep)) := by
+theorem cellKnown_fleaf (parameter : PublicParameter) (index : Index) (κ : FTree) (leaf : FLeaf) :
+    CellKnown parameter (.inr (.fleaf index κ leaf)) := by
   intro coordinate hcell
   have h := coordinateAtCell_of_cell hcell
   simp only [coordinateAtCell, Option.some.injEq] at h
   subst coordinate
-  simp [KnownCoordinate, Position.lastForestStep, chainTop]
+  rfl
+
+theorem cellKnown_public (parameter : PublicParameter) (position : Position)
+    (hpublic : IsPublicPosition position) : CellKnown parameter (.inr position) := by
+  cases position with
+  | chain => exact hpublic.elim
+  | fleaf index κ leaf => exact cellKnown_fleaf parameter index κ leaf
+  | _ => exact cellKnown_struct parameter _ (fun h => h)
 
 theorem cellKnown_surrogate (parameter : PublicParameter) (level : Fin maxLayerHeight) :
     CellKnown parameter (.inl (.inr (.inr level))) :=
@@ -177,7 +189,7 @@ theorem cellKnown_children (parameter : PublicParameter) (position : Position)
     CellKnown parameter (.inr child) := by
   cases position with
   | chain => exact (hrow trivial).elim
-  | fchain => exact (hrow trivial).elim
+  | fleaf => exact (hrow trivial).elim
   | leaf lay tree leaf =>
       simp only [Position.children, List.mem_ofFn] at hchild
       obtain ⟨chainIdx, rfl⟩ := hchild
@@ -186,24 +198,10 @@ theorem cellKnown_children (parameter : PublicParameter) (position : Position)
       simp only [Position.children] at hchild
       split_ifs at hchild <;> simp only [List.mem_cons, List.not_mem_nil, or_false] at hchild <;>
         rcases hchild with rfl | rfl <;> exact cellKnown_struct parameter _ (fun h => h)
-  | childLeaf index c s j a =>
-      simp only [Position.children, List.mem_ofFn] at hchild
-      obtain ⟨i, rfl⟩ := hchild
-      exact cellKnown_lastForest parameter index c s j a i
-  | subNode index c s j level nd =>
+  | fnode index κ level nd =>
       simp only [Position.children] at hchild
       split_ifs at hchild <;> simp only [List.mem_cons, List.not_mem_nil, or_false] at hchild <;>
-        rcases hchild with rfl | rfl <;> exact cellKnown_struct parameter _ (fun h => h)
-  | superChild index c s =>
-      simp only [Position.children, List.mem_cons, List.not_mem_nil, or_false] at hchild
-      rcases hchild with rfl | rfl | rfl | rfl <;> exact cellKnown_struct parameter _ (fun h => h)
-  | topNode index c level nd =>
-      simp only [Position.children] at hchild
-      split_ifs at hchild <;> simp only [List.mem_cons, List.not_mem_nil, or_false] at hchild <;>
-        rcases hchild with rfl | rfl <;> exact cellKnown_struct parameter _ (fun h => h)
-  | roots index =>
-      simp only [Position.children, List.mem_flatMap, List.mem_cons, List.not_mem_nil, or_false] at hchild
-      obtain ⟨c, -, rfl | rfl⟩ := hchild <;> exact cellKnown_struct parameter _ (fun h => h)
+        rcases hchild with rfl | rfl <;> exact cellKnown_public parameter _ trivial
 
 section Split
 
@@ -287,7 +285,7 @@ theorem canonicalGraphInput_struct (parameter : PublicParameter)
   congr 2
   cases position with
   | chain => exact (hrow trivial).elim
-  | fchain => exact (hrow trivial).elim
+  | fleaf => exact (hrow trivial).elim
   | _ => exact hmap
 
 section Split
@@ -311,41 +309,32 @@ theorem structCache_agree (lows lows' : HiddenGraph.Table)
       (cellKnown_struct _ position hrow)
 
 theorem publicData_congr (labels labels' : CanonicalGraphLabels) (steps : Message → Randomness)
-    (h : ∀ position, ¬IsRowPosition position → labels position = labels' position) :
+    (h : ∀ position, IsPublicPosition position → labels position = labels' position) :
     GraphView.publicData labels steps = GraphView.publicData labels' steps := by
   have htree : ∀ lay tree level hlevel index,
       labels (GraphCorrectness.treePosition lay tree level hlevel index) =
         labels' (GraphCorrectness.treePosition lay tree level hlevel index) := by
     intro lay tree level hlevel index
     apply h
-    cases level <;> simp [GraphCorrectness.treePosition, IsRowPosition]
-  have hsub : ∀ index c s j level hlevel nd,
-      labels (GraphCorrectness.subPosition index c s j level hlevel nd) =
-        labels' (GraphCorrectness.subPosition index c s j level hlevel nd) := by
-    intro index c s j level hlevel nd
+    cases level <;> simp [GraphCorrectness.treePosition, IsPublicPosition]
+  have hfors : ∀ index κ level hlevel nd,
+      labels (GraphCorrectness.forsPosition index κ level hlevel nd) =
+        labels' (GraphCorrectness.forsPosition index κ level hlevel nd) := by
+    intro index κ level hlevel nd
     apply h
-    cases level <;> simp [GraphCorrectness.subPosition, IsRowPosition]
-  have htop : ∀ index c level hlevel nd,
-      labels (GraphCorrectness.topPosition index c level hlevel nd) =
-        labels' (GraphCorrectness.topPosition index c level hlevel nd) := by
-    intro index c level hlevel nd
-    apply h
-    cases level <;> simp [GraphCorrectness.topPosition, IsRowPosition]
+    cases level <;> simp [GraphCorrectness.forsPosition, IsPublicPosition]
   unfold GraphView.publicData
   congr 1
   · rw [htree]
-  · funext index c
+  · funext index κ
     unfold GraphCorrectness.keyLabels
-    rw [h (.topNode index c ⟨topHeight - 2, by decide⟩ ⟨0, by decide⟩) (by simp [IsRowPosition]),
-      h (.topNode index c ⟨topHeight - 2, by decide⟩ ⟨1, by decide⟩) (by simp [IsRowPosition])]
+    rw [h (.fnode index κ _ _) trivial, h (.fnode index κ _ _) trivial]
   · funext lay tree
     rw [htree]
   · funext lay tree leaf level
     rw [htree]
-  · funext index c s j a level
-    rw [hsub]
-  · funext index c s level
-    rw [htop]
+  · funext index κ leaf level
+    rw [hfors]
 
 theorem publicData_agree (lows lows' : HiddenGraph.Table) (steps : Message → Randomness)
     (hagree : ∀ coordinate, KnownCoordinate (truncateHash parameterOutput) coordinate →
@@ -354,9 +343,9 @@ theorem publicData_agree (lows lows' : HiddenGraph.Table) (steps : Message → R
       (splitAnswers highs remaining lows)) steps =
     GraphView.publicData (labelsOf (splitMaterial parameterOutput highs remaining lows')
       (splitAnswers highs remaining lows')) steps :=
-  publicData_congr _ _ steps fun position hrow =>
+  publicData_congr _ _ steps fun position hpublic =>
     labelsOf_agree parameterOutput highs remaining lows lows' hagree position
-      (cellKnown_struct _ position hrow)
+      (cellKnown_public _ position hpublic)
 
 theorem highHalves_split (lows : HiddenGraph.Table) (address : Address)
     (hactive : candidateActive (truncateHash parameterOutput) address) :
@@ -392,7 +381,7 @@ theorem known_of_masked (parameter : PublicParameter) (coordinate : Coordinate)
     (h : Masked parameter coordinate) : KnownCoordinate parameter coordinate := by
   cases coordinate with
   | chain lay tree leaf chainIdx position => exact Or.inr h.2
-  | fchain => exact h.elim
+  | fors => exact h.elim
 
 noncomputable def masked (parameter : PublicParameter) (lows : HiddenGraph.Table) : HiddenGraph.Table :=
   fun coordinate => if Masked parameter coordinate then 0 else lows coordinate
@@ -452,13 +441,13 @@ theorem graphCoordinates_split (lows : HiddenGraph.Table) :
           rw [if_neg (fun hmem => hland ((mem_graphOrder _ _).mp hmem))]
           simp only [PrunedGraph.initialLabels, PrunedGraph.boundary]
           rfl
-  | fchain index c s j a i position =>
-      rw [if_neg (show ¬Masked (truncateHash parameterOutput) (.fchain index c s j a i position) from
+  | fors index κ leaf position =>
+      rw [if_neg (show ¬Masked (truncateHash parameterOutput) (.fors index κ leaf position) from
         fun h => h), ← hcoord]
       by_cases hzero : position.val = 0
-      · simp only [HiddenGraph.coordinates, dif_pos hzero]
+      · simp only [HiddenGraph.coordinates, if_pos hzero]
         rfl
-      · simp only [HiddenGraph.coordinates, dif_neg hzero]
+      · simp only [HiddenGraph.coordinates, if_neg hzero]
         rw [completed_active_label _ _ _ _ trivial]
         rfl
 

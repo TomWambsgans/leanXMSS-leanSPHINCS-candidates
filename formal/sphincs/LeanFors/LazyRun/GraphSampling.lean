@@ -28,26 +28,23 @@ def coordinateCell : Coordinate → SampleCell
       if h : position.val = 0 then .inl (.inl (lay, tree, leaf, chainIdx))
       else .inr (.chain lay tree leaf chainIdx
         ⟨position.val - 1, by have := position.isLt; simp only [chainLength, winternitzBits] at *; omega⟩)
-  | .fchain index c s j a i position =>
-      if h : position.val = 0 then .inl (.inr (.inl (index, c, s, j, a, i)))
-      else .inr (.fchain index c s j a i
-        ⟨position.val - 1, by have := position.isLt; simp only [chainTop] at *; omega⟩)
+  | .fors index κ leaf position =>
+      if position.val = 0 then .inl (.inr (.inl (index, κ, leaf))) else .inr (.fleaf index κ leaf)
 
 def coordinateAtCell : SampleCell → Option Coordinate
   | .inl (.inl (lay, tree, leaf, chainIdx)) => some (.chain lay tree leaf chainIdx ⟨0, by decide⟩)
-  | .inl (.inr (.inl (index, c, s, j, a, i))) => some (.fchain index c s j a i ⟨0, by decide⟩)
+  | .inl (.inr (.inl (index, κ, leaf))) => some (.fors index κ leaf 0)
   | .inl (.inr (.inr _)) => none
   | .inr (.chain lay tree leaf chainIdx step) =>
       some (.chain lay tree leaf chainIdx ⟨step.val + 1, by have := step.isLt; omega⟩)
-  | .inr (.fchain index c s j a i t) =>
-      some (.fchain index c s j a i ⟨t.val + 1, by have := t.isLt; simp only [chainTop] at *; omega⟩)
+  | .inr (.fleaf index κ leaf) => some (.fors index κ leaf 1)
   | .inr _ => none
 
 theorem coordinateAtCell_cell (coordinate : Coordinate) :
     coordinateAtCell (coordinateCell coordinate) = some coordinate := by
   cases coordinate with
   | chain lay tree leaf chainIdx position => fin_cases position <;> rfl
-  | fchain index c s j a i position => fin_cases position <;> rfl
+  | fors index κ leaf position => fin_cases position <;> rfl
 
 theorem coordinateCell_injective : Function.Injective coordinateCell := by
   intro left right heq
@@ -57,7 +54,7 @@ theorem coordinateCell_outgoing (address : Address) :
     coordinateCell address.outputCoordinate = .inr address.position := by
   cases address with
   | chain lay tree leaf chainIdx step => fin_cases step <;> rfl
-  | fchain index c s j a i t => fin_cases t <;> rfl
+  | fleaf index κ leaf => rfl
 
 abbrev CoordinateHighs := Coordinate → Prefix.High
 abbrev RemainingOutputs := Outside coordinateCell → HashOutput
@@ -132,15 +129,15 @@ def otsFromOutputs (outputs : SecretOutputs) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (chainIdx : ChainIndex) : Digest :=
   truncateHash (outputs (.inl (lay, tree, leaf, chainIdx)))
 
-def ftsFromOutputs (outputs : SecretOutputs) : ForsSecrets := fun index c s j a i =>
-  truncateHash (outputs (.inr (.inl (index, c, s, j, a, i))))
+def ftsFromOutputs (outputs : SecretOutputs) : ForsSecrets := fun index κ leaf =>
+  truncateHash (outputs (.inr (.inl (index, κ, leaf))))
 
 theorem coordinates_joined (outputs : JoinedOutputs) (coordinate : Coordinate) :
     coordinates (otsFromOutputs (joinedSecrets outputs)) (ftsFromOutputs (joinedSecrets outputs))
       (joinedLabels outputs) coordinate = truncateHash (outputs (coordinateCell coordinate)) := by
   cases coordinate with
   | chain lay tree leaf chainIdx position => fin_cases position <;> rfl
-  | fchain index c s j a i position => fin_cases position <;> rfl
+  | fors index κ leaf position => fin_cases position <;> rfl
 
 /-- The extracted coordinate function is literally the independent low-bit table. -/
 theorem coordinates_assemble (lows : Table) (highs : CoordinateHighs) (remaining : RemainingOutputs) :

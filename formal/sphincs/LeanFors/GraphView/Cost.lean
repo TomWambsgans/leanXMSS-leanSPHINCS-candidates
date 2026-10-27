@@ -42,58 +42,36 @@ open Concrete Completeness Prefix PrunedGraph
 set_option backward.isDefEq.respectTransparency false
 attribute [local irreducible] firstEncoding ReferenceChoice.search encodingAttemptLimit
   Seeded.forsKey Seeded.forsOpen Seeded.treePath Seeded.otsSignFrom Seeded.signLayer
-  chainWalk forestWalk sequenceFin encode Seeded.treeRoot
+  chainWalk sequenceFin encode Seeded.treeRoot Seeded.forsNode
 
-theorem hashCalls_forestKey_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+/-- The cost of the FORS key: the two top nodes of every tree. -/
+def forsKeyCost : Nat := forsTrees * (2 * (3 * 2 ^ (forsHeight - 1) - 1))
+
+/-- The cost of opening one tree: the derivation of its secret, then its `a` path nodes. -/
+def treeOpenCost : Nat := 1 + ∑ level : Fin forsHeight, (3 * 2 ^ level.val - 1)
+
+theorem hashCalls_forsKey_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (seed : MasterSeed) :
-    hashCalls f (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey) = 59120 :=
-  hashCalls_forestKey f parameter index seed
+    hashCalls f (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey) = forsKeyCost :=
+  hashCalls_forsKey f parameter index seed
 
-/-- Opening one tree costs 7370 calls: 3 seed derivations, 19 chain steps and 200 subtree-path calls
-per subtree (the opened positions sum to `6 · 4 - 5`), and 6926 tree-path calls. The last element of
-each path is the other top node of its tree. -/
-theorem hashCalls_coordOpen_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (c : Coord) (mark : CoordMark) (seed : MasterSeed) :
-    hashCalls f (Seeded.coordOpen parameter index c mark seed : OracleComp HashSpec CoordOpening) = 7370 := by
-  rw [Seeded.coordOpen, hashCalls_bind, hashCalls_bind, hashCalls_sequenceFin, hashCalls_sequenceFin]
-  simp only [hashCalls_bind, hashCalls_sequenceFin, hashCalls_pure, Nat.add_zero, hashCalls_forestSecrets]
-  have hchain : ∀ (j : SubIdx) (i : FChain) (value : Digest),
-      hashCalls f (forestWalk parameter index c mark.super j (mark.child j) i 0
-        (chainTop - (lut (mark.word j) i).val) value : OracleComp HashSpec Digest) =
-        chainTop - (lut (mark.word j) i).val := fun j i value =>
-    hashCalls_forestWalk f parameter index c _ j _ i 0 _ value (by omega)
-  have hsum : ∀ j : SubIdx, ∑ i : FChain, (chainTop - (lut (mark.word j) i).val) = 19 := by
-    intro j
-    have hle : ∀ i : FChain, (lut (mark.word j) i).val ≤ chainTop := fun i =>
-      Nat.le_of_lt_succ (lut (mark.word j) i).isLt
-    have hs := Completeness.lut_sum (mark.word j)
-    have : ∑ i : FChain, (chainTop - (lut (mark.word j) i).val) + ∑ i, (lut (mark.word j) i).val =
-        ∑ i : FChain, chainTop := by
-      rw [← Finset.sum_add_distrib]
-      exact Finset.sum_congr rfl fun i _ => by have := hle i; omega
-    rw [hs] at this
-    simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul, chainTop,
-      codewordSum, childChains] at this ⊢
-    omega
-  have hsub : ∀ (j : SubIdx) (level : Fin subHeight),
-      hashCalls f (Seeded.subNode parameter index c mark.super j seed level.val
-        (Nat.xor ((mark.child j).val / 2 ^ level.val) 1) : OracleComp HashSpec Digest) =
-        29 * 2 ^ level.val - 1 := fun j level =>
-    hashCalls_subNode f parameter index c _ j seed _ _ (Nat.le_of_lt level.isLt)
-  have htop : ∀ level : Fin topHeight,
-      hashCalls f (Seeded.topNode parameter index c seed level.val
-        (Nat.xor (mark.super.val / 2 ^ level.val) 1) : OracleComp HashSpec Digest) =
-        462 * 2 ^ level.val - 1 := fun level =>
-    hashCalls_topNode f parameter index c seed _ _ (Nat.le_of_lt level.isLt)
-  simp only [hchain, hsum, hsub, htop]
-  decide
+theorem hashCalls_treeOpen_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (index : Index) (κ : FTree) (leaf : FLeaf) (seed : MasterSeed) :
+    hashCalls f (Seeded.treeOpen parameter index κ leaf seed : OracleComp HashSpec TreeOpening) =
+      treeOpenCost := by
+  rw [Seeded.treeOpen, hashCalls_bind, hashCalls_forsSecret, hashCalls_bind, hashCalls_sequenceFin,
+    hashCalls_pure, Nat.add_zero, treeOpenCost]
+  congr 1
+  exact Finset.sum_congr rfl fun level _ =>
+    hashCalls_forsNode f parameter index κ seed _ _ (Nat.le_of_lt level.isLt)
 
-theorem hashCalls_forestOpen_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (index : Index) (marks : Coord → CoordMark) (seed : MasterSeed) :
-    hashCalls f (Seeded.forsOpen parameter index marks seed :
-      OracleComp HashSpec (Coord → CoordOpening)) = 58960 := by
-  simp only [Seeded.forsOpen, hashCalls_sequenceFin, hashCalls_coordOpen_exact]
-  decide
+/-- Opening FORS costs `k` tree openings. -/
+theorem hashCalls_forsOpen_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (index : Index) (leaves : FTree → FLeaf) (seed : MasterSeed) :
+    hashCalls f (Seeded.forsOpen parameter index leaves seed :
+      OracleComp HashSpec (FTree → TreeOpening)) = forsTrees * treeOpenCost := by
+  simp only [Seeded.forsOpen, hashCalls_sequenceFin, hashCalls_treeOpen_exact, Finset.sum_const,
+    Finset.card_univ, Fintype.card_fin, smul_eq_mul]
 
 /-- The published values of a WOTS+C signature cost `32 + 128 = 160` calls: the 32 seed derivations
 of the chain starts and the 128 chain steps of a codeword. -/
@@ -176,7 +154,7 @@ theorem hashCalls_treePath_exact (f : QueryImpl HashSpec Id) (parameter : Public
 /-- The cost of a key's message: the root of a whole tree of height 6 below it, or the FORS key
 of its instance at the bottom layer. -/
 def keyMessageCost (lay : Layer) : Nat :=
-  if lay.val + 1 < numLayers then 226 * 2 ^ lowerHeight - 1 else 59120
+  if lay.val + 1 < numLayers then 226 * 2 ^ lowerHeight - 1 else forsKeyCost
 
 set_option maxRecDepth 100000 in
 theorem hashCalls_keyMessage (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -189,7 +167,7 @@ theorem hashCalls_keyMessage (f : QueryImpl HashSpec Id) (parameter : PublicPara
     rw [dif_pos hbelow, if_pos hbelow, hashCalls_bind, hashCalls_treeRoot,
       keptHeight_of_ne_top _ hne, layerHeight_of_ne_top _ hne, Nat.sub_self]
     simp only [hashCalls_pure, Nat.mul_zero, Nat.add_zero]
-  · rw [dif_neg hbelow, if_neg hbelow, hashCalls_bind, hashCalls_forestKey_exact, hashCalls_pure]
+  · rw [dif_neg hbelow, if_neg hbelow, hashCalls_bind, hashCalls_forsKey_exact, hashCalls_pure, Nat.add_zero]
 
 /-- The cost of one layer: its key's message, the counter search, and on success the chain values
 and the path. -/
@@ -232,11 +210,12 @@ noncomputable def finishHashCost (f : QueryImpl HashSpec Id) (parameter : Public
     (data : PublicData) (message : Message) (randomness : Randomness) : Nat :=
   let index := digestIndex (evalWithAnswerFn f
     (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest))
-  1 + 58960 + seqCost (layerFound f parameter data index) (layerHashCost f parameter data index)
+  digestCalls + forsTrees * treeOpenCost +
+    seqCost (layerFound f parameter data index) (layerHashCost f parameter data index)
 
-/-- The `1 + 58960` calls are the digest block and the forest opening (chain values and all subtree
-and tree authentication nodes); the layers follow, each with its key's message, the counter search,
-and on success the chain values and the path, until the first failed search. -/
+/-- The digest calls and the FORS opening (secrets and all authentication nodes) come first; the
+layers follow, each with its key's message, the counter search, and on success the chain values and
+the path, until the first failed search. -/
 theorem hashCalls_finishSign_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (data : PublicData) (hdata : DataCorrect f parameter seed data)
     (message : Message) (randomness : Randomness)
@@ -244,7 +223,7 @@ theorem hashCalls_finishSign_exact (f : QueryImpl HashSpec Id) (parameter : Publ
       (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest)))) :
     hashCalls f (Seeded.finishSign ⟨seed, parameter, data.root⟩ message randomness) =
       finishHashCost f parameter data message randomness := by
-  simp only [Seeded.finishSign, hashCalls_bind, hashCalls_messageDigest, hashCalls_forestOpen_exact,
+  simp only [Seeded.finishSign, hashCalls_bind, hashCalls_messageDigest, hashCalls_forsOpen_exact,
     finishHashCost]
   generalize digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
     OracleComp HashSpec MessageDigest)) = index at hland ⊢
