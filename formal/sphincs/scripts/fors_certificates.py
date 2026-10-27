@@ -587,15 +587,15 @@ def emit(certs, path):
                     out.append('def tabc%s_%s_%d : PoisT := %s\n' % (kind, tag, ci, lean_tab(cv['t'])))
                     out.append('theorem tabc%s_%s_%d_ok : checkPT tabc%s_%s_%d = true := checkPT_poisOf (by decide +kernel)\n'
                                % (kind, tag, ci, kind, tag, ci))
-                    for k, o in enumerate(cv['opts']):
-                        out.append('/-- Option %d of %scover %d. -/' % (k, 'heavy ' if kind else '', ci))
-                        name, tabn = 'large%s_%s_%d_%d' % (kind, tag, ci, k), 'tabc%s_%s_%d' % (kind, tag, ci)
+                    for oi, o in enumerate(cv['opts']):
+                        out.append('/-- Option %d of %scover %d. -/' % (oi, 'heavy ' if kind else '', ci))
+                        name, tabn = 'large%s_%s_%d_%d' % (kind, tag, ci, oi), 'tabc%s_%s_%d' % (kind, tag, ci)
                         out.append('def %s : OptF := %s\n' % (name, lean_opt(b, tabn, cv['t'], o)))
                         out.append('/-- Its threshold and its bound. -/')
                         out.append('def %s_cB : ℚ × ℚ :=\n    (%s,\n     %s)\n' % (name, q(o.cthr), q(o.B)))
                         out.append('theorem %s_ok : checkOptB %d %d %d %d %s %s %s_cB = true :=\n    checkOptB_build (by decide +kernel)\n'
                                    % (name, H, b, k, a, tabn, name, name))
-                    opts = ['large%s_%s_%d_%d' % (kind, tag, ci, k) for k in range(len(cv['opts']))]
+                    opts = ['large%s_%s_%d_%d' % (kind, tag, ci, oi) for oi in range(len(cv['opts']))]
                     out.append('/-- %s %d: every budget from %d to %d. -/' % (
                         'Heavy cover (one heavy message, one spare slot)' if kind else 'Cover', ci, cv['qstart'], cv['qtop']))
                     out.append(cover_def(own, cv['qtop'], 'tabc%s_%s_%d' % (kind, tag, ci), opts, cv['entries']))
@@ -608,7 +608,7 @@ def emit(certs, path):
                         out.append('/-- %s %d with the entries of this keygen credit. -/' % ('Heavy cover' if kind else 'Cover', ci))
                         out.append(cover_def(own, None, None, None, cv['entries'], base=cname))
                         cname = own
-                onames = ['large%s_%s_%d_%d' % (kind, otag, ci, k) for k in range(len(cv['opts']))]
+                onames = ['large%s_%s_%d_%d' % (kind, otag, ci, oi) for oi in range(len(cv['opts']))]
                 names[kind].append(cname)
                 out.append('theorem %s_ok : %s %d %d %d %d %d %d %d %s = true :='
                            % (own, chk, H, b, k, a, K, N, cv['qstart'], cname))
