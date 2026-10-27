@@ -75,6 +75,37 @@ def PairInv (state : DebtState HashInput HashOutput Coordinate) : Prop :=
     (∀ u0, state.cache (blk parameter data message ρ) = some u0 → Landed parameter (blockIndex u0) →
       ∀ call, (state.cache (pblk parameter data message ρ call)).isSome)
 
+/-- **The first half of the pair invariant**: a pair whose index block is uncached is wholly
+uncached. A signing call preserves this half whether or not it completes. -/
+def PairFresh (state : DebtState HashInput HashOutput Coordinate) : Prop :=
+  ∀ ρ, state.cache (blk parameter data message ρ) = none →
+    ∀ call, state.cache (pblk parameter data message ρ call) = none
+
+theorem pairFresh_of_pairInv {state : DebtState HashInput HashOutput Coordinate}
+    (hinv : PairInv parameter data message state) : PairFresh parameter data message state :=
+  fun ρ => (hinv ρ).1
+
+/-- Storing a rejected index block keeps the pair invariant: its pair is no longer fresh, and it
+does not land. -/
+theorem pairInv_store (state : DebtState HashInput HashOutput Coordinate)
+    (hinv : PairInv parameter data message state) (ρ : Randomness) (u0 : HashOutput)
+    (hu : ¬Landed parameter (blockIndex u0)) :
+    PairInv parameter data message (state.store (blk parameter data message ρ) u0) := by
+  intro ρ'
+  by_cases hρ : ρ' = ρ
+  · have hfirst : (state.store (blk parameter data message ρ) u0).cache
+        (blk parameter data message ρ') = some u0 := by
+      rw [hρ]; simp [DebtState.store]
+    refine ⟨fun h => absurd (hfirst.symm.trans h) (by simp), fun v h0 hl => ?_⟩
+    rw [hfirst] at h0
+    cases h0
+    exact absurd hl hu
+  · have hsame : ∀ call, (state.store (blk parameter data message ρ) u0).cache
+        (pblk parameter data message ρ' call) = state.cache (pblk parameter data message ρ' call) :=
+      fun call => store_cache_ne state _ _ (pblk_ne_of_ne parameter data message hρ call firstCall) u0
+    exact ⟨fun h call => (hsame call).trans ((hinv ρ').1 ((hsame firstCall).symm.trans h) call),
+      fun v h0 hl call => (hsame call) ▸ (hinv ρ').2 v ((hsame firstCall).symm.trans h0) hl call⟩
+
 /-- A wholly cached pair has a block tuple. -/
 theorem pcache_of_isSome (state : DebtState HashInput HashOutput Coordinate) (ρ : Randomness)
     (h : ∀ call, (state.cache (pblk parameter data message ρ call)).isSome) :
@@ -474,6 +505,180 @@ theorem source_post (hparse : ∀ ρ call, model.parse (pblk parameter data mess
   rw [interp_liftProb_bind, support_bind] at hout
   obtain ⟨ρ, _, hout⟩ := Set.mem_iUnion₂.1 hout
   exact scan_post tg initial model parameter data message hparse Fail hfail _ budget s ρ hprep out hout r hr
+
+/-- A completed final assembly holds every block of the pair it signed: its digest call reads
+them all, and the run only grows the cache. -/
+theorem finish_pcache (hparse : ∀ ρ call, model.parse (pblk parameter data message ρ call) = none)
+    (ρ : Randomness) (budget : ℕ) (s' : DebtState HashInput HashOutput Coordinate)
+    (out : Run HashInput Coordinate (Option Signature) × DebtState HashInput HashOutput Coordinate)
+    (hout : out ∈ support (interp tg initial model (finishCostSource parameter data message ρ) budget s'))
+    (hsome : out.1.1 ≠ none) (call : DigestCall) :
+    (out.2.cache (pblk parameter data message ρ call)).isSome := by
+  rw [finishCostSource_eq] at hout
+  obtain ⟨u, b, s2, o, _, hs2, _, _, ho, _, _, hst⟩ :=
+    all_read_support tg initial model _ (pblk_injective parameter data message ρ) (hparse ρ) s'
+      _ budget out hout hsome
+  rw [hst, (interp_extends tg initial model _ b s2 o ho).1 _ _ (hs2 call)]
+  rfl
+
+/-- **The scan keeps fresh pairs whole**, whether or not it completes: a trial caches the index
+block of its own pair alone, and the final assembly reads only the pair it signs. -/
+theorem scan_pairFresh (hparse : ∀ ρ call, model.parse (pblk parameter data message ρ call) = none) :
+    ∀ attempts budget (s : DebtState HashInput HashOutput Coordinate) (ρ : Randomness),
+      PairFresh parameter data message s →
+      ∀ out ∈ support (interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts ρ) budget s),
+        PairFresh parameter data message out.2 := by
+  intro attempts
+  induction attempts with
+  | zero =>
+      intro budget s ρ hfresh out hout
+      change out ∈ support (interp tg initial model (pure none) budget s) at hout
+      rw [interp_pure, support_pure, Set.mem_singleton_iff] at hout
+      rw [hout]
+      exact hfresh
+  | succ attempts ih =>
+      intro budget s ρ hfresh out hout
+      rw [signCostSourceLoop_succ, interp_ordinary] at hout
+      split_ifs at hout with h1
+      · rw [ordinaryStep, hparse ρ firstCall] at hout
+        simp only at hout
+        rw [support_bind] at hout
+        obtain ⟨res, hres, hout⟩ := Set.mem_iUnion₂.1 hout
+        rw [support_map] at hout
+        obtain ⟨o, ho, rfl⟩ := hout
+        show PairFresh parameter data message o.2
+        have hstep : res.2.cache (blk parameter data message ρ) = some res.1 ∧
+            (∀ x, x ≠ blk parameter data message ρ → res.2.cache x = s.cache x) := by
+          cases hc0 : s.cache (blk parameter data message ρ) with
+          | some v =>
+              rw [readOutside_cached _ s v hc0, support_pure, Set.mem_singleton_iff] at hres
+              rw [hres]
+              exact ⟨hc0, fun _ _ => rfl⟩
+          | none =>
+              rw [readOutside_fresh _ s hc0, support_map] at hres
+              obtain ⟨v, _, rfl⟩ := hres
+              exact ⟨by simp [DebtState.store], fun x hx => store_cache_ne s _ x hx v⟩
+        obtain ⟨hb0, hrest⟩ := hstep
+        have hfresh1 : PairFresh parameter data message res.2 := by
+          intro ρ' hρ' call
+          by_cases hρ : ρ' = ρ
+          · exact absurd hρ' (by rw [hρ, hb0]; simp)
+          · exact (hrest _ (pblk_ne_of_ne parameter data message hρ call firstCall)).trans
+              (hfresh ρ' ((hrest _ (blk_ne_of_ne parameter data message hρ)).symm.trans hρ') call)
+        by_cases hl : Landed parameter (blockIndex res.1)
+        · rw [if_pos hl] at ho
+          have hkeep := finish_keeps_msg tg initial model parameter data message ρ (budget - 1) res.2 o ho
+          intro ρ' hρ' call
+          by_cases hρ : ρ' = ρ
+          · rw [hρ] at hρ'
+            exact absurd (((interp_extends tg initial model _ (budget - 1) res.2 o ho).1 _ _ hb0).symm.trans hρ')
+              (by simp)
+          · have hcall : ∀ c, o.2.cache (pblk parameter data message ρ' c) =
+                res.2.cache (pblk parameter data message ρ' c) := fun c =>
+              hkeep _ (msgInput_digestInput parameter data.root message ρ' c)
+                fun c' => pblk_ne_of_ne parameter data message hρ c c'
+            exact (hcall call).trans (hfresh1 ρ' ((hcall firstCall).symm.trans hρ') call)
+        · rw [if_neg hl] at ho
+          exact ih _ res.2 _ hfresh1 o ho
+      · rw [support_pure, Set.mem_singleton_iff] at hout
+        rw [hout]
+        exact hfresh
+
+/-- **The scan keeps the pair invariant** of a call that completes. An aborted call can leave a
+landed pair half read, so the second half of the invariant needs the result. -/
+theorem scan_pairInv (hparse : ∀ ρ call, model.parse (pblk parameter data message ρ call) = none) :
+    ∀ attempts budget (s : DebtState HashInput HashOutput Coordinate) (ρ : Randomness),
+      PairInv parameter data message s →
+      ∀ out ∈ support (interp tg initial model (signCostSourceLoop parameter data message (data.step message) attempts ρ) budget s),
+        ∀ r, out.1.1 = some r → PairInv parameter data message out.2 := by
+  intro attempts
+  induction attempts with
+  | zero =>
+      intro budget s ρ hinv out hout _ _
+      change out ∈ support (interp tg initial model (pure none) budget s) at hout
+      rw [interp_pure, support_pure, Set.mem_singleton_iff] at hout
+      rw [hout]
+      exact hinv
+  | succ attempts ih =>
+      intro budget s ρ hinv out hout r hr
+      rw [signCostSourceLoop_succ, interp_ordinary] at hout
+      split_ifs at hout with h1
+      · rw [ordinaryStep, hparse ρ firstCall] at hout
+        simp only at hout
+        rw [support_bind] at hout
+        obtain ⟨res, hres, hout⟩ := Set.mem_iUnion₂.1 hout
+        rw [support_map] at hout
+        obtain ⟨o, ho, rfl⟩ := hout
+        simp only at hr
+        show PairInv parameter data message o.2
+        have hstep : res.2.cache (blk parameter data message ρ) = some res.1 ∧
+            (∀ x, x ≠ blk parameter data message ρ → res.2.cache x = s.cache x) ∧
+            (res.2 = s ∨ res.2 = s.store (blk parameter data message ρ) res.1) := by
+          cases hc0 : s.cache (blk parameter data message ρ) with
+          | some v =>
+              rw [readOutside_cached _ s v hc0, support_pure, Set.mem_singleton_iff] at hres
+              rw [hres]
+              exact ⟨hc0, fun _ _ => rfl, Or.inl rfl⟩
+          | none =>
+              rw [readOutside_fresh _ s hc0, support_map] at hres
+              obtain ⟨v, _, rfl⟩ := hres
+              exact ⟨by simp [DebtState.store], fun x hx => store_cache_ne s _ x hx v, Or.inr rfl⟩
+        obtain ⟨hb0, hrest, hres2⟩ := hstep
+        by_cases hl : Landed parameter (blockIndex res.1)
+        · rw [if_pos hl] at ho
+          have hkeep := finish_keeps_msg tg initial model parameter data message ρ (budget - 1) res.2 o ho
+          have hall := finish_pcache tg initial model parameter data message hparse ρ (budget - 1) res.2 o ho
+            (by rw [hr]; simp)
+          intro ρ'
+          by_cases hρ : ρ' = ρ
+          · refine ⟨fun h call => ?_, fun _ _ _ call => by rw [hρ]; exact hall call⟩
+            exfalso
+            have hs := hall firstCall
+            rw [hρ] at h
+            rw [show o.2.cache (pblk parameter data message ρ firstCall) = none from h] at hs
+            simp at hs
+          · have hcall : ∀ call, o.2.cache (pblk parameter data message ρ' call) =
+                s.cache (pblk parameter data message ρ' call) := fun call =>
+              (hkeep _ (msgInput_digestInput parameter data.root message ρ' call)
+                fun c' => pblk_ne_of_ne parameter data message hρ call c').trans
+                (hrest _ (pblk_ne_of_ne parameter data message hρ call firstCall))
+            refine ⟨fun h call => (hcall call).trans ((hinv ρ').1 ((hcall firstCall).symm.trans h) call),
+              fun v h0 hland call => ?_⟩
+            rw [hcall call]
+            exact (hinv ρ').2 v ((hcall firstCall).symm.trans h0) hland call
+        · rw [if_neg hl] at ho
+          have hinv1 : PairInv parameter data message res.2 := by
+            rcases hres2 with h | h
+            · rw [h]; exact hinv
+            · rw [h]; exact pairInv_store parameter data message s hinv ρ res.1 hl
+          exact ih _ res.2 _ hinv1 o ho r hr
+      · rw [support_pure, Set.mem_singleton_iff] at hout
+        rw [hout] at hr
+        cases hr
+
+/-- **The scan signer keeps fresh pairs whole.** -/
+theorem source_pairFresh (hparse : ∀ ρ call, model.parse (pblk parameter data message ρ call) = none)
+    (budget : ℕ) (s : DebtState HashInput HashOutput Coordinate)
+    (hfresh : PairFresh parameter data message s) :
+    ∀ out ∈ support (interp tg initial model (signCostSource parameter data message) budget s),
+      PairFresh parameter data message out.2 := by
+  intro out hout
+  unfold signCostSource at hout
+  rw [interp_liftProb_bind, support_bind] at hout
+  obtain ⟨ρ, _, hout⟩ := Set.mem_iUnion₂.1 hout
+  exact scan_pairFresh tg initial model parameter data message hparse _ budget s ρ hfresh out hout
+
+/-- **The scan signer keeps the pair invariant** of a call that completes. -/
+theorem source_pairInv (hparse : ∀ ρ call, model.parse (pblk parameter data message ρ call) = none)
+    (budget : ℕ) (s : DebtState HashInput HashOutput Coordinate)
+    (hinv : PairInv parameter data message s) :
+    ∀ out ∈ support (interp tg initial model (signCostSource parameter data message) budget s),
+      ∀ r, out.1.1 = some r → PairInv parameter data message out.2 := by
+  intro out hout r hr
+  unfold signCostSource at hout
+  rw [interp_liftProb_bind, support_bind] at hout
+  obtain ⟨ρ, _, hout⟩ := Set.mem_iUnion₂.1 hout
+  exact scan_pairInv tg initial model parameter data message hparse _ budget s ρ hinv out hout r hr
 
 /-- The scan only queries message inputs of the signed message. -/
 theorem avoids_scan :
