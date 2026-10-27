@@ -1,6 +1,6 @@
 # sphincs.art
 
-Exploring leanSphincs: an hash based stateless signature scheme for Post-Quantum Ethereum.
+Exploring leanSphincs: a hash-based stateless signature scheme for Post-Quantum Ethereum.
 
 - [Website](https://sphincs.art/)
 - [Note (PDF)](https://github.com/TomWambsgans/sphincs.art/releases/download/doc-latest/leanSPHINCS.pdf)

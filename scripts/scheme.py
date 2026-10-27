@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Sizes and compression counts of the leanSphincs candidate in its 24 configurations (leanSPHINCS.tex), with
-its few-time signature (FTS) a two-level WOTS forest or FORS.
+"""Sizes and compression counts of the leanSphincs candidate in its 48 configurations (leanSPHINCS.tex).
 
-Three toggles: the height h (22, 24, 26, 28: about 2^26, 2^28, 2^30, 2^32 signatures), the shape
+Four toggles: the height h (22, 24, 26, 28: about 2^26, 2^28, 2^30, 2^32 signatures), the shape
 (pruned: one tree of height h of which the key builds a kept subtree of 2^b leaves, b = h being the
 full key, the signer grinding the randomizer into it; layered: a hypertree whose key builds the top
-layer only) and the hash. Every call hashes P (16 B) || address (16 B) || payload, each hash with its
-own layout:
+layer only), the hash and the few-time signature (FTS): a two-level WOTS forest or FORS. Every call
+hashes P (16 B) || address (16 B) || payload, each hash with its own layout:
 
   Keccak-256  P inline; l bytes cost floor(l / 136) + 1 Keccak-f permutations.
   BLAKE2s     P inline; l bytes cost ceil(l / 64) compressions (no padding byte), so a node,

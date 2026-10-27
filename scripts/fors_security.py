@@ -195,7 +195,7 @@ def main():
         description=__doc__.split("\n\n")[0],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="examples:\n"
-        "  %(prog)s                          # the FORS comparison row (h=24, a=10, k=24)\n"
+        "  %(prog)s                          # the FORS comparison row (h=24, a=10, k=25)\n"
         "  %(prog)s --h 23                   # same set with one more level of tree height\n"
         "  %(prog)s --sigs 24 24.5 25 --levels 128 100\n"
         "  %(prog)s --preset 128s\n"

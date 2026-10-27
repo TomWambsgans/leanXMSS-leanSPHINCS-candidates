@@ -312,7 +312,7 @@ footer a + a { margin-left: 1.25rem; }
     </header>
     <div class="params">
       <div class="toggles" id="toggles">
-        <span class="sl"><span id="tl-h">Lifetime</span><span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="How many signatures can be made, at ≥ 127 bits of security in the ROM. Security degrades gracefully beyond that.">i</span></span>
+        <span class="sl"><span id="tl-h">Lifetime</span><span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="How many signatures can be made, at ≥ 127 bits of security in the ROM, [proven in Lean 4](https://github.com/TomWambsgans/sphincs.art/tree/main/formal/sphincs). Security degrades gracefully beyond that.">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-h" data-key="h"><button type="button" role="radio" data-val="22" aria-label="2 to the 26">2<sup>26</sup></button><button type="button" role="radio" data-val="24" aria-label="2 to the 28">2<sup>28</sup></button><button type="button" role="radio" data-val="26" aria-label="2 to the 30">2<sup>30</sup></button><button type="button" role="radio" data-val="28" aria-label="2 to the 32">2<sup>32</sup></button></div>
         <span class="sl"><span id="tl-shape">Mode</span><span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="# Pruning&#10;Use a single, large, XMSS layer. Weak devices only construct a subtree of 2ᵇ leaves, and use pseudorandom nodes for the rest, and signing grinds until its index lands in it (An idea from [conduition](https://conduition.io/cryptography/hypertree-pruning/)). Verifier algo is unaffected.&#10;&#10;The risk of reusing a seed under different pruning parameters is fixed by deriving a second seed as H(seed ‖ parameters).&#10;&#10;Privacy: one can select the leaf indexes of the non-pruned FTS at (pseudo)random, but signing a lot will always eventually leak the pruning size. Partial remediation: keep a semi-trusted state S of the previously signed FTS, and when grinding lands on a FTS of S, accept it only with probability 2ᵇ⁻ʰ, so that FTS repeat exactly as often as with a full tree. This essentially gives 2ᵇ⁻¹ signatures with no privacy leak. The state is semi-trusted, because an adversary controlling it can: leak the pruning size, and reduce the lifetime by a factor of 2, but nothing worse.&#10;&#10;# Uniform&#10;Standard signing (the randomizer selects a random FTS among the 2ʰ possible ones).">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-shape" data-key="shape"><button type="button" role="radio" data-val="pruned">Pruning</button><button type="button" role="radio" data-val="layered">Uniform</button></div>
@@ -328,7 +328,6 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th><i>k</i></th><td data-f="k">&hellip;</td></tr>
           <tr><th><i>a</i></th><td data-f="a">&hellip;</td></tr>
           <tr><th>OTS</th><td>WOTS+C<span class="info" tabindex="0" role="button" aria-label="More information" data-tip="v = 64 chains of length w = 4,&#10;target sum T = 128">i</span></td></tr>
-          <tr><th>FTS</th><td class="two" data-f="fts">&hellip;</td></tr>
         </tbody>
         <tbody class="out">
           <tr><th>Size</th><td data-f="size">&hellip;</td></tr>
@@ -1010,9 +1009,10 @@ footer a + a { margin-left: 1.25rem; }
   function info(tip, cls) { return '<span class="info' + (cls || '') + '" tabindex="0" role="button" aria-label="More information" data-tip="' + tip + '">i</span>'; }
   var NOTE = 'https://github.com/TomWambsgans/sphincs.art/releases/download/doc-latest/leanSPHINCS.pdf';
   var LIFE_TIP = '127 bits of security (ROM), [proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/main/formal/sphincs)';
-  var FOREST_TIP = '8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5&#10;(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))';
+  // the two FTS, for the tip of the FTS variant
+  var FOREST_TIP = '# WOTS forest\n8 trees of height 4. Each leaf hashes\nthe top nodes of two subtrees of height 3\nover WOTS keys of 6 chains of length 5,\nwith target sum 5\n(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))';
   function forsTip(v) {
-    return v.k + ' trees of height ' + v.a;
+    return '# FORS\nk = ' + v.k + ' trees of height a = ' + v.a;
   }
   function isForest() { return S.v === 'forest'; }
   // a figure that depends on the variant: the selected variant's value
@@ -1096,7 +1096,6 @@ footer a + a { margin-left: 1.25rem; }
     set('h', S.shape === 'layered' ? split(main) : String(main.h));
     set('k', vs(String(V.k), '8'));
     set('a', vs(String(V.a), '4 + 3'));
-    set('fts', vs('FORS', 'WOTS forest') + info(isForest() ? FOREST_TIP : forsTip(V)));
     set('size', vs(comma(V.size), comma(main.size)) + ' bytes');
     set('verify', vs(comma(V.verify), comma(main.verify)) + ' ' + unit());
     set('dia-h', String(S.h));
@@ -1167,7 +1166,8 @@ footer a + a { margin-left: 1.25rem; }
       '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + vs(comma(th.fors.prep_rounds), comma(th.prep_rounds)) + '</td></tr>');
 
     // what the forest changes, against the FORS figures of the same configuration (gains rounded down, losses up)
-    document.getElementById('v-tip').setAttribute('data-tip', 'The WOTS forest, against FORS ([paragraph 4](' + NOTE + '#page=7)):\n' +
+    document.getElementById('v-tip').setAttribute('data-tip', forsTip(V) + '\n\n' + FOREST_TIP + '\n\n' +
+      'The WOTS forest, against FORS ([paragraph 4](' + NOTE + '#page=8)):\n' +
       '+ ' + Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures\n' +
       '+ ' + Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification\n' +
       '− novel\n' +

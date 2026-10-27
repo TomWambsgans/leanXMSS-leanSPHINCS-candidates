@@ -14,8 +14,6 @@ with the other operators of the virtual future.
 * `probe_step`: a digest query at a fresh position is paid by one future coin of probability `w`
   on a uniform view, landing with probability `p`, as soon as
   `(2 − p) / card ≤ p · w · (mass on the identity)`.
-* `sign_le`: the true law of the signature (cached hit, or fresh view) is below the group applied
-  to one fresh slot.
 -/
 
 open ENNReal

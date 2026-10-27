@@ -1,8 +1,8 @@
 # leanSPHINCS proofs in Lean 4
 
 **Status: the leanSphincs signer has 127 bits of classical SUF-CMA security in the random-oracle
-model in each of its configurations, at the signature limits below: one theorem per configuration,
-32 in all, stated together in [Main.lean](LeanForest/Main.lean); the FORS variant has its own 32 in
+model in each of its configurations, at the signature limits below: one theorem per height, shape and kept
+subtree height, 32 in all, stated together in [Main.lean](LeanForest/Main.lean); the FORS variant has its own 32 in
 [FORS/Main.lean](FORS/Main.lean).** The
 proof uses only `propext`, `Classical.choice` and `Quot.sound`: [Axioms.lean](LeanForest/Axioms.lean)
 pins the main theorems to their axioms and checks that no declaration of the library uses another.
@@ -41,8 +41,8 @@ heights and the layered key, below), 8 size theorems and 24 cost theorems.
 
 The scheme, the digest layout, the codeword table, the costs and the forest are documented in
 [FOREST.md](FOREST.md); the proof route and the modeling differences with the Rust code are in
-[PROOF.md](PROOF.md). `FORS/` is the same proof for the **FORS** variant, whose few-time
-signature is FORS instead of the forest: what FORS changes, and what that changes in the proof, is
+[PROOF.md](PROOF.md). `FORS/` is the same proof with FORS (25 trees of height 10) as the
+few-time signature: what FORS changes, and what that changes in the proof, is
 in [FORS.md](FORS.md).
 
 ## Proved lifetimes
@@ -79,7 +79,7 @@ for every table of steps, as if the forger knew them.
 ## Proved lifetimes, FORS variant
 
 The same statement for the `FORS` library ([FORS.md](FORS.md)): one
-theorem per configuration in [Main.lean](FORS/Main.lean), 32 in all, collected by
+theorem per height, shape and kept subtree height in [Main.lean](FORS/Main.lean), 32 in all, collected by
 `requestedSecurity`, with [Axioms.lean](FORS/Axioms.lean) pinning them to the same three axioms.
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |

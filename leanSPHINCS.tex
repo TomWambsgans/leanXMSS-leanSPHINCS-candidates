@@ -45,25 +45,25 @@ A SPHINCS-style scheme with four toggles, 48 configurations in all. Its componen
   \item few-time signature (FTS, T4): a \emph{two-level WOTS forest} (\cref{sec:twolevel}, after
         sig.golf~\cite{siggolf}), or FORS
   \item one-time signature: WOTS$^+$C~\cite{HK22C}, 64 chains of length $w=4$, target sum 128
-  \item the FTS public key is the nodes just below the roots --- 16 digests for the forest (two per tree), $2k$ for
-        FORS; WOTS$^+$C signs them directly
+  \item the FTS public key is the nodes just below the roots --- 16 digests for the forest (two per tree), 50 for
+        FORS (two per tree); WOTS$^+$C signs them directly
 \end{itemize}
 
 \paragraph{The toggles.}
 \begin{description}[leftmargin=1.2em]
   \item[T1, lifetime.] The height $h\in\{22,24,26,28\}$ of the index, for lifetimes of about $2^{26}$, $2^{28}$,
-        $2^{30}$ and $2^{32}$ signatures: the full key lasts $N\approx20\cdot2^h$ signatures, proved, 91 to 98\% of the
-        $21.45\cdot2^h$ of the best known attack (\cref{sec:lifetimes}).
+        $2^{30}$ and $2^{32}$ signatures: the full key lasts $N\approx20\cdot2^h$ signatures, proved (forest: 91 to 98\% of
+        the $21.45\cdot2^h$ of the best known attack; \cref{sec:lifetimes}).
   \item[T2, shape.] \emph{Pruned}~\cite{conduition}: one tree of height $h$; key generation builds only a kept subtree
         of $2^b$ leaves and replaces the $h-b$ siblings above it by pseudorandom surrogate nodes. The signer grinds
         the randomizer until the index lands in the kept subtree, $2^{h-b}$ attempts on average ($b=h$ is the full
         key). \emph{Layered}: a hypertree of three layers (table below); key generation builds the top layer only,
         the signer builds the lower trees on the fly, does not grind, and keeps the full key's lifetime.
   \item[T3, hash.] Keccak-256, BLAKE2s or SHA-256.
-  \item[T4, FTS.] The \emph{two-level WOTS forest} of \cref{sec:twolevel}, which is the candidate and which every
-        figure below assumes, or \emph{FORS} ($k$ trees of height $a$). Both are proved in
-        Lean, each with its own 32 lifetimes; FORS trades about 37\% more signature bytes for half the threshold
-        preprocessing (\cref{sec:twolevel}).
+  \item[T4, FTS.] The \emph{two-level WOTS forest} of \cref{sec:twolevel}, the candidate (the figures below are
+        for it unless a table also gives FORS), or \emph{FORS}, 25 trees of height 10. Both are proved in Lean, each
+        with its own 32 lifetimes. FORS signatures are 37\% larger with one tree (25\% layered), and its threshold
+        preprocessing is about half with one tree (\cref{sec:twolevel}).
 \end{description}
 
 \begin{center}
@@ -101,14 +101,15 @@ With all three, a chain step, a tree node, a grinding attempt and a WOTS$^+$C co
   \item the digest layout is in \cref{sec:twolevel}
 \end{itemize}
 
-\paragraph{The 24 forest configurations.} Signature size and verification cost in compressions (Keccak-f[1600]
-permutations for Keccak-256); public and secret keys are 32 bytes each. A pruned key has the size and
+\paragraph{The configurations.} Signature size and verification cost in compressions (Keccak-f[1600]
+permutations for Keccak-256), for each FTS; public and secret keys are 32 bytes each. A pruned key has the size and
 verification cost of the full key of its height.
 \begin{center}
 \begin{tabular}{llrrrr}
   \toprule
   $h$ & shape & size (bytes) & Keccak-256 & BLAKE2s & SHA-256 \\
   \midrule
+  \multicolumn{6}{l}{\emph{two-level WOTS forest}} \\
   22 & one tree & 4\,212 & 258 & 294 & 295 \\
   22 & layered ($10+6+6$) & 6\,268 & 404 & 458 & 459 \\
   24 & one tree & 4\,244 & 260 & 296 & 297 \\
@@ -117,6 +118,16 @@ verification cost of the full key of its height.
   26 & layered ($12+7+7$) & 6\,332 & 408 & 462 & 463 \\
   28 & one tree & 4\,308 & 264 & 300 & 301 \\
   28 & layered ($12+8+8$) & 6\,364 & 410 & 464 & 465 \\
+  \midrule
+  \multicolumn{6}{l}{\emph{FORS, $k=25$, $a=10$}} \\
+  22 & one tree & 5\,796 & 353 & 371 & 371 \\
+  22 & layered ($10+6+6$) & 7\,852 & 499 & 535 & 535 \\
+  24 & one tree & 5\,828 & 355 & 373 & 373 \\
+  24 & layered ($12+6+6$) & 7\,884 & 501 & 537 & 537 \\
+  26 & one tree & 5\,860 & 357 & 375 & 375 \\
+  26 & layered ($12+7+7$) & 7\,916 & 503 & 539 & 539 \\
+  28 & one tree & 5\,892 & 359 & 377 & 377 \\
+  28 & layered ($12+8+8$) & 7\,948 & 505 & 541 & 541 \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -132,9 +143,8 @@ queries in total (the adversary's, and those of key generation, signing and veri
 probability at most $q\cdot2^{-127}$, up to the
 signature limits below. One proof, for any height, shape and kept subtree height, gives the 32 limits, each with its
 certificate checked by the Lean kernel; the size and the three verification costs of each of the 8 shapes are
-separate theorems. The limits below are the candidate's, whose few-time signature is the two-level WOTS forest; the
-FORS variant is proved separately, with its own 32 limits. The second half of the table is the ratio to the cover
-attack (\cref{sec:twolevel}).
+separate theorems; FORS has the same statement and axioms in a second library, with its own 32 limits. Each block of
+the table gives the limits, then their ratio to that FTS's cover attack (\cref{sec:twolevel}).
 \begin{center}
 \setlength{\tabcolsep}{3.5pt}
 \small
@@ -144,6 +154,7 @@ attack (\cref{sec:twolevel}).
   \cmidrule(lr){2-8}
   $h$ & $b=h$ & 20 & 14 & 13 & 12 & 10 & 8 & \\
   \midrule
+  \multicolumn{9}{l}{\emph{two-level WOTS forest}} \\
   22 & $8.18\cdot10^{7}$ & $2.17\cdot10^{7}$ & $4.05\cdot10^{5}$ & $2.08\cdot10^{5}$ & $1.07\cdot10^{5}$ & $2.84\cdot10^{4}$ & $7.51\cdot10^{3}$ & $8.18\cdot10^{7}$ \\
   24 & $3.36\cdot10^{8}$ & $2.38\cdot10^{7}$ & $4.41\cdot10^{5}$ & $2.26\cdot10^{5}$ & $1.16\cdot10^{5}$ & $3.08\cdot10^{4}$ & $8.15\cdot10^{3}$ & $3.36\cdot10^{8}$ \\
   26 & $1.38\cdot10^{9}$ & $2.60\cdot10^{7}$ & $4.80\cdot10^{5}$ & $2.46\cdot10^{5}$ & $1.26\cdot10^{5}$ & $3.34\cdot10^{4}$ & $8.83\cdot10^{3}$ & $1.38\cdot10^{9}$ \\
@@ -154,6 +165,18 @@ attack (\cref{sec:twolevel}).
   24 & 93.5\% & 90.3\% & 85.2\% & 84.4\% & 83.7\% & 82.3\% & 81.1\% & 93.5\% \\
   26 & 95.9\% & 91.3\% & 86.1\% & 85.4\% & 84.7\% & 83.2\% & 81.9\% & 95.9\% \\
   28 & 97.8\% & 92.1\% & 87.1\% & 86.3\% & 85.4\% & 83.9\% & 82.6\% & 97.8\% \\
+  \midrule
+  \multicolumn{9}{l}{\emph{FORS, $k=25$, $a=10$}} \\
+  22 & $8.69\cdot10^{7}$ & $2.30\cdot10^{7}$ & $4.24\cdot10^{5}$ & $2.17\cdot10^{5}$ & $1.11\cdot10^{5}$ & $2.94\cdot10^{4}$ & $7.75\cdot10^{3}$ & $8.69\cdot10^{7}$ \\
+  24 & $3.54\cdot10^{8}$ & $2.49\cdot10^{7}$ & $4.59\cdot10^{5}$ & $2.35\cdot10^{5}$ & $1.20\cdot10^{5}$ & $3.17\cdot10^{4}$ & $8.35\cdot10^{3}$ & $3.54\cdot10^{8}$ \\
+  26 & $1.42\cdot10^{9}$ & $2.70\cdot10^{7}$ & $4.96\cdot10^{5}$ & $2.54\cdot10^{5}$ & $1.30\cdot10^{5}$ & $3.43\cdot10^{4}$ & $9.01\cdot10^{3}$ & $1.42\cdot10^{9}$ \\
+  28 & $5.70\cdot10^{9}$ & $2.92\cdot10^{7}$ & $5.36\cdot10^{5}$ & $2.75\cdot10^{5}$ & $1.40\cdot10^{5}$ & $3.70\cdot10^{4}$ & $9.72\cdot10^{3}$ & $5.70\cdot10^{9}$ \\
+  \midrule
+  \multicolumn{9}{l}{\emph{ratio to the cover attack}} \\
+  22 & 95.9\% & 94.4\% & 89.3\% & 88.4\% & 87.6\% & 86.0\% & 84.4\% & 95.9\% \\
+  24 & 97.7\% & 95.0\% & 90.1\% & 89.2\% & 88.3\% & 86.5\% & 84.8\% & 97.7\% \\
+  26 & 98.4\% & 95.6\% & 90.6\% & 89.7\% & 88.8\% & 87.2\% & 85.4\% & 98.4\% \\
+  28 & 98.4\% & 96.2\% & 91.3\% & 90.4\% & 89.5\% & 87.7\% & 86.0\% & 98.4\% \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -274,10 +297,11 @@ against the published chain and aborts the signing.
 price: 1 bit per AND gate per operator for 2-of-3~\cite{AFLNO16}, plus sublinear traffic for the malicious
 check~\cite{BGIN19,GS20}. Replicated sharing over $\mathrm{GF}(2)$ generalizes to $n=2t-1$ with $(n-1)+t-1$ bits per
 AND gate through one collector: 1, 1.2 and 1.29 bits per operator for 2-of-3, 3-of-5 and 4-of-7 (the local work grows
-with $\binom{n-1}{t-1}$, fine for small committees). The MPC hashes only chain steps (the chain secrets are outputs of
-$F$; keys, trees and the forest key are hashed in the clear): key generation is $2^k\cdot64\cdot3$ steps, $k$ the
-height of the kept subtree or top layer, and preprocessing $2\,048\cdot6\cdot4=49\,152$ (plus the lower trees' chains
-of a layered key, and $\hash(s)$). AND gates per compression: $36.3\cdot10^3$ for Keccak-f[1600] (1\,600 per round,
+with $\binom{n-1}{t-1}$, fine for small committees). The MPC hashes only chain steps and FORS leaves (the secrets are outputs
+of $F$; keys, trees and the forest key are hashed in the clear): key generation is $2^k\cdot64\cdot3$ steps, $k$ the
+height of the kept subtree or top layer, and preprocessing $2\,048\cdot6\cdot4=49\,152$ for the forest and
+$k\,2^a=25\,600$ leaf hashes for FORS (plus the lower trees' chains of a layered key, and $\hash(s)$). AND gates
+per compression: $36.3\cdot10^3$ for Keccak-f[1600] (1\,600 per round,
 less the public part of the first and most of the truncated last), $22.6\cdot10^3$ for SHA-256 (Bristol circuit),
 $14.9\cdot10^3$ for BLAKE2s (10 rounds of 8 functions of 6 additions modulo $2^{32}$, 31 AND gates each). Traffic per
 operator at $h=24$, 2-of-3:
@@ -287,17 +311,21 @@ operator at $h=24$, 2-of-3:
   & Keccak-256 & BLAKE2s & SHA-256 \\
   \midrule
   keygen, layered or pruned $b=12$ & 3.6~GB & 1.5~GB & 2.3~GB \\
-  preprocessing, pruned (one instance) & 224~MB & 92~MB & 139~MB \\
-  preprocessing, layered (and two lower trees) & 335~MB & 138~MB & 209~MB \\
+  preprocessing, forest, pruned (one instance) & 224~MB & 92~MB & 139~MB \\
+  preprocessing, forest, layered (and two lower trees) & 335~MB & 138~MB & 209~MB \\
+  preprocessing, FORS, pruned (one instance) & 117~MB & 48~MB & 73~MB \\
+  preprocessing, FORS, layered (and two lower trees) & 228~MB & 94~MB & 142~MB \\
   \bottomrule
 \end{tabular}
 \end{center}
 Rounds: one per layer of AND gates for 2-of-3 (two, through a collector, from 3-of-5 on): 24 per Keccak-f
 permutation, and with ripple-carry adders 884 per BLAKE2s and 1\,607 per SHA-256 compression. Chains run in parallel,
-their steps in sequence (3 at key generation, 4 for the forest), then one round opens them: 73, 2\,653 and 4\,822
-rounds at key generation and 97, 3\,537 and 6\,429 per preprocessing (Keccak-256, BLAKE2s, SHA-256). Online, signing
+their steps in sequence (3 at key generation, 4 for the forest, 1 for a FORS leaf and 3 for the lower trees of a
+layered key), then one round opens them: 73, 2\,653 and 4\,822 rounds at key generation, and per preprocessing 97, 3\,537 and
+6\,429 for the forest, 25, 885 and 1\,608 for a pruned FORS key, 73, 2\,653 and 4\,822 for a layered FORS key
+(Keccak-256, BLAKE2s, SHA-256). Online, signing
 grinds about $2^h$ digests in the clear ($1.68\cdot10^7$ at $h=24$) and opens 44 forest chain values on average, at
-most 64, one part per signer per value.
+most 64 (FORS: its $k=25$ secrets), one part per signer per value.
 
 \paragraph{Remark.} The Lean proof covers the single deterministic signer. The prepared instances are uniform and each
 is used once, so the indices of threshold signatures are distributed as the single signer's, and the lifetime is
@@ -329,8 +357,8 @@ Labs~\cite{riva}, the device delegates it to the untrusted host, which proves it
   \item the device verifies the STARK and finishes the signature from the prepared instance
 \end{enumerate}
 The STARK needs no zero knowledge; $\Delta$ is no longer secret against the host. The host holds the public data of
-each instance (forest trees, WOTS$^+$C signatures and paths); the device keeps only its index and a hash of its forest
-key (16 top nodes), recomputes from its seed the chain values it opens, and checks the host's nodes against that hash.
+each instance (forest trees, WOTS$^+$C signatures and paths); the device keeps only its index and a hash of its FTS
+key (16 top nodes for the forest, 50 for FORS), recomputes from its seed the chain values it opens, and checks the host's nodes against that hash.
 Minimality makes $R$ a function of $(m, \text{secret key})$ and the prepared set, as for the deterministic signer;
 this flow is not covered by the Lean proof.
 
@@ -347,13 +375,12 @@ $h=28$).
 The FTS under each leaf is built from small WOTS keys instead of FORS, an idea from Jonas Nick's (Blockstream)
 sig.golf submission~\cite{siggolf}.
 
-\paragraph{Against FORS.} The site's other variant uses FORS~\cite{FIPS205} instead, with $k$ trees of height $a$ and no
-root hash (the WOTS$^+$C key signs the $2k$ nodes below the roots), $a=10$ and $k=25$ in every configuration so
-that verification does not depend on the pruning: the fewest trees that live as long as the forest under the cover
-attack for the full key, and 97.8--100.7\% of it in every configuration (\texttt{scripts/scheme.py}). Its
-lifetimes are proved in Lean as well, by a second library with the same statement and the same axioms, and reach
-84--98\% of the FORS cover attack~\cite{proofs} --- a larger share of its own attack than the forest reaches of
-the forest's, so FORS proves 1--6\% \emph{more} signatures at the same height. At $h=26$, full key, Keccak-256,
+\paragraph{Against FORS.} The FORS variant (T4) uses FORS~\cite{FIPS205} with no root hash (the WOTS$^+$C key signs
+the $2k$ nodes below the roots), $k=25$ trees of height $a=10$ in every configuration, so that verification does
+not depend on the pruning. 25 is the fewest trees for which FORS lasts as long as the forest under the cover attack
+with the full key; over all configurations its cover lifetime is 97.8--100.7\% of the forest's
+(\texttt{scripts/scheme.py}). Its proved lifetimes (\cref{sec:lifetimes}) are 84--98\% of its cover attack, and
+1--6\% above the forest's in every configuration. At $h=26$, full key, Keccak-256,
 in permutations (preprocessing: the hashes of the FTS inside the threshold MPC):
 \begin{center}
 \setlength{\tabcolsep}{4pt}
@@ -371,11 +398,21 @@ once the leaves leave the MPC they are public, and the $k(2^a-2)$ nodes above th
 The forest cannot do the same --- its MPC cost is the WOTS chain steps, and each step consumes the previous
 step's secret output, so none of the chain can leave the MPC early.
 
-For one key, let $Y$ be the chance that a random digest falls on an FTS opening that the key's $N$ signatures have
-already revealed. $Y$ changes from key to key, and its average is the cover attack's rate. With each FTS at its own
-cover lifetime and $h=24$, the standard deviation of $Y$, divided by its average, is 0.079 for the forest and 0.041
-for FORS with the full key, and 0.98 and 0.56 with $b=14$
-(\href{https://github.com/TomWambsgans/sphincs.art/blob/main/scripts/key_variance.py}{\texttt{scripts/key\_variance.py}}).
+\paragraph{Per key.} Take a key that has made $N$ signatures, $N$ being the cover lifetime of its FTS. Let $Y$ be
+the probability, for this key, that a random digest selects an FTS opening its signatures have already revealed. $Y$
+changes from key to key (it depends on where the $N$ signatures landed and what they revealed); its average over
+keys is $2^{-127}$, by the choice of $N$. The standard deviation of $Y$, divided by $2^{-127}$, at $h=24$
+(\href{https://github.com/TomWambsgans/sphincs.art/blob/main/scripts/key_variance.py}{\texttt{scripts/key\_variance.py}}):
+\begin{center}
+\begin{tabular}{lrr}
+  \toprule
+  & full key & $b=14$ \\
+  \midrule
+  two-level WOTS forest & 0.079 & 0.98 \\
+  FORS, $k=25$, $a=10$ & 0.041 & 0.56 \\
+  \bottomrule
+\end{tabular}
+\end{center}
 
 \paragraph{WOTS keys.} 6 chains of length 5, with leaf $\hash(\text{6 chain tops})$. A codeword is a vector
 $d\in\{0,\dots,4\}^6$ with $\sum_i d_i=5$; there are 246 of them. Signing at $d$ reveals each chain $d_i$ steps below
@@ -497,7 +534,9 @@ factor $2^{b-h}$ is not credited by hypertree pruning~\cite{conduition}, which c
 $2^{h-b}$ although the forger pays the signer's grinding cost per attempt; it is worth about $2^{(h-b)/18}$, from
 $+17\%$ at $h=24$, $b=20$ to a factor 1.8 at $b=8$. The best known attack also uses the WOTS$^+$C key (a counter
 search for a neighbouring encoding, then one chain preimage); at $h=24$ it is the cover figure for the forest, except at
-$b=8$ where it is 2\% lower~\cite{proofs}. At $h=24$, rounded down (the last row is \cref{sec:lifetimes}):
+$b=8$ where it is 2\% lower~\cite{proofs}. For FORS, a tree is covered when the target leaf is among the revealed ones, so
+$\mathrm{cover}(r)=(1-(1-2^{-a})^r)^k$, with the same lifetime rule. At $h=24$, rounded down (the last row is
+\cref{sec:lifetimes}):
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{lrrrrrrr}

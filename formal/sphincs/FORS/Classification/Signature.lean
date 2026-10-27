@@ -7,7 +7,7 @@ The interface of deterministic extraction from an accepted candidate signature: 
 verifier trace, the canonical FORS key and the canonical message of every layer's WOTS+C key on
 the index's path (the root of the honest tree below it, the FORS key at the bottom), reference
 certificates for the counter and word of each key, canonical openings, and the explicit exceptional
-branches (`ForsException`, `LayerException`, `Exception`). `Classification/Accepted` proves the
+branches (`ForsException`, `Exception`). `Classification/Accepted` proves the
 classification of accepted signatures.
 -/
 

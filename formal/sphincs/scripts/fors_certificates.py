@@ -70,7 +70,7 @@ FK = 25             # k: the number of FORS trees, the same in every configurati
 SPLITS = {22: (10, 6, 6), 24: (12, 6, 6), 26: (12, 7, 7), 28: (12, 8, 8)}
 
 def set_config(h, shape='pruned', b=None):
-    """Select the height, the shape and the FORS shape every function below works at."""
+    """Select the height and the shape every function below works at."""
     global TOTAL, KQ, LAYERED_TOP, SHAPE
     assert shape in ('pruned', 'layered')
     TOTAL, KQ, SHAPE = h, Fr(1, 2 ** h), shape
