@@ -181,7 +181,7 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .rng input { z-index: 1; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .rng:hover .knob, .rng input:active ~ .knob { transform: translate(-50%, -50%) scale(1.25); }
 .rng input:focus-visible ~ .knob { box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.18); }
-@media (max-width: 600px) { .rng { width: 5.75rem; } }
+@media (max-width: 600px) { .rng { width: 6.9rem; } }
 @media (prefers-reduced-motion: reduce) { .rng .knob { transition: none; } }
 .tables p, #tip { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }   /* running text: flush left and right */
 .cmp thead .sub { font-weight: 400; color: var(--muted); }
@@ -236,6 +236,7 @@ footer a + a { margin-left: 1.25rem; }
   .cards td .hd { gap: 0 0.6em; flex-wrap: wrap; }
   .cards td .hd .ex { margin-left: auto; }
   .cards .note { display: block; }
+  .cards .assist .note { display: inline; }   /* the slider's count stays beside its time */
   footer { flex-direction: column; gap: 0.5rem; }
 }
 @media (max-width: 860px) {
@@ -1117,13 +1118,13 @@ footer a + a { margin-left: 1.25rem; }
     var lo = xmin * per, hi = Math.max(OFF_MAX, 2 * lo);
     var shell = cell.querySelector('.assist');
     if (!shell || shell.classList.contains('never') !== never) {
-      var body = '<label class="nw">Offline: <span class="rng"><input type="range" min="0" max="1000" step="10" ' +
-        'aria-label="Offline preparation time"><span class="trk"><span class="fill"></span></span><span class="knob"></span></span> ' +
-        '<span class="ex off"></span></label><span class="nw">Online: ' +
+      var body = '<label><span class="nw">Offline:&nbsp;<span class="rng"><input type="range" min="0" max="1000" step="10" ' +
+        'aria-label="Offline preparation time"><span class="trk"><span class="fill"></span></span><span class="knob"></span></span></span> ' +
+        '<span class="ex off nw"></span></label><span class="nw">Online: ' +
         '<span class="ex on" aria-live="polite"></span><span class="m-only">' + info('', ' w') + '</span></span>';
       // never: the message over an invisible slider cell, so that the row keeps its height
       cell.innerHTML = never ? '<div class="assist never"><div class="ghost" aria-hidden="true">' +
-        body.replace('<input', '<input tabindex="-1" disabled').replace('class="ex off">', 'class="ex off">42&nbsp;min <span class="note">(64 FTS)</span>').replace('class="ex on" aria-live="polite">', 'class="ex on">&asymp;&thinsp;5.2&nbsp;s') +
+        body.replace('<input', '<input tabindex="-1" disabled').replace('class="ex off nw">', 'class="ex off nw">42&nbsp;min&nbsp;<span class="note nw">(64&nbsp;FTS)</span>').replace('class="ex on" aria-live="polite">', 'class="ex on">&asymp;&thinsp;5.2&nbsp;s') +
         '</div><span class="note msg">Never faster than signing alone here</span></div>' : '<div class="assist">' + body + '</div>';
       var input = cell.querySelector('input');
       if (input) input.addEventListener('input', function () { offChosen = cell.timeOf(+input.value); cell.show(); });
@@ -1140,7 +1141,7 @@ footer a + a { margin-left: 1.25rem; }
       slider.parentNode.style.setProperty('--p', String(slider.value / 1000));   // the thumb's place and the inked track   // the inked part of the track
       var off = time(np * per);
       slider.setAttribute('aria-valuetext', off.replace(/&nbsp;/g, ' ') + ', ' + np + ' FTS prepared');
-      cell.querySelector('.off').innerHTML = off + ' <span class="note">(' + comma(np) + ' FTS)</span>';
+      cell.querySelector('.off').innerHTML = off + '&nbsp;<span class="note nw">(' + comma(np) + '&nbsp;FTS)</span>';
       cell.querySelector('.on').innerHTML = '&asymp;&thinsp;' + time(online(np));
       cell.querySelector('.m-only .info').setAttribute('data-tip', tip);
     };
