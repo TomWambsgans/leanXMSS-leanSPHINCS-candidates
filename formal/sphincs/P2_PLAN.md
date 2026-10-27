@@ -55,58 +55,50 @@ P1 (owns CoverBound): `CoverF t Xs := t ∈ Xs`, `φF`,
 
 ## Status of the files
 
-- `CoverPotential/Presample.lean`: **builds** (commit `17e5c6e`). It ports BridgePresample and
-  `interp_presample_le/eq`, and adds `storeAll`, `storeAll_perm`, `interp_presampleAll_le` and
-  `interp_presample_new`. Three traps, for the record: `DebtState.cache` is a `QueryCache`, so a
-  cache application is not a function application under `instances` transparency — `rw`/`simp`
-  inside its argument fails, and the cure is to state the fact with `have … : … = …` or to compose
-  with `.trans` instead of rewriting; a pattern must match syntactically (`x ∘ σ`, not
-  `fun i => x (σ i)`; `Fin.tail x i` needs a `show … (x i.succ) …` first); and `store_cache_ne`
-  (LazyRun/Presample) keeps `[Params]`, so a lemma that `omit`s it must redo the step with
-  `simp only [DebtState.store, QueryCache.cacheQuery_of_ne _ _ hne]`.
-  **It still has to be added to `LeanFors.lean` (lead's file).**
-- `Linear/ForestSteps.lean`: drafted (FORS cases, `Address.fleaf`). It builds once Linear/* has
-  the FIn and lemma names above.
-- `Contact/RunFacts.lean`: Closed section removed and `IsFc` added for `.fors`. Open: Avoid section
-  (`avoids_finishRest_fleaf`, `avoids_loop_fleaf`), which must follow the lead's multi-call
-  `finishCostSource` and `finishRest` (`avoids_treeCostSource` is assumed).
-- `Contact/NearWitness.lean`: drafted against P1's API.
-- `Contact/RevealRate.lean`: leaf-hit part drafted (`opensAt`, `revRate`, `freshAvg_opensAt`). Open:
-  the signing part still uses one block `u0` (`finish_reveals_ok`, `reveal_scan_all`); move it to
-  `u : DigestCall → HashOutput` and `pblk p call` following the lead's `loop_boundV` and `pairWeight`.
-- `Contact/PaidPotential.lean`: invariants without `rclosed`, multi-call `NewPairPaysF` and
-  `OrdinaryPaysF`, and `binvF_withPair` against assumed `extends_withPair`, `Ctx.inv_withPair` and
-  `pinv/minv/count_withPair`. Open: `goodXF_ordinary`'s new-pair case. It should use
-  `PInv.first` and `interp_presample_new` with `x = pblk p`, `c` = the queried call, and `F` = final
-  value + pay·count. Monotone under fresh stores: G must satisfy `hG` as in old BridgeFleafGame
-  (`hGstore`); check that finalA4 is monotone (old `finalA_store`/`finalB_store`). Then `pairE`
-  must be converted to `(card^n)⁻¹ Σ_u` (use `tsum_uniform_eq` at the function type).
-- `Contact/Weights.lean`: drafted (unbuilt): `Address.fleaf index κ leaf` in `input_of_guess` and in
-  `wsum_ordinary`'s new-step case.
-- `Contact/Potential.lean`: drafted (unbuilt): `Settled R f := f.inC ∈ R` (that is
-  `.fors f.index f.κ f.leaf 0 ∈ R`), and `not_settled_of_unknown` without `hclosed`. Open: the pair
-  lemmas (`offMass_newPair`, `offMass_blocks`, `blk`), which go multi-call with the lead's
-  ScanSigner/Groups.
-- `Contact/Signing.lean`: drafted (unbuilt): `OpensF f reveals := ∃ q, .fors f.index f.κ f.leaf q ∈
-  reveals` (no `kTop`), `writes_fleaf` over `Address.fleaf`, `sign_step_facts` without the anchor
-  case (the exposure of outC is the revealed leaf value, `⟨1, h⟩`), `settled_append` by
-  `List.mem_append_left`, and `hparse : ∀ p call` in `sign_contact` and `psiF_sign`.
-- `Contact/Bound.lean`: drafted (unbuilt): `A4ev` as above, the `hsub` destructuring, and the
-  ForestNearRecorded destructuring of `potNF_ge_of_near` (`nearWitness_pos hB.dinv _ κ hcov`).
-  `hparse`/`hclean` are `∀ p call`, and the "no message input is a leaf input" argument assumes
-  `msgInput_digestInput K.p root m ρ call` (**call last** — the lead confirms or I swap it). Open:
-  `potNF_ge_of_near`'s `cachedDigest`/`pview` block, which is still one block `u0`.
+- `CoverPotential/Presample.lean`: **builds** (`17e5c6e`, `6e84bc7`). Ports BridgePresample and
+  `interp_presample_le/eq`, and adds `storeAll`, `storeAll_perm`, `interp_presampleAll_le`,
+  `interp_presample_new` (used by ScanReveals and by `withPair`), and the equality versions
+  `interp_presample_fresh_eq`, `interp_presampleAll_eq`, `interp_presample_new_eq` for a value of
+  the run alone (the expected query count), which is what lets the new-pair step keep its payment.
+  Traps: a `QueryCache` application is not a function application under `instances` transparency, so
+  state cache facts with `have … : … = …` and compose with `.trans` instead of rewriting inside
+  `.cache _`; `rw` patterns must match syntactically (`x ∘ σ`, `Fin.tail x i` needs a `show`); and
+  `store_cache_ne` keeps `[Params]`.
+- `Linear/ForestSteps.lean`: **builds** unchanged on the lead's Linear/*.
+- `Contact/RunFacts.lean`: **builds** (`5ca5a1d`). `IsFc` is the FORS class; the Avoid section
+  follows the multi-call `finishCostSource_eq` (`avoids_sequenceFin` + `avoids_read`).
+- `Contact/NearWitness.lean`: drafted against P1's API; **blocked** on `CoverPotential/OneCoin`
+  (P6, still single-call `hparse : ∀ p`), which `GenericWitness` imports.
+- `Contact/RevealRate.lean`: ported (unbuilt): `cached_reads_reveals` (reads of cached inputs keep
+  the reveals, an aborted run reveals nothing), `finish_reveals_ok` over the block tuple `u`, and
+  `reveal_scan_all`/`reveal_le_all` against the lead's new `loop_boundV` (extra `hkind` and
+  `PairInv` arguments, `hVfin` over `u : DigestCall → HashOutput`).
+- `Contact/PaidPotential.lean`: ported (unbuilt). The new-pair case of `goodXF_ordinary` queries one
+  call `c` of the pair: `interp_presample_new` moves the final value to `withPair` (monotone by the
+  new `hGstore`), `interp_presample_new_eq` moves the query count back, and `pairE` is converted
+  with `tsum_uniform_eq` and `Fintype.card_fun`. New hypotheses threaded through
+  `goodXF_{ordinary,liftHash,advProg}` and `final_le_startF`: `hmsg : ∀ x, IsMsgInput x →
+  K.tg.kind x = .none` and `hGstore`.
+- `Contact/Weights.lean`: ported (unbuilt): `Address.fleaf`, and `wsum_storeAll_other` for the
+  digest blocks of a new pair stored at once.
+- `Contact/Potential.lean`: ported (unbuilt): `Settled R f := f.inC ∈ R`, `not_settled_of_unknown`
+  without `hclosed`, and the pair lemmas over `u : DigestCall → HashOutput` with the landing test at
+  `firstCall`.
+- `Contact/Signing.lean`: ported (unbuilt): `OpensF f reveals := ∃ q, .fors f.index f.κ f.leaf q ∈
+  reveals` (no `kTop`), `sign_step_facts` without the anchor case, `hmsg` for `reveal_le_all`'s
+  `hkind`, and `PairInv` built from `hB.pinv`.
+- `Contact/Bound.lean`: ported (unbuilt): `A4ev` over a revealed secret, `cachedDigest_mono`,
+  `a4ev_store` and `finalA4_store` (the `hGstore` of `finalA4`), `potNF_ge_of_near` over `pblocks`,
+  and `hparse`/`hclean`/`hmsg` per call.
 
 ## Next steps
 
-1. ~~Fix Presample.lean~~ done, builds, committed. Waiting on the lead to import it from
-   `LeanFors.lean`.
-2. Everything else of mine is blocked on `LeanFors.ScanSigner.FairShare`, which is the first module
-   to fail for every Contact target (and for ForestSteps, through RunFacts). Nothing of mine has
-   been compiled since.
-3. Once the lead signals that Linear/*, CoverPotential/Basic and ScanSigner build: build ForestSteps,
-   then RunFacts → NearWitness → RevealRate → PaidPotential → Weights → Potential → Signing → Bound.
-   The multi-call parts left open above (RevealRate's signing part, PaidPotential's new-pair case,
-   Potential's pair lemmas, Bound's `potNF_ge_of_near`) need the lead's final `pblk p call`,
-   `pview`, `withPair` and `loop_boundV`.
-4. No sorry or axioms. Commit with explicit paths.
+1. Presample, ForestSteps and RunFacts build and are committed.
+2. The rest of the chain (NearWitness → RevealRate → PaidPotential → Weights → Potential → Signing
+   → Bound) is blocked on `CoverPotential/OneCoin` (P6): it still takes the single-call
+   `hparse : ∀ p, model.parse (pblk parameter data p) = none`, so `GenericWitness` and with it
+   `Contact/NearWitness` do not build.
+3. The lead owes nothing else; the two new obligations handed up are `hmsg` and `hGstore` on
+   `a4F_bound` (`hGstore` is discharged inside Bound by `finalA4_store`, `hmsg` is the standard
+   `∀ x, IsMsgInput x → tg.kind x = .none` of SampleBound).
+4. No sorry or axioms. Commit each module as it builds, with explicit paths.
