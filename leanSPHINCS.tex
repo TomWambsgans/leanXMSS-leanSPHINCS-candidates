@@ -339,16 +339,16 @@ The FTS under each leaf is built from small WOTS keys instead of FORS, an idea f
 sig.golf submission~\cite{siggolf}.
 
 \paragraph{Against FORS.} The \emph{vanilla} variant of the site uses FORS instead, with $k$ trees of height $a$ and no
-root hash (the WOTS$^+$C key signs the $2k$ nodes below the roots): of the FORS whose instance costs no more hashes than a
-forest, the one with the smallest signature that lives at least as long as the forest under the cover attack, that is
-$a=9$ and $k=32$ to $34$ depending on the configuration (\texttt{scripts/scheme.py}). Its lifetimes are not proved in
+root hash (the WOTS$^+$C key signs the $2k$ nodes below the roots): as in leanSphincs v1, $a=10$, and the fewest trees
+that live at least as long as the forest under the cover attack, $k=25$ or $26$ depending on the configuration
+(\texttt{scripts/scheme.py}). Its lifetimes are not proved in
 Lean. At $h=26$, full key, Keccak-256, in permutations (preprocessing: the hashes of the FTS inside the threshold MPC):
 \begin{center}
 \begin{tabular}{lrrrr}
   \toprule
   FTS & size & verification & FTS signing & preprocessing \\
   \midrule
-  FORS, $k=32$, $a=9$ & 6\,580 bytes & 396 & $41\cdot10^3$ & 16\,384 \\
+  FORS, $k=25$, $a=10$ & 5\,860 bytes & 357 & $64\cdot10^3$ & 25\,600 \\
   two-level WOTS forest & 4\,276 bytes & 262 & $60\cdot10^3$ & 49\,152 \\
   \bottomrule
 \end{tabular}

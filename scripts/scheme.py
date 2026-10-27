@@ -23,9 +23,8 @@ LAYERED) and, for comparison, the cover attack they are measured against (ATTACK
 The same figures are pinned by the Rust tests (crates/sphincs, `Config::verify_compressions`).
 
 The vanilla FTS is FORS with k trees of height a and no root hash (the WOTS+C key signs the 2k nodes below
-the roots), as in leanSphincs v1. For each configuration it is the FORS with the smallest signature among
-those whose cover attack (fors_security.py) needs at least as many signatures as the forest's and whose
-instance costs no more hashes to build than a forest; its lifetime is not proved in Lean.
+the roots), as in leanSphincs v1: a = 10, and for each configuration the fewest trees k whose cover attack
+(fors_security.py) needs at least as many signatures as the forest's; its lifetime is not proved in Lean.
 """
 
 import argparse
@@ -118,14 +117,10 @@ def fors_log2_lifetime(h, b, a, k, level=127):
     return lo
 
 
-def fors_instance(a, k):
-    """Hashes to build a FORS instance, one per call: a derivation per two leaves, a hash per leaf, the nodes."""
-    return k * (2**a // 2 + 2**a + 2**a - 2)
-
-
-FOREST_INSTANCE = COORDS * (SUPERS * (SUBS * (CHILDREN * (CHAINS // 2 + CHAINS * STEPS + 1) + CHILDREN - 2) + 1)
-                            + SUPERS - 2)
 _FORS = {}
+
+
+FORS_HEIGHT = 10
 
 
 def fors(h, shape, b):
@@ -134,21 +129,10 @@ def fors(h, shape, b):
     if key not in _FORS:
         target = math.log2(fc.attack(h, shape, b))
         bb = h if shape == "layered" else b
-        def lives(a, k):
-            life = fors_log2_lifetime(h, bb, a, k)
-            return life is not None and life >= target
-        best = None
-        for a in range(2, 20):
-            hi = FOREST_INSTANCE // fors_instance(a, 1)  # the most trees within the forest's instance cost
-            if hi < 1 or not lives(a, hi):
-                continue
-            lo = 0  # the fewest trees that live long enough: lives(a, hi), not lives(a, lo)
-            while hi - lo > 1:
-                mid = (lo + hi) // 2
-                lo, hi = (lo, mid) if lives(a, mid) else (mid, hi)
-            cand = (hi * (1 + a), hi * a, hi, a)
-            best = cand if best is None or cand < best else best
-        _FORS[key] = best[2:]
+        k = 1
+        while (fors_log2_lifetime(h, bb, FORS_HEIGHT, k) or -1) < target:
+            k += 1
+        _FORS[key] = (k, FORS_HEIGHT)
     return _FORS[key]
 
 
