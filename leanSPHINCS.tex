@@ -38,12 +38,13 @@
 \section{The scheme}
 \label{sec:scheme}
 
-A SPHINCS-style scheme with three toggles, 24 configurations in all. Its components:
+A SPHINCS-style scheme with four toggles, 48 configurations in all. Its components:
 \begin{itemize}
-  \item few-time signature (FTS): a \emph{two-level WOTS forest} (\cref{sec:twolevel}, after sig.golf~\cite{siggolf})
+  \item few-time signature (FTS, T4): a \emph{two-level WOTS forest} (\cref{sec:twolevel}, after
+        sig.golf~\cite{siggolf}), or FORS
   \item one-time signature: WOTS$^+$C~\cite{HK22C}, 64 chains of length $w=4$, target sum 128
-  \item the FTS public key is 16 digests (the two nodes below the root of each of the 8 trees); WOTS$^+$C signs
-        them directly
+  \item the FTS public key is the nodes just below the roots --- 16 digests for the forest (two per tree), $2k$ for
+        FORS; WOTS$^+$C signs them directly
 \end{itemize}
 
 \paragraph{The toggles.}
@@ -57,6 +58,10 @@ A SPHINCS-style scheme with three toggles, 24 configurations in all. Its compone
         key). \emph{Layered}: a hypertree of three layers (table below); key generation builds the top layer only,
         the signer builds the lower trees on the fly, does not grind, and keeps the full key's lifetime.
   \item[T3, hash.] Keccak-256, BLAKE2s or SHA-256.
+  \item[T4, FTS.] The \emph{two-level WOTS forest} of \cref{sec:twolevel}, which is the candidate and which every
+        figure below assumes, or \emph{FORS} ($k$ trees of height $a$, as in leanSphincs v1). Both are proved in
+        Lean, each with its own 32 lifetimes; FORS trades about 37\% more signature bytes for half the threshold
+        preprocessing (\cref{sec:twolevel}).
 \end{description}
 
 \begin{center}
@@ -94,7 +99,7 @@ With all three, a chain step, a tree node, a grinding attempt and a WOTS$^+$C co
   \item the digest layout is in \cref{sec:twolevel}
 \end{itemize}
 
-\paragraph{The 24 configurations.} Signature size and verification cost in compressions (Keccak-f[1600]
+\paragraph{The 24 forest configurations.} Signature size and verification cost in compressions (Keccak-f[1600]
 permutations for Keccak-256); public and secret keys are 32 bytes each. A pruned key has the size and
 verification cost of the full key of its height.
 \begin{center}
