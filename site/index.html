@@ -1007,6 +1007,7 @@ footer a + a { margin-left: 1.25rem; }
   function rate(dev) { return D.rates[dev][S.hash]; }
   // an (i) with its tip (cls: more classes)
   function info(tip, cls) { return '<span class="info' + (cls || '') + '" tabindex="0" role="button" aria-label="More information" data-tip="' + tip + '">i</span>'; }
+  var NOTE = 'https://github.com/TomWambsgans/sphincs.art/releases/download/doc-latest/leanSPHINCS.pdf';
   var LIFE_TIP = '127 bits of security (ROM), [proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/main/formal/sphincs)';
   var FOREST_TIP = '8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5&#10;(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))';
   function forsTip(v) {
@@ -1165,7 +1166,7 @@ footer a + a { margin-left: 1.25rem; }
       '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + vs(comma(th.vanilla.prep_rounds), comma(th.prep_rounds)) + '</td></tr>');
 
     // what spicy changes, against the vanilla figures of the same configuration (gains rounded down, losses up)
-    document.getElementById('v-tip').setAttribute('data-tip', 'The WOTS forest, against FORS:\n' +
+    document.getElementById('v-tip').setAttribute('data-tip', '[The WOTS forest, against FORS](' + NOTE + '#page=7):\n' +
       '+ ' + Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures\n' +
       '+ ' + Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification\n' +
       '− novel\n' +
