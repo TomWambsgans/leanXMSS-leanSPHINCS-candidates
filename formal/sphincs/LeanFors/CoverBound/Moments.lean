@@ -1,11 +1,10 @@
-import LeanFors.CoverBound.UniformMark
+import LeanFors.CoverBound.IndexFactor
+import LeanFors.Scheme
 
-/-! **Per-tree cover moments by inclusion-exclusion.** A tree's mark is a tree leaf and, per
-subtree, a WOTS key and a codeword. A target mark is covered by a multiset `X` of disclosed marks
-when every chain it needs is opened deep enough by a disclosed mark with the same tree leaf and the
-same WOTS key. Writing the cover indicator as `Π (1 - a Π_x (1 - κ_x))` and expanding by
-inclusion-exclusion turns the average over `n` independent uniform marks into a signed sum of `n`-th
-powers of one-mark avoidance probabilities `Q`, which decode into the codeword-level quantities. -/
+/-! **One FORS tree.** A target leaf of a tree is covered by a multiset `X` of disclosed leaves of
+the same tree (at the same index) when it is one of them. The cover indicator is
+`1 - Π_{x ∈ X} [x ≠ t]`, a product over the disclosed leaves, so its average over `n` independent
+uniform leaves is a power of the one-leaf miss probability. -/
 
 open ENNReal
 
@@ -16,7 +15,6 @@ variable [Params]
 open Concrete
 
 set_option linter.unusedSectionVars false
-attribute [local irreducible] lut codewordCodes
 
 /-! ### Real averages -/
 
@@ -90,127 +88,98 @@ theorem avgR_const [Nonempty α] (c : ℝ) : avgR (fun _ : α => c) = c := by
   rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, ← mul_assoc,
     inv_mul_cancel₀ (by exact_mod_cast Fintype.card_ne_zero), one_mul]
 
+theorem avgNR_add (φ ψ : Multiset α → ℝ) :
+    ∀ n X, avgNR (fun Y => φ Y + ψ Y) n X = avgNR φ n X + avgNR ψ n X
+  | 0, X => rfl
+  | n + 1, X => by
+      simp only [avgNR, avgNR_add φ ψ n]
+      exact avgR_add _ _
+
+theorem avgNR_const [Nonempty α] (c : ℝ) : ∀ n X, avgNR (fun _ : Multiset α => c) n X = c
+  | 0, X => rfl
+  | n + 1, X => by
+      simp only [avgNR, avgNR_const c n]
+      exact avgR_const c
+
+/-- Averages over the elements commute with an average over another finite type. -/
+theorem avgNR_avgR {β : Type} [Fintype β] (f : β → Multiset α → ℝ) (n : ℕ) (X : Multiset α) :
+    avgNR (fun Y => avgR fun b => f b Y) n X = avgR fun b => avgNR (f b) n X := by
+  unfold avgR
+  rw [avgNR_const_mul, avgNR_sum]
+
 end Real
 
-/-! ### Inclusion-exclusion -/
 
-/-- `Π (1 - a b) = Σ_T (-1)^|T| Π_T a Π_T b` over all subsets. -/
-theorem prod_one_sub_mul {ι : Type} [Fintype ι] [DecidableEq ι] (a b : ι → ℝ) :
-    ∏ i, (1 - a i * b i) = ∑ T : Finset ι, (-1) ^ T.card * (∏ i ∈ T, a i) * ∏ i ∈ T, b i := by
-  have h := Finset.prod_add (fun i => -(a i * b i)) (fun _ => (1 : ℝ)) Finset.univ
-  simp only [Finset.prod_const_one, mul_one, Finset.powerset_univ] at h
-  rw [show (∏ i, (1 - a i * b i)) = ∏ i, (-(a i * b i) + 1) from
-    Finset.prod_congr rfl fun i _ => by ring, h]
-  refine Finset.sum_congr rfl fun T _ => ?_
-  rw [Finset.prod_neg, Finset.prod_mul_distrib]
-  ring
+/-! ### One tree -/
 
-/-! ### Marks as tuples -/
+/-- The cover indicator of a target leaf by the disclosed leaves `X`. -/
+noncomputable def coverR (t : FLeaf) (X : Multiset FLeaf) : ℝ := if t ∈ X then 1 else 0
 
-/-- A mark: the tree leaf and, per subtree, the WOTS key and the codeword index. -/
-abbrev MT := SuperIdx × (SubIdx → ChildIdx × LutIdx)
+/-- One disclosed leaf misses the target. -/
+noncomputable def missR (t x : FLeaf) : ℝ := if x = t then 0 else 1
 
-def toMT (m : CoordMark) : MT := (m.super, fun j => (m.child j, m.word j))
+theorem coverR_nonneg (t : FLeaf) (X : Multiset FLeaf) : 0 ≤ coverR t X := by
+  unfold coverR; split_ifs <;> norm_num
 
-def ofMT (x : MT) : CoordMark := ⟨x.1, fun j => (x.2 j).1, fun j => (x.2 j).2⟩
+theorem coverR_le_one (t : FLeaf) (X : Multiset FLeaf) : coverR t X ≤ 1 := by
+  unfold coverR; split_ifs <;> norm_num
 
-/-- Fields are uniform tuples. -/
-def fieldMT : FieldVal ≃ MT where
-  toFun v := toMT (markEquiv v)
-  invFun x := markEquiv.symm (ofMT x)
-  left_inv v := by
-    simp only [toMT, ofMT]
-    rw [show (⟨(markEquiv v).super, fun j => (markEquiv v).child j, fun j => (markEquiv v).word j⟩ : CoordMark) =
-      markEquiv v from rfl, Equiv.symm_apply_apply]
-  right_inv x := by
-    simp only [Equiv.apply_symm_apply, toMT, ofMT]
-
-/-- The deficit of chain `i` of subtree `j`. -/
-def need (x : MT) (j : SubIdx) (i : FChain) : ℕ := (lut (x.2 j).2 i).val
-
-/-- `x` opens chain `i` of the WOTS key that `t` needs in subtree `j`, deep enough. -/
-def KC (x t : MT) (j : SubIdx) (i : FChain) : Prop :=
-  x.1 = t.1 ∧ (x.2 j).1 = (t.2 j).1 ∧ need t j i ≤ need x j i
-
-instance (x t : MT) (j : SubIdx) (i : FChain) : Decidable (KC x t j i) := by unfold KC; infer_instance
-
-/-- Every chain the target needs is opened deep enough. -/
-def CoverT (t : MT) (X : Multiset MT) : Prop := ∀ j i, need t j i = 0 ∨ ∃ x ∈ X, KC x t j i
-
-/-- The cover indicator as a real number. -/
-noncomputable def coverR (t : MT) (X : Multiset MT) : ℝ := by
-  classical
-  exact if CoverT t X then 1 else 0
-
-/-! ### The expansion of the cover indicator -/
-
-/-- The sign of a choice of chains per subtree. -/
-def sgnS (S : SubIdx → Finset FChain) : ℝ := ∏ j, (-1) ^ (S j).card
-
-/-- The chosen chains are all needed. -/
-noncomputable def needA (t : MT) (S : SubIdx → Finset FChain) : ℝ :=
-  ∏ j, ∏ i ∈ S j, if need t j i = 0 then 0 else 1
-
-/-- A mark avoids every chosen chain. -/
-noncomputable def avoidB (t : MT) (S : SubIdx → Finset FChain) (x : MT) : ℝ := by
-  classical
-  exact ∏ j, ∏ i ∈ S j, (1 - if KC x t j i then 1 else 0)
-
-theorem coverR_eq_prod (t : MT) (X : Multiset MT) :
-    coverR t X = ∏ j, ∏ i, (1 - (if need t j i = 0 then 0 else 1) *
-      (X.map fun x => (1 - if KC x t j i then (1 : ℝ) else 0)).prod) := by
-  classical
-  have hpt : ∀ j i, (1 - (if need t j i = 0 then (0 : ℝ) else 1) *
-      (X.map fun x => (1 - if KC x t j i then (1 : ℝ) else 0)).prod) =
-      if need t j i = 0 ∨ ∃ x ∈ X, KC x t j i then 1 else 0 := by
-    intro j i
-    by_cases h0 : need t j i = 0
-    · rw [if_pos h0, zero_mul, sub_zero, if_pos (Or.inl h0)]
-    · rw [if_neg h0, one_mul]
-      by_cases hx : ∃ x ∈ X, KC x t j i
-      · obtain ⟨x, hx, hk⟩ := hx
-        rw [if_pos (Or.inr ⟨x, hx, hk⟩), Multiset.prod_eq_zero (Multiset.mem_map.2 ⟨x, hx, by simp [hk]⟩),
-          sub_zero]
-      · push Not at hx
-        rw [if_neg (by rintro (h | ⟨x, hx', hk⟩); exact h0 h; exact hx x hx' hk)]
-        rw [Multiset.prod_eq_one (fun y hy => by
-          obtain ⟨x, hx', rfl⟩ := Multiset.mem_map.1 hy
-          simp [hx x hx'])]
-        ring
-  simp only [hpt]
-  unfold coverR CoverT
-  by_cases hc : ∀ j i, need t j i = 0 ∨ ∃ x ∈ X, KC x t j i
-  · rw [if_pos hc]
-    symm
-    refine Finset.prod_eq_one fun j _ => Finset.prod_eq_one fun i _ => ?_
-    rw [if_pos (hc j i)]
-  · rw [if_neg hc]
-    push Not at hc
-    obtain ⟨j, i, hji⟩ := hc
-    symm
-    refine Finset.prod_eq_zero (Finset.mem_univ j) (Finset.prod_eq_zero (Finset.mem_univ i) ?_)
-    rw [if_neg]
-    rintro (h | ⟨x, hx, hk⟩)
-    · exact hji.1 h
-    · exact hji.2 x hx hk
-
-theorem multiset_prod_finset_prod {β γ : Type} (X : Multiset β) (s : Finset γ) (g : γ → β → ℝ) :
-    (X.map fun x => ∏ i ∈ s, g i x).prod = ∏ i ∈ s, (X.map (g i)).prod := by
+/-- **The cover indicator as a product over the disclosed leaves.** -/
+theorem coverR_eq (t : FLeaf) (X : Multiset FLeaf) : coverR t X = 1 - (X.map (missR t)).prod := by
   induction X using Multiset.induction_on with
-  | empty => simp
+  | empty => simp [coverR]
   | cons x X ih =>
-      simp only [Multiset.map_cons, Multiset.prod_cons, ih, Finset.prod_mul_distrib]
+      rw [Multiset.map_cons, Multiset.prod_cons]
+      by_cases hx : x = t
+      · subst hx
+        simp [coverR, missR]
+      · rw [show missR t x = 1 from if_neg hx, one_mul, ← ih]
+        unfold coverR
+        by_cases h : t ∈ X
+        · rw [if_pos h, if_pos (Multiset.mem_cons_of_mem h)]
+        · rw [if_neg h, if_neg (fun h' => (Multiset.mem_cons.1 h').elim (fun e => hx e.symm) h)]
 
-/-- **Inclusion-exclusion of the cover indicator.** -/
-theorem coverR_expand (t : MT) (X : Multiset MT) :
-    coverR t X = ∑ S : SubIdx → Finset FChain, sgnS S * needA t S * (X.map (avoidB t S)).prod := by
-  classical
-  rw [coverR_eq_prod]
-  simp only [prod_one_sub_mul]
-  rw [Fintype.prod_sum]
-  refine Finset.sum_congr rfl fun S _ => ?_
-  unfold sgnS needA avoidB
-  rw [multiset_prod_finset_prod]
-  simp only [multiset_prod_finset_prod, Finset.prod_mul_distrib]
+/-- The number of leaves of a tree, as a real number. -/
+noncomputable def leavesR : ℝ := 2 ^ forsHeight
+
+theorem leavesR_pos : 0 < leavesR := by unfold leavesR; positivity
+
+theorem card_fleaf : (Fintype.card FLeaf : ℝ) = leavesR := by
+  rw [Fintype.card_fin, leavesR]; push_cast; rfl
+
+theorem sum_ind (t : FLeaf) : ∑ x : FLeaf, (if x = t then (1 : ℝ) else 0) = 1 := by
+  rw [Finset.sum_ite_eq' Finset.univ t, if_pos (Finset.mem_univ t)]
+
+/-- A uniform leaf misses a given leaf with probability `1 - 1/A`. -/
+theorem avgR_missR (t : FLeaf) : avgR (missR t) = 1 - 1 / leavesR := by
+  unfold avgR
+  have h : ∀ x, missR t x = 1 - if x = t then 1 else 0 := fun x => by unfold missR; split_ifs <;> norm_num
+  simp only [h, Finset.sum_sub_distrib, sum_ind, Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one,
+    card_fleaf]
+  have := leavesR_pos
+  field_simp
+
+/-- A uniform leaf misses two distinct leaves with probability `1 - 2/A`. -/
+theorem avgR_missR_mul (t t' : FLeaf) :
+    avgR (fun x => missR t x * missR t' x) = if t' = t then 1 - 1 / leavesR else 1 - 2 / leavesR := by
+  by_cases htt : t' = t
+  · subst htt
+    rw [if_pos rfl, ← avgR_missR t']
+    congr 1
+    funext x
+    unfold missR; split_ifs <;> norm_num
+  · rw [if_neg htt]
+    unfold avgR
+    have h : ∀ x, missR t x * missR t' x = 1 - (if x = t then 1 else 0) - if x = t' then 1 else 0 := by
+      intro x
+      unfold missR
+      by_cases h1 : x = t
+      · subst h1; simp [Ne.symm htt]
+      · by_cases h2 : x = t' <;> simp [h1, h2, htt]
+    simp only [h, Finset.sum_sub_distrib, sum_ind, Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one,
+      card_fleaf]
+    have := leavesR_pos
+    field_simp
+    ring
 
 end LeanFors.Security.H0
