@@ -4,10 +4,7 @@
 
 [leanSPHINCS security proofs in Lean 4](formal/sphincs/README.md)
 
-## License and credits
-
-The code of this repository is licensed under either of [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your
-option.
+## Credits
 
 Parts are adapted from [leanVM](https://github.com/leanEthereum/leanVM) (MIT OR Apache-2.0, see
 [licenses/](licenses)): the `sphincs` crate, and the Lean proof `formal/sphincs/LeanForest`, which
