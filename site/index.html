@@ -6,7 +6,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%2726 -86 372 372%27%3E%3Cpath d=%27M54%20176%20C42%20150%2054%20114%2096%20108%20C150%20102%20200%20106%20236%20104%20C246%2080%20252%2052%20262%2038%20C272%2024%20296%2026%20302%2042%20L305%2055%20L317%2072%20L310%2075%20L312%2083%20L306%2094%20L296%2097%20L302%20134%20C304%20146%20302%20150%20308%20152%20L382%20152%20C394%20152%20394%20176%20382%20176%20Z%27 fill=%27%23111%27/%3E%3C/svg%3E">
 <meta name="color-scheme" content="light">
 <title>leanSphincs exploration</title>
-<meta name="description" content="leanSphincs exploration: a hash-based signature built from SLH-DSA-128-24, with lifetimes of 2^26 to 2^32 signatures, fast signing, uniform or pruned keys, and threshold and hardware-wallet signing.">
+<meta name="description" content="leanSphincs exploration: a stateless hash-based signature for Ethereum with a two-level WOTS forest, uniform or pruned keys, three hashes, threshold and hardware-wallet signing, proved in Lean.">
 <style>
 :root {
   color-scheme: light;
@@ -69,9 +69,11 @@ h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height:
 figure { margin: 0; position: relative; min-height: 18rem; }
 figure svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .titlerow { position: relative; }
-/* the versions, at the bottom: v1 (later a link), v2 (this page), v3? (a tip asking for feedback) */
+/* the versions, at the bottom: v1 (the old page, in v1/), v2 (this page), v3? (a tip asking for feedback) */
 .versions { display: flex; gap: 0.4rem; font-size: 0.85rem; }
 .ver { border: 1px solid var(--tree); border-radius: 6px; padding: 0.05rem 0.55rem; line-height: 1.5; color: var(--muted); }
+a.ver { text-decoration: none; }
+a.ver:hover { color: var(--ink); border-color: var(--ink); }
 .ver.cur { background: var(--ink); border-color: var(--ink); color: #fff; }
 .ver.info { display: inline-block; width: auto; height: auto; margin-left: 0; border: 1px dashed var(--tree); border-radius: 6px;
   font-size: inherit; font-weight: inherit; line-height: 1.5; vertical-align: baseline; cursor: pointer; }
@@ -148,6 +150,7 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
 }
+#tip { max-height: calc(100vh - 2.5rem); overflow-y: auto; }   /* a long tip scrolls on a small screen */
 #tip.w { white-space: pre-line; width: max-content; max-width: 32rem; }
 #tip a { color: #fff; text-decoration: underline; }
 #tip strong { font-weight: 600; }
@@ -205,7 +208,7 @@ footer a + a { margin-left: 1.25rem; }
   .page { grid-template-columns: minmax(0, 1fr); }
   .page > * { min-width: 0; }
   .params p { white-space: normal; }
-  figure { min-height: 0; }
+  figure { min-height: 0; width: 100%; max-width: 36rem; margin: 0 auto; }   /* one column: the diagram is not taller than the page needs */
   figure svg { position: static; height: auto; }
   .scroll { overflow-x: auto; }
   /* One signer: a figure and its time share a line when they fit */
@@ -306,9 +309,9 @@ footer a + a { margin-left: 1.25rem; }
     </header>
     <div class="params">
       <div class="toggles" id="toggles">
-        <span class="sl" id="tl-h">Lifetime<span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="How many transactions can be signed, at &gt; 127 bits security. Security degrades gracefully beyond that.">i</span></span>
+        <span class="sl"><span id="tl-h">Lifetime</span><span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="How many signatures can be made, at ≥ 127 bits of security. Security degrades gracefully beyond that.">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-h" data-key="h"><button type="button" role="radio" data-val="22" aria-label="2 to the 26">2<sup>26</sup></button><button type="button" role="radio" data-val="24" aria-label="2 to the 28">2<sup>28</sup></button><button type="button" role="radio" data-val="26" aria-label="2 to the 30">2<sup>30</sup></button><button type="button" role="radio" data-val="28" aria-label="2 to the 32">2<sup>32</sup></button></div>
-        <span class="sl" id="tl-shape">Mode<span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="# Uniform&#10;Standard signing (the randomizer selects a random FTS among the 2ʰ possible ones).&#10;&#10;# Pruning&#10;Use a single, large, XMSS layer. Weak devices only construct a subtree of 2ᵇ leaves, and use pseudorandom nodes for the rest, and signing grinds until its index lands in it (An idea from [conduition](https://conduition.io/cryptography/hypertree-pruning/)). Verifier algo is unaffected.&#10;&#10;The risk of reusing a seed under different pruning parameters is fixed by deriving a second seed as H(seed ‖ parameters).&#10;&#10;Privacy: one can select the leaf indexes of the non-pruned FTS at (pseudo)random, but signing a lot will always eventually leak the pruning size. Partial remediation: keep a semi-trusted state S of the previously signed FTS, and never reuse a FTS of S while |S| &lt; 2ᵇ⁻¹. This essentially gives 2ᵇ⁻¹ signatures with no privacy leak (for small b). The state is semi-trusted, because an adversary controlling it can: leak the pruning size, and reduce the lifetime by a factor of 2, but nothing worse.">i</span></span>
+        <span class="sl"><span id="tl-shape">Mode</span><span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="# Uniform&#10;Standard signing (the randomizer selects a random FTS among the 2ʰ possible ones).&#10;&#10;# Pruning&#10;Use a single, large, XMSS layer. Weak devices only construct a subtree of 2ᵇ leaves, and use pseudorandom nodes for the rest, and signing grinds until its index lands in it (An idea from [conduition](https://conduition.io/cryptography/hypertree-pruning/)). Verifier algo is unaffected.&#10;&#10;The risk of reusing a seed under different pruning parameters is fixed by deriving a second seed as H(seed ‖ parameters).&#10;&#10;Privacy: one can select the leaf indexes of the non-pruned FTS at (pseudo)random, but signing a lot will always eventually leak the pruning size. Partial remediation: keep a semi-trusted state S of the previously signed FTS, and when grinding lands on a FTS of S, accept it only with probability 2ᵇ⁻ʰ, so that FTS repeat exactly as often as with a full tree. This essentially gives 2ᵇ⁻¹ signatures with no privacy leak. The state is semi-trusted, because an adversary controlling it can: leak the pruning size, and reduce the lifetime by a factor of 2, but nothing worse.">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-shape" data-key="shape"><button type="button" role="radio" data-val="layered">Uniform</button><button type="button" role="radio" data-val="pruned">Pruning</button></div>
         <span class="sl" id="tl-hash">Hash</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-hash" data-key="hash"><button type="button" role="radio" data-val="Keccak-256">Keccak-256</button><button type="button" role="radio" data-val="BLAKE2s">BLAKE2s</button><button type="button" role="radio" data-val="SHA-256">SHA-256</button></div>
@@ -897,7 +900,7 @@ footer a + a { margin-left: 1.25rem; }
         <p class="bn" data-f="th-life">&nbsp;</p>
         <div class="scroll">
         <table class="cmp plain">
-          <thead><tr><th></th><th>Keygen</th><th>Preprocessing<br><span class="sub">(per signature)</span></th></tr></thead>
+          <thead><tr><th><span class="sub">For 2-of-3</span></th><th>Keygen</th><th>Preprocessing<br><span class="sub">(per signature)</span></th></tr></thead>
           <tbody data-f="th-traffic"></tbody>
         </table>
         </div>
@@ -909,7 +912,7 @@ footer a + a { margin-left: 1.25rem; }
 
 <footer>
   <p><a href="https://github.com/TomWambsgans/sphincs.art/blob/v2/leanSPHINCS.tex">Note</a><a href="https://github.com/TomWambsgans/sphincs.art/tree/v2">Code</a><a href="https://github.com/TomWambsgans/sphincs.art/tree/v2/formal/sphincs">Proofs</a></p>
-  <div class="versions" aria-label="Versions"><span class="ver">v1</span><span class="ver cur" aria-current="page">v2</span><span class="ver info" tabindex="0" role="button" aria-label="v3?" data-tip="Feedback welcome, please open an issue in [TomWambsgans/sphincs.art](https://github.com/TomWambsgans/sphincs.art/issues).">v3?</span></div>
+  <div class="versions" aria-label="Versions"><a class="ver" href="v1/">v1</a><span class="ver cur" aria-current="page">v2</span><span class="ver info" tabindex="0" role="button" aria-label="v3?" data-tip="Feedback welcome, please open an issue in [TomWambsgans/sphincs.art](https://github.com/TomWambsgans/sphincs.art/issues).">v3?</span></div>
 </footer>
 
 </main>
@@ -975,7 +978,10 @@ footer a + a { margin-left: 1.25rem; }
     else hide();
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') hide();
+    if (e.key === 'Escape') {   // from a link in the tip, back to its (i)
+      if (cur && tip.contains(document.activeElement)) cur.focus();
+      hide();
+    }
     var i = info(e);
     if (i && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); if (i === cur) hide(); else show(i); }
   });
@@ -998,16 +1004,13 @@ footer a + a { margin-left: 1.25rem; }
   function info(tip, cls) { return '<span class="info' + (cls || '') + '" tabindex="0" role="button" aria-label="More information" data-tip="' + tip + '">i</span>'; }
   var LIFE_TIP = '127 bits of security (ROM), [proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/v2/formal/sphincs)';
 
-  // 3 significant digits with K, M, B (as scripts/scheme.py prints them)
+  // a cost: two significant digits, rounded up, with K, M, B
   function fmt(x) {
     var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
     x = up(x, 2);   // a cost, rounded up to two significant digits: 954K is 960K, 244M is 250M
     for (var i = 0; i < u.length; i++) if (x >= u[i][0]) return x / u[i][0] + u[i][1];
     return String(x);
   }
-  // a lifetime: the same, rounded down (never more than proved)
-  // the lifetime of a configuration: as a power of two (rounded down) for the full and layered keys, as the
-  // toggle names them, and as a number for a pruned key
   // a lifetime, rounded down to one significant digit (100K, 20M, 1B): never above what is proved
   function lifeOf(c) { return life1(c.lifetime); }
   function life1(n) {
@@ -1016,7 +1019,8 @@ footer a + a { margin-left: 1.25rem; }
     for (var i = 0; i < u.length; i++) if (n >= u[i][0]) return (n / u[i][0]) + u[i][1];
     return String(n);
   }
-  function life(x) {
+  // a rate: three significant digits, rounded down (32.6K, 5.8K)
+  function rateK(x) {
     var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(x)) - 2);
     x = q >= 1 ? Math.floor(x / q + 1e-9) * q : Math.floor(x);
     for (var i = 0; i < u.length; i++) if (x >= u[i][0]) return Number((x / u[i][0]).toPrecision(3)) + u[i][1];
@@ -1039,7 +1043,6 @@ footer a + a { margin-left: 1.25rem; }
     if (gb >= 0.995) return r(gb) + '&nbsp;GB';
     return r(gb * 1000) + '&nbsp;MB';
   }
-  function pow2(e) { return '<span role="img" aria-label="2 to the ' + e + '">2<sup>' + e + '</sup></span>'; }
   function pow2t(e) { return '2' + String(e).replace(/\d/g, function (d) { return '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]; }); }   // in a tip
   function keccak() { return S.hash === 'Keccak-256'; }
   function unit() { return keccak() ? 'permutations' : 'compressions'; }
@@ -1063,7 +1066,7 @@ footer a + a { margin-left: 1.25rem; }
   function split(c) { return c.layers.join(' + '); }
 
   function render() {
-    var W = D.wallet, main = cfg(S.shape), full = cfg('pruned'), lay = cfg('layered');
+    var W = D.wallet, main = cfg(S.shape), lay = cfg('layered');
 
     // the toggles
     [].forEach.call(document.querySelectorAll('.seg'), function (g) {
@@ -1096,7 +1099,7 @@ footer a + a { margin-left: 1.25rem; }
       return 'Offline: the Ledger prepares ' + np + ' FTS and their ' + (lay_ ? 'hypertree' : 'authentication') + ' paths once (' + fmt(tt.ledger_prep * np) + ' ' + unit() +
         '), then one per signature in idle time. ' +
         'Online: the host finds the randomizer that lands on one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes) and proves it in a STARK (≈ ' +
-        time(g / W.host_rate) + '), which the Ledger verifies (optimistically ≈ ' + time(W.stark_verify_s) + ' after a Ledger OS update; [benchmark](https://github.com/TomWambsgans/hardware-wallet-benchmark)). Idea from [Riva Labs](https://www.riva.xyz/).';
+        time(g / W.host_rate) + '), which the Ledger verifies (optimistically ≈ ' + time(W.stark_verify_s) + ' after a Ledger OS update; [benchmark](https://github.com/TomWambsgans/hardware-wallet-benchmark)), then opens the FTS chain values itself. Idea from [Riva Labs](https://www.riva.xyz/).';
     };
     // the layered key has the same lifetime on every device: one cell for all
     [].forEach.call(document.querySelectorAll('.life-tip'), function (e) { e.setAttribute('data-tip', LIFE_TIP); });
@@ -1106,7 +1109,7 @@ footer a + a { margin-left: 1.25rem; }
     set('life-same-1', '<div>' + lifeOf(lay) + ' signatures</div>'); set('life-same-2', '<div>' + lifeOf(lay) + ' signatures</div>');
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
-      var dev = d.dev + info((d.host ? fmt(d.rate) : pow2t(Math.round(Math.log2(d.rate)))) +
+      var dev = d.dev + info((d.host ? rateK(d.rate) : pow2t(Math.floor(Math.log2(d.rate) + 1e-9))) +
         ' ' + units() + ' per second' + (!d.host && S.hash === 'SHA-256' ? ' (counted at the BLAKE2s rate)' : '') +
         (d.bench ? ' ([benchmark](' + d.bench + '))' : ''), k > 0 ? ' r' : '');
       set('head-' + k, '<div class="hd"><span>' + dev + '</span></div>');
@@ -1121,7 +1124,8 @@ footer a + a { margin-left: 1.25rem; }
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       // shown only when it beats signing alone
-      var tt = lay_ ? thr('layered') : thr('pruned', d.b), online = g / W.host_rate + W.stark_verify_s;
+      // online: the host grinds and proves, the Ledger verifies the STARK and opens the chain values itself
+      var tt = lay_ ? thr('layered') : thr('pruned', d.b), online = g / W.host_rate + W.stark_verify_s + tt.device_online / d.rate;
       document.querySelector('[data-f="assist-' + k + '"]').closest('tr').classList.toggle('gone', online >= c.sign[d.kib] / d.rate);
       set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.ledger_prep * np / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
         time(online) + '</span><span class="m-only">' + info(assist(tt), ' w') + '</span></span></div>');
@@ -1130,9 +1134,9 @@ footer a + a { margin-left: 1.25rem; }
 
     // threshold, with the chosen hash, for the chosen shape: the layered key, or a pruned key with the Ledger's subtree
     // traffic per operator at about 1 bit per AND gate
-    var MPC = '<th>Traffic' + info('Thanks to honest-majority MPC with replicated&#10;sharing (Araki et al., CCS 2016), each AND gate&#10;costs roughly 1 bit of bandwidth per operator,&#10;with malicious security (Boyle et al., CCS 2019;&#10;Goyal and Song, CRYPTO 2020)') + '</th>';
+    var MPC = '<th>Traffic' + info('For 2-of-3 (×1.2 and ×1.29 for 3-of-5 and 4-of-7).&#10;Thanks to honest-majority MPC with replicated&#10;sharing (Araki et al., CCS 2016), each AND gate&#10;costs roughly 1 bit of bandwidth per operator,&#10;with malicious security (Boyle et al., CCS 2019;&#10;Goyal and Song, CRYPTO 2020)') + '</th>';
     var th = lay_ ? thr('layered') : thr('pruned', devs[0].b);
-    var ROUNDS = '<th>Rounds' + info('One communication round per layer of AND gates&#10;(' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + ')') + '</th>';
+    var ROUNDS = '<th>Rounds' + info('One communication round per layer of AND gates&#10;(' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + '), for 2-of-3&#10;(twice as many from 3-of-5 on, through a collector)') + '</th>';
     // with pruning, the Ledger's subtree; the layered key needs no sentence
     set('th-life', lay_ ? '' : 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for a lifetime of ' +
       life1(th.lifetime) + ' signatures:');
