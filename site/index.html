@@ -1033,10 +1033,11 @@ footer a + a { margin-left: 1.25rem; }
     if (s >= 1e-3) return sig2(s * 1e3) + '&nbsp;ms';
     return sig2(s * 1e6) + '&nbsp;&micro;s';
   }
-  function bytes(gb) {
-    if (gb >= 999.5) return (gb / 1000).toPrecision(3) + '&nbsp;TB';
-    if (gb >= 0.9995) return gb.toPrecision(3) + '&nbsp;GB';
-    return (gb * 1000).toPrecision(3) + '&nbsp;MB';
+  function bytes(gb) {   // two significant digits: 3.6 GB, 220 MB
+    var r = function (v) { return Number(v.toPrecision(2)); };
+    if (gb >= 999.5) return r(gb / 1000) + '&nbsp;TB';
+    if (gb >= 0.995) return r(gb) + '&nbsp;GB';
+    return r(gb * 1000) + '&nbsp;MB';
   }
   function pow2(e) { return '<span role="img" aria-label="2 to the ' + e + '">2<sup>' + e + '</sup></span>'; }
   function pow2t(e) { return '2' + String(e).replace(/\d/g, function (d) { return '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]; }); }   // in a tip
