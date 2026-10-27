@@ -3,7 +3,7 @@ import FORS.Base.Prelude
 
 /-! Exact independent-coordinate decomposition of the material secret table and the graph's
 full-output labels. Every hidden digest is extracted from a distinct actual sampled answer;
-the other128bits and all unselected answers remain explicit independent residual data. -/
+the other 128 bits and all unselected answers remain explicit independent residual data. -/
 
 open OracleComp OracleSpec
 namespace FORS.Security.HiddenGraph
@@ -22,7 +22,7 @@ noncomputable opaque sampleCellFintype : Fintype SampleCell := inferInstance
 noncomputable local instance : Fintype SampleCell := sampleCellFintype
 noncomputable local instance : DecidableEq SampleCell := Classical.decEq _
 
-/-- The sampled full answer containing each hidden128-bit coordinate. -/
+/-- The sampled full answer containing each hidden 128-bit coordinate. -/
 def coordinateCell : Coordinate → SampleCell
   | .chain lay tree leaf chainIdx position =>
       if h : position.val = 0 then .inl (.inl (lay, tree, leaf, chainIdx))

@@ -133,8 +133,8 @@ probability at most $q\cdot2^{-127}$, up to the
 signature limits below. One proof, for any height, shape and kept subtree height, gives the 32 limits, each with its
 certificate checked by the Lean kernel; the size and the three verification costs of each of the 8 shapes are
 separate theorems. The limits below are the candidate's, whose few-time signature is the two-level WOTS forest; the
-FORS variant is proved separately, with its own 32 limits (\cref{sec:twolevel}). The second half of the table is the
-ratio to the cover attack (\cref{sec:twolevel}).
+FORS variant is proved separately, with its own 32 limits. The second half of the table is the ratio to the cover
+attack (\cref{sec:twolevel}).
 \begin{center}
 \setlength{\tabcolsep}{3.5pt}
 \small
@@ -347,7 +347,7 @@ $h=28$).
 The FTS under each leaf is built from small WOTS keys instead of FORS, an idea from Jonas Nick's (Blockstream)
 sig.golf submission~\cite{siggolf}.
 
-\paragraph{Against FORS.} The \emph{vanilla} variant of the site uses FORS instead, with $k$ trees of height $a$ and no
+\paragraph{Against FORS.} The site's other variant uses FORS~\cite{FIPS205} instead, with $k$ trees of height $a$ and no
 root hash (the WOTS$^+$C key signs the $2k$ nodes below the roots): as in leanSphincs v1, $a=10$, and the fewest trees
 that live at least as long as the forest under the cover attack, $k=25$ or $26$ depending on the configuration
 (\texttt{scripts/scheme.py}). Its lifetimes are proved in Lean as well, by a second library with the same
@@ -367,9 +367,17 @@ inside the threshold MPC):
 \end{tabular}
 \end{center}
 FORS halves its preprocessing because only the leaf layer $\hash(\text{secret})$ touches the shared secrets:
-once the leaves leave the MPC they are public, and the $k(2^a-1)$ nodes above them are a public computation.
+once the leaves leave the MPC they are public, and the $k(2^a-2)$ nodes above them are a public computation.
 The forest cannot do the same --- its MPC cost is the WOTS chain steps, and each step consumes the previous
 step's secret output, so none of the chain can leave the MPC early.
+
+The cover attack and the proofs bound the forgery probability averaged over the signer's randomness; a
+given key has its own cover rate, set by how many signatures each instance made and what they revealed. At
+equal mean, the forest's varies about twice as much across keys as FORS's (relative standard deviation 0.079
+against 0.041 for the full key at $h=24$), because its coverage depends on the codewords revealed: the weakest
+key in $10^6$ is 3.6 bits below the mean against 2.3 bits for FORS (7.7 and 6.5 at $b=14$). This matters only to
+an attacker who picks the weakest of many keys. Computed numerically, not in Lean
+(\href{https://github.com/TomWambsgans/sphincs.art/blob/main/scripts/key_variance.py}{\texttt{scripts/key\_variance.py}}).
 
 \paragraph{WOTS keys.} 6 chains of length 5, with leaf $\hash(\text{6 chain tops})$. A codeword is a vector
 $d\in\{0,\dots,4\}^6$ with $\sum_i d_i=5$; there are 246 of them. Signing at $d$ reveals each chain $d_i$ steps below
@@ -512,7 +520,7 @@ $b=8$ where it is 2\% lower~\cite{proofs}. At $h=24$, rounded down (the last row
 \bibitem{FIPS205} National Institute of Standards and Technology. \emph{Stateless Hash-Based Digital Signature
   Standard}. FIPS~205, 2024. \url{https://doi.org/10.6028/NIST.FIPS.205}.
 \bibitem{proofs} \emph{leanSphincs proofs in Lean 4} (\texttt{LeanForest} for the two-level WOTS forest,
-  \texttt{LeanFors} for FORS), \texttt{formal/sphincs} in
+  \texttt{FORS} for FORS), \texttt{formal/sphincs} in
   \url{https://github.com/TomWambsgans/sphincs.art}.
 \bibitem{hwbench} T.~Wambsgans. \emph{Hardware wallet benchmark}.
   \url{https://github.com/TomWambsgans/hardware-wallet-benchmark}.

@@ -3,7 +3,7 @@ import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 import Mathlib.Data.BitVec
 
 /-!
-# leanSPHINCS, vanilla: FORS under a hypertree of WOTS+C keys
+# leanSPHINCS, FORS variant: FORS under a hypertree of WOTS+C keys
 
 The scheme has a height `h = totalHeight` (22, 24, 26 or 28) and a shape (`Params`): one tree of
 height `h` of which the key keeps a subtree of `2^b` leaves (`numLayers = 1`, `b = subtreeHeight`,
@@ -194,11 +194,11 @@ def truncateHash (output : HashOutput) : Digest :=
   output.extractLsb' 0 digestBits
 
 /-- The second 16 bytes of a hash output (bytes 16 to 31). The seed derivations of chain starts and
-the step of the randomizer walk use them. -/
+FORS secrets and the step of the randomizer walk use them. -/
 def upperHash (output : HashOutput) : Digest :=
   output.extractLsb' digestBits digestBits
 
-/-- The half of a hash output that starts chain `n`: the first for even `n`, the second for odd `n`. -/
+/-- The half of a hash output for chain or FORS leaf `n`: the first for even `n`, the second for odd `n`. -/
 def hashHalf (n : Nat) (output : HashOutput) : Digest :=
   if n % 2 = 0 then truncateHash output else upperHash output
 
@@ -377,7 +377,7 @@ deriving DecidableEq
 
 /-- `TWEAK_PARAMETER = 5`, `TWEAK_PRF = 0` (`hi` the pair of chains, `lo` the leaf, with the layer
 and the tree),
-`TWEAK_FORS_PRF = 14` (`hi` the tree and the pair of leaves, `lo = idx`), `TWEAK_SURROGATE = 13`
+type 14 for a FORS secret pair (`hi` the tree and the pair of leaves, `lo = idx`), `TWEAK_SURROGATE = 13`
 (`hi` the level). -/
 def keygenDomainFields : KeygenDomain → TweakFields
   | .parameter => tweakFields 5 0 0 0
@@ -612,7 +612,7 @@ def forsRecover (parameter : PublicParameter) (index : Index) (leaves : FTree �
 /-! ### The message digest -/
 
 /-- `m || rho`, what the message digest hashes after the parameter and the address: `P || A || m ||
-rho` is 80 bytes, within one 136-byte block. The root is not hashed (`P` binds the key); the
+rho` is 80 bytes, within one Keccak-256 block (136 bytes). The root is not hashed (`P` binds the key); the
 argument is kept for the callers. -/
 def messageDigestPayload (_root : Digest) (message : Message) (randomness : Randomness) : HashInput :=
   bytesLE 32 message ++ bytesLE 16 randomness
@@ -738,7 +738,8 @@ def deriveKey {m : Type → Type} [Monad m] [HasQuery HashSpec m]
     (parameter : PublicParameter) (domain : KeygenDomain) (seed : MasterSeed) : m Digest := do
   return truncateHash (← Concrete.oracleHash (keygenHashInput parameter domain seed))
 
-/-- One seed derivation, all 32 bytes (`th_pair`): the starts of two chains are its two halves. -/
+/-- One seed derivation, all 32 bytes (`th_pair`): its two halves are the starts of two chains or the
+secrets of two FORS leaves. -/
 def deriveOutput {m : Type → Type} [Monad m] [HasQuery HashSpec m]
     (parameter : PublicParameter) (domain : KeygenDomain) (seed : MasterSeed) : m HashOutput :=
   Concrete.oracleHash (keygenHashInput parameter domain seed)
@@ -921,7 +922,7 @@ def keygenFromSeed (seed : MasterSeed) : OracleComp HashSpec (PublicKey × Secre
   let root ← treeRoot parameter topLayer rootTree seed
   return (⟨root, parameter⟩, ⟨seed, parameter, root⟩)
 
-/-- One grinding attempt: the leaf index of the digest call (`digest_index`). -/
+/-- One grinding attempt: the index read from the first digest call (`digest_index`). -/
 def signAttempt (secretKey : SecretKey) (message : Message) (randomness : Randomness) :
     m (Option Index) := do
   let first ← messageDigestCall secretKey.parameter secretKey.root message randomness firstCall

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Sizes and compression counts of the leanSphincs candidate in its 24 configurations (leanSPHINCS.tex), with
-its few-time signature (FTS) a two-level WOTS forest (spicy) or FORS (vanilla).
+its few-time signature (FTS) a two-level WOTS forest or FORS.
 
 Three toggles: the height h (22, 24, 26, 28: about 2^26, 2^28, 2^30, 2^32 signatures), the shape
 (pruned: one tree of height h of which the key builds a kept subtree of 2^b leaves, b = h being the
@@ -18,15 +18,15 @@ The digest input puts the randomizer alone in the last block (Keccak-256: the wh
 block; SHA-256: 16 zero bytes before it), and the WOTS+C encoding puts its counter in the last block:
 a grinding attempt and a counter cost one compression each, with every hash.
 
-The lifetimes are the ones proved in Lean (formal/sphincs/scripts/forest_certificates.py for the forest
-and fors_certificates.py for FORS, PARAMS and LAYERED) and, for comparison, the cover attack they are
-measured against (ATTACK).
-The same figures are pinned by the Rust tests (crates/sphincs, `Config::verify_compressions`).
+The lifetimes are the ones proved in Lean (the PARAMS and LAYERED tables of
+formal/sphincs/scripts/forest_certificates.py and fors_certificates.py) and, for comparison, the cover
+attack they are measured against (ATTACK).
+The forest's sizes and verification costs are also pinned by the Rust tests (crates/sphincs,
+`Config::verify_compressions`).
 
-The vanilla FTS is FORS with k trees of height a and no root hash (the WOTS+C key signs the 2k nodes below
+The FORS FTS has k trees of height a and no root hash (the WOTS+C key signs the 2k nodes below
 the roots), as in leanSphincs v1: a = 10, and for each configuration the fewest trees k whose cover attack
-(fors_security.py) needs at least as many signatures as the forest's. Its lifetimes are proved in Lean too,
-by the `FORS` library.
+(fors_security.py) needs at least as many signatures as the forest's.
 """
 
 import argparse
@@ -127,7 +127,7 @@ FORS_HEIGHT = 10
 
 
 def fors(h, shape, b):
-    """(k, a) of the vanilla FTS of a configuration (see above)."""
+    """(k, a) of the FORS FTS of a configuration (see above)."""
     key = (h, shape, b)
     if key not in _FORS:
         target = math.log2(fc.attack(h, shape, b))
@@ -140,13 +140,13 @@ def fors(h, shape, b):
 
 
 def fts_bytes(variant, h, shape, b):
-    if variant == "spicy":
+    if variant == "forest":
         return FOREST_BYTES
     k, a = fors(h, shape, b)
     return k * (1 + a) * N
 
 
-def size(h, shape, variant="spicy", b=None):
+def size(h, shape, variant="forest", b=None):
     return 16 + fts_bytes(variant, h, shape, b) + len(layers(h, shape)) * LAYER_BYTES + h * N
 
 
@@ -154,7 +154,7 @@ class Costs:
     """Per-call and per-component compressions of one hash."""
 
     def __init__(self, H, fts=None):
-        """`fts` is None for the forest (spicy), or the (k, a) of FORS (vanilla)."""
+        """`fts` is None for the forest, or the (k, a) of FORS."""
         c = H.call
         self.H, self.fts = H, fts
         self.derive, self.step, self.node = c(32), c(N), c(2 * N)
@@ -242,7 +242,7 @@ class Costs:
             opened = COORDS * SUBS * (CHAINS // 2 * self.derive + (CHAINS * STEPS - DIGIT_SUM) * self.step)
         else:  # the k opened secrets
             opened = self.fts[0] * self.derive
-        return opened + self.fts_verify + 1
+        return opened + self.fts_verify + self.H.call(self.fts_nodes * N)  # and the hash of the FTS key
 
     def tree_cost(self, height, cache_nodes):
         """Per-signature work in a tree of 2^height leaves: the best of keeping one level c (rebuild the 2^c
@@ -367,7 +367,7 @@ def site_data():
                                                keygen=round(C.keygen(h, shape, b)), sign=signs,
                                                grind=round(2 ** (h - b)) if shape == "pruned" else 1,
                                                lifetime=proved, attack=attack,
-                                               vanilla=dict(k=k, a=a, size=size(h, shape, "vanilla", b),
+                                               fors=dict(k=k, a=a, size=size(h, shape, "fors", b),
                                                             verify=CV.verify(h, shape), sign=signs_v,
                                                             lifetime=vc.lifetime(h, shape, b),
                                                             attack=round(2**life_v))))
@@ -383,15 +383,15 @@ def site_data():
                 ledger = C.ledger_prep(h, shape, b)
                 CV = Costs(H, fors(h, shape, b))
                 prep_v = CV.mpc_prep(h, shape)
-                vanilla = dict(lifetime=vc.lifetime(h, shape, b),
-                               prep=round(prep_v), prep_mb=prep_v * ands * BITS_PER_AND / 8 / 1e6, prep_rounds=rounds(H.name, 1),
+                fors_th = dict(lifetime=vc.lifetime(h, shape, b),
+                               prep=round(prep_v), prep_mb=prep_v * ands * BITS_PER_AND / 8 / 1e6, prep_rounds=rounds(H.name, 1 if shape == "pruned" else Q - 1),
                                ledger_prep=math.ceil(CV.ledger_prep(h, shape, b)), device_online=CV.device_online())
                 out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
                                              keygen=round(keygen), prep=round(prep), grind=2**h // THRESHOLD_PREPARED,
                                              and_depth=and_depth(H.name), keygen_rounds=rounds(H.name, Q - 1), prep_rounds=rounds(H.name, STEPS),
                                              ledger_prep=math.ceil(ledger), device_online=C.device_online(),
                                              keygen_gb=keygen * ands * BITS_PER_AND / 8 / 1e9,
-                                             prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6, vanilla=vanilla))
+                                             prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6, fors=fors_th))
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
     out["rates"] = DEVICES
     out["wallet"] = dict(prepared=THRESHOLD_PREPARED, ledger_prepared={h: wallet_prepared(h) for h in HEIGHTS},

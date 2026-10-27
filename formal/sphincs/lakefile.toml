@@ -16,6 +16,6 @@ leanOptions = { weak.linter.unusedSectionVars = false }
 
 [[lean_lib]]
 name = "FORS"
-# The vanilla variant: FORS instead of the forest. `FORS.lean` imports every module.
+# The FORS variant: FORS instead of the forest. `FORS.lean` imports every module.
 roots = ["FORS", "FORS.Axioms"]
 leanOptions = { weak.linter.unusedSectionVars = false }

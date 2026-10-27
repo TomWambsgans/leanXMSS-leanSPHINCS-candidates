@@ -5,8 +5,8 @@ import VCVio.OracleComp.QueryTracking.WriterCost
 # The security statement
 
 The SUF-CMA game of the security target, adapted from leanVM b7a107256 to pruning: forgeries,
-signing transcripts and their tests, adversaries, and the counted experiment with the signer of the
-Rust implementation, `Seeded.sign` (`Scheme.lean`), whose randomizers are derived from the master
+signing transcripts and their tests, adversaries, and the counted experiment with the deterministic
+signer `Seeded.sign` (`Scheme.lean`; the Rust signer's, with FORS in place of the forest), whose randomizers are derived from the master
 seed and the message (a repeated request returns the same signature). Every hash call counts,
 including repeated calls and the calls of the honest parties. The module ends with the forgery
 advantage, the hash-query budget and the security-bits target `SecurityBits P bits`; `Main.lean`

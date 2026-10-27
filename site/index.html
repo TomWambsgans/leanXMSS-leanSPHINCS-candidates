@@ -71,7 +71,7 @@ figure svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .titlerow { position: relative; }
 
 /* The FTS variant: FORS or the WOTS forest. Each figure is shown for the selected variant alone. */
-body:not([data-v="spicy"]) .s-only, body[data-v="spicy"] .v-only { display: none !important; }
+body:not([data-v="forest"]) .forest-only, body[data-v="forest"] .fors-only { display: none !important; }
 /* the versions, at the bottom: v1 (the old page, at /v1/), v2 (this page), v3? (a tip asking for feedback) */
 .versions { display: flex; gap: 0.4rem; font-size: 0.85rem; }
 .ver { border: 1px solid var(--tree); border-radius: 6px; padding: 0.05rem 0.55rem; line-height: 1.5; color: var(--muted); }
@@ -302,7 +302,7 @@ footer a + a { margin-left: 1.25rem; }
 }
 </style>
 </head>
-<body data-v="spicy">
+<body data-v="forest">
 <main>
 
 <div class="page">
@@ -319,7 +319,7 @@ footer a + a { margin-left: 1.25rem; }
         <span class="sl" id="tl-hash">Hash</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-hash" data-key="hash"><button type="button" role="radio" data-val="BLAKE2s">BLAKE2s</button><button type="button" role="radio" data-val="SHA-256">SHA-256</button><button type="button" role="radio" data-val="Keccak-256">Keccak-256</button></div>
         <span class="sl"><span id="tl-v">FTS variant</span><span class="info w dn" id="v-tip" tabindex="0" role="button" aria-label="More information" data-tip="">i</span></span>
-        <div class="seg" role="radiogroup" aria-labelledby="tl-v" data-key="v"><button type="button" role="radio" data-val="spicy">WOTS forest</button><button type="button" role="radio" data-val="vanilla">FORS</button></div>
+        <div class="seg" role="radiogroup" aria-labelledby="tl-v" data-key="v"><button type="button" role="radio" data-val="forest">WOTS forest</button><button type="button" role="radio" data-val="fors">FORS</button></div>
       </div>
       <div class="scroll">
       <table>
@@ -900,7 +900,7 @@ footer a + a { margin-left: 1.25rem; }
 
       <h2>Threshold, <i>t</i>-of-(2<i>t</i>&nbsp;&minus;&nbsp;1)</h2>
       <div class="thr-pair">
-      <p class="lead">As in <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>, the secret values are XOR-encrypted under a context-aware threshold PRF. Unlike PRAWNS, key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick an instance at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate its <span class="s-only">WOTS forest</span><span class="v-only">FORS instance</span><span data-shape="layered" hidden> and the trees of the lower layers</span> (an idea from <a href="https://www.riva.xyz/">Riva Labs</a>). Online: they grind the randomizer in the clear onto it (about 2<sup><i>h</i></sup> hashes), and open via the context-aware threshold PRF only the <span class="s-only">forest chain values</span><span class="v-only"><i>k</i> FORS secrets</span> the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort). Key generation and preprocessing need all 2<i>t</i>&nbsp;&minus;&nbsp;1 operators online; signing needs only <i>t</i>.</p>
+      <p class="lead">As in <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>, the secret values are XOR-encrypted under a context-aware threshold PRF. Unlike PRAWNS, key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick an instance at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate its <span class="forest-only">WOTS forest</span><span class="fors-only">FORS instance</span><span data-shape="layered" hidden> and the trees of the lower layers</span> (an idea from <a href="https://www.riva.xyz/">Riva Labs</a>). Online: they grind the randomizer in the clear onto it (about 2<sup><i>h</i></sup> hashes), and open via the context-aware threshold PRF only the <span class="forest-only">forest chain values</span><span class="fors-only"><i>k</i> FORS secrets</span> the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort). Key generation and preprocessing need all 2<i>t</i>&nbsp;&minus;&nbsp;1 operators online; signing needs only <i>t</i>.</p>
       <div class="thr">
         <p class="bn" data-f="th-life">&nbsp;</p>
         <div class="scroll">
@@ -998,10 +998,11 @@ footer a + a { margin-left: 1.25rem; }
 // The figures: every number comes from data.json (python3 scripts/scheme.py --json > site/data.json),
 // for the configuration chosen with the four toggles (height, shape, hash, FTS variant).
 (function () {
-  var S = { h: 26, shape: 'layered', hash: 'Keccak-256', v: 'spicy' }, D = null, KEY = 'leanSphincs.config';
+  var S = { h: 26, shape: 'layered', hash: 'Keccak-256', v: 'forest' }, D = null, KEY = 'leanSphincs.config';
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (saved) ['h', 'shape', 'hash', 'v'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
+    if (S.v !== 'forest' && S.v !== 'fors') S.v = 'forest';
   } catch (e) {}
   // the devices: hashes per second for each hash, from data.json (rates[device][hash])
   function rate(dev) { return D.rates[dev][S.hash]; }
@@ -1013,9 +1014,9 @@ footer a + a { margin-left: 1.25rem; }
   function forsTip(v) {
     return v.k + ' trees of height ' + v.a;
   }
-  function spicy() { return S.v === 'spicy'; }
+  function isForest() { return S.v === 'forest'; }
   // a figure that depends on the variant: the selected variant's value
-  function vs(a, b) { return spicy() ? b : a; }
+  function vs(a, b) { return isForest() ? b : a; }
 
   // a cost: two significant digits, rounded up, with K, M, B
   function fmt(x) {
@@ -1025,7 +1026,7 @@ footer a + a { margin-left: 1.25rem; }
     return String(x);
   }
   // a lifetime: the limit proved in Lean, to two significant digits rounded down (150K, 31M, 1.4B)
-  function lifeOf(c) { return life1(spicy() ? c.lifetime : c.vanilla.lifetime); }
+  function lifeOf(c) { return life1(isForest() ? c.lifetime : c.fors.lifetime); }
   function life1(n) {
     var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(n)) - 1);
     n = q >= 1 ? Math.floor(n / q + 1e-9) * q : Math.floor(n);
@@ -1079,7 +1080,7 @@ footer a + a { margin-left: 1.25rem; }
   function split(c) { return c.layers.join(' + '); }
 
   function render() {
-    var W = D.wallet, main = cfg(S.shape), lay = cfg('layered'), V = main.vanilla;
+    var W = D.wallet, main = cfg(S.shape), lay = cfg('layered'), V = main.fors;
     document.body.dataset.v = S.v;
 
     // the toggles
@@ -1095,7 +1096,7 @@ footer a + a { margin-left: 1.25rem; }
     set('h', S.shape === 'layered' ? split(main) : String(main.h));
     set('k', vs(String(V.k), '8'));
     set('a', vs(String(V.a), '4 + 3'));
-    set('fts', vs('FORS', 'WOTS forest') + info(spicy() ? FOREST_TIP : forsTip(V)));
+    set('fts', vs('FORS', 'WOTS forest') + info(isForest() ? FOREST_TIP : forsTip(V)));
     set('size', vs(comma(V.size), comma(main.size)) + ' bytes');
     set('verify', vs(comma(V.verify), comma(main.verify)) + ' ' + unit());
     set('dia-h', String(S.h));
@@ -1116,7 +1117,7 @@ footer a + a { margin-left: 1.25rem; }
       return 'Offline: the Ledger prepares ' + np + ' FTS and their ' + (lay_ ? 'hypertree' : 'authentication') + ' paths once (' + fmt(tt.ledger_prep * np) + ' ' + unit() +
         '), then one per signature in idle time. ' +
         'Online: the host finds the randomizer that lands on one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes) and proves it in a STARK (≈ ' +
-        time(g / W.host_rate) + '), which the Ledger verifies (optimistically ≈ ' + time(W.stark_verify_s) + ' after a Ledger OS update; [benchmark](https://github.com/TomWambsgans/hardware-wallet-benchmark)), then opens the ' + (spicy() ? 'forest chain values' : 'FORS secrets') + ' itself. Idea from [Riva Labs](https://www.riva.xyz/).';
+        time(g / W.host_rate) + '), which the Ledger verifies (optimistically ≈ ' + time(W.stark_verify_s) + ' after a Ledger OS update; [benchmark](https://github.com/TomWambsgans/hardware-wallet-benchmark)), then opens the ' + (isForest() ? 'forest chain values' : 'FORS secrets') + ' itself. Idea from [Riva Labs](https://www.riva.xyz/).';
     };
     // the layered key has the same lifetime on every device: one cell for all
     var lifeTip = LIFE_TIP;
@@ -1138,14 +1139,14 @@ footer a + a { margin-left: 1.25rem; }
       set('life-' + k, '<div>' + lifeOf(c) + ' signatures<span class="m-only">' + info(lifeTip) + '</span>' +
         (what ? ' <span class="note">(' + what + ')</span>' : '') + '</div>');
       set('keygen-' + k, '<div class="hd"><span>' + fmt(c.keygen) + '&nbsp;' + unit() + '</span>' + t(c.keygen) + '</div>');
-      var sv = c.vanilla.sign[d.kib], sn = spicy() ? c.sign[d.kib] : sv;
+      var sv = c.fors.sign[d.kib], sn = isForest() ? c.sign[d.kib] : sv;
       set('sign-' + k, '<div class="hd"><span>' + vs(fmt(sv), fmt(c.sign[d.kib])) + '&nbsp;' + unit() + ' <span class="note">(' + d.cache + ' cache)</span></span>' + t(sn) + '</div>');
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       // shown only when it beats signing alone
       // online: the host grinds and proves, the Ledger verifies the STARK and opens the chain values itself (whole seconds)
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
-      if (!spicy()) tt = Object.assign({}, tt, tt.vanilla);
+      if (!isForest()) tt = Object.assign({}, tt, tt.fors);
       var online = g / W.host_rate + W.stark_verify_s + tt.device_online / d.rate;
       document.querySelector('[data-f="assist-' + k + '"]').closest('tr').classList.toggle('gone', online >= sn / d.rate);
       set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.ledger_prep * np / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
@@ -1160,17 +1161,17 @@ footer a + a { margin-left: 1.25rem; }
     var ROUNDS = '<th>Rounds' + info('One communication round per layer of AND gates&#10;(' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + '), for 2-of-3&#10;(twice as many from 3-of-5 on, through a collector)') + '</th>';
     // with pruning, the Ledger's subtree; the layered key needs no sentence
     set('th-life', lay_ ? '' : 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for a lifetime of ' +
-      life1(spicy() ? th.lifetime : th.vanilla.lifetime) + ' signatures:');
+      life1(isForest() ? th.lifetime : th.fors.lifetime) + ' signatures:');
     document.querySelector('[data-f="th-life"]').hidden = lay_;
-    set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + vs(bytes(th.vanilla.prep_mb / 1000), bytes(th.prep_mb / 1000)) + '</td></tr>' +
-      '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + vs(comma(th.vanilla.prep_rounds), comma(th.prep_rounds)) + '</td></tr>');
+    set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + vs(bytes(th.fors.prep_mb / 1000), bytes(th.prep_mb / 1000)) + '</td></tr>' +
+      '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + vs(comma(th.fors.prep_rounds), comma(th.prep_rounds)) + '</td></tr>');
 
-    // what spicy changes, against the vanilla figures of the same configuration (gains rounded down, losses up)
+    // what the forest changes, against the FORS figures of the same configuration (gains rounded down, losses up)
     document.getElementById('v-tip').setAttribute('data-tip', 'The WOTS forest, against FORS ([paragraph 4](' + NOTE + '#page=7)):\n' +
       '+ ' + Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures\n' +
       '+ ' + Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification\n' +
       '− novel\n' +
-      '− ' + String(Math.ceil(10 * th.prep / th.vanilla.prep - 1e-9) / 10) + '× slower threshold signing');
+      '− ' + String(Math.ceil(10 * th.prep / th.fors.prep - 1e-9) / 10) + '× slower threshold signing');
 
     // the diagram: one pruned tree, or the layers
     if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers, S.v, V.k, V.a);
@@ -1207,7 +1208,7 @@ footer a + a { margin-left: 1.25rem; }
   }).then(function (d) {
     D = d;
     // a saved choice that the data no longer has falls back to the default
-    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256', v: 'spicy' }; }
+    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256', v: 'forest' }; }
     render();
   }).catch(function (e) {
     console.error(e);
@@ -1225,7 +1226,7 @@ footer a + a { margin-left: 1.25rem; }
   var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 239;   // the column of the path, the tip of the forest brace
   var pruned = svg.querySelector('.xmss.pruned'), layered = svg.querySelector('.xmss.layered');
   var motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var shown = 'pruned', shownV = 'spicy', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
+  var shown = 'pruned', shownV = 'forest', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
 
   function el(name, attrs, parent) {
     var e = document.createElementNS(NS, name);
@@ -1385,7 +1386,7 @@ footer a + a { margin-left: 1.25rem; }
     }
     el('text', { x: n1(X + 30), y: WT + 11, 'class': 'lb' }, fts).textContent = 'WOTS+C';
     fts.won = el('g', { 'class': 'on' }, fts);            // the encoding of that key, in both variants
-    var fg = el('g', { 'class': 's-only' }, fts);         // the forest (spicy)
+    var fg = el('g', { 'class': 'forest-only' }, fts);         // the forest
     var g = el('g', { 'class': 'tree' }, fg);
     for (var i = 0; i < 8; i++) edges(g, tc(i), TY, TO);
     for (var j = 0; j < 16; j++) edges(g, sc(j), SY, SO);
@@ -1416,9 +1417,9 @@ footer a + a { margin-left: 1.25rem; }
     fts.paths = el('g', {}, fg);
     fts.dot = el('g', { 'class': 'dot' }, fg);
     fts.on = el('g', { 'class': 'on' }, fg);
-    // FORS (vanilla): 4 of its k trees, the dots between the two pairs standing for the others; the opened leaf
+    // FORS: 4 of its k trees, the dots between the two pairs standing for the others; the opened leaf
     // of each and its path, up to the two nodes below the root, which the WOTS+C key signs
-    var vg = el('g', { 'class': 'v-only' }, fts), vt = el('g', { 'class': 'tree' }, vg);
+    var vg = el('g', { 'class': 'fors-only' }, fts), vt = el('g', { 'class': 'tree' }, vg);
     for (i = 0; i < VN; i++) edges(vt, vc(i), VY, VO);
     el('text', { x: FX, y: VY[4] + 5, 'class': 'pv', 'text-anchor': 'middle' }, vg).textContent = '…';
     var vm = el('g', { 'class': 'tree' }, vg), vl = vc(0) - 2 * VO - 10, vx = vc(VN - 1) + 2 * VO, vb = VY[VY.length - 1] + 14;
@@ -1547,9 +1548,9 @@ footer a + a { margin-left: 1.25rem; }
     // the forest: the key's chains to their ends, which hash into its subtree leaf; each subtree up to its root,
     // which with its sibling hashes into the opened leaf of its tree; each tree up to its root; the 8 roots into
     // the bottom leaf of the hypertree
-    // FORS (vanilla): each opened leaf up its tree
+    // FORS: each opened leaf up its tree
     var fo = forest, ks = fo.subs[KI][3], tops = fors;
-    if (document.body.dataset.v === 'spicy') {
+    if (document.body.dataset.v === 'forest') {
       stage(700, fo.key.map(function (c) { return [c, [c[0], KT]]; }), true, 2.2);
       stage(300, fo.key.map(function (c) { return [[c[0], KT], [KX, KT - 21]]; }), false, 1.8);
       stage(200, [[[KX, KT - 21], ks]], true, 1.8, 'conn');   // the link appears, in grey
@@ -1641,7 +1642,7 @@ footer a + a { margin-left: 1.25rem; }
   function obstacles() {
     var out = [], keep = document.body.dataset.v;
     // in both variants, so that the sphinx does not move when switching
-    ['vanilla', 'spicy'].forEach(function (v) {
+    ['fors', 'forest'].forEach(function (v) {
       document.body.dataset.v = v;
       // the title, the toggles and the parameter table: what is written in each cell, not the cell
       [].forEach.call(document.querySelectorAll('.titlerow, .toggles .sl, .toggles .seg'), function (e) {

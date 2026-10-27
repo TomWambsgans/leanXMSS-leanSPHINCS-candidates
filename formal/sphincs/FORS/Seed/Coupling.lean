@@ -222,9 +222,10 @@ noncomputable local instance : SampleableType DerivedOutputs := derivedOutputsSa
 
 /-! ### Uniform material gives uniform derivation answers
 
-The answer of a derivation is made of the first halves of the material at its two chain starts (or is
-the material at a surrogate), and distinct derivations read distinct positions. Each table of answers
-therefore comes from the same number of materials: one free second half per chain start. -/
+The answer of a derivation is made of the first halves of the material at its two secrets (chain
+starts or FORS leaves), or is the material at a surrogate, and distinct derivations read distinct
+positions. Each table of answers therefore comes from the same number of materials: one free second
+half per secret. -/
 
 /-- A map all of whose fibres have one size sends the uniform distribution to the uniform
 distribution. -/

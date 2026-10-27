@@ -1,6 +1,6 @@
 # FORS in Lean
 
-`FORS` (`lakefile.toml`, namespace `FORS`) is the Lean library of the vanilla variant. It is
+`FORS` (`lakefile.toml`, namespace `FORS`) is the Lean library of the FORS variant. It is
 `LeanForest` with one part replaced: the few-time signature is FORS instead of the two-level WOTS
 forest. The hypertree, the WOTS+C keys, the pruning, the deterministic signer and the SUF-CMA
 statement are the same, so this file only records what FORS changes; the rest is in
@@ -21,8 +21,8 @@ j + 1 (`HashDomain`). FORS addresses pack the tree, the level and the node in `h
 (`forsSlot`, `nodePosition`) and the instance in `lo`: type byte 15 for a leaf, 17 for a node.
 
 An opening is one secret and its path of `a` nodes per tree, the last one the other node of level
-`a - 1`, so the signature carries `k` openings (`signature_size`). Key generation costs
-`forsKeyCost` hashes and one opening costs `treeOpenCost`.
+`a - 1`, so the signature carries `k` openings (`signature_size`). The signer computes an
+instance's FORS key in `forsKeyCost` hashes and opens one tree in `treeOpenCost`.
 
 ## The digest
 
@@ -64,7 +64,7 @@ Every limit is a larger share of its own cover attack than the forest's is of th
 
 The route of [PROOF.md](PROOF.md) is unchanged. Two steps differ.
 
-**The grinding signer reads its pair call by call.** A trial reads only the block that carries the
+**The grinding signer reads the digest of a (message, randomizer) pair call by call.** A trial reads only the block that carries the
 index and tests landing on it; the remaining calls of the pair are read later, in the final
 assembly, and only if it landed. So the fair-share argument runs over the pair's whole tuple of
 blocks ([ScanSigner/FairShare.lean](FORS/ScanSigner/FairShare.lean): `pblk`, `pcache`, `viewOf`,
@@ -75,8 +75,8 @@ value at their cached answers. A pair that is fresh when a trial reads its first
 remaining calls presampled, so the whole tuple is uniform at once
 ([CoverPotential/Presample.lean](FORS/CoverPotential/Presample.lean), `interp_presample_new`).
 
-**The cover bound is over `k` independent trees.** A forgery must open, in every tree, a leaf the
-run has already revealed (`TreeCov`, `Covered`). The first two moments of that event have closed
+**The cover bound is over `k` independent trees.** The cover event: in every tree, the forgery's digest
+selects a leaf the run has already revealed (`TreeCov`, `Covered`). The first two moments of the per-tree cover fraction have closed
 forms in `A = 2^a` — `1 - (1 - 1/A)^n` and its second-moment companion
 ([CoverBound/FirstMoment.lean](FORS/CoverBound/FirstMoment.lean),
 [CoverBound/SecondMoment.lean](FORS/CoverBound/SecondMoment.lean)) — which replace the forest's

@@ -1,7 +1,7 @@
 import FORS.Lifetimes
 
 /-!
-# leanSPHINCS: every security theorem
+# leanSPHINCS, FORS variant: every security theorem
 
 This file states every security theorem of the library: one theorem per height, shape and kept
 subtree, 32 in all, then `requestedSecurity`, which collects them. The proofs live elsewhere

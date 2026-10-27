@@ -41,8 +41,8 @@ lifetime is the largest `N` with `E[max(Y, r)] ≤ 1`. It is 100% of the cover l
 Monte Carlo of the realized key (loads, leaves, WOTS keys, codewords), with about 0.3% of noise on `N`
 and 0.6% at `b = 8`: the column has three digits and the ratios are good to about a point. The rate is
 `r = 0.9694`: a search of about `2^116` hashes for a neighbouring encoding, then one chain preimage at
-`2 · 2^-128` per query, is at its best after about `2^122` queries. Every forest lifetime is about 19%
-above the FORS one at the same height (`h = 24`).
+`2 · 2^-128` per query, is at its best after about `2^122` queries. The FORS variant (`k = 25` or `26`) is sized
+to last at least as long ([FORS.md](FORS.md)).
 
 ## The codeword table
 

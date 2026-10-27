@@ -1,6 +1,6 @@
 import FORS.Scheme.VerificationCost
 
-/-! **The vanilla configurations: sizes and verification costs.** A configuration is a height `h`
+/-! **The FORS configurations: sizes and verification costs.** A configuration is a height `h`
 (22, 24, 26, 28), a shape (pruned: one tree of height `h`, of which key generation builds a kept
 subtree; layered: a hypertree of three layers, a top layer of at most 12 over two equal layers of at
 least 6), FORS of `k` trees of height `a = 10` (`k = 25` for the full and layered keys and at

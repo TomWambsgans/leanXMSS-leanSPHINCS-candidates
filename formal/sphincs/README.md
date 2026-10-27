@@ -2,7 +2,8 @@
 
 **Status: the leanSphincs signer has 127 bits of classical SUF-CMA security in the random-oracle
 model in each of its configurations, at the signature limits below: one theorem per configuration,
-32 in all, stated together in [Main.lean](LeanForest/Main.lean).** The
+32 in all, stated together in [Main.lean](LeanForest/Main.lean); the FORS variant has its own 32 in
+[FORS/Main.lean](FORS/Main.lean).** The
 proof uses only `propext`, `Classical.choice` and `Quot.sound`: [Axioms.lean](LeanForest/Axioms.lean)
 pins the main theorems to their axioms and checks that no declaration of the library uses another.
 
@@ -40,7 +41,7 @@ heights and the layered key, below), 8 size theorems and 24 cost theorems.
 
 The scheme, the digest layout, the codeword table, the costs and the forest are documented in
 [FOREST.md](FOREST.md); the proof route and the modeling differences with the Rust code are in
-[PROOF.md](PROOF.md). `FORS/` is the same proof for the **vanilla** variant, whose few-time
+[PROOF.md](PROOF.md). `FORS/` is the same proof for the **FORS** variant, whose few-time
 signature is FORS instead of the forest: what FORS changes, and what that changes in the proof, is
 in [FORS.md](FORS.md).
 
@@ -75,7 +76,7 @@ These figures do not depend on how the signer picks its randomizer. The proof fi
 all messages and averages only the starts R0 (`Det.forgeAdvantage_le_seedFree`): the bound holds
 for every table of steps, as if the forger knew them.
 
-## Proved lifetimes, vanilla (FORS)
+## Proved lifetimes, FORS variant
 
 The same statement for the `FORS` library ([FORS.md](FORS.md)): one
 theorem per configuration in [Main.lean](FORS/Main.lean), 32 in all, collected by
@@ -88,8 +89,8 @@ theorem per configuration in [Main.lean](FORS/Main.lean), 32 in all, collected b
 | 26 | 1,426,000,000 | 31,810,000 | 579,400 | 296,700 | 151,900 | 39,850 | 10,430 | 1,426,000,000 |
 | 28 | 5,707,000,000 | 34,270,000 | 622,600 | 319,000 | 163,300 | 42,750 | 11,190 | 5,707,000,000 |
 
-These are 85–98% of the FORS cover attack, so each is a larger share of its own attack than the
-forest's figures above are of the forest's.
+These are 85–98% of the FORS cover attack, in every configuration a larger share than the forest's
+limit is of the forest's attack.
 
 ## Checked claims
 
@@ -130,7 +131,7 @@ files and Lean names.
 
 ## Credit
 
-`LeanForest` adapts the security proof of leanVM's three-layer scheme
+`LeanForest` and `FORS` adapt the security proof of leanVM's three-layer scheme
 ([leanVM](https://github.com/leanEthereum/leanVM) at commit `b7a107256`, MIT OR Apache-2.0, see
 [licenses](../../licenses)); that proof, the `SphincsSecurity` library, is in this repository's
 history at commit `7269bd3`.
