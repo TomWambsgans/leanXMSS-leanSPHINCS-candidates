@@ -373,6 +373,10 @@ def site_data():
                 ledger = C.ledger_prep(h, shape, b)
                 CV = Costs(H, fors(h, shape, b))
                 prep_v = CV.mpc_prep(h, shape)
+                # the Ledger signs a pruned key with a 16 KiB cache: alone, or assisted from prepared instances
+                alone = [C.sign(h, shape, b, 16 * 1024), CV.sign(h, shape, b, 16 * 1024)]
+                alone = [base + tree for base, grind, tree in alone]
+                np_ = ledger_prepared(h, H.name, [C.device_online(), CV.device_online()], alone)
                 fors_th = dict(lifetime=vc.lifetime(h, shape, b),
                                prep=round(prep_v), prep_mb=prep_v * ands * BITS_PER_AND / 8 / 1e6, prep_rounds=rounds(H.name, 1 if shape == "pruned" else Q - 1),
                                ledger_prep=math.ceil(CV.ledger_prep(h, shape, b)), device_online=CV.device_online())
@@ -380,12 +384,12 @@ def site_data():
                                              keygen=round(keygen), prep=round(prep), grind=2**h // THRESHOLD_PREPARED,
                                              and_depth=and_depth(H.name), keygen_rounds=rounds(H.name, Q - 1), prep_rounds=rounds(H.name, STEPS),
                                              ledger_prep=math.ceil(ledger), device_online=C.device_online(),
+                                             ledger_prepared=np_, ledger_grind=2**h // np_,
                                              keygen_gb=keygen * ands * BITS_PER_AND / 8 / 1e9,
                                              prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6, fors=fors_th))
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
     out["rates"] = DEVICES
-    out["wallet"] = dict(prepared=THRESHOLD_PREPARED, ledger_prepared={h: wallet_prepared(h) for h in HEIGHTS},
-                         ledger_grind={h: 2**h // wallet_prepared(h) for h in HEIGHTS}, stark_verify=STARK_VERIFY, stark_verify_s=STARK_VERIFY_SECONDS, host_rate=HOST_RATE, device_rate=DEVICE_RATE,
+    out["wallet"] = dict(prepared=THRESHOLD_PREPARED, stark_verify=STARK_VERIFY, stark_verify_s=STARK_VERIFY_SECONDS, host_rate=HOST_RATE, device_rate=DEVICE_RATE,
                          opened_avg=COORDS * SUBS * sum(nonzero) / len(nonzero), opened_max=COORDS * SUBS * max(nonzero))
     return out
 
@@ -404,6 +408,20 @@ HOST_GRIND_TOP = 2**22
 
 def wallet_prepared(h):
     return max(PREPARED, 2**h // (HOST_GRIND_TOP if h == max(HEIGHTS) else HOST_GRIND))
+
+
+def ledger_prepared(h, name, device_online, alone):
+    """The instances the Ledger prepares for a configuration: wallet_prepared(h), doubled while assisted signing is
+    slower online than the Ledger signing alone, for either FTS (`device_online` and `alone`, in compressions, one per
+    FTS), as long as it can win at all (the STARK verification alone takes STARK_VERIFY_SECONDS)."""
+    rate = DEVICES["Ledger Nano S+"][name]
+    p = wallet_prepared(h)
+    def slower(p):
+        return any(2**h / p / HOST_RATE + STARK_VERIFY_SECONDS + o / rate >= a / rate for o, a in zip(device_online, alone))
+    if all(STARK_VERIFY_SECONDS + o / rate < a / rate for o, a in zip(device_online, alone)):
+        while slower(p):
+            p *= 2
+    return p
 
 KECCAK_ANDS = 36_300  # AND gates of one Keccak-f[1600] call with a public part and a truncated output
 # AND gates of one compression in a binary MPC: Keccak-f as above; SHA-256, the Bristol-format circuit (22,573);

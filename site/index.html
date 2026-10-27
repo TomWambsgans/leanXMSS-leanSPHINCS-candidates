@@ -1115,9 +1115,10 @@ footer a + a { margin-left: 1.25rem; }
     ];
     // a layered key needs no large cache: every device keeps the Ledger's 16 KiB
     if (lay_) devs.forEach(function (d) { d.kib = '16'; d.cache = '16&nbsp;KiB'; });
-    // the Ledger with the host: offline, it prepares np FTS; online, the host grinds onto one of them and proves it in a STARK
-    var np = W.ledger_prepared[S.h], g = W.ledger_grind[S.h];
+    // the Ledger with the host: offline, it prepares np FTS (more where it would otherwise be slower than signing alone);
+    // online, the host grinds onto one of them and proves it in a STARK
     var assist = function (tt) {
+      var np = tt.ledger_prepared, g = tt.ledger_grind;
       return 'Offline: the Ledger prepares ' + np + ' FTS and their ' + (lay_ ? 'hypertree' : 'authentication') + ' paths once (' + fmt(tt.ledger_prep * np) + ' ' + unit() +
         '), then one per signature in idle time. ' +
         'Online: the host finds the randomizer that lands on one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes) and proves it in a STARK (≈ ' +
@@ -1147,13 +1148,12 @@ footer a + a { margin-left: 1.25rem; }
       set('sign-' + k, '<div class="hd"><span>' + vs(fmt(sv), fmt(c.sign[d.kib])) + '&nbsp;' + unit() + ' <span class="note">(' + d.cache + ' cache)</span></span>' + t(sn) + '</div>');
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
-      // shown only when it beats signing alone
+      // always shown
       // online: the host grinds and proves, the Ledger verifies the STARK and opens the chain values itself (whole seconds)
       var tt = lay_ ? thr('layered') : thr('pruned', d.b);
       if (!isForest()) tt = Object.assign({}, tt, tt.fors);
-      var online = g / W.host_rate + W.stark_verify_s + tt.device_online / d.rate;
-      document.querySelector('[data-f="assist-' + k + '"]').closest('tr').classList.toggle('gone', online >= sn / d.rate);
-      set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.ledger_prep * np / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
+      var online = tt.ledger_grind / W.host_rate + W.stark_verify_s + tt.device_online / d.rate;
+      set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.ledger_prep * tt.ledger_prepared / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
         (online >= 1 ? Math.round(online) + '&nbsp;s' : time(online)) + '</span><span class="m-only">' + info(assist(tt), ' w') + '</span></span></div>');
       document.getElementById('assist-tip').setAttribute('data-tip', assist(tt).replace(/&nbsp;/g, '\u00a0'));
     });

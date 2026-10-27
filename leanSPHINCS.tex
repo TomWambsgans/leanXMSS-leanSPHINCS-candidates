@@ -349,11 +349,12 @@ Grinding about $2^h$ randomizers onto a few prepared instances is too slow on a 
 Labs~\cite{riva}, the device delegates it to the untrusted host, which proves it with a STARK:
 \begin{enumerate}
   \item in its idle time, the device prepares $p$ uniformly random instances (from its secure randomness), as in
-        \cref{sec:threshold}: 16 at $h\le24$, 64 at $h=26$ and $h=28$
+        \cref{sec:threshold}: 16 at $h\le24$, 64 at $h=26$ and $h=28$, doubled where assisted signing would
+        otherwise be slower than signing alone (up to 512, with BLAKE2s or SHA-256; \texttt{scripts/scheme.py})
   \item to sign $m$, it derives $R_0$ and $\Delta$ in one hash of its secret key and $m$, and sends $m$, $R_0$,
         $\Delta$ and the $p$ indices to the host
   \item the host finds the least $i$ such that the index of $R_0 + i\Delta$ is one of the $p$, $\approx2^h/p$
-        digest hashes on average ($2^{20}$ at $h=24,26$, $2^{22}$ at $h=28$), and returns $R = R_0 + i\Delta$ with
+        digest hashes on average (at most $2^{22}$), and returns $R = R_0 + i\Delta$ with
         a STARK that $i$ is the least
   \item the device verifies the STARK and finishes the signature from the prepared instance
 \end{enumerate}
@@ -366,8 +367,8 @@ this flow is not covered by the Lean proof.
 
 \paragraph{Costs.} At $h=24$ and $26$ the host hashes $\approx2^{20}$ digests and proves them at about $2^{19}$ hashes
 per second, 2~s (8~s at $h=28$). The device verifies the STARK in about $10^4$ compressions, counted as 3~s on a Ledger
-Nano S+ (1.7~s with Keccak-256 at 5.8 thousand per second~\cite{hwbench}): about 5~s in all (11~s at $h=28$).
-Preparing an instance costs the device $76\cdot10^3$ Keccak-f permutations for a pruned key and $136\cdot10^3$ for a
+Nano S+ (1.7~s with Keccak-256 at 5.8 thousand per second~\cite{hwbench}): about 5~s in all (11~s at $h=28$), less
+where more instances are prepared. Preparing an instance costs the device $76\cdot10^3$ Keccak-f permutations for a pruned key and $136\cdot10^3$ for a
 layered one at $h=24$ ($225\cdot10^3$ at $h=28$), WOTS$^+$C counter searches and the path included; the first $p$ are
 prepared once (about 41~min for the layered key at $h=28$).
 
