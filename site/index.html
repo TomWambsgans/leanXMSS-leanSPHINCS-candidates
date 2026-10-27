@@ -1010,7 +1010,7 @@ footer a + a { margin-left: 1.25rem; }
   var NOTE = 'https://github.com/TomWambsgans/sphincs.art/releases/download/doc-latest/leanSPHINCS.pdf';
   var LIFE_TIP = '127 bits of security (ROM), [proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/main/formal/sphincs)';
   // the two FTS, for the tip of the FTS variant
-  var FOREST_TIP = '# WOTS forest\n8 trees of height 4. Each leaf hashes\nthe top nodes of two subtrees of height 3\nover WOTS keys of 6 chains of length 5,\nwith target sum 5\n(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))';
+  var FOREST_TIP = '# WOTS forest\n8 trees of height 4. Each leaf hashes\nthe top nodes of two subtrees of height 3\nover WOTS keys of 6 chains of length 5,\nwith target sum 5 ([paragraph 4](' + NOTE + '#page=8))\n(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))';
   function forsTip(v) {
     return '# FORS\nk = ' + v.k + ' trees of height a = ' + v.a;
   }
@@ -1167,7 +1167,7 @@ footer a + a { margin-left: 1.25rem; }
 
     // what the forest changes, against the FORS figures of the same configuration (gains rounded down, losses up)
     document.getElementById('v-tip').setAttribute('data-tip', forsTip(V) + '\n\n' + FOREST_TIP + '\n\n' +
-      'The WOTS forest, against FORS ([paragraph 4](' + NOTE + '#page=8)):\n' +
+      'The WOTS forest, against FORS:\n' +
       '+ ' + Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures\n' +
       '+ ' + Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification\n' +
       '− novel\n' +
