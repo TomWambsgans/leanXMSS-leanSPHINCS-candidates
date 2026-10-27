@@ -164,7 +164,7 @@ noncomputable def layerCostSearch (parameter : PublicParameter) (data : PublicDa
   let found ← liftM (layerSearch parameter data index lay)
   match found with
   | some pair => do
-      HiddenCost.tick (155 + treePathCost lay)
+      HiddenCost.tick (160 + treePathCost lay)
       return some pair
   | none => return none
 

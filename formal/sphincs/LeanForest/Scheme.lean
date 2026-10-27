@@ -34,7 +34,7 @@ under every bottom leaf is a **two-level WOTS forest**:
   other top node: the verifier folds all levels but the last and hashes the two top nodes, in index
   order, into the hash above.
 
-At every layer a WOTS+C key (64 chains of length 4, target sum 123) signs the message of the layer
+At every layer a WOTS+C key (64 chains of length 4, target sum 128) signs the message of the layer
 below: the forest key at the bottom layer, the 16-byte root of the tree below at a layer above.
 Layers are numbered from the top (`topLayer = 0`), as in leanVM. Every hash input is
 `P || A || payload`: the 16-byte public parameter, then the 16-byte address of the call (a 32-bit
@@ -65,7 +65,7 @@ def counterBits : Nat := 32
 def winternitzBits : Nat := 2
 def chainLength : Nat := 2 ^ winternitzBits
 def numChains : Nat := 64
-def targetSum : Nat := 123
+def targetSum : Nat := 128
 /-- Randomizers tried per signature (`ctr` is a `u32`), `A_max`. -/
 def digestAttemptLimit : Nat := 2 ^ 32
 /-- Encoding counters tried per signature, `C_max`. -/
@@ -442,7 +442,7 @@ def keygenHashInput (parameter : PublicParameter) (domain : KeygenDomain)
 /-! ### The target-sum code
 
 `v = 64` chunks of `w = 2` bits covering the 128 digest bits, and the code is the words of digit sum
-`T = 123`. -/
+`T = 128`. -/
 
 namespace TargetSum
 

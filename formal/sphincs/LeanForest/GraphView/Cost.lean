@@ -95,14 +95,14 @@ theorem hashCalls_forestOpen_exact (f : QueryImpl HashSpec Id) (parameter : Publ
   simp only [Seeded.forestOpen, hashCalls_sequenceFin, hashCalls_coordOpen_exact]
   decide
 
-/-- The published values of a WOTS+C signature cost `32 + 123 = 155` calls: the 32 seed derivations
-of the chain starts and the 123 chain steps of a codeword. -/
+/-- The published values of a WOTS+C signature cost `32 + 128 = 160` calls: the 32 seed derivations
+of the chain starts and the 128 chain steps of a codeword. -/
 theorem hashCalls_published_values (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (seed : MasterSeed) (word : Encoding)
     (hword : TargetSum.Valid word) :
     hashCalls f (do
       let secrets ← (Seeded.otsSecrets parameter lay tree leaf seed : OracleComp HashSpec (ChainIndex → Digest))
-      sequenceFin fun chain => chainWalk parameter lay tree leaf chain 0 (word chain).val (secrets chain)) = 155 := by
+      sequenceFin fun chain => chainWalk parameter lay tree leaf chain 0 (word chain).val (secrets chain)) = 160 := by
   simp only [hashCalls_sequenceFin, hashCalls_bind, hashCalls_otsSecrets]
   have hwalk (chain : ChainIndex) (value : Digest) :
       hashCalls f (chainWalk parameter lay tree leaf chain 0 (word chain).val value :
@@ -110,7 +110,7 @@ theorem hashCalls_published_values (f : QueryImpl HashSpec Id) (parameter : Publ
     hashCalls_chainWalk f parameter lay tree leaf chain 0 (word chain).val value
       (by have := (word chain).isLt; omega)
   simp only [hwalk]
-  change 32 + TargetSum.sum word = 155
+  change 32 + TargetSum.sum word = 160
   rw [show TargetSum.sum word = targetSum from hword]
   rfl
 
@@ -135,7 +135,7 @@ theorem hashCalls_otsSignFrom_search (f : QueryImpl HashSpec Id) (parameter : Pu
     hashCalls f (Seeded.otsSignFrom parameter lay tree leaf seed message attempts start :
       OracleComp HashSpec (Option (Counter × (ChainIndex → Digest)))) =
       hashCalls f (ReferenceChoice.search parameter lay tree leaf message attempts start) +
-        if (firstEncoding f parameter lay tree leaf message attempts start).isSome then 155 else 0 := by
+        if (firstEncoding f parameter lay tree leaf message attempts start).isSome then 160 else 0 := by
   induction attempts generalizing start with
   | zero => simp only [Seeded.otsSignFrom, ReferenceChoice.search, firstEncoding, hashCalls_pure,
       Option.isSome_none, Bool.false_eq_true, ↓reduceIte, Nat.add_zero]
@@ -200,7 +200,7 @@ theorem hashCalls_signLayer_exact (f : QueryImpl HashSpec Id) (sk : Seeded.Secre
         (leafIndexAt index lay) (Completeness.layerMessageValue f sk index lay) encodingAttemptLimit 0) +
       if (firstEncoding f sk.parameter lay (treeIndexAt index lay) (leafIndexAt index lay)
         (Completeness.layerMessageValue f sk index lay) encodingAttemptLimit 0).isSome then
-          155 + treePathCost lay else 0 := by
+          160 + treePathCost lay else 0 := by
   unfold Completeness.layerMessageValue
   rw [Seeded.signLayer, hashCalls_bind, Seeded.layerMessage, hashCalls_keyMessage]
   simp only [Seeded.otsSign, hashCalls_bind, hashCalls_otsSignFrom_search, evalWithAnswerFn_bind,
@@ -220,7 +220,7 @@ noncomputable def layerHashCost (f : QueryImpl HashSpec Id) (parameter : PublicP
   keyMessageCost lay + hashCalls f (layerSearch parameter data index lay) +
     if (firstEncoding f parameter lay (treeIndexAt index lay) (leafIndexAt index lay)
       (data.keyMessage lay (treeIndexAt index lay) (leafIndexAt index lay)) encodingAttemptLimit 0).isSome
-    then 155 + treePathCost lay else 0
+    then 160 + treePathCost lay else 0
 
 /-- Whether the counter search of the layer `lay` of a signature succeeds. -/
 noncomputable def layerFound (f : QueryImpl HashSpec Id) (parameter : PublicParameter)

@@ -274,10 +274,10 @@ theorem encode_valid (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     exact hvalid
   next => simp at hword
 
-/-- Recovery after an admissible encoding: the encoding, the 69 chain steps that complete the 123
+/-- Recovery after an admissible encoding: the encoding, the 64 chain steps that complete the 128
 signed positions, the leaf. -/
 def otsCost (messageLength : Nat) : Nat :=
-  H.cost (32 + (messageLength + 4)) + 69 * stepCost H + H.cost 1056
+  H.cost (32 + (messageLength + 4)) + 64 * stepCost H + H.cost 1056
 
 /-- Recovery spends `otsCost` after an admissible encoding, or the encoding alone on rejection. -/
 theorem compressions_otsLeaf (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -371,15 +371,15 @@ theorem compressions_verifyLayers (f : QueryImpl HashSpec Id) (parameter : Publi
 
 /-- The verifier's cost of an accepted signature: SHA-256's block of `P`, the 80-byte digest, the
 forest, the encoding of the forest key (292 bytes) and of each root above it (52 bytes), at every
-layer the 69 chain steps and the one-time leaf, and one node per level of the hypertree. -/
+layer the 64 chain steps and the one-time leaf, and one node per level of the hypertree. -/
 def verifyCost : Nat :=
   H.keyBlocks + H.cost 80 + forestCoords * coordCost H + H.cost 292 + (numLayers - 1) * H.cost 52 +
-    numLayers * (69 * stepCost H + H.cost 1056) + totalHeight * nodeCost H
+    numLayers * (64 * stepCost H + H.cost 1056) + totalHeight * nodeCost H
 
 /-- The cost of every layer of the walk, in closed form. -/
 theorem sum_layerCost :
     ∑ j ∈ Finset.Ico 0 numLayers, layerCost H (layerUp j) (messageLength j) =
-      H.cost 292 + (numLayers - 1) * H.cost 52 + numLayers * (69 * stepCost H + H.cost 1056) +
+      H.cost 292 + (numLayers - 1) * H.cost 52 + numLayers * (64 * stepCost H + H.cost 1056) +
         totalHeight * nodeCost H := by
   have hpos := numLayers_pos
   have hheights : ∑ j ∈ Finset.Ico 0 numLayers, layerHeight (layerUp j) = totalHeight := by

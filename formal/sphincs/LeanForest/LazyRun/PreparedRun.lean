@@ -631,48 +631,48 @@ theorem prep_fail_le (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) 
     unfold structCache
     exact programGraphCache_empty_none _ _ _ _ _ _ fun position _ => encoding_not_graph _ _ position _ _ _ _ _
 
-/-- Bernoulli: `(1 - 2⁻¹²) ^ 2¹² ≤ 1/2`. -/
-theorem one_sub_pow_le_half : (1 - (2 : ℝ)⁻¹ ^ 12) ^ (2 ^ 12) ≤ 1 / 2 := by
-  set a : ℝ := (2 : ℝ)⁻¹ ^ 12 with ha
+/-- Bernoulli: `(1 - 2⁻¹⁴) ^ 2¹⁴ ≤ 1/2`. -/
+theorem one_sub_pow_le_half : (1 - (2 : ℝ)⁻¹ ^ 14) ^ (2 ^ 14) ≤ 1 / 2 := by
+  set a : ℝ := (2 : ℝ)⁻¹ ^ 14 with ha
   have ha0 : 0 ≤ a := by positivity
   have ha1 : a ≤ 1 := by rw [ha]; norm_num
-  have hbern : 1 + ((2 ^ 12 : ℕ) : ℝ) * a ≤ (1 + a) ^ (2 ^ 12) := one_add_mul_le_pow (by linarith) _
-  have hna : ((2 ^ 12 : ℕ) : ℝ) * a = 1 := by rw [ha]; norm_num
+  have hbern : 1 + ((2 ^ 14 : ℕ) : ℝ) * a ≤ (1 + a) ^ (2 ^ 14) := one_add_mul_le_pow (by linarith) _
+  have hna : ((2 ^ 14 : ℕ) : ℝ) * a = 1 := by rw [ha]; norm_num
   rw [hna] at hbern
-  have hprod : (1 - a) ^ (2 ^ 12) * (1 + a) ^ (2 ^ 12) ≤ 1 := by
+  have hprod : (1 - a) ^ (2 ^ 14) * (1 + a) ^ (2 ^ 14) ≤ 1 := by
     rw [← mul_pow]
     have h0 : 0 ≤ (1 - a) * (1 + a) := mul_nonneg (by linarith) (by linarith)
     have h1 : (1 - a) * (1 + a) ≤ 1 := by nlinarith
     exact pow_le_one₀ h0 h1
-  have hpos : 0 < (1 + a) ^ (2 ^ 12) := by positivity
+  have hpos : 0 < (1 + a) ^ (2 ^ 14) := by positivity
   rw [div_eq_mul_inv, one_mul]
-  calc (1 - a) ^ (2 ^ 12) = (1 - a) ^ (2 ^ 12) * (1 + a) ^ (2 ^ 12) / (1 + a) ^ (2 ^ 12) := by
+  calc (1 - a) ^ (2 ^ 14) = (1 - a) ^ (2 ^ 14) * (1 + a) ^ (2 ^ 14) / (1 + a) ^ (2 ^ 14) := by
         field_simp
-    _ ≤ 1 / (1 + a) ^ (2 ^ 12) := by gcongr
+    _ ≤ 1 / (1 + a) ^ (2 ^ 14) := by gcongr
     _ ≤ 1 / 2 := by gcongr; exact (by norm_num : (2 : ℝ) ≤ 1 + 1).trans hbern
     _ = 2⁻¹ := by norm_num
 
 /-- The trial budget makes a prepared search fail with negligible probability. -/
 theorem fail_pow_le :
     Completeness.failMass (fun out => TargetSum.decodeDigest (truncateHash out)) ^ encodingAttemptLimit ≤
-      (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20) := by
+      (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 18) := by
   set fm := Completeness.failMass (fun out => TargetSum.decodeDigest (truncateHash out)) with hfm
   have hadd := Completeness.failMass_encoding_add_le
-  have hle : fm ≤ ENNReal.ofReal (1 - (2 : ℝ)⁻¹ ^ 12) := by
-    have htop : ((2 : ℝ≥0∞) ^ 12)⁻¹ ≠ ⊤ := by simp
-    have h1 : fm ≤ 1 - ((2 : ℝ≥0∞) ^ 12)⁻¹ := ENNReal.le_sub_of_add_le_right htop hadd
+  have hle : fm ≤ ENNReal.ofReal (1 - (2 : ℝ)⁻¹ ^ 14) := by
+    have htop : ((2 : ℝ≥0∞) ^ 14)⁻¹ ≠ ⊤ := by simp
+    have h1 : fm ≤ 1 - ((2 : ℝ≥0∞) ^ 14)⁻¹ := ENNReal.le_sub_of_add_le_right htop hadd
     refine h1.trans (le_of_eq ?_)
     rw [ENNReal.ofReal_sub _ (by positivity), ENNReal.ofReal_one]
     congr 1
     rw [ENNReal.ofReal_pow (by norm_num), ENNReal.ofReal_inv_of_pos (by norm_num), ENNReal.ofReal_ofNat,
       ENNReal.inv_pow]
-  calc fm ^ encodingAttemptLimit ≤ ENNReal.ofReal (1 - (2 : ℝ)⁻¹ ^ 12) ^ (2 ^ 12 * 2 ^ 20) := by
-        rw [show encodingAttemptLimit = 2 ^ 12 * 2 ^ 20 from rfl]
+  calc fm ^ encodingAttemptLimit ≤ ENNReal.ofReal (1 - (2 : ℝ)⁻¹ ^ 14) ^ (2 ^ 14 * 2 ^ 18) := by
+        rw [show encodingAttemptLimit = 2 ^ 14 * 2 ^ 18 from rfl]
         exact pow_le_pow_left' hle _
-    _ = (ENNReal.ofReal ((1 - (2 : ℝ)⁻¹ ^ 12) ^ (2 ^ 12))) ^ (2 ^ 20) := by
+    _ = (ENNReal.ofReal ((1 - (2 : ℝ)⁻¹ ^ 14) ^ (2 ^ 14))) ^ (2 ^ 18) := by
         rw [pow_mul, ENNReal.ofReal_pow (by norm_num)]
-    _ ≤ (ENNReal.ofReal (1 / 2)) ^ (2 ^ 20) := pow_le_pow_left' (ENNReal.ofReal_le_ofReal one_sub_pow_le_half) _
-    _ = (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20) := by
+    _ ≤ (ENNReal.ofReal (1 / 2)) ^ (2 ^ 18) := pow_le_pow_left' (ENNReal.ofReal_le_ofReal one_sub_pow_le_half) _
+    _ = (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 18) := by
         rw [one_div, ENNReal.ofReal_inv_of_pos (by norm_num), ENNReal.ofReal_ofNat]
 
 theorem failMass_le_count (R : OtsKey → Option (Counter × Encoding)) :
@@ -722,11 +722,11 @@ theorem expectedFail_le : expectedFail ≤ (2 : ℝ≥0∞)⁻¹ ^ 201 := by
           rw [Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
       _ ≤ ∑ i : OtsKey, Pr[fun prepared => prepared.1 i = none | preparation parameterOutput fixed highs remaining] :=
           Finset.sum_le_sum fun i _ => tsum_elim_le _ i
-      _ ≤ ∑ _i : OtsKey, (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20) :=
+      _ ≤ ∑ _i : OtsKey, (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 18) :=
           Finset.sum_le_sum fun i _ => (prep_fail_le parameterOutput fixed highs remaining i).trans fail_pow_le
-      _ = (Fintype.card OtsKey : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20) := by
+      _ = (Fintype.card OtsKey : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 18) := by
           rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
-      _ ≤ (2 ^ 58 : ℕ) * (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20) := by
+      _ ≤ (2 ^ 58 : ℕ) * (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 18) := by
           refine mul_le_mul_right' (Nat.cast_le (α := ℝ≥0∞).2 ?_) _
           rw [Fintype.card_prod, Fintype.card_prod, Fintype.card_fin, Fintype.card_fin, Fintype.card_fin]
           calc numLayers * (2 ^ totalHeight * 2 ^ maxLayerHeight) ≤ 4 * (2 ^ 28 * 2 ^ 28) :=
@@ -734,8 +734,8 @@ theorem expectedFail_le : expectedFail ≤ (2 : ℝ≥0∞)⁻¹ ^ 201 := by
                   (Nat.pow_le_pow_right (by norm_num) (maxLayerHeight_le.trans totalHeight_le_28)))
             _ = 2 ^ 58 := by norm_num
       _ ≤ (2 : ℝ≥0∞)⁻¹ ^ 201 := by
-          have hsplit : (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20) = (2 : ℝ≥0∞)⁻¹ ^ 58 * ((2 : ℝ≥0∞)⁻¹ ^ 201 *
-              (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 20 - 259)) := by
+          have hsplit : (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 18) = (2 : ℝ≥0∞)⁻¹ ^ 58 * ((2 : ℝ≥0∞)⁻¹ ^ 201 *
+              (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 18 - 259)) := by
             rw [← pow_add, ← pow_add]
             congr 1
           rw [hsplit, Nat.cast_pow, Nat.cast_ofNat, ← mul_assoc, ← mul_pow,

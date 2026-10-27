@@ -12,7 +12,7 @@ and the few-time key is the sixteen level-3 nodes `t_0[0] ‖ t_0[1] ‖ … ‖
 no hash folds them, and the WOTS+C encoding of the bottom layer absorbs them before its counter,
 `Th(P, A(4, 0, leaf; layer 0, tree), t_0[0] ‖ … ‖ t_7[1] ‖ ctr)` (`Concrete.encode`, `ForestKey`). A key of
 a higher layer signs the root of the tree below it (`rootPayload`, 16 bytes). The WOTS+C keys have 64
-chains of 4 positions and target sum 123 (`targetSum`).
+chains of 4 positions and target sum 128 (`targetSum`).
 The signature is unchanged (3 path elements per subtree, 4 per tree): the last path element is the
 other top node of its tree. The verifier folds 2 levels in a subtree and 3 in a tree and puts the node
 it reached and the last path element in index order (`orderTops`: the reached node first when bit 2
@@ -205,11 +205,11 @@ trees of distinct layers are separated as well.
 `Layout.signature_size`: a signature serializes to `2832 + 1028 d + 16 h` bytes (4,244 for one layer of
 height 24). `Cost.verification_compressions`: an accepted signature costs exactly `verifyCost`
 compressions of the hash, and no signature costs more (`verification_compressions_le`). With
-Keccak-256 at `h = 24` and one layer that is 265 permutations: 1 for the 80-byte digest input, 160
-for the forest, 104 for WOTS+C and the path (3 for the encoding of the key, 69 chain steps, 8 for the
+Keccak-256 at `h = 24` and one layer that is 260 permutations: 1 for the 80-byte digest input, 160
+for the forest, 99 for WOTS+C and the path (3 for the encoding of the key, 64 chain steps, 8 for the
 leaf and 24 nodes). The forest is 20 per tree (`compressions_coordRecover`: in each of the two
 subtrees 5 chain steps, 1 for the WOTS-key leaf and 2 folds; 1 for the tree leaf; 3 folds), times 8.
-The key is not hashed. Each further layer adds 1 for the encoding of a root, 69 chain steps and 8 for
+The key is not hashed. Each further layer adds 1 for the encoding of a root, 64 chain steps and 8 for
 the leaf; the path nodes of all layers are `h` in total. `Configurations.lean` states the size
 and the three costs of each of the 8 shapes.
 
@@ -228,16 +228,16 @@ counts on any oracle):
 | forest key of an instance (`hashCalls_forestKey`) | `8 · 2 · 3,695 = 59,120` |
 | opening of one tree (`hashCalls_coordOpen_exact`) | `2 · 222 + 6,926 = 7,370` |
 | forest opening (`hashCalls_forestOpen_exact`) | 58,960 |
-| WOTS+C values of a signature (`hashCalls_published_values`) | `32 + 123 = 155` |
-| signature after the scan (`hashCalls_finishSign_exact`) | `1 + 58,960 + Σ_layers (message + counter search + 155 + path)` |
+| WOTS+C values of a signature (`hashCalls_published_values`) | `32 + 128 = 160` |
+| signature after the scan (`hashCalls_finishSign_exact`) | `1 + 58,960 + Σ_layers (message + counter search + 160 + path)` |
 
 The message of the bottom key is the forest key (59,120 calls); the message of a key above is the root
 of the tree below (`226 · 2^l − 1` calls for a lower layer of height `l`, 6 to 8). Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less, and without the key
 hash the key costs 1 call less: the forest key went from 59,385 to 59,120 calls, the opening from
 59,200 to 58,960 and the fixed part of a signature from 118,586 to 118,081 (`1 + 58,960 + 59,120`; the
 signer's tick is 118,080 after the digest call). A counter of the encoding search is one hash call,
-as before; the expected search is 2,197 calls (`2^128` over the 154,880,076,975,771,860,577,080,744,218,814,592
-codewords of digit sum 123), 829 with the former sum 120.
+as before; the expected search is 14,670 calls (`2^128` over the 23,195,210,617,839,120,199,658,819,909,693,679
+codewords of digit sum 128, about `2^114.16`), 2,197 with the former sum 123.
 These counts do not enter the certificates: only the key-generation credit does.
 
 The Lean signer recomputes the forest instance for its key and again for the opening, and the tree

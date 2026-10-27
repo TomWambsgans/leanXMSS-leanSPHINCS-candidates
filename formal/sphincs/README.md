@@ -14,7 +14,7 @@ other file is proof: [PROOF.md](PROOF.md) maps it.
 
 `LeanForest/` models the candidate for every height `h ≤ 28`, number of layers `d` and kept subtree
 height `b` (`Params`, [Scheme.lean](LeanForest/Scheme.lean)): an index of `h` bits; a hypertree of
-`d` layers of WOTS+C keys (64 chains of four positions, target sum 123), whose layers below the top
+`d` layers of WOTS+C keys (64 chains of four positions, target sum 128), whose layers below the top
 share one height `ℓ ≥ 6` (`lowerHeight`) and whose top layer has the rest; a two-level WOTS forest as the few-time signature; one
 message-digest call; and pruning of the top layer with surrogate siblings. A pruned key is `d = 1`,
 `b ≤ h` (`b = h` is the full key); a layered key keeps everything, `b = h`, `d ≥ 2`. No tree of the

@@ -17,7 +17,7 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local irreducible] firstEncoding encodingAttemptLimit Seeded.forestKey
 
-def dummyWord : Encoding := fun index => if index.val < 41 then ⟨3, by decide⟩ else ⟨0, by decide⟩
+def dummyWord : Encoding := fun _ => ⟨2, by decide⟩
 
 theorem dummyWord_valid : TargetSum.Valid dummyWord := by decide
 
