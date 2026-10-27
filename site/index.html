@@ -1177,8 +1177,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
       '+ ' + Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures\n' +
       '+ ' + Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification\n' +
       '− more complex\n' +
-      '− ' + String(Math.ceil(10 * th.prep / th.vanilla.prep - 1e-9) / 10) + '× worse threshold (preprocessing per signature, ' + units() + ' in the MPC: ' +
-      comma(th.vanilla.prep) + ' → ' + comma(th.prep) + ')');
+      '− ' + String(Math.ceil(10 * th.prep / th.vanilla.prep - 1e-9) / 10) + '× slower threshold signing');
 
     // the diagram: one pruned tree, or the layers
     if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers, S.v, V.k, V.a);
