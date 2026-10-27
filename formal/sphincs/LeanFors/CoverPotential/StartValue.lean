@@ -35,9 +35,10 @@ theorem hValueO_start (parameter : PublicParameter) (data : PublicData) (wbar b0
 
 /-- At the start no digest block is cached: the empty list of touched messages is valid. -/
 theorem start_minv (parameter : PublicParameter) (data : PublicData)
-    (initial : HiddenOutside.Cache HashInput HashOutput) (hclean : ∀ p, initial (pblk parameter data p) = none)
+    (initial : HiddenOutside.Cache HashInput HashOutput)
+    (hclean : ∀ p call, initial (pblk parameter data p call) = none)
     (known : Knowledge Coordinate) : MInv parameter data (DebtState.start initial known) [] :=
-  ⟨List.nodup_nil, fun m ρ h => absurd (hclean (m, ρ)) h⟩
+  ⟨List.nodup_nil, fun m ρ h => absurd (hclean (m, ρ) firstCall) h⟩
 
 /-- **The potential at the start of the run**: the excess forecasts of the future pairs, the failing
 indices, and the cap term of the landed pairs. -/
