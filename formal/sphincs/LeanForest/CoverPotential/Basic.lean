@@ -307,9 +307,10 @@ noncomputable def finalValue (R : List Coordinate) (out : Run HashInput Coordina
     if HiddenBridge.ForestCover parameter data.root outcome (R ++ out.1.2.1) out.2.cache ∧ ¬Realized tg initial out.2
     then 1 else 0
 
-/-- Cached digest entries of every message, plus the remaining budget, stay bounded. -/
-def CountInv (s : State) (budget : ℕ) : Prop :=
-  ∀ m : Message, cachedCount parameter data m s + budget ≤ Qtot
+/-- Cached digest entries of every message not yet signed, plus the remaining budget, stay
+bounded. -/
+def CountInv (L : QueryLog SigningSpec) (s : State) (budget : ℕ) : Prop :=
+  ∀ m : Message, (∀ entry ∈ L, entry.1 ≠ m) → cachedCount parameter data m s + budget ≤ Qtot
 
 end Good
 

@@ -44,7 +44,7 @@ theorem trial_boundV
         ∑' out, Pr[= out | interp tg initial model cont b s'] * V out.1.2.1 ≤ bound)
     (budget : ℕ) :
     ∑' out, Pr[= out | interp tg initial model
-        (liftM (CostSpec.query (.inl (.inr (.inl (blk parameter data message ρ))))) >>= fun first =>
+        (HiddenCost.honest (blk parameter data message ρ) >>= fun first =>
           if Landed parameter (blockIndex first) then finishCostSource parameter data message ρ
           else cont) budget state] *
         V out.1.2.1 ≤
@@ -69,50 +69,45 @@ theorem trial_boundV
       _ ≤ _ := by
           rw [ENNReal.tsum_mul_right]
           exact mul_le_of_le_one_left' tsum_probOutput_le_one
-  rw [interp_ordinary]
-  split_ifs with h1
-  · rw [ordinaryStep, hparse ρ]
-    simp only
-    rw [tsum_probOutput_bind_mul]
-    simp only [tsum_probOutput_map_mul]
-    cases hc : state.cache (blk parameter data message ρ) with
-    | some u0 =>
-        rw [readOutside_cached _ state u0 hc, tsum_probOutput_pure_mul]
-        simp only [Option.elim]
-        by_cases hl : Landed parameter (blockIndex u0)
-        · rw [if_pos hl, if_pos hl]
-          have href : reference.cache (blk parameter data message ρ) = some u0 := by
-            rcases hrel ρ with h | ⟨_, u, hu, hnl⟩
-            · rw [← h]; exact hc
-            · rw [hc] at hu; cases hu; exact absurd hl hnl
-          refine le_trans (hfinish state u0 _ (fun ρ' _ => hrel ρ') hc hl) (le_of_eq ?_)
-          simp [pairWeight, poolValue, href, hl]
-        · rw [if_neg hl, if_neg hl]
-          exact hih state hrel (fun _ _ => rfl) _
-    | none =>
-        rw [readOutside_fresh _ state hc, tsum_probOutput_map_mul]
-        simp only [Option.elim]
-        have href : reference.cache (blk parameter data message ρ) = none := by
-          rcases hrel ρ with h | ⟨h, _⟩
+  rw [interp_honest]
+  rw [ordinaryStep, hparse ρ]
+  simp only
+  rw [tsum_probOutput_bind_mul]
+  simp only [tsum_probOutput_map_mul]
+  cases hc : state.cache (blk parameter data message ρ) with
+  | some u0 =>
+      rw [readOutside_cached _ state u0 hc, tsum_probOutput_pure_mul]
+      simp only [Option.elim]
+      by_cases hl : Landed parameter (blockIndex u0)
+      · rw [if_pos hl, if_pos hl]
+        have href : reference.cache (blk parameter data message ρ) = some u0 := by
+          rcases hrel ρ with h | ⟨_, u, hu, hnl⟩
           · rw [← h]; exact hc
-          · exact h
-        refine ENNReal.tsum_le_tsum fun u0 => mul_le_mul_right ?_ _
-        by_cases hl : Landed parameter (blockIndex u0)
-        · rw [if_pos hl, if_pos hl]
-          refine le_trans (hfinish _ u0 _ (fun ρ' hρ' => by
-              rw [show (state.store (blk parameter data message ρ) u0).cache (blk parameter data message ρ') =
-                state.cache (blk parameter data message ρ') from
-                store_cache_ne state _ _ (blk_ne_of_ne parameter data message hρ') u0]
-              exact hrel ρ')
-            (by simp [DebtState.store]) hl) (le_of_eq ?_)
-          simp only [pairWeight, href, if_true, if_pos hl]
-        · rw [if_neg hl, if_neg hl]
-          exact hih _ (related_store parameter data message reference state hrel ρ hc u0 hl)
-            (fun x hx => store_cache_ne state _ x hx u0) _
-  · rw [tsum_probOutput_pure_mul]
-    change V [] ≤ _
-    rw [hV0]
-    exact zero_le
+          · rw [hc] at hu; cases hu; exact absurd hl hnl
+        refine le_trans (hfinish state u0 _ (fun ρ' _ => hrel ρ') hc hl) (le_of_eq ?_)
+        simp [pairWeight, poolValue, href, hl]
+      · rw [if_neg hl, if_neg hl]
+        exact hih state hrel (fun _ _ => rfl) _
+  | none =>
+      rw [readOutside_fresh _ state hc, tsum_probOutput_map_mul]
+      simp only [Option.elim]
+      have href : reference.cache (blk parameter data message ρ) = none := by
+        rcases hrel ρ with h | ⟨h, _⟩
+        · rw [← h]; exact hc
+        · exact h
+      refine ENNReal.tsum_le_tsum fun u0 => mul_le_mul_right ?_ _
+      by_cases hl : Landed parameter (blockIndex u0)
+      · rw [if_pos hl, if_pos hl]
+        refine le_trans (hfinish _ u0 _ (fun ρ' hρ' => by
+            rw [show (state.store (blk parameter data message ρ) u0).cache (blk parameter data message ρ') =
+              state.cache (blk parameter data message ρ') from
+              store_cache_ne state _ _ (blk_ne_of_ne parameter data message hρ') u0]
+            exact hrel ρ')
+          (by simp [DebtState.store]) hl) (le_of_eq ?_)
+        simp only [pairWeight, href, if_true, if_pos hl]
+      · rw [if_neg hl, if_neg hl]
+        exact hih _ (related_store parameter data message reference state hrel ρ hc u0 hl)
+          (fun x hx => store_cache_ne state _ x hx u0) _
 
 /-- **The scan from a start, for any reveal weight of all runs.** The weight of the reveals of the
 call, completed or not, is at most the walk value over the reference cache: a cached landed pair

@@ -38,21 +38,18 @@ theorem finish_bound₁W (randomness : Randomness)
         (weight tg initial out.2 * (if out.1.1.isSome then
           (out.2.cache (blk parameter data message randomness)).elim 0 g else 0)) ≤
       weight tg initial state * g u0 := by
-  rw [finishCostSource_eq, interp_ordinary]
-  split_ifs with h0
-  · rw [ordinaryStep, hparse]
-    simp only
-    rw [readOutside_cached _ state u0 hc0, pure_bind, tsum_probOutput_map_mul]
-    refine interp_weight_mul_leW tg initial model _ _ state _ _ fun out hout => ?_
-    have hk0 := interp_avoids_cache tg initial model _ _ (avoids_mono (fun x hx => by
-        subst hx; exact msgInput_digestInput parameter data.root message randomness)
-      (avoids_finishRest parameter data message randomness _)) _ state out hout
-      (blk parameter data message randomness) rfl
-    split_ifs
-    · rw [hk0, hc0]; rfl
-    · exact bot_le
-  · rw [tsum_probOutput_pure_mul]
-    simp
+  rw [finishCostSource_eq, interp_honest]
+  rw [ordinaryStep, hparse]
+  simp only
+  rw [readOutside_cached _ state u0 hc0, pure_bind, tsum_probOutput_map_mul]
+  refine interp_weight_mul_leW tg initial model _ _ state _ _ fun out hout => ?_
+  have hk0 := interp_avoids_cache tg initial model _ _ (avoids_mono (fun x hx => by
+      subst hx; exact msgInput_digestInput parameter data.root message randomness)
+    (avoids_finishRest parameter data message randomness _)) _ state out hout
+    (blk parameter data message randomness) rfl
+  split_ifs
+  · rw [hk0, hc0]; rfl
+  · exact bot_le
 
 /-- The arithmetic of one fresh trial: it lands with probability `landing` on a uniform view, and
 the scan goes on otherwise. -/
@@ -94,7 +91,7 @@ theorem trial_boundSW
           (weight tg initial out.2 * V out.1.1 out.2) ≤ weight tg initial s' * bound)
     (budget : ℕ) :
     ∑' out, Pr[= out | interp tg initial model
-        (liftM (CostSpec.query (.inl (.inr (.inl (blk parameter data message ρ))))) >>= fun first =>
+        (HiddenCost.honest (blk parameter data message ρ) >>= fun first =>
           if Landed parameter (blockIndex first) then finishCostSource parameter data message ρ
           else cont) budget state] *
         (weight tg initial out.2 * V out.1.1 out.2) ≤
@@ -114,56 +111,52 @@ theorem trial_boundSW
     by_cases hout : out ∈ support (interp tg initial model (finishCostSource parameter data message ρ) b s')
     · exact mul_le_mul_right (mul_le_mul_right (hVfin s' u0 b hrel' hs' out hout) _) _
     · rw [probOutput_eq_zero_of_not_mem_support hout, zero_mul, zero_mul]
-  rw [interp_ordinary]
-  split_ifs with h1
-  · rw [ordinaryStep, hparse ρ]
-    simp only
-    rw [tsum_probOutput_bind_mul]
-    simp only [tsum_probOutput_map_mul]
-    cases hc : state.cache (blk parameter data message ρ) with
-    | some u0 =>
-        rw [readOutside_cached _ state u0 hc, tsum_probOutput_pure_mul]
-        simp only [Option.elim]
-        by_cases hl : Landed parameter (blockIndex u0)
-        · rw [if_pos hl, if_pos hl]
-          have href : reference.cache (blk parameter data message ρ) = some u0 := by
-            rcases hrel ρ with h | ⟨_, u, hu, hnl⟩
-            · rw [← h]; exact hc
-            · rw [hc] at hu; cases hu; exact absurd hl hnl
-          refine le_trans (hfinish state u0 _ (fun ρ' _ => hrel ρ') hc) (le_of_eq ?_)
-          simp [pairWeight, poolValue, href, hl]
-        · rw [if_neg hl, if_neg hl]
-          exact hih state hrel (fun _ _ => rfl) _
-    | none =>
-        rw [readOutside_fresh _ state hc, tsum_probOutput_map_mul]
-        simp only [Option.elim]
-        have href : reference.cache (blk parameter data message ρ) = none := by
-          rcases hrel ρ with h | ⟨h, _⟩
+  rw [interp_honest]
+  rw [ordinaryStep, hparse ρ]
+  simp only
+  rw [tsum_probOutput_bind_mul]
+  simp only [tsum_probOutput_map_mul]
+  cases hc : state.cache (blk parameter data message ρ) with
+  | some u0 =>
+      rw [readOutside_cached _ state u0 hc, tsum_probOutput_pure_mul]
+      simp only [Option.elim]
+      by_cases hl : Landed parameter (blockIndex u0)
+      · rw [if_pos hl, if_pos hl]
+        have href : reference.cache (blk parameter data message ρ) = some u0 := by
+          rcases hrel ρ with h | ⟨_, u, hu, hnl⟩
           · rw [← h]; exact hc
-          · exact h
-        rw [← ENNReal.tsum_mul_left]
-        refine ENNReal.tsum_le_tsum fun u0 => ?_
-        rw [mul_left_comm]
-        refine mul_le_mul_right ?_ _
-        have hw : weight tg initial (state.store (blk parameter data message ρ) u0) = weight tg initial state :=
-          weight_store_untargetedW tg initial state _ u0 (hkind ρ)
-        by_cases hl : Landed parameter (blockIndex u0)
-        · rw [if_pos hl, if_pos hl]
-          refine le_trans (hfinish _ u0 _ (fun ρ' hρ' => by
-              rw [show (state.store (blk parameter data message ρ) u0).cache (blk parameter data message ρ') =
-                state.cache (blk parameter data message ρ') from
-                store_cache_ne state _ _ (blk_ne_of_ne parameter data message hρ') u0]
-              exact hrel ρ')
-            (by simp [DebtState.store])) (le_of_eq ?_)
-          rw [hw]
-          simp only [pairWeight, href, if_true, if_pos hl]
-        · rw [if_neg hl, if_neg hl]
-          have h := hih _ (related_store parameter data message reference state hrel ρ hc u0 hl)
-            (fun x hx => store_cache_ne state _ x hx u0) (budget - 1)
-          rwa [hw] at h
-  · rw [tsum_probOutput_pure_mul]
-    rw [hVabort, mul_zero]
-    exact zero_le
+          · rw [hc] at hu; cases hu; exact absurd hl hnl
+        refine le_trans (hfinish state u0 _ (fun ρ' _ => hrel ρ') hc) (le_of_eq ?_)
+        simp [pairWeight, poolValue, href, hl]
+      · rw [if_neg hl, if_neg hl]
+        exact hih state hrel (fun _ _ => rfl) _
+  | none =>
+      rw [readOutside_fresh _ state hc, tsum_probOutput_map_mul]
+      simp only [Option.elim]
+      have href : reference.cache (blk parameter data message ρ) = none := by
+        rcases hrel ρ with h | ⟨h, _⟩
+        · rw [← h]; exact hc
+        · exact h
+      rw [← ENNReal.tsum_mul_left]
+      refine ENNReal.tsum_le_tsum fun u0 => ?_
+      rw [mul_left_comm]
+      refine mul_le_mul_right ?_ _
+      have hw : weight tg initial (state.store (blk parameter data message ρ) u0) = weight tg initial state :=
+        weight_store_untargetedW tg initial state _ u0 (hkind ρ)
+      by_cases hl : Landed parameter (blockIndex u0)
+      · rw [if_pos hl, if_pos hl]
+        refine le_trans (hfinish _ u0 _ (fun ρ' hρ' => by
+            rw [show (state.store (blk parameter data message ρ) u0).cache (blk parameter data message ρ') =
+              state.cache (blk parameter data message ρ') from
+              store_cache_ne state _ _ (blk_ne_of_ne parameter data message hρ') u0]
+            exact hrel ρ')
+          (by simp [DebtState.store])) (le_of_eq ?_)
+        rw [hw]
+        simp only [pairWeight, href, if_true, if_pos hl]
+      · rw [if_neg hl, if_neg hl]
+        have h := hih _ (related_store parameter data message reference state hrel ρ hc u0 hl)
+          (fun x hx => store_cache_ne state _ x hx u0) (budget - 1)
+        rwa [hw] at h
 
 /-- **The scan from a start, weighted.** The weighted weight of the signed pair is at most the
 initial weight times the walk value over the reference cache. The state may differ from the

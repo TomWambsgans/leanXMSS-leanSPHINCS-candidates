@@ -460,7 +460,7 @@ theorem sign_pointH (hparse : ∀ p, model.parse (pblk parameter data p) = none)
       if Realized tg initial s ∨ signatureLimit ≤ L.length then 0
       else canonH parameter data Qtot w b0 Fail m s P Ms L d (signatureLimit - (L.length + 1)) budget out := by
   obtain ⟨_, hP', _, _, _, hview⟩ := sign_paramsS tg initial model Fail Qtot hparse hfail budget
-    s P Ms d R hprep hP hM hD hT.countInv out hout r hr
+    s P Ms L d R hprep hP hM hD hT.countInv out hout r hr
   have hext := interp_extends tg initial model _ budget s out hout
   have hpost := source_post tg initial model parameter data m (fun ρ => hparse (m, ρ)) Fail hfail
     budget s hprep out hout r hr
@@ -968,7 +968,7 @@ theorem goodHW_sign (hparse : ∀ p, model.parse (pblk parameter data p) = none)
     | some r =>
         rw [interpThen_some tg initial model next budget o1 r hres, tsum_probOutput_map_mul]
         obtain ⟨hprep', hP', hM', hD', _, _⟩ := sign_paramsS tg initial model Fail Qtot hparse (hfail m)
-          budget s P Ms d R hprep hP hM hD hT.countInv o1 ho1 r hres
+          budget s P Ms L d R hprep hP hM hD hT.countInv o1 ho1 r hres
         have hT' : TotalInv parameter data Qtot o1.2 (budget - traceCost o1.1.2.2.1) :=
           totalInv_interp tg initial model sign hT o1 ho1
         have hIH := h r (budget - traceCost o1.1.2.2.1) o1.2 _ _ _ _ hprep' hP' hM' hD' hT'

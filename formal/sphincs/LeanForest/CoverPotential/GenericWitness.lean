@@ -329,7 +329,7 @@ theorem sign_pointG_level (hW : WitnessProps W) {gate : State → Prop}
     (hw : wbar ≤ 1) (hb0 : b0 ≠ ⊤) (budget : ℕ) (s : State) (P : List Pair) (Ms : List Message)
     (L : QueryLog SigningSpec) (d : Multiset View) (R : List Coordinate) (hprep : Prepared initial s)
     (hP : PInv parameter data s P) (hM : MInv parameter data s Ms) (hD : DInv R d)
-    (hC : CountInv parameter data Qtot s budget)
+    (hC : CountInv parameter data Qtot L s budget)
     (out : Run HashInput Coordinate (Option Signature) × State)
     (hout : out ∈ support (interp tg initial model (signCostSource parameter data m) budget s))
     (r : Option Signature) (hr : out.1.1 = some r) {k' K : ℕ} (hk : k' ≤ K) :
@@ -338,7 +338,7 @@ theorem sign_pointG_level (hW : WitnessProps W) {gate : State → Prop}
       canonL parameter data W wbar b0 Fail m s P Ms L d gate K out := by
   unfold canonL
   obtain ⟨_, hP', _, _, _, hview⟩ := sign_paramsS tg initial model Fail Qtot hparse hfail budget
-    s P Ms d R hprep hP hM hD hC out hout r hr
+    s P Ms L d R hprep hP hM hD hC out hout r hr
   have hext := interp_extends tg initial model _ budget s out hout
   have hpost := source_post tg initial model parameter data m (fun ρ => hparse (m, ρ)) Fail hfail
     budget s hprep out hout r hr

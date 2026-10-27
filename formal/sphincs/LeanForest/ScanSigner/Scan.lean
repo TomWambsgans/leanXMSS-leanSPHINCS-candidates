@@ -45,8 +45,7 @@ theorem nextRand_pow_ne (half ρ : Randomness) (j : ℕ) (h0 : 0 < j) (hj : j < 
 theorem signCostSourceLoop_succ (parameter : PublicParameter) (data : PublicData) (message : Message)
     (attempts : ℕ) (randomness : Randomness) :
     signCostSourceLoop parameter data message (data.step message) (attempts + 1) randomness =
-      liftM (CostSpec.query (.inl (.inr (.inl
-        (Security.digestInput parameter data.root message randomness))))) >>= fun first =>
+      HiddenCost.honest (Security.digestInput parameter data.root message randomness) >>= fun first =>
           if Landed parameter (blockIndex first) then finishCostSource parameter data message randomness
           else signCostSourceLoop parameter data message (data.step message) attempts (nextRand (data.steps message) randomness) := by
   rw [signCostSourceLoop]
@@ -82,7 +81,7 @@ theorem trial_boundS
         ∑' out, Pr[= out | interp tg initial model cont b s'] * W out.1.1 out.2 ≤ bound)
     (budget : ℕ) :
     ∑' out, Pr[= out | interp tg initial model
-        (liftM (CostSpec.query (.inl (.inr (.inl (blk parameter data message ρ))))) >>= fun first =>
+        (HiddenCost.honest (blk parameter data message ρ) >>= fun first =>
           if Landed parameter (blockIndex first) then finishCostSource parameter data message ρ
           else cont) budget state] *
         W out.1.1 out.2 ≤
@@ -102,49 +101,45 @@ theorem trial_boundS
     by_cases hout : out ∈ support (interp tg initial model (finishCostSource parameter data message ρ) b s')
     · exact mul_le_mul_right (hWfin s' u0 b hrel' hs' out hout) _
     · rw [probOutput_eq_zero_of_not_mem_support hout, zero_mul, zero_mul]
-  rw [interp_ordinary]
-  split_ifs with h1
-  · rw [ordinaryStep, hparse ρ]
-    simp only
-    rw [tsum_probOutput_bind_mul]
-    simp only [tsum_probOutput_map_mul]
-    cases hc : state.cache (blk parameter data message ρ) with
-    | some u0 =>
-        rw [readOutside_cached _ state u0 hc, tsum_probOutput_pure_mul]
-        simp only [Option.elim]
-        by_cases hl : Landed parameter (blockIndex u0)
-        · rw [if_pos hl, if_pos hl]
-          have href : reference.cache (blk parameter data message ρ) = some u0 := by
-            rcases hrel ρ with h | ⟨_, u, hu, hnl⟩
-            · rw [← h]; exact hc
-            · rw [hc] at hu; cases hu; exact absurd hl hnl
-          refine le_trans (hfinish state u0 _ (fun ρ' _ => hrel ρ') hc) (le_of_eq ?_)
-          simp [pairWeight, poolValue, href, hl]
-        · rw [if_neg hl, if_neg hl]
-          exact hih state hrel (fun _ _ => rfl) _
-    | none =>
-        rw [readOutside_fresh _ state hc, tsum_probOutput_map_mul]
-        simp only [Option.elim]
-        have href : reference.cache (blk parameter data message ρ) = none := by
-          rcases hrel ρ with h | ⟨h, _⟩
+  rw [interp_honest]
+  rw [ordinaryStep, hparse ρ]
+  simp only
+  rw [tsum_probOutput_bind_mul]
+  simp only [tsum_probOutput_map_mul]
+  cases hc : state.cache (blk parameter data message ρ) with
+  | some u0 =>
+      rw [readOutside_cached _ state u0 hc, tsum_probOutput_pure_mul]
+      simp only [Option.elim]
+      by_cases hl : Landed parameter (blockIndex u0)
+      · rw [if_pos hl, if_pos hl]
+        have href : reference.cache (blk parameter data message ρ) = some u0 := by
+          rcases hrel ρ with h | ⟨_, u, hu, hnl⟩
           · rw [← h]; exact hc
-          · exact h
-        refine ENNReal.tsum_le_tsum fun u0 => mul_le_mul_right ?_ _
-        by_cases hl : Landed parameter (blockIndex u0)
-        · rw [if_pos hl, if_pos hl]
-          refine le_trans (hfinish _ u0 _ (fun ρ' hρ' => by
-              rw [show (state.store (blk parameter data message ρ) u0).cache (blk parameter data message ρ') =
-                state.cache (blk parameter data message ρ') from
-                store_cache_ne state _ _ (blk_ne_of_ne parameter data message hρ') u0]
-              exact hrel ρ')
-            (by simp [DebtState.store])) (le_of_eq ?_)
-          simp only [pairWeight, href, if_true, if_pos hl]
-        · rw [if_neg hl, if_neg hl]
-          exact hih _ (related_store parameter data message reference state hrel ρ hc u0 hl)
-            (fun x hx => store_cache_ne state _ x hx u0) _
-  · rw [tsum_probOutput_pure_mul]
-    rw [hWabort]
-    exact zero_le
+          · rw [hc] at hu; cases hu; exact absurd hl hnl
+        refine le_trans (hfinish state u0 _ (fun ρ' _ => hrel ρ') hc) (le_of_eq ?_)
+        simp [pairWeight, poolValue, href, hl]
+      · rw [if_neg hl, if_neg hl]
+        exact hih state hrel (fun _ _ => rfl) _
+  | none =>
+      rw [readOutside_fresh _ state hc, tsum_probOutput_map_mul]
+      simp only [Option.elim]
+      have href : reference.cache (blk parameter data message ρ) = none := by
+        rcases hrel ρ with h | ⟨h, _⟩
+        · rw [← h]; exact hc
+        · exact h
+      refine ENNReal.tsum_le_tsum fun u0 => mul_le_mul_right ?_ _
+      by_cases hl : Landed parameter (blockIndex u0)
+      · rw [if_pos hl, if_pos hl]
+        refine le_trans (hfinish _ u0 _ (fun ρ' hρ' => by
+            rw [show (state.store (blk parameter data message ρ) u0).cache (blk parameter data message ρ') =
+              state.cache (blk parameter data message ρ') from
+              store_cache_ne state _ _ (blk_ne_of_ne parameter data message hρ') u0]
+            exact hrel ρ')
+          (by simp [DebtState.store])) (le_of_eq ?_)
+        simp only [pairWeight, href, if_true, if_pos hl]
+      · rw [if_neg hl, if_neg hl]
+        exact hih _ (related_store parameter data message reference state hrel ρ hc u0 hl)
+          (fun x hx => store_cache_ne state _ x hx u0) _
 
 /-- **The scan from a start.** The weight of the signed pair is at most the walk value over the
 reference cache: a cached landed pair pays its pool value, a fresh pair that lands pays the fresh
@@ -256,71 +251,67 @@ theorem scan_post (hparse : ∀ ρ, model.parse (blk parameter data message ρ) 
       exact Or.inl ⟨rfl, rfl, fun ρ => RelatedAt.refl parameter data message s ρ⟩
   | succ attempts ih =>
       intro budget s ρ hprep out hout r hr
-      rw [signCostSourceLoop_succ, interp_ordinary] at hout
-      split_ifs at hout with h1
-      · rw [ordinaryStep, hparse ρ] at hout
-        simp only at hout
-        rw [support_bind] at hout
-        obtain ⟨res, hres, hout⟩ := Set.mem_iUnion₂.1 hout
-        rw [support_map] at hout
-        obtain ⟨o, ho, rfl⟩ := hout
-        simp only at hr ⊢
-        have hstep : res.2.cache (blk parameter data message ρ) = some res.1 ∧
-            (s.cache (blk parameter data message ρ) = none ∨
-              s.cache (blk parameter data message ρ) = some res.1) ∧
-            (∀ x, x ≠ blk parameter data message ρ → res.2.cache x = s.cache x) ∧
-            Prepared initial res.2 := by
-          cases hc0 : s.cache (blk parameter data message ρ) with
-          | some u =>
-              rw [readOutside_cached _ s u hc0, support_pure, Set.mem_singleton_iff] at hres
-              rw [hres]
-              exact ⟨hc0, Or.inr rfl, fun _ _ => rfl, hprep⟩
-          | none =>
-              rw [readOutside_fresh _ s hc0, support_map] at hres
-              obtain ⟨u, _, rfl⟩ := hres
-              exact ⟨by simp [DebtState.store], Or.inl rfl, fun x hx => store_cache_ne s _ x hx u,
-                prepared_store initial s hprep _ u hc0⟩
-        obtain ⟨hb0, hb0s, hrest, hprep1⟩ := hstep
-        by_cases hl : Landed parameter (blockIndex res.1)
-        · rw [if_pos hl] at ho
-          obtain ⟨hf0, hfother, hfrev, hfsig, hffail⟩ :=
-            finish_post tg initial model parameter data message hparse Fail hfail ρ _ res.2 hprep1 res.1 hb0 o ho r hr
-          refine Or.inr ⟨ρ, res.1, ⟨hf0, hl, hb0s, fun ρ' hρ' => ?_⟩, hfrev, hfsig, fun hn => ?_⟩
-          · refine Or.inl ?_
-            rw [hfother _ (msgInput_digestInput parameter data.root message ρ'),
-              hrest _ (blk_ne_of_ne parameter data message hρ')]
-          · obtain ⟨hrv, hfl⟩ := hffail hn
-            exact ⟨hrv, fun _ => hfl⟩
-        · rw [if_neg hl] at ho
-          have hrel1 : ∀ ρ', RelatedAt parameter data message s res.2 ρ' := by
-            intro ρ'
-            by_cases hρ : ρ' = ρ
-            · subst hρ
-              rcases hb0s with hn | hs
-              · exact Or.inr ⟨hn, res.1, hb0, hl⟩
-              · exact Or.inl (hb0.trans hs.symm)
-            · exact Or.inl (hrest _ (blk_ne_of_ne parameter data message hρ))
-          rcases ih _ res.2 (nextRand (data.steps message) ρ) hprep1 o ho r hr with ⟨hrn, hrv, hrel⟩ | ⟨ρs, u0, hsel, hrev, hsig, hfl⟩
-          · exact Or.inl ⟨hrn, hrv, fun ρ' => (hrel1 ρ').trans parameter data message (hrel ρ')⟩
-          · obtain ⟨hs0, hland, hs0r, hothers⟩ := hsel
-            have hr1 := hrel1 ρs
-            refine Or.inr ⟨ρs, u0, ⟨hs0, hland, ?_, fun ρ' hρ' =>
-              (hrel1 ρ').trans parameter data message (hothers ρ' hρ')⟩, hrev, hsig, fun hn => ?_⟩
-            · rcases hr1 with he | ⟨hn', _⟩
-              · rw [← he]; exact hs0r
-              · exact Or.inl hn'
-            · obtain ⟨hrv, hfl'⟩ := hfl hn
-              refine ⟨hrv, fun hnone => hfl' ?_⟩
-              rcases hr1 with he | ⟨_, u, hu, hnl⟩
-              · rw [he]; exact hnone
-              · rcases hs0r with h | h
-                · exact h
-                · rw [hu] at h
-                  cases h
-                  exact absurd hland hnl
-      · rw [support_pure, Set.mem_singleton_iff] at hout
-        rw [hout] at hr
-        cases hr
+      rw [signCostSourceLoop_succ, interp_honest] at hout
+      rw [ordinaryStep, hparse ρ] at hout
+      simp only at hout
+      rw [support_bind] at hout
+      obtain ⟨res, hres, hout⟩ := Set.mem_iUnion₂.1 hout
+      rw [support_map] at hout
+      obtain ⟨o, ho, rfl⟩ := hout
+      simp only at hr ⊢
+      have hstep : res.2.cache (blk parameter data message ρ) = some res.1 ∧
+          (s.cache (blk parameter data message ρ) = none ∨
+            s.cache (blk parameter data message ρ) = some res.1) ∧
+          (∀ x, x ≠ blk parameter data message ρ → res.2.cache x = s.cache x) ∧
+          Prepared initial res.2 := by
+        cases hc0 : s.cache (blk parameter data message ρ) with
+        | some u =>
+            rw [readOutside_cached _ s u hc0, support_pure, Set.mem_singleton_iff] at hres
+            rw [hres]
+            exact ⟨hc0, Or.inr rfl, fun _ _ => rfl, hprep⟩
+        | none =>
+            rw [readOutside_fresh _ s hc0, support_map] at hres
+            obtain ⟨u, _, rfl⟩ := hres
+            exact ⟨by simp [DebtState.store], Or.inl rfl, fun x hx => store_cache_ne s _ x hx u,
+              prepared_store initial s hprep _ u hc0⟩
+      obtain ⟨hb0, hb0s, hrest, hprep1⟩ := hstep
+      by_cases hl : Landed parameter (blockIndex res.1)
+      · rw [if_pos hl] at ho
+        obtain ⟨hf0, hfother, hfrev, hfsig, hffail⟩ :=
+          finish_post tg initial model parameter data message hparse Fail hfail ρ _ res.2 hprep1 res.1 hb0 o ho r hr
+        refine Or.inr ⟨ρ, res.1, ⟨hf0, hl, hb0s, fun ρ' hρ' => ?_⟩, hfrev, hfsig, fun hn => ?_⟩
+        · refine Or.inl ?_
+          rw [hfother _ (msgInput_digestInput parameter data.root message ρ'),
+            hrest _ (blk_ne_of_ne parameter data message hρ')]
+        · obtain ⟨hrv, hfl⟩ := hffail hn
+          exact ⟨hrv, fun _ => hfl⟩
+      · rw [if_neg hl] at ho
+        have hrel1 : ∀ ρ', RelatedAt parameter data message s res.2 ρ' := by
+          intro ρ'
+          by_cases hρ : ρ' = ρ
+          · subst hρ
+            rcases hb0s with hn | hs
+            · exact Or.inr ⟨hn, res.1, hb0, hl⟩
+            · exact Or.inl (hb0.trans hs.symm)
+          · exact Or.inl (hrest _ (blk_ne_of_ne parameter data message hρ))
+        rcases ih _ res.2 (nextRand (data.steps message) ρ) hprep1 o ho r hr with ⟨hrn, hrv, hrel⟩ | ⟨ρs, u0, hsel, hrev, hsig, hfl⟩
+        · exact Or.inl ⟨hrn, hrv, fun ρ' => (hrel1 ρ').trans parameter data message (hrel ρ')⟩
+        · obtain ⟨hs0, hland, hs0r, hothers⟩ := hsel
+          have hr1 := hrel1 ρs
+          refine Or.inr ⟨ρs, u0, ⟨hs0, hland, ?_, fun ρ' hρ' =>
+            (hrel1 ρ').trans parameter data message (hothers ρ' hρ')⟩, hrev, hsig, fun hn => ?_⟩
+          · rcases hr1 with he | ⟨hn', _⟩
+            · rw [← he]; exact hs0r
+            · exact Or.inl hn'
+          · obtain ⟨hrv, hfl'⟩ := hfl hn
+            refine ⟨hrv, fun hnone => hfl' ?_⟩
+            rcases hr1 with he | ⟨_, u, hu, hnl⟩
+            · rw [he]; exact hnone
+            · rcases hs0r with h | h
+              · exact h
+              · rw [hu] at h
+                cases h
+                exact absurd hland hnl
 
 /-- **The scan signer, support.** -/
 theorem source_post (hparse : ∀ ρ, model.parse (blk parameter data message ρ) = none)

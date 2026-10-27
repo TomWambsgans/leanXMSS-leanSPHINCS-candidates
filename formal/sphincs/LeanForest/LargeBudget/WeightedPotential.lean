@@ -339,7 +339,7 @@ potential and the weighted baseline payments. -/
 def GoodW (L : QueryLog SigningSpec) (prog : OracleComp CostSpec HiddenBridge.Outcome) : Prop :=
   ∀ budget (s : State) (P : List Pair) (Ms : List Message) (d : Multiset View) (R : List Coordinate),
     Prepared initial s → PInv parameter data s P → MInv parameter data s Ms → DInv R d →
-      CountInv parameter data Qtot s budget →
+      CountInv parameter data Qtot L s budget →
       ∑' out, Pr[= out | interp tg initial model prog budget s] *
           (weight tg initial out.2 * finalValue parameter data tg initial R out) ≤
         weight tg initial s * potO parameter data w b0 Fail tg initial Lmax s P Ms L d budget +
@@ -471,7 +471,7 @@ theorem new_pair_boundW (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
     (budget : ℕ) (hb : 1 ≤ budget) (s : State) (P : List Pair) (Ms : List Message) (d : Multiset View)
     (R : List Coordinate) (hprep : Prepared initial s) (hP : PInv parameter data s P)
     (hM : MInv parameter data s Ms) (hD : DInv R d)
-    (hC : CountInv parameter data Qtot s budget) (p : Pair)
+    (hC : CountInv parameter data Qtot L s budget) (p : Pair)
     (hp0 : s.cache (pblk parameter data p) = none) :
     ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
         ∑' out, Pr[= out | interp tg initial model (next u) (budget - 1)
@@ -498,11 +498,11 @@ theorem new_pair_boundW (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
     by_contra hlt
     exact hcap (one_le_lam (by omega) budget)
   have hrate : MsgLive L p.1 → Rate parameter data w s p.1 := fun hlive =>
-    rate_of_fair hfair s p.1 (by have := hC p.1; omega) (le_trans (landedCount_le hP L hlive) hlen)
-  have hC2 : ∀ a, CountInv parameter data Qtot (withPair parameter data s p a) (budget - 1) := by
-    intro a m
+    rate_of_fair hfair s p.1 (by have := hC p.1 hlive; omega) (le_trans (landedCount_le hP L hlive) hlen)
+  have hC2 : ∀ a, CountInv parameter data Qtot L (withPair parameter data s p a) (budget - 1) := by
+    intro a m hm
     have h1 := count_withPair (parameter := parameter) (data := data) m s p a
-    have h2 := hC m
+    have h2 := hC m hm
     omega
   have hone : ∀ u, ∑' out, Pr[= out | interp tg initial model (next u) (budget - 1)
         (s.store (pblk parameter data p) u)] * (weight tg initial out.2 * finalValue parameter data tg initial R out) ≤
@@ -579,12 +579,12 @@ theorem goodW_ordinary (hparse : ∀ p, model.parse (pblk parameter data p) = no
             have hblocks := same_blocks (parameter := parameter) (data := data) hext
               (ordinaryStep_cache_ne model x s r hr) hnew
             obtain ⟨hP', -⟩ := same_items parameter data hext (ordinaryStep_cache_ne model x s r hr) hnew hP
-            have hcnt : CountInv parameter data Qtot r.2 (budget - 1) := by
-              intro m
+            have hcnt : CountInv parameter data Qtot L r.2 (budget - 1) := by
+              intro m hm
               have h1 : cachedCount parameter data m r.2 ≤ cachedCount parameter data m s + 1 := by
                 rw [cachedCount_eq, cachedCount_eq]
                 exact costStep_card_le model _ (.inl (.inr (.inl x))) s r (by rw [costStep_ordinary]; exact hr)
-              have h2 := hC m
+              have h2 := hC m hm
               omega
             refine le_trans (h r.1 (budget - 1) r.2 P Ms d R
               (fun i o hi => hext.1 i o (hprep i o hi)) hP' (minv_blocks hblocks hM) hD hcnt) (add_le_add ?_ le_rfl)
@@ -665,7 +665,7 @@ theorem goodW_sign (hparse : ∀ p, model.parse (pblk parameter data p) = none)
     | some r =>
         rw [interpThen_some tg initial model next budget o1 r hres, tsum_probOutput_map_mul]
         obtain ⟨hprep', hP', hM', hD', hC', _⟩ := sign_paramsS tg initial model Fail Qtot hparse (hfail m)
-          budget s P Ms d R hprep hP hM hD hC o1 ho1 r hres
+          budget s P Ms L d R hprep hP hM hD hC o1 ho1 r hres
         have hIH := h r (budget - traceCost o1.1.2.2.1) o1.2 _ _ _ _ hprep' hP' hM' hD' hC'
         have hpot := sign_pointO tg initial model parameter data w b0 Fail Qtot m hparse (hfail m) hw
           budget s P Ms L d R hprep hP hM hD hC o1 ho1 r hres (Nat.sub_le budget (traceCost o1.1.2.2.1))
