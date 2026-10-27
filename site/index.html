@@ -158,7 +158,6 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .cmp th.nw { white-space: nowrap; }
 .cards .nw { white-space: nowrap; }
 .cmp .gone, .cmp .gone > * { display: none !important; }
-.cards .same { color: var(--muted); }
 .cards .note { color: var(--muted); white-space: nowrap; font-size: 0.88em; }
 .plain { font-variant-numeric: tabular-nums; }
 .plain td { white-space: nowrap; }
@@ -1077,7 +1076,7 @@ footer a + a { margin-left: 1.25rem; }
     document.querySelector('[data-f="life-0"]').closest('tr').classList.toggle('gone', lay_);
     document.querySelector('[data-f="life-all"]').closest('tr').classList.toggle('gone', !lay_);
     set('life-all', '<div>' + lifeOf(lay) + ' signatures<span class="m-only">' + info(LIFE_TIP) + '</span></div>');
-    set('life-same-1', '<div class="same">the same</div>'); set('life-same-2', '<div class="same">the same</div>');
+    set('life-same-1', '<div>' + lifeOf(lay) + ' signatures</div>'); set('life-same-2', '<div>' + lifeOf(lay) + ' signatures</div>');
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
       var dev = d.dev + info((d.host ? fmt(d.rate) : pow2t(Math.round(Math.log2(d.rate)))) +
