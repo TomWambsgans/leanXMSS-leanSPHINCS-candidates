@@ -1018,7 +1018,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
   var LIFE_TIP = '127 bits of security (ROM), [proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/main/formal/sphincs)';
   var FOREST_TIP = '8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5&#10;(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))';
   function forsTip(v) {
-    return v.k + ' trees of height ' + v.a + ', with no root hash (the WOTS+C key signs&#10;the two nodes below each root): as in v1, a = 10, and&#10;the fewest trees that live at least as long as the&#10;forest under the cover attack';
+    return v.k + ' trees of height ' + v.a + ', no root hash';
   }
   function spicy() { return S.v === 'spicy'; }
   // a figure that spicy changes: struck through, and its spicy value
