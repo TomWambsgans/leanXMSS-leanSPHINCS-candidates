@@ -28,8 +28,9 @@ H(P ‖ A(7, 0, 0) ‖ seed ‖ m) per message and tries R0, R0 + δ, R0 + 2δ, 
 lands in the kept subtree, as the Rust signer does, so a repeated request returns the same
 signature. δ is odd, so the walk does not come back within 2^128 attempts (`walk_iterate_ne`), and
 secret, so a signature does not tell which randomizers were rejected before it. The SUF-CMA game is
-[Statement.lean](LeanForest/Statement.lean): every adversary, every number q ≥ 1 of hash
-queries (keygen, signing and verification included), forges with probability at most q / 2^127.
+[Statement.lean](LeanForest/Statement.lean): for every adversary, if the whole game makes q ≥ 1 hash
+queries in total (the adversary's, and those of keygen, signing and verification), a forgery has
+probability at most q / 2^127.
 
 The proof is the same for every hash: the random oracle stands for Keccak-256, BLAKE2s or SHA-256,
 and only the costs depend on the hash ([Scheme/VerificationCost.lean](LeanForest/Scheme/VerificationCost.lean),
