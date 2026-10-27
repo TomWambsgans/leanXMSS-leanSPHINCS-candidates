@@ -148,60 +148,60 @@ section Probe
 
 variable {parameter : PublicParameter} {data : PublicData}
 
-theorem stOf_withPair_self (s : State) (p : Pair) (u0 : HashOutput) :
-    stOf parameter data p.1 (withPair parameter data s p u0) =
-      Function.update (stOf parameter data p.1 s) p.2 (if Landed parameter (blockIndex u0) then .hit else .miss) := by
+theorem stOf_withPair_self (s : State) (p : Pair) (u : DigestCall → HashOutput) :
+    stOf parameter data p.1 (withPair parameter data s p u) =
+      Function.update (stOf parameter data p.1 s) p.2 (if Landed parameter (blockIndex (u firstCall)) then .hit else .miss) := by
   funext ρ
   by_cases hρ : ρ = p.2
   · subst hρ
     rw [Function.update_self]
-    have h : (withPair parameter data s p u0).cache (blk parameter data p.1 p.2) = some u0 := withPair_self s p u0
+    have h : (withPair parameter data s p u).cache (blk parameter data p.1 p.2) = some (u firstCall) := withPair_self s p u firstCall
     simp only [stOf, h, Option.elim]
   · rw [Function.update_of_ne hρ]
     have hne : (p.1, ρ) ≠ p := fun h => hρ (congrArg Prod.snd h)
-    have h : (withPair parameter data s p u0).cache (blk parameter data p.1 ρ) = s.cache (blk parameter data p.1 ρ) :=
-      withPair_other_pair s p (p.1, ρ) hne u0
+    have h : (withPair parameter data s p u).cache (blk parameter data p.1 ρ) = s.cache (blk parameter data p.1 ρ) :=
+      withPair_other_pair s p (p.1, ρ) hne u firstCall
     simp only [stOf, h]
 
-theorem stOf_withPair_other (s : State) (p : Pair) (u0 : HashOutput) {m : Message} (hm : m ≠ p.1) :
-    stOf parameter data m (withPair parameter data s p u0) = stOf parameter data m s := by
+theorem stOf_withPair_other (s : State) (p : Pair) (u : DigestCall → HashOutput) {m : Message} (hm : m ≠ p.1) :
+    stOf parameter data m (withPair parameter data s p u) = stOf parameter data m s := by
   funext ρ
   have hne : (m, ρ) ≠ p := fun h => hm (congrArg Prod.fst h)
-  have h : (withPair parameter data s p u0).cache (blk parameter data m ρ) = s.cache (blk parameter data m ρ) :=
-    withPair_other_pair s p (m, ρ) hne u0
+  have h : (withPair parameter data s p u).cache (blk parameter data m ρ) = s.cache (blk parameter data m ρ) :=
+    withPair_other_pair s p (m, ρ) hne u firstCall
   simp only [stOf, h]
 
-theorem extOf_withPair_other (s : State) (p : Pair) (u0 : HashOutput) (excl : Pair → Prop) {m : Message} {ρ : Randomness}
+theorem extOf_withPair_other (s : State) (p : Pair) (u : DigestCall → HashOutput) (excl : Pair → Prop) {m : Message} {ρ : Randomness}
     (hne : (m, ρ) ≠ p) :
-    extOf parameter data (withPair parameter data s p u0) excl m ρ = extOf parameter data s excl m ρ := by
+    extOf parameter data (withPair parameter data s p u) excl m ρ = extOf parameter data s excl m ρ := by
   unfold extOf
-  rw [pview_withPair_other s p (m, ρ) hne u0]
+  rw [pview_withPair_other s p (m, ρ) hne u]
 
-theorem grpM_withPair_other (s : State) (p : Pair) (u0 : HashOutput) (excl : Pair → Prop) {m : Message}
+theorem grpM_withPair_other (s : State) (p : Pair) (u : DigestCall → HashOutput) (excl : Pair → Prop) {m : Message}
     (hm : m ≠ p.1) (F : Multiset View → ℝ≥0∞) (d : Multiset View) :
-    grpM parameter data (withPair parameter data s p u0) excl m F d = grpM parameter data s excl m F d := by
+    grpM parameter data (withPair parameter data s p u) excl m F d = grpM parameter data s excl m F d := by
   unfold grpM
-  rw [stOf_withPair_other s p u0 hm]
-  exact grp_congr_ext _ (fun ρ _ => extOf_withPair_other s p u0 excl fun h => hm (congrArg Prod.fst h)) F d
+  rw [stOf_withPair_other s p u hm]
+  exact grp_congr_ext _ (fun ρ _ => extOf_withPair_other s p u excl fun h => hm (congrArg Prod.fst h)) F d
 
-theorem grpAll_withPair_other (s : State) (p : Pair) (u0 : HashOutput) (excl : Pair → Prop)
+theorem grpAll_withPair_other (s : State) (p : Pair) (u : DigestCall → HashOutput) (excl : Pair → Prop)
     (F : Multiset View → ℝ≥0∞) :
     ∀ (Ms : List Message), p.1 ∉ Ms → ∀ d,
-      grpAll parameter data (withPair parameter data s p u0) excl Ms F d = grpAll parameter data s excl Ms F d
+      grpAll parameter data (withPair parameter data s p u) excl Ms F d = grpAll parameter data s excl Ms F d
   | [], _, _ => rfl
   | m :: Ms, hm, d => by
       have hm1 : m ≠ p.1 := fun h => hm (h ▸ List.mem_cons_self ..)
       have hm2 : p.1 ∉ Ms := fun h => hm (List.mem_cons_of_mem _ h)
       simp only [grpAll]
-      rw [grpM_withPair_other s p u0 excl hm1]
-      exact grp_congr _ _ (fun e => grpAll_withPair_other s p u0 excl F Ms hm2 e) d
+      rw [grpM_withPair_other s p u excl hm1]
+      exact grp_congr _ _ (fun e => grpAll_withPair_other s p u excl F Ms hm2 e) d
 
-theorem grpM_withPair_self (s : State) (p : Pair) (u0 : HashOutput) (excl : Pair → Prop)
+theorem grpM_withPair_self (s : State) (p : Pair) (u : DigestCall → HashOutput) (excl : Pair → Prop)
     (F : Multiset View → ℝ≥0∞) (d : Multiset View) :
-    grpM parameter data (withPair parameter data s p u0) excl p.1 F d =
+    grpM parameter data (withPair parameter data s p u) excl p.1 F d =
       grp (nextRand (data.steps p.1)) landing digestAttemptLimit Finset.univ
-        (Function.update (stOf parameter data p.1 s) p.2 (if Landed parameter (blockIndex u0) then .hit else .miss))
-        (Function.update (extOf parameter data s excl p.1) p.2 (if excl p then 0 else {viewOf u0})) F d := by
+        (Function.update (stOf parameter data p.1 s) p.2 (if Landed parameter (blockIndex (u firstCall)) then .hit else .miss))
+        (Function.update (extOf parameter data s excl p.1) p.2 (if excl p then 0 else {viewOf u})) F d := by
   unfold grpM
   rw [stOf_withPair_self]
   congr 1
@@ -212,7 +212,7 @@ theorem grpM_withPair_self (s : State) (p : Pair) (u0 : HashOutput) (excl : Pair
     unfold extOf
     rw [show ((p.1, p.2) : Pair) = p from rfl, pview_withPair_self]
   · rw [Function.update_of_ne hρ]
-    exact extOf_withPair_other s p u0 excl fun h => hρ (congrArg Prod.snd h)
+    exact extOf_withPair_other s p u excl fun h => hρ (congrArg Prod.snd h)
 
 /-- One more future pair in front of the future. -/
 theorem creations_one {U : Finset View} {land : ℝ≥0∞} (G : List View → ℝ≥0∞) :
@@ -229,11 +229,11 @@ theorem creations_one {U : Finset View} {land : ℝ≥0∞} (G : List View → �
 the groups applied to the virtual future are paid by one more future pair, provided the coin `w`
 pays `(2 − landing)/2^128` through the mass that the group of the message leaves on the identity. -/
 theorem grpAll_probe {w : ℝ≥0∞} (hw : w ≤ 1) {f : Multiset View → ℝ≥0∞} (hf : Monotone' f) (hfin : ∀ D, f D ≠ ⊤)
-    (s : State) (p : Pair) (hp0 : s.cache (pblk parameter data p) = none) (excl : Pair → Prop)
+    (s : State) (p : Pair) (hp0 : s.cache (pblk parameter data p firstCall) = none) (excl : Pair → Prop)
     (Ms : List Message) (hMs : Ms.Nodup) (hp : p.1 ∈ Ms)
     (hrate : (Fintype.card Randomness : ℝ≥0∞)⁻¹ * ((1 - landing) + 1) ≤ landing * w * idMassM parameter data s p.1)
     (n : ℕ) (I : List View) (d : Multiset View) :
-    pairE (fun u0 => grpAll parameter data (withPair parameter data s p u0) excl Ms
+    pairE (fun u => grpAll parameter data (withPair parameter data s p u) excl Ms
         (virtualOnce Finset.univ w f n I) d) ≤
       (1 - landing) * grpAll parameter data s excl Ms (virtualOnce Finset.univ w f n I) d +
         landing * freshAvg Finset.univ (fun v => grpAll parameter data s excl Ms
@@ -254,15 +254,15 @@ theorem grpAll_probe {w : ℝ≥0∞} (hw : w ≤ 1) {f : Multiset View → ℝ�
     (Function.update (extOf parameter data s excl p.1) p.2 (if excl p then 0 else {v})) X d with hFh
   set Cm : ℝ≥0∞ := grp (nextRand (data.steps p.1)) landing digestAttemptLimit Finset.univ
     (Function.update (stOf parameter data p.1 s) p.2 .miss) (extOf parameter data s excl p.1) X d with hCm
-  have hleft : ∀ u0, grpAll parameter data (withPair parameter data s p u0) excl Ms
+  have hleft : ∀ u, grpAll parameter data (withPair parameter data s p u) excl Ms
       (virtualOnce Finset.univ w f n I) d =
-      if Landed parameter (blockIndex u0) then Fh (viewOf u0) else Cm := by
-    intro u0
+      if Landed parameter (blockIndex (u firstCall)) then Fh (viewOf u) else Cm := by
+    intro u
     rw [grpAll_perm _ excl _ hperm d]
     simp only [grpAll]
     rw [grpM_withPair_self,
-      grp_congr _ _ (fun e => grpAll_withPair_other s p u0 excl (virtualOnce Finset.univ w f n I) Ms' hnot e) d]
-    by_cases hl : Landed parameter (blockIndex u0)
+      grp_congr _ _ (fun e => grpAll_withPair_other s p u excl (virtualOnce Finset.univ w f n I) Ms' hnot e) d]
+    by_cases hl : Landed parameter (blockIndex (u firstCall))
     · simp only [hl, if_true]
       rfl
     · simp only [hl, if_false]
@@ -270,8 +270,8 @@ theorem grpAll_probe {w : ℝ≥0∞} (hw : w ≤ 1) {f : Multiset View → ℝ�
         by_cases h : ρ = p.2
         · subst h; rw [Function.update_self] at hρ; cases hρ
         · rw [Function.update_of_ne h]) X d
-  rw [show (fun u0 => grpAll parameter data (withPair parameter data s p u0) excl Ms
-      (virtualOnce Finset.univ w f n I) d) = fun u0 => if Landed parameter (blockIndex u0) then Fh (viewOf u0) else Cm
+  rw [show (fun u => grpAll parameter data (withPair parameter data s p u) excl Ms
+      (virtualOnce Finset.univ w f n I) d) = fun u => if Landed parameter (blockIndex (u firstCall)) then Fh (viewOf u) else Cm
       from funext hleft, pairE_landed parameter Fh Cm]
   have hstep := probe_step (σ := (nextRand (data.steps p.1))) (p := landing) (A := digestAttemptLimit) (U := (Finset.univ : Finset View))
     landing_le_one Finset.univ_nonempty (stOf parameter data p.1 s) (extOf parameter data s excl p.1) hXmono hXfin d
@@ -309,59 +309,100 @@ variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate)
   (initial : HiddenOutside.Cache HashInput HashOutput) (model : HiddenRows.Model HashInput HashOutput A Coordinate)
   (parameter : PublicParameter) (data : PublicData) (m : Message)
 
-/-- **The scan from a start, with the fresh pair it completes.** -/
+/-- **The scan from a start, with the fresh pair it completes.** A trial reads the index block
+alone; the rest of the pair follows in the final assembly, so the weight reads the state only
+through `pcache` and can only grow under a fresh store. -/
 theorem scan_bound_comb
-    (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none) (s : State)
+    (hparse : ∀ ρ call, model.parse (GraphView.pblk parameter data m ρ call) = none)
+    (hkind : ∀ ρ call, tg.kind (GraphView.pblk parameter data m ρ call) = .none)
+    (s : State) (hinv : PairInv parameter data m s)
     (gf : View → ℝ≥0∞) (gp : Randomness → View → ℝ≥0∞) (attempts : ℕ) (hA : attempts ≤ 2 ^ 128)
     (budget : ℕ) (start : Randomness) :
     ∑' out, Pr[= out | interp tg initial model (signCostSourceLoop parameter data m (data.step m) attempts start) budget s] *
         (freshNewWeight parameter data m s gf out + outWeight parameter data m s 0 gp out) ≤
       walk (nextRand (data.steps m)) landing (stOf parameter data m s) (poolValue parameter data m s gp)
         (freshAvg Finset.univ gf) 0 attempts start := by
-  refine scan_boundW tg initial model parameter data m hparse s gf gp
+  refine scan_boundW tg initial model parameter data m hparse hkind s gf gp
     (fun r s' => freshNewWeight parameter data m s gf ((r, [], [], []), s') +
       outWeight parameter data m s 0 gp ((r, [], [], []), s'))
-    (fun _ => by simp [freshNewWeight, outWeight]) ?_ ?_ attempts hA budget s start (fun _ => Or.inl rfl)
-    (fun _ _ => rfl)
-  · intro s' hrel
+    (fun _ => by simp [freshNewWeight, outWeight]) ?_ ?_ ?_ attempts hA budget s start
+    (fun _ => Or.inl rfl) hinv (fun _ _ _ => rfl)
+  · -- a fresh store only grows the weight
+    intro r s' y v hy
+    refine add_le_add ?_ ?_
+    · unfold freshNewWeight
+      simp only
+      split_ifs with hr
+      · refine Finset.sum_le_sum fun ρ _ => ?_
+        split_ifs
+        · exact pcache_elim_store_mono parameter data m ρ s' y v hy _
+        · exact le_rfl
+      · exact le_rfl
+    · unfold outWeight
+      simp only
+      rcases r with _ | (_ | sig)
+      · exact le_rfl
+      · exact le_rfl
+      · exact pcache_elim_store_mono parameter data m sig.randomness s' y v hy _
+  · -- an exhausted scan weighs nothing
+    intro s' hrel
     simp only [freshNewWeight, outWeight, Option.isSome_some, if_true, add_zero]
     refine Finset.sum_eq_zero fun ρ _ => ?_
     split_ifs with hn
-    · rcases hrel ρ with h | ⟨_, u, hu', hnl⟩
-      · rw [h, hn]; rfl
-      · simp only [hu', Option.elim, if_neg hnl]
+    · cases hpc : pcache parameter data m s' ρ with
+      | none => rfl
+      | some w =>
+          have h0 := first_of_pcache parameter data hpc
+          rcases hrel ρ with h | ⟨_, u1, hu', hnl⟩
+          · rw [h, hn] at h0; cases h0
+          · rw [hu'] at h0
+            cases h0
+            simp only [Option.elim, if_neg hnl]
     · rfl
-  · intro ρ s' u0 b hoff hs0 out hout
-    have hkeep := finish_keeps_msg tg initial model parameter data m hparse ρ b s' u0 hs0 out hout
-    have hk : ∀ ρ', out.2.cache (blk parameter data m ρ') = s'.cache (blk parameter data m ρ') :=
-      fun ρ' => hkeep _ (msgInput_digestInput parameter data.root m ρ')
+  · -- the final assembly weighs its own pair
+    intro ρ s' u b hoff hs0 out hout
+    have hext := interp_extends tg initial model _ b s' out hout
+    have hpcρ : pcache parameter data m out.2 ρ = some u :=
+      pcache_of_cached (p := (m, ρ)) parameter data fun call => hext.1 _ _ (hs0 call)
+    have hkeep := finish_keeps_msg tg initial model parameter data m ρ b s' out hout
+    have hother : ∀ ρ', ρ' ≠ ρ → pcache parameter data m out.2 ρ' = pcache parameter data m s' ρ' := by
+      intro ρ' hne
+      exact pcache_congr (p := (m, ρ')) parameter data fun call =>
+        hkeep _ (msgInput_digestInput parameter data.root m ρ' call) fun call' =>
+          GraphView.pblk_ne_of_ne parameter data m hne call call'
     show freshNewWeight parameter data m s gf ((out.1.1, [], [], []), out.2) +
       outWeight parameter data m s 0 gp ((out.1.1, [], [], []), out.2) ≤ _
     by_cases hsome : out.1.1.isSome
-    · rw [if_pos hsome, hk ρ, hs0]
+    · rw [if_pos hsome, hpcρ]
       simp only [Option.elim]
       have hfresh : freshNewWeight parameter data m s gf ((out.1.1, [], [], []), out.2) =
           if s.cache (blk parameter data m ρ) = none then
-            (if Landed parameter (blockIndex u0) then gf (viewOf u0) else 0) else 0 := by
+            (if Landed parameter (blockIndex (u firstCall)) then gf (viewOf u) else 0) else 0 := by
         simp only [freshNewWeight, if_pos hsome]
         rw [Finset.sum_eq_single ρ]
-        · simp only [hk ρ, hs0, Option.elim]
+        · simp only [hpcρ, Option.elim]
         · intro ρ' _ hne
           split_ifs with hn
-          · rcases hoff ρ' hne with h | ⟨_, u, hu', hnl⟩
-            · rw [hk ρ', h, hn]; rfl
-            · simp only [hk ρ', hu', Option.elim, if_neg hnl]
+          · rw [hother ρ' hne]
+            cases hpc : pcache parameter data m s' ρ' with
+            | none => rfl
+            | some w =>
+                have h0 := first_of_pcache parameter data hpc
+                rcases hoff ρ' hne with h | ⟨_, u1, hu', hnl⟩
+                · rw [h, hn] at h0; cases h0
+                · rw [hu'] at h0
+                  cases h0
+                  simp only [Option.elim, if_neg hnl]
           · rfl
         · intro h; exact absurd (Finset.mem_univ ρ) h
-      rw [hfresh]
-      have hout' : outWeight parameter data m s 0 gp ((out.1.1, [], [], []), out.2) ≤
-          if s.cache (blk parameter data m ρ) = none then 0 else gp ρ (viewOf u0) := by
-        have := outWeight_finish_le tg initial model parameter data m s 0 gp ρ b s' out hout
-        simp only [if_pos hsome, hk ρ, hs0, Option.elim, pairWeight] at this
-        refine le_trans (le_of_eq ?_) (le_trans this (le_of_eq ?_))
-        · rfl
-        · split_ifs <;> rfl
-      refine le_trans (add_le_add_right hout' _) (le_of_eq ?_)
+      have hpool : outWeight parameter data m s 0 gp ((out.1.1, [], [], []), out.2) ≤
+          if s.cache (blk parameter data m ρ) = none then 0 else gp ρ (viewOf u) := by
+        have h := outWeight_finish_le tg initial model parameter data m s 0 gp ρ b s' out hout
+        rw [if_pos hsome, hpcρ] at h
+        simp only [Option.elim, pairWeight] at h
+        refine le_trans h (le_of_eq ?_)
+        split_ifs <;> simp
+      refine le_trans (add_le_add (le_of_eq hfresh) hpool) (le_of_eq ?_)
       simp only [pairWeight]
       split_ifs <;> simp
     · rw [if_neg hsome]
@@ -378,41 +419,41 @@ theorem upper_pointX {X : Multiset View → ℝ≥0∞} (hX : Monotone' X) {s : 
     (excl : Pair → Prop) (out : Run HashInput Coordinate (Option Signature) × State)
     (r : Option Signature) (hres : out.1.1 = some r) (Fail : Finset (Fin (2 ^ subtreeHeight)))
     (shape : (newRand parameter data m s out.2 = ∅ ∧ poolDisc parameter data m s out = 0) ∨
-      (∃ ρ u0, newRand parameter data m s out.2 = {ρ} ∧ poolDisc parameter data m s out = 0 ∧
-        out.2.cache (blk parameter data m ρ) = some u0 ∧ Landed parameter (blockIndex u0) ∧
+      (∃ ρ u, newRand parameter data m s out.2 = {ρ} ∧ poolDisc parameter data m s out = 0 ∧
+        pcache parameter data m out.2 ρ = some u ∧ Landed parameter (blockIndex (u firstCall)) ∧
         s.cache (blk parameter data m ρ) = none ∧
         (∀ ρ', ρ' ≠ ρ → RelatedAt parameter data m s out.2 ρ') ∧
-        (r = none → (viewOf u0).1 ∈ Fail) ∧ (∀ sig, r = some sig → sig.randomness = ρ)) ∨
-      (∃ ρ u0 sig, newRand parameter data m s out.2 = ∅ ∧ poolDisc parameter data m s out = {viewOf u0} ∧
-        r = some sig ∧ sig.randomness = ρ ∧ s.cache (blk parameter data m ρ) = some u0 ∧
-        out.2.cache (blk parameter data m ρ) = some u0))
+        (r = none → (viewOf u).1 ∈ Fail) ∧ (∀ sig, r = some sig → sig.randomness = ρ)) ∨
+      (∃ ρ u sig, newRand parameter data m s out.2 = ∅ ∧ poolDisc parameter data m s out = {viewOf u} ∧
+        r = some sig ∧ sig.randomness = ρ ∧ s.cache (blk parameter data m ρ) = some (u firstCall) ∧
+        pcache parameter data m out.2 ρ = some u))
     (hex : ∀ sig, r = some sig → s.cache (blk parameter data m sig.randomness) ≠ none → ¬excl (m, sig.randomness)) :
     X (discAfter parameter data m s d out) ≤
       X d + (freshNewWeight parameter data m s (fun v => X (d + {v}) - X d) out +
         outWeight parameter data m s 0 (fun ρ v => if excl (m, ρ) then 0 else X (d + {v}) - X d) out) := by
   unfold discAfter newPairs
-  rcases shape with ⟨hnew, hpool⟩ | ⟨ρ, u0, hnew, hpool, h0, hl, hs0, hothers, _, _⟩ |
-      ⟨ρ, u0, sig, hnew, hpool, hr, hsig, hs0, h0⟩
+  rcases shape with ⟨hnew, hpool⟩ | ⟨ρ, u, hnew, hpool, h0, hl, hs0, hothers, _, _⟩ |
+      ⟨ρ, u, sig, hnew, hpool, hr, hsig, hs0, h0⟩
   · rw [hnew, hpool]
     simp only [Finset.toList_empty, List.map_nil, Multiset.coe_nil, add_zero]
     exact le_self_add
   · rw [hnew, hpool, Finset.toList_singleton]
-    have hv : pview parameter data out.2 (m, ρ) = viewOf u0 := pview_of_cached h0
+    have hv : pview parameter data out.2 (m, ρ) = viewOf u := pview_of_pcache (q := (m, ρ)) h0
     simp only [List.map_cons, List.map_nil, hv, add_zero]
-    rw [show ((([viewOf u0] : List View)) : Multiset View) = {viewOf u0} from rfl]
-    have hbase : X d ≤ X (d + {viewOf u0}) := hX _ _ (Multiset.le_add_right _ _)
+    rw [show ((([viewOf u] : List View)) : Multiset View) = {viewOf u} from rfl]
+    have hbase : X d ≤ X (d + {viewOf u}) := hX _ _ (Multiset.le_add_right _ _)
     rw [← add_tsub_cancel_of_le hbase]
     refine add_le_add le_rfl (le_trans ?_ le_self_add)
     unfold freshNewWeight
     rw [if_pos (by rw [hres]; rfl)]
     refine le_trans (le_of_eq ?_) (Finset.single_le_sum (f := fun ρ' => if s.cache (blk parameter data m ρ') = none then
-      (out.2.cache (blk parameter data m ρ')).elim 0 (fun u0 =>
-        if Landed parameter (blockIndex u0) then X (d + {viewOf u0}) - X d else 0) else 0)
+      (pcache parameter data m out.2 ρ').elim 0 (fun w =>
+        if Landed parameter (blockIndex (w firstCall)) then X (d + {viewOf w}) - X d else 0) else 0)
       (fun _ _ => bot_le) (Finset.mem_univ ρ))
     simp only [hs0, h0, Option.elim, if_true, if_pos hl]
   · rw [hnew, hpool]
     simp only [Finset.toList_empty, List.map_nil, Multiset.coe_nil, add_zero]
-    have hbase : X d ≤ X (d + {viewOf u0}) := hX _ _ (Multiset.le_add_right _ _)
+    have hbase : X d ≤ X (d + {viewOf u}) := hX _ _ (Multiset.le_add_right _ _)
     rw [← add_tsub_cancel_of_le hbase]
     refine add_le_add le_rfl (le_trans ?_ le_add_self)
     unfold outWeight
@@ -431,9 +472,10 @@ variable (parameter data m)
 /-- **One signing call, one term.** Averaged over the uniform start and the scan, the upper value of
 a monotone function of the disclosures is at most the group of the message applied to that function
 after one fresh slot. -/
-theorem sign_term (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none)
-    {X : Multiset View → ℝ≥0∞} (hX : Monotone' X) (s : State) (d : Multiset View)
-    (excl : Pair → Prop) (budget : ℕ) :
+theorem sign_term (hparse : ∀ ρ call, model.parse (GraphView.pblk parameter data m ρ call) = none)
+    (hkind : ∀ ρ call, tg.kind (GraphView.pblk parameter data m ρ call) = .none)
+    {X : Multiset View → ℝ≥0∞} (hX : Monotone' X) (s : State) (hinv : PairInv parameter data m s)
+    (d : Multiset View) (excl : Pair → Prop) (budget : ℕ) :
     ∑' out, Pr[= out | interp tg initial model
           ((liftM ($ᵗ Randomness : ProbComp Randomness) : OracleComp CostSpec Randomness) >>= fun start =>
             signCostSourceLoop parameter data m (data.step m) digestAttemptLimit start) budget s] *
@@ -463,7 +505,7 @@ theorem sign_term (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none
     simp only [hpr]
     rw [ENNReal.tsum_mul_left, tsum_fintype]
     refine mul_le_mul' le_rfl (Finset.sum_le_sum fun start _ => ?_)
-    exact scan_bound_comb tg initial model parameter data m hparse s gf gp digestAttemptLimit
+    exact scan_bound_comb tg initial model parameter data m hparse hkind s hinv gf gp digestAttemptLimit
       (by unfold digestAttemptLimit; norm_num) budget start
   have hsum : ∑' out, Pr[= out | interp tg initial model
         ((liftM ($ᵗ Randomness : ProbComp Randomness) : OracleComp CostSpec Randomness) >>= fun start =>
@@ -487,15 +529,17 @@ theorem sign_term (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none
   · -- a cached landed pair
     refine le_trans ?_ (hUX (d + extOf parameter data s excl m ρ))
     unfold poolValue extOf
-    cases h0 : s.cache (blk parameter data m ρ) with
+    cases h0 : pcache parameter data m s ρ with
     | none =>
-        simp only [Option.elim, add_zero]
+        simp only [Option.elim]
+        rw [add_zero]
         exact hX _ _ (Multiset.le_add_right _ _)
-    | some u0 =>
+    | some u =>
         simp only [Option.elim]
         split_ifs with hl hx
-        · simp only [hgp, if_pos hx, add_zero, le_refl]
-        · have hv : pview parameter data s (m, ρ) = viewOf u0 := pview_of_cached h0
+        · simp only [hgp, if_pos hx, add_zero]
+          exact le_rfl
+        · have hv : pview parameter data s (m, ρ) = viewOf u := pview_of_pcache (q := (m, ρ)) h0
           simp only [hgp, if_neg hx, hv]
           rw [add_tsub_cancel_of_le (hX _ _ (Multiset.le_add_right _ _))]
         · rw [add_zero]

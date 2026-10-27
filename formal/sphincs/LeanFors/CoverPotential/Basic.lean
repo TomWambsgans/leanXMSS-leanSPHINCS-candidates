@@ -78,6 +78,30 @@ theorem pcache_of_uncached {s : State} {p : Pair} {call : DigestCall}
   unfold pcache Completeness.allSome
   exact dif_neg fun hall => by simpa [h] using hall call
 
+theorem first_of_pcache {s : State} {mes : Message} {ρ : Randomness} {u : DigestCall → HashOutput}
+    (h : pcache parameter data mes s ρ = some u) : s.cache (blk parameter data mes ρ) = some (u firstCall) :=
+  HiddenBridge.allSome_some h firstCall
+
+/-- A value read from the blocks of a pair only grows when a fresh input is stored: either the
+blocks are not all cached yet, or the store misses every one of them. -/
+theorem pcache_elim_store_mono (mes : Message) (ρ : Randomness) (s : State) (y : HashInput)
+    (v : HashOutput) (hy : s.cache y = none) (g : (DigestCall → HashOutput) → ℝ≥0∞) :
+    (pcache parameter data mes s ρ).elim 0 g ≤ (pcache parameter data mes (s.store y v) ρ).elim 0 g := by
+  cases hc : pcache parameter data mes s ρ with
+  | none => exact bot_le
+  | some u =>
+      have hall := cached_of_pcache (p := (mes, ρ)) parameter data hc
+      have hstore : ∀ call, (s.store y v).cache (pblk parameter data (mes, ρ) call) = some (u call) := by
+        intro call
+        have hne : pblk parameter data (mes, ρ) call ≠ y := by
+          intro heq
+          have hcall := hall call
+          rw [heq, hy] at hcall
+          cases hcall
+        rw [store_cache_ne s y _ hne v]
+        exact hall call
+      rw [pcache_of_cached (p := (mes, ρ)) parameter data hstore]
+
 theorem pcache_congr {s s' : State} {p : Pair}
     (h : ∀ call, s'.cache (pblk parameter data p call) = s.cache (pblk parameter data p call)) :
     pcache parameter data p.1 s' p.2 = pcache parameter data p.1 s p.2 :=
