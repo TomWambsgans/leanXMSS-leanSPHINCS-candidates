@@ -103,7 +103,7 @@ With all three, a chain step, a tree node, a grinding attempt and a WOTS$^+$C co
 
 \paragraph{The configurations.} Signature size and verification cost in compressions (Keccak-f[1600]
 permutations for Keccak-256), for each FTS; public and secret keys are 32 bytes each. A pruned key has the size and
-verification cost of the full key of its height.
+verification cost of the full key of its height. Throughout, costs are rounded up and lifetimes down.
 \begin{center}
 \begin{tabular}{llrrrr}
   \toprule
@@ -194,7 +194,7 @@ thousand~\cite{hwbench}.
   \toprule
   key & lifetime & keygen & signing, 16~KiB cache & signing, 1~MiB cache \\
   \midrule
-  full ($b=24$) & $3.36\cdot10^8$ & $4.0\cdot10^9$ & $3.9\cdot10^6$ & $194\cdot10^3$ \\
+  full ($b=24$) & $3.36\cdot10^8$ & $3.91\cdot10^9$ & $3.90\cdot10^6$ & $194\cdot10^3$ \\
   layered ($10+7+7$) & $3.36\cdot10^8$ & $239\cdot10^3$ & $165\cdot10^3$ & $164\cdot10^3$ \\
   pruned, $b=20$ & $2.38\cdot10^7$ & $245\cdot10^6$ & $314\cdot10^3$ & $82\cdot10^3$ \\
   pruned, $b=12$ & $1.16\cdot10^5$ & $955\cdot10^3$ & $81\cdot10^3$ & $79\cdot10^3$ \\
@@ -368,10 +368,11 @@ Minimality makes $R$ a function of $(m, \text{secret key})$ and the prepared set
 this flow is not covered by the Lean proof.
 
 \paragraph{Costs.} At $h=24$ and $26$ the host hashes $\approx2^{20}$ digests and proves them at 500 thousand Keccak-f
-permutations per second (750 thousand SHA-256, 1 million BLAKE2s compressions), 2.1~s with Keccak-256 (8.4~s at $h=28$). The device verifies the STARK in about $10^4$ compressions (1.7~s with Keccak-256
-at 5.8 thousand per second on a Ledger Nano S+~\cite{hwbench}), counted optimistically as 3~s: about 5~s in all
-(12~s at $h=28$), less where more instances are prepared. Preparing an instance costs the device $76\cdot10^3$
-Keccak-f permutations for a pruned key with $b=12$ and $164\cdot10^3$ for a layered one at $h=24$ ($343\cdot10^3$
+permutations per second (750 thousand SHA-256, 1 million BLAKE2s compressions), 2.1~s with Keccak-256 (8.4~s at $h=28$).
+The device verifies the STARK in about $10^4$ compressions (1.8~s with Keccak-256 at 5.8 thousand per second on a
+Ledger Nano S+~\cite{hwbench}), counted optimistically as 3~s: 5.2~s in all (11.5~s at $h=28$), less where more
+instances are prepared. Preparing an instance costs the device $76\cdot10^3$ Keccak-f permutations for a pruned
+key with $b=12$ and $164\cdot10^3$ for a layered one at $h=24$ ($343\cdot10^3$
 at $h=28$), WOTS$^+$C counter searches and the path included; the first $p$ are prepared once (about 63~min for
 the layered key at $h=28$).
 
@@ -525,7 +526,7 @@ most concentrated ones appear twice.
 \end{itemize}
 Every signature has the same size and verification cost. The WOTS$^+$C key that signs the forest uses a target sum
 of 128 instead of 120: 8 fewer chain steps at verification, for about 14\,700 counter tries instead of 830 when
-signing ($13.8\cdot10^3$ more permutations, counted in \cref{sec:usage}).
+signing ($13.9\cdot10^3$ more permutations, counted in \cref{sec:usage}).
 
 \paragraph{Security.} A forgery at an instance with $r$ prior signatures needs every tree to be covered: in both
 subtrees, the target WOTS key must have been opened, and the target codeword must lie below the componentwise max of
@@ -541,8 +542,8 @@ $2^{h-b}$ although the forger pays the signer's grinding cost per attempt; it is
 $+17\%$ at $h=24$, $b=20$ to a factor 1.8 at $b=8$. The best known attack also uses the WOTS$^+$C key (a counter
 search for a neighbouring encoding, then one chain preimage); at $h=24$ it is 100, 99, 96, 95, 95, 93 and 91\% of the
 forest's cover figure for $b=24,20,14,13,12,10,8$~\cite{proofs}. For FORS, a tree is covered when the target leaf
-is among the revealed ones, so $\mathrm{cover}(r)=(1-(1-2^{-a})^r)^k$, with the same lifetime rule. At $h=24$, rounded down (the last row is
-\cref{sec:lifetimes}):
+is among the revealed ones, so $\mathrm{cover}(r)=(1-(1-2^{-a})^r)^k$, with the same lifetime rule (the loads
+exactly binomial). At $h=24$, rounded down (the last row is \cref{sec:lifetimes}):
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{lrrrrrrr}

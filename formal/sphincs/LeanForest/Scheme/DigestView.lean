@@ -79,7 +79,7 @@ theorem getLsbD_of_extract {left right : MessageDigest} {offset len position : N
   rwa [show offset + (position - offset) = position by omega] at hbit
 
 /-- The index and the 8 fields hold every bit of the digest: bits 0 to 127 are the 16 codeword
-indices, 128 to 153 the index, 154 to 185 the 8 tree leaves and 186 to 233 the 16 WOTS keys. -/
+indices, 128 to 175 the 16 WOTS keys, 176 to 207 the 8 tree leaves and 208 to `207 + h` the index. -/
 theorem fullDigestView_injective : Function.Injective fullDigestView := by
   intro left right heq
   have hidx : left.extractLsb' indexOffset totalHeight = right.extractLsb' indexOffset totalHeight := by

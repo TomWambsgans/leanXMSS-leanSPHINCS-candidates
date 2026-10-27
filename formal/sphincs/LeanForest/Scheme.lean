@@ -580,7 +580,7 @@ def rootPayload (root : Digest) : HashInput := bytesLE 16 root
 
 /-- `Enc(P, e, M, c)`: hash the message, then the counter, under the leaf's encoding tweak, and
 decode. There is no message hash: the counter falls in the last block of this one
-(`P || A || K || c`, 292 bytes, at the bottom layer; `P || A || root || c`, 68 bytes, above). -/
+(`P || A || K || c`, 292 bytes, at the bottom layer; `P || A || root || c`, 52 bytes, above). -/
 def encode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
     (message : HashInput) (counter : Counter) : m (Option Encoding) := do
   let digest ← tweakableHash parameter (.encoding lay tree leaf)

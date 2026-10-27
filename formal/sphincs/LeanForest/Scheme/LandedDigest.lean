@@ -6,8 +6,8 @@ import LeanForest.Scheme.Landing
 section
 
 /-!
-The candidate's single message-digest call: its first 234 bits are the digest, so a uniform block
-gives the uniform 234-bit digest law.
+The candidate's single message-digest call: its first `h + 208` bits are the digest, so a uniform
+block gives the uniform digest law on `h + 208` bits.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -18,7 +18,7 @@ namespace LeanForest.Security
 variable [Params]
 open Concrete
 
-/-- The oracle block induces exactly the uniform 234-bit digest law. -/
+/-- The oracle block induces exactly the uniform digest law on `h + 208` bits. -/
 theorem evalDist_digestBlock_uniform :
     𝒟[truncateMessageDigest <$> ($ᵗ HashOutput : ProbComp HashOutput)] =
       𝒟[($ᵗ MessageDigest : ProbComp MessageDigest)] :=

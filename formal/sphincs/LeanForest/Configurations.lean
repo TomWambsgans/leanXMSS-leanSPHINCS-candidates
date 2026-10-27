@@ -2,8 +2,8 @@ import LeanForest.Scheme.VerificationCost
 
 /-! **The 24 configurations: sizes and verification costs.** A configuration is a height `h` (22, 24,
 26, 28, for lifetimes of about `2^26` to `2^32` signatures), a shape (pruned: one tree of height `h`,
-of which key generation builds a kept subtree; layered: a hypertree of three layers, a top layer of at most 12
-over two equal layers of at least 6) and a hash (Keccak-256, BLAKE2s, SHA-256). The size of a signature
+of which key generation builds a kept subtree; layered: a hypertree of three layers, a top layer of 10
+over two equal layers of 6 to 9) and a hash (Keccak-256, BLAKE2s, SHA-256). The size of a signature
 and the compressions of an accepted verification depend only on the height and the number of layers
 (`Layout.signature_size`, `Cost.verification_compressions`): the theorems below hold for every
 `Params` of the configuration, whatever its kept subtree and signature limit. The figures are those of
