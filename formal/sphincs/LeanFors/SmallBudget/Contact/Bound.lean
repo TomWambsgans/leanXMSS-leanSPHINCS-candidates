@@ -175,10 +175,10 @@ theorem a4F_bound (hparse : ∀ p, model.parse (pblk K.p data p) = none)
         κ * ν * ∑ j ∈ Finset.range total, ((j : ℝ≥0∞) * (startNearF wbar j + failMass Fail) +
           signatureLimit * failMass Fail) + lam Lmax 0 total) +
         (ν * ((signatureLimit : ℝ≥0∞) * revRate) + payB) *
-          expCount K model (IsFchainIn K.p) (advProg K.p data M []) total (DebtState.start K.initial known) := by
+          expCount K model (IsFleafIn K.p) (advProg K.p data M []) total (DebtState.start K.initial known) := by
   rw [← psiF_start K data wbar κ Fail Lmax known total]
-  exact final_le_startF K data model (IsFchainIn K.p) _ hMp hMi hparse
-    (fun p => by rintro ⟨f, hf⟩; exact msg_ne_fchain (msgInput_digestInput K.p data.root p.1 p.2) hf) hclean total
+  exact final_le_startF K data model (IsFleafIn K.p) _ hMp hMi hparse
+    (fun p => by rintro ⟨f, hf⟩; exact msg_ne_fleaf (msgInput_digestInput K.p data.root p.1 p.2) hf) hclean total
     (fun _ _ => rfl) (finalA4_le_one K data.root) (psiF_newPair K data wbar κ Fail total model hfair hQ)
     (psiF_ordinary K data wbar κ Fail total model hMp hMi hfair.le_one hκ Lmax)
     (psiF_sign K data wbar κ Fail total model hMp hMi hMo hparse hfail hfair.le_one Lmax)

@@ -5,9 +5,9 @@ import LeanFors.CoverPotential.OneCoinGame
 /-! **Paid potentials of the lazy run.** A potential of the state, the cached landed pairs, the
 signing log, the disclosed views, the reveals and the remaining budget pays a final value of the
 run if a new pair, any other ordinary query (up to a payment per query of a class), a signing call
-on a fresh message and the end of the game are paid. The invariants carried along: the invariant of
-the linear potential, the pair and count invariants, guesses backed by cached queries, and reveals
-that are exposed and upward closed on their chains. -/
+on a fresh message and the end of the game are paid. A query of one digest call of a new pair
+presamples the other calls. The invariants carried along: the invariant of the linear potential,
+the pair and count invariants, guesses backed by cached queries, and exposed reveals. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -84,7 +84,6 @@ structure BInvF (s : State) (P : List Pair) (Ms : List Message) (d : Multiset Vi
   count : CountInv K.p data Qtot s budget
   gc : GuessCached model s
   rinv : ∀ c ∈ R, s.known c ≠ none
-  rclosed : UpClosed R
 
 /-- A potential of the lazy run. -/
 abbrev PotF := State → List Pair → List Message → QueryLog SigningSpec → Multiset View → List Coordinate → ℕ → ℝ≥0∞
@@ -98,7 +97,7 @@ def NewPairPaysF (Φ : PotF) : Prop :=
   ∀ budget (s : State) (P : List Pair) (Ms : List Message) (L : QueryLog SigningSpec) (d : Multiset View)
     (R : List Coordinate),
     1 ≤ budget → BInvF K data Qtot model s P Ms d R budget →
-      ∀ p : Pair, s.cache (pblk K.p data p) = none →
+      ∀ p : Pair, s.cache (pblk K.p data p firstCall) = none →
         1 ≤ Φ s P Ms L d R budget ∨
         pairE (fun u => Φ (withPair K.p data s p u) (addPair K.p P p u) (addMsg Ms p.1) L d R (budget - 1)) ≤
           Φ s P Ms L d R budget
@@ -125,7 +124,7 @@ def OrdinaryPaysF (IsF : HashInput → Prop) (pay : ℝ≥0∞) (Φ : PotF) : Pr
   ∀ budget (s : State) (P : List Pair) (Ms : List Message) (L : QueryLog SigningSpec) (d : Multiset View)
     (R : List Coordinate),
     1 ≤ budget → BInvF K data Qtot model s P Ms d R budget → ∀ x : HashInput,
-      ¬(∃ p, x = pblk K.p data p ∧ s.cache (pblk K.p data p) = none) →
+      ¬(∃ p call, x = pblk K.p data p call ∧ s.cache (pblk K.p data p firstCall) = none) →
         ∑' r, Pr[= r | ordinaryStep model x s.known s] * Φ r.2 P Ms L d R (budget - 1) ≤
           Φ s P Ms L d R budget + pay * (if IsF x then 1 else 0)
 
@@ -150,20 +149,19 @@ section Inv
 
 variable {K : Ctx} {data : PublicData} {Qtot : ℕ} {model : HiddenRows.Model HashInput HashOutput Address Coordinate}
 
-/-- After a new pair. -/
+/-- After a new pair: every digest call of the pair is stored at once. -/
 theorem binvF_withPair (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
-    (hparse : ∀ p, model.parse (pblk K.p data p) = none)
+    (hparse : ∀ p call, model.parse (pblk K.p data p call) = none)
     {budget : ℕ} (hb : 1 ≤ budget) {s : State} {P : List Pair} {Ms : List Message} {d : Multiset View}
     {R : List Coordinate}
     (hB : BInvF K data Qtot model s P Ms d R budget) {p : Pair}
-    (hp0 : s.cache (pblk K.p data p) = none) (u : HashOutput) :
+    (hp0 : s.cache (pblk K.p data p firstCall) = none) (u : DigestCall → HashOutput) :
     BInvF K data Qtot model (withPair K.p data s p u) (addPair K.p P p u) (addMsg Ms p.1) d R (budget - 1) := by
-  have hext := extends_store s (pblk K.p data p) u hp0
-  refine ⟨?_, pinv_withPair hB.pinv hp0 u, minv_withPair hB.minv p u, hB.dinv, fun m => ?_, ?_, hB.rinv,
-    hB.rclosed⟩
-  · refine hB.inv.store (pblk K.p data p) u hp0 fun q hq _ => ?_
-    rw [← hMp, hparse p] at hq
-    cases hq
+  have hext := extends_withPair hB.pinv hp0 u
+  refine ⟨?_, pinv_withPair hB.pinv hp0 u, minv_withPair hB.minv p u, hB.dinv, fun m => ?_, ?_, hB.rinv⟩
+  · exact K.inv_withPair hB.inv hB.pinv hp0 u fun call q hq => by
+      rw [← hMp, hparse p call] at hq
+      cases hq
   · have h1 := count_withPair (parameter := K.p) (data := data) m s p u
     have h2 := hB.count m
     omega
@@ -176,13 +174,14 @@ theorem binvF_ordinary (hMp : model.parse = HiddenGraph.parse K.p (candidateActi
     (hMi : model.incoming = Address.inputCoordinate)
     {budget : ℕ} (hb : 1 ≤ budget) {s : State} {P : List Pair} {Ms : List Message}
     {d : Multiset View} {R : List Coordinate} (hB : BInvF K data Qtot model s P Ms d R budget)
-    (x : HashInput) (hnew : ¬∃ p, x = pblk K.p data p ∧ s.cache (pblk K.p data p) = none)
+    (x : HashInput) (hnew : ¬∃ p call, x = pblk K.p data p call ∧ s.cache (pblk K.p data p firstCall) = none)
     (r : HashOutput × State) (hr : r ∈ support (ordinaryStep model x s.known s)) :
     BInvF K data Qtot model r.2 P Ms d R (budget - 1) := by
   have hext := ordinaryStep_extends model x s r hr
   obtain ⟨hP', _⟩ := same_items K.p data hext (ordinaryStep_cache_ne model x s r hr) hnew hB.pinv
   refine ⟨K.inv_step model hMp hMi (.inl (.inr (.inl x))) s hB.inv r (by rw [costStep_ordinary]; exact hr),
-    hP', minv_blocks (same_blocks hext (ordinaryStep_cache_ne model x s r hr) hnew) hB.minv, hB.dinv, fun m => ?_, guessCached_ordinary model x s hB.gc r hr, fun c hc => ?_, hB.rclosed⟩
+    hP', minv_blocks (same_blocks hext (ordinaryStep_cache_ne model x s r hr) hnew) hB.minv, hB.dinv,
+    fun m => ?_, guessCached_ordinary model x s hB.gc r hr, fun c hc => ?_⟩
   · have h1 : cachedCount K.p data m r.2 ≤ cachedCount K.p data m s + 1 := by
       rw [cachedCount_eq, cachedCount_eq]
       exact costStep_card_le model _ (.inl (.inr (.inl x))) s r (by rw [costStep_ordinary]; exact hr)
@@ -192,21 +191,10 @@ theorem binvF_ordinary (hMp : model.parse = HiddenGraph.parse K.p (candidateActi
     rw [hext.2.1 c v hv]
     exact Option.some_ne_none _
 
-/-- A completed signing call (uniform start, then the scan) reveals upward-closed chains. -/
-theorem closedRuns_source {A : Type} (tg : Targeting HashInput HashOutput Coordinate)
-    (initial : HiddenOutside.Cache HashInput HashOutput) (model : HiddenRows.Model HashInput HashOutput A Coordinate)
-    (parameter : PublicParameter) (data : PublicData) (message : Message) :
-    ClosedRuns tg initial model (signCostSource parameter data message) := by
-  intro budget s out hout hsome
-  unfold signCostSource at hout
-  rw [interp_liftProb_bind, support_bind] at hout
-  obtain ⟨ρ, _, hout⟩ := Set.mem_iUnion₂.1 hout
-  exact closedRuns_loop tg initial model parameter data message _ ρ budget s out hout hsome
-
 /-- After a signing call. -/
 theorem binvF_sign (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate)
-    (hparse : ∀ p, model.parse (pblk K.p data p) = none) (m : Message)
+    (hparse : ∀ p call, model.parse (pblk K.p data p call) = none) (m : Message)
     (budget : ℕ) {s : State} {P : List Pair} {Ms : List Message} {d : Multiset View} {R : List Coordinate}
     (hB : BInvF K data Qtot model s P Ms d R budget)
     (o1 : Run HashInput Coordinate (Option Signature) × State)
@@ -219,9 +207,7 @@ theorem binvF_sign (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K
     o1 ho1 r hr
   have hext := interp_extends K.tg K.initial model _ budget s o1 ho1
   refine ⟨inv_interp K model hMp hMi K.tg K.initial _ budget s hB.inv o1 ho1, hP', hM', hD', hC',
-    interp_guessCached K.tg K.initial model _ budget s hB.gc o1 ho1, fun c hc => ?_,
-    upClosed_append hB.rclosed (closedRuns_source K.tg K.initial model K.p data m budget s o1 ho1
-      (by rw [hr]; rfl))⟩
+    interp_guessCached K.tg K.initial model _ budget s hB.gc o1 ho1, fun c hc => ?_⟩
   rcases List.mem_append.1 hc with hc | hc
   · obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.1 (hB.rinv c hc)
     rw [hext.2.1 c v hv]
@@ -229,13 +215,13 @@ theorem binvF_sign (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K
   · exact interp_reveals_known K.tg K.initial model _ budget s o1 ho1 c hc
 
 /-- At the start of the run. -/
-theorem binvF_start (hclean : ∀ p, K.initial (pblk K.p data p) = none) (known : HiddenReveal.Knowledge Coordinate)
+theorem binvF_start (hclean : ∀ p call, K.initial (pblk K.p data p call) = none) (known : HiddenReveal.Knowledge Coordinate)
     (hinv : K.Inv (DebtState.start K.initial known)) (total : ℕ) :
     BInvF K data total model (DebtState.start K.initial known) [] [] 0 [] total :=
-  ⟨hinv, start_pinv K.p data K.initial hclean known, ⟨List.nodup_nil, fun m ρ h => absurd (hclean (m, ρ)) h⟩,
-    (fun i c s j a ch pos h => by cases h),
+  ⟨hinv, start_pinv K.p data K.initial hclean known, ⟨List.nodup_nil, fun m ρ h => absurd (hclean (m, ρ) firstCall) h⟩,
+    (fun i κ l q h => by cases h),
     start_count K.p data K.initial hclean known total, guessCached_start K.initial model known,
-    (fun c h => by cases h), fun _ _ _ _ _ _ _ _ h => by cases h⟩
+    (fun c h => by cases h)⟩
 
 end Inv
 
@@ -272,7 +258,7 @@ theorem goodXF_draw (L : QueryLog SigningSpec) (draw : ℕ)
 /-- **One ordinary query**, with the payment. -/
 theorem goodXF_ordinary (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate)
-    (hparse : ∀ p, model.parse (pblk K.p data p) = none) (hFp : ∀ p, ¬IsF (pblk K.p data p))
+    (hparse : ∀ p call, model.parse (pblk K.p data p call) = none) (hFp : ∀ p call, ¬IsF (pblk K.p data p call))
     (hG0 : ∀ R s, G none R s = 0) (hG1 : ∀ o R s, G o R s ≤ 1)
     (hnewp : NewPairPaysF K data Qtot model Φ) (hord : OrdinaryPaysF K data Qtot model IsF pay Φ)
     (L : QueryLog SigningSpec) (x : HashInput) (next : HashOutput → OracleComp CostSpec HiddenBridge.Outcome)
@@ -361,7 +347,7 @@ theorem goodXF_pure (hfin : FinalPaysF K data Qtot model Φ G) (L : QueryLog Sig
 
 theorem goodXF_liftHash (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate)
-    (hparse : ∀ p, model.parse (pblk K.p data p) = none) (hFp : ∀ p, ¬IsF (pblk K.p data p))
+    (hparse : ∀ p call, model.parse (pblk K.p data p call) = none) (hFp : ∀ p call, ¬IsF (pblk K.p data p call))
     (hG0 : ∀ R s, G none R s = 0) (hG1 : ∀ o R s, G o R s ≤ 1)
     (hnewp : NewPairPaysF K data Qtot model Φ) (hord : OrdinaryPaysF K data Qtot model IsF pay Φ)
     (L : QueryLog SigningSpec) {α : Type} (computation : OracleComp HashSpec α)
@@ -377,7 +363,7 @@ theorem goodXF_liftHash (hMp : model.parse = HiddenGraph.parse K.p (candidateAct
 /-- **One signing call** on a message that was never signed before, with the payments. -/
 theorem goodXF_sign (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate)
-    (hparse : ∀ p, model.parse (pblk K.p data p) = none)
+    (hparse : ∀ p call, model.parse (pblk K.p data p call) = none)
     (hG0 : ∀ R s, G none R s = 0) (hsign : SignPaysF K data Qtot model Φ)
     (L : QueryLog SigningSpec) (m : Message) (hm : ∀ entry ∈ L, entry.1 ≠ m)
     (next : Option Signature → OracleComp CostSpec HiddenBridge.Outcome)
@@ -439,7 +425,7 @@ theorem goodXF_sign (hMp : model.parse = HiddenGraph.parse K.p (candidateActive 
 /-- **A paid potential through any adversary that never repeats a message**, with the payments. -/
 theorem goodXF_advProg (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate)
-    (hparse : ∀ p, model.parse (pblk K.p data p) = none) (hFp : ∀ p, ¬IsF (pblk K.p data p))
+    (hparse : ∀ p call, model.parse (pblk K.p data p call) = none) (hFp : ∀ p call, ¬IsF (pblk K.p data p call))
     (hG0 : ∀ R s, G none R s = 0) (hG1 : ∀ o R s, G o R s ≤ 1)
     (hnewp : NewPairPaysF K data Qtot model Φ) (hord : OrdinaryPaysF K data Qtot model IsF pay Φ)
     (hsign : SignPaysF K data Qtot model Φ) (hfin : FinalPaysF K data Qtot model Φ G) :
@@ -475,8 +461,8 @@ theorem goodXF_advProg (hMp : model.parse = HiddenGraph.parse K.p (candidateActi
 expected number of queries of the class. -/
 theorem final_le_startF (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate)
-    (hparse : ∀ p, model.parse (pblk K.p data p) = none) (hFp : ∀ p, ¬IsF (pblk K.p data p))
-    (hclean : ∀ p, K.initial (pblk K.p data p) = none)
+    (hparse : ∀ p call, model.parse (pblk K.p data p call) = none) (hFp : ∀ p call, ¬IsF (pblk K.p data p call))
+    (hclean : ∀ p call, K.initial (pblk K.p data p call) = none)
     (total : ℕ) (hG0 : ∀ R s, G none R s = 0) (hG1 : ∀ o R s, G o R s ≤ 1)
     (hnewp : NewPairPaysF K data total model Φ) (hord : OrdinaryPaysF K data total model IsF pay Φ)
     (hsign : SignPaysF K data total model Φ) (hfin : FinalPaysF K data total model Φ G)

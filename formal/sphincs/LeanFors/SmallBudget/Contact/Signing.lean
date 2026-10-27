@@ -34,7 +34,7 @@ variable (K : Ctx) (model : HiddenRows.Model HashInput HashOutput Address Coordi
 
 include hMp hMi in
 /-- A run avoiding forest step inputs records no forest step. -/
-theorem interp_recd_avoid {α : Type} (comp : OracleComp CostSpec α) (h : Avoids (IsFchainIn K.p) comp) :
+theorem interp_recd_avoid {α : Type} (comp : OracleComp CostSpec α) (h : Avoids (IsFleafIn K.p) comp) :
     ∀ budget (s : State), ∀ out ∈ support (interp K.tg K.initial model comp budget s),
       ∀ f, Ctx.Recd out.2 f → Ctx.Recd s f := by
   induction comp using OracleComp.inductionOn with
@@ -45,7 +45,7 @@ theorem interp_recd_avoid {α : Type} (comp : OracleComp CostSpec α) (h : Avoid
       exact hf
   | query_bind input next ih =>
       intro budget s out hout f hf
-      obtain ⟨hin, hnext⟩ := (avoids_query_bind (IsFchainIn K.p) input next).1 h
+      obtain ⟨hin, hnext⟩ := (avoids_query_bind (IsFleafIn K.p) input next).1 h
       rw [interp_query_bind] at hout
       split_ifs at hout with hcost
       · rw [support_bind] at hout
@@ -84,7 +84,7 @@ theorem interp_recd_avoid {α : Type} (comp : OracleComp CostSpec α) (h : Avoid
 
 include hMp hMo in
 /-- A query writing a forest chain coordinate is a forest step input. -/
-theorem writes_fchain {c : Coordinate} (hc : IsFc c) {x : HashInput} (h : Writes model c x) : IsFchainIn K.p x := by
+theorem writes_fleaf {c : Coordinate} (hc : IsFc c) {x : HashInput} (h : Writes model c x) : IsFleafIn K.p x := by
   obtain ⟨a, v, hp, hout⟩ := h
   rw [hMp] at hp
   obtain ⟨hx, -⟩ := (parse_some_iff _ _ x (a, v)).1 hp
@@ -100,10 +100,10 @@ theorem writes_fchain {c : Coordinate} (hc : IsFc c) {x : HashInput} (h : Writes
 end Avoid
 
 /-- The signing call (uniform start, then the scan) queries no forest step input. -/
-theorem avoids_source_fchain (p : PublicParameter) (parameter : PublicParameter) (data : PublicData)
-    (message : Message) : Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate) (IsFchainIn p)
+theorem avoids_source_fleaf (p : PublicParameter) (parameter : PublicParameter) (data : PublicData)
+    (message : Message) : Avoids (D := HashInput) (R := HashOutput) (ι := Coordinate) (IsFleafIn p)
       (signCostSource parameter data message) :=
-  avoids_bind _ (avoids_liftProb _ _) fun ρ => avoids_loop_fchain p parameter data message _ ρ
+  avoids_bind _ (avoids_liftProb _ _) fun ρ => avoids_loop_fleaf p parameter data message _ ρ
 
 /-! ### One contact through a signing call -/
 
@@ -137,7 +137,7 @@ theorem sign_step_facts {m : Message} {budget : ℕ} {s : State} {P : List Pair}
     (o1.2.known f.outC ≠ none → s.known f.outC = none → OpensF f o1.1.2.1) ∧
     (¬OpensF f o1.1.2.1 → K.cw o1.2 f = K.cw s f) ∧
     (Settled (R ++ o1.1.2.1) f → ¬Settled R f → OpensF f o1.1.2.1) := by
-  have havoid := avoids_source_fchain K.p K.p data m
+  have havoid := avoids_source_fleaf K.p K.p data m
   have hcache := interp_avoids_cache K.tg K.initial model _ _ havoid budget s o1 ho1 (f.input K.p) ⟨f, rfl⟩
   have hext := interp_extends K.tg K.initial model _ budget s o1 ho1
   have hfr : ∀ u, K.Fr o1.2 (f.input K.p) u ↔ K.Fr s (f.input K.p) u := fun u => by
@@ -146,7 +146,7 @@ theorem sign_step_facts {m : Message} {budget : ℕ} {s : State} {P : List Pair}
   have hexp : o1.2.known f.outC ≠ none → s.known f.outC = none → OpensF f o1.1.2.1 := by
     intro hk hs
     have hw : Avoids (Writes model f.outC) (signCostSource K.p data m) :=
-      avoids_mono (fun x hx => writes_fchain K model hMp hMo ⟨_, _, _, _, _, _, _, rfl⟩ hx) havoid
+      avoids_mono (fun x hx => writes_fleaf K model hMp hMo ⟨_, _, _, _, _, _, _, rfl⟩ hx) havoid
     rcases interp_known_new K.tg K.initial model _ f.outC hw budget s o1 ho1 hk with h | h
     · exact absurd hs h
     · -- the written coordinate is not the top: tops are anchors
@@ -545,7 +545,7 @@ theorem psiF_sign (hparse : ∀ p, model.parse (pblk K.p data p) = none)
         set y' := budget - traceCost o1.1.2.2.1 with hy'
         have hy'le : y' ≤ budget := Nat.sub_le _ _
         have hrecd : ∀ f, Ctx.Recd o1.2 f ↔ Ctx.Recd s f := fun f =>
-          ⟨interp_recd_avoid K model hMp hMi _ (avoids_source_fchain K.p K.p data m) budget s o1
+          ⟨interp_recd_avoid K model hMp hMi _ (avoids_source_fleaf K.p K.p data m) budget s o1
             ho1 f, fun h => (interp_extends K.tg K.initial model _ budget s o1 ho1).2.2 _ h⟩
         have hlen : signatureLimit - (L ++ [(⟨m, r⟩ : (_ : Message) × Option Signature)]).length =
             signatureLimit - (L.length + 1) := by simp

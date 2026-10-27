@@ -112,7 +112,7 @@ theorem wsum_store_new (g : FIn → ℝ≥0∞) {s : St} {x : HashInput} (u : Ha
   unfold wsum
   have h := sum_single (fun f => if Recd s f then g f * K.cw s f else 0)
     (fun f => if Recd (s.store x u) f then g f * K.cw (s.store x u) f else 0) f0 (fun f hf => by
-      have hne : x ≠ f.input K.p := fun h => hf (fchain_inj (hxf.symm.trans h)).symm
+      have hne : x ≠ f.input K.p := fun h => hf (fleaf_inj (hxf.symm.trans h)).symm
       rw [K.cw_store_other u hx hi hne]
       rfl) (by
       have hnfe : ¬K.FE s f0 := fun ⟨w, hw⟩ => by
@@ -197,7 +197,7 @@ step query at an unexposed read coordinate adds `2^-128` times its coefficient. 
 theorem wsum_ordinary {s : St} (hinv : K.Inv s) (hgc : ForestPotential.GuessCached M s) (x : HashInput)
     (g : FIn → ℝ≥0∞) (C : ℝ≥0∞) (hC : ∀ f : FIn, x = f.input K.p → s.known f.inC = none → g f ≤ C) :
     ∑' r, Pr[= r | ordinaryStep M x s.known s] * K.wsum g r.2 ≤
-      K.wsum g s + ν * C * (if IsFchainIn K.p x then 1 else 0) := by
+      K.wsum g s + ν * C * (if IsFleafIn K.p x then 1 else 0) := by
   -- a fresh read without a new record keeps the mean
   have hread : ∀ s1 : St, s1.cache = s.cache → s1.known = s.known → s1.guesses = s.guesses →
       ∑' r, Pr[= r | readOutside x s1] * K.wsum g r.2 ≤ K.wsum g s := by
@@ -266,7 +266,7 @@ theorem wsum_ordinary {s : St} (hinv : K.Inv s) (hgc : ForestPotential.GuessCach
               · obtain ⟨f0, hxf⟩ := hF
                 simp only [K.wsum_store_new g _ hc' hi hxf, hrec0, mul_add]
                 rw [ENNReal.tsum_add, ENNReal.tsum_mul_right, Ctx.mean_new g (s.record g0) f0]
-                have hIs : IsFchainIn K.p x := ⟨f0, hxf⟩
+                have hIs : IsFleafIn K.p x := ⟨f0, hxf⟩
                 rw [if_pos hIs, mul_one]
                 refine add_le_add (mul_le_of_le_one_left' tsum_probOutput_le_one) ?_
                 split_ifs

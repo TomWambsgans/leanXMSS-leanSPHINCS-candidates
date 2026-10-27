@@ -2,12 +2,12 @@ import LeanFors.SmallBudget.Linear.Payoff
 import LeanFors.SmallBudget.Linear.Payments
 
 /-! The linear potential of the small-budget route pays, besides the digest baseline, a fixed
-amount at every forest step query. A fresh forest step costs the potential at most
-`(1 + Y + K_F) 2^-128` (a guess, a recorded contact weight at the remaining budget `Y`, and its pairs
-with the weighted recorded contacts `K_F`), while the rate decreases by at least `(ρ + K_F) 2^-128`;
-every other answer of a forest step (canonical, cached, or at a known read coordinate) costs at most
-`(1 + Y) 2^-128`. So each forest step query, fresh or cached, leaves `(ρ - 1 - x) 2^-128`,
-`x = total / 2^128`, which the potential pays out. -/
+amount at every FORS leaf query (the hash of a FORS secret). A fresh FORS leaf query costs the
+potential at most `(1 + Y + K_F) 2^-128` (a guess, a recorded contact weight at the remaining budget
+`Y`, and its pairs with the weighted recorded contacts `K_F`), while the rate decreases by at least
+`(ρ + K_F) 2^-128`; every other answer of a FORS leaf query (canonical, cached, or at a known secret)
+costs at most `(1 + Y) 2^-128`. So each FORS leaf query, fresh or cached, leaves
+`(ρ - 1 - x) 2^-128`, `x = total / 2^128`, which the potential pays out. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -16,8 +16,8 @@ namespace LeanFors.Security.HiddenBridge
 variable [Params]
 
 
-/-- The forest step inputs of a public parameter. -/
-def IsFchainIn (parameter : PublicParameter) (input : HashInput) : Prop :=
+/-- The FORS leaf inputs of a public parameter: hashes of a FORS secret. -/
+def IsFleafIn (parameter : PublicParameter) (input : HashInput) : Prop :=
   ∃ f : PotentialA.FIn, input = f.input parameter
 
 end LeanFors.Security.HiddenBridge
@@ -33,7 +33,7 @@ set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
 
-/-- The slack of one forest step query: `1 + Y + (ρ - 1 - x) ≤ ρ` for `Y ≤ x`. -/
+/-- The slack of one FORS leaf query: `1 + Y + (ρ - 1 - x) ≤ ρ` for `Y ≤ x`. -/
 theorem arith_fleaf {ρ x : ℝ} (hN : Numeric ρ x) (hx : 0 ≤ x) {Y : ℝ≥0∞} (hY : Y ≤ ENNReal.ofReal x) :
     1 + Y + ENNReal.ofReal (ρ - 1 - x) ≤ ENNReal.ofReal ρ := by
   have hd : 0 ≤ ρ - 1 - x := by linarith [hN.contact]
@@ -62,7 +62,7 @@ theorem one_add_slack_le_rate (s : St) : 1 + ENNReal.ofReal (K.ρ - 1 - xr) ≤ 
     _ ≤ _ := K.rate_ge_rho hN s
 
 include hY in
-/-- **A fresh forest step leaves the slack.** -/
+/-- **A fresh FORS leaf query leaves the slack.** -/
 theorem arithFF (s : St) {f : FIn} {g : ℝ≥0∞} (hg : g ≤ 1) (hrec : g = 0 ∨ Recd s f) :
     g + (if Recd s f then Y + K.kf s else 1) + ENNReal.ofReal (K.ρ - 1 - xr) ≤ K.rate s := by
   have hbase : 1 + Y + ENNReal.ofReal (K.ρ - 1 - xr) ≤ ENNReal.ofReal K.ρ := arith_fleaf hN hxr hY
@@ -83,7 +83,7 @@ theorem arithFF (s : St) {f : FIn} {g : ℝ≥0∞} (hg : g ≤ 1) (hrec : g = 0
 
 end Arith
 
-/-! ### Forest steps leave the slack -/
+/-! ### FORS leaf queries leave the slack -/
 
 section Fresh
 
@@ -91,13 +91,13 @@ variable {xr : ℝ} (hN : Numeric K.ρ xr) (hxr : 0 ≤ xr) {y' : ℕ} (hY : (y'
   (hsec : ∀ x, SecondOrderInput K.p K.R x → K.tg.kind x = .none)
 
 include hN hxr hY in
-/-- A fresh forest step pays its guess and the slack. -/
-theorem fresh_fchainF {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none) {f : FIn}
+/-- A fresh FORS leaf query pays its guess and the slack. -/
+theorem fresh_fleafF {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none) {f : FIn}
     (hxF : x = f.input K.p) (hk : K.tg.kind x = .none) {g : ℝ≥0∞} (hg : g ≤ 1) (hrec : g = 0 ∨ Recd s f) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y' r.2 + ν * g + ν * ENNReal.ofReal (K.ρ - 1 - xr) ≤
       K.pot (y' + 1) s := by
   have hi := initial_none_of_fresh K.initial s hinv.prepared x hx
-  have h := K.step_fchain y' hx hi hxF hk
+  have h := K.step_fleaf y' hx hi hxF hk
   have ha := K.arithFF hN hxr hY s hg hrec
   rw [K.pot_succ]
   calc ∑' r, Pr[= r | readOutside x s] * K.pot y' r.2 + ν * g + ν * ENNReal.ofReal (K.ρ - 1 - xr)
@@ -109,10 +109,10 @@ theorem fresh_fchainF {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x 
     _ ≤ _ := add_le_add le_rfl (mul_le_mul_of_nonneg_left ha bot_le)
 
 include hN hxr hY hsec in
-/-- **A guess at a fresh forest step** pays the guess, the answer and the slack. -/
+/-- **A guess at a fresh FORS leaf query** pays the guess, the answer and the slack. -/
 theorem guess_freshF {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none) (q : Address × Digest)
     (hp : HiddenGraph.parse K.p (candidateActive K.p) x = some q) (hk : s.known q.1.inputCoordinate = none)
-    (hF : IsFchainIn K.p x) :
+    (hF : IsFleafIn K.p x) :
     ∑' r, Pr[= r | readOutside x (s.record (q.1.inputCoordinate, q.2))] * K.pot y' r.2 +
       ν * ENNReal.ofReal (K.ρ - 1 - xr) ≤ K.pot (y' + 1) s := by
   obtain ⟨rfl, -⟩ := (parse_some_iff _ _ x q).1 hp
@@ -125,35 +125,35 @@ theorem guess_freshF {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x =
       exfalso
       have hd := (domain_eq_of_input hxF trivial trivial).1
       cases hd
-  | fchain index c sp j a i t =>
-      have hKF : ∀ f : FIn, ((Address.fchain index c sp j a i t).inputCoordinate, v) = (f.inC, f.v) →
-          K.FE s f → ((Address.fchain index c sp j a i t).inputCoordinate, v) ∈ s.guesses := by
+  | fleaf index κ leaf =>
+      have hKF : ∀ f : FIn, ((Address.fleaf index κ leaf).inputCoordinate, v) = (f.inC, f.v) →
+          K.FE s f → ((Address.fleaf index κ leaf).inputCoordinate, v) ∈ s.guesses := by
         intro f hg hfe
         exfalso
         obtain ⟨w, hfr⟩ := hfe
         rw [fin_eq_of_inC hg] at hfr
         have h1 := hfr.1
-        change s.cache (HiddenGraph.input K.p (Address.fchain _ _ _ _ _ _ _, _)) = some w at h1
+        change s.cache (HiddenGraph.input K.p (Address.fleaf _ _ _, _)) = some w at h1
         rw [hx] at h1
         cases h1
-      have hkind := hsec _ (Or.inr ⟨index, c, sp, j, a, i, t, v, rfl⟩)
-      rw [input_fchain] at hx₁ ⊢
-      have main := K.fresh_fchainF hN hxr hY hinv₁ hx₁ rfl hkind le_rfl (Or.inr List.mem_cons_self)
-      have hrec := K.pot_record (y' + 1) s ((Address.fchain index c sp j a i t).inputCoordinate, v) hk hKF
+      have hkind := hsec _ (Or.inr ⟨index, κ, leaf, v, rfl⟩)
+      rw [input_fleaf] at hx₁ ⊢
+      have main := K.fresh_fleafF hN hxr hY hinv₁ hx₁ rfl hkind le_rfl (Or.inr List.mem_cons_self)
+      have hrec := K.pot_record (y' + 1) s ((Address.fleaf index κ leaf).inputCoordinate, v) hk hKF
       rw [mul_one] at main
       refine (ENNReal.add_le_add_iff_right ν_ne_top).1 ?_
-      calc ∑' r, Pr[= r | readOutside ((FIn.mk index c sp j a i t v).input K.p)
-              (s.record ((Address.fchain index c sp j a i t).inputCoordinate, v))] * K.pot y' r.2 +
+      calc ∑' r, Pr[= r | readOutside ((FIn.mk index κ leaf v).input K.p)
+              (s.record ((Address.fleaf index κ leaf).inputCoordinate, v))] * K.pot y' r.2 +
             ν * ENNReal.ofReal (K.ρ - 1 - xr) + ν
-          = ∑' r, Pr[= r | readOutside ((FIn.mk index c sp j a i t v).input K.p)
-              (s.record ((Address.fchain index c sp j a i t).inputCoordinate, v))] * K.pot y' r.2 + ν +
+          = ∑' r, Pr[= r | readOutside ((FIn.mk index κ leaf v).input K.p)
+              (s.record ((Address.fleaf index κ leaf).inputCoordinate, v))] * K.pot y' r.2 + ν +
             ν * ENNReal.ofReal (K.ρ - 1 - xr) := by ring
-        _ ≤ K.pot (y' + 1) (s.record ((Address.fchain index c sp j a i t).inputCoordinate, v)) := main
+        _ ≤ K.pot (y' + 1) (s.record ((Address.fleaf index κ leaf).inputCoordinate, v)) := main
         _ ≤ _ := hrec
 
 end Fresh
 
-/-- **A guess at a cached forest step** pays the guess and the slack. -/
+/-- **A guess at a cached FORS leaf query** pays the guess and the slack. -/
 theorem guess_cachedF {xr : ℝ} (hN : Numeric K.ρ xr) (hxr : 0 ≤ xr) (y' : ℕ) {s : St} (hinv : K.Inv s)
     {x : HashInput} {u : HashOutput} (hc : s.cache x = some u) (q : Address × Digest)
     (hp : HiddenGraph.parse K.p (candidateActive K.p) x = some q) (hk : s.known q.1.inputCoordinate = none) :
@@ -167,7 +167,7 @@ theorem guess_cachedF {xr : ℝ} (hN : Numeric K.ρ xr) (hxr : 0 ≤ xr) (y' : �
     | chain lay tree' leaf' chain step =>
         have := congrArg Prod.fst hg
         cases this
-    | fchain index c sp j a i t =>
+    | fleaf index κ leaf =>
         obtain ⟨w, hfr⟩ := hfe
         rw [fin_eq_of_inC hg] at hfr
         exact hinv.guessed _ w _ hfr hp hk
@@ -194,11 +194,11 @@ variable (M : HiddenRows.Model HashInput HashOutput Address Coordinate)
   (hMi : M.incoming = Address.inputCoordinate) (hMo : M.outgoing = Address.outputCoordinate)
 
 include hMp hMi in
-/-- **A forest step query** pays the slack `(ρ - 1 - x) 2^-128`, fresh or cached, at a known or an
+/-- **A FORS leaf query** pays the slack `(ρ - 1 - x) 2^-128`, fresh or cached, at a known or an
 unknown secret. -/
-theorem stepFchain {total : ℕ} (hN : Numeric K.ρ ((total : ℝ) / 2 ^ 128))
+theorem stepFleaf {total : ℕ} (hN : Numeric K.ρ ((total : ℝ) / 2 ^ 128))
     (hsec : ∀ x, SecondOrderInput K.p K.R x → K.tg.kind x = .none)
-    (bytes : HashInput) (hF : IsFchainIn K.p bytes) (budget : ℕ) (s : St) (hinv : K.Inv s) (hcost : 1 ≤ budget) :
+    (bytes : HashInput) (hF : IsFleafIn K.p bytes) (budget : ℕ) (s : St) (hinv : K.Inv s) (hcost : 1 ≤ budget) :
     ∑' r, Pr[= r | costStep M (.inl (.inr (.inl bytes))) s] * K.potCap total (budget - 1) r.2 +
       ν * ENNReal.ofReal (K.ρ - 1 - (total : ℝ) / 2 ^ 128) ≤ K.potCap total budget s := by
   unfold potCap
@@ -217,7 +217,7 @@ theorem stepFchain {total : ℕ} (hN : Numeric K.ρ ((total : ℝ) / 2 ^ 128))
   have hY : (y' : ℝ≥0∞) * ν ≤ ENNReal.ofReal ((total : ℝ) / 2 ^ 128) := budget_le_x (by omega)
   have hsame := K.pot_same_slack hN hxr y' s
   obtain ⟨f, hxF⟩ := hF
-  have hkF : K.tg.kind bytes = .none := hsec _ (Or.inr ⟨f.index, f.c, f.s, f.j, f.a, f.i, f.t, f.v, hxF⟩)
+  have hkF : K.tg.kind bytes = .none := hsec _ (Or.inr ⟨f.index, f.κ, f.leaf, f.v, hxF⟩)
   rw [costStep_inl]
   cases hp : M.parse bytes with
   | none =>
@@ -227,7 +227,7 @@ theorem stepFchain {total : ℕ} (hN : Numeric K.ρ ((total : ℝ) / 2 ^ 128))
           rw [readOutside_cached bytes s u hc, tsum_probOutput_pure_mul]
           exact hsame
       | none =>
-          have h := K.fresh_fchainF hN hxr hY hinv hc hxF hkF (g := 0) bot_le (Or.inl rfl)
+          have h := K.fresh_fleafF hN hxr hY hinv hc hxF hkF (g := 0) bot_le (Or.inl rfl)
           rw [mul_zero, add_zero] at h
           exact h
   | some q =>
@@ -256,17 +256,17 @@ theorem stepFchain {total : ℕ} (hN : Numeric K.ρ ((total : ℝ) / 2 ^ 128))
                 rw [readOutside_cached bytes s u hc, tsum_probOutput_pure_mul]
                 exact hsame
             | none =>
-                have h := K.fresh_fchainF hN hxr hY hinv hc hxF hkF (g := 0) bot_le (Or.inl rfl)
+                have h := K.fresh_fleafF hN hxr hY hinv hc hxF hkF (g := 0) bot_le (Or.inl rfl)
                 rw [mul_zero, add_zero] at h
                 exact h
 
 theorem digestCount_fleaf (tg' : Targeting HashInput HashOutput Coordinate)
-    (hdig : tg'.digest = ForestSigner.IsMsgInput) (bytes : HashInput) (hF : IsFchainIn K.p bytes) :
+    (hdig : tg'.digest = ForestSigner.IsMsgInput) (bytes : HashInput) (hF : IsFleafIn K.p bytes) :
     digestCount tg' (recorded (D := HashInput) (R := HashOutput) (ι := Coordinate) (.inl (.inr (.inl bytes)))) =
       0 := by
   have hnm : ¬ForestSigner.IsMsgInput bytes := by
     obtain ⟨f, rfl⟩ := hF
-    exact fun hd => msg_ne_fchain hd rfl
+    exact fun hd => msg_ne_fleaf hd rfl
   have h := digestCount_bytes tg' bytes
   rw [hdig, if_neg hnm] at h
   exact_mod_cast h
@@ -281,17 +281,17 @@ theorem stepF (tg' : Targeting HashInput HashOutput Coordinate) (hdig : tg'.dige
     (hcost : sourceCost input ≤ budget) :
     ∑' r, Pr[= r | costStep M input s] * K.potCap total (budget - sourceCost input) r.2 +
       ENNReal.ofReal (K.ρ / 2 ^ 128) * digestCount tg' (recorded input) +
-      ENNReal.ofReal ((K.ρ - 1 - (total : ℝ) / 2 ^ 128) / 2 ^ 128) * fleafCount (IsFchainIn K.p) (recorded input) ≤
+      ENNReal.ofReal ((K.ρ - 1 - (total : ℝ) / 2 ^ 128) / 2 ^ 128) * fleafCount (IsFleafIn K.p) (recorded input) ≤
         K.potCap total budget s := by
-  by_cases hF : ∃ bytes, input = .inl (.inr (.inl bytes)) ∧ IsFchainIn K.p bytes
+  by_cases hF : ∃ bytes, input = .inl (.inr (.inl bytes)) ∧ IsFleafIn K.p bytes
   · obtain ⟨bytes, rfl, hF⟩ := hF
     have hc1 : sourceCost (D := HashInput) (R := HashOutput) (ι := Coordinate) (.inl (.inr (.inl bytes))) = 1 :=
       rfl
     rw [hc1] at hcost ⊢
     rw [K.digestCount_fleaf tg' hdig bytes hF, Nat.cast_zero, mul_zero, add_zero, fleafCount_recorded_inl,
       if_pos hF, mul_one, payment_eq]
-    exact K.stepFchain M hMp hMi hN hsec bytes hF budget s hinv hcost
-  · have hfc : fleafCount (IsFchainIn K.p) (recorded input) = 0 :=
+    exact K.stepFleaf M hMp hMi hN hsec bytes hF budget s hinv hcost
+  · have hfc : fleafCount (IsFleafIn K.p) (recorded input) = 0 :=
       fleafCount_recorded_eq_zero _ input fun bytes h hb => hF ⟨bytes, h, hb⟩
     rw [hfc, Nat.cast_zero, mul_zero, add_zero]
     exact K.step M hMp hMi hMo tg' hdig hN hsec hmsg input budget s hinv hcost
@@ -306,8 +306,8 @@ variable (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : Coo
   (remaining : RemainingOutputs) (prepared : (OtsKey → Option (Counter × Encoding)) × QueryCache HashSpec)
   (known : Knowledge Coordinate) (ρ : ℝ)
 
-/-- **Linear potential on the small-budget route, paying every forest step query.** Besides the
-digest baseline `ρ / 2^128`, every forest step query of the trace (fresh or cached) is paid
+/-- **Linear potential on the small-budget route, paying every FORS leaf query.** Besides the
+digest baseline `ρ / 2^128`, every FORS leaf query of the trace (fresh or cached) is paid
 `(ρ - 1 - x) / 2^128`, `x = total / 2^128`. -/
 theorem smallRoute_potentialF
     (hknown : known ∈ support (exposeR (aboveList (truncateHash parameterOutput) prepared.1)
@@ -320,14 +320,14 @@ theorem smallRoute_potentialF
       (endValue (payoffA parameterOutput fixed highs remaining prepared known ρ) out.2 +
         ENNReal.ofReal (ρ / 2 ^ 128) * digestCount tg out.1.2.2.1 +
         ENNReal.ofReal ((ρ - 1 - (total : ℝ) / 2 ^ 128) / 2 ^ 128) *
-          fleafCount (IsFchainIn (truncateHash parameterOutput)) out.1.2.2.1) ≤
+          fleafCount (IsFleafIn (truncateHash parameterOutput)) out.1.2.2.1) ≤
       ENNReal.ofReal (ρ * total / 2 ^ 128) := by
   set K := ctxA parameterOutput fixed highs remaining prepared known ρ with hK
   have hMp : (sampleModel parameterOutput highs).parse = HiddenGraph.parse K.p (candidateActive K.p) :=
     sampleModel_parse parameterOutput highs
   have hMi := sampleModel_incoming parameterOutput highs
   have hMo := sampleModel_outgoing parameterOutput highs
-  have h := interp_potential2 tg prepared.2 (sampleModel parameterOutput highs) (IsFchainIn K.p) K.Inv
+  have h := interp_potential2 tg prepared.2 (sampleModel parameterOutput highs) (IsFleafIn K.p) K.Inv
     (K.potCap total) K.payoff (ENNReal.ofReal (K.ρ / 2 ^ 128))
     (ENNReal.ofReal ((K.ρ - 1 - (total : ℝ) / 2 ^ 128) / 2 ^ 128))
     (fun budget state _ => K.endValue_le_cap total budget state)

@@ -409,7 +409,7 @@ theorem psiF_newPair {Cmax Lmax : ℕ} (hfair : FairS wbar Cmax Lmax) (hQ : Qtot
   simp only [if_neg hL]
   have hi := initial_none_of_fresh K.initial s hB.inv.prepared _ hp0
   have hnf : ∀ f : FIn, pblk K.p data p ≠ f.input K.p := fun f =>
-    msg_ne_fchain (msgInput_digestInput K.p data.root p.1 p.2)
+    msg_ne_fleaf (msgInput_digestInput K.p data.root p.1 p.2)
   have hw' : ∀ (g : FIn → ℝ≥0∞) u, K.wsum g (withPair K.p data s p u) = K.wsum g s := fun g u =>
     K.wsum_store_other g u hp0 hi hnf
   set wS := K.wsum (gA R 0) s with hwS
@@ -454,7 +454,7 @@ variable (K : Ctx) (data : PublicData) (wbar κ : ℝ≥0∞) (Fail : Finset (Fi
 theorem psiF_ordinary (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate) (hw : wbar ≤ 1) {payB : ℝ≥0∞}
     (hκ : ν ≤ payB + κ * ν) (Lmax : ℕ) :
-    OrdinaryPaysF K data Qtot model (IsFchainIn K.p) (ν * ((signatureLimit : ℝ≥0∞) * revRate) + payB)
+    OrdinaryPaysF K data Qtot model (IsFleafIn K.p) (ν * ((signatureLimit : ℝ≥0∞) * revRate) + payB)
       (psiF K data wbar κ Fail Lmax) := by
   intro budget s P Ms L d R hb hB x hnew
   obtain ⟨y, rfl⟩ : ∃ y, budget = y + 1 := ⟨budget - 1, by omega⟩
@@ -470,7 +470,7 @@ theorem psiF_ordinary (hMp : model.parse = HiddenGraph.parse K.p (candidateActiv
   set C0 := coefU K data wbar Fail s P Ms L d y with hC0
   set Q := potNF K data wbar Fail s P Ms L d y with hQ
   set S := ∑ j ∈ Finset.range y, potNF K data wbar Fail s P Ms L d j with hS
-  set f1 : ℝ≥0∞ := if IsFchainIn K.p x then 1 else 0 with hf1
+  set f1 : ℝ≥0∞ := if IsFleafIn K.p x then 1 else 0 with hf1
   have hpt : ∀ r ∈ support (ordinaryStep model x s.known s),
       K.wsum (gA R (coefU K data wbar Fail r.2 P Ms L d y)) r.2 + coinPotF K data r.2 Ms L y +
           κ * ν * ∑ j ∈ Finset.range y, potNF K data wbar Fail r.2 P Ms L d j ≤
