@@ -170,35 +170,19 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .assist.never { position: relative; }
 .assist.never .ghost { visibility: hidden; display: flex; flex-direction: column; gap: 0.15rem; }
 .assist.never .msg { position: absolute; inset: 0; display: flex; align-items: center; }
-/* the offline-time slider: a hairline track, inked up to a small round thumb */
-.assist input[type=range] {
-  -webkit-appearance: none; appearance: none; width: 7rem; max-width: 40vw; height: 1.2rem; margin: 0 0.35rem;
-  vertical-align: middle; background: transparent; cursor: pointer; --pct: 50%;
-}
-.assist input[type=range]::-webkit-slider-runnable-track {
-  height: 2px; border-radius: 1px; background: linear-gradient(to right, var(--ink) var(--pct), var(--tree) var(--pct));
-}
-.assist input[type=range]::-moz-range-track { height: 2px; border-radius: 1px; background: var(--tree); }
-.assist input[type=range]::-moz-range-progress { height: 2px; border-radius: 1px; background: var(--ink); }
-.assist input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 11px; height: 11px; margin-top: -4.5px; border-radius: 50%; background: #fff;
-  border: 1.5px solid var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); transition: transform 0.12s ease;
-}
-.assist input[type=range]::-moz-range-thumb {
-  width: 9px; height: 9px; border-radius: 50%; background: #fff; border: 1.5px solid var(--ink);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); transition: transform 0.12s ease;
-}
-.assist input[type=range]:hover::-webkit-slider-thumb, .assist input[type=range]:active::-webkit-slider-thumb { transform: scale(1.25); }
-.assist input[type=range]:hover::-moz-range-thumb, .assist input[type=range]:active::-moz-range-thumb { transform: scale(1.25); }
-.assist input[type=range]:focus { outline: none; }
-.assist input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.18); }
-.assist input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.18); }
-@media (prefers-reduced-motion: reduce) { .assist input[type=range]::-webkit-slider-thumb, .assist input[type=range]::-moz-range-thumb { transition: none; } }
-@media (max-width: 600px), (hover: none) {   /* phones: a larger thumb, easy to see and to grab */
-  .assist input[type=range] { width: 5rem; height: 1.6rem; }
-  .assist input[type=range]::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -7px; border-width: 2px; }
-  .assist input[type=range]::-moz-range-thumb { width: 13px; height: 13px; border-width: 2px; }
-}
+/* the offline-time slider, drawn the same everywhere: a hairline track inked up to a small round thumb, and over
+   them the real slider, invisible, which takes the pointer, the touch and the keyboard */
+.rng { position: relative; display: inline-block; width: 7rem; max-width: 40vw; height: 1.3rem; margin: 0 0.35rem; vertical-align: middle; --p: 0.5; }
+.rng .trk { pointer-events: none; position: absolute; left: 6px; right: 6px; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px; background: var(--tree); }
+.rng .fill { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--p) * 100%); border-radius: 1px; background: var(--ink); }
+.rng .knob { position: absolute; top: 50%; left: calc(6px + (100% - 12px) * var(--p)); width: 11px; height: 11px;
+  transform: translate(-50%, -50%); border-radius: 50%; background: #fff; border: 1.5px solid var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); transition: transform 0.12s ease; pointer-events: none; box-sizing: border-box; }
+.rng input { z-index: 1; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.rng:hover .knob, .rng input:active ~ .knob { transform: translate(-50%, -50%) scale(1.25); }
+.rng input:focus-visible ~ .knob { box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.18); }
+@media (max-width: 600px) { .rng { width: 5rem; } }
+@media (prefers-reduced-motion: reduce) { .rng .knob { transition: none; } }
 .tables p, #tip { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }   /* running text: flush left and right */
 .cmp thead .sub { font-weight: 400; color: var(--muted); }
 .m-only { display: none; }
@@ -1133,8 +1117,9 @@ footer a + a { margin-left: 1.25rem; }
     var lo = xmin * per, hi = Math.max(OFF_MAX, 2 * lo);
     var shell = cell.querySelector('.assist');
     if (!shell || shell.classList.contains('never') !== never) {
-      var body = '<label class="nw">Offline: <input type="range" min="0" max="1000" step="10" ' +
-        'aria-label="Offline preparation time"> <span class="ex off"></span></label><span class="nw">Online: ' +
+      var body = '<label class="nw">Offline: <span class="rng"><input type="range" min="0" max="1000" step="10" ' +
+        'aria-label="Offline preparation time"><span class="trk"><span class="fill"></span></span><span class="knob"></span></span> ' +
+        '<span class="ex off"></span></label><span class="nw">Online: ' +
         '<span class="ex on" aria-live="polite"></span><span class="m-only">' + info('', ' w') + '</span></span>';
       // never: the message over an invisible slider cell, so that the row keeps its height
       cell.innerHTML = never ? '<div class="assist never"><div class="ghost" aria-hidden="true">' +
@@ -1152,7 +1137,7 @@ footer a + a { margin-left: 1.25rem; }
       var T = Math.min(hi, Math.max(lo, offChosen == null ? per * tt.ledger_prepared : offChosen));
       var np = Math.max(xmin, Math.floor(T / per + 1e-9));
       slider.value = String(Math.round(1000 * Math.log(T / lo) / Math.log(hi / lo)));
-      slider.style.setProperty('--pct', (slider.value / 10) + '%');   // the inked part of the track
+      slider.parentNode.style.setProperty('--p', String(slider.value / 1000));   // the thumb's place and the inked track   // the inked part of the track
       var off = time(np * per);
       slider.setAttribute('aria-valuetext', off.replace(/&nbsp;/g, ' ') + ', ' + np + ' FTS prepared');
       cell.querySelector('.off').innerHTML = off + ' <span class="note">(' + comma(np) + ' FTS)</span>';
