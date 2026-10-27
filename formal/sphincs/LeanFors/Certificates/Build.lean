@@ -270,6 +270,10 @@ abbrev p2 (k : ℕ) : ℤ := ((2 ^ k : ℕ) : ℤ)
 
 theorem p2_pos (k : ℕ) : 0 < p2 k := by unfold p2; exact_mod_cast Nat.two_pow_pos k
 
+/-- A power of a moment-table entry, over one power of two. -/
+theorem tab_pow (x : ℚ) (k : ℕ) : (x / 2 ^ 128) ^ k = x ^ k / 2 ^ (128 * k) := by
+  rw [div_pow, ← pow_mul]
+
 /-- The numerators of `gBound` over `2^191`, `n ≤ n1`, for `k` trees of height `a`. -/
 def gZ (H k a n1 : ℕ) (c1 : ℚ) : List ℤ :=
   zipTab n1 (fun x y : ℕ => min (cdivZ (((x ^ k : ℕ) : ℤ) * 2 ^ 191) (p2 (H + 128 * k)))
@@ -296,10 +300,10 @@ theorem gZ_bound {H k a n1 n : ℕ} {o : OptF} (hc : 0 < o.c1) (hn1 : n1 ≤ 150
   have hc1 : (o.c1 : ℚ) = o.c1.num / o.c1.den := (Rat.num_div_den o.c1).symm
   apply min_le_min
   · apply le_cdivZ_div (p2_pos _)
-    unfold κQ; push_cast; field_simp; ring
+    unfold κQ; simp only [tab_pow]; push_cast; field_simp; ring
   · apply le_cdivZ_div (mul_pos (mul_pos (p2_pos _) (by norm_num)) hu)
     conv_lhs => rw [hc1]
-    unfold κQ; push_cast
+    unfold κQ; simp only [tab_pow]; push_cast
     have : (0 : ℚ) < o.c1.num := by exact_mod_cast hu
     have : (0 : ℚ) < o.c1.den := by exact_mod_cast o.c1.den_pos
     field_simp; ring
@@ -315,7 +319,7 @@ theorem hZ_bound {H k a n1 n : ℕ} {o : OptF} {E : ℤ} (hE : o.eC - 1 ≤ (E :
   apply min_le_min hE
   apply le_cdivZ_div (mul_pos (mul_pos (by exact_mod_cast o.θ.den_pos) (by exact_mod_cast o.A2.den_pos)) (p2_pos _))
   conv_lhs => rw [hθ, hA]
-  unfold κQ; push_cast
+  unfold κQ; simp only [tab_pow]; push_cast
   have : (0 : ℚ) < o.θ.den := by exact_mod_cast o.θ.den_pos
   have : (0 : ℚ) < o.A2.den := by exact_mod_cast o.A2.den_pos
   field_simp; ring
@@ -325,7 +329,7 @@ theorem nZ_bound {H k a n1 n : ℕ} (hn1 : n1 ≤ 150) (hn : n < n1 + 1) :
   have l1 : n1 + 1 ≤ (P1L a).length := by rw [length_P1L]; omega
   rw [nZ, getD_zipTab (a := 0) (b := 0) l1 l1 hn, nBound, getD_tab (P1L_eq a) (by omega)]
   apply le_cdivZ_div (p2_pos _)
-  unfold κQ; push_cast; field_simp; ring
+  unfold κQ; simp only [tab_pow]; push_cast; field_simp; ring
 
 /-! ### Means -/
 

@@ -7,10 +7,6 @@ rationals they stand for (`P1tab`, `P2tab`). The kernel computes them from the c
 
 namespace LeanFors.Security.H0
 
-variable [Params]
-
-open Concrete
-
 set_option linter.unusedSectionVars false
 
 /-- The numerators over `2^128` of the upper bounds of `Ψ1(n)`, `n ≤ 150`. -/
@@ -42,6 +38,10 @@ theorem getD_P1tab (a n : ℕ) (hn : n ≤ 150) : (P1tab a).getD n 0 = P1Q a n :
 theorem getD_P2tab (a n : ℕ) (hn : n ≤ 150) : (P2tab a).getD n 0 = P2Q a n := by
   rw [P2tab, P2L, List.map_map, getD_map_range _ _ _ _ (by omega)]
   rfl
+
+variable [Params]
+
+open Concrete
 
 theorem Ψ1R_le_tab (n : ℕ) (hn : n ≤ 150) : Ψ1R n ≤ (((P1tab forsHeight).getD n 0 : ℚ) : ℝ) := by
   rw [getD_P1tab forsHeight n hn]

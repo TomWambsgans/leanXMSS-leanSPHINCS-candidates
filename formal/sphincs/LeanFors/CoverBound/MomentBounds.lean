@@ -10,10 +10,6 @@ open ENNReal
 
 namespace LeanFors.Security.H0
 
-variable [Params]
-
-open Concrete
-
 set_option linter.unusedSectionVars false
 
 /-! ### Lists over a range -/
@@ -101,6 +97,10 @@ def P1Q (a n : ℕ) : ℚ := (p1N a n : ℚ) / 2 ^ 128
 def P2Q (a n : ℕ) : ℚ := (p2N a n : ℚ) / 2 ^ 128
 
 /-! ### Soundness -/
+
+variable [Params]
+
+open Concrete
 
 /-- `Ψ1(n) = (A^n - (A-1)^n) / A^n`. -/
 theorem Ψ1R_frac (n : ℕ) :
