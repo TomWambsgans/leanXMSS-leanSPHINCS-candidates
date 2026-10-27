@@ -4,8 +4,8 @@ import LeanFors.SmallBudget.Linear.Run
 context and payoff of the linear potential for the sample's comparison, started from the prepared
 cache and the above-word exposure, and the start: the invariant holds and the potential with total
 budget `q` is `ρ q / 2^128`. The payoff counts a hit of the first-order targeting (a correct guess,
-a decided first-order hit, or a debt completed by the remaining table), the WOTS events and the forest contact events against
-the completed table. -/
+a decided first-order hit, or a debt completed by the remaining table), the WOTS events and the
+FORS contact events against the completed table. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -119,15 +119,8 @@ theorem inv_start (hknown : known ∈ support (exposeR (aboveList (truncateHash 
     (ctxA parameterOutput fixed highs remaining prepared known ρ).Inv (DebtState.start prepared.2 known) where
   prepared := fun _ _ h => h
   anchored c hc := by
-    obtain ⟨hbase, hlist⟩ := exposeR_known _ _ _ hknown
-    have hne : known c ≠ none := by
-      rcases hc with ha | ⟨index, cc, sp, j, a, i, rfl⟩
-      · exact hlist c (mem_aboveList.2 ha)
-      · have : knownOf (truncateHash parameterOutput) fixed (.fchain index cc sp j a i ⟨chainTop, by omega⟩) =
-            some (masked (truncateHash parameterOutput) fixed (.fchain index cc sp j a i ⟨chainTop, by omega⟩)) := by
-          simp [knownOf, KnownCoordinate]
-        rw [hbase _ _ this]
-        simp
+    obtain ⟨-, hlist⟩ := exposeR_known _ _ _ hknown
+    have hne : known c ≠ none := hlist c (mem_aboveList.2 hc)
     obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.1 hne
     change known c = some ((known c).getD 0)
     rw [hv]

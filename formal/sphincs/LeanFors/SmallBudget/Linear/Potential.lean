@@ -4,11 +4,11 @@ import LeanFors.Classification.Targeting
 
 /-! A linear potential on the interpreted comparison for small budgets. Guesses and first-order
 hits pay one unit per query. The WOTS second-order events (two edges into the frontier, a
-contact with an encoding marker, two contacts at one leaf) and the forest contact events (a contact
-without guess record, two contacts at different chains of one index) are paid by an armed rate, a
-contact count, credits for two-edge pairs and a pair term. A forest step whose written coordinate
-is still unexposed is latent: it becomes a contact with chance `2^-128` when that coordinate is
-exposed, and the potential carries it at that weight. This file holds the definitions and how one
+contact with an encoding marker, two contacts at one leaf) and the FORS contact events (a contact
+without guess record, two contacts at different leaves of one index) are paid by an armed rate, a
+contact count, credits for two-edge pairs and a pair term. A FORS leaf query whose written
+coordinate is still unexposed is latent: it becomes a contact with chance `2^-128` when that
+coordinate is exposed, and the potential carries it at that weight. This file holds the definitions and how one
 step of the lazy comparison changes them. -/
 
 open OracleComp OracleSpec ENNReal
@@ -137,23 +137,18 @@ theorem chainInput_ne_enc {p p' : PublicParameter} {l : OtsKey} {i : ChainIndex}
   have hd := (domain_eq_of_input h trivial trivial).1
   cases hd
 
-/-- A forest chain step query: the chain, the step and the payload. -/
+/-- A FORS leaf query: the instance, the tree, the leaf and the payload. -/
 structure FIn where
   index : Index
-  c : Coord
-  s : SuperIdx
-  j : SubIdx
-  a : ChildIdx
-  i : FChain
-  t : FStep
+  κ : FTree
+  leaf : FLeaf
   v : Digest
   deriving DecidableEq
 
 instance FIn.instFintype : Fintype FIn :=
-  Fintype.ofEquiv (Index × Coord × SuperIdx × SubIdx × ChildIdx × FChain × FStep × Digest)
-    { toFun := fun x => ⟨x.1, x.2.1, x.2.2.1, x.2.2.2.1, x.2.2.2.2.1, x.2.2.2.2.2.1, x.2.2.2.2.2.2.1,
-        x.2.2.2.2.2.2.2⟩
-      invFun := fun f => (f.index, f.c, f.s, f.j, f.a, f.i, f.t, f.v)
+  Fintype.ofEquiv (Index × FTree × FLeaf × Digest)
+    { toFun := fun x => ⟨x.1, x.2.1, x.2.2.1, x.2.2.2⟩
+      invFun := fun f => (f.index, f.κ, f.leaf, f.v)
       left_inv := fun _ => rfl
       right_inv := fun _ => rfl }
 
@@ -161,36 +156,36 @@ attribute [irreducible] FIn.instFintype
 
 namespace FIn
 
-/-- The hash input of a forest chain step query. -/
-def input (p : PublicParameter) (f : FIn) : HashInput := fchainInput p f.index f.c f.s f.j f.a f.i f.t f.v
+/-- The hash input of a FORS leaf query. -/
+def input (p : PublicParameter) (f : FIn) : HashInput := fleafInput p f.index f.κ f.leaf f.v
 
-/-- The coordinate read by the step. -/
-def inC (f : FIn) : Coordinate := .fchain f.index f.c f.s f.j f.a f.i ⟨f.t.val, by omega⟩
+/-- The coordinate read by the query: the FORS secret. -/
+def inC (f : FIn) : Coordinate := .fors f.index f.κ f.leaf 0
 
-/-- The coordinate written by the step. -/
-def outC (f : FIn) : Coordinate := .fchain f.index f.c f.s f.j f.a f.i ⟨f.t.val + 1, by omega⟩
+/-- The coordinate written by the query: the FORS leaf value. -/
+def outC (f : FIn) : Coordinate := .fors f.index f.κ f.leaf 1
 
-/-- Two steps at different chains (tree, subtree, chain) of one index. -/
-def Rel (f g : FIn) : Prop := f.index = g.index ∧ (f.c, f.j, f.i) ≠ (g.c, g.j, g.i)
+/-- Two queries at different leaves (tree, leaf) of one index. -/
+def Rel (f g : FIn) : Prop := f.index = g.index ∧ (f.κ, f.leaf) ≠ (g.κ, g.leaf)
 
 theorem rel_symm {f g : FIn} (h : f.Rel g) : g.Rel f := ⟨h.1.symm, fun e => h.2 e.symm⟩
 
-/-- Related steps write different coordinates. -/
+/-- Related queries write different coordinates. -/
 theorem outC_ne_of_rel {f g : FIn} (h : f.Rel g) : f.outC ≠ g.outC := by
   intro e
-  simp only [outC, Coordinate.fchain.injEq] at e
-  obtain ⟨-, hc, -, hj, -, hi, -⟩ := e
-  exact h.2 (by rw [hc, hj, hi])
+  rw [show f.outC = Coordinate.fors f.index f.κ f.leaf 1 from rfl,
+    show g.outC = Coordinate.fors g.index g.κ g.leaf 1 from rfl, Coordinate.fors.injEq] at e
+  exact h.2 (by rw [e.2.1, e.2.2.1])
 
 end FIn
 
-theorem chainInput_ne_fchain {p p' : PublicParameter} {l : OtsKey} {i : ChainIndex} {st : ChainStep} {v : Digest}
+theorem chainInput_ne_fleaf {p p' : PublicParameter} {l : OtsKey} {i : ChainIndex} {st : ChainStep} {v : Digest}
     {f : FIn} : chainInput p l i st v ≠ f.input p' := by
   intro h
   have hd := (domain_eq_of_input h trivial trivial).1
   cases hd
 
-theorem enc_ne_fchain {p p' : PublicParameter} {lay : Layer} {tree : TreeIndex} {l : LeafIndex} {m : HashInput}
+theorem enc_ne_fleaf {p p' : PublicParameter} {lay : Layer} {tree : TreeIndex} {l : LeafIndex} {m : HashInput}
     {c : Counter} {f : FIn} : Wots.encodingInput p lay tree l m c ≠ f.input p' := by
   intro h
   have hd := (domain_eq_of_input h trivial trivial).1
@@ -206,10 +201,10 @@ theorem enc_inj {p : PublicParameter} {l l' : OtsKey} {m m' : HashInput} {c c' :
   obtain ⟨rfl, rfl, rfl⟩ := hd
   exact ⟨rfl, Wots.encodingInput_injective p l1 l2 l3 h⟩
 
-theorem fchain_inj {p : PublicParameter} {f g : FIn} (h : f.input p = g.input p) : f = g := by
+theorem fleaf_inj {p : PublicParameter} {f g : FIn} (h : f.input p = g.input p) : f = g := by
   obtain ⟨hd, hm⟩ := domain_eq_of_input h trivial trivial
-  simp only [HashDomain.fchain.injEq] at hd
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := hd
+  simp only [HashDomain.forsLeaf.injEq] at hd
+  obtain ⟨h1, h2, h3⟩ := hd
   have hv := bytesLE_injective hm
   cases f; cases g
   simp_all
@@ -269,17 +264,17 @@ def BadLeaf (s : St) (l : OtsKey) : Prop :=
 
 def WotsBad (s : St) : Prop := ∃ l, Retained K.p l ∧ K.BadLeaf s l
 
-/-- A fresh entry of a forest chain step. -/
+/-- A fresh entry of a FORS leaf query. -/
 def FE (s : St) (f : FIn) : Prop := ∃ u, K.Fr s (f.input K.p) u
 
-/-- A decided forest contact: a fresh step answer equal to the exposed value it writes. -/
+/-- A decided FORS contact: a fresh leaf answer equal to the exposed value it writes. -/
 def FC (s : St) (f : FIn) : Prop :=
   ∃ u w, K.Fr s (f.input K.p) u ∧ s.known f.outC = some w ∧ truncateHash u = w
 
-/-- A latent forest step: a fresh step whose written coordinate is not exposed yet. -/
+/-- A latent FORS leaf query: a fresh query whose written coordinate is not exposed yet. -/
 def Lat (s : St) (f : FIn) : Prop := K.FE s f ∧ s.known f.outC = none
 
-/-- The step carries a guess record: its read coordinate was unexposed when it was asked. -/
+/-- The query carries a guess record: its read coordinate was unexposed when it was asked. -/
 def Recd (s : St) (f : FIn) : Prop := (f.inC, f.v) ∈ s.guesses
 
 /-- The decided bad event. -/
@@ -299,8 +294,8 @@ noncomputable def contactCount (s : St) : ℝ≥0∞ := ∑ l, if Retained K.p l
 def UAset (s : St) : Set HashInput :=
   {x | ∃ l i u, Retained K.p l ∧ K.IsA l i x ∧ K.Fr s x u ∧ truncateHash u ∉ K.BPay s l i}
 
-/-- The contact weight of a forest step: one for a decided contact, `2^-128` for a latent step,
-zero otherwise. -/
+/-- The contact weight of a FORS leaf query: one for a decided contact, `2^-128` for a latent
+query, zero otherwise. -/
 noncomputable def cw (s : St) (f : FIn) : ℝ≥0∞ := if K.FC s f then 1 else if K.Lat s f then ν else 0
 
 /-- Weighted contacts without a guess record. -/
@@ -309,7 +304,7 @@ noncomputable def ng (s : St) : ℝ≥0∞ := ∑ f, if Recd s f then 0 else K.c
 /-- Weighted contacts with a guess record. -/
 noncomputable def kf (s : St) : ℝ≥0∞ := ∑ f, if Recd s f then K.cw s f else 0
 
-/-- Weighted ordered pairs of recorded contacts at different chains of one index. -/
+/-- Weighted ordered pairs of recorded contacts at different leaves of one index. -/
 noncomputable def pp (s : St) : ℝ≥0∞ :=
   ∑ f, ∑ g, if Recd s f ∧ Recd s g ∧ f.Rel g then K.cw s f * K.cw s g else 0
 
@@ -317,7 +312,7 @@ noncomputable def pp (s : St) : ℝ≥0∞ :=
 noncomputable def pend (s : St) : ℝ≥0∞ :=
   ∑ c : Coordinate, if s.known c = none then ((debts K.tg K.initial s c).encard : ℝ≥0∞) * ν else 0
 
-/-- The forest part: weighted contacts without record and half the weighted pairs. -/
+/-- The FORS part: weighted contacts without record and half the weighted pairs. -/
 noncomputable def latent (s : St) : ℝ≥0∞ := K.ng s + K.pp s / 2
 
 /-- The armed rate. -/
@@ -328,10 +323,10 @@ noncomputable def rate (s : St) : ℝ≥0∞ := K.vrate s + 64 * K.contactCount 
 
 noncomputable def done (s : St) : ℝ≥0∞ := if K.Bad s then 1 else 0
 
-/-- **The potential.** The decided bad event, the pending debts, the weighted forest contacts
+/-- **The potential.** The decided bad event, the pending debts, the weighted FORS contacts
 without guess record and pairs of recorded ones, half a unit per input two steps below the word
 whose answer is no payload one step below, and the remaining budget at the rate: 2 when armed and
-`ρ` otherwise, 64 per contact at a leaf without a WOTS event, and the weighted recorded forest
+`ρ` otherwise, 64 per contact at a leaf without a WOTS event, and the weighted recorded FORS
 contacts. -/
 noncomputable def pot (y : ℕ) (s : St) : ℝ≥0∞ :=
   K.done s + K.pend s + K.latent s + ν / 2 * ((K.UAset s).encard : ℝ≥0∞) + ((y : ℝ≥0∞) * ν) * K.rate s
@@ -339,12 +334,12 @@ noncomputable def pot (y : ℕ) (s : St) : ℝ≥0∞ :=
 /-- The potential, infinite above the total budget. -/
 noncomputable def potCap (total y : ℕ) (s : St) : ℝ≥0∞ := if y ≤ total then K.pot y s else ⊤
 
-/-- A forest contact against a completed table. -/
+/-- A FORS contact against a completed table. -/
 def FCT (T : Coordinate → Digest) (s : St) (f : FIn) : Prop :=
   ∃ u, K.Fr s (f.input K.p) u ∧ truncateHash u = T f.outC
 
-/-- The final payoff: a hit of the targeting, a WOTS event, or a forest contact without guess record
-or two related forest contacts against the completed table. -/
+/-- The final payoff: a hit of the targeting, a WOTS event, or a FORS contact without guess record
+or two related FORS contacts against the completed table. -/
 noncomputable def payoff (T : Coordinate → Digest) (s : St) : ℝ≥0∞ :=
   if Hit K.tg K.initial T s ∨ K.WotsBad s ∨ (∃ f, K.FCT T s f ∧ ¬Recd s f) ∨
     (∃ f g, f.Rel g ∧ K.FCT T s f ∧ K.FCT T s g) then 1 else 0
@@ -391,15 +386,15 @@ theorem isB_ne_enc {l : OtsKey} {i : ChainIndex} {v : Digest} {x : HashInput} (h
   obtain ⟨st, -, rfl⟩ := h
   exact chainInput_ne_enc
 
-theorem isA_ne_fchain {l : OtsKey} {i : ChainIndex} {x : HashInput} (h : K.IsA l i x) (f : FIn) :
+theorem isA_ne_fleaf {l : OtsKey} {i : ChainIndex} {x : HashInput} (h : K.IsA l i x) (f : FIn) :
     x ≠ f.input K.p := by
   obtain ⟨st, pay, -, rfl⟩ := h
-  exact chainInput_ne_fchain
+  exact chainInput_ne_fleaf
 
-theorem isB_ne_fchain {l : OtsKey} {i : ChainIndex} {v : Digest} {x : HashInput} (h : K.IsB l i v x) (f : FIn) :
+theorem isB_ne_fleaf {l : OtsKey} {i : ChainIndex} {v : Digest} {x : HashInput} (h : K.IsB l i v x) (f : FIn) :
     x ≠ f.input K.p := by
   obtain ⟨st, -, rfl⟩ := h
-  exact chainInput_ne_fchain
+  exact chainInput_ne_fleaf
 
 /-! ### Fresh entries after a store -/
 
@@ -863,7 +858,7 @@ theorem cw_congr {s s' : St} (hfr : ∀ (f : FIn) u, K.Fr s' (f.input K.p) u ↔
   have hLat : K.Lat s' f ↔ K.Lat s f := by simp only [Lat, FE, hfr, hk]
   simp only [cw, hFC, hLat]
 
-/-- The forest aggregates follow the contact weights and the guess records. -/
+/-- The FORS aggregates follow the contact weights and the guess records. -/
 theorem forest_same {s s' : St} (hcw : ∀ f, K.cw s' f = K.cw s f) (hg : s'.guesses = s.guesses) :
     K.ng s' = K.ng s ∧ K.kf s' = K.kf s ∧ K.pp s' = K.pp s ∧ K.latent s' = K.latent s := by
   have hR : ∀ f, Recd s' f ↔ Recd s f := fun f => by simp only [Recd, hg]

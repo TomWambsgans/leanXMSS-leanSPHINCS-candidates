@@ -1,8 +1,8 @@
 import LeanFors.SmallBudget.Linear.Potential
 
 /-! One fresh answer and the linear potential, input class by input class: an input of no WOTS
-or forest shape pays its first-order hazard; a forest step adds a contact weight of mean `2^-128`,
-paid as a contact without guess record, or as pairs and one more recorded contact. -/
+or FORS shape pays its first-order hazard; a FORS leaf query adds a contact weight of mean
+`2^-128`, paid as a contact without guess record, or as pairs and one more recorded contact. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -27,7 +27,7 @@ theorem rate_eq_of {s s' : St} (hA : K.Armed s' ↔ K.Armed s) (hC : K.contactCo
     (hK : K.kf s' = K.kf s) : K.rate s' = K.rate s := by
   simp only [rate, vrate, hA, hC, hK]
 
-/-- A store of an input that is no forest step keeps every forest aggregate. -/
+/-- A store of an input that is no FORS leaf query keeps every FORS aggregate. -/
 theorem forest_same_store {s : St} {x : HashInput} (u : HashOutput) (hx : s.cache x = none)
     (hi : K.initial x = none) (hF : ∀ f : FIn, x ≠ f.input K.p) :
     K.ng (s.store x u) = K.ng s ∧ K.kf (s.store x u) = K.kf s ∧ K.pp (s.store x u) = K.pp s ∧
@@ -36,14 +36,14 @@ theorem forest_same_store {s : St} {x : HashInput} (u : HashOutput) (hx : s.cach
       rw [K.fr_store u hx hi]; exact ⟨fun h => h.resolve_right fun h' => hF f h'.1.symm, Or.inl⟩)
     (fun _ => rfl)) rfl
 
-/-- A sum over forest steps that changes at one step only, from zero. -/
+/-- A sum over FORS leaf queries that changes at one query only, from zero. -/
 theorem sum_single (F F' : FIn → ℝ≥0∞) (f : FIn) (h : ∀ g, g ≠ f → F' g = F g) (h0 : F f = 0) :
     ∑ g, F' g = ∑ g, F g + F' f := by
   rw [← Finset.add_sum_erase _ F' (Finset.mem_univ f), ← Finset.add_sum_erase _ F (Finset.mem_univ f), h0,
     zero_add, add_comm, Finset.sum_congr rfl fun g hg => h g (Finset.ne_of_mem_erase hg)]
 
 
-/-- A double sum over forest steps that changes on the row and the column of one step only. -/
+/-- A double sum over FORS leaf queries that changes on the row and the column of one query only. -/
 theorem sum_double_le (G G' : FIn → FIn → ℝ≥0∞) (f : FIn) (h : ∀ g h, g ≠ f → h ≠ f → G' g h = G g h) :
     ∑ g, ∑ h, G' g h ≤ ∑ g, ∑ h, G g h + ∑ h, G' f h + ∑ g, G' g f := by
   have hpt : ∀ g h, G' g h ≤ G g h + (if g = f then G' f h else 0) + (if h = f then G' g f else 0) := by
@@ -73,7 +73,7 @@ theorem sum_double_le (G G' : FIn → FIn → ℝ≥0∞) (f : FIn) (h : ∀ g h
           Finset.sum_congr rfl fun g _ => by rw [Finset.sum_ite_eq' Finset.univ f, if_pos (Finset.mem_univ _)]
         rw [e1, e2]
 
-/-- The contact weight of a new step with truncated answer `t`. -/
+/-- The contact weight of a new query with truncated answer `t`. -/
 noncomputable def cwNew (s : St) (f : FIn) (t : Digest) : ℝ≥0∞ :=
   if s.known f.outC = none then ν else if s.known f.outC = some t then 1 else 0
 
@@ -90,7 +90,7 @@ theorem cw_of_not_fe {s : St} {f : FIn} (h : ¬K.FE s f) : K.cw s f = 0 := by
   have h2 : ¬K.Lat s f := fun hl => h hl.1
   simp only [cw, h1, h2, if_false]
 
-/-- **Other inputs.** An input of no WOTS or forest shape pays at most its first-order hazard. -/
+/-- **Other inputs.** An input of no WOTS or FORS shape pays at most its first-order hazard. -/
 theorem step_other (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none) (hi : K.initial x = none)
     (hAB : ∀ l, Retained K.p l → (∀ i, ¬K.IsA l i x) ∧ ∀ i v, ¬K.IsB l i v x)
     (hE : ∀ l msg ctr, Retained K.p l → x ≠ Wots.encodingInput K.p l.1 l.2.1 l.2.2 msg ctr)
@@ -127,30 +127,30 @@ theorem step_other (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none) (h
     refine this.trans (le_of_eq ?_)
     simp only [mul_zero, add_zero]
 
-/-- **Forest steps.** A fresh step adds a contact weight of mean `2^-128`: one unit of it without a
-guess record, and otherwise the weighted recorded contacts it may pair with and one more recorded
-contact at the remaining budget. -/
-theorem step_fchain (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none) (hi : K.initial x = none)
+/-- **FORS leaf queries.** A fresh query adds a contact weight of mean `2^-128`: one unit of it
+without a guess record, and otherwise the weighted recorded contacts it may pair with and one more
+recorded contact at the remaining budget. -/
+theorem step_fleaf (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none) (hi : K.initial x = none)
     {f : FIn} (hxF : x = f.input K.p) (hk : K.tg.kind x = .none) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y r.2 ≤
       K.pot y s + ν * (if Recd s f then (y : ℝ≥0∞) * ν + K.kf s else 1) := by
   set C : ℝ≥0∞ := if Recd s f then (y : ℝ≥0∞) * ν + K.kf s else 1 with hCdef
-  have hnotA : ∀ l i, ¬K.IsA l i x := fun l i hA => isA_ne_fchain hA f hxF
-  have hnotB : ∀ l i v, ¬K.IsB l i v x := fun l i v hB => isB_ne_fchain hB f hxF
+  have hnotA : ∀ l i, ¬K.IsA l i x := fun l i hA => isA_ne_fleaf hA f hxF
+  have hnotB : ∀ l i v, ¬K.IsB l i v x := fun l i v hB => isB_ne_fleaf hB f hxF
   have hnotFE : ¬K.FE s f := by
     rintro ⟨w, hw, -⟩
     rw [← hxF, hx] at hw
     cases hw
   have hxg : ∀ g : FIn, x = g.input K.p ↔ g = f := fun g => by
     rw [hxF]
-    exact ⟨fun h => (fchain_inj h).symm, fun h => h ▸ rfl⟩
+    exact ⟨fun h => (fleaf_inj h).symm, fun h => h ▸ rfl⟩
   have h := K.mean_store y hx 0 (fun t => cwNew s f t * C) (fun u => ?_)
   · rw [add_zero, meanD_cwNew] at h
     exact h
   · set s' := s.store x u with hs'
     set t := truncateHash u with ht
     have hsame : ∀ l, Retained K.p l → K.SameLeaf s s' l := fun l _ =>
-      K.sameLeaf_store u hx hi l (hnotA l) (hnotB l) (fun msg ctr he => enc_ne_fchain (he.symm.trans hxF))
+      K.sameLeaf_store u hx hi l (hnotA l) (hnotB l) (fun msg ctr he => enc_ne_fleaf (he.symm.trans hxF))
     obtain ⟨hW, hA, hC⟩ := K.wots_of_allSame hsame
     have hRs : ∀ g, Recd s' g ↔ Recd s g := fun g => Iff.rfl
     have hfrg : ∀ (g : FIn) v, g ≠ f → (K.Fr s' (g.input K.p) v ↔ K.Fr s (g.input K.p) v) := fun g v hg => by
@@ -189,7 +189,7 @@ theorem step_fchain (y : ℕ) {s : St} {x : HashInput} (hx : s.cache x = none) (
             simp only [h1, h2, if_false, reduceCtorEq, hne]
     have hcw0 : K.cw s f = 0 := K.cw_of_not_fe hnotFE
     set N := cwNew s f t with hN
-    -- the three forest sums
+    -- the three FORS sums
     have hng : K.ng s' = K.ng s + (if Recd s f then 0 else N) := by
       unfold ng
       rw [sum_single (fun g => if Recd s g then 0 else K.cw s g) (fun g => if Recd s' g then 0 else K.cw s' g) f
@@ -332,7 +332,7 @@ theorem step_A (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.cac
     have hnotB : ∀ l' i' v', ¬K.IsB l' i' v' x := fun l' i' v' hB => isA_not_isB hA hB
     have hnotE : ∀ (l' : OtsKey) msg ctr, x ≠ Wots.encodingInput K.p l'.1 l'.2.1 l'.2.2 msg ctr :=
       fun l' msg ctr => isA_ne_enc hA l' msg ctr
-    have hnotF : ∀ f : FIn, x ≠ f.input K.p := isA_ne_fchain hA
+    have hnotF : ∀ f : FIn, x ≠ f.input K.p := isA_ne_fleaf hA
     have hsame : ∀ l', Retained K.p l' → l' ≠ l → K.SameLeaf s s' l' := fun l' _ hne =>
       K.sameLeaf_store u hx hi l' (fun i' hA' => hne (isA_unique hA' hA).1) (hnotB l') (hnotE l')
     have hCB : ∀ i', K.ContactB s' l i' = K.ContactB s l i' := fun i' => by
@@ -447,7 +447,7 @@ theorem step_enc (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.c
     have hnotA : ∀ l' i', ¬K.IsA l' i' x := fun l' i' hA => isA_ne_enc hA l msg ctr hxE
     have hnotB : ∀ l' i' v, ¬K.IsB l' i' v x := fun l' i' v hB => isB_ne_enc hB l msg ctr hxE
     have hnotF : ∀ f : FIn, x ≠ f.input K.p := fun _ he =>
-      enc_ne_fchain (hxE.symm.trans he)
+      enc_ne_fleaf (hxE.symm.trans he)
     have hsame : ∀ l', Retained K.p l' → l' ≠ l → K.SameLeaf s s' l' := fun l' _ hne =>
       K.sameLeaf_store u hx hi l' (hnotA l') (hnotB l')
         (fun msg' ctr' he => hne (enc_inj (hxE.symm.trans he)).1.symm)
@@ -545,7 +545,7 @@ theorem step_B (hρ : K.ρ ≤ 2) (y : ℕ) {s : St} {x : HashInput} (hx : s.cac
     have hnotA : ∀ l' i', ¬K.IsA l' i' x := fun l' i' hA => isA_not_isB hA hB
     have hnotE : ∀ (l' : OtsKey) msg ctr, x ≠ Wots.encodingInput K.p l'.1 l'.2.1 l'.2.2 msg ctr :=
       fun l' msg ctr => isB_ne_enc hB l' msg ctr
-    have hnotF : ∀ f : FIn, x ≠ f.input K.p := isB_ne_fchain hB
+    have hnotF : ∀ f : FIn, x ≠ f.input K.p := isB_ne_fleaf hB
     have hsame : ∀ l', Retained K.p l' → l' ≠ l → K.SameLeaf s s' l' := fun l' _ hne =>
       K.sameLeaf_store u hx hi l' (hnotA l') (fun i' v' hB' => hne (isB_unique hB' hB).1) (hnotE l')
     have hAAeq : ∀ i', K.AAns s' l i' = K.AAns s l i' := fun i' => by

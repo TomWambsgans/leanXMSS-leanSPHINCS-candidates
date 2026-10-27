@@ -192,7 +192,7 @@ theorem arithEnc (s : St) {l : OtsKey} (hl : Retained K.p l) {g : ℝ≥0∞} (h
         _ ≤ _ := K.rate_ge_rho hN s
 
 include hxr hY in
-/-- A fresh forest step: its guess, and its contact weight with the pairs and the remaining budget
+/-- A fresh FORS leaf query: its guess, and its contact weight with the pairs and the remaining budget
 when it carries a record, or one unit otherwise. -/
 theorem arithF (s : St) {f : FIn} {g : ℝ≥0∞} (hg : g ≤ 1) (hrec : g = 0 ∨ Recd s f) :
     g + (if Recd s f then Y + K.kf s else 1) ≤ K.rate s := by
@@ -306,11 +306,11 @@ theorem fresh_enc {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = no
     _ ≤ _ := add_le_add le_rfl (mul_le_mul_of_nonneg_left ha bot_le)
 
 include hN hxr hY in
-theorem fresh_fchain {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none) {f : FIn}
+theorem fresh_fleaf {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = none) {f : FIn}
     (hxF : x = f.input K.p) (hk : K.tg.kind x = .none) {g : ℝ≥0∞} (hg : g ≤ 1) (hrec : g = 0 ∨ Recd s f) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y' r.2 + ν * g ≤ K.pot (y' + 1) s := by
   have hi := initial_none_of_fresh K.initial s hinv.prepared x hx
-  have h := K.step_fchain y' hx hi hxF hk
+  have h := K.step_fleaf y' hx hi hxF hk
   have ha := K.arithF hN hxr hY s hg hrec
   rw [K.pot_succ]
   calc _ ≤ _ + ν * g := add_le_add h le_rfl

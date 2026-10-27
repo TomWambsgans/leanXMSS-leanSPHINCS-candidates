@@ -3,7 +3,7 @@ import LeanFors.SmallBudget.Linear.Step
 /-! The linear potential on the interpreted comparison: every step of the cost-level lazy
 comparison keeps the potential in expectation while paying the digest baseline, the invariant
 is preserved, and the final payoff is bounded by the decided events, the pending debts and the
-forest part (completing the unexposed coordinates decides each latent step with chance `2^-128`,
+FORS part (completing the unexposed coordinates decides each latent query with chance `2^-128`,
 independently at different coordinates). -/
 
 open OracleComp OracleSpec ENNReal
@@ -287,7 +287,7 @@ theorem pinChance_eq (o : Option Digest) (t : Digest) :
       rfl
   | some w => simp [pinChance]
 
-/-- The chance of one forest contact against the completion is its contact weight. -/
+/-- The chance of one FORS contact against the completion is its contact weight. -/
 theorem prob_fct (s : St) (f : FIn) : Pr[fun T => K.FCT T s f | completion s.known] = K.cw s f := by
   by_cases hfe : K.FE s f
   · obtain ⟨u, hu⟩ := hfe
@@ -331,7 +331,7 @@ theorem prob_fct (s : St) (f : FIn) : Pr[fun T => K.FCT T s f | completion s.kno
     rw [h0]
     exact probEvent_eq_zero fun T _ ⟨u, hu, _⟩ => hfe ⟨u, hu⟩
 
-/-- The chance of two forest contacts writing different coordinates is the product of their weights. -/
+/-- The chance of two FORS contacts writing different coordinates is the product of their weights. -/
 theorem prob_fct2 (s : St) (f g : FIn) (hfg : f.outC ≠ g.outC) :
     Pr[fun T => K.FCT T s f ∧ K.FCT T s g | completion s.known] = K.cw s f * K.cw s g := by
   by_cases hfe : K.FE s f
@@ -387,11 +387,11 @@ theorem prob_fct2 (s : St) (f g : FIn) (hfg : f.outC ≠ g.outC) :
   · rw [K.cw_of_not_fe hfe, zero_mul]
     exact probEvent_eq_zero fun T _ ⟨⟨u, hu, _⟩, _⟩ => hfe ⟨u, hu⟩
 
-/-- The indicator of a forest contact without guess record against a completed table. -/
+/-- The indicator of a FORS contact without guess record against a completed table. -/
 noncomputable def ngInd (T : Coordinate → Digest) (s : St) (f : FIn) : ℝ≥0∞ :=
   if Recd s f then 0 else if K.FCT T s f then 1 else 0
 
-/-- The indicator of two related recorded forest contacts against a completed table. -/
+/-- The indicator of two related recorded FORS contacts against a completed table. -/
 noncomputable def pairInd (T : Coordinate → Digest) (s : St) (f g : FIn) : ℝ≥0∞ :=
   if Recd s f ∧ Recd s g ∧ f.Rel g then (if K.FCT T s f ∧ K.FCT T s g then 1 else 0) else 0
 

@@ -102,9 +102,8 @@ variable (K : Ctx)
 /-! ### The invariant -/
 
 /-- Coordinates known from the start with fixed values: the chain values at and above the
-prepared word of a retained key, and the tops of the forest chains. -/
-def Anchor (c : Coordinate) : Prop :=
-  AboveWord K.p K.R c ∨ ∃ index cc sp j a i, c = .fchain index cc sp j a i ⟨chainTop, by omega⟩
+prepared word of a retained key. A FORS leaf row has no such value. -/
+def Anchor (c : Coordinate) : Prop := AboveWord K.p K.R c
 
 /-- **Invariant.** The prepared cache is kept, the anchors hold their values, and every fresh
 parsed input whose incoming coordinate is still unexposed carries its guess record. -/
@@ -396,7 +395,7 @@ theorem pot_expose_mean (y : ℕ) (s : St) (c : Coordinate) (hc : s.known c = no
         rw [← hpend]
         ring
 
-/-- A guess record that is no new record of a fresh forest step keeps the forest aggregates. -/
+/-- A guess record that is no new record of a fresh FORS leaf query keeps the FORS aggregates. -/
 theorem forest_record (s : St) (g : Coordinate × Digest)
     (h : ∀ f : FIn, g = (f.inC, f.v) → K.FE s f → g ∈ s.guesses) :
     K.ng (s.record g) = K.ng s ∧ K.kf (s.record g) = K.kf s ∧ K.pp (s.record g) = K.pp s ∧

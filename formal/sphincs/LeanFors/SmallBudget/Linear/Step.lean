@@ -31,7 +31,7 @@ theorem msg_ne_enc {x : HashInput} (hx : ForestSigner.IsMsgInput x) {p : PublicP
   have hd := (domain_eq_of_input h trivial trivial).1
   cases hd
 
-theorem msg_ne_fchain {x : HashInput} (hx : ForestSigner.IsMsgInput x) {p : PublicParameter} {f : FIn} :
+theorem msg_ne_fleaf {x : HashInput} (hx : ForestSigner.IsMsgInput x) {p : PublicParameter} {f : FIn} :
     x ≠ f.input p := by
   obtain ⟨p', call, payload, rfl⟩ := hx
   intro h
@@ -41,21 +41,19 @@ theorem msg_ne_fchain {x : HashInput} (hx : ForestSigner.IsMsgInput x) {p : Publ
 theorem input_chain (p : PublicParameter) (l : OtsKey) (i : ChainIndex) (st : ChainStep) (v : Digest) :
     HiddenGraph.input p (Address.chain l.1 l.2.1 l.2.2 i st, v) = chainInput p l i st v := rfl
 
-theorem input_fchain (p : PublicParameter) (index : Index) (c : Coord) (sp : SuperIdx) (j : SubIdx) (a : ChildIdx)
-    (i : FChain) (t : FStep) (v : Digest) :
-    HiddenGraph.input p (Address.fchain index c sp j a i t, v) = (FIn.mk index c sp j a i t v).input p := rfl
+theorem input_fleaf (p : PublicParameter) (index : Index) (κ : FTree) (leaf : FLeaf) (v : Digest) :
+    HiddenGraph.input p (Address.fleaf index κ leaf, v) = (FIn.mk index κ leaf v).input p := rfl
 
-/-- A forest step is determined by the coordinate it reads and its payload. -/
-theorem fin_eq_of_inC {f : FIn} {index : Index} {c : Coord} {sp : SuperIdx} {j : SubIdx} {a : ChildIdx}
-    {i : FChain} {t : FStep} {v : Digest}
-    (h : ((Address.fchain index c sp j a i t).inputCoordinate, v) = (f.inC, f.v)) :
-    f = FIn.mk index c sp j a i t v := by
-  obtain ⟨index', c', sp', j', a', i', t', v'⟩ := f
-  simp only [Address.inputCoordinate, FIn.inC, Prod.mk.injEq, Coordinate.fchain.injEq, Fin.mk.injEq] at h
-  obtain ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, ht⟩, rfl⟩ := h
-  have : t' = t := Fin.ext ht.symm
-  subst this
-  rfl
+/-- A FORS leaf query is determined by the coordinate it reads and its payload. -/
+theorem fin_eq_of_inC {f : FIn} {index : Index} {κ : FTree} {leaf : FLeaf} {v : Digest}
+    (h : ((Address.fleaf index κ leaf).inputCoordinate, v) = (f.inC, f.v)) :
+    f = FIn.mk index κ leaf v := by
+  obtain ⟨index', κ', leaf', v'⟩ := f
+  have hc : Coordinate.fors index κ leaf 0 = Coordinate.fors index' κ' leaf' 0 := congrArg Prod.fst h
+  have hv : v = v' := congrArg Prod.snd h
+  rw [Coordinate.fors.injEq] at hc
+  obtain ⟨rfl, rfl, rfl, -⟩ := hc
+  rw [hv]
 
 namespace Ctx
 
@@ -89,8 +87,8 @@ theorem fresh_zero {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = n
     simpa using K.fresh_enc hN hxr hY hinv hx hl hxE (g := 0) (by rw [zero_add]; exact K.kindUnit_le_one x)
   by_cases hF : ∃ f : FIn, x = f.input K.p
   · obtain ⟨f, hxF⟩ := hF
-    simpa using K.fresh_fchain hN hxr hY hinv hx hxF
-      (hsec x (Or.inr ⟨f.index, f.c, f.s, f.j, f.a, f.i, f.t, f.v, hxF⟩)) (g := 0) bot_le (Or.inl rfl)
+    simpa using K.fresh_fleaf hN hxr hY hinv hx hxF
+      (hsec x (Or.inr ⟨f.index, f.κ, f.leaf, f.v, hxF⟩)) (g := 0) bot_le (Or.inl rfl)
   have h := K.fresh_other hN (y' := y') hinv hx
     (fun l hl => ⟨fun i h => hA ⟨l, i, hl, h⟩, fun i v h => hB ⟨l, i, v, hl, h⟩⟩)
     (fun l msg ctr hl h => hE ⟨l, msg, ctr, hl, h⟩) (fun f h => hF ⟨f, h⟩) (w := 0)
@@ -103,7 +101,7 @@ theorem fresh_digest (hmsg : ∀ x, ForestSigner.IsMsgInput x → K.tg.kind x = 
     {x : HashInput} (hx : s.cache x = none) (hd : ForestSigner.IsMsgInput x) :
     ∑' r, Pr[= r | readOutside x s] * K.pot y' r.2 + ν * ENNReal.ofReal K.ρ ≤ K.pot (y' + 1) s := by
   refine K.fresh_other hN hinv hx (fun l _ => ⟨fun i h => ?_, fun i v h => ?_⟩)
-    (fun l msg ctr _ h => msg_ne_enc hd h) (fun f h => msg_ne_fchain hd h)
+    (fun l msg ctr _ h => msg_ne_enc hd h) (fun f h => msg_ne_fleaf hd h)
     (by rw [K.kindUnit_none (hmsg x hd), add_zero])
   · obtain ⟨st, pay, -, h⟩ := h
     exact msg_ne_chain hd h
@@ -138,8 +136,7 @@ theorem guess_fresh {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = 
       refine ⟨?_, hKF⟩
       have hnot : ¬(K.w (lay, tree, leaf) chain).val ≤ step.val := by
         intro hle
-        have hanc : K.Anchor (Address.chain lay tree leaf chain step).inputCoordinate :=
-          Or.inl ⟨hl, hle⟩
+        have hanc : K.Anchor (Address.chain lay tree leaf chain step).inputCoordinate := ⟨hl, hle⟩
         rw [hinv.anchored _ hanc] at hk
         cases hk
       have hsecx : SecondOrderInput K.p K.R (chainInput K.p (lay, tree, leaf) chain step v) :=
@@ -151,7 +148,7 @@ theorem guess_fresh {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = 
       by_cases h2 : step.val + 2 = (K.w (lay, tree, leaf) chain).val
       · exact K.fresh_A hN hinv₁ hx₁ hl ⟨step, v, h2, rfl⟩ hkind le_rfl
       refine K.fresh_other hN hinv₁ hx₁ (fun l' _ => ⟨fun i' hA => ?_, fun i' v' hB => ?_⟩)
-        (fun l' msg ctr _ => chainInput_ne_enc) (fun _ => chainInput_ne_fchain)
+        (fun l' msg ctr _ => chainInput_ne_enc) (fun _ => chainInput_ne_fleaf)
         (by rw [K.kindUnit_none hkind, add_zero]; exact one_le_ofReal (by linarith [hN.low]))
       · obtain ⟨st', pay', hst', heq⟩ := hA
         obtain ⟨rfl, rfl, rfl, -⟩ := chainInput_inj heq
@@ -159,21 +156,21 @@ theorem guess_fresh {s : St} (hinv : K.Inv s) {x : HashInput} (hx : s.cache x = 
       · obtain ⟨st', hst', heq⟩ := hB
         obtain ⟨rfl, rfl, rfl, -⟩ := chainInput_inj heq
         exact h1 hst'
-  | fchain index c sp j a i t =>
-      have hKF : ∀ f : FIn, ((Address.fchain index c sp j a i t).inputCoordinate, v) = (f.inC, f.v) →
-          K.FE s f → ((Address.fchain index c sp j a i t).inputCoordinate, v) ∈ s.guesses := by
+  | fleaf index κ leaf =>
+      have hKF : ∀ f : FIn, ((Address.fleaf index κ leaf).inputCoordinate, v) = (f.inC, f.v) →
+          K.FE s f → ((Address.fleaf index κ leaf).inputCoordinate, v) ∈ s.guesses := by
         intro f hg hfe
         exfalso
         obtain ⟨w, hfr⟩ := hfe
         rw [fin_eq_of_inC hg] at hfr
         have h1 := hfr.1
-        change s.cache (HiddenGraph.input K.p (Address.fchain _ _ _ _ _ _ _, _)) = some w at h1
+        change s.cache (HiddenGraph.input K.p (Address.fleaf _ _ _, _)) = some w at h1
         rw [hx] at h1
         cases h1
       refine ⟨?_, hKF⟩
-      have hkind := hsec _ (Or.inr ⟨index, c, sp, j, a, i, t, v, rfl⟩)
-      rw [input_fchain] at hx₁ ⊢
-      exact K.fresh_fchain hN hxr hY hinv₁ hx₁ rfl hkind le_rfl (Or.inr List.mem_cons_self)
+      have hkind := hsec _ (Or.inr ⟨index, κ, leaf, v, rfl⟩)
+      rw [input_fleaf] at hx₁ ⊢
+      exact K.fresh_fleaf hN hxr hY hinv₁ hx₁ rfl hkind le_rfl (Or.inr List.mem_cons_self)
 
 end Fresh
 
@@ -191,7 +188,7 @@ theorem guess_cached {xr : ℝ} (hN : Numeric K.ρ xr) (y' : ℕ) {s : St} (hinv
     | chain lay tree' leaf' chain step =>
         have := congrArg Prod.fst hg
         cases this
-    | fchain index c sp j a i t =>
+    | fleaf index κ leaf =>
         obtain ⟨w, hfr⟩ := hfe
         rw [fin_eq_of_inC hg] at hfr
         exact hinv.guessed _ w _ hfr hp hk

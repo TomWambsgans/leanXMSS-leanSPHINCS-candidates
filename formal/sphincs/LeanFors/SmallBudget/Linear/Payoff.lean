@@ -4,8 +4,8 @@ import LeanFors.SmallBudget.Linear.Start
 prepared cache holds structural inputs and the encoding search queries only, and no search
 answer decodes to a unit neighbour of the prepared word. So, for any table extending the
 exposed coordinates, a first-order hit or a correct guess is a hit of the first-order targeting,
-the WOTS events are WOTS events of the state, two forest contacts are a pair of the payoff, and a
-forest contact is a contact without guess record or a recorded contact (both against the table). -/
+the WOTS events are WOTS events of the state, two FORS contacts are a pair of the payoff, and a
+FORS contact is a contact without guess record or a recorded contact (both against the table). -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -111,9 +111,8 @@ theorem position_domain_chain {position : Position} {lay : Layer} {tree : TreeIn
   cases position <;> simp [Position.domain] at h
   trivial
 
-theorem position_domain_fchain {position : Position} {index : Index} {c : Coord} {sp : SuperIdx} {j : SubIdx}
-    {a : ChildIdx} {i : FChain} {t : FStep}
-    (h : position.domain = .fchain index c sp j a i t) : IsRowPosition position := by
+theorem position_domain_fleaf {position : Position} {index : Index} {κ : FTree} {leaf : FLeaf}
+    (h : position.domain = .forsLeaf index κ leaf) : IsRowPosition position := by
   cases position <;> simp [Position.domain] at h
   trivial
 
@@ -131,13 +130,13 @@ theorem prepared_not_chain {l : OtsKey} {i : ChainIndex} {st : ChainStep} {v : D
   · exact chainInput_ne_enc heq
 
 include hprepared in
-/-- The prepared cache holds no forest step. -/
-theorem prepared_not_fchain {f : FIn} {a : HashOutput}
+/-- The prepared cache holds no FORS leaf query. -/
+theorem prepared_not_fleaf {f : FIn} {a : HashOutput}
     (h : prepared.2 (f.input (truncateHash parameterOutput)) = some a) : False := by
   rcases prepared_origin parameterOutput fixed highs remaining prepared hprepared _ a h with
     ⟨position, hrow, payload, heq⟩ | ⟨leaf', counter, heq, -⟩
-  · exact hrow (position_domain_fchain (domain_eq_of_input heq trivial (Position.domain_inRange _)).1.symm)
-  · exact enc_ne_fchain heq.symm
+  · exact hrow (position_domain_fleaf (domain_eq_of_input heq trivial (Position.domain_inRange _)).1.symm)
+  · exact enc_ne_fleaf heq.symm
 
 include hprepared in
 /-- No prepared encoding answer decodes to a unit neighbour of the prepared word. -/
@@ -169,10 +168,9 @@ variable (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : Coo
   (hinv : (ctxA parameterOutput fixed highs remaining prepared known ρ).Inv s)
   (T : Coordinate → Digest) (hT : tableExtending s.known T = T)
 
-/-- A forest contact carrying its guess record, at a given step. -/
-def RecordedContactAt (K : Ctx) (index : Index) (c : Coord) (sp : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain)
-    (t : FStep) : Prop :=
-  ∃ v, K.FCT T s ⟨index, c, sp, j, a, i, t, v⟩ ∧ Ctx.Recd s ⟨index, c, sp, j, a, i, t, v⟩
+/-- A FORS contact carrying its guess record, at a given leaf. -/
+def RecordedContactAt (K : Ctx) (index : Index) (κ : FTree) (leaf : FLeaf) : Prop :=
+  ∃ v, K.FCT T s ⟨index, κ, leaf, v⟩ ∧ Ctx.Recd s ⟨index, κ, leaf, v⟩
 
 include hinv hT in
 theorem anchor_value {c : Coordinate}
@@ -232,8 +230,7 @@ theorem wotsBad_of_event (h : WotsEvent (truncateHash parameterOutput) prepared.
   set K := ctxA parameterOutput fixed highs remaining prepared known ρ with hK
   obtain ⟨leaf, hl, hev⟩ := h
   have hfront : ∀ chain, frontierValue prepared.1 T leaf chain = K.front leaf chain := fun chain =>
-    anchor_value parameterOutput fixed highs remaining prepared known ρ s hinv T hT
-      (Or.inl ⟨hl, le_rfl⟩)
+    anchor_value parameterOutput fixed highs remaining prepared known ρ s hinv T hT ⟨hl, le_rfl⟩
   have hchain : ∀ (chain : ChainIndex) (st : ChainStep) (v : Digest) (a : HashOutput),
       s.cache (chainInput (truncateHash parameterOutput) leaf chain st v) = some a →
       K.Fr s (chainInput K.p leaf chain st v) a := fun chain st v a hc =>
@@ -265,46 +262,46 @@ theorem wotsBad_of_event (h : WotsEvent (truncateHash parameterOutput) prepared.
   · exact Or.inr (Or.inr ⟨chain, chain', hne, hcontact chain hc, hcontact chain' hc'⟩)
 
 include hprepared in
-theorem fContact_of_at {index : Index} {c : Coord} {sp : SuperIdx} {j : SubIdx} {a : ChildIdx} {i : FChain}
-    {t : FStep} (h : FContactAt (truncateHash parameterOutput) T s.cache index c sp j a i t) :
-    ∃ v, (ctxA parameterOutput fixed highs remaining prepared known ρ).FCT T s ⟨index, c, sp, j, a, i, t, v⟩ := by
+theorem fContact_of_at {index : Index} {κ : FTree} {leaf : FLeaf}
+    (h : FContactAt (truncateHash parameterOutput) T s.cache index κ leaf) :
+    ∃ v, (ctxA parameterOutput fixed highs remaining prepared known ρ).FCT T s ⟨index, κ, leaf, v⟩ := by
   obtain ⟨payload, answer, -, hc, hv⟩ := h
   exact ⟨payload, answer, ⟨hc, initial_none_of_not prepared fun a' h' =>
-    prepared_not_fchain parameterOutput fixed highs remaining prepared hprepared (f := ⟨_, _, _, _, _, _, _, _⟩) h'⟩, hv⟩
+    prepared_not_fleaf parameterOutput fixed highs remaining prepared hprepared (f := ⟨_, _, _, _⟩) h'⟩, hv⟩
 
 include hprepared in
-/-- **Two forest contacts** at different chains of one index are a pair of the payoff. -/
+/-- **Two FORS contacts** at different leaves of one index are a pair of the payoff. -/
 theorem twoForest_of_contacts (h : TwoForestContacts (truncateHash parameterOutput) T s.cache) :
     ∃ f g, f.Rel g ∧ (ctxA parameterOutput fixed highs remaining prepared known ρ).FCT T s f ∧
       (ctxA parameterOutput fixed highs remaining prepared known ρ).FCT T s g := by
-  obtain ⟨index, c, sp, j, a, i, t, c', sp', j', a', i', t', hne, hc, hc'⟩ := h
+  obtain ⟨index, κ, leaf, κ', leaf', hne, hc, hc'⟩ := h
   obtain ⟨v, hf⟩ := fContact_of_at parameterOutput fixed highs remaining prepared hprepared known ρ s T hc
   obtain ⟨v', hf'⟩ := fContact_of_at parameterOutput fixed highs remaining prepared hprepared known ρ s T hc'
-  exact ⟨⟨index, c, sp, j, a, i, t, v⟩, ⟨index, c', sp', j', a', i', t', v'⟩, ⟨rfl, hne⟩, hf, hf'⟩
+  exact ⟨⟨index, κ, leaf, v⟩, ⟨index, κ', leaf', v'⟩, ⟨rfl, hne⟩, hf, hf'⟩
 
 include hprepared in
-/-- **A forest contact** is a contact without guess record or a recorded contact. -/
-theorem fContactAt_split {index : Index} {c : Coord} {sp : SuperIdx} {j : SubIdx} {a : ChildIdx} {i : FChain}
-    {t : FStep} (h : FContactAt (truncateHash parameterOutput) T s.cache index c sp j a i t) :
+/-- **A FORS contact** is a contact without guess record or a recorded contact. -/
+theorem fContactAt_split {index : Index} {κ : FTree} {leaf : FLeaf}
+    (h : FContactAt (truncateHash parameterOutput) T s.cache index κ leaf) :
     (∃ f, (ctxA parameterOutput fixed highs remaining prepared known ρ).FCT T s f ∧ ¬Ctx.Recd s f) ∨
-      RecordedContactAt s T (ctxA parameterOutput fixed highs remaining prepared known ρ) index c sp j a i t := by
+      RecordedContactAt s T (ctxA parameterOutput fixed highs remaining prepared known ρ) index κ leaf := by
   obtain ⟨v, hf⟩ := fContact_of_at parameterOutput fixed highs remaining prepared hprepared known ρ s T h
-  by_cases hg : Ctx.Recd s ⟨index, c, sp, j, a, i, t, v⟩
+  by_cases hg : Ctx.Recd s ⟨index, κ, leaf, v⟩
   · exact Or.inr ⟨v, hf, hg⟩
   · exact Or.inl ⟨_, hf, hg⟩
 
 include hprepared in
-/-- **Forest contacts at revealed chains.** Without a guess record they are a payoff event; what
-remains is a recorded contact whose chain is revealed at or below its step. -/
+/-- **FORS contacts at revealed secrets.** Without a guess record they are a payoff event; what
+remains is a recorded contact whose secret is revealed. -/
 theorem revealedContact_split (reveals : List Coordinate)
     (h : RevealedContact (truncateHash parameterOutput) T s.cache reveals) :
     (∃ f, (ctxA parameterOutput fixed highs remaining prepared known ρ).FCT T s f ∧ ¬Ctx.Recd s f) ∨
-      ∃ index c sp j a i t, (∃ q : FPos, q.val ≤ t.val ∧ Coordinate.fchain index c sp j a i q ∈ reveals) ∧
-        RecordedContactAt s T (ctxA parameterOutput fixed highs remaining prepared known ρ) index c sp j a i t := by
-  obtain ⟨index, c, sp, j, a, i, t, hrev, hc⟩ := h
+      ∃ index κ leaf, Coordinate.fors index κ leaf 0 ∈ reveals ∧
+        RecordedContactAt s T (ctxA parameterOutput fixed highs remaining prepared known ρ) index κ leaf := by
+  obtain ⟨index, κ, leaf, hrev, hc⟩ := h
   rcases fContactAt_split parameterOutput fixed highs remaining prepared hprepared known ρ s T hc with hng | hrec
   · exact Or.inl hng
-  · exact Or.inr ⟨index, c, sp, j, a, i, t, hrev, hrec⟩
+  · exact Or.inr ⟨index, κ, leaf, hrev, hrec⟩
 
 /-- A near cover whose contact carries its guess record. -/
 def ForestNearRecorded (K : Ctx) (root : Digest) (outcome : Outcome) (reveals : List Coordinate) : Prop :=
@@ -313,9 +310,8 @@ def ForestNearRecorded (K : Ctx) (root : Digest) (outcome : Outcome) (reveals : 
     Landed K.p (digestIndex digest) ∧
     (∀ entry ∈ outcome.2.1, ∀ signature, entry.2 = some signature →
       ¬(entry.1 = outcome.1.message ∧ signature.randomness = outcome.1.signature.randomness)) ∧
-    ∃ c j i t, RecordedContactAt s T K (digestIndex digest) c (digestLeaves digest c).super j
-        ((digestLeaves digest c).child j) i t ∧
-      ∀ c' j' i', (c', j', i') ≠ (c, j, i) → ChainCov (revealedSet reveals) (fullDigestView digest) c' j' i'
+    ∃ κ, RecordedContactAt s T K (digestIndex digest) κ (digestLeaves digest κ) ∧
+      ∀ κ' ≠ κ, TreeCov (revealedSet reveals) (fullDigestView digest) κ'
 
 include hprepared in
 /-- **Near covers.** Without a guess record the contact is a payoff event; what remains is a near
@@ -324,20 +320,20 @@ theorem forestNear_split (root : Digest) (outcome : Outcome) (reveals : List Coo
     (h : ForestNear (truncateHash parameterOutput) T s.cache root outcome reveals) :
     (∃ f, (ctxA parameterOutput fixed highs remaining prepared known ρ).FCT T s f ∧ ¬Ctx.Recd s f) ∨
       ForestNearRecorded s T (ctxA parameterOutput fixed highs remaining prepared known ρ) root outcome reveals := by
-  obtain ⟨hvalid, digest, hdigest, hland, hunsigned, c, j, i, t, hc, hcov⟩ := h
+  obtain ⟨hvalid, digest, hdigest, hland, hunsigned, κ, hc, hcov⟩ := h
   rcases fContactAt_split parameterOutput fixed highs remaining prepared hprepared known ρ s T hc with hng | hrec
   · exact Or.inl hng
-  · exact Or.inr ⟨hvalid, digest, hdigest, hland, hunsigned, c, j, i, t, hrec, hcov⟩
+  · exact Or.inr ⟨hvalid, digest, hdigest, hland, hunsigned, κ, hrec, hcov⟩
 
 include hprepared hinv hT in
 /-- **The refined bad event.** Every component of `badA` of a final state is a payoff event, a
-recorded forest contact at a revealed chain, a near cover with a recorded contact, or a cover. -/
+recorded FORS contact at a revealed secret, a near cover with a recorded contact, or a cover. -/
 theorem badA_split (hfix : tableExtending (knownOf (truncateHash parameterOutput) fixed) T = T)
     (res : Option Outcome) (reveals : List Coordinate) (entries : List (Entry HashInput))
     (h : badA parameterOutput fixed highs remaining prepared.1 T (((res, reveals), entries), s.cache)) :
     payoffA parameterOutput fixed highs remaining prepared known ρ T s = 1 ∨
-      (∃ index c sp j a i t, (∃ q : FPos, q.val ≤ t.val ∧ Coordinate.fchain index c sp j a i q ∈ reveals) ∧
-        RecordedContactAt s T (ctxA parameterOutput fixed highs remaining prepared known ρ) index c sp j a i t) ∨
+      (∃ index κ leaf, Coordinate.fors index κ leaf 0 ∈ reveals ∧
+        RecordedContactAt s T (ctxA parameterOutput fixed highs remaining prepared known ρ) index κ leaf) ∨
       ∃ outcome, res = some outcome ∧
         (ForestNearRecorded s T (ctxA parameterOutput fixed highs remaining prepared known ρ)
             (sampleData parameterOutput fixed highs remaining).root outcome reveals ∨
