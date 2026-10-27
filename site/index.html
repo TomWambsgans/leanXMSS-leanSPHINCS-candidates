@@ -991,6 +991,9 @@ footer a + a { margin-left: 1.25rem; }
     return String(Math.round(x));
   }
   // a lifetime: the same, rounded down (never more than proved)
+  // the lifetime of a configuration: as a power of two (rounded down) for the full and layered keys, as the
+  // toggle names them, and as a number for a pruned key
+  function lifeOf(c) { return c.shape === 'layered' || c.b === c.h ? pow2(Math.floor(Math.log2(c.lifetime))) : life(c.lifetime); }
   function life(x) {
     var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(x)) - 2);
     x = q >= 1 ? Math.floor(x / q + 1e-9) * q : Math.floor(x);
@@ -1074,7 +1077,7 @@ footer a + a { margin-left: 1.25rem; }
     [].forEach.call(document.querySelectorAll('.life-tip'), function (e) { e.setAttribute('data-tip', LIFE_TIP); });
     document.querySelector('[data-f="life-0"]').closest('tr').classList.toggle('gone', lay_);
     document.querySelector('[data-f="life-all"]').closest('tr').classList.toggle('gone', !lay_);
-    set('life-all', '<div>' + life(lay.lifetime) + ' signatures<span class="m-only">' + info(LIFE_TIP) + '</span></div>');
+    set('life-all', '<div>' + lifeOf(lay) + ' signatures<span class="m-only">' + info(LIFE_TIP) + '</span></div>');
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
       var dev = d.dev + info((d.host ? fmt(d.rate) : pow2t(Math.round(Math.log2(d.rate)))) +
@@ -1085,7 +1088,7 @@ footer a + a { margin-left: 1.25rem; }
       else if (c.b === c.h) what = 'full tree of height ' + c.h;
       else what = 'subtree of height ' + c.b;
       var t = function (n, r) { return '<span class="ex">' + time(n / (r || d.rate)) + '</span>'; };
-      set('life-' + k, '<div>' + life(c.lifetime) + ' signatures<span class="m-only">' + info(LIFE_TIP) + '</span>' +
+      set('life-' + k, '<div>' + lifeOf(c) + ' signatures<span class="m-only">' + info(LIFE_TIP) + '</span>' +
         (what ? ' <span class="note">(' + what + ')</span>' : '') + '</div>');
       set('keygen-' + k, '<div class="hd"><span>' + fmt(c.keygen) + '&nbsp;' + unit() + '</span>' + t(c.keygen) + '</div>');
       set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="note">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
