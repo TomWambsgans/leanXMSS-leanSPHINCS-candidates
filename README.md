@@ -11,6 +11,8 @@
   - the `sphincs` crate;
   - the Lean proof `formal/sphincs/LeanForest`, which builds on leanVM's security proof of its
     three-layer scheme at commit `b7a107256` (in this repository's history at commit `7269bd3`).
+- Pruning (key generation builds only a subtree, and the signer grinds into it) comes from
+  conduition's [hypertree pruning](https://conduition.io/cryptography/hypertree-pruning/).
 - The two-level WOTS forest is inspired by Jonas Nick's
   [sig.golf submission](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0).
 - The idea of preparing FTS instances ahead of the message and grinding onto them comes from
