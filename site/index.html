@@ -172,16 +172,21 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .assist.never .msg { position: absolute; inset: 0; display: flex; align-items: center; }
 /* the offline-time slider, drawn the same everywhere: a hairline track inked up to a small round thumb, and over
    them the real slider, invisible, which takes the pointer, the touch and the keyboard */
-.rng { position: relative; display: inline-block; width: 7rem; max-width: 40vw; height: 1.3rem; margin: 0 0.35rem; vertical-align: middle; --p: 0.5; }
+.assist .ln { display: flex; align-items: center; gap: 0.6rem; }
+.assist .ln > :last-child { margin-left: auto; }
+.assist .off { min-width: 4.4em; text-align: right; font-variant-numeric: tabular-nums; }   /* a fixed width: the slider keeps its length while the time changes */
+.rng { position: relative; flex: 1 1 auto; min-width: 3rem; height: 1.3rem; --p: 0.5; }
 .rng .trk { pointer-events: none; position: absolute; left: 6px; right: 6px; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px; background: var(--tree); }
 .rng .fill { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--p) * 100%); border-radius: 1px; background: var(--ink); }
 .rng .knob { position: absolute; top: 50%; left: calc(6px + (100% - 12px) * var(--p)); width: 11px; height: 11px;
   transform: translate(-50%, -50%); border-radius: 50%; background: #fff; border: 1.5px solid var(--ink);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); transition: transform 0.12s ease; pointer-events: none; box-sizing: border-box; }
-.rng input { z-index: 1; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.rng input { z-index: 1; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer;
+  -webkit-appearance: none; appearance: none; background: transparent; }
+.rng input::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 1.3rem; }
+.rng input::-moz-range-thumb { width: 12px; height: 1.3rem; border: 0; }
 .rng:hover .knob, .rng input:active ~ .knob { transform: translate(-50%, -50%) scale(1.25); }
 .rng input:focus-visible ~ .knob { box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.18); }
-@media (max-width: 600px) { .rng { width: 6.3rem; } }
 @media (prefers-reduced-motion: reduce) { .rng .knob { transition: none; } }
 .tables p, #tip { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }   /* running text: flush left and right */
 .cmp thead .sub { font-weight: 400; color: var(--muted); }
@@ -236,7 +241,6 @@ footer a + a { margin-left: 1.25rem; }
   .cards td .hd { gap: 0 0.6em; flex-wrap: wrap; }
   .cards td .hd .ex { margin-left: auto; }
   .cards .note { display: block; }
-  .cards .assist .note { display: inline; }   /* the slider's count stays beside its time */
   footer { flex-direction: column; gap: 0.5rem; }
 }
 @media (max-width: 860px) {
@@ -254,7 +258,7 @@ footer a + a { margin-left: 1.25rem; }
   .tables .scroll .cards thead th { margin: 1.1rem 0 0.35rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--rule); }
   .tables .scroll .cards thead th:nth-child(2) { margin-top: 0.3rem; }
   .tables .scroll .cards td { display: grid; grid-template-columns: 7.6rem minmax(0, 1fr); align-items: baseline; padding: 0.14rem 0; }
-  .cards td::before { content: attr(data-l); color: var(--muted); font-size: 0.92em; }
+  .cards td::before { content: attr(data-l); color: var(--muted); font-size: 0.92em; white-space: normal; padding-right: 0.5rem; }
   .tables .scroll .cards td.na { display: none; }
 }
 @media (max-width: 600px) {
@@ -912,7 +916,7 @@ footer a + a { margin-left: 1.25rem; }
           <tr class="life"><th class="nw">Lifetime (pruned)<span class="info life-tip" tabindex="0" role="button" aria-label="More information">i</span></th><td data-l="Lifetime (pruned)" data-f="life-0"></td><td data-l="Lifetime (pruned)" data-f="life-1"></td><td data-l="Lifetime (pruned)" data-f="life-2"></td></tr>
           <tr><th>Key generation</th><td data-l="Key generation" data-f="keygen-0"></td><td data-l="Key generation" data-f="keygen-1"></td><td data-l="Key generation" data-f="keygen-2"></td></tr>
           <tr><th>Signing</th><td data-l="Signing" data-f="sign-0"></td><td data-l="Signing" data-f="sign-1"></td><td data-l="Signing" data-f="sign-2"></td></tr>
-          <tr><th class="nw">Assisted signing<span class="info w" tabindex="0" role="button" aria-label="More information" id="assist-tip" data-tip="">i</span></th><td data-l="Assisted" data-f="assist-0"></td><td class="na"></td><td class="na"></td></tr>
+          <tr><th class="nw">Assisted signing<span class="info w" tabindex="0" role="button" aria-label="More information" id="assist-tip" data-tip="">i</span></th><td data-l="Assisted signing" data-f="assist-0"></td><td class="na"></td><td class="na"></td></tr>
         </tbody>
       </table>
       </div>
@@ -1118,30 +1122,31 @@ footer a + a { margin-left: 1.25rem; }
     var lo = xmin * per, hi = Math.max(OFF_MAX, 2 * lo);
     var shell = cell.querySelector('.assist');
     if (!shell || shell.classList.contains('never') !== never) {
-      var body = '<label><span class="nw">Offline:&nbsp;<span class="rng"><input type="range" min="0" max="1000" step="10" ' +
-        'aria-label="Offline preparation time"><span class="trk"><span class="fill"></span></span><span class="knob"></span></span></span> ' +
-        '<span class="ex off nw"></span></label><span class="nw">Online: ' +
-        '<span class="ex on" aria-live="polite"></span><span class="m-only">' + info('', ' w') + '</span></span>';
+      // two rows: "Offline:", the slider filling the free space, the time at right; "Online:", the time at right
+      var body = '<label class="ln"><span>Offline:</span><span class="rng"><input type="range" min="0" max="1000" step="10" ' +
+        'aria-label="Offline preparation time"><span class="trk"><span class="fill"></span></span><span class="knob"></span></span>' +
+        '<span class="ex off nw"></span></label><div class="ln"><span>Online:</span><span class="nw">' +
+        '<span class="ex on" aria-live="polite"></span><span class="m-only">' + info('', ' w') + '</span></span></div>';
       // never: the message over an invisible slider cell, so that the row keeps its height
       cell.innerHTML = never ? '<div class="assist never"><div class="ghost" aria-hidden="true">' +
-        body.replace('<input', '<input tabindex="-1" disabled').replace('class="ex off nw">', 'class="ex off nw">42&nbsp;min&nbsp;<span class="note nw">(64&nbsp;FTS)</span>').replace('class="ex on" aria-live="polite">', 'class="ex on">&asymp;&thinsp;5.2&nbsp;s') +
+        body.replace('<input', '<input tabindex="-1" disabled').replace('class="ex off nw">', 'class="ex off nw">42&nbsp;min').replace('class="ex on" aria-live="polite">', 'class="ex on">&asymp;&thinsp;5.2&nbsp;s') +
         '</div><span class="note msg">Never faster than signing alone here</span></div>' : '<div class="assist">' + body + '</div>';
       var input = cell.querySelector('input');
-      if (input) input.addEventListener('input', function () { offChosen = cell.timeOf(+input.value); cell.show(); });
+      if (input) input.addEventListener('input', function () { offChosen = cell.timeOf(+input.value); cell.show(true); });
     }
     var tip = assist(tt).replace(/&nbsp;/g, '\u00a0');
     document.getElementById('assist-tip').setAttribute('data-tip', tip);
     if (never) return;
     var slider = cell.querySelector('input');
     cell.timeOf = function (v) { return lo * Math.pow(hi / lo, v / 1000); };
-    cell.show = function () {
+    cell.show = function (dragging) {
       var T = Math.min(hi, Math.max(lo, offChosen == null ? per * tt.ledger_prepared : offChosen));
       var np = Math.max(xmin, Math.floor(T / per + 1e-9));
-      slider.value = String(Math.round(1000 * Math.log(T / lo) / Math.log(hi / lo)));
+      if (!dragging) slider.value = String(Math.round(1000 * Math.log(T / lo) / Math.log(hi / lo)));   // not under the finger
       slider.parentNode.style.setProperty('--p', String(slider.value / 1000));   // the thumb's place and the inked track   // the inked part of the track
       var off = time(np * per);
       slider.setAttribute('aria-valuetext', off.replace(/&nbsp;/g, ' ') + ', ' + np + ' FTS prepared');
-      cell.querySelector('.off').innerHTML = off + '&nbsp;<span class="note nw">(' + comma(np) + '&nbsp;FTS)</span>';
+      cell.querySelector('.off').innerHTML = off;
       cell.querySelector('.on').innerHTML = '&asymp;&thinsp;' + time(online(np));
       cell.querySelector('.m-only .info').setAttribute('data-tip', tip);
     };
