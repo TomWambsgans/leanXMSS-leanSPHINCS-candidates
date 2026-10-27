@@ -395,7 +395,7 @@ def site_data():
                 ledger = C.ledger_prep(h, shape, b)
                 CV = Costs(H, fors(h, shape, b))
                 prep_v = CV.mpc_prep(h, shape)
-                vanilla = dict(prep=round(prep_v), prep_mb=prep_v * ands * BITS_PER_AND / 8 / 1e6,
+                vanilla = dict(prep=round(prep_v), prep_mb=prep_v * ands * BITS_PER_AND / 8 / 1e6, prep_rounds=rounds(H.name, 1),
                                ledger_prep=math.ceil(CV.ledger_prep(h, shape, b)), device_online=CV.device_online())
                 out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
                                              keygen=round(keygen), prep=round(prep), grind=2**h // THRESHOLD_PREPARED,

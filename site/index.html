@@ -69,6 +69,26 @@ h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height:
 figure { margin: 0; position: relative; min-height: 18rem; }
 figure svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .titlerow { position: relative; }
+
+/* The variant: vanilla (FORS) or spicy (the WOTS forest). Spicy strikes the vanilla figures it changes. */
+body:not([data-v="spicy"]) .s-only, body[data-v="spicy"] .v-only { display: none !important; }
+.old { position: relative; display: inline-block; }
+body[data-v="spicy"] .old::after { content: ""; position: absolute; left: -0.2em; right: -0.2em; top: 52%; border-top: 1.5px solid rgba(139, 26, 26, 0.45); transform: rotate(-16deg); pointer-events: none; }
+.new { color: var(--accent); margin-left: 0.45em; }
+.toggle { position: absolute; left: calc(100% + 1.5rem); top: 50%; transform: translateY(-50%); z-index: 2; white-space: nowrap; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 3px; background: #fff; }
+.toggle button { font: inherit; font-size: 1.1rem; border: 0; background: none; color: var(--muted); padding: 0.35rem 1.4rem; border-radius: 999px; cursor: pointer; }
+.toggle button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.toggle button[data-v="spicy"][aria-pressed="true"] { background: var(--accent); }
+/* what spicy changes, under the toggle, with an arrow from "spicy" */
+.notes { position: absolute; z-index: 3; visibility: hidden; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.95rem; color: var(--muted); white-space: nowrap; }
+.notes.flow { position: static; visibility: visible; margin: 1.7rem 0 0.6rem; }
+.notes ul { margin: 0; padding: 0; list-style: none; }
+.notes li::before { display: inline-flex; align-items: center; justify-content: center; width: 1.15em; height: 1.15em; margin-right: 0.5em; border: 1px solid currentColor; border-radius: 50%; font-size: 0.85em; line-height: 1; vertical-align: 0.1em; }
+.notes .pro li::before { content: "+"; color: var(--ink); }
+.notes .con li::before { content: "\2212"; }
+.arrow { position: absolute; display: none; overflow: visible; pointer-events: none; }
+.arrow .line { fill: none; stroke: #c48c8c; stroke-width: 1.3; stroke-linecap: round; }
+.arrow .head { fill: #c48c8c; }
 /* the versions, at the bottom: v1 (the old page, at /v1/), v2 (this page), v3? (a tip asking for feedback) */
 .versions { display: flex; gap: 0.4rem; font-size: 0.85rem; }
 .ver { border: 1px solid var(--tree); border-radius: 6px; padding: 0.05rem 0.55rem; line-height: 1.5; color: var(--muted); }
@@ -205,6 +225,8 @@ footer a + a { margin-left: 1.25rem; }
 @media (max-width: 1150px) {
   main { min-height: 0; }
   h1 { white-space: normal; }
+  .toggle { position: static; transform: none; margin: 0.9rem 0 0.2rem; }
+  .notes { position: static; visibility: visible; margin: 1.7rem 0 0.6rem; }
   .page { grid-template-columns: minmax(0, 1fr); }
   .page > * { min-width: 0; }
   .params p { white-space: normal; }
@@ -249,6 +271,8 @@ footer a + a { margin-left: 1.25rem; }
   .params th, .params td { padding-right: 0.5rem; vertical-align: baseline; white-space: nowrap; }
   .params th:last-child, .params td:last-child { padding-right: 0; width: 100%; white-space: normal; }
   .params td.two { white-space: nowrap; }
+  .params .old { margin-right: 0.4em; }
+  .params .new { margin-left: 0; white-space: nowrap; }
 
   /* The diagram: larger labels */
   figure { margin-top: 0.4rem; }
@@ -289,6 +313,8 @@ footer a + a { margin-left: 1.25rem; }
 .sphinx .rim { fill: none; stroke: currentColor; stroke-opacity: 0.2; stroke-width: 0.9; stroke-linejoin: round; }
 /* the face of a pushed stone is the stone itself: its piece of the image, in the accent colour */
 .sphinx .faces { opacity: 0.3; filter: url(#sphinx-ink); }
+body[data-v="spicy"] .sphinx { color: var(--accent); }
+body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
 /* Narrow screens: the sphinx has its own band under the title, standing on its own line */
 .sphinx-line.inflow { position: relative; left: auto; top: auto; width: 100%; max-width: 33rem; height: auto; z-index: 0; margin: 1.3rem 0 0; border-bottom: 1px solid var(--rule); }
 .sphinx-line.inflow .sphinx { position: relative; left: 0; top: 0; transform: none; display: block; width: min(108%, 100% + 2rem); margin-left: max(-4%, -1rem); height: auto; }   /* its faded ends reach into the margins */
@@ -296,16 +322,22 @@ footer a + a { margin-left: 1.25rem; }
   header { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.9rem; align-items: center; }
   h1, .sphinx-line { grid-column: 1 / -1; }
   .sphinx-line.inflow { order: 4; margin-top: 1rem; }
+  /* the toggle, with what spicy changes at its right */
+  .toggle { order: 2; align-self: start; margin: 1.9rem 0 0; }
+  .toggle button { font-size: 1rem; padding: 0.3rem 0.95rem; }
+  .notes, .notes.flow { order: 3; flex-flow: column; gap: 0.1rem; margin: 1.9rem 0 0; font-size: 0.74rem; line-height: 1.4; white-space: normal; }
 }
 </style>
 </head>
-<body>
+<body data-v="vanilla">
 <main>
 
 <div class="page">
   <div class="text">
     <header>
-      <div class="titlerow"><h1>leanSphincs exploration</h1></div>
+      <div class="titlerow"><h1>leanSphincs exploration</h1><div class="toggle" role="group" aria-label="Variant"><button type="button" data-v="vanilla" aria-pressed="true">vanilla</button><button type="button" data-v="spicy" aria-pressed="false">spicy</button></div></div>
+      <div class="notes"><ul class="pro"><li data-f="pro-size">&nbsp;</li><li data-f="pro-verify">&nbsp;</li></ul><ul class="con"><li>more complex</li><li data-f="con-thr">&nbsp;</li></ul></div>
+      <svg class="arrow" aria-hidden="true"><path class="line"/><path class="head"/></svg>
     </header>
     <div class="params">
       <div class="toggles" id="toggles">
@@ -320,10 +352,10 @@ footer a + a { margin-left: 1.25rem; }
       <table>
         <tbody>
           <tr><th><i>h</i></th><td data-f="h">&hellip;</td></tr>
-          <tr><th><i>k</i></th><td>8</td></tr>
-          <tr><th><i>a</i></th><td>4 + 3</td></tr>
+          <tr><th><i>k</i></th><td data-f="k">&hellip;</td></tr>
+          <tr><th><i>a</i></th><td data-f="a">&hellip;</td></tr>
           <tr><th>OTS</th><td>WOTS+C<span class="info" tabindex="0" role="button" aria-label="More information" data-tip="v = 64 chains of length w = 4,&#10;target sum T = 128">i</span></td></tr>
-          <tr><th>FTS</th><td class="two">WOTS forest<span class="info" tabindex="0" role="button" aria-label="More information" data-tip="8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5&#10;(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))">i</span></td></tr>
+          <tr><th>FTS</th><td class="two" data-f="fts">&hellip;</td></tr>
         </tbody>
         <tbody class="out">
           <tr><th>Size</th><td data-f="size">&hellip;</td></tr>
@@ -895,7 +927,7 @@ footer a + a { margin-left: 1.25rem; }
 
       <h2>Threshold, <i>t</i>-of-(2<i>t</i>&nbsp;&minus;&nbsp;1)</h2>
       <div class="thr-pair">
-      <p class="lead">As in <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>, the secret values are XOR-encrypted under a context-aware threshold PRF. Unlike PRAWNS, key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick an instance at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate its forest<span data-shape="layered" hidden> and the trees of the lower layers</span> (an idea from <a href="https://www.riva.xyz/">Riva Labs</a>). Online: they grind the randomizer in the clear onto it (about 2<sup><i>h</i></sup> hashes), and open via the context-aware threshold PRF only the forest chain values the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort). Key generation and preprocessing need all 2<i>t</i>&nbsp;&minus;&nbsp;1 operators online; signing needs only <i>t</i>.</p>
+      <p class="lead">As in <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>, the secret values are XOR-encrypted under a context-aware threshold PRF. Unlike PRAWNS, key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick an instance at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate its <span class="s-only">forest</span><span class="v-only">FORS instance</span><span data-shape="layered" hidden> and the trees of the lower layers</span> (an idea from <a href="https://www.riva.xyz/">Riva Labs</a>). Online: they grind the randomizer in the clear onto it (about 2<sup><i>h</i></sup> hashes), and open via the context-aware threshold PRF only the <span class="s-only">forest chain values</span><span class="v-only"><i>k</i> FORS secrets</span> the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort). Key generation and preprocessing need all 2<i>t</i>&nbsp;&minus;&nbsp;1 operators online; signing needs only <i>t</i>.</p>
       <div class="thr">
         <p class="bn" data-f="th-life">&nbsp;</p>
         <div class="scroll">
@@ -993,16 +1025,23 @@ footer a + a { margin-left: 1.25rem; }
 // The figures: every number comes from data.json (python3 scripts/scheme.py --json > site/data.json),
 // for the configuration chosen with the three toggles (height, shape, hash).
 (function () {
-  var S = { h: 26, shape: 'layered', hash: 'Keccak-256' }, D = null, KEY = 'leanSphincs.config';
+  var S = { h: 26, shape: 'layered', hash: 'Keccak-256', v: 'vanilla' }, D = null, KEY = 'leanSphincs.config';
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (saved) ['h', 'shape', 'hash'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
+    if (saved) ['h', 'shape', 'hash', 'v'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
   } catch (e) {}
   // the devices: hashes per second for each hash, from data.json (rates[device][hash])
   function rate(dev) { return D.rates[dev][S.hash]; }
   // an (i) with its tip (cls: more classes)
   function info(tip, cls) { return '<span class="info' + (cls || '') + '" tabindex="0" role="button" aria-label="More information" data-tip="' + tip + '">i</span>'; }
   var LIFE_TIP = '127 bits of security (ROM), [proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/main/formal/sphincs)';
+  var FOREST_TIP = '8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5&#10;(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))';
+  function forsTip(v) {
+    return v.k + ' trees of height ' + v.a + ', with no root hash (the WOTS+C key signs&#10;the two nodes below each root): of the FORS whose&#10;instance costs no more hashes than a forest, the one&#10;with the smallest signature that lives at least as long&#10;as the forest under the cover attack';
+  }
+  function spicy() { return S.v === 'spicy'; }
+  // a figure that spicy changes: struck through, and its spicy value
+  function vs(a, b) { return spicy() && a !== b ? '<span class="old">' + a + '</span><span class="new">' + b + '</span>' : (spicy() ? b : a); }
 
   // a cost: two significant digits, rounded up, with K, M, B
   function fmt(x) {
@@ -1066,7 +1105,9 @@ footer a + a { margin-left: 1.25rem; }
   function split(c) { return c.layers.join(' + '); }
 
   function render() {
-    var W = D.wallet, main = cfg(S.shape), lay = cfg('layered');
+    var W = D.wallet, main = cfg(S.shape), lay = cfg('layered'), V = main.vanilla;
+    document.body.dataset.v = S.v;
+    [].forEach.call(document.querySelectorAll('.toggle button'), function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === S.v)); });
 
     // the toggles
     [].forEach.call(document.querySelectorAll('.seg'), function (g) {
@@ -1079,8 +1120,11 @@ footer a + a { margin-left: 1.25rem; }
 
     // the parameter table
     set('h', S.shape === 'layered' ? split(main) : String(main.h));
-    set('size', comma(main.size) + ' bytes');
-    set('verify', comma(main.verify) + ' ' + unit());
+    set('k', vs(String(V.k), '8'));
+    set('a', vs(String(V.a), '4 + 3'));
+    set('fts', vs('FORS', 'WOTS forest') + info(spicy() ? FOREST_TIP : forsTip(V)));
+    set('size', vs(comma(V.size), comma(main.size)) + ' bytes');
+    set('verify', vs(comma(V.verify), comma(main.verify)) + ' ' + unit());
     set('dia-h', String(S.h));
 
     [].forEach.call(document.querySelectorAll('[data-shape]'), function (e) { e.hidden = e.dataset.shape !== S.shape; });
@@ -1099,13 +1143,14 @@ footer a + a { margin-left: 1.25rem; }
       return 'Offline: the Ledger prepares ' + np + ' FTS and their ' + (lay_ ? 'hypertree' : 'authentication') + ' paths once (' + fmt(tt.ledger_prep * np) + ' ' + unit() +
         '), then one per signature in idle time. ' +
         'Online: the host finds the randomizer that lands on one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes) and proves it in a STARK (≈ ' +
-        time(g / W.host_rate) + '), which the Ledger verifies (optimistically ≈ ' + time(W.stark_verify_s) + ' after a Ledger OS update; [benchmark](https://github.com/TomWambsgans/hardware-wallet-benchmark)), then opens the FTS chain values itself. Idea from [Riva Labs](https://www.riva.xyz/).';
+        time(g / W.host_rate) + '), which the Ledger verifies (optimistically ≈ ' + time(W.stark_verify_s) + ' after a Ledger OS update; [benchmark](https://github.com/TomWambsgans/hardware-wallet-benchmark)), then opens the ' + (spicy() ? 'forest chain values' : 'FORS secrets') + ' itself. Idea from [Riva Labs](https://www.riva.xyz/).';
     };
     // the layered key has the same lifetime on every device: one cell for all
-    [].forEach.call(document.querySelectorAll('.life-tip'), function (e) { e.setAttribute('data-tip', LIFE_TIP); });
+    var lifeTip = spicy() ? LIFE_TIP : LIFE_TIP + ' for the forest (spicy); FORS is chosen to live as long under the cover attack, which is not proved in Lean';
+    [].forEach.call(document.querySelectorAll('.life-tip'), function (e) { e.setAttribute('data-tip', lifeTip); });
     document.querySelector('[data-f="life-0"]').closest('tr').classList.toggle('gone', lay_);
     document.querySelector('[data-f="life-all"]').closest('tr').classList.toggle('gone', !lay_);
-    set('life-all', '<div>' + lifeOf(lay) + ' signatures<span class="m-only">' + info(LIFE_TIP) + '</span></div>');
+    set('life-all', '<div>' + lifeOf(lay) + ' signatures<span class="m-only">' + info(lifeTip) + '</span></div>');
     set('life-same-1', '<div>' + lifeOf(lay) + ' signatures</div>'); set('life-same-2', '<div>' + lifeOf(lay) + ' signatures</div>');
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
@@ -1117,16 +1162,19 @@ footer a + a { margin-left: 1.25rem; }
       else if (c.b === c.h) what = 'full tree of height ' + c.h;
       else what = 'subtree of height ' + c.b;
       var t = function (n, r) { return '<span class="ex">' + time(n / (r || d.rate)) + '</span>'; };
-      set('life-' + k, '<div>' + lifeOf(c) + ' signatures<span class="m-only">' + info(LIFE_TIP) + '</span>' +
+      set('life-' + k, '<div>' + lifeOf(c) + ' signatures<span class="m-only">' + info(lifeTip) + '</span>' +
         (what ? ' <span class="note">(' + what + ')</span>' : '') + '</div>');
       set('keygen-' + k, '<div class="hd"><span>' + fmt(c.keygen) + '&nbsp;' + unit() + '</span>' + t(c.keygen) + '</div>');
-      set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="note">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
+      var sv = c.vanilla.sign[d.kib], sn = spicy() ? c.sign[d.kib] : sv;
+      set('sign-' + k, '<div class="hd"><span>' + vs(fmt(sv), fmt(c.sign[d.kib])) + '&nbsp;' + unit() + ' <span class="note">(' + d.cache + ' cache)</span></span>' + t(sn) + '</div>');
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       // shown only when it beats signing alone
       // online: the host grinds and proves, the Ledger verifies the STARK and opens the chain values itself (whole seconds)
-      var tt = lay_ ? thr('layered') : thr('pruned', d.b), online = g / W.host_rate + W.stark_verify_s + tt.device_online / d.rate;
-      document.querySelector('[data-f="assist-' + k + '"]').closest('tr').classList.toggle('gone', online >= c.sign[d.kib] / d.rate);
+      var tt = lay_ ? thr('layered') : thr('pruned', d.b);
+      if (!spicy()) tt = Object.assign({}, tt, tt.vanilla);
+      var online = g / W.host_rate + W.stark_verify_s + tt.device_online / d.rate;
+      document.querySelector('[data-f="assist-' + k + '"]').closest('tr').classList.toggle('gone', online >= sn / d.rate);
       set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.ledger_prep * np / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
         (online >= 1 ? Math.round(online) + '&nbsp;s' : time(online)) + '</span><span class="m-only">' + info(assist(tt), ' w') + '</span></span></div>');
       document.getElementById('assist-tip').setAttribute('data-tip', assist(tt).replace(/&nbsp;/g, '\u00a0'));
@@ -1141,11 +1189,18 @@ footer a + a { margin-left: 1.25rem; }
     set('th-life', lay_ ? '' : 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for a lifetime of ' +
       life1(th.lifetime) + ' signatures:');
     document.querySelector('[data-f="th-life"]').hidden = lay_;
-    set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + bytes(th.prep_mb / 1000) + '</td></tr>' +
-      '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + comma(th.prep_rounds) + '</td></tr>');
+    set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + vs(bytes(th.vanilla.prep_mb / 1000), bytes(th.prep_mb / 1000)) + '</td></tr>' +
+      '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + vs(comma(th.vanilla.prep_rounds), comma(th.prep_rounds)) + '</td></tr>');
+
+    // what spicy changes, against the vanilla figures of the same configuration (gains rounded down, losses up)
+    set('pro-size', Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures');
+    set('pro-verify', Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification' +
+      info('Measured in ' + units() + ': ' + V.verify + ' → ' + main.verify));
+    set('con-thr', Math.ceil(th.prep / th.vanilla.prep - 1e-9) + '× worse threshold' +
+      info('Preprocessing per signature, in ' + units() + ' inside the MPC: ' + comma(th.vanilla.prep) + ' → ' + comma(th.prep)));
 
     // the diagram: one pruned tree, or the layers
-    if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers);
+    if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers, S.v, V.k, V.a);
 
     window.dispatchEvent(new Event('resize'));   // the sphinx finds its place again
   }
@@ -1155,6 +1210,9 @@ footer a + a { margin-left: 1.25rem; }
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
     render();
   }
+  [].forEach.call(document.querySelectorAll('.toggle button'), function (b) {
+    b.addEventListener('click', function () { if (D) choose('v', b.dataset.v); });
+  });
   [].forEach.call(document.querySelectorAll('.seg'), function (g) {
     var bs = [].slice.call(g.querySelectorAll('button'));
     g.addEventListener('click', function (e) {
@@ -1178,13 +1236,88 @@ footer a + a { margin-left: 1.25rem; }
   }).then(function (d) {
     D = d;
     // a saved choice that the data no longer has falls back to the default
-    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256' }; }
+    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256', v: 'vanilla' }; }
     render();
   }).catch(function (e) {
     console.error(e);
     set('signer-lead', 'The figures could not be loaded (data.json).');
     document.querySelector('[data-f="signer-lead"]').hidden = false;
   });
+})();
+</script>
+<script>
+// What spicy changes: on a wide screen, the notes sit under the toggle, between the parameters and the diagram,
+// with an arrow from "spicy"; narrower, they follow the toggle (on a phone, at its right).
+(function () {
+  var notes = document.querySelector('.notes'), page = document.querySelector('.page');
+  var arrow = document.querySelector('.arrow'), line = arrow.querySelector('.line'), head = arrow.querySelector('.head');
+  var spicy = document.querySelector('.toggle button[data-v="spicy"]');
+  function drawn() {                     // the left edge of the tree(s) the diagram draws, beside the notes
+    var left = Infinity;
+    [].forEach.call(document.querySelectorAll('figure svg > .part.xmss'), function (g) {
+      var r = g.getBoundingClientRect();
+      if (r.width > 0) left = Math.min(left, r.left);
+    });
+    return left;
+  }
+  function place() {
+    notes.classList.remove('flow');
+    notes.style.left = notes.style.top = '';
+    arrow.style.display = 'none';
+    var p = page.getBoundingClientRect(), b = spicy.getBoundingClientRect(), w = notes.offsetWidth;
+    if (matchMedia('(max-width: 600px)').matches) {      // phone: an arch from the top of "spicy" to the notes at its right
+      var lo = Infinity, hi = -Infinity, top = Infinity;
+      [].forEach.call(notes.querySelectorAll('li'), function (li) {
+        var rg = document.createRange(); rg.selectNodeContents(li);
+        var r = rg.getBoundingClientRect();
+        lo = Math.min(lo, r.left); hi = Math.max(hi, r.right); top = Math.min(top, r.top);
+      });
+      var x1 = b.left + b.width / 2, y1 = b.top - 6, x2 = (lo + hi) / 2, y2 = top - 4, lift = 30;
+      var x0 = x1 - 10, y0 = Math.min(y1, y2) - lift, ax = 10, ay = y1 - y0, bx = x2 - x0, by = y2 - y0;
+      arrow.style.left = (x0 - p.left) + 'px';
+      arrow.style.top = (y0 - p.top) + 'px';
+      arrow.setAttribute('width', bx + 10);
+      arrow.setAttribute('height', Math.max(ay, by) + 4);
+      line.setAttribute('d', 'M' + ax + ',' + ay + ' C' + (ax + 4) + ',' + (ay - lift) + ' ' + bx + ',' + (by - lift - 6) + ' ' + bx + ',' + (by - 7));
+      head.setAttribute('d', 'M' + (bx - 4.5) + ',' + (by - 8) + ' L' + (bx + 4.5) + ',' + (by - 8) + ' L' + bx + ',' + by + ' Z');
+      arrow.style.display = 'block';
+      return;
+    }
+    var flow = matchMedia('(max-width: 1150px)').matches;
+    if (!flow) {
+      // the parameters in their widest (spicy) state, so that the notes do not move when switching
+      var mode = document.body.dataset.v;
+      document.body.dataset.v = 'spicy';
+      var t = document.querySelector('.params table').getBoundingClientRect().right;
+      [].forEach.call(document.querySelectorAll('.toggles .seg'), function (g) { t = Math.max(t, g.getBoundingClientRect().right); });
+      document.body.dataset.v = mode;
+      var d = drawn();
+      flow = d - t < w + 48;
+      if (!flow) {
+        notes.style.left = ((t + d) / 2 - w / 2 - p.left) + 'px';
+        notes.style.top = (b.bottom + 44 - p.top) + 'px';
+        notes.style.visibility = 'visible';
+      }
+    }
+    if (flow) notes.classList.add('flow');
+    var n = notes.getBoundingClientRect();
+    var x1 = b.left + b.width / 2, y1 = b.bottom + 6, y2 = n.top - 7;
+    var x2 = flow ? Math.min(Math.max(x1, n.left + 12), n.right - 12) : n.left + n.width / 2;
+    if (y2 - y1 < 12) return;
+    var x0 = Math.min(x1, x2) - 10, y0 = y1;
+    arrow.style.left = (x0 - p.left) + 'px';
+    arrow.style.top = (y0 - p.top) + 'px';
+    arrow.setAttribute('width', Math.abs(x2 - x1) + 20);
+    arrow.setAttribute('height', y2 - y1 + 2);
+    var ax = x1 - x0, bx = x2 - x0, by = y2 - y0, m = (by - 7) * 0.6;
+    line.setAttribute('d', 'M' + ax + ',0 C' + ax + ',' + m + ' ' + bx + ',' + (by - 7 - m) + ' ' + bx + ',' + (by - 7));
+    head.setAttribute('d', 'M' + (bx - 4.5) + ',' + (by - 8) + ' L' + (bx + 4.5) + ',' + (by - 8) + ' L' + bx + ',' + by + ' Z');
+    arrow.style.display = 'block';
+  }
+  window.addEventListener('resize', place);
+  window.addEventListener('load', place);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
+  place();
 })();
 </script>
 <script>
@@ -1196,7 +1329,7 @@ footer a + a { margin-left: 1.25rem; }
   var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 239;   // the column of the path, the tip of the forest brace
   var pruned = svg.querySelector('.xmss.pruned'), layered = svg.querySelector('.xmss.layered');
   var motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var shown = 'pruned', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
+  var shown = 'pruned', shownV = 'vanilla', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
 
   function el(name, attrs, parent) {
     var e = document.createElementNS(NS, name);
@@ -1323,7 +1456,9 @@ footer a + a { margin-left: 1.25rem; }
   var SY = [317, 327, 334, 340], SO = 5, SD = 11.5;        // a subtree: the same, and its offset from the tree
   var KI = 7, KS = 17, KP = 13, KT = 370, KX;             // the key: its subtree, chain and position spacing, top
   var WT = LEAF + 7;                                      // the top of the small WOTS+C key that signs the forest
+  var VY = [258, 276, 291, 302, 310, 316], VO = 11;      // a FORS tree: its levels, root first, and its first offset
   function tc(i) { return FX + (i - 3.5) * FS; }
+  function vc(i) { return FX + (i - 3.5) * 44 + (i < 4 ? -10 : 10); }   // a FORS tree, around the dots
   function sc(j) { return tc(j >> 1) + (j & 1 ? SD : -SD); }
   KX = sc(KI);
   function edges(g, cx, ys, o) {                          // every edge of a tree
@@ -1353,36 +1488,57 @@ footer a + a { margin-left: 1.25rem; }
       for (var m = 0; m < 4; m++) el('circle', { cx: n1(X + (c - 3.5) * 6), cy: WT + 4 * m, r: 1.1 }, wd);
     }
     el('text', { x: n1(X + 30), y: WT + 11, 'class': 'lb' }, fts).textContent = 'WOTS+C';
-    var g = el('g', { 'class': 'tree' }, fts);
+    fts.won = el('g', { 'class': 'on' }, fts);            // the encoding of that key, in both variants
+    var fg = el('g', { 'class': 's-only' }, fts);         // the forest (spicy)
+    var g = el('g', { 'class': 'tree' }, fg);
     for (var i = 0; i < 8; i++) edges(g, tc(i), TY, TO);
     for (var j = 0; j < 16; j++) edges(g, sc(j), SY, SO);
     el('path', { 'class': 'brace', d: 'M' + n1(KX - kw) + ',' + kb + ' Q' + n1(KX - kw) + ',' + (kb - 7) + ' ' + n1(KX - kw + 7) + ',' + (kb - 7) +
       ' L' + n1(KX - 7) + ',' + (kb - 7) + ' Q' + n1(KX) + ',' + (kb - 7) + ' ' + n1(KX) + ',' + (kb - 14) + ' Q' + n1(KX) + ',' + (kb - 7) + ' ' + n1(KX + 7) + ',' + (kb - 7) +
-      ' L' + n1(KX + kw - 7) + ',' + (kb - 7) + ' Q' + n1(KX + kw) + ',' + (kb - 7) + ' ' + n1(KX + kw) + ',' + kb }, fts);
-    var ch = el('g', { 'class': 'chain' }, fts);
+      ' L' + n1(KX + kw - 7) + ',' + (kb - 7) + ' Q' + n1(KX + kw) + ',' + (kb - 7) + ' ' + n1(KX + kw) + ',' + kb }, fg);
+    var ch = el('g', { 'class': 'chain' }, fg);
     for (j = 0; j < 6; j++) el('line', { x1: n1(KX + (j - 2.5) * KS), y1: KT, x2: n1(KX + (j - 2.5) * KS), y2: KT + 4 * KP }, ch);
     // the measures: the heights on the left, the key's w and ℓ around it
-    var m = el('g', { 'class': 'tree' }, fts), lx = x0 - 2 * TO - 10;
+    var m = el('g', { 'class': 'tree' }, fg), lx = x0 - 2 * TO - 10;
     bar(m, lx, TY[0], TY[4]); bar(m, lx, SY[0], SY[3]);
-    el('text', { x: n1(lx - 8), y: n1((TY[0] + TY[4]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fts).textContent = '4';
-    el('text', { x: n1(lx - 8), y: n1((SY[0] + SY[3]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fts).textContent = '3';
-    var nm = el('text', { x: n1(x1 + 2 * TO + 14), y: n1((TY[0] + SY[3]) / 2 - 3), 'class': 'nm' }, fts);
+    el('text', { x: n1(lx - 8), y: n1((TY[0] + TY[4]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fg).textContent = '4';
+    el('text', { x: n1(lx - 8), y: n1((SY[0] + SY[3]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fg).textContent = '3';
+    var nm = el('text', { x: n1(x1 + 2 * TO + 14), y: n1((TY[0] + SY[3]) / 2 - 3), 'class': 'nm' }, fg);
     el('tspan', {}, nm).textContent = 'WOTS';
     el('tspan', { x: n1(x1 + 2 * TO + 14), dy: '1.2em' }, nm).textContent = 'forest';
     bar(m, KX - kw - 10, KT, KT + 4 * KP);
-    var t = el('text', { x: n1(KX - kw - 20), y: n1(KT + 2 * KP + 5), 'class': 'pv', 'text-anchor': 'end' }, fts);
+    var t = el('text', { x: n1(KX - kw - 20), y: n1(KT + 2 * KP + 5), 'class': 'pv', 'text-anchor': 'end' }, fg);
     el('tspan', { 'class': 'it' }, t).textContent = 'w'; t.appendChild(document.createTextNode(' = 5'));
     var yl = KT + 4 * KP + 14;
     el('line', { x1: n1(KX - kw), y1: yl, x2: n1(KX + kw), y2: yl }, m);
     el('line', { x1: n1(KX - kw), y1: yl - 4, x2: n1(KX - kw), y2: yl + 4 }, m);
     el('line', { x1: n1(KX + kw), y1: yl - 4, x2: n1(KX + kw), y2: yl + 4 }, m);
-    t = el('text', { x: n1(KX), y: yl + 22, 'class': 'pv', 'text-anchor': 'middle' }, fts);
+    t = el('text', { x: n1(KX), y: yl + 22, 'class': 'pv', 'text-anchor': 'middle' }, fg);
     el('tspan', { 'class': 'it' }, t).textContent = 'ℓ'; t.appendChild(document.createTextNode(' = 6'));
     // what each signature picks
-    fts.conn = el('g', { 'class': 'conn' }, fts);
-    fts.paths = el('g', {}, fts);
-    fts.dot = el('g', { 'class': 'dot' }, fts);
-    fts.on = el('g', { 'class': 'on' }, fts);
+    fts.conn = el('g', { 'class': 'conn' }, fg);
+    fts.paths = el('g', {}, fg);
+    fts.dot = el('g', { 'class': 'dot' }, fg);
+    fts.on = el('g', { 'class': 'on' }, fg);
+    // FORS (vanilla): 8 of its k trees, the dots between the two fours standing for the others; the opened leaf
+    // of each and its path, up to the two nodes below the root, which the WOTS+C key signs
+    var vg = el('g', { 'class': 'v-only' }, fts), vt = el('g', { 'class': 'tree' }, vg);
+    for (i = 0; i < 8; i++) edges(vt, vc(i), VY, VO);
+    el('text', { x: FX, y: VY[2] + 5, 'class': 'pv', 'text-anchor': 'middle' }, vg).textContent = '…';
+    var vm = el('g', { 'class': 'tree' }, vg), vl = vc(0) - 2 * VO - 10, vx = vc(7) + 2 * VO, vb = VY[VY.length - 1] + 14;
+    bar(vm, vl, VY[0], VY[VY.length - 1]);
+    t = el('text', { x: n1(vl - 8), y: n1((VY[0] + VY[VY.length - 1]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, vg);
+    el('tspan', { 'class': 'it' }, t).textContent = 'a'; t.appendChild(document.createTextNode(' = '));
+    fts.va = el('tspan', {}, t);
+    el('line', { x1: n1(vc(0) - 2 * VO), y1: vb, x2: n1(vx), y2: vb }, vm);
+    el('line', { x1: n1(vc(0) - 2 * VO), y1: vb - 4, x2: n1(vc(0) - 2 * VO), y2: vb + 4 }, vm);
+    el('line', { x1: n1(vx), y1: vb - 4, x2: n1(vx), y2: vb + 4 }, vm);
+    t = el('text', { x: FX, y: vb + 22, 'class': 'pv', 'text-anchor': 'middle' }, vg);
+    el('tspan', { 'class': 'it' }, t).textContent = 'k'; t.appendChild(document.createTextNode(' = '));
+    fts.vk = el('tspan', {}, t);
+    el('text', { x: n1(vx + 14), y: n1((VY[0] + VY[VY.length - 1]) / 2 + 5), 'class': 'nm' }, vg).textContent = 'FORS';
+    fts.vpaths = el('g', {}, vg);
+    fts.von = el('g', { 'class': 'on' }, vg);
   })();
   // The drawing is taller than the text beside it: on a wide screen the figure grows in height so that the drawing
   // keeps the width it would have in the height of the text. The same height for every configuration.
@@ -1416,10 +1572,10 @@ footer a + a { margin-left: 1.25rem; }
     var link = pruned.querySelector('line.conn');   // from the leaf to its WOTS+C key
     link.setAttribute('x1', n1(pp[pl][0])); link.setAttribute('y1', n1(pp[pl][1])); link.setAttribute('x2', X); link.setAttribute('y2', WT - 1);
     // the forest: the path to a leaf of each tree, and to a leaf of each of the two subtrees under it
-    clear(fts.conn); clear(fts.paths); clear(fts.dot); clear(fts.on);
+    clear(fts.conn); clear(fts.paths); clear(fts.dot); clear(fts.on); clear(fts.won); clear(fts.vpaths); clear(fts.von);
     forest = { trees: [], subs: [], key: [], wc: [] };
     wotsc().forEach(function (p, j) {
-      el('circle', { cx: n1(X + (j - 3.5) * 6), cy: WT + 4 * p, r: 1.9 }, fts.on);
+      el('circle', { cx: n1(X + (j - 3.5) * 6), cy: WT + 4 * p, r: 1.9 }, fts.won);
       forest.wc.push([X + (j - 3.5) * 6, WT + 4 * p]);
     });
     for (var i = 0; i < 8; i++) forest.trees.push(walk(tc(i), TY, TO));
@@ -1441,24 +1597,37 @@ footer a + a { margin-left: 1.25rem; }
       el('circle', { cx: n1(cx), cy: KT + KP * p, r: 2.7 }, fts.on);
       forest.key.push([cx, KT + KP * p]);
     });
+    // FORS: the path from the opened leaf of each tree drawn
+    fors = [];
+    for (i = 0; i < 8; i++) {
+      var ft = walk(vc(i), VY, VO);
+      fors.push(ft);
+      el('polyline', { points: pts(ft), 'class': 'path thin' }, fts.vpaths);
+      ft.forEach(function (q, j) { el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j ? 1.6 : 2.1 }, fts.von); });
+    }
     if (cur && cur.shape === 'layered') geo = drawLayered(cur.layers, cur.h);
   }
+  var fors = null;
   pick();
 
-  window.sigDiagram = function (h, shape, layers) {
+  window.sigDiagram = function (h, shape, layers, v, k, a) {
     cur = { h: h, shape: shape, layers: layers };
-    var want = shape === 'layered' ? 'layered ' + layers.join('+') : 'pruned';
-    if (want === shown) return;
-    shown = want;
-    if (shape === 'layered') {
-      geo = drawLayered(layers, h);
-      layered.removeAttribute('display'); pruned.setAttribute('display', 'none');
-    } else {
-      geo = null;
-      while (layered.firstChild) layered.removeChild(layered.firstChild);
-      pruned.removeAttribute('display'); layered.setAttribute('display', 'none');
+    fts.vk.textContent = String(k); fts.va.textContent = String(a);
+    var tree = shape === 'layered' ? 'layered ' + layers.join('+') : 'pruned';
+    if (tree === shown && v === shownV) return;
+    var redraw = tree !== shown;
+    shown = tree; shownV = v;
+    if (redraw) {
+      if (shape === 'layered') {
+        geo = drawLayered(layers, h);
+        layered.removeAttribute('display'); pruned.setAttribute('display', 'none');
+      } else {
+        geo = null;
+        while (layered.firstChild) layered.removeChild(layered.firstChild);
+        pruned.removeAttribute('display'); layered.setAttribute('display', 'none');
+      }
+      fit();
     }
-    fit();
     if (motion) build();
   };
   if (!motion) return;
@@ -1482,16 +1651,20 @@ footer a + a { margin-left: 1.25rem; }
     // the forest: the key's chains to their ends, which hash into its subtree leaf; each subtree up to its root,
     // which with its sibling hashes into the opened leaf of its tree; each tree up to its root; the 8 roots into
     // the bottom leaf of the hypertree
-    var fo = forest, ks = fo.subs[KI][3];
-    stage(700, fo.key.map(function (c) { return [c, [c[0], KT]]; }), true, 2.2);
-    stage(300, fo.key.map(function (c) { return [[c[0], KT], [KX, KT - 21]]; }), false, 1.8);
-    stage(200, [[[KX, KT - 21], ks]], true, 1.8, 'conn');   // the link appears, in grey
-    stage(600, fo.subs.map(function (q) { return q.slice().reverse(); }), true, 1.6, 'thin');
-    stage(300, fo.subs.map(function (q, i) { return [q[0], fo.trees[i >> 1][4]]; }), true, 1.6, 'conn');   // the link appears, in grey
-    stage(750, fo.trees.map(function (q) { return q.slice().reverse(); }), true, 2, 'thin');
+    // FORS (vanilla): each opened leaf up its tree
+    var fo = forest, ks = fo.subs[KI][3], tops = fors;
+    if (document.body.dataset.v === 'spicy') {
+      stage(700, fo.key.map(function (c) { return [c, [c[0], KT]]; }), true, 2.2);
+      stage(300, fo.key.map(function (c) { return [[c[0], KT], [KX, KT - 21]]; }), false, 1.8);
+      stage(200, [[[KX, KT - 21], ks]], true, 1.8, 'conn');   // the link appears, in grey
+      stage(600, fo.subs.map(function (q) { return q.slice().reverse(); }), true, 1.6, 'thin');
+      stage(300, fo.subs.map(function (q, i) { return [q[0], fo.trees[i >> 1][4]]; }), true, 1.6, 'conn');   // the link appears, in grey
+      tops = fo.trees;
+    }
+    stage(750, tops.map(function (q) { return q.slice().reverse(); }), true, 2, 'thin');
     // the 8 roots into the WOTS+C key of the bottom leaf: its chains to their ends, which hash into that leaf
     function up(leaf) {
-      stage(450, fo.trees.map(function (q) { return [q[0], [X, TIP]]; }), false, 2);
+      stage(450, tops.map(function (q) { return [q[0], [X, TIP]]; }), false, 2);
       stage(300, fo.wc.map(function (c) { return [[X, TIP], c]; }), false, 1.4);
       stage(400, fo.wc.map(function (c) { return [c, [c[0], WT]]; }), true, 1.6);
       stage(300, fo.wc.map(function (c) { return [[c[0], WT], leaf]; }), false, 1.6);
@@ -1570,25 +1743,30 @@ footer a + a { margin-left: 1.25rem; }
   // The sphinx sits on the line, in the widest free place: it never overlaps the text or the diagram.
   var line = document.querySelector('.sphinx-line'), box = document.querySelector('.sphinx'), ratio = D.w / D.h;
   function obstacles() {
-    var out = [];
-    // the title, the toggles and the parameter table: what is written in each cell, not the cell
-    [].forEach.call(document.querySelectorAll('.titlerow, .toggles .sl, .toggles .seg'), function (e) {
-      var r = e.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) out.push(r);
+    var out = [], keep = document.body.dataset.v;
+    // in both variants, so that the sphinx does not move when switching
+    ['vanilla', 'spicy'].forEach(function (v) {
+      document.body.dataset.v = v;
+      // the title, the toggles, the notes and the parameter table: what is written in each cell, not the cell
+      [].forEach.call(document.querySelectorAll('.titlerow, .notes, .arrow, .toggles .sl, .toggles .seg'), function (e) {
+        var r = e.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) out.push(r);
+      });
+      [].forEach.call(document.querySelectorAll('.params th, .params td'), function (e) {
+        var rg = document.createRange(); rg.selectNodeContents(e);
+        var r = rg.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) out.push(r);
+      });
+      // the diagram: what is drawn, kept to the frame of its viewBox
+      var fs = document.querySelector('figure svg'), f = fs.getBoundingClientRect(), vb = fs.viewBox.baseVal;
+      var visLeft = f.right - vb.width * Math.min(f.width / vb.width, f.height / vb.height);
+      [].forEach.call(fs.querySelectorAll(':scope > *:not(.anim):not(defs):not(title):not(.part), :scope > .part > *'), function (e) {
+        var r = e.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0 && r.right > visLeft)
+          out.push({ left: Math.max(r.left, visLeft), right: r.right, top: Math.max(r.top, f.top), bottom: Math.min(r.bottom, f.bottom) });
+      });
     });
-    [].forEach.call(document.querySelectorAll('.params th, .params td'), function (e) {
-      var rg = document.createRange(); rg.selectNodeContents(e);
-      var r = rg.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) out.push(r);
-    });
-    // the diagram: what is drawn, kept to the frame of its viewBox
-    var fs = document.querySelector('figure svg'), f = fs.getBoundingClientRect(), vb = fs.viewBox.baseVal;
-    var visLeft = f.right - vb.width * Math.min(f.width / vb.width, f.height / vb.height);
-    [].forEach.call(fs.querySelectorAll(':scope > *:not(.anim):not(defs):not(title):not(.part), :scope > .part > *'), function (e) {
-      var r = e.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0 && r.right > visLeft)
-        out.push({ left: Math.max(r.left, visLeft), right: r.right, top: Math.max(r.top, f.top), bottom: Math.min(r.bottom, f.bottom) });
-    });
+    document.body.dataset.v = keep;
     return out;
   }
   function place() {
@@ -1653,7 +1831,7 @@ footer a + a { margin-left: 1.25rem; }
     return e;
   }
   var defs = el('defs', {}, svg);
-  [['sphinx-ink', '0.067 0 0 0 0 0.067 0 0 0 0 0.067']].forEach(function (f) {
+  [['sphinx-ink', '0.067 0 0 0 0 0.067 0 0 0 0 0.067'], ['sphinx-spicy', '0.545 0 0 0 0 0.102 0 0 0 0 0.102']].forEach(function (f) {
     var c = f[1].split(' ');                                 // every pixel takes the colour, and keeps its alpha
     el('feColorMatrix', { type: 'matrix', values: '0 0 0 0 ' + c[0] + ' 0 0 0 0 ' + c[5] + ' 0 0 0 0 ' + c[10] + ' 0 0 0 1 0' },
       el('filter', { id: f[0], x: 0, y: 0, width: D.w, height: D.h, filterUnits: 'userSpaceOnUse', 'color-interpolation-filters': 'sRGB' }, defs));
