@@ -124,7 +124,7 @@ variable [Params]
 open Concrete
 
 attribute [local instance] Classical.propDecidable
-attribute [local irreducible] encodingAttemptLimit Seeded.treePath Seeded.subNode Seeded.topNode chainWalk
+attribute [local irreducible] encodingAttemptLimit Seeded.treePath Seeded.forsNode chainWalk
 
 /-- The actual least successful encoding search; its counter remains a 32-bit value. -/
 noncomputable def firstEncoding (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -177,7 +177,7 @@ open Concrete
 set_option backward.isDefEq.respectTransparency false
 
 attribute [local irreducible] encodingAttemptLimit digestAttemptLimit Seeded.signLayer
-  Seeded.forestOpen Seeded.forestKey sequenceFin chainWalk
+  Seeded.forsOpen Seeded.forsKey sequenceFin chainWalk
 
 /-- Hash-only evaluation inside the private-sampling interpreter is deterministic. -/
 theorem fixedHashWorld_lift_hash (f : QueryImpl HashSpec Id) {α : Type}

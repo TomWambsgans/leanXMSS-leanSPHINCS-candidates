@@ -2,7 +2,7 @@ import LeanFors.Classification.Chain
 import LeanFors.Scheme.Correctness
 
 /-! The verifier's walk up the layers exposes, at every layer, its WOTS+C leaf and its Merkle fold in
-its query trace: the bottom layer's key signs the recovered forest key, each layer above signs the
+its query trace: the bottom layer's key signs the recovered FORS key, each layer above signs the
 fold of the layer below, and the top layer's fold is the public root. -/
 
 open OracleComp OracleSpec
@@ -14,7 +14,7 @@ variable [Params]
 open Concrete
 
 attribute [local semireducible] Concrete.verify
-attribute [local irreducible] messageDigest forestRecover otsLeaf treeFold
+attribute [local irreducible] messageDigest forsRecover otsLeaf treeFold
 
 theorem layerUp_top : layerUp (numLayers - 1) = topLayer := by
   apply Fin.ext
@@ -24,7 +24,7 @@ theorem verify_eq_layers (pk : PublicKey) (message : Message) (signature : Signa
     (Concrete.verify pk message signature : OracleComp HashSpec Bool) = (do
       let digest ← messageDigest pk.parameter pk.root message signature.randomness
       let index := digestIndex digest
-      let fts ← forestRecover pk.parameter index (digestMarks digest) signature.forest
+      let fts ← forsRecover pk.parameter index (digestLeaves digest) signature.fors
       let some root ← verifyLayers pk.parameter index signature numLayers (rootsPayload fts)
         | return false
       return decide (root = pk.root)) := rfl
@@ -35,12 +35,12 @@ def verificationDigest (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : M
   evalWithAnswerFn f (messageDigest pk.parameter pk.root message signature.randomness :
     OracleComp HashSpec MessageDigest)
 
-/-- The candidate forest key recovered before WOTS verification. -/
+/-- The candidate FORS key recovered before WOTS verification. -/
 def verificationForest (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
-    (signature : Signature) : ForestKey :=
+    (signature : Signature) : ForsKey :=
   let digest := verificationDigest f pk message signature
-  evalWithAnswerFn f (forestRecover pk.parameter (digestIndex digest) (digestMarks digest)
-    signature.forest : OracleComp HashSpec ForestKey)
+  evalWithAnswerFn f (forsRecover pk.parameter (digestIndex digest) (digestLeaves digest)
+    signature.fors : OracleComp HashSpec ForsKey)
 
 /-! ### The walk up the layers -/
 
@@ -59,25 +59,25 @@ def layerFold (lay : Layer) (value : Digest) : Digest :=
   evalWithAnswerFn f (treeFold parameter lay (treeIndexAt index lay) (leafIndexAt index lay)
     (signaturePath signature lay) (layerHeight lay) value : OracleComp HashSpec Digest)
 
-/-- The message the verifier gives the key of the layer `k` steps above the bottom: the forest key
+/-- The message the verifier gives the key of the layer `k` steps above the bottom: the FORS key
 at the bottom, then the fold of the layer below. -/
-def walkMessage (forest : ForestKey) : Nat → HashInput
+def walkMessage (forest : ForsKey) : Nat → HashInput
   | 0 => rootsPayload forest
   | k + 1 => rootPayload (layerFold f parameter index signature (layerUp k)
       ((layerLeaf f parameter index signature (layerUp k) (walkMessage forest k)).getD 0))
 
 /-- The fold of the layer `k` steps above the bottom. -/
-def walkFold (forest : ForestKey) (k : Nat) : Digest :=
+def walkFold (forest : ForsKey) (k : Nat) : Digest :=
   layerFold f parameter index signature (layerUp k)
     ((layerLeaf f parameter index signature (layerUp k) (walkMessage f parameter index signature forest k)).getD 0)
 
-theorem walkMessage_succ (forest : ForestKey) (k : Nat) :
+theorem walkMessage_succ (forest : ForsKey) (k : Nat) :
     walkMessage f parameter index signature forest (k + 1) =
       rootPayload (walkFold f parameter index signature forest k) := rfl
 
 /-- An accepted walk from the layer `k` steps above the bottom succeeds at every layer above, ends at
 the top layer's fold, and runs the leaf recovery and the fold of every layer in its trace. -/
-theorem walk_spec (forest : ForestKey) (trace : List HashInput) :
+theorem walk_spec (forest : ForsKey) (trace : List HashInput) :
     ∀ n k, k + n = numLayers → 0 < n → ∀ root,
       evalWithAnswerFn f (verifyLayers parameter index signature n
         (walkMessage f parameter index signature forest k) : OracleComp HashSpec (Option Digest)) =

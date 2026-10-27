@@ -15,7 +15,7 @@ open Concrete Completeness Prefix
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
-attribute [local irreducible] firstEncoding encodingAttemptLimit Seeded.forestKey
+attribute [local irreducible] firstEncoding encodingAttemptLimit Seeded.forsKey
 
 def dummyWord : Encoding := fun _ => ⟨2, by decide⟩
 
@@ -150,8 +150,8 @@ namespace LeanFors.Security.SignatureWitness
 variable [Params]
 open Concrete
 
-attribute [local irreducible] messageDigest forestRecover otsLeaf treeFold
-  Seeded.forestKey Seeded.treeRoot Seeded.treePath chainWalk encode
+attribute [local irreducible] messageDigest forsRecover otsLeaf treeFold
+  Seeded.forsKey Seeded.treeRoot Seeded.treePath chainWalk encode
 
 /-- The reference word of the key of layer `lay` on the path of `leaf`. -/
 noncomputable def chosenWord (f : QueryImpl HashSpec Id) (parameter : PublicParameter)

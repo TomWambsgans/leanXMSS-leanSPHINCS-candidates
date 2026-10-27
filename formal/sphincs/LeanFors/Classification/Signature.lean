@@ -4,10 +4,10 @@ import LeanFors.Classification.Forest
 
 /-!
 The interface of deterministic extraction from an accepted candidate signature: its index and
-verifier trace, the canonical forest key and the canonical message of every layer's WOTS+C key on
-the index's path (the root of the honest tree below it, the forest key at the bottom), reference
+verifier trace, the canonical FORS key and the canonical message of every layer's WOTS+C key on
+the index's path (the root of the honest tree below it, the FORS key at the bottom), reference
 certificates for the counter and word of each key, canonical openings, and the explicit exceptional
-branches (`ForestException`, `LayerException`, `Exception`). `Classification/Accepted` proves the
+branches (`ForsException`, `LayerException`, `Exception`). `Classification/Accepted` proves the
 classification of accepted signatures.
 -/
 
@@ -19,8 +19,8 @@ variable [Params]
 
 open Concrete
 
-attribute [local irreducible] messageDigest forestRecover otsLeaf treeFold
-  Seeded.forestKey Seeded.treeRoot Seeded.treePath chainWalk encode
+attribute [local irreducible] messageDigest forsRecover otsLeaf treeFold
+  Seeded.forsKey Seeded.treeRoot Seeded.treePath chainWalk encode
 
 def index (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) : Index := digestIndex (verificationDigest f pk message signature)
@@ -29,11 +29,11 @@ def trace (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
     (signature : Signature) : List HashInput :=
   queriedInputs f (Concrete.verify pk message signature : OracleComp HashSpec Bool)
 
-def canonicalForest (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
-    (seed : MasterSeed) (leaf : Index) : ForestKey :=
-  evalWithAnswerFn f (Seeded.forestKey parameter leaf seed : OracleComp HashSpec ForestKey)
+def canonicalFors (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
+    (seed : MasterSeed) (leaf : Index) : ForsKey :=
+  evalWithAnswerFn f (Seeded.forsKey parameter leaf seed : OracleComp HashSpec ForsKey)
 
-/-- The canonical message of a WOTS+C key: the root of the honest tree below it, or the forest key
+/-- The canonical message of a WOTS+C key: the root of the honest tree below it, or the FORS key
 of its instance at the bottom layer. -/
 def keyMessageValue (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed)
     (key : OtsKey) : HashInput :=
@@ -48,10 +48,10 @@ theorem canonicalMessage_eq (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey) 
     (lay : Layer) :
     canonicalMessage f sk.parameter sk.seed leaf lay = Completeness.layerMessageValue f sk leaf lay := rfl
 
-/-- The bottom key signs the forest key. -/
+/-- The bottom key signs the FORS key. -/
 theorem canonicalMessage_bottom (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (leaf : Index) :
-    canonicalMessage f parameter seed leaf (layerUp 0) = rootsPayload (canonicalForest f parameter seed leaf) := by
+    canonicalMessage f parameter seed leaf (layerUp 0) = rootsPayload (canonicalFors f parameter seed leaf) := by
   have h := Completeness.layerMessageValue_bottom f ⟨seed, parameter, 0⟩ leaf
   exact h
 
@@ -79,12 +79,12 @@ def ReferenceCertificate (f : QueryImpl HashSpec Id) (parameter : PublicParamete
   evalWithAnswerFn f (encode parameter lay (keyTree leaf lay) (keyLeaf leaf lay)
     (canonicalMessage f parameter seed leaf lay) counter : OracleComp HashSpec (Option Encoding)) = some word
 
-/-- The forest recovery is always part of the complete verifier's actual execution. -/
-theorem verification_forest_run (f : QueryImpl HashSpec Id) (pk : PublicKey)
+/-- The FORS recovery is always part of the complete verifier's actual execution. -/
+theorem verification_fors_run (f : QueryImpl HashSpec Id) (pk : PublicKey)
     (message : Message) (signature : Signature) :
     ContainsRun f (trace f pk message signature)
-      (forestRecover pk.parameter (index f pk message signature)
-        (digestMarks (verificationDigest f pk message signature)) signature.forest) := by
+      (forsRecover pk.parameter (index f pk message signature)
+        (digestLeaves (verificationDigest f pk message signature)) signature.fors) := by
   have hrun : ContainsRun f
       (queriedInputs f (Concrete.verify pk message signature : OracleComp HashSpec Bool))
       (Concrete.verify pk message signature : OracleComp HashSpec Bool) := fun _ hi => hi
@@ -132,15 +132,15 @@ def CanonicalLayer (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSe
         OracleComp HashSpec (Fin (layerHeight lay) → Digest))
 
 /-- Exact retained-leaf components of a canonical signature. The message and randomizer are
-unrestricted; they select the index and the forest marks through the actual message digest. -/
+unrestricted; they select the index and the FORS leaves through the actual message digest. -/
 def CanonicalOpening (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
     (message : Message) (signature : Signature) (referenceCounter : Layer → Counter)
     (referenceWord : Layer → Encoding) : Prop :=
   let leaf := index f pk message signature
   Landed pk.parameter leaf ∧
     (∀ lay, CanonicalLayer f pk seed leaf signature lay (referenceCounter lay) (referenceWord lay)) ∧
-    Forest.Opening f pk.parameter leaf seed (digestMarks (verificationDigest f pk message signature))
-      signature.forest
+    Fors.Opening f pk.parameter leaf seed (digestLeaves (verificationDigest f pk message signature))
+      signature.fors
 
 /-- All canonical signature components are fixed by the message, randomizer, reference counters
 and reference words. This is equality of the complete signature structure. -/
@@ -152,8 +152,8 @@ theorem canonicalOpening_unique (f : QueryImpl HashSpec Id) (pk : PublicKey) (se
   have hdigest : verificationDigest f pk message left = verificationDigest f pk message right := by
     simp only [verificationDigest, hrandomness]
   have hindex : index f pk message left = index f pk message right := congrArg digestIndex hdigest
-  obtain ⟨_, hlayersL, hforestL⟩ := hleft
-  obtain ⟨_, hlayersR, hforestR⟩ := hright
+  obtain ⟨_, hlayersL, hforsL⟩ := hleft
+  obtain ⟨_, hlayersR, hforsR⟩ := hright
   have hlayers : left.layers = right.layers := by
     funext lay
     obtain ⟨hcounterL, hvaluesL, hpathL⟩ := hlayersL lay
@@ -170,37 +170,25 @@ theorem canonicalOpening_unique (f : QueryImpl HashSpec Id) (pk : PublicKey) (se
     simp only at hcounter hvalues hpath
     subst hcounter hvalues hpath
     rfl
-  have hforest : left.forest = right.forest := by
-    funext c
-    obtain ⟨hvL, hpL, htL⟩ := hforestL c
-    obtain ⟨hvR, hpR, htR⟩ := hforestR c
-    rw [hindex, hdigest] at hvL hpL htL
-    have hsub : (left.forest c).sub = (right.forest c).sub := by
-      funext j
-      have hv : ((left.forest c).sub j).values = ((right.forest c).sub j).values :=
-        funext fun i => (hvL j i).trans (hvR j i).symm
-      have hp : ((left.forest c).sub j).path = ((right.forest c).sub j).path := (hpL j).trans (hpR j).symm
-      rcases hl : (left.forest c).sub j with ⟨vl, pl⟩
-      rcases hr : (right.forest c).sub j with ⟨vr, pr⟩
-      rw [hl, hr] at hv hp
-      simp only at hv hp
-      subst hv hp
-      rfl
-    have htop : (left.forest c).top = (right.forest c).top := htL.trans htR.symm
-    rcases hl : left.forest c with ⟨sl, tl⟩
-    rcases hr : right.forest c with ⟨sr, tr⟩
-    rw [hl, hr] at hsub htop
-    simp only at hsub htop
-    subst hsub htop
-    rfl
+  have hfors : left.fors = right.fors := by
+    funext κ
+    obtain ⟨hsL, hpL⟩ := hforsL κ
+    obtain ⟨hsR, hpR⟩ := hforsR κ
+    rw [hindex, hdigest] at hsL hpL
+    rcases hl : left.fors κ with ⟨sl, pl⟩
+    rcases hr : right.fors κ with ⟨sr, pr⟩
+    rw [hl] at hsL hpL
+    rw [hr] at hsR hpR
+    simp only at hsL hpL hsR hpR
+    rw [hsL, hsR, hpL, hpR]
   cases left
   cases right
   cases hrandomness
-  cases hforest
+  cases hfors
   cases hlayers
   rfl
 
-attribute [local irreducible] Seeded.signLayer Seeded.forestOpen sequenceFin
+attribute [local irreducible] Seeded.signLayer Seeded.forsOpen sequenceFin
 
 /-- Honest assembly preserves its selected randomizer exactly. -/
 theorem finishSign_randomness (f : QueryImpl HashSpec Id) (sk : Seeded.SecretKey)
@@ -227,22 +215,21 @@ theorem canonical_of_finishSign (f : QueryImpl HashSpec Id) (sk : Seeded.SecretK
         (index f ⟨sk.root, sk.parameter⟩ message signature) lay (signature.layers lay).counter (word lay)) ∧
       CanonicalOpening f ⟨sk.root, sk.parameter⟩ sk.seed message signature
         (fun lay => (signature.layers lay).counter) word := by
-  obtain ⟨hland, hforest, hlayers⟩ := Completeness.finishSign_spec f sk message randomness hland hsign
+  obtain ⟨hland, hfors, hlayers⟩ := Completeness.finishSign_spec f sk message randomness hland hsign
   choose word href hvalues hpath using fun lay => reference_of_signLayer f sk _ lay _ (hlayers lay)
   refine ⟨word, href, hland, fun lay => ⟨rfl, hvalues lay, hpath lay⟩, ?_⟩
-  intro c
-  have hc := congrFun hforest c
-  simp only [Seeded.forestOpen, Completeness.eval_sequenceFin, Completeness.eval_coordOpen] at hc
-  refine ⟨fun j i => ?_, fun j => ?_, ?_⟩
-  · rw [hc]; rfl
-  · rw [hc]; rfl
-  · rw [hc]; rfl
+  intro κ
+  have hκ := congrFun hfors κ
+  simp only [Seeded.forsOpen, Completeness.eval_sequenceFin, Completeness.eval_treeOpen] at hκ
+  refine ⟨?_, ?_⟩
+  · rw [hκ]; rfl
+  · rw [hκ]; rfl
 
-/-- The detailed forest exception also supplies a distinct-input match in the complete verifier. -/
-def ForestException (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
+/-- The detailed FORS exception also supplies a distinct-input match in the complete verifier. -/
+def ForsException (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
     (message : Message) (signature : Signature) : Prop :=
-  Forest.Exception f pk.parameter (index f pk message signature) seed
-    (digestMarks (verificationDigest f pk message signature)) signature.forest ∧
+  Fors.Exception f pk.parameter (index f pk message signature) seed
+    (digestLeaves (verificationDigest f pk message signature)) signature.fors ∧
   ∃ input canonicalInput, input ∈ trace f pk message signature ∧ input ≠ canonicalInput ∧
     truncateHash (f input) = truncateHash (f canonicalInput)
 

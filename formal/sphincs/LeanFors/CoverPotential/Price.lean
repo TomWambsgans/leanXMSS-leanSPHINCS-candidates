@@ -1,11 +1,10 @@
 import LeanFors.Base.Virtual
 import LeanFors.Scheme.LandedDigest
 
-/-! The forest price over multisets of disclosed kept views. A target view is covered when, in every
-tree and both subtrees, each chain of the WOTS key it selects is disclosed at or below the position
-it needs by a disclosed view at the same index. The cover indicator is monotone (it is not
-supermodular: a second cover adds nothing). The fresh-digest price averages it over a uniform landed
-digest. -/
+/-! The FORS price over multisets of disclosed kept views. A target view is covered when, in every
+tree, the leaf it selects is disclosed by a disclosed view at the same index. The cover indicator is
+monotone (it is not supermodular: a second cover adds nothing). The fresh-digest price averages it
+over a uniform landed digest. -/
 
 open ENNReal
 
@@ -18,20 +17,18 @@ open Concrete LeanFors.Base.Domination
 
 abbrev View := Lifetime.KeptDigestView
 
-/-- Chain `i` of the WOTS key that the target selects in tree `c`, subtree `j`, needs only the
-public top, or some disclosed view at the target's index opens it deep enough. -/
-def ChainCovered (target : View) (c : Coord) (j : SubIdx) (i : FChain) (disclosed : Multiset View) : Prop :=
-  chainNeed (target.2 c) j i = 0 ∨ ∃ v ∈ disclosed, v.1 = target.1 ∧ KeyCovers (v.2 c) (target.2 c) j i
+/-- Some disclosed view at the target's index discloses the leaf the target selects in tree `κ`. -/
+def TreeCovered (target : View) (κ : FTree) (disclosed : Multiset View) : Prop :=
+  ∃ v ∈ disclosed, v.1 = target.1 ∧ v.2 κ = target.2 κ
 
-/-- Every chain the target needs is covered. -/
+/-- Every tree the target selects is covered. -/
 def CoverAll (target : View) (disclosed : Multiset View) : Prop :=
-  ∀ c j i, ChainCovered target c j i disclosed
+  ∀ κ, TreeCovered target κ disclosed
 
-theorem chainCovered_mono {target : View} {c : Coord} {j : SubIdx} {i : FChain} {small large : Multiset View}
-    (hle : small ≤ large) (h : ChainCovered target c j i small) : ChainCovered target c j i large := by
-  rcases h with h | ⟨v, hv, h1, h2⟩
-  · exact Or.inl h
-  · exact Or.inr ⟨v, Multiset.mem_of_le hle hv, h1, h2⟩
+theorem treeCovered_mono {target : View} {κ : FTree} {small large : Multiset View}
+    (hle : small ≤ large) (h : TreeCovered target κ small) : TreeCovered target κ large := by
+  obtain ⟨v, hv, h1, h2⟩ := h
+  exact ⟨v, Multiset.mem_of_le hle hv, h1, h2⟩
 
 open Classical in
 /-- **The witness**: the cover indicator of a target. -/
@@ -48,7 +45,7 @@ theorem witness_mono (target : View) : Monotone' (witness target) := by
   intro small large hle
   unfold witness
   by_cases hs : CoverAll target small
-  · have hl : CoverAll target large := fun c j i => chainCovered_mono hle (hs c j i)
+  · have hl : CoverAll target large := fun κ => treeCovered_mono hle (hs κ)
     rw [if_pos hs, if_pos hl]
   · rw [if_neg hs]; exact zero_le
 

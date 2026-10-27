@@ -929,11 +929,11 @@ theorem bad_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashOu
       have hmarks := funext (digestMarks_eq (verificationDigest f ⟨(sampleData parameterOutput fixed highs
         remaining).root, truncateHash parameterOutput⟩ forgery.message forgery.signature))
       have hopen := hcanon.2.2
-      have hrun := SignatureWitness.verification_forest_run f ⟨(sampleData parameterOutput fixed highs
+      have hrun := SignatureWitness.verification_fors_run f ⟨(sampleData parameterOutput fixed highs
         remaining).root, truncateHash parameterOutput⟩ forgery.message forgery.signature
       rw [hmarks] at hopen hrun
       rcases Forest.Opening.covered_or_hidden f (truncateHash parameterOutput) _ seed _
-          forgery.signature.forest (revealedSet reveals) _ hopen hrun with
+          forgery.signature.fors (revealedSet reveals) _ hopen hrun with
         hcovered | ⟨index, c, s, j, a, i, t, hnot, hmem⟩
       · refine ⟨hvalid, _, cachedDigest_eq parameterOutput highs table cacheF f entries hagree hcached _
           forgery.message forgery.signature htrace, hcanon.1, ?_, hcovered⟩
@@ -991,7 +991,7 @@ theorem bad_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashOu
     · left
       obtain ⟨input, hinput, hmem⟩ := forestException_hit f (truncateHash parameterOutput) seed _ hcons _ _ _
         hforestExc
-      exact hhit input (SignatureWitness.verification_forest_run f _ forgery.message forgery.signature input hinput)
+      exact hhit input (SignatureWitness.verification_fors_run f _ forgery.message forgery.signature input hinput)
         (graph_targets_subset _ _ _ _ _ hmem)
 
 /-- Prepared answers take priority over a sample function. -/

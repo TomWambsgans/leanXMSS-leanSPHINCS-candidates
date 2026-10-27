@@ -41,7 +41,7 @@ attribute [local irreducible] positionAt
 
 variable (parameter : PublicParameter)
   (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-  (ftsSecret : ForestSecrets)
+  (ftsSecret : ForsSecrets)
 
 /-- Active nodes have their canonical input exempted. Boundary nodes have no such input. -/
 noncomputable def referenceTable (active : Position → Prop) (boundary : Position → Option Digest)

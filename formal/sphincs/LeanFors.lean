@@ -132,7 +132,6 @@ import LeanFors.CoverBound.NearMomentTable
 import LeanFors.CoverBound.NearOption
 import LeanFors.CoverBound.PerIndex
 import LeanFors.CoverBound.SecondMoment
-import LeanFors.CoverBound.UniformMark
 import LeanFors.SmallBudget.Closing
 import LeanFors.SmallBudget.Contact.Bound
 import LeanFors.SmallBudget.Contact.NearWitness

@@ -21,7 +21,7 @@ noncomputable local instance : SampleableType CanonicalGraphLabels := graphLabel
 
 variable (parameter : PublicParameter)
   (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-  (ftsSecret : ForestSecrets)
+  (ftsSecret : ForsSecrets)
 
 def FreshPositions (positions : List Position) (cache : QueryCache HashSpec) : Prop :=
   ∀ position ∈ positions, ∀ labels,

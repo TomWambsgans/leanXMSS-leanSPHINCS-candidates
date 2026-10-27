@@ -133,7 +133,7 @@ noncomputable def finishRest (parameter : PublicParameter) (data : PublicData) (
     | return none
   let values ← sequenceFin fun lay : Layer => sequenceFin fun chain => HiddenCost.reveal
     (.chain lay (treeIndexAt index lay) (leafIndexAt index lay) chain ((found lay).2 chain))
-  let opening ← sequenceFin fun c => coordCostSource data index c (digestMarks digest c)
+  let opening ← sequenceFin fun c => coordCostSource data index c (digestLeaves digest c)
   return some ⟨randomness, opening, layerSignatures data index found values⟩
 
 theorem finishCostSource_eq (parameter : PublicParameter) (data : PublicData) (message : Message)

@@ -4,13 +4,14 @@ import LeanFors.Scheme.Recovery
 /-!
 Seed-independent prepared key material and its exact full-output oracle programming interface.
 
-A *secret* is the start of one WOTS+C chain, the start of one forest chain or a surrogate; a
+A *secret* is the start of one WOTS+C chain, the secret of one FORS leaf or a surrogate; a
 *derivation* is one hash of the seed. A surrogate is one derivation (its first 16 bytes). The starts
-of chains `2t` and `2t + 1` of a key are the two 16-byte halves of one derivation.
+of chains `2t` and `2t + 1` of a key, and the secrets of leaves `2t` and `2t + 1` of a FORS tree, are
+the two 16-byte halves of one derivation.
 
 The material holds one 256-bit value per secret; the secret is its first 16 bytes (`truncateHash`),
 as for a scheme with one derivation per secret. The programmed answer of a derivation
-(`derivedOutput`) is the surrogate's value, or the two secrets of its pair of chains side by side.
+(`derivedOutput`) is the surrogate's value, or the two secrets of its pair side by side.
 Uniform material gives independent uniform answers (`SeedCoupling.evalDist_derivedOutput_uniform`).
 Only the parameter derivation uses the zero public parameter; all other entries use its truncated
 sampled output. This module defines and verifies the programming operation. It does not assume that
@@ -25,29 +26,29 @@ namespace LeanFors.Security.SeedModel
 variable [Params]
 
 abbrev OtsPosition := Layer × TreeIndex × LeafIndex × ChainIndex
-abbrev ForestPosition := Index × Coord × SuperIdx × SubIdx × ChildIdx × FChain
-abbrev SecretPosition := OtsPosition ⊕ (ForestPosition ⊕ Fin maxLayerHeight)
+abbrev ForsPosition := Index × FTree × FLeaf
+abbrev SecretPosition := OtsPosition ⊕ (ForsPosition ⊕ Fin maxLayerHeight)
 abbrev SecretOutputs := SecretPosition → HashOutput
 
-instance forestPositionDecEq : DecidableEq ForestPosition := inferInstance
+instance forsPositionDecEq : DecidableEq ForsPosition := inferInstance
 instance otsPositionDecEq : DecidableEq OtsPosition := inferInstance
 instance secretPositionDecEq : DecidableEq SecretPosition :=
-  @instDecidableEqSum _ _ otsPositionDecEq (@instDecidableEqSum _ _ forestPositionDecEq inferInstance)
+  @instDecidableEqSum _ _ otsPositionDecEq (@instDecidableEqSum _ _ forsPositionDecEq inferInstance)
 instance secretPositionFintype : Fintype SecretPosition := inferInstance
 noncomputable instance secretOutputsFintype : Fintype SecretOutputs := Pi.instFintype
 
 /-- The derivations of the chain starts of a one-time key: one per pair of chains. -/
 abbrev OtsDerivation := Layer × TreeIndex × LeafIndex × ChainPair
-/-- The derivations of the chain starts of a forest WOTS key: one per pair of chains. -/
-abbrev ForestDerivation := Index × Coord × SuperIdx × SubIdx × ChildIdx × FPair
+/-- The derivations of the secrets of a FORS tree: one per pair of leaves. -/
+abbrev ForsDerivation := Index × FTree × FPair
 /-- The seed derivations at the public parameter: one hash each. -/
-abbrev Derivation := OtsDerivation ⊕ (ForestDerivation ⊕ Fin maxLayerHeight)
+abbrev Derivation := OtsDerivation ⊕ (ForsDerivation ⊕ Fin maxLayerHeight)
 abbrev DerivedOutputs := Derivation → HashOutput
 
-instance forestDerivationDecEq : DecidableEq ForestDerivation := inferInstance
+instance forsDerivationDecEq : DecidableEq ForsDerivation := inferInstance
 instance otsDerivationDecEq : DecidableEq OtsDerivation := inferInstance
 instance derivationDecEq : DecidableEq Derivation :=
-  @instDecidableEqSum _ _ otsDerivationDecEq (@instDecidableEqSum _ _ forestDerivationDecEq inferInstance)
+  @instDecidableEqSum _ _ otsDerivationDecEq (@instDecidableEqSum _ _ forsDerivationDecEq inferInstance)
 instance derivationFintype : Fintype Derivation := inferInstance
 noncomputable instance derivedOutputsFintype : Fintype DerivedOutputs := Pi.instFintype
 
@@ -73,7 +74,7 @@ noncomputable def sampleMaterial : ProbComp Material := do
 
 def derivationDomain : Derivation → KeygenDomain
   | .inl (lay, tree, leaf, pair) => .ots lay tree leaf pair
-  | .inr (.inl (index, c, s, j, a, pair)) => .forest index c s j a pair
+  | .inr (.inl (index, κ, pair)) => .fors index κ pair
   | .inr (.inr level) => .surrogate level
 
 theorem derivationDomain_injective : Function.Injective derivationDomain := by
@@ -87,12 +88,12 @@ theorem derivationDomain_injective : Function.Injective derivationDomain := by
   | inr left =>
       cases left with
       | inl left =>
-          rcases left with ⟨index, c, s, j, a, pair⟩
+          rcases left with ⟨index, κ, pair⟩
           cases right with
           | inl right => cases h
           | inr right =>
               cases right with
-              | inl right => rcases right with ⟨index', c', s', j', a', pair'⟩; simpa [derivationDomain] using h
+              | inl right => rcases right with ⟨index', κ', pair'⟩; simpa [derivationDomain] using h
               | inr right => cases h
       | inr left =>
           cases right with
@@ -111,14 +112,14 @@ theorem derivationDomain_ne_parameter (derivation : Derivation) :
 /-- The derivation that gives a secret. -/
 def secretDerivation : SecretPosition → Derivation
   | .inl (lay, tree, leaf, chain) => .inl (lay, tree, leaf, chainPair chain)
-  | .inr (.inl (index, c, s, j, a, i)) => .inr (.inl (index, c, s, j, a, fchainPair i))
+  | .inr (.inl (index, κ, leaf)) => .inr (.inl (index, κ, leafPair leaf))
   | .inr (.inr level) => .inr (.inr level)
 
 /-- The half of its derivation that is a secret: the half of its parity for a chain start, the first
 half for a surrogate. -/
 def secretHalf : SecretPosition → HashOutput → Digest
   | .inl (_, _, _, chain) => hashHalf chain.val
-  | .inr (.inl (_, _, _, _, _, i)) => hashHalf i.val
+  | .inr (.inl (_, _, leaf)) => hashHalf leaf.val
   | .inr (.inr _) => truncateHash
 
 /-- The hash domain of the derivation that gives a secret. -/
@@ -129,10 +130,13 @@ def secretDomain (position : SecretPosition) : KeygenDomain :=
 def evenChain (pair : ChainPair) : ChainIndex := ⟨2 * pair.val, by have := pair.isLt; simp only [numChains]; omega⟩
 /-- Chain `2t + 1` of a one-time key. -/
 def oddChain (pair : ChainPair) : ChainIndex := ⟨2 * pair.val + 1, by have := pair.isLt; simp only [numChains]; omega⟩
-/-- Chain `2t` of a forest WOTS key. -/
-def evenFChain (pair : FPair) : FChain := ⟨2 * pair.val, by have := pair.isLt; simp only [childChains]; omega⟩
-/-- Chain `2t + 1` of a forest WOTS key. -/
-def oddFChain (pair : FPair) : FChain := ⟨2 * pair.val + 1, by have := pair.isLt; simp only [childChains]; omega⟩
+theorem two_pow_forsHeight_eq : 2 ^ forsHeight = 2 * 2 ^ (forsHeight - 1) := by
+  rw [← Nat.pow_succ']; congr 1; have := Params.forsHeight_ge; omega
+
+/-- Leaf `2t` of a FORS tree. -/
+def evenLeaf (pair : FPair) : FLeaf := ⟨2 * pair.val, by have := pair.isLt; rw [two_pow_forsHeight_eq]; omega⟩
+/-- Leaf `2t + 1` of a FORS tree. -/
+def oddLeaf (pair : FPair) : FLeaf := ⟨2 * pair.val + 1, by have := pair.isLt; rw [two_pow_forsHeight_eq]; omega⟩
 
 theorem chainPair_evenChain (pair : ChainPair) : chainPair (evenChain pair) = pair := by
   apply Fin.ext; simp only [chainPair, evenChain]; omega
@@ -140,11 +144,11 @@ theorem chainPair_evenChain (pair : ChainPair) : chainPair (evenChain pair) = pa
 theorem chainPair_oddChain (pair : ChainPair) : chainPair (oddChain pair) = pair := by
   apply Fin.ext; simp only [chainPair, oddChain]; omega
 
-theorem fchainPair_evenFChain (pair : FPair) : fchainPair (evenFChain pair) = pair := by
-  apply Fin.ext; simp only [fchainPair, evenFChain]; omega
+theorem leafPair_evenLeaf (pair : FPair) : leafPair (evenLeaf pair) = pair := by
+  apply Fin.ext; simp only [leafPair, evenLeaf]; omega
 
-theorem fchainPair_oddFChain (pair : FPair) : fchainPair (oddFChain pair) = pair := by
-  apply Fin.ext; simp only [fchainPair, oddFChain]; omega
+theorem leafPair_oddLeaf (pair : FPair) : leafPair (oddLeaf pair) = pair := by
+  apply Fin.ext; simp only [leafPair, oddLeaf]; omega
 
 theorem chain_eq_of_even (chain : ChainIndex) (h : chain.val % 2 = 0) : evenChain (chainPair chain) = chain := by
   apply Fin.ext; simp only [chainPair, evenChain]; omega
@@ -152,11 +156,11 @@ theorem chain_eq_of_even (chain : ChainIndex) (h : chain.val % 2 = 0) : evenChai
 theorem chain_eq_of_odd (chain : ChainIndex) (h : ¬chain.val % 2 = 0) : oddChain (chainPair chain) = chain := by
   apply Fin.ext; simp only [chainPair, oddChain]; omega
 
-theorem fchain_eq_of_even (i : FChain) (h : i.val % 2 = 0) : evenFChain (fchainPair i) = i := by
-  apply Fin.ext; simp only [fchainPair, evenFChain]; omega
+theorem leaf_eq_of_even (leaf : FLeaf) (h : leaf.val % 2 = 0) : evenLeaf (leafPair leaf) = leaf := by
+  apply Fin.ext; simp only [leafPair, evenLeaf]; omega
 
-theorem fchain_eq_of_odd (i : FChain) (h : ¬i.val % 2 = 0) : oddFChain (fchainPair i) = i := by
-  apply Fin.ext; simp only [fchainPair, oddFChain]; omega
+theorem leaf_eq_of_odd (leaf : FLeaf) (h : ¬leaf.val % 2 = 0) : oddLeaf (leafPair leaf) = leaf := by
+  apply Fin.ext; simp only [leafPair, oddLeaf]; omega
 
 /-- Every derivation gives a secret. -/
 theorem secretDerivation_surjective : Function.Surjective secretDerivation := by
@@ -168,9 +172,9 @@ theorem secretDerivation_surjective : Function.Surjective secretDerivation := by
   | inr p =>
       cases p with
       | inl p =>
-          rcases p with ⟨index, c, s, j, a, pair⟩
-          exact ⟨.inr (.inl (index, c, s, j, a, evenFChain pair)),
-            by simp only [secretDerivation, fchainPair_evenFChain]⟩
+          rcases p with ⟨index, κ, pair⟩
+          exact ⟨.inr (.inl (index, κ, evenLeaf pair)),
+            by simp only [secretDerivation, leafPair_evenLeaf]⟩
       | inr level => exact ⟨.inr (.inr level), rfl⟩
 
 /-! ### The two halves of a hash output -/
@@ -203,15 +207,15 @@ theorem hashHalf_odd {n : Nat} (h : ¬n % 2 = 0) (output : HashOutput) :
 
 /-! ### The answers of the derivations -/
 
-/-- The answer of each derivation: the two secrets of a pair of chains side by side, the full value
-of a surrogate. -/
+/-- The answer of each derivation: the two secrets of a pair side by side, the full value of a
+surrogate. -/
 noncomputable def derivedOutput (outputs : SecretOutputs) : Derivation → HashOutput
   | .inl (lay, tree, leaf, pair) =>
       joinHalves (truncateHash (outputs (.inl (lay, tree, leaf, evenChain pair))))
         (truncateHash (outputs (.inl (lay, tree, leaf, oddChain pair))))
-  | .inr (.inl (index, c, s, j, a, pair)) =>
-      joinHalves (truncateHash (outputs (.inr (.inl (index, c, s, j, a, evenFChain pair)))))
-        (truncateHash (outputs (.inr (.inl (index, c, s, j, a, oddFChain pair)))))
+  | .inr (.inl (index, κ, pair)) =>
+      joinHalves (truncateHash (outputs (.inr (.inl (index, κ, evenLeaf pair)))))
+        (truncateHash (outputs (.inr (.inl (index, κ, oddLeaf pair)))))
   | .inr (.inr level) => outputs (.inr (.inr level))
 
 /-- **Every secret is read back from the answer of its derivation.** -/
@@ -228,11 +232,11 @@ theorem secretHalf_derivedOutput (outputs : SecretOutputs) (position : SecretPos
   | inr p =>
       cases p with
       | inl p =>
-          rcases p with ⟨index, c, s, j, a, i⟩
+          rcases p with ⟨index, κ, leaf⟩
           simp only [secretHalf, secretDerivation, derivedOutput]
-          by_cases h : i.val % 2 = 0
-          · rw [hashHalf_even h, truncateHash_joinHalves, fchain_eq_of_even i h]
-          · rw [hashHalf_odd h, upperHash_joinHalves, fchain_eq_of_odd i h]
+          by_cases h : leaf.val % 2 = 0
+          · rw [hashHalf_even h, truncateHash_joinHalves, leaf_eq_of_even leaf h]
+          · rw [hashHalf_odd h, upperHash_joinHalves, leaf_eq_of_odd leaf h]
       | inr level => rfl
 
 /-- What a table of answers requires of the value at one secret position: for a chain start, its
@@ -269,13 +273,13 @@ theorem derivedOutput_eq_iff (outputs : SecretOutputs) (table : DerivedOutputs) 
     | inr p =>
         cases p with
         | inl p =>
-            rcases p with ⟨index, c, s, j, a, pair⟩
-            have he := h (.inr (.inl (index, c, s, j, a, evenFChain pair)))
-            have ho := h (.inr (.inl (index, c, s, j, a, oddFChain pair)))
-            simp only [Compatible, secretHalf, secretDerivation, fchainPair_evenFChain,
-              fchainPair_oddFChain] at he ho
-            rw [hashHalf_even (by simp only [evenFChain]; omega)] at he
-            rw [hashHalf_odd (by simp only [oddFChain]; omega)] at ho
+            rcases p with ⟨index, κ, pair⟩
+            have he := h (.inr (.inl (index, κ, evenLeaf pair)))
+            have ho := h (.inr (.inl (index, κ, oddLeaf pair)))
+            simp only [Compatible, secretHalf, secretDerivation, leafPair_evenLeaf,
+              leafPair_oddLeaf] at he ho
+            rw [hashHalf_even (by simp only [evenLeaf]; omega)] at he
+            rw [hashHalf_odd (by simp only [oddLeaf]; omega)] at ho
             simp only [derivedOutput, he, ho, joinHalves_halves]
         | inr level => exact h (.inr (.inr level))
 
@@ -383,14 +387,13 @@ theorem eval_ots_prepared (f : QueryImpl HashSpec Id) (seed : MasterSeed) (mater
   rw [← secret_prepared f seed material h (.inl (lay, tree, leaf, chain))]
   exact Completeness.otsSecret_eq f _ lay tree leaf seed chain
 
-/-- The start of a forest chain reads the sampled table. -/
-theorem eval_forest_prepared (f : QueryImpl HashSpec Id) (seed : MasterSeed) (material : Material)
-    (h : PreparedAgreement f seed material) (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx)
-    (a : ChildIdx) (i : FChain) :
-    evalWithAnswerFn f (Seeded.forestStart (parameter material) index c s j a i seed :
-      OracleComp HashSpec Digest) = truncateHash (material.2 (.inr (.inl (index, c, s, j, a, i)))) := by
-  rw [← secret_prepared f seed material h (.inr (.inl (index, c, s, j, a, i)))]
-  exact Completeness.forestSecret_eq f _ index c s j a i seed
+/-- The secret of a FORS leaf reads the sampled table. -/
+theorem eval_fors_prepared (f : QueryImpl HashSpec Id) (seed : MasterSeed) (material : Material)
+    (h : PreparedAgreement f seed material) (index : Index) (κ : FTree) (leaf : FLeaf) :
+    evalWithAnswerFn f (Seeded.forsSecret (parameter material) index κ leaf seed :
+      OracleComp HashSpec Digest) = truncateHash (material.2 (.inr (.inl (index, κ, leaf)))) := by
+  rw [← secret_prepared f seed material h (.inr (.inl (index, κ, leaf)))]
+  exact Completeness.forsSecretValue_eq f _ index κ seed leaf
 
 /-- A surrogate reads the sampled table. -/
 theorem eval_surrogate_prepared (f : QueryImpl HashSpec Id) (seed : MasterSeed) (material : Material)

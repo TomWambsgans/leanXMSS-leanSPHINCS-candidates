@@ -313,8 +313,8 @@ def ForestNearRecorded (K : Ctx) (root : Digest) (outcome : Outcome) (reveals : 
     Landed K.p (digestIndex digest) ∧
     (∀ entry ∈ outcome.2.1, ∀ signature, entry.2 = some signature →
       ¬(entry.1 = outcome.1.message ∧ signature.randomness = outcome.1.signature.randomness)) ∧
-    ∃ c j i t, RecordedContactAt s T K (digestIndex digest) c (digestMarks digest c).super j
-        ((digestMarks digest c).child j) i t ∧
+    ∃ c j i t, RecordedContactAt s T K (digestIndex digest) c (digestLeaves digest c).super j
+        ((digestLeaves digest c).child j) i t ∧
       ∀ c' j' i', (c', j', i') ≠ (c, j, i) → ChainCov (revealedSet reveals) (fullDigestView digest) c' j' i'
 
 include hprepared in

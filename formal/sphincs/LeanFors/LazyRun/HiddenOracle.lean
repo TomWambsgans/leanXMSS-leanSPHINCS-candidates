@@ -40,7 +40,7 @@ section Lookup
 
 variable (parameter : PublicParameter)
   (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-  (ftsSecret : ForestSecrets) (labels : CanonicalGraphLabels)
+  (ftsSecret : ForsSecrets) (labels : CanonicalGraphLabels)
 
 theorem programGraphCache_empty_some (positions : List Position) (position : Position)
     (hmem : position ∈ positions) (bytes : HashInput)
@@ -254,7 +254,7 @@ end Split
 
 theorem programGraphCache_congr (parameter : PublicParameter)
     (otsSecret otsSecret' : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-    (ftsSecret ftsSecret' : ForestSecrets) (positions : List Position)
+    (ftsSecret ftsSecret' : ForsSecrets) (positions : List Position)
     (labels labels' : CanonicalGraphLabels) (cache : QueryCache HashSpec)
     (h : ∀ position ∈ positions,
       canonicalGraphInput parameter otsSecret ftsSecret position labels =
@@ -275,7 +275,7 @@ theorem programGraphCache_congr (parameter : PublicParameter)
 
 theorem canonicalGraphInput_struct (parameter : PublicParameter)
     (otsSecret otsSecret' : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-    (ftsSecret ftsSecret' : ForestSecrets) (position : Position)
+    (ftsSecret ftsSecret' : ForsSecrets) (position : Position)
     (labels labels' : CanonicalGraphLabels) (hrow : ¬IsRowPosition position)
     (hchildren : ∀ child ∈ position.children, labels child = labels' child) :
     canonicalGraphInput parameter otsSecret ftsSecret position labels =

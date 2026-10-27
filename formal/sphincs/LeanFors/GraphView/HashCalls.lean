@@ -16,7 +16,7 @@ variable [Params]
 open Concrete
 
 attribute [local irreducible] encodingAttemptLimit digestAttemptLimit Seeded.treeNode
-  Seeded.subNode Seeded.topNode Seeded.forestKey Seeded.forestOpen Seeded.treePath Seeded.signLayer chainWalk
+  Seeded.subNode Seeded.topNode Seeded.forsKey Seeded.forsOpen Seeded.treePath Seeded.signLayer chainWalk
   forestWalk
   deriveKey
 set_option backward.isDefEq.respectTransparency false
@@ -166,12 +166,12 @@ theorem hashCalls_topNode (f : QueryImpl HashSpec Id) (parameter : PublicParamet
       rw [pow_succ]
       omega
 
-/-- Building the forest key costs `8 · 2 · (462 · 8 - 1) = 59120` hash calls: the two level-3 nodes
+/-- Building the FORS key costs `8 · 2 · (462 · 8 - 1) = 59120` hash calls: the two level-3 nodes
 of each of the 8 trees. A tree has no root hash and the key has no hash. -/
 theorem hashCalls_forestKey (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (seed : MasterSeed) :
-    hashCalls f (Seeded.forestKey parameter index seed : OracleComp HashSpec ForestKey) = 59120 := by
-  rw [Seeded.forestKey, hashCalls_sequenceFin]
+    hashCalls f (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey) = 59120 := by
+  rw [Seeded.forsKey, hashCalls_sequenceFin]
   simp only [hashCalls_bind, hashCalls_pure,
     hashCalls_topNode f parameter index _ seed (topHeight - 1) _ (by decide)]
   decide

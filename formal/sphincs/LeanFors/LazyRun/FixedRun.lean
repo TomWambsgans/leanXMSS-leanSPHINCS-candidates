@@ -317,7 +317,7 @@ noncomputable def revealsOf (parameter : PublicParameter) (data : PublicData) (m
   let index := digestIndex digest
   match assembledEncodings f parameter data index with
   | none => []
-  | some found => wotsReveals index found ++ (List.ofFn fun c => treeReveals index c (digestMarks digest c)).flatten
+  | some found => wotsReveals index found ++ (List.ofFn fun c => treeReveals index c (digestLeaves digest c)).flatten
 
 attribute [local irreducible] ReferenceChoice.search encodingAttemptLimit Concrete.messageDigest
   Concrete.sequenceFin

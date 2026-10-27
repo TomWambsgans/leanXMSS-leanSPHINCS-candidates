@@ -72,7 +72,7 @@ theorem flatMap_ofFn_injective {α β : Type} (g : α → List β) (len : Nat)
       | zero => exact hzero
       | succ j => exact congrFun hsucc j
 
-theorem rootsPayload_injective {tops tops' : Coord → Digest × Digest}
+theorem rootsPayload_injective {tops tops' : ForsKey}
     (h : rootsPayload tops = rootsPayload tops') : tops = tops' :=
   flatMap_ofFn_injective (fun pair : Digest × Digest => nodePayload pair.1 pair.2) 32
     (fun pair => by simp [nodePayload, bytesLE_length])

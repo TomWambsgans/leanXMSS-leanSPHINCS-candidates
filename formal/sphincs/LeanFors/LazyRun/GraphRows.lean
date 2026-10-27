@@ -17,7 +17,7 @@ attribute [local instance] Classical.propDecidable
 
 def coordinates
     (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-    (ftsSecret : ForestSecrets)
+    (ftsSecret : ForsSecrets)
     (labels : CanonicalGraphLabels) : Table
   | .chain lay tree leaf chainIdx position =>
       if h : position.val = 0 then otsSecret lay tree leaf chainIdx
@@ -33,7 +33,7 @@ def highHalves (labels : CanonicalGraphLabels) (address : Address) : Prefix.High
 
 variable (parameter : PublicParameter)
   (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-  (ftsSecret : ForestSecrets)
+  (ftsSecret : ForsSecrets)
   (labels : CanonicalGraphLabels)
 
 theorem coordinates_outgoing (address : Address) :

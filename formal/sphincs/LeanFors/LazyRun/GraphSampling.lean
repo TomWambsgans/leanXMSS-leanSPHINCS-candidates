@@ -132,7 +132,7 @@ def otsFromOutputs (outputs : SecretOutputs) (lay : Layer) (tree : TreeIndex)
     (leaf : LeafIndex) (chainIdx : ChainIndex) : Digest :=
   truncateHash (outputs (.inl (lay, tree, leaf, chainIdx)))
 
-def ftsFromOutputs (outputs : SecretOutputs) : ForestSecrets := fun index c s j a i =>
+def ftsFromOutputs (outputs : SecretOutputs) : ForsSecrets := fun index c s j a i =>
   truncateHash (outputs (.inr (.inl (index, c, s, j, a, i))))
 
 theorem coordinates_joined (outputs : JoinedOutputs) (coordinate : Coordinate) :

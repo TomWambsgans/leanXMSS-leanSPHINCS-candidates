@@ -189,14 +189,14 @@ theorem SignedRevealed.fchain_mem {parameter : PublicParameter} {data : PublicDa
     (h : SignedRevealed f parameter data log reveals) (entry : (t : SigningSpec.Domain) × SigningSpec.Range t)
     (hentry : entry ∈ log) (signature : Signature) (hsig : entry.2 = some signature) (c : Coord) (j : SubIdx)
     (ch : FChain) (k : FPos)
-    (hk : (GraphView.openedPos (digestMarks (evalWithAnswerFn f (messageDigest parameter data.root entry.1
+    (hk : (GraphView.openedPos (digestLeaves (evalWithAnswerFn f (messageDigest parameter data.root entry.1
       signature.randomness : OracleComp HashSpec MessageDigest)) c) j ch).val ≤ k.val) :
     HiddenGraph.Coordinate.fchain
       (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root entry.1 signature.randomness :
         OracleComp HashSpec MessageDigest))) c
-      (digestMarks (evalWithAnswerFn f (messageDigest parameter data.root entry.1 signature.randomness :
+      (digestLeaves (evalWithAnswerFn f (messageDigest parameter data.root entry.1 signature.randomness :
         OracleComp HashSpec MessageDigest)) c).super j
-      ((digestMarks (evalWithAnswerFn f (messageDigest parameter data.root entry.1 signature.randomness :
+      ((digestLeaves (evalWithAnswerFn f (messageDigest parameter data.root entry.1 signature.randomness :
         OracleComp HashSpec MessageDigest)) c).child j) ch k ∈ reveals := by
   obtain ⟨⟨pair, hpair⟩, hsub⟩ := h entry hentry signature hsig
   apply hsub

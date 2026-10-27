@@ -6,7 +6,7 @@ import LeanFors.Classification.Hidden
 equals the honest root of the layer's tree on the forgery's path (the public root at the top):
 either the tree classification gives a hit, or the WOTS+C classification of the layer's key gives
 an exception, or the key's message is the canonical one, which makes the fold of the layer below
-the honest root of its tree. At the bottom the canonical message is the forest key. Every
+the honest root of its tree. At the bottom the canonical message is the FORS key. Every
 exception other than a tree hit is at a key on the path of a landed index. -/
 
 open OracleComp OracleSpec
@@ -14,8 +14,8 @@ open OracleComp OracleSpec
 namespace LeanFors.Security.SignatureWitness
 open Concrete PrunedGraph
 
-attribute [local irreducible] messageDigest forestRecover otsLeaf treeFold
-  Seeded.forestKey Seeded.treeRoot Seeded.treePath chainWalk encode
+attribute [local irreducible] messageDigest forsRecover otsLeaf treeFold
+  Seeded.forsKey Seeded.treeRoot Seeded.treePath chainWalk encode
 
 variable [Params]
 
@@ -33,14 +33,14 @@ def WotsException (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSee
     (Completeness.otsSecret f pk.parameter lay (keyTree leaf lay) (keyLeaf leaf lay) seed) inputs
 
 /-- A canonical WOTS and tree opening at every layer of a landed index whose forest part recovers
-the canonical forest key. -/
+the canonical FORS key. -/
 def RecoveredOpening (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
     (message : Message) (signature : Signature) (referenceCounter : Layer → Counter) : Prop :=
   let leaf := index f pk message signature
   Landed pk.parameter leaf ∧
     (∀ lay, CanonicalLayer f pk seed leaf signature lay (referenceCounter lay)
       (chosenWord f pk.parameter seed leaf lay)) ∧
-    verificationForest f pk message signature = canonicalForest f pk.parameter seed leaf
+    verificationForest f pk message signature = canonicalFors f pk.parameter seed leaf
 
 /-- At a crossing above the top layer's kept subtree, the forged path enters at the boundary node. -/
 theorem crossing_boundary (parameter : PublicParameter) (leaf reference : LeafIndex)
@@ -238,7 +238,7 @@ theorem layer_step (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSe
 
 /-- **The walk down the layers.** If the fold of the layer `j` steps above the bottom is the honest
 root of its tree on the path of a landed index, then the layers up to `j` are canonical and the
-forest key is recovered, or some layer up to `j` has a tree hit or a WOTS exception. -/
+FORS key is recovered, or some layer up to `j` has a tree hit or a WOTS exception. -/
 theorem walk_classification (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed : MasterSeed)
     (message : Message) (signature : Signature)
     (hverified : evalWithAnswerFn f (Concrete.verify pk message signature : OracleComp HashSpec Bool) = true)
@@ -249,7 +249,7 @@ theorem walk_classification (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed :
         evalWithAnswerFn f (Seeded.treeRoot pk.parameter (layerUp j)
           (keyTree (index f pk message signature) (layerUp j)) seed : OracleComp HashSpec Digest) →
       ((∀ j', j' ≤ j → ChosenLayer f pk seed message signature (layerUp j')) ∧
-          verificationForest f pk message signature = canonicalForest f pk.parameter seed
+          verificationForest f pk message signature = canonicalFors f pk.parameter seed
             (index f pk message signature)) ∨
         (∃ j', j' ≤ j ∧ TreeHit f pk seed message signature j') ∨
         (∃ j', j' ≤ j ∧ WotsException f pk seed message signature (layerUp j')) := by
@@ -287,7 +287,7 @@ theorem walk_classification (f : QueryImpl HashSpec Id) (pk : PublicKey) (seed :
       · exact Or.inr (Or.inl ⟨j + 1, le_rfl, htree⟩)
       · exact Or.inr (Or.inr ⟨j + 1, le_rfl, hwots⟩)
 
-/-- **Recovered canonical forest key, a tree hit, or a WOTS exception on the path of a landed
+/-- **Recovered canonical FORS key, a tree hit, or a WOTS exception on the path of a landed
 index.** -/
 theorem accepted_recovered_classification (f : QueryImpl HashSpec Id) (pk : PublicKey)
     (seed : MasterSeed) (message : Message) (signature : Signature) (hb : 0 < keptHeight topLayer)
@@ -378,19 +378,19 @@ theorem accepted_full_classification (f : QueryImpl HashSpec Id) (pk : PublicKey
         (chosenWord f pk.parameter seed (index f pk message signature))) ∨
     (∃ j, j < numLayers ∧ TreeHit f pk seed message signature j) ∨
     (Landed pk.parameter (index f pk message signature) ∧
-      ((∃ lay, WotsException f pk seed message signature lay) ∨ ForestException f pk seed message signature)) := by
+      ((∃ lay, WotsException f pk seed message signature lay) ∨ ForsException f pk seed message signature)) := by
   rcases accepted_recovered_classification f pk seed message signature hb hroot hverified with
     ⟨counter, hcounter, hland, hlayers, hforest⟩ | htree | ⟨hland, hwots⟩
   · rcases Forest.recover_classification f pk.parameter (index f pk message signature) seed
-        (digestMarks (verificationDigest f pk message signature)) signature.forest
+        (digestLeaves (verificationDigest f pk message signature)) signature.fors
         hforest with hforestOpening | hforestException
     · exact Or.inl ⟨counter, hcounter, hland, hlayers, hforestOpening⟩
     · refine Or.inr (Or.inr ⟨hland, Or.inr ⟨hforestException, ?_⟩⟩)
       obtain ⟨input, canonicalInput, hinput, hne, hout⟩ :=
         Forest.Exception.queried_output_match f pk.parameter (index f pk message signature) seed
-          (digestMarks (verificationDigest f pk message signature)) signature.forest
+          (digestLeaves (verificationDigest f pk message signature)) signature.fors
           hforestException
-      exact ⟨input, canonicalInput, verification_forest_run f pk message signature input hinput, hne, hout⟩
+      exact ⟨input, canonicalInput, verification_fors_run f pk message signature input hinput, hne, hout⟩
   · exact Or.inr (Or.inl htree)
   · exact Or.inr (Or.inr ⟨hland, Or.inl hwots⟩)
 
@@ -498,7 +498,7 @@ theorem fchain_input_consistent (index : Index) (c : Coord) (s : SuperIdx) (j : 
 include hconsistent in
 theorem forestException_hit (index : Index) (marks : Coord → CoordMark) (opening : Coord → CoordOpening)
     (h : Forest.Exception f parameter index seed marks opening) :
-    ∃ input ∈ queriedInputs f (forestRecover parameter index marks opening : OracleComp HashSpec ForestKey),
+    ∃ input ∈ queriedInputs f (forsRecover parameter index marks opening : OracleComp HashSpec ForsKey),
       truncateHash (f input) ∈ targets parameter (graphTable f parameter seed labels) input := by
   rcases h with ⟨c, j, i, offset, hoffset, hlt, hne, heq⟩ | ⟨c, j, hne, heq⟩ |
       ⟨c, j, level, hlevel, -, hneq, hout⟩ | ⟨c, hne, heq⟩ | ⟨c, level, hlevel, -, hneq, hout⟩
@@ -661,7 +661,7 @@ theorem encodingAt_encoding (key : OtsKey) :
 attribute [local irreducible] encodingAt
 
 /-- The message of every key read from the graph labels: the root label of the tree below, or the
-forest key label at the bottom. For a retained key it is the key's canonical message. -/
+FORS key label at the bottom. For a retained key it is the key's canonical message. -/
 def labelMessage (labels : CanonicalGraphLabels) (key : OtsKey) : HashInput :=
   (GraphView.publicData labels fun _ => 0).keyMessage key.1 key.2.1 key.2.2
 

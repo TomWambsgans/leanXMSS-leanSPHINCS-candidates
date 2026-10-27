@@ -346,7 +346,7 @@ include hconsistent in
 queried first-order input. -/
 theorem structException_hitA (index : Index) (marks : Coord → CoordMark) (opening : Coord → CoordOpening)
     (h : Forest.StructException f parameter index seed marks opening) :
-    ∃ input ∈ queriedInputs f (forestRecover parameter index marks opening : OracleComp HashSpec ForestKey),
+    ∃ input ∈ queriedInputs f (forsRecover parameter index marks opening : OracleComp HashSpec ForsKey),
       truncateHash (f input) ∈ targets parameter (graphTable f parameter seed labels) input ∧
       ∀ results, ¬SecondOrderInput parameter results input := by
   rcases h with ⟨c, j, hne, heq⟩ | ⟨c, j, level, hlevel, -, hneq, hout⟩ | ⟨c, hne, heq⟩ |
@@ -546,7 +546,7 @@ theorem badA_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashO
   · -- the forest part recovers the canonical key
     set digest := verificationDigest f pk forgery.message forgery.signature with hdigestDef
     set index := SignatureWitness.index f pk forgery.message forgery.signature with hindex
-    set marks := digestMarks digest with hmarksDef
+    set marks := digestLeaves digest with hmarksDef
     have hindex' : index = digestIndex digest := rfl
     have hmarksEq : ∀ c, marks c = decodeMark (coordField digest c) := fun c => digestMarks_eq digest c
     have hchainMem : ∀ (c : Coord) (j : SubIdx) (i : FChain) offset
@@ -555,23 +555,23 @@ theorem badA_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashO
         Sum.inl (fchainInput (truncateHash parameterOutput) index c (marks c).super j ((marks c).child j) i
           ⟨chainTop - (lut ((marks c).word j) i).val + offset, hoffset⟩
           (Forest.walkValue f (truncateHash parameterOutput) index c (marks c).super j ((marks c).child j) i
-            (chainTop - (lut ((marks c).word j) i).val) (((forgery.signature.forest c).sub j).values i) offset)) ∈
+            (chainTop - (lut ((marks c).word j) i).val) (((forgery.signature.fors c).sub j).values i) offset)) ∈
           entries := fun c j i offset hoffset hlt =>
-      htrace _ (SignatureWitness.verification_forest_run f pk forgery.message forgery.signature _
+      htrace _ (SignatureWitness.verification_fors_run f pk forgery.message forgery.signature _
         (Forest.chainInput_mem f _ _ _ _ c j i offset hlt hoffset))
     rcases hrec.forest_classification with hS | hall
     · obtain ⟨input, hinput, hmem, hnot⟩ := structException_hitA f (truncateHash parameterOutput) seed _ hcons
-        index marks forgery.signature.forest hS
-      exact hfirst input (SignatureWitness.verification_forest_run f pk _ _ _ hinput) hmem (hnot results)
+        index marks forgery.signature.fors hS
+      exact hfirst input (SignatureWitness.verification_fors_run f pk _ _ _ hinput) hmem (hnot results)
     -- the contacts of the chain matches
     have hcontact : ∀ c j i, Forest.ChainMatch f (truncateHash parameterOutput) index seed c (marks c) j
-        ((forgery.signature.forest c).sub j).values i →
+        ((forgery.signature.fors c).sub j).values i →
         ∃ t : FStep, chainTop - (lut ((marks c).word j) i).val ≤ t.val ∧
           FContactAt (truncateHash parameterOutput) table cacheF index c (marks c).super j ((marks c).child j) i t :=
       fun c j i hm => chainMatch_contact parameterOutput highs table cacheF f entries hagree hcached seed hcoord
         index c (marks c) j _ i hm (hchainMem c j i)
     -- a canonical chain value is covered
-    have hcanonCov : ∀ c j i, ((forgery.signature.forest c).sub j).values i = Completeness.chainValueOf f
+    have hcanonCov : ∀ c j i, ((forgery.signature.fors c).sub j).values i = Completeness.chainValueOf f
         (truncateHash parameterOutput) index c (marks c).super j ((marks c).child j) i seed
         (chainTop - (lut ((marks c).word j) i).val) →
         ChainCov (revealedSet reveals) (fullDigestView digest) c j i := by
@@ -592,7 +592,7 @@ theorem badA_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashO
           omega
         have hm := hchainMem c j i 0 hrange hpos
         have hwalk : Forest.walkValue f (truncateHash parameterOutput) index c (marks c).super j ((marks c).child j) i
-            (chainTop - (lut ((marks c).word j) i).val) (((forgery.signature.forest c).sub j).values i) 0 =
+            (chainTop - (lut ((marks c).word j) i).val) (((forgery.signature.fors c).sub j).values i) 0 =
             table (.fchain index c (marks c).super j ((marks c).child j) i
               ⟨chainTop - (lut ((marks c).word j) i).val + 0, by omega⟩) := by
           simp only [Forest.walkValue, forestWalk, evalWithAnswerFn_pure, Nat.add_zero]
@@ -609,7 +609,7 @@ theorem badA_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashO
           simpa using hq
     -- a contact at a revealed position
     by_cases hrc : ∃ c j i, Forest.ChainMatch f (truncateHash parameterOutput) index seed c (marks c) j
-        ((forgery.signature.forest c).sub j).values i ∧
+        ((forgery.signature.fors c).sub j).values i ∧
         ∀ t : FStep, chainTop - (lut ((marks c).word j) i).val ≤ t.val →
           FContactAt (truncateHash parameterOutput) table cacheF index c (marks c).super j ((marks c).child j) i t →
           ∃ q : FPos, q.val ≤ t.val ∧ Coordinate.fchain index c (marks c).super j ((marks c).child j) i q ∈ reveals
@@ -628,7 +628,7 @@ theorem badA_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashO
         have h := SignedRevealed.fchain_mem f hsigned entry hentry honest hhonest c j i k
         rw [hmessage, hrandomness] at h
         exact h hk
-      have hopen : Forest.Opening f (truncateHash parameterOutput) index seed marks forgery.signature.forest := by
+      have hopen : Forest.Opening f (truncateHash parameterOutput) index seed marks forgery.signature.fors := by
         intro c
         refine ⟨fun j i => ?_, (hall c).2.1, (hall c).1⟩
         rcases (hall c).2.2 j i with hcan | hm
@@ -651,15 +651,15 @@ theorem badA_of_accepted (hb : 0 < keptHeight topLayer) (parameterOutput : HashO
       forgery.message forgery.signature htrace
     by_cases htwo : ∃ c j i c' j' i', (c, j, i) ≠ (c', j', i') ∧
         Forest.ChainMatch f (truncateHash parameterOutput) index seed c (marks c) j
-          ((forgery.signature.forest c).sub j).values i ∧
+          ((forgery.signature.fors c).sub j).values i ∧
         Forest.ChainMatch f (truncateHash parameterOutput) index seed c' (marks c') j'
-          ((forgery.signature.forest c').sub j').values i'
+          ((forgery.signature.fors c').sub j').values i'
     · obtain ⟨c, j, i, c', j', i', hne, hm, hm'⟩ := htwo
       obtain ⟨t, -, hct⟩ := hcontact c j i hm
       obtain ⟨t', -, hct'⟩ := hcontact c' j' i' hm'
       exact Or.inr (Or.inr (Or.inr (Or.inl ⟨index, c, _, j, _, i, t, c', _, j', _, i', t', hne, hct, hct'⟩)))
     by_cases hone : ∃ c j i, Forest.ChainMatch f (truncateHash parameterOutput) index seed c (marks c) j
-        ((forgery.signature.forest c).sub j).values i
+        ((forgery.signature.fors c).sub j).values i
     · obtain ⟨c, j, i, hm⟩ := hone
       obtain ⟨t, -, hct⟩ := hcontact c j i hm
       refine Or.inr (Or.inr (Or.inr (Or.inr ⟨(forgery, log, true), rfl, Or.inl

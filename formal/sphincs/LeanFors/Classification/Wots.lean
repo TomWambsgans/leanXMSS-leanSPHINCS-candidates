@@ -23,7 +23,7 @@ theorem leafPayload_injective {endpoints endpoints' : ChainIndex → Digest}
 variable (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
 
-/-- The encoding's input: the message (the forest key's sixteen nodes, or a root), then the counter. -/
+/-- The encoding's input: the message (the FORS key's sixteen nodes, or a root), then the counter. -/
 def encodingInput (message : HashInput) (counter : Counter) : HashInput :=
   tweakableHashInput parameter (.encoding lay tree leaf) (message ++ bytesLE 4 counter)
 

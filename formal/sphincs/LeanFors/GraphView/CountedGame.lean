@@ -178,7 +178,7 @@ noncomputable def finishCostSource (parameter : PublicParameter) (data : PublicD
     | return none
   let values ← sequenceFin fun lay : Layer => sequenceFin fun chain => HiddenCost.reveal
     (.chain lay (treeIndexAt index lay) (leafIndexAt index lay) chain ((found lay).2 chain))
-  let opening ← sequenceFin fun c => coordCostSource data index c (digestMarks digest c)
+  let opening ← sequenceFin fun c => coordCostSource data index c (digestLeaves digest c)
   return some ⟨randomness, opening, layerSignatures data index found values⟩
 
 theorem fixed_layerCostSearch (f : QueryImpl HashSpec Id) (parameter : PublicParameter)

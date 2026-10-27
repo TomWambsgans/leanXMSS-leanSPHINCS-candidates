@@ -22,7 +22,7 @@ attribute [local instance] Classical.propDecidable
 
 theorem programGraphCache_congr_base (parameter : PublicParameter)
     (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-    (ftsSecret : ForestSecrets) (positions : List Position)
+    (ftsSecret : ForsSecrets) (positions : List Position)
     (labels : CanonicalGraphLabels) (base base' : QueryCache HashSpec) (input : HashInput)
     (h : base input = base' input) :
     programGraphCache parameter otsSecret ftsSecret positions labels base input =

@@ -17,18 +17,18 @@ namespace LeanFors.Security.GraphView
 variable [Params]
 open Concrete Completeness Graph GraphCorrectness HiddenGraph Prefix PrunedGraph
 
-attribute [local irreducible] firstEncoding encodingAttemptLimit Seeded.forestKey Seeded.forestOpen
+attribute [local irreducible] firstEncoding encodingAttemptLimit Seeded.forsKey Seeded.forsOpen
   Seeded.treePath Seeded.signLayer chainWalk forestWalk sequenceFin encode
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 
 /-- The values the graph view fixes: the public key, the roots and paths of the layers' trees, the
-forest keys and paths, and the step halves of the randomizer walks (`steps m` gives the step
+FORS keys and paths, and the step halves of the randomizer walks (`steps m` gives the step
 `walkStep (steps m)` of message `m`). The steps are secret in the scheme; the proof bounds the game
 for every table of steps. -/
 structure PublicData where
   root : Digest
-  forestKey : Index → ForestKey
+  forsKey : Index → ForsKey
   treeRoot : Layer → TreeIndex → Digest
   treePath : (lay : Layer) → TreeIndex → LeafIndex → Fin (layerHeight lay) → Digest
   subPath : Index → Coord → SuperIdx → SubIdx → ChildIdx → Fin subHeight → Digest
@@ -36,18 +36,18 @@ structure PublicData where
   steps : Message → Randomness
 
 /-- The message of the key at leaf `leaf` of tree `tree` of layer `lay`, read from the public data:
-the root of the tree below, or the forest key at the bottom layer. -/
+the root of the tree below, or the FORS key at the bottom layer. -/
 def PublicData.keyMessage (data : PublicData) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) :
     HashInput :=
   if hbelow : lay.val + 1 < numLayers then
     rootPayload (data.treeRoot ⟨lay.val + 1, hbelow⟩ (childTree lay tree leaf))
-  else rootsPayload (data.forestKey (childTree lay tree leaf))
+  else rootsPayload (data.forsKey (childTree lay tree leaf))
 
 def publicData (labels : CanonicalGraphLabels) (steps : Message → Randomness) : PublicData where
   steps := steps
   root := truncateHash (labels (treePosition topLayer rootTree (layerHeight topLayer)
     (layerHeight_le _) ⟨0, Nat.two_pow_pos _⟩))
-  forestKey := fun index => keyLabels labels index
+  forsKey := fun index => keyLabels labels index
   treeRoot := fun lay tree => truncateHash (labels (treePosition lay tree (layerHeight lay)
     (layerHeight_le lay) ⟨0, Nat.two_pow_pos _⟩))
   treePath := fun lay tree leaf level => truncateHash (labels
@@ -67,8 +67,8 @@ structure DataCorrect (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (data : PublicData) : Prop where
   root : data.root = evalWithAnswerFn f
     (Seeded.treeRoot parameter topLayer rootTree seed : OracleComp HashSpec Digest)
-  forestKey : ∀ index, data.forestKey index = evalWithAnswerFn f
-    (Seeded.forestKey parameter index seed : OracleComp HashSpec ForestKey)
+  forsKey : ∀ index, data.forsKey index = evalWithAnswerFn f
+    (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey)
   treeRoot : ∀ lay tree, TreeActive parameter lay tree → data.treeRoot lay tree = evalWithAnswerFn f
     (Seeded.treeRoot parameter lay tree seed : OracleComp HashSpec Digest)
   treePath : ∀ lay tree leaf, KeyActive parameter lay tree leaf → data.treePath lay tree leaf =
@@ -113,7 +113,7 @@ theorem DataCorrect.keyMessage {f : QueryImpl HashSpec Id} {parameter : PublicPa
   · rw [dif_pos hbelow, dif_pos hbelow,
       hdata.treeRoot _ _ (treeActive_child parameter lay tree leaf hactive hbelow)]
     simp only [evalWithAnswerFn_bind, evalWithAnswerFn_pure]
-  · rw [dif_neg hbelow, dif_neg hbelow, hdata.forestKey]
+  · rw [dif_neg hbelow, dif_neg hbelow, hdata.forsKey]
     simp only [evalWithAnswerFn_bind, evalWithAnswerFn_pure]
 
 def CoordinatesCorrect (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -206,7 +206,7 @@ def finishSource (parameter : PublicParameter) (data : PublicData)
   let some found ← liftM (layersSearch parameter data index) | return none
   let values ← sequenceFin fun lay : Layer => sequenceFin fun chain =>
     reveal (.chain lay (treeIndexAt index lay) (leafIndexAt index lay) chain ((found lay).2 chain))
-  let opening ← sequenceFin fun c => coordSource data index c (digestMarks digest c)
+  let opening ← sequenceFin fun c => coordSource data index c (digestLeaves digest c)
   return some ⟨randomness, opening, layerSignatures data index found values⟩
 
 /-- The forest opening read from a coordinate table. -/
@@ -234,17 +234,17 @@ noncomputable def assembled (f : QueryImpl HashSpec Id) (parameter : PublicParam
     OracleComp HashSpec MessageDigest)
   let index := digestIndex digest
   (assembledEncodings f parameter data index).map fun found =>
-    ⟨randomness, assembledForest data table index (digestMarks digest),
+    ⟨randomness, assembledForest data table index (digestLeaves digest),
       layerSignatures data index found (assembledValues table index found)⟩
 
 theorem eval_forestOpen_assembled (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (seed : MasterSeed) (data : PublicData) (table : HiddenGraph.Table)
     (hdata : DataCorrect f parameter seed data)
     (htable : CoordinatesCorrect f parameter seed table) (index : Index) (marks : Coord → CoordMark) :
-    evalWithAnswerFn f (Seeded.forestOpen parameter index marks seed :
+    evalWithAnswerFn f (Seeded.forsOpen parameter index marks seed :
       OracleComp HashSpec (Coord → CoordOpening)) = assembledForest data table index marks := by
   funext c
-  simp only [Seeded.forestOpen, eval_sequenceFin, eval_coordOpen, assembledForest, htable.2, hdata.subPath,
+  simp only [Seeded.forsOpen, eval_sequenceFin, eval_coordOpen, assembledForest, htable.2, hdata.subPath,
     hdata.topPath, openedPos]
   rfl
 

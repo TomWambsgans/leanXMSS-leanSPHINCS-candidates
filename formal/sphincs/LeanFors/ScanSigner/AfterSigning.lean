@@ -22,12 +22,12 @@ attribute [local instance] Classical.propDecidable
 /-- A reveal is a forest chain value the digest opens, or not a forest chain value at all. -/
 def ForestOk (digest : MessageDigest) (x : Coordinate) : Prop :=
   ∀ i c s j a ch pos, x = .fchain i c s j a ch pos →
-    i = digestIndex digest ∧ s = (digestMarks digest c).super ∧ a = (digestMarks digest c).child j ∧
-      (openedPos (digestMarks digest c) j ch).val ≤ pos.val
+    i = digestIndex digest ∧ s = (digestLeaves digest c).super ∧ a = (digestLeaves digest c).child j ∧
+      (openedPos (digestLeaves digest c) j ch).val ≤ pos.val
 
 theorem revealsIn_coordCostSource (digest : MessageDigest) (data : PublicData) (c : Coord) :
     RevealsIn (D := HashInput) (R := HashOutput) (ForestOk digest)
-      (coordCostSource data (digestIndex digest) c (digestMarks digest c)) := by
+      (coordCostSource data (digestIndex digest) c (digestLeaves digest c)) := by
   unfold coordCostSource
   refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun j => ?_) fun _ => revealsIn_pure _ _
   refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun ch => ?_) fun _ => revealsIn_pure _ _

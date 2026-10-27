@@ -72,7 +72,7 @@ theorem Opening.covered_or_hidden (f : QueryImpl HashSpec Id) (parameter : Publi
     (index : Index) (seed : MasterSeed) (fields : Coord → FieldVal) (opening : Coord → CoordOpening)
     (revealed : Disclosures) (trace : List HashInput)
     (hopening : Opening f parameter index seed (fun c => decodeMark (fields c)) opening)
-    (hrun : ContainsRun f trace (forestRecover parameter index (fun c => decodeMark (fields c)) opening)) :
+    (hrun : ContainsRun f trace (forsRecover parameter index (fun c => decodeMark (fields c)) opening)) :
     Covered revealed (index, fields) ∨ HiddenChainQuery f parameter seed revealed trace := by
   classical
   by_cases hcovered : Covered revealed (index, fields)

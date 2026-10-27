@@ -18,26 +18,24 @@ abbrev CanonicalGraphLabels := Position → HashOutput
 
 def canonicalGraphSlots
     (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-    (ftsSecret : ForestSecrets)
+    (ftsSecret : ForsSecrets)
     (labels : CanonicalGraphLabels) : Position → List Digest
   | .chain lay tree leaf chain step =>
       if step.val = 0 then [otsSecret lay tree leaf chain]
       else (Position.chain lay tree leaf chain step).children.map (fun child => truncateHash (labels child))
-  | .fchain index c s j a i t =>
-      if t.val = 0 then [ftsSecret index c s j a i]
-      else (Position.fchain index c s j a i t).children.map (fun child => truncateHash (labels child))
+  | .fleaf index κ lf => [ftsSecret index κ lf]
   | position => position.children.map (fun child => truncateHash (labels child))
 
 def canonicalGraphInput (parameter : PublicParameter)
     (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-    (ftsSecret : ForestSecrets)
+    (ftsSecret : ForsSecrets)
     (position : Position) (labels : CanonicalGraphLabels) : HashInput :=
   tweakableHashInput parameter position.domain
     ((canonicalGraphSlots otsSecret ftsSecret labels position).flatMap (bytesLE 16))
 
 variable (parameter : PublicParameter)
   (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-  (ftsSecret : ForestSecrets)
+  (ftsSecret : ForsSecrets)
 
 theorem canonicalGraphInput_separated :
     ∀ left right : Position, left ≠ right → ∀ before after,

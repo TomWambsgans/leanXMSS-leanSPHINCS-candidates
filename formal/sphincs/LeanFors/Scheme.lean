@@ -86,8 +86,8 @@ class Params where
   forsTrees_le : forsTrees ≤ 64
   /-- A tree has two top nodes below its root. -/
   forsHeight_ge : 2 ≤ forsHeight
-  /-- A position of a tree fits the rest of `hi`. -/
-  forsHeight_le : forsHeight ≤ 17
+  /-- A level and a node of a tree fit the rest of `hi`. -/
+  forsHeight_le : forsHeight ≤ 12
 
 export Params (totalHeight numLayers forsTrees forsHeight lowerHeight subtreeHeight signatureLimit)
 
@@ -97,7 +97,7 @@ trees of height `a`, for at most `N` signatures. With one layer `lowerHeight` is
 to 6. -/
 abbrev Params.pruned (h b k a N : Nat) (hh : h ≤ 28 := by decide) (h6 : 6 ≤ h := by decide)
     (hb : b ≤ h := by decide) (hk : 0 < k := by decide) (hk' : k ≤ 64 := by decide)
-    (ha : 2 ≤ a := by decide) (ha' : a ≤ 17 := by decide) : Params where
+    (ha : 2 ≤ a := by decide) (ha' : a ≤ 12 := by decide) : Params where
   totalHeight := h
   numLayers := 1
   forsTrees := k
@@ -121,7 +121,7 @@ height `ℓ` (the top layer has the rest, `h - ℓ (d - 1)`); key generation bui
 (`subtreeHeight = h`), with FORS of `k` trees of height `a`. At most `N` signatures. -/
 abbrev Params.layered (h d ℓ k a N : Nat) (hd : 0 < d := by decide) (hℓ : 6 ≤ ℓ := by decide)
     (hle : ℓ * d ≤ h := by decide) (hh : h ≤ 28 := by decide) (hk : 0 < k := by decide)
-    (hk' : k ≤ 64 := by decide) (ha : 2 ≤ a := by decide) (ha' : a ≤ 17 := by decide) : Params where
+    (hk' : k ≤ 64 := by decide) (ha : 2 ≤ a := by decide) (ha' : a ≤ 12 := by decide) : Params where
   totalHeight := h
   numLayers := d
   forsTrees := k
@@ -302,12 +302,11 @@ def treeFields (tag step : Nat) (lay : Layer) (tree : TreeIndex) (hi lo : Nat) :
 
 /-! ### FORS addresses -/
 
-/-- The heap position of node `node` at level `level` of a FORS tree, `2^(a - level) + node`
-(`a + 1` bits; leaves are level 0). -/
-def heapPosition (level node : Nat) : Nat := 2 ^ (forsHeight - level) + node
-
 /-- `κ + 64 p`, a position `p` of tree `κ` of the instance. -/
 def forsSlot (κ : FTree) (position : Nat) : Nat := κ.val + 64 * position
+
+/-- The position of node `node` at level `level` of a tree: `level + 16 node`. -/
+def nodePosition (level node : Nat) : Nat := level + 16 * node
 
 /-- The verification hash domains. Seed derivation uses `KeygenDomain`. A `forsNode` at `level` is the
 node of FORS tree level `level + 1`: the scheme hashes levels 1 to `a - 1`, and the address of a
@@ -324,16 +323,16 @@ deriving DecidableEq
 
 /-- The address of a hash domain: types `TWEAK_CHAIN = 1`, ..., `TWEAK_MSG = 12`, FORS types 15 and
 17. In the tree `lo` is the leaf (or the node index) and `hi` the chain (or the node level); a chain
-step carries its step. In a FORS instance `lo` is `idx` and `hi` the tree and its heap position. A
+step carries its step. In a FORS instance `lo` is `idx` and `hi` packs the tree, the level and the
+node, `κ + 64 (level + 16 node)` (a leaf: `κ + 64 leaf`). A
 hash of the hypertree carries its layer and its tree; a digest call carries its number in `hi`. -/
 def hashDomainFields : HashDomain → TweakFields
   | .chain lay tree leaf chainIdx step => treeFields 1 step lay tree chainIdx leaf
   | .leaf lay tree leaf => treeFields 2 0 lay tree 0 leaf
   | .node lay tree level nodeIdx => treeFields 3 0 lay tree level nodeIdx
   | .encoding lay tree leaf => treeFields 4 0 lay tree 0 leaf
-  | .forsLeaf index κ leaf => tweakFields 15 0 (forsSlot κ (heapPosition 0 leaf.val)) index
-  | .forsNode index κ level node =>
-      tweakFields 17 0 (forsSlot κ (heapPosition (level.val + 1) node.val)) index
+  | .forsLeaf index κ leaf => tweakFields 15 0 (forsSlot κ leaf.val) index
+  | .forsNode index κ level node => tweakFields 17 0 (forsSlot κ (nodePosition (level.val + 1) node.val)) index
   | .message call => tweakFields 12 0 call.val 0
 
 /-- The exact 16 address bytes of a hash domain. -/

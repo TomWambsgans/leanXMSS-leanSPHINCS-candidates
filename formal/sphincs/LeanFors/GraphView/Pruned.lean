@@ -240,7 +240,7 @@ theorem boundary_inactive (parameter : PublicParameter) (surrogates : Fin maxLay
     (position : Position) (value : Digest) (hboundary : boundary parameter surrogates position = some value) :
     ¬active parameter position := by
   cases position with
-  | chain | fchain | childLeaf | subNode | superChild | topNode | roots => simp [boundary] at hboundary
+  | chain | fleaf | fnode => simp [boundary] at hboundary
   | leaf lay tree leaf =>
       simp only [boundary] at hboundary
       split at hboundary
@@ -323,7 +323,7 @@ theorem initialLabels_boundary (parameter : PublicParameter) (surrogates : Fin m
 and no exempt canonical input in the retained graph. -/
 theorem referenceTable_surrogate (parameter : PublicParameter)
     (otsSecret : Layer → TreeIndex → LeafIndex → ChainIndex → Digest)
-    (ftsSecret : ForestSecrets) (surrogates : Fin maxLayerHeight → Digest)
+    (ftsSecret : ForsSecrets) (surrogates : Fin maxLayerHeight → Digest)
     (labels : CanonicalGraphLabels) (lay : Layer) (tree : TreeIndex)
     (level : Fin maxLayerHeight) (hpositive : 0 < level.val) (hlay : lay = topLayer)
     (htree : tree = rootTree) (hlower : keptHeight topLayer ≤ level.val) :

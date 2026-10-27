@@ -27,7 +27,7 @@ def otsSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed :
   fun lay tree leaf chain => Completeness.otsSecret f parameter lay tree leaf seed chain
 
 def ftsSecrets (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed) :
-    ForestSecrets :=
+    ForsSecrets :=
   fun index c s j a i => Completeness.forestSecret f parameter index c s j a i seed
 
 def surrogates (f : QueryImpl HashSpec Id) (parameter : PublicParameter) (seed : MasterSeed) :
@@ -665,7 +665,7 @@ theorem tree_root_value (hboundary : BoundaryCorrect f parameter seed labels)
 Every forest position is prepared. Its label is the honest value: chain steps the chain values,
 WOTS-key leaves the child leaves, subtree and tree nodes the honest nodes, the tree leaves the
 hashes of the four level-2 nodes of their subtrees, and the roots position the hash of the sixteen
-level-3 nodes of the trees. The scheme does not hash the roots position: the forest key is the
+level-3 nodes of the trees. The scheme does not hash the roots position: the FORS key is the
 sixteen level-3 nodes themselves (`keyLabels`). -/
 
 section Forest
@@ -840,15 +840,15 @@ theorem top_value (level : Nat) (hlevel : level ≤ topHeight) (nd : SuperIdx)
       congr 4
       exact Fin.ext (Nat.mod_eq_of_lt nd.isLt).symm
 
-/-- The forest key as graph labels: the two level-3 nodes of every tree. -/
-def keyLabels : ForestKey :=
+/-- The FORS key as graph labels: the two level-3 nodes of every tree. -/
+def keyLabels : ForsKey :=
   fun c' => (truncateHash (labels (.topNode index c' ⟨topHeight - 2, by decide⟩ ⟨0, by decide⟩)),
     truncateHash (labels (.topNode index c' ⟨topHeight - 2, by decide⟩ ⟨1, by decide⟩)))
 
 include hconsistent in
 theorem forest_key_value :
     keyLabels labels index =
-      evalWithAnswerFn f (Seeded.forestKey parameter index seed : OracleComp HashSpec ForestKey) := by
+      evalWithAnswerFn f (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey) := by
   have h : ∀ (c' : Coord) (nd : SuperIdx) (_ : nd.val < 2 ^ (topHeight - (topHeight - 1))),
       truncateHash (labels (.topNode index c' ⟨topHeight - 2, by decide⟩ nd)) =
         Completeness.topNodeValue f parameter index c' seed (topHeight - 1) nd.val :=
@@ -1053,7 +1053,7 @@ end Forest
 def materialOts (material : SeedModel.Material) : Layer → TreeIndex → LeafIndex → ChainIndex → Digest :=
   fun lay tree leaf chain => truncateHash (material.2 (.inl (lay, tree, leaf, chain)))
 
-def materialFts (material : SeedModel.Material) : ForestSecrets :=
+def materialFts (material : SeedModel.Material) : ForsSecrets :=
   fun index c s j a i => truncateHash (material.2 (.inr (.inl (index, c, s, j, a, i))))
 
 def materialSurrogates (material : SeedModel.Material) : Fin maxLayerHeight → Digest :=

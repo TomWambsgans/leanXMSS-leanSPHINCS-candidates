@@ -1,7 +1,7 @@
 import LeanFors.Classification.Accepted
 
-/-! The forest part of the classification that keeps the recovered forest key
-(`accepted_recovered_classification`, `Classification/Accepted.lean`). A recovered canonical forest key is a
+/-! The forest part of the classification that keeps the recovered FORS key
+(`accepted_recovered_classification`, `Classification/Accepted.lean`). A recovered canonical FORS key is a
 structural match (WOTS-key leaf, subtree node, tree leaf or tree node), or every path is canonical
 and every opened chain value is canonical or walks into its chain through a match. A tree has no
 root hash and the key is not hashed: the key is the two level-3 nodes of every tree, and a tree leaf
@@ -85,10 +85,10 @@ theorem coord_refined (c : Coord) (mark : CoordMark) (opening : CoordOpening)
     · exact Or.inl ⟨hpayload, hsuper⟩
   · exact Or.inr (Or.inl ⟨level, hlevel, hmatch⟩)
 
-/-- **Chain-by-chain classification of a recovered canonical forest key.** -/
+/-- **Chain-by-chain classification of a recovered canonical FORS key.** -/
 theorem recovered_classification (marks : Coord → CoordMark) (opening : Coord → CoordOpening)
-    (hrecover : evalWithAnswerFn f (forestRecover parameter index marks opening : OracleComp HashSpec ForestKey) =
-      evalWithAnswerFn f (Seeded.forestKey parameter index seed : OracleComp HashSpec ForestKey)) :
+    (hrecover : evalWithAnswerFn f (forsRecover parameter index marks opening : OracleComp HashSpec ForsKey) =
+      evalWithAnswerFn f (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey)) :
     StructException f parameter index seed marks opening ∨
     ∀ c, (opening c).top = canonicalTopPath f parameter index seed c (marks c).super ∧
       (∀ j, ((opening c).sub j).path = canonicalSubPath f parameter index seed c (marks c).super j ((marks c).child j)) ∧
@@ -132,8 +132,8 @@ namespace LeanFors.Security.SignatureWitness
 variable [Params]
 open Concrete
 
-attribute [local irreducible] messageDigest forestRecover otsLeaf treeFold
-  Seeded.forestKey Seeded.treeRoot Seeded.treePath chainWalk encode
+attribute [local irreducible] messageDigest forsRecover otsLeaf treeFold
+  Seeded.forsKey Seeded.treeRoot Seeded.treePath chainWalk encode
 
 
 /-- A recovered opening whose forest part is the canonical opening is a canonical opening. -/
@@ -141,7 +141,7 @@ theorem RecoveredOpening.canonical {f : QueryImpl HashSpec Id} {pk : PublicKey} 
     {message : Message} {signature : Signature} {counter : Layer → Counter}
     (h : RecoveredOpening f pk seed message signature counter)
     (hopening : Forest.Opening f pk.parameter (index f pk message signature) seed
-      (digestMarks (verificationDigest f pk message signature)) signature.forest) :
+      (digestLeaves (verificationDigest f pk message signature)) signature.fors) :
     CanonicalOpening f pk seed message signature counter
       (chosenWord f pk.parameter seed (index f pk message signature)) :=
   ⟨h.1, h.2.1, hopening⟩
@@ -151,19 +151,19 @@ theorem RecoveredOpening.forest_classification {f : QueryImpl HashSpec Id} {pk :
     {seed : MasterSeed} {message : Message} {signature : Signature} {counter : Layer → Counter}
     (h : RecoveredOpening f pk seed message signature counter) :
     Forest.StructException f pk.parameter (index f pk message signature) seed
-        (digestMarks (verificationDigest f pk message signature)) signature.forest ∨
-    ∀ c, (signature.forest c).top = Forest.canonicalTopPath f pk.parameter (index f pk message signature) seed c
-        (digestMarks (verificationDigest f pk message signature) c).super ∧
-      (∀ j, ((signature.forest c).sub j).path = Forest.canonicalSubPath f pk.parameter (index f pk message signature)
-        seed c (digestMarks (verificationDigest f pk message signature) c).super j
-        ((digestMarks (verificationDigest f pk message signature) c).child j)) ∧
-      ∀ j i, ((signature.forest c).sub j).values i = Completeness.chainValueOf f pk.parameter
-          (index f pk message signature) c (digestMarks (verificationDigest f pk message signature) c).super j
-          ((digestMarks (verificationDigest f pk message signature) c).child j) i seed
-          (chainTop - (lut ((digestMarks (verificationDigest f pk message signature) c).word j) i).val) ∨
+        (digestLeaves (verificationDigest f pk message signature)) signature.fors ∨
+    ∀ c, (signature.fors c).top = Forest.canonicalTopPath f pk.parameter (index f pk message signature) seed c
+        (digestLeaves (verificationDigest f pk message signature) c).super ∧
+      (∀ j, ((signature.fors c).sub j).path = Forest.canonicalSubPath f pk.parameter (index f pk message signature)
+        seed c (digestLeaves (verificationDigest f pk message signature) c).super j
+        ((digestLeaves (verificationDigest f pk message signature) c).child j)) ∧
+      ∀ j i, ((signature.fors c).sub j).values i = Completeness.chainValueOf f pk.parameter
+          (index f pk message signature) c (digestLeaves (verificationDigest f pk message signature) c).super j
+          ((digestLeaves (verificationDigest f pk message signature) c).child j) i seed
+          (chainTop - (lut ((digestLeaves (verificationDigest f pk message signature) c).word j) i).val) ∨
         Forest.ChainMatch f pk.parameter (index f pk message signature) seed c
-          (digestMarks (verificationDigest f pk message signature) c) j ((signature.forest c).sub j).values i :=
+          (digestLeaves (verificationDigest f pk message signature) c) j ((signature.fors c).sub j).values i :=
   Forest.recovered_classification f pk.parameter (index f pk message signature) seed
-    (digestMarks (verificationDigest f pk message signature)) signature.forest h.2.2
+    (digestLeaves (verificationDigest f pk message signature)) signature.fors h.2.2
 
 end LeanFors.Security.SignatureWitness

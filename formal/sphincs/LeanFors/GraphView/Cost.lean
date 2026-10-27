@@ -41,12 +41,12 @@ variable [Params]
 open Concrete Completeness Prefix PrunedGraph
 set_option backward.isDefEq.respectTransparency false
 attribute [local irreducible] firstEncoding ReferenceChoice.search encodingAttemptLimit
-  Seeded.forestKey Seeded.forestOpen Seeded.treePath Seeded.otsSignFrom Seeded.signLayer
+  Seeded.forsKey Seeded.forsOpen Seeded.treePath Seeded.otsSignFrom Seeded.signLayer
   chainWalk forestWalk sequenceFin encode Seeded.treeRoot
 
 theorem hashCalls_forestKey_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (seed : MasterSeed) :
-    hashCalls f (Seeded.forestKey parameter index seed : OracleComp HashSpec ForestKey) = 59120 :=
+    hashCalls f (Seeded.forsKey parameter index seed : OracleComp HashSpec ForsKey) = 59120 :=
   hashCalls_forestKey f parameter index seed
 
 /-- Opening one tree costs 7370 calls: 3 seed derivations, 19 chain steps and 200 subtree-path calls
@@ -90,9 +90,9 @@ theorem hashCalls_coordOpen_exact (f : QueryImpl HashSpec Id) (parameter : Publi
 
 theorem hashCalls_forestOpen_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (marks : Coord → CoordMark) (seed : MasterSeed) :
-    hashCalls f (Seeded.forestOpen parameter index marks seed :
+    hashCalls f (Seeded.forsOpen parameter index marks seed :
       OracleComp HashSpec (Coord → CoordOpening)) = 58960 := by
-  simp only [Seeded.forestOpen, hashCalls_sequenceFin, hashCalls_coordOpen_exact]
+  simp only [Seeded.forsOpen, hashCalls_sequenceFin, hashCalls_coordOpen_exact]
   decide
 
 /-- The published values of a WOTS+C signature cost `32 + 128 = 160` calls: the 32 seed derivations
@@ -173,7 +173,7 @@ theorem hashCalls_treePath_exact (f : QueryImpl HashSpec Id) (parameter : Public
   · have hlevel : level.val < maxLayerHeight := level.isLt.trans_le (layerHeight_le lay)
     simp only [Seeded.surrogate, dif_pos hlevel, hashCalls_deriveKey]
 
-/-- The cost of a key's message: the root of a whole tree of height 6 below it, or the forest key
+/-- The cost of a key's message: the root of a whole tree of height 6 below it, or the FORS key
 of its instance at the bottom layer. -/
 def keyMessageCost (lay : Layer) : Nat :=
   if lay.val + 1 < numLayers then 226 * 2 ^ lowerHeight - 1 else 59120

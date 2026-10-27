@@ -49,7 +49,7 @@ theorem tweakableInput_injective {parameter parameter' : PublicParameter}
 
 /-! ### FORS addresses -/
 
-theorem two_pow_forsHeight_le : 2 ^ forsHeight ≤ 2 ^ 17 :=
+theorem two_pow_forsHeight_le : 2 ^ forsHeight ≤ 2 ^ 12 :=
   Nat.pow_le_pow_right (by decide) Params.forsHeight_le
 
 theorem forsSlot_lt (κ : FTree) {position : Nat} (h : position < 2 ^ 18) : forsSlot κ position < 2 ^ 24 := by
@@ -64,45 +64,27 @@ theorem forsSlot_injective {κ κ' : FTree} {position position' : Nat}
   unfold forsSlot at h
   refine ⟨Fin.ext ?_, ?_⟩ <;> omega
 
-theorem heapPosition_bounds {level node : Nat} (hlevel : level ≤ forsHeight)
-    (hnode : node < 2 ^ (forsHeight - level)) :
-    2 ^ (forsHeight - level) ≤ heapPosition level node ∧
-      heapPosition level node < 2 ^ (forsHeight - level + 1) := by
-  unfold heapPosition
-  rw [Nat.pow_succ]
+theorem nodePosition_lt (level : Nat) (node : FLeaf) (hlevel : level < 16) :
+    nodePosition level node.val < 2 ^ 18 := by
+  have := node.isLt; have := two_pow_forsHeight_le
+  unfold nodePosition
   omega
 
-theorem heapPosition_lt {level node : Nat} (hlevel : level ≤ forsHeight)
-    (hnode : node < 2 ^ (forsHeight - level)) : heapPosition level node < 2 ^ 18 := by
-  have h := (heapPosition_bounds hlevel hnode).2
-  have : 2 ^ (forsHeight - level + 1) ≤ 2 ^ 18 :=
-    Nat.pow_le_pow_right (by decide) (by have := Params.forsHeight_le; omega)
+/-- A node position determines the level and the node. -/
+theorem nodePosition_injective {level level' node node' : Nat} (hlevel : level < 16) (hlevel' : level' < 16)
+    (h : nodePosition level node = nodePosition level' node') : level = level' ∧ node = node' := by
+  unfold nodePosition at h
   omega
 
-/-- A heap position determines the level and the node. -/
-theorem heapPosition_injective {level level' node node' : Nat} (hlevel : level ≤ forsHeight)
-    (hlevel' : level' ≤ forsHeight) (hnode : node < 2 ^ (forsHeight - level))
-    (hnode' : node' < 2 ^ (forsHeight - level'))
-    (h : heapPosition level node = heapPosition level' node') : level = level' ∧ node = node' := by
-  have hb := heapPosition_bounds hlevel hnode
-  have hb' := heapPosition_bounds hlevel' hnode'
-  have hexp : forsHeight - level = forsHeight - level' := by
-    rcases Nat.lt_trichotomy (forsHeight - level) (forsHeight - level') with hlt | heq | hgt
-    · have : 2 ^ (forsHeight - level + 1) ≤ 2 ^ (forsHeight - level') := Nat.pow_le_pow_right (by decide) hlt
-      omega
-    · exact heq
-    · have : 2 ^ (forsHeight - level' + 1) ≤ 2 ^ (forsHeight - level) := Nat.pow_le_pow_right (by decide) hgt
-      omega
-  have hl : level = level' := by omega
-  subst hl
-  unfold heapPosition at h
-  exact ⟨rfl, by omega⟩
-
-theorem leaf_lt_pow (leaf : FLeaf) : leaf.val < 2 ^ (forsHeight - 0) := by
-  simpa using leaf.isLt
+theorem leaf_lt_two_pow_18 (leaf : FLeaf) : leaf.val < 2 ^ 18 :=
+  lt_of_lt_of_le leaf.isLt (two_pow_forsHeight_le.trans (by decide))
 
 theorem pair_lt_two_pow_18 (pair : FPair) : pair.val < 2 ^ 18 :=
   lt_of_lt_of_le pair.isLt (Nat.pow_le_pow_right (by decide) (by have := Params.forsHeight_le; omega))
+
+theorem level_lt_16 (level : FLevel) : level.val + 1 < 16 := by
+  have := level.isLt; have := Params.forsHeight_le
+  omega
 
 theorem deriveFields_injective : Function.Injective keygenDomainFields := by
   intro left right h
