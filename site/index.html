@@ -167,7 +167,33 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .tables h2:first-child { margin-top: 0; }
 .tables .lead { margin: 0 0 0.3rem; color: var(--muted); }
 .assist { display: flex; flex-direction: column; gap: 0.15rem; }
-.assist input[type=range] { width: 7rem; max-width: 40vw; vertical-align: middle; accent-color: var(--ink); }
+.assist.never { position: relative; }
+.assist.never .ghost { visibility: hidden; display: flex; flex-direction: column; gap: 0.15rem; }
+.assist.never .msg { position: absolute; inset: 0; display: flex; align-items: center; }
+/* the offline-time slider: a hairline track, inked up to a small round thumb */
+.assist input[type=range] {
+  -webkit-appearance: none; appearance: none; width: 7rem; max-width: 40vw; height: 1.2rem; margin: 0 0.35rem;
+  vertical-align: middle; background: transparent; cursor: pointer; --pct: 50%;
+}
+.assist input[type=range]::-webkit-slider-runnable-track {
+  height: 2px; border-radius: 1px; background: linear-gradient(to right, var(--ink) var(--pct), var(--tree) var(--pct));
+}
+.assist input[type=range]::-moz-range-track { height: 2px; border-radius: 1px; background: var(--tree); }
+.assist input[type=range]::-moz-range-progress { height: 2px; border-radius: 1px; background: var(--ink); }
+.assist input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 11px; height: 11px; margin-top: -4.5px; border-radius: 50%; background: #fff;
+  border: 1.5px solid var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); transition: transform 0.12s ease;
+}
+.assist input[type=range]::-moz-range-thumb {
+  width: 9px; height: 9px; border-radius: 50%; background: #fff; border: 1.5px solid var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15); transition: transform 0.12s ease;
+}
+.assist input[type=range]:hover::-webkit-slider-thumb, .assist input[type=range]:active::-webkit-slider-thumb { transform: scale(1.25); }
+.assist input[type=range]:hover::-moz-range-thumb, .assist input[type=range]:active::-moz-range-thumb { transform: scale(1.25); }
+.assist input[type=range]:focus { outline: none; }
+.assist input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.18); }
+.assist input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.18); }
+@media (prefers-reduced-motion: reduce) { .assist input[type=range]::-webkit-slider-thumb, .assist input[type=range]::-moz-range-thumb { transition: none; } }
 @media (max-width: 600px) { .assist input[type=range] { width: 5rem; } }
 .tables p, #tip { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }   /* running text: flush left and right */
 .cmp thead .sub { font-weight: 400; color: var(--muted); }
@@ -1084,34 +1110,50 @@ footer a + a { margin-left: 1.25rem; }
   function set(f, html) { [].forEach.call(document.querySelectorAll('[data-f="' + f + '"]'), function (e) { e.innerHTML = html; }); }
   function split(c) { return c.layers.join(' + '); }
 
-  // Assisted signing: the viewer chooses the offline time with a slider (log scale, from one prepared instance to 2 h);
-  // the instances that fit in it set the host's grinding, so the online time. Kept across the other toggles.
+  // Assisted signing: the viewer chooses the offline time with a slider (log scale), from the least time at which it is
+  // faster online than signing alone up to 2 h; the instances that fit in it set the host's grinding, so the online time.
+  // Kept across the other toggles. Where signing alone is faster than the STARK check alone, assisted signing never pays.
   var offChosen = null, OFF_MAX = 2 * 3600;
   function assistCell(cell, tt, d, W, assist, alone) {
-    var per = tt.ledger_prep / d.rate, lo = per, hi = Math.max(OFF_MAX, 2 * per);
-    var slider = cell.querySelector('input');
-    if (!slider) {
-      cell.innerHTML = '<div class="assist"><label class="nw">Offline: <input type="range" min="0" max="1000" step="10" ' +
-        'aria-label="Offline preparation time"> <span class="ex off"></span></label><span class="nw">Online: ' +
-        '<span class="ex on" aria-live="polite"></span><span class="m-only">' + info('', ' w') + '</span></span></div>';
-      slider = cell.querySelector('input');
-      slider.addEventListener('input', function () { offChosen = cell.timeOf(+slider.value); cell.show(); });
+    var per = tt.ledger_prep / d.rate, host = W.host_rate[S.hash], fixed = W.stark_verify_s + tt.device_online / d.rate;
+    var online = function (np) { return Math.max(1, Math.round(Math.pow(2, S.h) / np)) / host + fixed; };
+    // the least count that beats signing alone, visibly (as displayed, the online time is below the signing time):
+    // a binary search, the online time falling with the count; none where even 2^h prepared FTS do not beat it
+    var pays = function (np) { return online(np) < alone && time(online(np)) !== time(alone); };
+    var never = !pays(Math.pow(2, S.h)), xmin = 1;
+    if (!never) {
+      var a = 1, b = Math.pow(2, S.h);
+      while (a < b) { var m = Math.floor((a + b) / 2); if (pays(m)) b = m; else a = m + 1; }
+      xmin = a;
     }
+    var lo = xmin * per, hi = Math.max(OFF_MAX, 2 * lo);
+    var shell = cell.querySelector('.assist');
+    if (!shell || shell.classList.contains('never') !== never) {
+      var body = '<label class="nw">Offline: <input type="range" min="0" max="1000" step="10" ' +
+        'aria-label="Offline preparation time"> <span class="ex off"></span></label><span class="nw">Online: ' +
+        '<span class="ex on" aria-live="polite"></span><span class="m-only">' + info('', ' w') + '</span></span>';
+      // never: the message over an invisible slider cell, so that the row keeps its height
+      cell.innerHTML = never ? '<div class="assist never"><div class="ghost" aria-hidden="true">' +
+        body.replace('<input', '<input tabindex="-1" disabled').replace('class="ex off">', 'class="ex off">42&nbsp;min <span class="note">(64 FTS)</span>').replace('class="ex on" aria-live="polite">', 'class="ex on">&asymp;&thinsp;5.2&nbsp;s') +
+        '</div><span class="note msg">Never faster than signing alone here</span></div>' : '<div class="assist">' + body + '</div>';
+      var input = cell.querySelector('input');
+      if (input) input.addEventListener('input', function () { offChosen = cell.timeOf(+input.value); cell.show(); });
+    }
+    var tip = assist(tt).replace(/&nbsp;/g, '\u00a0');
+    document.getElementById('assist-tip').setAttribute('data-tip', tip);
+    if (never) return;
+    var slider = cell.querySelector('input');
     cell.timeOf = function (v) { return lo * Math.pow(hi / lo, v / 1000); };
     cell.show = function () {
       var T = Math.min(hi, Math.max(lo, offChosen == null ? per * tt.ledger_prepared : offChosen));
-      var np = Math.max(1, Math.floor(T / per + 1e-9)), g = Math.max(1, Math.round(Math.pow(2, S.h) / np));
-      // the device signs alone when that is faster: the online time is the better of the two
-      var assisted = g / W.host_rate[S.hash] + W.stark_verify_s + tt.device_online / d.rate, online = Math.min(assisted, alone);
+      var np = Math.max(xmin, Math.floor(T / per + 1e-9));
       slider.value = String(Math.round(1000 * Math.log(T / lo) / Math.log(hi / lo)));
+      slider.style.setProperty('--pct', (slider.value / 10) + '%');   // the inked part of the track
       var off = time(np * per);
       slider.setAttribute('aria-valuetext', off.replace(/&nbsp;/g, ' ') + ', ' + np + ' FTS prepared');
       cell.querySelector('.off').innerHTML = off + ' <span class="note">(' + comma(np) + ' FTS)</span>';
-      cell.querySelector('.on').innerHTML = '&asymp;&thinsp;' + time(online) + (alone <= assisted ? ' <span class="note">(signs alone)</span>' : '');
-      var tip = (assist(tt) + (alone <= assisted ? ' Here signing alone is faster (≈ ' + time(alone) + '), so the Ledger signs alone.' : ''))
-        .replace(/&nbsp;/g, '\u00a0');
-      cell.querySelector('.m-only .info').setAttribute('data-tip', tip);   // in place, so that an open tip stays
-      document.getElementById('assist-tip').setAttribute('data-tip', tip);
+      cell.querySelector('.on').innerHTML = '&asymp;&thinsp;' + time(online(np));
+      cell.querySelector('.m-only .info').setAttribute('data-tip', tip);
     };
     cell.show();
   }
