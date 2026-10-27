@@ -535,9 +535,9 @@ the signatures spread over the $2^b$ instances of the kept subtree, and a forger
 factor $2^{b-h}$ is not credited by hypertree pruning~\cite{conduition}, which cuts the lifetime by the full factor
 $2^{h-b}$ although the forger pays the signer's grinding cost per attempt; it is worth about $2^{(h-b)/18}$, from
 $+17\%$ at $h=24$, $b=20$ to a factor 1.8 at $b=8$. The best known attack also uses the WOTS$^+$C key (a counter
-search for a neighbouring encoding, then one chain preimage); at $h=24$ it is the cover figure for the forest, except at
-$b=8$ where it is 2\% lower~\cite{proofs}. For FORS, a tree is covered when the target leaf is among the revealed ones, so
-$\mathrm{cover}(r)=(1-(1-2^{-a})^r)^k$, with the same lifetime rule. At $h=24$, rounded down (the last row is
+search for a neighbouring encoding, then one chain preimage); at $h=24$ it is 100, 99, 96, 95, 95, 93 and 91\% of the
+forest's cover figure for $b=24,20,14,13,12,10,8$~\cite{proofs}. For FORS, a tree is covered when the target leaf
+is among the revealed ones, so $\mathrm{cover}(r)=(1-(1-2^{-a})^r)^k$, with the same lifetime rule. At $h=24$, rounded down (the last row is
 \cref{sec:lifetimes}):
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
