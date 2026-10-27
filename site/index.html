@@ -163,6 +163,11 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .plain { font-variant-numeric: tabular-nums; }
 .plain td { white-space: nowrap; }
 .thr { margin-top: 0.5rem; }
+@media (min-width: 1000px) {   /* on a wide screen, the text and the table side by side */
+  .thr-pair { display: grid; grid-template-columns: 2fr 1fr; gap: 2.5rem; align-items: start; }
+  .thr-pair .lead { margin-top: 0; }
+  .thr-pair .thr { margin-top: 0.2rem; }
+}
 .thr .bn { margin: 0.1rem 0 0.3rem; }
 .thr .cmp { width: auto; table-layout: auto; }
 .thr .cmp th, .thr .cmp td { padding-right: 2rem; white-space: nowrap; }
@@ -880,6 +885,7 @@ footer a + a { margin-left: 1.25rem; }
       </div>
 
       <h2>Threshold, <i>t</i>-of-(2<i>t</i>&nbsp;&minus;&nbsp;1)</h2>
+      <div class="thr-pair">
       <p class="lead">As in <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>, the secret values are XOR-encrypted under a context-aware threshold PRF. Unlike PRAWNS, key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick an instance at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate its forest<span data-shape="layered" hidden> and the trees of the lower layers</span> (an idea from <a href="https://www.riva.xyz/">Riva Labs</a>). Online: they grind the randomizer in the clear onto it (about 2<sup><i>h</i></sup> hashes), and open via the context-aware threshold PRF only the forest chain values the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort). Key generation and preprocessing need all 2<i>t</i>&nbsp;&minus;&nbsp;1 operators online; signing needs only <i>t</i>.</p>
       <div class="thr">
         <p class="bn" data-f="th-life">&nbsp;</p>
@@ -889,6 +895,7 @@ footer a + a { margin-left: 1.25rem; }
           <tbody data-f="th-traffic"></tbody>
         </table>
         </div>
+      </div>
       </div>
     </div>
   </section>
