@@ -1,6 +1,6 @@
 import LeanFors.SmallBudget.SampleEvents
 
-/-! **One sample of the small-budget route of the forest.** The stopped experiment with the
+/-! **One sample of the small-budget route.** The stopped experiment with the
 above-word values exposed is at most the linear potential `ρ q / 2^128`, the one-coin cover
 potential, the coin part of A4, and `κ` times its near term, once
 `2 - ρ + y / 2^128 + N rate ≤ κ ≤ 1`, `y = q - keygenCost`, `rate = 2^-b · 2^-a`. -/
@@ -39,7 +39,7 @@ open Completeness SeedModel Graph Assembly Reduce Internalize
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 1000000 in
-/-- **One sample of the small-budget route of the forest.** -/
+/-- **One sample of the small-budget route.** -/
 theorem sample_boundF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hnr : adversary.NoRepeat) (q : ℕ)
     (hq : q < 2 ^ 256)
     (parameterOutput : HashOutput) (fixed : HiddenGraph.Table) (highs : CoordinateHighs)

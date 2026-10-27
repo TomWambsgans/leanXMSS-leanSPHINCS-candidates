@@ -7,7 +7,7 @@ import LeanFors.CoverBound.NearOption
 /-! **One sample of the small-budget route.** On the stopped experiment with the above-word values
 exposed, a correct guess or the refined bad event of a valid finished run is a payoff event of the
 linear potential, the event of the contact bound A4 against the completed table, or a cover. The
-linear potential leaves `(ρ - 1 - x) 2^-128` per forest step query unused; A4 takes
+linear potential leaves `(ρ - 1 - x) 2^-128` per FORS leaf query unused; A4 takes
 `2^-128 (N rate + 1 - κ)` of it, which fits once `κ ≥ 2 - ρ + x + N rate`. -/
 
 open OracleComp OracleSpec ENNReal

@@ -1,6 +1,6 @@
 import LeanFors.SmallBudget.SampleBound
 
-/-! **The deterministic signer of the forest at 127 bits.** Small budgets (`q - keygenCost ≤ qh`):
+/-! **The deterministic signer at 127 bits.** Small budgets (`q - keygenCost ≤ qh`):
 the sample bound averaged over the prepared samples, in closed form from one rational check
 `checkSmallF` at the right end `qh`. Large budgets: the weighted one-coin bound from a checked chain
 of covers of the budgets above `qh`. -/
