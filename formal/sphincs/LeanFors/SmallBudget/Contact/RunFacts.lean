@@ -290,14 +290,13 @@ theorem avoids_loop_fleaf (p : PublicParameter) (parameter : PublicParameter) (d
       refine (avoids_query_bind _ _ _).2 ⟨fun bytes hb hx => ?_, fun first => ?_⟩
       · cases hb
         obtain ⟨f, hf⟩ := hx
-        exact PotentialA.msg_ne_fleaf (msgInput_digestInput parameter data.root message ρ) hf
+        exact PotentialA.msg_ne_fleaf (msgInput_digestInput parameter data.root message ρ firstCall) hf
       · split_ifs
         · rw [finishCostSource_eq]
-          refine (avoids_query_bind _ _ _).2 ⟨fun bytes hb hx => ?_, fun a => ?_⟩
-          · cases hb
-            obtain ⟨f, hf⟩ := hx
-            exact PotentialA.msg_ne_fleaf (msgInput_digestInput parameter data.root message ρ) hf
-          exact avoids_finishRest_fleaf p parameter data message ρ _
+          refine avoids_bind _ (avoids_sequenceFin _ _ fun call => avoids_read _ _ fun hx => ?_)
+            fun outputs => avoids_finishRest_fleaf p parameter data message ρ _
+          obtain ⟨f, hf⟩ := hx
+          exact PotentialA.msg_ne_fleaf (msgInput_digestInput parameter data.root message ρ call) hf
         · exact ih _
 
 end Avoid
