@@ -363,8 +363,9 @@ theorem storeAll_cache_other : ∀ {n : ℕ} (x : Fin n → D) (u : Fin n → R)
     (∀ i, x i ≠ y) → (storeAll x u state).cache y = state.cache y
   | 0, _, _, _, _, _ => rfl
   | _ + 1, x, u, state, y, h => by
-      rw [storeAll_succ, storeAll_cache_other (Fin.tail x) (Fin.tail u) _ y fun i => h i.succ,
-        store_cache_ne state (x 0) y (fun e => h 0 e.symm)]
+      have hne : y ≠ x 0 := fun e => h 0 e.symm
+      rw [storeAll_succ, storeAll_cache_other (Fin.tail x) (Fin.tail u) _ y fun i => h i.succ]
+      simp only [DebtState.store, QueryCache.cacheQuery_of_ne _ _ hne]
 
 omit [Params] [Fintype ι] [SampleableType R] in
 /-- An input of an injective family holds its answer. -/
@@ -388,13 +389,17 @@ theorem storeAll_perm {n : ℕ} (x : Fin n → D) (hx : Function.Injective x) (u
   have hx' : Function.Injective (x ∘ σ) := hx.comp σ.injective
   have hcache : (storeAll (x ∘ σ) (u ∘ σ) state).cache = (storeAll x u state).cache := by
     funext y
-    by_cases hy : ∃ i, x i = y
-    · obtain ⟨i, rfl⟩ := hy
-      have h1 := storeAll_cache_self (x ∘ σ) hx' (u ∘ σ) state (σ.symm i)
-      simp only [Function.comp_apply, Equiv.apply_symm_apply] at h1
-      rw [h1, storeAll_cache_self x hx u state i]
+    by_cases hy : ∃ j, x (σ j) = y
+    · obtain ⟨j, rfl⟩ := hy
+      have h1 : (storeAll (x ∘ σ) (u ∘ σ) state).cache (x (σ j)) = some (u (σ j)) :=
+        storeAll_cache_self (x ∘ σ) hx' (u ∘ σ) state j
+      exact h1.trans (storeAll_cache_self x hx u state (σ j)).symm
     · push Not at hy
-      rw [storeAll_cache_other _ _ _ y fun i => hy (σ i), storeAll_cache_other _ _ _ y hy]
+      have hy' : ∀ i, x i ≠ y := fun i => by
+        have h := hy (σ.symm i)
+        rwa [σ.apply_symm_apply] at h
+      exact (storeAll_cache_other (x ∘ σ) (u ∘ σ) state y hy).trans
+        (storeAll_cache_other x u state y hy').symm
   obtain ⟨hk1, hg1⟩ := storeAll_known (x ∘ σ) (u ∘ σ) state
   obtain ⟨hk2, hg2⟩ := storeAll_known x u state
   cases h1 : storeAll (x ∘ σ) (u ∘ σ) state
@@ -459,6 +464,7 @@ theorem interp_presampleAll_le {α : Type} (computation : OracleComp (SourceCost
           ((Fintype.card R : ℝ≥0∞) ^ n)⁻¹ * ∑ w : Fin n → R, ∑' out, Pr[= out | interp tg initial model
             computation budget (storeAll (Fin.tail x) w (state.store (x 0) v))] * F out := fun v =>
         interp_presampleAll_le computation budget F hF (Fin.tail x) hxt (fun i => hk i.succ) _ fun i => by
+          show (state.store (x 0) v).cache (x i.succ) = none
           rw [store_cache_ne state (x 0) _ (fun e => Fin.succ_ne_zero i (hx e))]
           exact hfresh i.succ
       calc (Fintype.card R : ℝ≥0∞)⁻¹ * ∑ v, ∑' out, Pr[= out | interp tg initial model computation budget
