@@ -36,14 +36,14 @@ theorem hValueH_start (parameter : PublicParameter) (data : PublicData) (Qtot : 
 
 /-- At the start no digest block is cached: the whole budget is left. -/
 theorem start_total (parameter : PublicParameter) (data : PublicData)
-    (initial : HiddenOutside.Cache HashInput HashOutput) (hclean : ∀ p, initial (pblk parameter data p) = none)
+    (initial : HiddenOutside.Cache HashInput HashOutput) (hclean : ∀ p call, initial (pblk parameter data p call) = none)
     (known : Knowledge Coordinate) (budget : ℕ) :
     TotalInv parameter data budget (DebtState.start initial known) budget := by
   have h0 : totalCount parameter data (DebtState.start initial known) = 0 := by
     unfold totalCount
     rw [Finset.card_eq_zero, Finset.filter_eq_empty_iff]
     intro p _ h
-    exact h (hclean p)
+    exact h (hclean p firstCall)
   unfold TotalInv
   rw [h0, zero_add]
 
@@ -77,10 +77,10 @@ never repeats a message, a decided hit or a forest cover has probability at most
 saturation budget plus the one-coin forest potential with one heavy message at the baseline
 `baselineW total`. The coin pays the rate at `total / 2` cached digests. -/
 theorem rest_boundH (hcompat : Compatible tg model) (htrunc : UniformTruncation (R := HashOutput) tg)
-    (hparse : ∀ p, model.parse (pblk parameter data p) = none)
-    (hkind : ∀ p, tg.kind (pblk parameter data p) = .none)
-    (hdigest : ∀ p, tg.digest (pblk parameter data p))
-    (hclean : ∀ p, initial (pblk parameter data p) = none)
+    (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
+    (hdigest : ∀ p call, tg.digest (pblk parameter data p call))
+    (hclean : ∀ p call, initial (pblk parameter data p call) = none)
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
@@ -106,7 +106,7 @@ theorem rest_boundH (hcompat : Compatible tg model) (htrunc : UniformTruncation 
   have hgood := goodHW_advProg parameter data total wbar b0 Fail Lmax tg initial model hparse hkind hdigest hfail hfair
     le_rfl M [] hnr total start [] [] 0 [] (start_prepared initial known)
     (start_pinv parameter data initial hclean known) (start_minv parameter data initial hclean known)
-    (fun _ _ _ _ _ _ _ h => by cases h) (start_total parameter data initial hclean known total)
+    (fun _ _ _ _ h => by cases h) (start_total parameter data initial hclean known total)
   have hw1 : weight tg initial start = 1 := weight_start tg initial known
   rw [hw1, one_mul] at hgood
   -- the weighted saturation
@@ -200,8 +200,8 @@ theorem sample_boundH (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hn
   set known := knownOf param fixed with hknown
   set model := sampleModel parameterOutput highs with hmodel
   set start : State := DebtState.start prepared.2 known with hstart
-  have hparse : ∀ p, model.parse (pblk param data p) = none := fun p =>
-    hcompat.digestParse _ (hmsg _ (msgInput_digestInput param data.root p.1 p.2)).2
+  have hparse : ∀ p call, model.parse (pblk param data p call) = none := fun p call =>
+    hcompat.digestParse _ (hmsg _ (msgInput_digestInput param data.root p.1 p.2 call)).2
   refine le_trans (stopped_le_interp hb adversary q hq parameterOutput fixed highs remaining steps prepared hprepared tg) ?_
   -- a correct guess or a bad cache is a decided hit
   refine le_trans (probEvent_mono (q := fun r => Hit tg prepared.2 r.1 r.2.2 ∨ CoverOf param data r.2)
@@ -228,9 +228,9 @@ theorem sample_boundH (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hn
   by_cases hK : keygenCost ≤ q
   · rw [interp_tick_bind tg prepared.2 model _ _ q start hK, bind_map_left]
     refine le_trans (le_of_eq ?_) (rest_boundH param data wbar Fail tg prepared.2 model hcompat htrunc hparse
-      (fun p => (hmsg _ (msgInput_digestInput param data.root p.1 p.2)).1)
-      (fun p => (hmsg _ (msgInput_digestInput param data.root p.1 p.2)).2)
-      (fun p => hclean _ (msgInput_digestInput param data.root p.1 p.2)) hfail (q - keygenCost) htotal Lmax hfair
+      (fun p call => (hmsg _ (msgInput_digestInput param data.root p.1 p.2 call)).1)
+      (fun p call => (hmsg _ (msgInput_digestInput param data.root p.1 p.2 call)).2)
+      (fun p call => hclean _ (msgInput_digestInput param data.root p.1 p.2 call)) hfail (q - keygenCost) htotal Lmax hfair
       ((internalize adversary).main ⟨data.root, param⟩)
       (noRepeat_internalize_adversary adversary hnr _) known)
     rw [costRestX_eq, probEvent_bind_eq_tsum, probEvent_bind_eq_tsum]
