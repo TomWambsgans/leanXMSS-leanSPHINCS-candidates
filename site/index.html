@@ -303,7 +303,7 @@ footer a + a { margin-left: 1.25rem; }
 }
 </style>
 </head>
-<body data-v="forest">
+<body data-v="fors">
 <main>
 
 <div class="page">
@@ -1000,11 +1000,11 @@ footer a + a { margin-left: 1.25rem; }
 // The figures: every number comes from data.json (python3 scripts/scheme.py --json > site/data.json),
 // for the configuration chosen with the four toggles (height, shape, hash, FTS variant).
 (function () {
-  var S = { h: 26, shape: 'layered', hash: 'Keccak-256', v: 'forest' }, D = null, KEY = 'leanSphincs.config';
+  var S = { h: 26, shape: 'layered', hash: 'Keccak-256', v: 'fors' }, D = null, KEY = 'leanSphincs.config';
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (saved) ['h', 'shape', 'hash', 'v'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
-    if (S.v !== 'forest' && S.v !== 'fors') S.v = 'forest';
+    if (S.v !== 'forest' && S.v !== 'fors') S.v = 'fors';
   } catch (e) {}
   // the devices: hashes per second for each hash, from data.json (rates[device][hash])
   function rate(dev) { return D.rates[dev][S.hash]; }
@@ -1213,7 +1213,7 @@ footer a + a { margin-left: 1.25rem; }
   }).then(function (d) {
     D = d;
     // a saved choice that the data no longer has falls back to the default
-    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256', v: 'forest' }; }
+    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256', v: 'fors' }; }
     render();
   }).catch(function (e) {
     console.error(e);
@@ -1231,7 +1231,7 @@ footer a + a { margin-left: 1.25rem; }
   var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 239;   // the column of the path, the tip of the forest brace
   var pruned = svg.querySelector('.xmss.pruned'), layered = svg.querySelector('.xmss.layered');
   var motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var shown = 'pruned', shownV = 'forest', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
+  var shown = 'pruned', shownV = 'fors', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
 
   function el(name, attrs, parent) {
     var e = document.createElementNS(NS, name);
