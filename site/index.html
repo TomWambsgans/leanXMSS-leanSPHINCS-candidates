@@ -76,16 +76,6 @@ body:not([data-v="spicy"]) .s-only, body[data-v="spicy"] .v-only { display: none
 body[data-v="spicy"] .old::after { content: ""; position: absolute; left: -0.2em; right: -0.2em; top: 52%; border-top: 1.5px solid rgba(139, 26, 26, 0.45); transform: rotate(-16deg); pointer-events: none; }
 .new { color: var(--accent); margin-left: 0.45em; }
 .seg button[data-val="spicy"][aria-checked="true"] { background: var(--accent); }
-/* what spicy changes, beside the toggles, with an arrow from "spicy" */
-.notes { position: absolute; z-index: 3; visibility: hidden; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.95rem; color: var(--muted); white-space: nowrap; }
-.notes.flow { position: static; visibility: visible; margin: 0.4rem 0 1.2rem; }
-.notes ul { margin: 0; padding: 0; list-style: none; }
-.notes li::before { display: inline-flex; align-items: center; justify-content: center; width: 1.15em; height: 1.15em; margin-right: 0.5em; border: 1px solid currentColor; border-radius: 50%; font-size: 0.85em; line-height: 1; vertical-align: 0.1em; }
-.notes .pro li::before { content: "+"; color: var(--ink); }
-.notes .con li::before { content: "\2212"; }
-.arrow { position: absolute; display: none; overflow: visible; pointer-events: none; }
-.arrow .line { fill: none; stroke: #c48c8c; stroke-width: 1.3; stroke-linecap: round; }
-.arrow .head { fill: #c48c8c; }
 /* the versions, at the bottom: v1 (the old page, at /v1/), v2 (this page), v3? (a tip asking for feedback) */
 .versions { display: flex; gap: 0.4rem; font-size: 0.85rem; }
 .ver { border: 1px solid var(--tree); border-radius: 6px; padding: 0.05rem 0.55rem; line-height: 1.5; color: var(--muted); }
@@ -222,7 +212,6 @@ footer a + a { margin-left: 1.25rem; }
 @media (max-width: 1150px) {
   main { min-height: 0; }
   h1 { white-space: normal; }
-  .notes { position: static; visibility: visible; margin: 0.4rem 0 1.2rem; }
   .page { grid-template-columns: minmax(0, 1fr); }
   .page > * { min-width: 0; }
   .params p { white-space: normal; }
@@ -318,7 +307,6 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
   header { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.9rem; align-items: center; }
   h1, .sphinx-line { grid-column: 1 / -1; }
   .sphinx-line.inflow { order: 4; margin-top: 1rem; }
-  .notes, .notes.flow { gap: 0.3rem; font-size: 0.9rem; white-space: normal; }
 }
 </style>
 </head>
@@ -338,11 +326,9 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
         <div class="seg" role="radiogroup" aria-labelledby="tl-shape" data-key="shape"><button type="button" role="radio" data-val="pruned">Pruning</button><button type="button" role="radio" data-val="layered">Uniform</button></div>
         <span class="sl" id="tl-hash">Hash</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-hash" data-key="hash"><button type="button" role="radio" data-val="BLAKE2s">BLAKE2s</button><button type="button" role="radio" data-val="SHA-256">SHA-256</button><button type="button" role="radio" data-val="Keccak-256">Keccak-256</button></div>
-        <span class="sl" id="tl-v">Variant</span>
+        <span class="sl"><span id="tl-v">Variant</span><span class="info w dn" id="v-tip" tabindex="0" role="button" aria-label="More information" data-tip="">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-v" data-key="v"><button type="button" role="radio" data-val="vanilla">vanilla</button><button type="button" role="radio" data-val="spicy">spicy</button></div>
       </div>
-      <div class="notes"><ul class="pro"><li data-f="pro-size">&nbsp;</li><li data-f="pro-verify">&nbsp;</li></ul><ul class="con"><li>more complex</li><li data-f="con-thr">&nbsp;</li></ul></div>
-      <svg class="arrow" aria-hidden="true"><path class="line"/><path class="head"/></svg>
       <div class="scroll">
       <table>
         <tbody>
@@ -1187,11 +1173,12 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
       '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + vs(comma(th.vanilla.prep_rounds), comma(th.prep_rounds)) + '</td></tr>');
 
     // what spicy changes, against the vanilla figures of the same configuration (gains rounded down, losses up)
-    set('pro-size', Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures');
-    set('pro-verify', Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification' +
-      info('Measured in ' + units() + ': ' + V.verify + ' → ' + main.verify));
-    set('con-thr', Math.ceil(th.prep / th.vanilla.prep - 1e-9) + '× worse threshold' +
-      info('Preprocessing per signature, in ' + units() + ' inside the MPC: ' + comma(th.vanilla.prep) + ' → ' + comma(th.prep)));
+    document.getElementById('v-tip').setAttribute('data-tip', 'Vanilla: FTS = FORS. Spicy: FTS = WOTS forest.\n\nSpicy, against vanilla:\n' +
+      '+ ' + Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures\n' +
+      '+ ' + Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification (' + units() + ': ' + V.verify + ' → ' + main.verify + ')\n' +
+      '− more complex\n' +
+      '− ' + String(Math.ceil(10 * th.prep / th.vanilla.prep - 1e-9) / 10) + '× worse threshold (preprocessing per signature, ' + units() + ' in the MPC: ' +
+      comma(th.vanilla.prep) + ' → ' + comma(th.prep) + ')');
 
     // the diagram: one pruned tree, or the layers
     if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers, S.v, V.k, V.a);
@@ -1235,63 +1222,6 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
     set('signer-lead', 'The figures could not be loaded (data.json).');
     document.querySelector('[data-f="signer-lead"]').hidden = false;
   });
-})();
-</script>
-<script>
-// What spicy changes: on a wide screen, the notes sit beside the toggles, between the parameters and the diagram,
-// with an arrow from "spicy"; narrower, they follow the toggles.
-(function () {
-  var notes = document.querySelector('.notes'), page = document.querySelector('.page');
-  var arrow = document.querySelector('.arrow'), line = arrow.querySelector('.line'), head = arrow.querySelector('.head');
-  var spicy = document.querySelector('.seg[data-key="v"] button[data-val="spicy"]');
-  function drawn() {                     // the left edge of the tree(s) the diagram draws, beside the notes
-    var left = Infinity;
-    [].forEach.call(document.querySelectorAll('figure svg > .part.xmss'), function (g) {
-      var r = g.getBoundingClientRect();
-      if (r.width > 0) left = Math.min(left, r.left);
-    });
-    return left;
-  }
-  function place() {
-    notes.classList.remove('flow');
-    notes.style.left = notes.style.top = '';
-    arrow.style.display = 'none';
-    var p = page.getBoundingClientRect(), b = spicy.getBoundingClientRect(), w = notes.offsetWidth;
-    var flow = matchMedia('(max-width: 1150px)').matches;
-    if (!flow) {
-      // the parameters in their widest (spicy) state, so that the notes do not move when switching
-      var mode = document.body.dataset.v;
-      document.body.dataset.v = 'spicy';
-      var t = document.querySelector('.params table').getBoundingClientRect().right;
-      [].forEach.call(document.querySelectorAll('.toggles .seg'), function (g) { t = Math.max(t, g.getBoundingClientRect().right); });
-      document.body.dataset.v = mode;
-      var d = drawn();
-      flow = d - t < w + 48;
-      if (!flow) {
-        notes.style.left = ((t + d) / 2 - w / 2 - p.left) + 'px';
-        notes.style.top = (b.bottom + 44 - p.top) + 'px';
-        notes.style.visibility = 'visible';
-      }
-    }
-    if (flow) notes.classList.add('flow');
-    var n = notes.getBoundingClientRect();
-    var x1 = b.left + b.width / 2, y1 = b.bottom + 6, y2 = n.top - 7;
-    var x2 = flow ? Math.min(Math.max(x1, n.left + 12), n.right - 12) : n.left + n.width / 2;
-    if (y2 - y1 < 12) return;
-    var x0 = Math.min(x1, x2) - 10, y0 = y1;
-    arrow.style.left = (x0 - p.left) + 'px';
-    arrow.style.top = (y0 - p.top) + 'px';
-    arrow.setAttribute('width', Math.abs(x2 - x1) + 20);
-    arrow.setAttribute('height', y2 - y1 + 2);
-    var ax = x1 - x0, bx = x2 - x0, by = y2 - y0, m = (by - 7) * 0.6;
-    line.setAttribute('d', 'M' + ax + ',0 C' + ax + ',' + m + ' ' + bx + ',' + (by - 7 - m) + ' ' + bx + ',' + (by - 7));
-    head.setAttribute('d', 'M' + (bx - 4.5) + ',' + (by - 8) + ' L' + (bx + 4.5) + ',' + (by - 8) + ' L' + bx + ',' + by + ' Z');
-    arrow.style.display = 'block';
-  }
-  window.addEventListener('resize', place);
-  window.addEventListener('load', place);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
-  place();
 })();
 </script>
 <script>
@@ -1721,8 +1651,8 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
     // in both variants, so that the sphinx does not move when switching
     ['vanilla', 'spicy'].forEach(function (v) {
       document.body.dataset.v = v;
-      // the title, the toggles, the notes and the parameter table: what is written in each cell, not the cell
-      [].forEach.call(document.querySelectorAll('.titlerow, .notes, .arrow, .toggles .sl, .toggles .seg'), function (e) {
+      // the title, the toggles and the parameter table: what is written in each cell, not the cell
+      [].forEach.call(document.querySelectorAll('.titlerow, .toggles .sl, .toggles .seg'), function (e) {
         var r = e.getBoundingClientRect();
         if (r.width > 0 && r.height > 0) out.push(r);
       });
