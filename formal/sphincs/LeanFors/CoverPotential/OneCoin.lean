@@ -1025,7 +1025,6 @@ theorem sign_paramsS (hparse : ∀ p call, model.parse (pblk parameter data p ca
     (hC : CountInv parameter data Qtot s budget)
     (out : Run HashInput Coordinate (Option Signature) × State)
     (hout : out ∈ support (interp tg initial model (signCostSource parameter data m) budget s))
-    (hpinv : PairInv parameter data m out.2)
     (r : Option Signature) (hr : out.1.1 = some r) :
     Prepared initial out.2 ∧ PInv parameter data out.2 (newPairs parameter data m s out.2 ++ P) ∧
       MInv parameter data out.2 (addMsg Ms m) ∧
@@ -1033,6 +1032,9 @@ theorem sign_paramsS (hparse : ∀ p call, model.parse (pblk parameter data p ca
       CountInv parameter data Qtot out.2 (budget - traceCost out.1.2.2.1) ∧
       (∀ q ∈ P, pview parameter data out.2 q = pview parameter data s q) := by
   have hext := interp_extends tg initial model _ budget s out hout
+  have hpinv : PairInv parameter data m out.2 :=
+    source_pairInv tg initial model parameter data m (fun ρ call => hparse (m, ρ) call) budget s
+      (pairInv_of_pinv hP m) out hout r hr
   have hpost := source_post tg initial model parameter data m (fun ρ call => hparse (m, ρ) call) Fail hfail
     budget s hprep out hout r hr
   have hother := other_message_keptS tg initial model budget s out hout
@@ -1383,7 +1385,6 @@ theorem sign_pointO (hparse : ∀ p call, model.parse (pblk parameter data p cal
     (hM : MInv parameter data s Ms) (hD : DInv R d) (hC : CountInv parameter data Qtot s budget)
     (out : Run HashInput Coordinate (Option Signature) × State)
     (hout : out ∈ support (interp tg initial model (signCostSource parameter data m) budget s))
-    (hpinv : PairInv parameter data m out.2)
     (r : Option Signature) (hr : out.1.1 = some r) {k' : ℕ} (hk : k' ≤ budget) :
     (if Realized tg initial out.2 ∨ signatureLimit < (L ++ [⟨m, r⟩] : QueryLog SigningSpec).length then 0
       else coreO parameter data w b0 Fail out.2 (newPairs parameter data m s out.2 ++ P) (addMsg Ms m)
@@ -1392,7 +1393,7 @@ theorem sign_pointO (hparse : ∀ p call, model.parse (pblk parameter data p cal
       if Realized tg initial s ∨ signatureLimit ≤ L.length then 0
       else canonO parameter data w b0 Fail m s P Ms L d (signatureLimit - (L.length + 1)) budget out := by
   obtain ⟨_, hP', _, _, _, hview⟩ := sign_paramsS tg initial model Fail Qtot hparse hfail budget
-    s P Ms d R hprep hP hM hD hC out hout hpinv r hr
+    s P Ms d R hprep hP hM hD hC out hout r hr
   have hext := interp_extends tg initial model _ budget s out hout
   have hpost := source_post tg initial model parameter data m (fun ρ call => hparse (m, ρ) call) Fail hfail
     budget s hprep out hout r hr
@@ -1522,9 +1523,6 @@ theorem goodO_sign (Lmax : ℕ) (hparse : ∀ p call, model.parse (pblk paramete
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
-    (hscan : ∀ (b : ℕ) (s1 : State), PairInv parameter data m s1 →
-      ∀ o ∈ support (interp tg initial model (signCostSource parameter data m) b s1),
-        PairInv parameter data m o.2)
     (hw : w ≤ 1) (L : QueryLog SigningSpec) (hm : MsgLive L m)
     (next : Option Signature → OracleComp CostSpec HiddenBridge.Outcome)
     (h : ∀ r, GoodO parameter data w b0 Fail Qtot Lmax tg initial model (L ++ [⟨m, r⟩]) (next r)) :
@@ -1547,13 +1545,11 @@ theorem goodO_sign (Lmax : ℕ) (hparse : ∀ p call, model.parse (pblk paramete
         exact bot_le
     | some r =>
         rw [interpThen_some tg initial model next budget o1 r hres, tsum_probOutput_map_mul]
-        have hpinv : PairInv parameter data m o1.2 :=
-          hscan budget s (pairInv_of_pinv hP m) o1 ho1
         obtain ⟨hprep', hP', hM', hD', hC', _⟩ := sign_paramsS tg initial model Fail Qtot hparse (hfail m)
-          budget s P Ms d R hprep hP hM hD hC o1 ho1 hpinv r hres
+          budget s P Ms d R hprep hP hM hD hC o1 ho1 r hres
         have hIH := h r (budget - traceCost o1.1.2.2.1) o1.2 _ _ _ _ hprep' hP' hM' hD' hC'
         have hpot := sign_pointO tg initial model parameter data w b0 Fail Qtot m hparse (hfail m) hw
-          budget s P Ms L d R hprep hP hM hD hC o1 ho1 hpinv r hres
+          budget s P Ms L d R hprep hP hM hD hC o1 ho1 r hres
           (Nat.sub_le budget (traceCost o1.1.2.2.1))
         have hlam : lam Lmax (livePairs (L ++ [⟨m, r⟩]) (newPairs parameter data m s o1.2 ++ P)).length
             (budget - traceCost o1.1.2.2.1) ≤ lam Lmax ℓ budget := by

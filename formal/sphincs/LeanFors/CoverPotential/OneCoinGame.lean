@@ -41,9 +41,6 @@ theorem goodO_advProg (hparse : ∀ p call, model.parse (pblk parameter data p c
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
-    (hscan : ∀ (m : Message) (b : ℕ) (s1 : State), PairInv parameter data m s1 →
-      ∀ o ∈ support (interp tg initial model (signCostSource parameter data m) b s1),
-        PairInv parameter data m o.2)
     {Cmax : ℕ} (hfair : FairS wbar Cmax Lmax) (hQ : Qtot ≤ Cmax) :
     ∀ (M : OracleComp (OracleWorld + SigningSpec) Forgery) (L : QueryLog SigningSpec),
       NoRepeat M (L.map Sigma.fst) →
@@ -68,7 +65,7 @@ theorem goodO_advProg (hparse : ∀ p call, model.parse (pblk parameter data p c
           intro entry he heq
           exact hnot (heq ▸ List.mem_map_of_mem he)
         refine goodO_sign tg initial model parameter data wbar b0 Fail Qtot message Lmax hparse hkind hfail
-          (hscan message) hfair.le_one L hm _ fun r => ih r _ ?_
+          hfair.le_one L hm _ fun r => ih r _ ?_
         rw [List.map_append]
         exact hrest r
 
