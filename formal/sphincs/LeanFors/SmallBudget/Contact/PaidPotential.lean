@@ -149,6 +149,25 @@ section Inv
 
 variable {K : Ctx} {data : PublicData} {Qtot : ℕ} {model : HiddenRows.Model HashInput HashOutput Address Coordinate}
 
+/-- The invariant survives the fresh stores of a family of inputs the model does not parse. -/
+theorem inv_storeAll (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p)) :
+    ∀ {n : ℕ} (x : Fin n → HashInput) (u : Fin n → HashOutput) (s : State), K.Inv s →
+      Function.Injective x → (∀ i, s.cache (x i) = none) → (∀ i, model.parse (x i) = none) →
+        K.Inv (storeAll x u s)
+  | 0, _, _, _, h, _, _, _ => h
+  | _ + 1, x, u, s, h, hx, hc, hp => by
+      have hstep : K.Inv (s.store (x 0) (u 0)) := h.store (x 0) (u 0) (hc 0) fun q hq _ => by
+        rw [← hMp, hp 0] at hq
+        cases hq
+      rw [storeAll_succ]
+      exact inv_storeAll hMp (Fin.tail x) (Fin.tail u) _ hstep
+        (fun a b e => Fin.succ_injective _ (hx e))
+        (fun i => by
+          show (s.store (x 0) (u 0)).cache (x i.succ) = none
+          rw [store_cache_ne s (x 0) _ fun e => Fin.succ_ne_zero i (hx e)]
+          exact hc i.succ)
+        (fun i => hp i.succ)
+
 /-- After a new pair: every digest call of the pair is stored at once. -/
 theorem binvF_withPair (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hparse : ∀ p call, model.parse (pblk K.p data p call) = none)
@@ -158,14 +177,16 @@ theorem binvF_withPair (hMp : model.parse = HiddenGraph.parse K.p (candidateActi
     (hp0 : s.cache (pblk K.p data p firstCall) = none) (u : DigestCall → HashOutput) :
     BInvF K data Qtot model (withPair K.p data s p u) (addPair K.p P p u) (addMsg Ms p.1) d R (budget - 1) := by
   have hext := extends_withPair hB.pinv hp0 u
-  refine ⟨?_, pinv_withPair hB.pinv hp0 u, minv_withPair hB.minv p u, hB.dinv, fun m => ?_, ?_, hB.rinv⟩
-  · exact K.inv_withPair hB.inv hB.pinv hp0 u fun call q hq => by
-      rw [← hMp, hparse p call] at hq
-      cases hq
+  have hknown := withPair_known (parameter := K.p) (data := data) s p u
+  refine ⟨?_, pinv_withPair hB.pinv hp0 u, minv_withPair hB.minv p u, hB.dinv, fun m => ?_, ?_,
+    fun c hc => by rw [hknown.1]; exact hB.rinv c hc⟩
+  · exact inv_storeAll hMp (pblk K.p data p) u s hB.inv (pblk_call_injective K.p data p)
+      (hB.pinv.first p hp0) (hparse p)
   · have h1 := count_withPair (parameter := K.p) (data := data) m s p u
     have h2 := hB.count m
     omega
   · intro g hg
+    rw [hknown.2] at hg
     obtain ⟨x, a, v, hp, hgq, hc⟩ := hB.gc g hg
     exact ⟨x, a, v, hp, hgq, cache_ne_of_extends hext hc⟩
 
