@@ -89,13 +89,13 @@ theorem writes_fleaf {c : Coordinate} (hc : IsFc c) {x : HashInput} (h : Writes 
   rw [hMp] at hp
   obtain ⟨hx, -⟩ := (parse_some_iff _ _ x (a, v)).1 hp
   rw [hMo] at hout
-  obtain ⟨index, cc, sp, j, a', i, q, rfl⟩ := hc
+  obtain ⟨index, κ, leaf, q, rfl⟩ := hc
   cases a with
   | chain lay tree leaf chainIdx step =>
       simp only [Address.outputCoordinate] at hout
       cases hout
-  | fchain index' c' s' j' a'' i' t =>
-      exact ⟨FIn.mk index' c' s' j' a'' i' t v, by rw [hx]; rfl⟩
+  | fleaf index' κ' leaf' =>
+      exact ⟨FIn.mk index' κ' leaf' v, by rw [hx]; rfl⟩
 
 end Avoid
 
@@ -113,16 +113,9 @@ variable (K : Ctx) (data : PublicData) (Qtot : ℕ) (model : HiddenRows.Model Ha
   (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
   (hMi : model.incoming = Address.inputCoordinate) (hMo : model.outgoing = Address.outputCoordinate)
 
-/-- The position up to which an opening of the chain of a step matters. -/
-def kTop (f : FIn) : ℕ := min (f.t.val + 1) 3
-
-/-- The call opens the chain of a step at or below `min(t + 1, 3)`. -/
+/-- The call opens the leaf of a step at one of its two positions. -/
 def OpensF (f : FIn) (reveals : List Coordinate) : Prop :=
-  ∃ q : FPos, q.val ≤ kTop f ∧ Coordinate.fchain f.index f.c f.s f.j f.a f.i q ∈ reveals
-
-theorem kTop_lt (f : FIn) : kTop f < chainTop := by
-  unfold kTop chainTop
-  omega
+  ∃ q, Coordinate.fors f.index f.κ f.leaf q ∈ reveals
 
 variable {K data Qtot model}
 
@@ -146,23 +139,11 @@ theorem sign_step_facts {m : Message} {budget : ℕ} {s : State} {P : List Pair}
   have hexp : o1.2.known f.outC ≠ none → s.known f.outC = none → OpensF f o1.1.2.1 := by
     intro hk hs
     have hw : Avoids (Writes model f.outC) (signCostSource K.p data m) :=
-      avoids_mono (fun x hx => writes_fleaf K model hMp hMo ⟨_, _, _, _, _, _, _, rfl⟩ hx) havoid
+      avoids_mono (fun x hx => writes_fleaf K model hMp hMo ⟨_, _, _, _, rfl⟩ hx) havoid
     rcases interp_known_new K.tg K.initial model _ f.outC hw budget s o1 ho1 hk with h | h
     · exact absurd hs h
-    · -- the written coordinate is not the top: tops are anchors
-      have ht : f.t.val + 1 ≤ 3 := by
-        by_contra hlt
-        have htop : f.t.val + 1 = chainTop := by
-          have := f.t.isLt
-          simp only [chainTop] at this ⊢
-          omega
-        have hanchor : K.Anchor f.outC := Or.inr ⟨f.index, f.c, f.s, f.j, f.a, f.i, by
-          unfold FIn.outC
-          congr 1
-          exact Fin.ext htop⟩
-        rw [hB.inv.anchored _ hanchor] at hs
-        cases hs
-      exact ⟨⟨f.t.val + 1, by simp only [chainTop]; omega⟩, by show f.t.val + 1 ≤ min (f.t.val + 1) 3; omega, h⟩
+    · -- the exposed coordinate is the revealed leaf value
+      exact ⟨1, h⟩
   refine ⟨hfr, hexp, fun hno => ?_, fun hS hnS => ?_⟩
   · refine K.cw_congr1 f hfr ?_
     cases hk : s.known f.outC with
@@ -170,10 +151,9 @@ theorem sign_step_facts {m : Message} {budget : ℕ} {s : State} {P : List Pair}
         by_contra hne
         exact hno (hexp hne hk)
     | some w => exact hext.2.1 _ _ hk
-  · obtain ⟨q, hq, hmem⟩ := hS
-    rcases List.mem_append.1 hmem with h | h
-    · exact absurd ⟨q, hq, h⟩ hnS
-    · exact ⟨q, le_trans hq (by have := f.t.isLt; unfold kTop; simp only [chainTop] at this; omega), h⟩
+  · rcases List.mem_append.1 hS with h | h
+    · exact absurd h hnS
+    · exact ⟨0, h⟩
 
 include hMp hMi hMo in
 /-- **The weight of a contact through a signing call**, and its part on runs opening its chain. -/
@@ -308,9 +288,7 @@ theorem sign_cw_mean {m : Message} {budget : ℕ} {s : State} {P : List Pair} {M
     · exact le_of_eq (hcongr _)
 
 theorem settled_append {R : List Coordinate} {f : FIn} (h : Settled R f) (L : List Coordinate) :
-    Settled (R ++ L) f := by
-  obtain ⟨q, hq, hmem⟩ := h
-  exact ⟨q, hq, List.mem_append_left _ hmem⟩
+    Settled (R ++ L) f := List.mem_append_left _ h
 
 include hMp hMi hMo in
 /-- **One contact through a signing call.** Its weight times its coefficient after the call is at
@@ -318,7 +296,7 @@ most its weight times the coefficient before: an opening of its chain has chance
 reveal rate plus the mass off the identity of the message, and costs at most `1 + Cd`. -/
 theorem sign_contact {m : Message} {budget : ℕ} {s : State} {P : List Pair} {Ms : List Message}
     {d : Multiset View} {R : List Coordinate} (hB : BInvF K data Qtot model s P Ms d R budget)
-    (hparse : ∀ p, model.parse (pblk K.p data p) = none)
+    (hparse : ∀ p call, model.parse (pblk K.p data p call) = none)
     (f : FIn) (Cd : ℝ≥0∞) (Z : Run HashInput Coordinate (Option Signature) × State → ℝ≥0∞) (hZ : ∀ o, Z o ≤ 1) :
     ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSource K.p data m) budget s] *
         (if o1.1.1.isSome then K.cw o1.2 f * gA (R ++ o1.1.2.1) (Cd + Z o1) f else 0) ≤
@@ -341,7 +319,7 @@ theorem sign_contact {m : Message} {budget : ℕ} {s : State} {P : List Pair} {M
   -- an unsettled contact
   have hPO : ∑' o1, Pr[= o1 | run] * (if OpensF f o1.1.2.1 then 1 else 0) ≤ revRate + nm := by
     refine le_trans (le_of_eq (tsum_congr fun o1 => ?_)) (le_trans (reveal_le_all K.tg K.initial model K.p data m
-      hparse budget f.index f.c f.s f.j f.a f.i (kTop f) (kTop_lt f))
+      hparse budget f.index f.κ f.leaf)
       (add_le_add le_rfl (hitMass_le_offMass s m)))
     unfold OpensF
     congr 1
@@ -446,7 +424,7 @@ variable (K : Ctx) (data : PublicData) (wbar κ : ℝ≥0∞) (Fail : Finset (Fi
 
 include hMp hMi hMo in
 /-- **A signing call on a fresh message.** -/
-theorem psiF_sign (hparse : ∀ p, model.parse (pblk K.p data p) = none)
+theorem psiF_sign (hparse : ∀ p call, model.parse (pblk K.p data p call) = none)
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared K.initial s1 →
       ∀ out ∈ support (interp K.tg K.initial model (finishRest K.p data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)

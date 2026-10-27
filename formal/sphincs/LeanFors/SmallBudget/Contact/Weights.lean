@@ -177,7 +177,7 @@ theorem input_of_guess {x : HashInput} {a : Address} {v : Digest} (hp : M.parse 
   | chain lay tree leaf chainIdx step =>
       simp only [Address.inputCoordinate, FIn.inC, Prod.mk.injEq] at hf
       cases hf.1
-  | fchain index c sp j a' i t =>
+  | fleaf index κ leaf =>
       rw [fin_eq_of_inC hf, hx]
       rfl
 
@@ -276,7 +276,7 @@ theorem wsum_ordinary {s : St} (hinv : K.Inv s) (hgc : ForestPotential.GuessCach
                   rw [hMp] at hp'
                   obtain ⟨hxe, -⟩ := (parse_some_iff _ _ _ (a, v)).1 hp'
                   have hfe : f0.input K.p = HiddenGraph.input K.p
-                      (Address.fchain f0.index f0.c f0.s f0.j f0.a f0.i f0.t, f0.v) := rfl
+                      (Address.fleaf f0.index f0.κ f0.leaf, f0.v) := rfl
                   have hav := input_injective K.p (hxe.symm.trans hfe)
                   rw [hMi] at hk
                   rw [Prod.mk.injEq] at hav

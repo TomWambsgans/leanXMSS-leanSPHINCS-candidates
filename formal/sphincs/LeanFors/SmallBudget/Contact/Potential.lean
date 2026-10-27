@@ -1,8 +1,8 @@
 import LeanFors.SmallBudget.Contact.Weights
 
 /-! **The contact potential of the forest (A4).** A recorded forest step is a contact with weight
-`cw` (one if decided, `2^-128` while its written coordinate is unexposed). Its chain is *settled*
-once a reveal opens it at or below the step: the contact then pays one. An unsettled contact pays
+`cw` (one if decided, `2^-128` while its written coordinate is unexposed). It is *settled*
+once a reveal opens its secret: the contact then pays one. An unsettled contact pays
 its coefficient: the reveal rate of the remaining signatures, the coin part (the mass off the identity
 of the groups of the live messages and the creation rate of the remaining budget), and the capped
 near potential. The potential
@@ -10,7 +10,7 @@ near potential. The potential
   `Ψ = Σ_{recorded} cw · (settled ? 1 : sig + coin + min(1, potN(y))) + y 2^-128 coin +
       κ 2^-128 Σ_{j < y} potN(j) + lam Lmax (live landed pairs) y`
 
-pays, at the end, a recorded contact at a chain opened at or below its step, or a near cover with a
+pays, at the end, a recorded contact at a revealed secret, or a near cover with a
 recorded contact; a forest step query costs `2^-128 (N rate + 1 - κ)`. -/
 
 open OracleComp OracleSpec ENNReal
@@ -65,9 +65,8 @@ section DefsA4
 
 variable (K : Ctx) (data : PublicData) (wbar κ : ℝ≥0∞) (Fail : Finset (Fin (2 ^ subtreeHeight)))
 
-/-- The chain of a step is opened by a reveal at or below the step. -/
-def Settled (R : List Coordinate) (f : FIn) : Prop :=
-  ∃ q : FPos, q.val ≤ f.t.val ∧ Coordinate.fchain f.index f.c f.s f.j f.a f.i q ∈ R
+/-- The leaf of a step is opened by a reveal of its secret. -/
+def Settled (R : List Coordinate) (f : FIn) : Prop := f.inC ∈ R
 
 /-- Coefficient of a contact: one once settled, `C` otherwise. -/
 noncomputable def gA (R : List Coordinate) (C : ℝ≥0∞) (f : FIn) : ℝ≥0∞ := if Settled R f then 1 else C
@@ -173,10 +172,7 @@ theorem potNF_mono (data : PublicData) (wbar : ℝ≥0∞) (Fail : Finset (Fin (
 
 /-- An unexposed read coordinate is not settled. -/
 theorem not_settled_of_unknown {s : State} {R : List Coordinate} (hrinv : ∀ c ∈ R, s.known c ≠ none)
-    (hclosed : UpClosed R) {f : FIn} (hk : s.known f.inC = none) : ¬Settled R f := by
-  rintro ⟨q, hq, hmem⟩
-  have hmem' := hclosed _ _ _ _ _ _ q ⟨f.t.val, by omega⟩ hmem hq
-  exact hrinv _ hmem' hk
+    {f : FIn} (hk : s.known f.inC = none) : ¬Settled R f := fun hmem => hrinv _ hmem hk
 
 end Basic
 
@@ -495,7 +491,7 @@ theorem psiF_ordinary (hMp : model.parse = HiddenGraph.parse K.p (candidateActiv
   have hC : ∀ f : FIn, x = f.input K.p → s.known f.inC = none → gA R C0 f ≤ C0 := by
     intro f _ hk
     unfold gA
-    rw [if_neg (not_settled_of_unknown hB.rinv hB.rclosed hk)]
+    rw [if_neg (not_settled_of_unknown hB.rinv hk)]
   have hmean := K.wsum_ordinary model hMp hMi hB.inv hB.gc x (gA R C0) C0 hC
   have hf1le : f1 ≤ 1 := by rw [hf1]; split_ifs <;> simp
   have hC0le : ν * C0 * f1 ≤ (ν * ((signatureLimit : ℝ≥0∞) * revRate) + payB) * f1 + ν * coinRiskF K data s Ms L y +

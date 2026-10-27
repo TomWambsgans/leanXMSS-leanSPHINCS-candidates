@@ -55,6 +55,16 @@ P1 (owns CoverBound): `CoverF t Xs := t ∈ Xs`, `φF`,
 
 ## Status of the files
 
+- `CoverPotential/Presample.lean`: **builds** (commit `17e5c6e`). It ports BridgePresample and
+  `interp_presample_le/eq`, and adds `storeAll`, `storeAll_perm`, `interp_presampleAll_le` and
+  `interp_presample_new`. Three traps, for the record: `DebtState.cache` is a `QueryCache`, so a
+  cache application is not a function application under `instances` transparency — `rw`/`simp`
+  inside its argument fails, and the cure is to state the fact with `have … : … = …` or to compose
+  with `.trans` instead of rewriting; a pattern must match syntactically (`x ∘ σ`, not
+  `fun i => x (σ i)`; `Fin.tail x i` needs a `show … (x i.succ) …` first); and `store_cache_ne`
+  (LazyRun/Presample) keeps `[Params]`, so a lemma that `omit`s it must redo the step with
+  `simp only [DebtState.store, QueryCache.cacheQuery_of_ne _ _ hne]`.
+  **It still has to be added to `LeanFors.lean` (lead's file).**
 - `Linear/ForestSteps.lean`: drafted (FORS cases, `Address.fleaf`). It builds once Linear/* has
   the FIn and lemma names above.
 - `Contact/RunFacts.lean`: Closed section removed and `IsFc` added for `.fors`. Open: Avoid section
@@ -71,31 +81,32 @@ P1 (owns CoverBound): `CoverF t Xs := t ∈ Xs`, `φF`,
   value + pay·count. Monotone under fresh stores: G must satisfy `hG` as in old BridgeFleafGame
   (`hGstore`); check that finalA4 is monotone (old `finalA_store`/`finalB_store`). Then `pairE`
   must be converted to `(card^n)⁻¹ Σ_u` (use `tsum_uniform_eq` at the function type).
-- `Contact/Weights.lean`: not yet edited. It is mostly mechanical: case `Address.fchain` becomes
-  `Address.fleaf index κ leaf`, and `fchain_inj` becomes `fleaf_inj`.
-- `Contact/Potential.lean`: not yet edited. Change `Settled` to the definition above. In
-  `not_settled_of_unknown`, drop `hclosed` and use `rinv` directly. The pair lemmas
-  (`offMass_newPair`, `offMass_blocks`, `blk`) go multi-call with the lead's ScanSigner/Groups.
-- `Contact/Signing.lean`: not yet edited. Define `OpensF` as above and drop `kTop`. In
-  `sign_step_facts`, the exposure of outC comes only by reveal (no anchor case), so OpensF covers it.
-  `writes_fleaf` covers `.fors` coordinates.
-- `Contact/Bound.lean`: only renamed. Update `A4ev`, `potNF_ge_of_near` (multi-call cachedDigest,
-  `pview` over all calls, `nearWitness_pos hB.dinv digest κ hcov`) and the `hsub` destructuring.
-- `CoverPotential/Presample.lean` (new, shared, mine): ports BridgePresample and
-  `interp_presample_le/eq`, and adds `storeAll`, `storeAll_perm`, `interp_presampleAll_le` and
-  `interp_presample_new`. Last build had 5 errors:
-  - lines 365–397 (`storeAll_cache_self`/`storeAll_perm`): `.cache y` rewrites fail ("function
-    expected" under instance transparency), and one instance fails to synthesize at line 367.
-    Restate them with `show` or `simp only [DebtState.store, QueryCache.cacheQuery…]`, or prove
-    `cache` equalities through `Option` congr.
-  - line 462: `rw [store_cache_ne]` fails on `Fin.tail x i`. Prefix it with
-    `show (state.store (x 0) v).cache (x i.succ) = none`, as already done at line ~508.
-  It also needs adding to `LeanFors.lean` (lead's file: ask the lead).
+- `Contact/Weights.lean`: drafted (unbuilt): `Address.fleaf index κ leaf` in `input_of_guess` and in
+  `wsum_ordinary`'s new-step case.
+- `Contact/Potential.lean`: drafted (unbuilt): `Settled R f := f.inC ∈ R` (that is
+  `.fors f.index f.κ f.leaf 0 ∈ R`), and `not_settled_of_unknown` without `hclosed`. Open: the pair
+  lemmas (`offMass_newPair`, `offMass_blocks`, `blk`), which go multi-call with the lead's
+  ScanSigner/Groups.
+- `Contact/Signing.lean`: drafted (unbuilt): `OpensF f reveals := ∃ q, .fors f.index f.κ f.leaf q ∈
+  reveals` (no `kTop`), `writes_fleaf` over `Address.fleaf`, `sign_step_facts` without the anchor
+  case (the exposure of outC is the revealed leaf value, `⟨1, h⟩`), `settled_append` by
+  `List.mem_append_left`, and `hparse : ∀ p call` in `sign_contact` and `psiF_sign`.
+- `Contact/Bound.lean`: drafted (unbuilt): `A4ev` as above, the `hsub` destructuring, and the
+  ForestNearRecorded destructuring of `potNF_ge_of_near` (`nearWitness_pos hB.dinv _ κ hcov`).
+  `hparse`/`hclean` are `∀ p call`, and the "no message input is a leaf input" argument assumes
+  `msgInput_digestInput K.p root m ρ call` (**call last** — the lead confirms or I swap it). Open:
+  `potNF_ge_of_near`'s `cachedDigest`/`pview` block, which is still one block `u0`.
 
 ## Next steps
 
-1. Fix Presample.lean (above) and build `LeanFors.CoverPotential.Presample`. It depends only on
-   `LeanFors.LazyRun.Presample`, which builds now.
-2. Once the lead signals that Linear/*, CoverPotential/Basic and ScanSigner build: build ForestSteps,
+1. ~~Fix Presample.lean~~ done, builds, committed. Waiting on the lead to import it from
+   `LeanFors.lean`.
+2. Everything else of mine is blocked on `LeanFors.ScanSigner.FairShare`, which is the first module
+   to fail for every Contact target (and for ForestSteps, through RunFacts). Nothing of mine has
+   been compiled since.
+3. Once the lead signals that Linear/*, CoverPotential/Basic and ScanSigner build: build ForestSteps,
    then RunFacts → NearWitness → RevealRate → PaidPotential → Weights → Potential → Signing → Bound.
-3. No sorry or axioms. Commit with explicit paths.
+   The multi-call parts left open above (RevealRate's signing part, PaidPotential's new-pair case,
+   Potential's pair lemmas, Bound's `potNF_ge_of_near`) need the lead's final `pblk p call`,
+   `pview`, `withPair` and `loop_boundV`.
+4. No sorry or axioms. Commit with explicit paths.

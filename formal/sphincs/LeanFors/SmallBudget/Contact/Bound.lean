@@ -1,7 +1,7 @@
 import LeanFors.SmallBudget.Contact.Signing
 
 /-! **The end of the game for the contact potential, and the bound.** At the end, a recorded contact
-at a chain opened at or below its step, or a near cover with a recorded contact, against a
+at a revealed secret, or a near cover with a recorded contact, against a
 completed table, has probability at most the weighted recorded contacts with their coefficients: a
 contact has the chance of its weight, settled contacts pay one, and a near cover makes the capped
 near potential one. Through the whole game the event is paid by the start potential and
@@ -26,12 +26,11 @@ attribute [local instance] Classical.propDecidable
 
 /-! ### The event -/
 
-/-- **The event of A4** against a completed table: a recorded contact at a chain opened at or below
-its step, or a near cover with a recorded contact. -/
+/-- **The event of A4** against a completed table: a recorded contact at a revealed secret, or a
+near cover with a recorded contact. -/
 def A4ev (K : Ctx) (root : Digest) (T : Coordinate → Digest) (s : State) (outcome : Outcome)
     (R : List Coordinate) : Prop :=
-  (∃ index c sp j a i t, (∃ q : FPos, q.val ≤ t.val ∧ Coordinate.fchain index c sp j a i q ∈ R) ∧
-    RecordedContactAt s T K index c sp j a i t) ∨
+  (∃ index κ leaf, Coordinate.fors index κ leaf 0 ∈ R ∧ RecordedContactAt s T K index κ leaf) ∨
   ForestNearRecorded s T K root outcome R
 
 /-- The final value of A4: the chance of a valid transcript and the event over the completion. -/
@@ -61,7 +60,7 @@ theorem potNF_ge_of_near (hw : wbar ≤ 1) {budget : ℕ} {s : State} {P : List 
     {forgery : Forgery} {L : QueryLog SigningSpec} {verified : Bool}
     (h : ForestNearRecorded s T K data.root (forgery, L, verified) R) :
     1 ≤ potNF K data wbar Fail s P Ms L d budget := by
-  obtain ⟨hvalid, digest, hdig, hland, hunsigned, c, j, i, t, -, hcov⟩ := h
+  obtain ⟨hvalid, digest, hdig, hland, hunsigned, κ, -, hcov⟩ := h
   set q : Pair := (forgery.message, forgery.signature.randomness) with hq
   unfold HiddenBridge.cachedDigest at hdig
   cases h0 : s.cache (pblk K.p data q) with
@@ -93,7 +92,7 @@ theorem potNF_ge_of_near (hw : wbar ≤ 1) {budget : ℕ} {s : State} {P : List 
       · exact le_rfl
       · calc (1 : ℝ≥0∞) ≤ witnessNear (pview K.p data s q) d := by
               rw [hv]
-              exact nearWitness_pos hB.dinv _ c j i hcov
+              exact nearWitness_pos hB.dinv _ κ hcov
           _ ≤ _ := base_le_candValueG wbar witnessNear_props hw s Ms L d _ _ q
 
 /-- **The end of the game.** -/
@@ -111,10 +110,10 @@ theorem psiF_final (hw : wbar ≤ 1) (Lmax : ℕ) :
   have hsub : ∀ T, SigningTranscript.Valid L ∧ A4ev K data.root T s (forgery, L, verified) R →
       ∃ f ∈ (Finset.univ : Finset FIn), K.FCT T s f ∧ Ctx.Recd s f ∧ (Settled R f ∨ near) := by
     rintro T ⟨-, h | h⟩
-    · obtain ⟨index, c, sp, j, a, i, t, ⟨q, hq, hmem⟩, v, hfct, hrec⟩ := h
-      exact ⟨⟨index, c, sp, j, a, i, t, v⟩, Finset.mem_univ _, hfct, hrec, Or.inl ⟨q, hq, hmem⟩⟩
+    · obtain ⟨index, κ, leaf, hmem, v, hfct, hrec⟩ := h
+      exact ⟨⟨index, κ, leaf, v⟩, Finset.mem_univ _, hfct, hrec, Or.inl hmem⟩
     · have hn := potNF_ge_of_near K data wbar Fail Qtot model hw hB h
-      obtain ⟨-, digest, -, -, -, c, j, i, t, ⟨v, hfct, hrec⟩, -⟩ := h
+      obtain ⟨-, digest, -, -, -, κ, ⟨v, hfct, hrec⟩, -⟩ := h
       exact ⟨_, Finset.mem_univ _, hfct, hrec, Or.inr hn⟩
   calc Pr[fun T => SigningTranscript.Valid L ∧ A4ev K data.root T s (forgery, L, verified) R | completion s.known]
       ≤ Pr[fun T => ∃ f ∈ (Finset.univ : Finset FIn), K.FCT T s f ∧ Ctx.Recd s f ∧ (Settled R f ∨ near) |
@@ -160,8 +159,8 @@ repeats a message, a valid finished game with the event A4 has chance at most th
 (the coin risk `total (2 − landing)/2^128` per contact, the near forecasts and the cap term
 `lam Lmax 0 total`) plus `2^-128 N rate + payB` per expected forest step query, once
 `2^-128 ≤ payB + κ 2^-128`. -/
-theorem a4F_bound (hparse : ∀ p, model.parse (pblk K.p data p) = none)
-    (hclean : ∀ p, K.initial (pblk K.p data p) = none)
+theorem a4F_bound (hparse : ∀ p call, model.parse (pblk K.p data p call) = none)
+    (hclean : ∀ p call, K.initial (pblk K.p data p call) = none)
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared K.initial s1 →
       ∀ out ∈ support (interp K.tg K.initial model (finishRest K.p data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
@@ -178,7 +177,9 @@ theorem a4F_bound (hparse : ∀ p, model.parse (pblk K.p data p) = none)
           expCount K model (IsFleafIn K.p) (advProg K.p data M []) total (DebtState.start K.initial known) := by
   rw [← psiF_start K data wbar κ Fail Lmax known total]
   exact final_le_startF K data model (IsFleafIn K.p) _ hMp hMi hparse
-    (fun p => by rintro ⟨f, hf⟩; exact msg_ne_fleaf (msgInput_digestInput K.p data.root p.1 p.2) hf) hclean total
+    (fun p call => by
+      rintro ⟨f, hf⟩
+      exact msg_ne_fleaf (msgInput_digestInput K.p data.root p.1 p.2 call) hf) hclean total
     (fun _ _ => rfl) (finalA4_le_one K data.root) (psiF_newPair K data wbar κ Fail total model hfair hQ)
     (psiF_ordinary K data wbar κ Fail total model hMp hMi hfair.le_one hκ Lmax)
     (psiF_sign K data wbar κ Fail total model hMp hMi hMo hparse hfail hfair.le_one Lmax)
