@@ -145,7 +145,7 @@ theorem walk_spec (forest : ForestKey) (trace : List HashInput) :
             exact hrunFold
           by_cases hzero : n = 0
           · subst hzero
-            simp only [↓reduceIte, if_true, evalWithAnswerFn_pure, Option.some.injEq] at hroot
+            simp only [↓reduceIte, evalWithAnswerFn_pure, Option.some.injEq] at hroot
             have hk : k = numLayers - 1 := by omega
             subst hk
             refine ⟨hroot.symm.trans hfoldEq.symm, fun j hj1 hj2 => hcur j hj1 (by omega) hj2⟩

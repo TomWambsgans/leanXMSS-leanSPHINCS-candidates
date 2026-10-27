@@ -727,7 +727,7 @@ theorem expectedFail_le : expectedFail ≤ (2 : ℝ≥0∞)⁻¹ ^ 201 := by
       _ = (Fintype.card OtsKey : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 18) := by
           rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
       _ ≤ (2 ^ 58 : ℕ) * (2 : ℝ≥0∞)⁻¹ ^ (2 ^ 18) := by
-          refine mul_le_mul_right' (Nat.cast_le (α := ℝ≥0∞).2 ?_) _
+          refine mul_le_mul_left (Nat.cast_le (α := ℝ≥0∞).2 ?_) _
           rw [Fintype.card_prod, Fintype.card_prod, Fintype.card_fin, Fintype.card_fin, Fintype.card_fin]
           calc numLayers * (2 ^ totalHeight * 2 ^ maxLayerHeight) ≤ 4 * (2 ^ 28 * 2 ^ 28) :=
                 Nat.mul_le_mul numLayers_le (Nat.mul_le_mul two_pow_totalHeight_le

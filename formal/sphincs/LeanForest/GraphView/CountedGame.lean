@@ -197,7 +197,7 @@ theorem fixed_layerCostSearch (f : QueryImpl HashSpec Id) (parameter : PublicPar
   | none =>
       simp only [simulateQ_pure, WriterT.run_pure, Option.isSome_none, Bool.false_eq_true,
         ↓reduceIte, Nat.add_zero, map_pure, mul_one]
-      simp only [← ofAdd_add, ← Nat.add_assoc]
+      simp only [← ofAdd_add]
   | some pair =>
       simp only [simulateQ_bind, fixedCostSource_tick, simulateQ_pure, WriterT.run_bind,
         WriterT.run_pure, AddWriterT.run_addTell, pure_bind, Option.isSome_some, ↓reduceIte,
@@ -257,8 +257,7 @@ theorem fixed_sequenceDep (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table
           · have hnone : Completeness.allSome (fun i : Fin n => results i.succ) = none := dif_neg hall
             have hnone' : Completeness.allSome results = none :=
               dif_neg (fun hall' => hall fun i => hall' i.succ)
-            simp only [hnone, hnone', simulateQ_pure, WriterT.run_pure, map_pure, mul_one, ← ofAdd_add,
-              pure_bind]
+            simp only [hnone, hnone', simulateQ_pure, WriterT.run_pure, map_pure, mul_one, ← ofAdd_add]
 
 theorem fixed_layersCostSearch (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (data : PublicData) (table : HiddenGraph.Table) (index : Index) :
@@ -279,7 +278,7 @@ theorem fixed_finishCostSource (f : QueryImpl HashSpec Id) (parameter : PublicPa
   apply WriterT.ext
   simp only [WriterT.run_bind, WriterT.run_mk, AddWriterT.run_addTell,
     ← PMF.monad_pure_eq_pure, pure_bind, assembled, finishHashCost, hashCalls_messageDigest,
-    assembledEncodings, layerFound]
+    assembledEncodings]
   cases hs : Completeness.allSome fun lay : Layer => firstEncoding f parameter lay
       (treeIndexAt (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root message randomness :
         OracleComp HashSpec MessageDigest))) lay)
@@ -302,7 +301,7 @@ theorem fixed_finishCostSource (f : QueryImpl HashSpec Id) (parameter : PublicPa
         intro lay
         exact fixedCostSource_sequence_reveal f table _
       simp only [simulateQ_bind, hvalues, fixed_forestCostSource, pure_bind,
-        simulateQ_pure, WriterT.run_bind, WriterT.run_pure, pure_bind,
+        simulateQ_pure, WriterT.run_pure, pure_bind,
         Option.map_some, map_pure, mul_one]
       simp only [← ofAdd_add, ← Nat.add_assoc]
 

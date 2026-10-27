@@ -14,8 +14,8 @@ landing probability of a digest is p = 2^-(h−b).
 
 ## Map of the files
 
-The statement is three files: [Main.lean](LeanForest/Main.lean) (the configurations and the main
-theorem), [Scheme.lean](LeanForest/Scheme.lean) (the scheme) and
+The statement is three files: [Main.lean](LeanForest/Main.lean) (the claim `Secure127` and one
+theorem per configuration), [Scheme.lean](LeanForest/Scheme.lean) (the scheme) and
 [Statement.lean](LeanForest/Statement.lean) (the game). The proof follows the steps below, one
 directory each:
 

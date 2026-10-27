@@ -9,8 +9,8 @@ signing transcripts and their tests, adversaries, and the counted experiment wit
 Rust implementation, `Seeded.sign` (`Scheme.lean`), whose randomizers are derived from the master
 seed and the message (a repeated request returns the same signature). Every hash call counts,
 including repeated calls and the calls of the honest parties. The module ends with the forgery
-advantage, the hash-query budget and the security-bits target `SecurityBits P bits` that
-`Main.lean` states for each configuration `P`.
+advantage, the hash-query budget and the security-bits target `SecurityBits P bits`; `Main.lean`
+spells out `SecurityBits P 127` as `Secure127 P` and states it for each configuration `P`.
 -/
 
 open OracleComp OracleSpec ENNReal

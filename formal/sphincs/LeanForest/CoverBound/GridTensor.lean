@@ -212,7 +212,7 @@ theorem getT_cumT : ∀ (d : ℕ) (a : NT d) (m : Fin d → FPos),
         rw [getT_cons]
       simp only [hcons, sum_fpos, sel_of_val, Fin.le_iff_val_le_val]
       rcases fpos_val_cases (m 0) with h | h | h | h | h <;> simp only [h] <;>
-        simp [cumT, getT_zipT, getT_cumT d] <;> ring
+        simp [cumT, getT_zipT, getT_cumT d]
 
 theorem getT_incT : ∀ (d : ℕ) (a : NT d) (c m : Fin d → FPos),
     getT d (incT d a c) m = getT d a m + if m = c then 1 else 0
@@ -250,7 +250,7 @@ theorem getT_incT : ∀ (d : ℕ) (a : NT d) (c m : Fin d → FPos),
       have ih := getT_incT d
       rcases fpos_val_cases (c 0) with hc0 | hc0 | hc0 | hc0 | hc0 <;>
         rcases fpos_val_cases (m 0) with hm0 | hm0 | hm0 | hm0 | hm0 <;>
-        simp only [hc0, hm0, heq, ih] <;> simp [ih]
+        simp only [hc0, hm0, heq] <;> simp [ih]
 
 theorem sumT2_eq (f : ℤ → ℤ → ℤ) : ∀ (d : ℕ) (a b : NT d),
     (sumT2 d f a b : ℝ) = ∑ m : Fin d → FPos, (f (getT d a m) (getT d b m) : ℝ)

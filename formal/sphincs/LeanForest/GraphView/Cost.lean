@@ -203,7 +203,7 @@ theorem hashCalls_signLayer_exact (f : QueryImpl HashSpec Id) (sk : Seeded.Secre
           160 + treePathCost lay else 0 := by
   unfold Completeness.layerMessageValue
   rw [Seeded.signLayer, hashCalls_bind, Seeded.layerMessage, hashCalls_keyMessage]
-  simp only [Seeded.otsSign, hashCalls_bind, hashCalls_otsSignFrom_search, evalWithAnswerFn_bind,
+  simp only [Seeded.otsSign, hashCalls_bind, hashCalls_otsSignFrom_search,
     otsSignFrom_eq_firstEncoding]
   generalize evalWithAnswerFn f (Seeded.keyMessage sk.parameter sk.seed lay (treeIndexAt index lay)
     (leafIndexAt index lay) : OracleComp HashSpec HashInput) = message

@@ -280,7 +280,7 @@ theorem upClosed_append {L1 L2 : List Coordinate} (h1 : UpClosed L1) (h2 : UpClo
   · exact List.mem_append_right _ (h2 _ _ _ _ _ _ _ _ h hk)
 
 theorem upClosed_of_noFc {L : List Coordinate} (h : ∀ x ∈ L, ¬IsFc x) : UpClosed L :=
-  fun index c sp j a i q _ hq _ => absurd ⟨_, _, _, _, _, _, _, rfl⟩ (h _ hq)
+  fun _ _ _ _ _ _ _ _ hq _ => absurd ⟨_, _, _, _, _, _, _, rfl⟩ (h _ hq)
 
 theorem closedRuns_of_revealsIn {α : Type} {computation : OracleComp CostSpec α}
     (h : RevealsIn (fun x => ¬IsFc x) computation) : ClosedRuns tg initial model computation :=

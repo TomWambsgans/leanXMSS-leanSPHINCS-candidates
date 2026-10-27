@@ -1,15 +1,15 @@
 # leanSPHINCS proofs in Lean 4
 
 **Status: the leanSphincs signer has 127 bits of classical SUF-CMA security in the random-oracle
-model in each of its configurations, at the signature limits below
-(`LeanForest.requestedSecurity`, [Main.lean](LeanForest/Main.lean)).** The
+model in each of its configurations, at the signature limits below: one theorem per configuration,
+32 in all, stated together in [Main.lean](LeanForest/Main.lean).** The
 proof uses only `propext`, `Classical.choice` and `Quot.sound`: [Axioms.lean](LeanForest/Axioms.lean)
 pins the main theorems to their axioms and checks that no declaration of the library uses another.
 
-**To audit the statement**, read three files: [Main.lean](LeanForest/Main.lean) (the 32
-configurations, `configurations`, and the main theorem), [Scheme.lean](LeanForest/Scheme.lean) (the
-scheme and its parameters, `Params.pruned` and `Params.layered`) and
-[Statement.lean](LeanForest/Statement.lean) (the SUF-CMA game and the target `SecurityBits`). Every
+**To audit the statement**, read three files: [Main.lean](LeanForest/Main.lean) (what is proved,
+`Secure127`, and the 32 theorems, e.g. `h24_pruned12`, then `requestedSecurity`, which collects
+them), [Scheme.lean](LeanForest/Scheme.lean) (the scheme and its parameters, `Params.pruned` and
+`Params.layered`) and [Statement.lean](LeanForest/Statement.lean) (the SUF-CMA game). Every
 other file is proof: [PROOF.md](PROOF.md) maps it.
 
 `LeanForest/` models the candidate for every height `h ≤ 28`, number of layers `d` and kept subtree
@@ -44,8 +44,8 @@ The scheme, the digest layout, the codeword table, the costs and the forest are 
 
 ## Proved lifetimes
 
-Signature limits N with 127 bits (`configurations`, [Main.lean](LeanForest/Main.lean); one proof
-`Lifetimes.<config>_bits` each); layered keys: 10 + 6 + 6, 12 + 6 + 6, 12 + 7 + 7 and 12 + 8 + 8.
+Signature limits N with 127 bits (one theorem each in [Main.lean](LeanForest/Main.lean), e.g.
+`h24_pruned12`); layered keys: 10 + 6 + 6, 12 + 6 + 6, 12 + 7 + 7 and 12 + 8 + 8.
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |

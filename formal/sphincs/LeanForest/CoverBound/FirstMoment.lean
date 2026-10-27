@@ -77,7 +77,7 @@ theorem avgR_avoidB_inner (t : MT) (S : SubIdx → Finset FChain) (s : SuperIdx)
         exact avgR_const 1
     simp only [ha]
     rw [avgR_ite_one]
-    simp only [ChildIdx, subHeight, Fintype.card_fin]
+    simp only [ChildIdx, subHeight]
     norm_num
     ring
   · rw [if_neg hst]
@@ -97,7 +97,7 @@ theorem avgR_avoidB (t : MT) (S : SubIdx → Finset FChain) :
   have hs := avgR_avoidB_inner t S
   simp only [hs]
   rw [avgR_ite_one]
-  simp only [SuperIdx, topHeight, Fintype.card_fin]
+  simp only [SuperIdx, topHeight]
   norm_num
   ring
 

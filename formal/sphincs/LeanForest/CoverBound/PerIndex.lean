@@ -241,7 +241,7 @@ theorem φF_le_one (Xs : Multiset FieldVal) : φF Xs ≤ 1 := by
     _ = 1 := freshAvg_const _ Finset.univ_nonempty 1
 
 theorem yM_le_one (Ms : Multiset (Coord → FieldVal)) : yM Ms ≤ 1 :=
-  Finset.prod_le_one' fun c _ => φF_le_one _
+  Finset.prod_le_one' fun _ _ => φF_le_one _
 
 theorem yM_ne_top (Ms : Multiset (Coord → FieldVal)) : yM Ms ≠ ⊤ :=
   ne_top_of_le_ne_top ENNReal.one_ne_top (yM_le_one Ms)

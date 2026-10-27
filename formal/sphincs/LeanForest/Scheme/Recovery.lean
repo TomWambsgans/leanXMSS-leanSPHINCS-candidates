@@ -624,7 +624,7 @@ theorem eval_forestRecover (marks : Coord → CoordMark) :
           : OracleComp HashSpec (Coord → CoordOpening))) : OracleComp HashSpec ForestKey)
       = evalWithAnswerFn f (Seeded.forestKey parameter index seed : OracleComp HashSpec ForestKey) := by
   rw [forestKey_eq]
-  simp only [forestRecover, Seeded.forestOpen, evalWithAnswerFn_bind, eval_sequenceFin,
+  simp only [forestRecover, Seeded.forestOpen, eval_sequenceFin,
     eval_coordRecover]
 
 end Key

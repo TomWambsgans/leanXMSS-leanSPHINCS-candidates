@@ -174,7 +174,7 @@ theorem lam_start (q : ℕ) : lam (LmaxOf q) 0 q ≤ ENNReal.ofReal ((64 / 65 : 
     calc (1 + 1 / (n : ℝ)) ^ q * (64 / 65 : ℝ) ^ (65 * A + 2 ^ 15)
         ≤ ((65 / 64 : ℝ) ^ 65) ^ A * (64 / 65 : ℝ) ^ (65 * A + 2 ^ 15) := by gcongr
       _ = ((65 / 64 : ℝ) * (64 / 65)) ^ (65 * A) * (64 / 65 : ℝ) ^ (2 ^ 15 : ℕ) := by
-          rw [← pow_mul, pow_add, mul_pow]; ring
+          rw [← pow_mul, pow_add, mul_pow, mul_assoc]
       _ = _ := by norm_num
   have hland : (1 : ℝ≥0∞) + landing / 64 = ENNReal.ofReal (1 + 1 / (n : ℝ)) := by
     rw [landing_eq_M, ENNReal.ofReal_add (by norm_num) (by positivity), ENNReal.ofReal_one]
