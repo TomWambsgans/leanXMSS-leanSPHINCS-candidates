@@ -1359,9 +1359,9 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
   var SY = [317, 327, 334, 340], SO = 5, SD = 11.5;        // a subtree: the same, and its offset from the tree
   var KI = 7, KS = 17, KP = 13, KT = 370, KX;             // the key: its subtree, chain and position spacing, top
   var WT = LEAF + 7;                                      // the top of the small WOTS+C key that signs the forest
-  var VN = 4, VY = [258, 281, 301, 317, 330, 340, 348, 354], VO = 13;   // FORS: the trees drawn; a tree's levels, root first, and its first offset
+  var VN = 4, VY = [258, 281, 301, 317, 330, 340, 348, 354], VO = 20;   // FORS: the trees drawn; a tree's levels, root first, and its first offset
   function tc(i) { return FX + (i - 3.5) * FS; }
-  function vc(i) { return FX + (i - (VN - 1) / 2) * 58 + (i < VN / 2 ? -10 : 10); }   // a FORS tree, around the dots
+  function vc(i) { return FX + (i - (VN - 1) / 2) * 88 + (i < VN / 2 ? -6 : 6); }   // a FORS tree, around the dots
   function sc(j) { return tc(j >> 1) + (j & 1 ? SD : -SD); }
   KX = sc(KI);
   function edges(g, cx, ys, o) {                          // every edge of a tree
