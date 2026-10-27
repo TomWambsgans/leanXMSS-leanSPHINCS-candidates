@@ -124,7 +124,6 @@ import LeanFors.CoverBound.MomentBounds
 import LeanFors.CoverBound.MomentTable
 import LeanFors.CoverBound.Moments
 import LeanFors.CoverBound.NearMoment
-import LeanFors.CoverBound.NearMomentTable
 import LeanFors.CoverBound.NearOption
 import LeanFors.CoverBound.PerIndex
 import LeanFors.CoverBound.SecondMoment
