@@ -90,12 +90,11 @@ theorem nearSub_iff (l : Fin (2 ^ subtreeHeight)) (τ : FTree → FLeaf) (κ : F
   · intro h κ'
     by_cases hκ : κ' = κ
     · exact Or.inl hκ
-    · obtain ⟨v, hv, hl, hk⟩ := h κ' hκ
-      exact Or.inr ⟨v.2 κ', ⟨v, hv, hl, rfl⟩, hk⟩
+    · exact Or.inr (h κ' hκ)
   · intro h κ' hκ
-    rcases h κ' with h0 | ⟨_, ⟨v, hv, hl, rfl⟩, hk⟩
+    rcases h κ' with h0 | h1
     · exact absurd h0 hκ
-    · exact ⟨v, hv, hl, hk⟩
+    · exact h1
 
 /-- **The near price is a sum over the indices.** -/
 theorem priceNear_decomp (d : Multiset View) :
