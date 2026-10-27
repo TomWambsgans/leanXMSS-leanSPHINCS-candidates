@@ -341,18 +341,25 @@ sig.golf submission~\cite{siggolf}.
 \paragraph{Against FORS.} The \emph{vanilla} variant of the site uses FORS instead, with $k$ trees of height $a$ and no
 root hash (the WOTS$^+$C key signs the $2k$ nodes below the roots): as in leanSphincs v1, $a=10$, and the fewest trees
 that live at least as long as the forest under the cover attack, $k=25$ or $26$ depending on the configuration
-(\texttt{scripts/scheme.py}). Its lifetimes are proved in Lean too, by a second
-library, and reach 85--98\% of the FORS cover attack~\cite{proofs}. At $h=26$, full key, Keccak-256, in permutations (preprocessing: the hashes of the FTS inside the threshold MPC):
+(\texttt{scripts/scheme.py}). Its lifetimes are proved in Lean as well, by a second library with the same
+statement and the same axioms, and reach 85--98\% of the FORS cover attack~\cite{proofs} --- a larger share
+of its own attack than the forest reaches of the forest's, so FORS proves slightly \emph{more} signatures
+at the same height. At $h=26$, full key, Keccak-256, in permutations (preprocessing: the hashes of the FTS
+inside the threshold MPC):
 \begin{center}
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrr}
   \toprule
-  FTS & size & verification & FTS signing & preprocessing \\
+  FTS & size & verification & FTS signing & preprocessing & proved lifetime \\
   \midrule
-  FORS, $k=25$, $a=10$ & 5\,860 bytes & 357 & $64\cdot10^3$ & 25\,600 \\
-  two-level WOTS forest & 4\,276 bytes & 262 & $60\cdot10^3$ & 49\,152 \\
+  FORS, $k=25$, $a=10$ & 5\,860 bytes & 357 & $64\cdot10^3$ & 25\,600 & $1.426\cdot10^9$ \\
+  two-level WOTS forest & 4\,276 bytes & 262 & $60\cdot10^3$ & 49\,152 & $1.381\cdot10^9$ \\
   \bottomrule
 \end{tabular}
 \end{center}
+FORS halves its preprocessing because only the leaf layer $\hash(\text{secret})$ touches the shared secrets:
+once the leaves leave the MPC they are public, and the $k(2^a-1)$ nodes above them are a public computation.
+The forest cannot do the same --- its MPC cost is the WOTS chain steps, and each step consumes the previous
+step's secret output, so none of the chain can leave the MPC early.
 
 \paragraph{WOTS keys.} 6 chains of length 5, with leaf $\hash(\text{6 chain tops})$. A codeword is a vector
 $d\in\{0,\dots,4\}^6$ with $\sum_i d_i=5$; there are 246 of them. Signing at $d$ reveals each chain $d_i$ steps below
