@@ -25,17 +25,12 @@
 \setlength{\parskip}{4pt}
 
 \title{leanSphincs candidate}
-\author{Tom Wambsgans}
+\author{}
 \date{}
 
 \begin{document}
 \maketitle
 \vspace{-3em}
-
-\begin{center}
-  \fbox{\parbox{0.9\linewidth}{\centering\textbf{Warning:} personal opinion of the author only, subject
-  to change.}}
-\end{center}
 
 \section{The scheme}
 \label{sec:scheme}
@@ -74,8 +69,8 @@ differences are:
   \bottomrule
 \end{tabular}
 \end{center}
-The two lower layers add two WOTS$^+$C signatures with their counters, 2\,056 bytes, and 156 Keccak-f permutations
-of verification (174 compressions with BLAKE2s or SHA-256).
+The two lower layers add two WOTS$^+$C signatures with their counters, 2\,056 bytes, and 146 Keccak-f permutations
+of verification (164 compressions with BLAKE2s or SHA-256).
 
 \paragraph{Hash inputs.} $\hash$ is truncated to 16 bytes except where noted. Every hash input is
 $P \concat \mathit{address} \concat \mathit{data}$: the public parameter $P$ (16 bytes), then a 16-byte address:
