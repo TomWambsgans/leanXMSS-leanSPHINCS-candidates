@@ -161,6 +161,19 @@ class Costs:
         lower = sum(2**hl * V * (Q - 1) * self.step for hl in layers(h, shape)[1:])
         return forest + lower + self.step
 
+    # The hardware wallet: preparing an instance (its forest, the lower trees, the WOTS+C signatures and the
+    # path in the kept subtree or top layer, with a 16 KiB cache); online, re-deriving the opened chain values
+    # and recovering the forest key from the opening, to check the host's nodes against its hash.
+    def ledger_prep(self, h, shape, b):
+        ls = layers(h, shape)
+        lower = sum(2**hl * self.leaf + (2**hl - 1) * self.node for hl in ls[1:])
+        return (self.forest_sign + lower + sum(self.wots_sign(layer) for layer in range(len(ls)))
+                + self.tree_cost(kept(h, shape, b), 16 * 1024 // N))
+
+    def device_online(self):
+        opened = COORDS * SUBS * (CHAINS // 2 * self.derive + (CHAINS * STEPS - DIGIT_SUM) * self.step)
+        return opened + COORDS * self.per_coord + 1
+
     def tree_cost(self, height, cache_nodes):
         """Per-signature work in a tree of 2^height leaves: the best of keeping one level c (rebuild the 2^c
         leaves below the cached node, hash the cached level up) or keeping every level >= c."""
@@ -290,11 +303,11 @@ def site_data():
                 keygen, prep = C.mpc_keygen(h, shape, b), C.mpc_prep(h, shape)
                 # the hardware wallet computes the whole instance, and signs it with WOTS+C
                 lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
-                ledger = C.forest_sign + lower + sum(C.wots_sign(layer) for layer in range(len(ls)))
+                ledger = C.ledger_prep(h, shape, b)
                 out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
                                              keygen=round(keygen), prep=round(prep), grind=2**h // THRESHOLD_PREPARED,
                                              and_depth=and_depth(H.name), keygen_rounds=rounds(H.name, Q - 1), prep_rounds=rounds(H.name, STEPS),
-                                             ledger_prep=round(ledger),
+                                             ledger_prep=math.ceil(ledger), device_online=C.device_online(),
                                              keygen_gb=keygen * ands * BITS_PER_AND / 8 / 1e9,
                                              prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6))
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
@@ -404,7 +417,7 @@ def threshold(heights):
             ls = layers(h, shape)
             keygen, prep = C.mpc_keygen(h, shape, b), C.mpc_prep(h, shape)
             lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
-            ledger = C.forest_sign + lower + sum(C.wots_sign(layer) for layer in range(len(ls)))
+            ledger = C.ledger_prep(h, shape, b)
             gb = keygen * KECCAK_ANDS * BITS_PER_AND / 8 / 1e9
             pm = prep * KECCAK_ANDS * BITS_PER_AND / 8 / 1e6
             label = f"pruned b={b}" if shape == "pruned" else "layered"
@@ -416,8 +429,9 @@ def threshold(heights):
         C = Costs(H)
         forests = 2**12 * (C.mpc_prep(24, "pruned") - C.step) * ANDS[H.name] * BITS_PER_AND / 8 / 1e12
         lifetime = lifetimes(24, "pruned", 12)[0] * C.mpc_prep(24, "pruned") * ANDS[H.name] * BITS_PER_AND / 8 / 1e12
-        print(f"threshold, every forest at keygen (h=24, b=12, {H.name}): {forests:.2f} TB per operator once, against "
-              f"{lifetime:.1f} TB of preprocessing over the lifetime")
+        # rounded against the alternative: its cost up, the preprocessing it saves down
+        print(f"threshold, every forest at keygen (h=24, b=12, {H.name}): {math.ceil(forests * 100) / 100:.2f} TB per operator "
+              f"once, against {math.floor(lifetime * 10) / 10:.1f} TB of preprocessing over the lifetime")
     print(f"hardware wallet: the device prepares max({PREPARED}, 2^h / 2^{HOST_GRIND.bit_length() - 1}) instances and the host grinds "
           f"2^h / that many digests ({', '.join(f'h={h}: {wallet_prepared(h)} prepared, {fmt(2 ** h / wallet_prepared(h))} digests, '
           f'{2 ** h / wallet_prepared(h) / HOST_RATE:.2g} s to prove' for h in heights)});"

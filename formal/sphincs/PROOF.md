@@ -185,16 +185,25 @@ for pruned keys ([README.md](README.md)). The remaining loss is structural:
 - For SHA-256, Rust pads P with zeros to a full 64-byte block, so that its compression is computed once
   per key: the input is P ‖ 0^48 ‖ A ‖ payload instead of P ‖ A ‖ payload, and the message digest also puts
   16 zero bytes before the randomizer (P ‖ 0^48 ‖ A ‖ m ‖ 0^16 ‖ R), so that R is alone in the last block.
-  This map from the model's inputs is injective, so distinct model inputs stay distinct; it is argued here,
-  not proved in Lean.
+  The map from model inputs is: pad P to a block, and, for a digest input (type 12) with a payload of at
+  least 32 bytes, insert 0^16 after its first 32 payload bytes. It is injective (it keeps the length
+  classes apart: below 32 payload bytes stays below, 32 or more becomes 48 or more), so distinct model
+  inputs stay distinct; real queries outside its image get fresh answers, which the model adversary can
+  sample itself. This is argued here, not proved in Lean.
 - Rust's key generation builds the key from one hash of a tag, the configuration and the seed
   (configured_seed in crates/sphincs), so that one seed never gives two configurations the same one-time keys. The model's seed
-  is that value, uniform in the random-oracle model; the extra hash is outside the hash-call counts.
+  is that value, uniform in the random-oracle model; the extra hash is outside the hash-call counts. For
+  Keccak-256 and BLAKE2s its 52-byte input also parses as a model input (P = the tag), so the reduction
+  adds the chance of guessing the 32-byte seed, at most q / 2^256.
+- Strong unforgeability carries over to byte strings because Rust's Signature::from_bytes and
+  to_bytes are inverse bijections at the configuration's length: fixed widths, no padding, every
+  counter value accepted (checked by inspection).
 - The signer of the security statement is `Seeded.sign`, which derives the base randomizer and the
   step from the seed and the message, as Rust does; a successful signature verifies
   (`Completeness.correct`).
-- The formal signer returns `none` after 2^32 randomizer trials, or when a counter search fails. Rust
-  uses unbounded loops; overflow and failure behavior are not modeled.
+- The formal signer returns `none` after 2^32 randomizer trials, or when a counter search fails. Rust caps
+  the counter search at 2^32 too (and then panics), but its randomizer loop is unbounded (it wraps in a
+  release build); these never happen in practice and are not modeled.
 - The functional model recomputes tree and forest nodes from the seed. Rust keeps the generated top
   layer and builds the forest of an instance and the lower trees once per signature. The hash-call
   counts are those of the model; the byte inputs and recovered values were ported by source

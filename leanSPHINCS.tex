@@ -119,12 +119,13 @@ lifetimes of \cref{sec:lifetimes}, and $\approx 64$ bits in the QROM (TODO proof
 \section{Lifetimes}
 \label{sec:lifetimes}
 
-Proved in Lean~\cite{proofs}, in the random-oracle model, for any hash: if the whole game makes $q$ hash
+Proved in Lean~\cite{proofs}, in the random-oracle model, for any hash (SHA-256's padded layout is an injective
+re-encoding, argued in the proofs' documentation): if the whole game makes $q$ hash
 queries in total (the adversary's, and those of key generation, signing and verification), a forgery has
 probability at most $q\cdot2^{-127}$, up to the
 signature limits below. One proof, for any height, shape and kept subtree height, gives the 32 limits, each with its
 certificate checked by the Lean kernel; the size and the three verification costs of each of the 8 shapes are
-separate theorems. The second half of the table is the ratio to the best attack (cover model, \cref{sec:twolevel}).
+separate theorems. The second half of the table is the ratio to the cover attack (\cref{sec:twolevel}).
 \begin{center}
 \setlength{\tabcolsep}{3.5pt}
 \small
@@ -161,10 +162,10 @@ thousand~\cite{hwbench}.
   \toprule
   key & lifetime & keygen & signing, 16~KiB cache & signing, 1~MiB cache \\
   \midrule
-  full ($b=24$) & $3.36\cdot10^8$ & $3.9\cdot10^9$ & $3.9\cdot10^6$ & $194\cdot10^3$ \\
-  layered ($12+6+6$) & $3.36\cdot10^8$ & $954\cdot10^3$ & $136\cdot10^3$ & $134\cdot10^3$ \\
-  pruned, $b=20$ & $2.38\cdot10^7$ & $244\cdot10^6$ & $314\cdot10^3$ & $82\cdot10^3$ \\
-  pruned, $b=12$ & $1.16\cdot10^5$ & $954\cdot10^3$ & $80\cdot10^3$ & $78\cdot10^3$ \\
+  full ($b=24$) & $3.36\cdot10^8$ & $4.0\cdot10^9$ & $3.9\cdot10^6$ & $194\cdot10^3$ \\
+  layered ($12+6+6$) & $3.36\cdot10^8$ & $955\cdot10^3$ & $136\cdot10^3$ & $134\cdot10^3$ \\
+  pruned, $b=20$ & $2.38\cdot10^7$ & $245\cdot10^6$ & $314\cdot10^3$ & $82\cdot10^3$ \\
+  pruned, $b=12$ & $1.16\cdot10^5$ & $955\cdot10^3$ & $81\cdot10^3$ & $79\cdot10^3$ \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -254,7 +255,8 @@ sends a part, and the parts combine into $F(x)$:
         plus a rounded share of zero at $(x,m,J)$; the sum is $F(x)$ up to $\pm t$ per coordinate, so $F$ is rounded
         once more to a coarser modulus, and the few candidates are checked against the published chain
 \end{itemize}
-Parts from different $(m,J)$ don't combine, so an aborted signing reveals at most its own signature. The last
+An honest signer opens only the addresses selected by the digest it computed itself, so an aborted signing reveals
+at most its own signature. The last
 signer can still complete it alone (fairness is impossible against $t-1$ of $t$~\cite{Cle86}), so a signing that
 reaches the opening of $s$ (step 2) consumes its instance and counts as a signature; a wrong part fails the check
 against the published chain and aborts the signing.
@@ -275,9 +277,9 @@ operator at $h=24$, 2-of-3:
   \toprule
   & Keccak-256 & BLAKE2s & SHA-256 \\
   \midrule
-  keygen, layered or pruned $b=12$ (as on the Ledger) & 3.6~GB & 1.5~GB & 2.2~GB \\
-  preprocessing, pruned (one instance) & 223~MB & 91~MB & 139~MB \\
-  preprocessing, layered (and two lower trees) & 335~MB & 137~MB & 208~MB \\
+  keygen, layered or pruned $b=12$ & 3.6~GB & 1.5~GB & 2.3~GB \\
+  preprocessing, pruned (one instance) & 224~MB & 92~MB & 139~MB \\
+  preprocessing, layered (and two lower trees) & 335~MB & 138~MB & 209~MB \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -295,11 +297,12 @@ meant to be the configuration's.
 \paragraph{Alternative: every forest at key generation.} A pruned key has only $2^b$ instances (4\,096 at $b=12$,
 each used about 28 times over the lifetime), so key generation can prepare all of them: the MPC computes every
 forest's chains, publishes their masked values, and opens the WOTS$^+$C signatures linking them to the kept subtree.
-Signing then needs no MPC: a quorum $J$ draws $R_0$ and $\Delta$ as $\hash(m, J, k, r_1,\dots,r_t)$, each signer
-committing to $r_i$ before revealing it, with $k$ the session counter of $J$; it grinds the $2^{h-b}$ attempts in the
-clear and opens $F$ at the selected addresses. A session whose $r_i$ are revealed counts as a signature, and each
-quorum has its own counter range, so there are at most $N$ in all. Traffic per operator at $h=24$, $b=12$, 2-of-3:
-0.91~TB once with Keccak-256 (0.37 and 0.57~TB with BLAKE2s and SHA-256), against 26~TB (10.7 and 16.2~TB) of
+Signing then needs no MPC: the quorum $J$ agrees on $m$, then draws $R_0$ and $\Delta$ as
+$\hash(m, J, k, r_1,\dots,r_t)$, each signer committing to $r_i$ before revealing it, with $k$ the session counter of
+$J$; it grinds the $2^{h-b}$ attempts in the clear and opens $F$ at the selected addresses. A signer advances $k$ (the
+session counts as a signature) when it reveals its own $r_i$, and each quorum has its own counter range, so there are
+at most $N$ in all. Traffic per operator at $h=24$, $b=12$, 2-of-3:
+0.92~TB once with Keccak-256 (0.38 and 0.57~TB with BLAKE2s and SHA-256), against 26~TB (10.6 and 16.1~TB) of
 preprocessing over the lifetime.
 
 \subsection{Hardware wallets}
@@ -325,8 +328,8 @@ this flow is not covered by the Lean proof.
 \paragraph{Costs.} At $h\ge24$ the host hashes $\approx2^{20}$ digests and proves them at about $2^{19}$ hashes per
 second, 2~s. The device verifies the STARK in about $10^4$ compressions, counted as 3~s on a Ledger Nano S+ (1.7~s
 with Keccak-256 at 5.8 thousand per second~\cite{hwbench}): about 5~s in all. Preparing an instance costs the device
-$74\cdot10^3$ Keccak-f permutations for a pruned key and $133\cdot10^3$ for a layered one at $h=24$ ($223\cdot10^3$ at
-$h=28$), WOTS$^+$C counter searches included; the first $p$ are prepared once (about 2.7~h for the layered key at
+$76\cdot10^3$ Keccak-f permutations for a pruned key and $136\cdot10^3$ for a layered one at $h=24$ ($225\cdot10^3$ at
+$h=28$), WOTS$^+$C counter searches and the path included; the first $p$ are prepared once (about 2.8~h for the layered key at
 $h=28$).
 
 \section{The few-time signature: a two-level WOTS forest}
@@ -341,7 +344,7 @@ its top, so verification always takes 5 steps. The fixed sum acts as the checksu
 codeword; several signatures by the same key reach exactly the codewords below their componentwise max.
 
 \paragraph{Trees.} The FTS has 8 independent trees of height 4 (\cref{fig:forest}). Each of the 16 leaves of a tree
-is $\hash(S_0,S_1)$, where $S_0$ and $S_1$ are the two top nodes of two subtrees of height 3 over 8 WOTS keys each.
+is $\hash(S_0,S_1)$, where $S_j$ is the pair of top nodes of subtree $j$ (height 3, over 8 WOTS keys; no subtree root).
 In each tree, the message picks a leaf, and in both of its subtrees a WOTS key and a codeword.
 
 \begin{figure}[htb]
@@ -417,7 +420,7 @@ In each tree, the message picks a leaf, and in both of its subtrees a WOTS key a
 \draw[hot] (-0.65,-7.0) -- (-0.25,-7.0); \node[pathnode] at (-0.45,-7.0) {};
 \node[lab] at (-0.15,-7.0) {recomputed by the verifier};
 \end{tikzpicture}
-\caption{One of the 8 trees of the forest. The chosen leaf hashes the two top nodes $S_0$, $S_1$ of its two
+\caption{One of the 8 trees of the forest. The chosen leaf hashes $S_0$, $S_1$, the pairs of top nodes of its two
 subtrees; in each subtree, the message picks a WOTS key and a codeword.}
 \label{fig:forest}
 \end{figure}
@@ -434,9 +437,9 @@ most concentrated ones appear twice.
 \paragraph{Costs.} Per tree:
 \begin{itemize}
   \item size: 22 values, i.e.\ 6 chain values and 3 nodes per subtree, plus 4 nodes in the tree
-  \item verification: 20 permutations, i.e.\ per subtree 5 chain steps, 1 for the leaf and 2 for the path, then 1 for
+  \item verification (Keccak-256): 20 permutations, i.e.\ per subtree 5 chain steps, 1 for the leaf and 2 for the path, then 1 for
         $\hash(S_0,S_1)$ and 3 for the path in the tree
-  \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 28 permutations each
+  \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 28 Keccak-f permutations each
 \end{itemize}
 Every signature has the same size and verification cost. The WOTS$^+$C key that signs the forest uses a target sum
 of 128 instead of 120: 8 fewer chain steps at verification, for about 14\,700 counter tries instead of 830 when
@@ -444,18 +447,18 @@ signing ($13.8\cdot10^3$ more permutations, counted in \cref{sec:usage}).
 
 \paragraph{Security.} A forgery at an instance with $r$ prior signatures needs every tree to be covered: in both
 subtrees, the target WOTS key must have been opened, and the target codeword must lie below the componentwise max of
-those openings. Let $f_t$ be the probability that $t$ random signatures by one WOTS key cover a random codeword
+those openings. Let $f_t$ be the probability that $t$ random signatures by one WOTS key cover a random table entry
 ($f_1=0.0052$, $f_2=0.068$, $f_3=0.17$). Then
 \[
 \mathrm{cover}(r)=\Big(\sum_{u\ge1}\mathrm{Bin}(r,\tfrac1{16})(u)\Big[\sum_{t\ge1}\mathrm{Bin}(u,\tfrac18)(t)\,f_t\Big]^2\Big)^8 .
 \]
-The lifetime is the largest $N$ with $2^{127}\,2^{b-h}\,\mathbb{E}_{r\sim\mathrm{Poisson}(N/2^b)}[\mathrm{cover}(r)]\le1$:
+The cover lifetime (the attack figure) is the largest $N$ with $2^{127}\,2^{b-h}\,\mathbb{E}_{r\sim\mathrm{Poisson}(N/2^b)}[\mathrm{cover}(r)]\le1$:
 the signatures spread over the $2^b$ instances of the kept subtree, and a forger's digest must also land in it. This
 factor $2^{b-h}$ is not credited by hypertree pruning~\cite{conduition}, which cuts the lifetime by the full factor
 $2^{h-b}$ although the forger pays the signer's grinding cost per attempt; it is worth about $2^{(h-b)/18}$, from
 $+17\%$ at $h=24$, $b=20$ to a factor 1.8 at $b=8$. The best known attack also uses the WOTS$^+$C key (a counter
-search for a neighbouring encoding, then one chain preimage); for the forest it is the cover figure, except at $b=8$
-where it is 2\% lower~\cite{proofs}. At $h=24$, rounded down (the last row is \cref{sec:lifetimes}):
+search for a neighbouring encoding, then one chain preimage); at $h=24$ it is the cover figure for the forest, except at
+$b=8$ where it is 2\% lower~\cite{proofs}. At $h=24$, rounded down (the last row is \cref{sec:lifetimes}):
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{lrrrrrrr}

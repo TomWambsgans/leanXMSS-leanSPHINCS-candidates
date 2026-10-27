@@ -298,7 +298,7 @@ impl Midstate {
 
     /// The untruncated 32-byte hash of the input completed by `tail`, which is not empty.
     pub fn finish(&self, tail: &[u8]) -> [u8; 32] {
-        debug_assert!(!tail.is_empty());
+        assert!(!tail.is_empty());
         count_blocks(self.hash.cost(self.rest + tail.len()));
         let mut hasher = self.hasher.clone();
         hasher.update(tail);

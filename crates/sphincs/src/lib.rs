@@ -1,7 +1,7 @@
 // CREDIT: adapted from leanVM's SPHINCS crate (https://github.com/leanEthereum/leanVM, crates/sphincs),
 // MIT OR Apache-2.0, see licenses/leanVM-LICENSE-MIT and licenses/leanVM-LICENSE-APACHE.
 // Re-parameterized to the leanSphincs candidate (leanSPHINCS.tex): a two-level WOTS forest as the
-// few-time signature, WOTS+C with w = 4, 64 chains and target sum 128, and three toggles: the
+// few-time signature, WOTS+C with 64 chains of length 4 and target sum 128, and three toggles: the
 // height (22, 24, 26 or 28), the shape (one pruned tree, or a hypertree whose key builds the top
 // layer only) and the hash (Keccak-256, BLAKE2s or SHA-256).
 
@@ -48,7 +48,7 @@ pub const V: usize = 64;
 pub const TARGET_SUM: usize = 128;
 
 /// The tree heights `h`, one per lifetime: the full and layered keys last about `20 * 2^h` signatures;
-/// a pruned key lasts much less (7,514 to 28.4M signatures, formal/sphincs/README.md).
+/// a pruned key lasts much less (7,514 to 28.35M signatures, formal/sphincs/README.md).
 pub const HEIGHTS: [usize; 4] = [22, 24, 26, 28];
 /// The tallest height: the digest's index field and the address fields are sized for it.
 pub const MAX_H: usize = 28;

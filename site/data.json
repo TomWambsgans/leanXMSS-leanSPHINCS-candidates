@@ -1958,7 +1958,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 73953,
+   "device_online": 513,
    "keygen_gb": 0.2230272,
    "prep_mb": 223.0317375
   },
@@ -1974,7 +1975,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 74418,
+   "device_online": 513,
    "keygen_gb": 0.8921088,
    "prep_mb": 223.0317375
   },
@@ -1990,7 +1992,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 75816,
+   "device_online": 513,
    "keygen_gb": 3.5684352,
    "prep_mb": 223.0317375
   },
@@ -2006,7 +2009,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 76839,
+   "device_online": 513,
    "keygen_gb": 7.1368704,
    "prep_mb": 223.0317375
   },
@@ -2022,7 +2026,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 78703,
+   "device_online": 513,
    "keygen_gb": 14.2737408,
    "prep_mb": 223.0317375
   },
@@ -2038,7 +2043,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 313567,
+   "device_online": 513,
    "keygen_gb": 913.5194112,
    "prep_mb": 223.0317375
   },
@@ -2054,7 +2060,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 133435,
+   "ledger_prep": 133901,
+   "device_online": 513,
    "keygen_gb": 0.8921088,
    "prep_mb": 334.5453375
   },
@@ -2070,7 +2077,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 73953,
+   "device_online": 513,
    "keygen_gb": 0.2230272,
    "prep_mb": 223.0317375
   },
@@ -2086,7 +2094,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 74418,
+   "device_online": 513,
    "keygen_gb": 0.8921088,
    "prep_mb": 223.0317375
   },
@@ -2102,7 +2111,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 75816,
+   "device_online": 513,
    "keygen_gb": 3.5684352,
    "prep_mb": 223.0317375
   },
@@ -2118,7 +2128,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 76839,
+   "device_online": 513,
    "keygen_gb": 7.1368704,
    "prep_mb": 223.0317375
   },
@@ -2134,7 +2145,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 78703,
+   "device_online": 513,
    "keygen_gb": 14.2737408,
    "prep_mb": 223.0317375
   },
@@ -2150,7 +2162,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 313567,
+   "device_online": 513,
    "keygen_gb": 913.5194112,
    "prep_mb": 223.0317375
   },
@@ -2166,7 +2179,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 133435,
+   "ledger_prep": 135299,
+   "device_online": 513,
    "keygen_gb": 3.5684352,
    "prep_mb": 334.5453375
   },
@@ -2182,7 +2196,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 73953,
+   "device_online": 513,
    "keygen_gb": 0.2230272,
    "prep_mb": 223.0317375
   },
@@ -2198,7 +2213,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 74418,
+   "device_online": 513,
    "keygen_gb": 0.8921088,
    "prep_mb": 223.0317375
   },
@@ -2214,7 +2230,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 75816,
+   "device_online": 513,
    "keygen_gb": 3.5684352,
    "prep_mb": 223.0317375
   },
@@ -2230,7 +2247,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 76839,
+   "device_online": 513,
    "keygen_gb": 7.1368704,
    "prep_mb": 223.0317375
   },
@@ -2246,7 +2264,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 78703,
+   "device_online": 513,
    "keygen_gb": 14.2737408,
    "prep_mb": 223.0317375
   },
@@ -2262,7 +2281,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 313567,
+   "device_online": 513,
    "keygen_gb": 913.5194112,
    "prep_mb": 223.0317375
   },
@@ -2278,7 +2298,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 163259,
+   "ledger_prep": 165123,
+   "device_online": 513,
    "keygen_gb": 3.5684352,
    "prep_mb": 446.0589375
   },
@@ -2294,7 +2315,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 73953,
+   "device_online": 513,
    "keygen_gb": 0.2230272,
    "prep_mb": 223.0317375
   },
@@ -2310,7 +2332,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 74418,
+   "device_online": 513,
    "keygen_gb": 0.8921088,
    "prep_mb": 223.0317375
   },
@@ -2326,7 +2349,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 75816,
+   "device_online": 513,
    "keygen_gb": 3.5684352,
    "prep_mb": 223.0317375
   },
@@ -2342,7 +2366,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 76839,
+   "device_online": 513,
    "keygen_gb": 7.1368704,
    "prep_mb": 223.0317375
   },
@@ -2358,7 +2383,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 78703,
+   "device_online": 513,
    "keygen_gb": 14.2737408,
    "prep_mb": 223.0317375
   },
@@ -2374,7 +2400,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 73952,
+   "ledger_prep": 313567,
+   "device_online": 513,
    "keygen_gb": 913.5194112,
    "prep_mb": 223.0317375
   },
@@ -2390,7 +2417,8 @@
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 222907,
+   "ledger_prep": 224771,
+   "device_online": 513,
    "keygen_gb": 3.5684352,
    "prep_mb": 669.0861375
   },
@@ -2406,7 +2434,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 76131,
+   "device_online": 537,
    "keygen_gb": 0.09142272,
    "prep_mb": 91.42458
   },
@@ -2422,7 +2451,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 76614,
+   "device_online": 537,
    "keygen_gb": 0.36569088,
    "prep_mb": 91.42458
   },
@@ -2438,7 +2468,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 78066,
+   "device_online": 537,
    "keygen_gb": 1.46276352,
    "prep_mb": 91.42458
   },
@@ -2454,7 +2485,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 79089,
+   "device_online": 537,
    "keygen_gb": 2.92552704,
    "prep_mb": 91.42458
   },
@@ -2470,7 +2502,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 81025,
+   "device_online": 537,
    "keygen_gb": 5.85105408,
    "prep_mb": 91.42458
   },
@@ -2486,7 +2519,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 324961,
+   "device_online": 537,
    "keygen_gb": 374.46746112,
    "prep_mb": 91.42458
   },
@@ -2502,7 +2536,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 136765,
+   "ledger_prep": 137249,
+   "device_online": 537,
    "keygen_gb": 0.36569088,
    "prep_mb": 137.13594
   },
@@ -2518,7 +2553,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 76131,
+   "device_online": 537,
    "keygen_gb": 0.09142272,
    "prep_mb": 91.42458
   },
@@ -2534,7 +2570,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 76614,
+   "device_online": 537,
    "keygen_gb": 0.36569088,
    "prep_mb": 91.42458
   },
@@ -2550,7 +2587,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 78066,
+   "device_online": 537,
    "keygen_gb": 1.46276352,
    "prep_mb": 91.42458
   },
@@ -2566,7 +2604,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 79089,
+   "device_online": 537,
    "keygen_gb": 2.92552704,
    "prep_mb": 91.42458
   },
@@ -2582,7 +2621,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 81025,
+   "device_online": 537,
    "keygen_gb": 5.85105408,
    "prep_mb": 91.42458
   },
@@ -2598,7 +2638,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 324961,
+   "device_online": 537,
    "keygen_gb": 374.46746112,
    "prep_mb": 91.42458
   },
@@ -2614,7 +2655,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 136765,
+   "ledger_prep": 138701,
+   "device_online": 537,
    "keygen_gb": 1.46276352,
    "prep_mb": 137.13594
   },
@@ -2630,7 +2672,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 76131,
+   "device_online": 537,
    "keygen_gb": 0.09142272,
    "prep_mb": 91.42458
   },
@@ -2646,7 +2689,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 76614,
+   "device_online": 537,
    "keygen_gb": 0.36569088,
    "prep_mb": 91.42458
   },
@@ -2662,7 +2706,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 78066,
+   "device_online": 537,
    "keygen_gb": 1.46276352,
    "prep_mb": 91.42458
   },
@@ -2678,7 +2723,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 79089,
+   "device_online": 537,
    "keygen_gb": 2.92552704,
    "prep_mb": 91.42458
   },
@@ -2694,7 +2740,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 81025,
+   "device_online": 537,
    "keygen_gb": 5.85105408,
    "prep_mb": 91.42458
   },
@@ -2710,7 +2757,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 324961,
+   "device_online": 537,
    "keygen_gb": 374.46746112,
    "prep_mb": 91.42458
   },
@@ -2726,7 +2774,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 167741,
+   "ledger_prep": 169677,
+   "device_online": 537,
    "keygen_gb": 1.46276352,
    "prep_mb": 182.8473
   },
@@ -2742,7 +2791,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 76131,
+   "device_online": 537,
    "keygen_gb": 0.09142272,
    "prep_mb": 91.42458
   },
@@ -2758,7 +2808,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 76614,
+   "device_online": 537,
    "keygen_gb": 0.36569088,
    "prep_mb": 91.42458
   },
@@ -2774,7 +2825,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 78066,
+   "device_online": 537,
    "keygen_gb": 1.46276352,
    "prep_mb": 91.42458
   },
@@ -2790,7 +2842,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 79089,
+   "device_online": 537,
    "keygen_gb": 2.92552704,
    "prep_mb": 91.42458
   },
@@ -2806,7 +2859,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 81025,
+   "device_online": 537,
    "keygen_gb": 5.85105408,
    "prep_mb": 91.42458
   },
@@ -2822,7 +2876,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 76130,
+   "ledger_prep": 324961,
+   "device_online": 537,
    "keygen_gb": 374.46746112,
    "prep_mb": 91.42458
   },
@@ -2838,7 +2893,8 @@
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 229693,
+   "ledger_prep": 231629,
+   "device_online": 537,
    "keygen_gb": 1.46276352,
    "prep_mb": 274.27002
   },
@@ -2854,7 +2910,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 76131,
+   "device_online": 537,
    "keygen_gb": 0.138688512,
    "prep_mb": 138.691333625
   },
@@ -2870,7 +2927,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 76614,
+   "device_online": 537,
    "keygen_gb": 0.554754048,
    "prep_mb": 138.691333625
   },
@@ -2886,7 +2944,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 78066,
+   "device_online": 537,
    "keygen_gb": 2.219016192,
    "prep_mb": 138.691333625
   },
@@ -2902,7 +2961,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 79089,
+   "device_online": 537,
    "keygen_gb": 4.438032384,
    "prep_mb": 138.691333625
   },
@@ -2918,7 +2978,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 81025,
+   "device_online": 537,
    "keygen_gb": 8.876064768,
    "prep_mb": 138.691333625
   },
@@ -2934,7 +2995,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 324961,
+   "device_online": 537,
    "keygen_gb": 568.068145152,
    "prep_mb": 138.691333625
   },
@@ -2950,7 +3012,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 136765,
+   "ledger_prep": 137249,
+   "device_online": 537,
    "keygen_gb": 0.554754048,
    "prep_mb": 208.035589625
   },
@@ -2966,7 +3029,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 76131,
+   "device_online": 537,
    "keygen_gb": 0.138688512,
    "prep_mb": 138.691333625
   },
@@ -2982,7 +3046,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 76614,
+   "device_online": 537,
    "keygen_gb": 0.554754048,
    "prep_mb": 138.691333625
   },
@@ -2998,7 +3063,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 78066,
+   "device_online": 537,
    "keygen_gb": 2.219016192,
    "prep_mb": 138.691333625
   },
@@ -3014,7 +3080,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 79089,
+   "device_online": 537,
    "keygen_gb": 4.438032384,
    "prep_mb": 138.691333625
   },
@@ -3030,7 +3097,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 81025,
+   "device_online": 537,
    "keygen_gb": 8.876064768,
    "prep_mb": 138.691333625
   },
@@ -3046,7 +3114,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 324961,
+   "device_online": 537,
    "keygen_gb": 568.068145152,
    "prep_mb": 138.691333625
   },
@@ -3062,7 +3131,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 136765,
+   "ledger_prep": 138701,
+   "device_online": 537,
    "keygen_gb": 2.219016192,
    "prep_mb": 208.035589625
   },
@@ -3078,7 +3148,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 76131,
+   "device_online": 537,
    "keygen_gb": 0.138688512,
    "prep_mb": 138.691333625
   },
@@ -3094,7 +3165,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 76614,
+   "device_online": 537,
    "keygen_gb": 0.554754048,
    "prep_mb": 138.691333625
   },
@@ -3110,7 +3182,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 78066,
+   "device_online": 537,
    "keygen_gb": 2.219016192,
    "prep_mb": 138.691333625
   },
@@ -3126,7 +3199,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 79089,
+   "device_online": 537,
    "keygen_gb": 4.438032384,
    "prep_mb": 138.691333625
   },
@@ -3142,7 +3216,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 81025,
+   "device_online": 537,
    "keygen_gb": 8.876064768,
    "prep_mb": 138.691333625
   },
@@ -3158,7 +3233,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 324961,
+   "device_online": 537,
    "keygen_gb": 568.068145152,
    "prep_mb": 138.691333625
   },
@@ -3174,7 +3250,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 167741,
+   "ledger_prep": 169677,
+   "device_online": 537,
    "keygen_gb": 2.219016192,
    "prep_mb": 277.379845625
   },
@@ -3190,7 +3267,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 76131,
+   "device_online": 537,
    "keygen_gb": 0.138688512,
    "prep_mb": 138.691333625
   },
@@ -3206,7 +3284,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 76614,
+   "device_online": 537,
    "keygen_gb": 0.554754048,
    "prep_mb": 138.691333625
   },
@@ -3222,7 +3301,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 78066,
+   "device_online": 537,
    "keygen_gb": 2.219016192,
    "prep_mb": 138.691333625
   },
@@ -3238,7 +3318,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 79089,
+   "device_online": 537,
    "keygen_gb": 4.438032384,
    "prep_mb": 138.691333625
   },
@@ -3254,7 +3335,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 81025,
+   "device_online": 537,
    "keygen_gb": 8.876064768,
    "prep_mb": 138.691333625
   },
@@ -3270,7 +3352,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 76130,
+   "ledger_prep": 324961,
+   "device_online": 537,
    "keygen_gb": 568.068145152,
    "prep_mb": 138.691333625
   },
@@ -3286,7 +3369,8 @@
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 229693,
+   "ledger_prep": 231629,
+   "device_online": 537,
    "keygen_gb": 2.219016192,
    "prep_mb": 416.068357625
   }
