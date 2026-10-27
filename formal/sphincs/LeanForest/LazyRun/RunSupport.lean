@@ -268,21 +268,86 @@ theorem lazy_support {β : Type} (computation : OracleComp CostSpec β) :
               exact .known _ _ hother
           · intro other hmem'
             exact .reveal _ (by simp [revealed, hmem'])
-      · -- virtual tick
-        change some _ ∈ support (HiddenOutside.stopped model table (pure () >>= _) known cache) at h
-        rw [pure_bind, outside_stopped_map] at h
-        obtain ⟨⟨⟨value', entries'⟩, cacheF'⟩, hinner, heq⟩ := mem_support_option_map _ _ _ h
-        simp only [Prod.mk.injEq] at heq
-        obtain ⟨⟨rfl, rfl⟩, rfl⟩ := heq
-        obtain ⟨hcache, hrun, hguess⟩ := ih () known cache _ value' entries' hinner
-        refine ⟨hcache, ?_, ?_⟩
-        · rw [mem_support_bind_iff]
-          refine ⟨(), by simp [fixedCostP], ?_⟩
-          rw [costRun_map, Functor.map_map, support_map]
-          exact ⟨(value', entries'), hrun, rfl⟩
-        · intro bytes hmem query hparse hmatch
-          simp only [recorded, List.singleton_append, List.mem_cons, reduceCtorEq, false_or] at hmem
-          exact hguess bytes hmem query hparse hmatch
+      · -- honest query
+        obtain ⟨bytes⟩ := amount
+        change some _ ∈ support (HiddenOutside.stopped model table
+          (liftM ((HiddenRows.SourceSpec HashInput HashOutput HiddenGraph.Coordinate).query
+            (.inr (.inl bytes))) >>= _) known cache) at h
+        rw [outside_stopped_hash] at h
+        simp only [revealed, recorded, List.nil_append, List.singleton_append] at h ⊢
+        have hfirst : fixedCostP (finalFn model table cacheF) table (.inr ⟨bytes⟩) =
+            pure (finalFn model table cacheF bytes) := rfl
+        rw [hfirst, pure_bind]
+        cases hp : model.parse bytes with
+        | none =>
+            simp only [hp] at h
+            rw [mem_support_bind_iff] at h
+            obtain ⟨read, hread, h⟩ := h
+            rw [outside_stopped_map] at h
+            obtain ⟨⟨⟨value', entries'⟩, cacheF'⟩, hinner, heq⟩ := mem_support_option_map _ _ _ h
+            simp only [Prod.mk.injEq] at heq
+            obtain ⟨⟨rfl, rfl⟩, rfl⟩ := heq
+            obtain ⟨hcache, hrun, hguess⟩ := ih read.1 known read.2 _ value' entries' hinner
+            obtain ⟨hbytes, hgrow⟩ := outsideRead_support bytes cache read hread
+            have hanswer : finalFn model table cacheF' bytes = read.1 := by
+              rw [finalFn, rows_answer_none model table _ bytes hp, hcache _ _ hbytes]
+              rfl
+            refine ⟨fun input answer hc => hcache _ _ (hgrow _ _ hc), ?_, ?_⟩
+            · rw [hanswer, support_map]
+              exact ⟨(value', entries'), by simpa using hrun, rfl⟩
+            · intro other hmem query hparse hmatch
+              rcases List.mem_cons.mp hmem with heq | hmem
+              · cases heq
+              · exact hguess other hmem query hparse hmatch
+        | some query =>
+            simp only [hp] at h
+            by_cases hstop : known (model.incoming query.1) = none ∧ query.2 = table (model.incoming query.1)
+            · rw [if_pos hstop] at h
+              simp at h
+            · rw [if_neg hstop] at h
+              by_cases hmatch : query.2 = table (model.incoming query.1)
+              · rw [if_pos hmatch, outside_stopped_map] at h
+                have hknown : known (model.incoming query.1) ≠ none := fun hnone => hstop ⟨hnone, hmatch⟩
+                obtain ⟨⟨⟨value', entries'⟩, cacheF'⟩, hinner, heq⟩ := mem_support_option_map _ _ _ h
+                simp only [Prod.mk.injEq] at heq
+                obtain ⟨⟨rfl, rfl⟩, rfl⟩ := heq
+                obtain ⟨hcache, hrun, hguess⟩ := ih _ _ cache _ value' entries' hinner
+                have hanswer : finalFn model table cacheF' bytes =
+                    model.combine query.1 (table (model.outgoing query.1)) := by
+                  rw [finalFn, rows_answer_match model table _ bytes query hp hmatch]
+                refine ⟨hcache, ?_, ?_⟩
+                · rw [hanswer, support_map]
+                  exact ⟨(value', entries'), by simpa using hrun, rfl⟩
+                · obtain ⟨incomingValue, hincoming⟩ := Option.ne_none_iff_exists'.mp hknown
+                  intro other hmem query' hparse hmatch'
+                  rcases List.mem_cons.mp hmem with heq | hmem
+                  · cases heq
+                  · refine reach_mono model ?_ (fun c hc => .reveal _ hc)
+                      (hguess other hmem query' hparse hmatch')
+                    intro c v hc
+                    by_cases heq : c = model.outgoing query.1
+                    · subst c
+                      exact .succ query.1 (.known _ _ hincoming)
+                    · rw [QueryCache.cacheQuery_of_ne _ _ heq] at hc
+                      exact .known _ _ hc
+              · rw [if_neg hmatch, mem_support_bind_iff] at h
+                obtain ⟨read, hread, h⟩ := h
+                rw [outside_stopped_map] at h
+                obtain ⟨⟨⟨value', entries'⟩, cacheF'⟩, hinner, heq⟩ := mem_support_option_map _ _ _ h
+                simp only [Prod.mk.injEq] at heq
+                obtain ⟨⟨rfl, rfl⟩, rfl⟩ := heq
+                obtain ⟨hcache, hrun, hguess⟩ := ih read.1 known read.2 _ value' entries' hinner
+                obtain ⟨hbytes, hgrow⟩ := outsideRead_support bytes cache read hread
+                have hanswer : finalFn model table cacheF' bytes = read.1 := by
+                  rw [finalFn, rows_answer_miss model table _ bytes query hp hmatch, hcache _ _ hbytes]
+                  rfl
+                refine ⟨fun input answer hc => hcache _ _ (hgrow _ _ hc), ?_, ?_⟩
+                · rw [hanswer, support_map]
+                  exact ⟨(value', entries'), by simpa using hrun, rfl⟩
+                · intro other hmem query' hparse hmatch'
+                  rcases List.mem_cons.mp hmem with heq | hmem
+                  · cases heq
+                  · exact hguess other hmem query' hparse hmatch'
 
 /-- Queried inputs other than canonical row inputs are in the final outside cache. -/
 def CachedQueries (cacheF : QueryCache HashSpec) (entries : List (Entry HashInput)) : Prop :=
@@ -384,15 +449,55 @@ theorem lazy_cached {β : Type} (computation : OracleComp CostSpec β) :
         refine ⟨hcache, fun bytes hmem => ?_⟩
         simp only [recorded, List.nil_append] at hmem
         exact hcached bytes hmem
-      · change some _ ∈ support (HiddenOutside.stopped model table (pure () >>= _) known cache) at h
-        rw [pure_bind, outside_stopped_map] at h
-        obtain ⟨⟨⟨value', entries'⟩, cacheF'⟩, hinner, heq⟩ := mem_support_option_map _ _ _ h
-        simp only [Prod.mk.injEq] at heq
-        obtain ⟨⟨rfl, rfl⟩, rfl⟩ := heq
-        obtain ⟨hcache, hcached⟩ := ih () known cache _ value' entries' hinner
-        refine ⟨hcache, fun bytes hmem => ?_⟩
-        simp only [recorded, List.singleton_append, List.mem_cons, reduceCtorEq, false_or] at hmem
-        exact hcached bytes hmem
+      · obtain ⟨bytes⟩ := amount
+        change some _ ∈ support (HiddenOutside.stopped model table
+          (liftM ((HiddenRows.SourceSpec HashInput HashOutput HiddenGraph.Coordinate).query
+            (.inr (.inl bytes))) >>= _) known cache) at h
+        rw [outside_stopped_hash] at h
+        simp only [revealed, recorded, List.nil_append, List.singleton_append] at h ⊢
+        -- shared outside-read branch
+        have hreadCase : some ((value, entries), cacheF) ∈ support
+            (HiddenOutside.outsideRead bytes cache >>= fun result =>
+              HiddenOutside.stopped model table
+                ((fun result => ((result.1.1, result.1.2), Sum.inr bytes :: result.2)) <$>
+                  erase (trace (withReveals (next result.1)))) known result.2) →
+            (∀ input answer, cache input = some answer → cacheF input = some answer) ∧
+            CachedQueries model table cacheF entries := by
+          intro h
+          rw [mem_support_bind_iff] at h
+          obtain ⟨read, hread, h⟩ := h
+          rw [outside_stopped_map] at h
+          obtain ⟨⟨⟨value', entries'⟩, cacheF'⟩, hinner, heq⟩ := mem_support_option_map _ _ _ h
+          simp only [Prod.mk.injEq] at heq
+          obtain ⟨⟨rfl, rfl⟩, rfl⟩ := heq
+          obtain ⟨hcache, hcached⟩ := ih read.1 known read.2 _ value' entries' hinner
+          obtain ⟨hbytes, hgrow⟩ := outsideRead_support bytes cache read hread
+          refine ⟨fun input answer hc => hcache _ _ (hgrow _ _ hc), fun other hmem hnot => ?_⟩
+          rcases List.mem_cons.mp hmem with heq | hmem
+          · cases heq
+          · exact hcached other hmem hnot
+        cases hp : model.parse bytes with
+        | none =>
+            simp only [hp] at h
+            exact hreadCase h
+        | some query =>
+            simp only [hp] at h
+            by_cases hstop : known (model.incoming query.1) = none ∧ query.2 = table (model.incoming query.1)
+            · rw [if_pos hstop] at h
+              simp at h
+            · rw [if_neg hstop] at h
+              by_cases hmatch : query.2 = table (model.incoming query.1)
+              · rw [if_pos hmatch, outside_stopped_map] at h
+                obtain ⟨⟨⟨value', entries'⟩, cacheF'⟩, hinner, heq⟩ := mem_support_option_map _ _ _ h
+                simp only [Prod.mk.injEq] at heq
+                obtain ⟨⟨rfl, rfl⟩, rfl⟩ := heq
+                obtain ⟨hcache, hcached⟩ := ih _ _ cache _ value' entries' hinner
+                refine ⟨hcache, fun other hmem hnot => ?_⟩
+                rcases List.mem_cons.mp hmem with heq | hmem
+                · cases heq
+                · exact hcached other hmem hnot
+              · rw [if_neg hmatch] at h
+                exact hreadCase h
 
 end Support
 

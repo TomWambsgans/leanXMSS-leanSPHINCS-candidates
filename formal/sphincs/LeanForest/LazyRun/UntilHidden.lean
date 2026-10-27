@@ -120,8 +120,24 @@ theorem costRun_le_stopped {α : Type} (model : HiddenRows.Model HashInput HashO
         change Pr[_ | pure (table coordinate) >>= _] ≤ _
         rw [pure_bind, stopped_map, probEvent_stopOr_map, probEvent_map]
         exact ih _ _ (hknown.reveal coordinate) _
-      · change Pr[_ | pure () >>= _] ≤ Pr[_ | HiddenRows.stopped model table outside (pure () >>= _) known]
-        rw [pure_bind, pure_bind, stopped_map, probEvent_stopOr_map, probEvent_map]
-        exact ih () known hknown _
+      · change _ ≤ Pr[_ | HiddenRows.stopped model table outside
+          (liftM ((HiddenRows.SourceSpec HashInput HashOutput Coordinate).query (.inr (.inl amount.input))) >>= _)
+            known]
+        rw [HiddenRows.stopped_hash]
+        change Pr[_ | pure (HiddenRows.answer model table outside amount.input) >>= _] ≤ _
+        rw [pure_bind]
+        cases hp : model.parse amount.input with
+        | none =>
+            dsimp only
+            rw [stopped_map, probEvent_stopOr_map, probEvent_map]
+            exact ih _ known hknown _
+        | some query =>
+            dsimp only
+            split_ifs with hstop hcanonical
+            · simp [HiddenReveal.StopOr]
+            · rw [stopped_map, probEvent_stopOr_map, probEvent_map]
+              exact ih _ _ (hknown.reveal _) _
+            · rw [stopped_map, probEvent_stopOr_map, probEvent_map]
+              exact ih _ known hknown _
 
 end LeanForest.Security.HiddenBridge

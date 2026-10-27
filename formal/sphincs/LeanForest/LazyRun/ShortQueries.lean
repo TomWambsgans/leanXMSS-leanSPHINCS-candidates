@@ -19,9 +19,10 @@ attribute [local instance] Classical.propDecidable
 
 def LongCost : CostSpec.Domain → Prop
   | .inl (.inr (.inl bytes)) => ¬IsShort bytes
+  | .inr query => ¬IsHonest query.input
   | _ => False
 
-/-- Every ordinary query of a cost program is short. -/
+/-- Every ordinary query of a cost program is short, and every honest query is a signer's input. -/
 def OnlyC {α : Type} (computation : OracleComp CostSpec α) : Prop :=
   computation.IsQueryBoundP LongCost 0
 
@@ -69,9 +70,28 @@ theorem OnlyC.liftProb {α : Type} (oa : ProbComp α) : OnlyC (liftM oa : Oracle
       change OnlyC (liftM (CostSpec.query (.inl (.inl input))) : OracleComp CostSpec _)
       exact OnlyC.query (fun h => h)
 
-theorem OnlyC.tick (amount : Nat) :
-    OnlyC (HiddenCost.tick (D := HashInput) (R := HashOutput) (ι := HiddenGraph.Coordinate) amount) :=
-  OnlyC.query (fun h => h)
+theorem OnlyC.honest {input : HashInput} (h : IsHonest input) :
+    OnlyC (HiddenCost.honest (D := HashInput) (R := HashOutput) (ι := HiddenGraph.Coordinate) input) :=
+  OnlyC.query (fun hlong => hlong h)
+
+theorem OnlyC.honestly {α : Type} {oa : OracleComp HashSpec α} (h : Short.HonestOnly oa) :
+    OnlyC (GraphView.honestly oa) := by
+  induction oa using OracleComp.inductionOn with
+  | pure value => rw [GraphView.honestly_pure]; exact OnlyC.pure' _
+  | query_bind input next ih =>
+      rw [Short.HonestOnly, isQueryBoundP_query_bind_iff] at h
+      rw [GraphView.honestly_bind]
+      refine OnlyC.bind ?_ (fun answer => ?_)
+      · have hq : GraphView.honestly (liftM (HashSpec.query input) : OracleComp HashSpec _) =
+            HiddenCost.honest (D := HashInput) (R := HashOutput) (ι := HiddenGraph.Coordinate) input := by
+          simp [GraphView.honestly, HiddenCost.honest]
+        rw [hq]
+        refine OnlyC.honest ?_
+        rcases h.1 with hshort | hzero
+        · exact not_not.mp hshort
+        · omega
+      · have hnext := h.2 answer
+        exact ih answer (by split at hnext <;> simpa [Short.HonestOnly] using hnext)
 
 theorem OnlyC.reveal (coordinate : HiddenGraph.Coordinate) :
     OnlyC (HiddenCost.reveal (D := HashInput) (R := HashOutput) coordinate) :=
@@ -100,6 +120,17 @@ theorem Only.search (parameter : PublicParameter) (lay : Layer) (tree : TreeInde
       cases found with
       | none => exact Only.search parameter lay tree leaf message hmsg attempts (start + 1)
       | some _ => exact Short.Only.pure' _
+
+theorem HonestOnly.search (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
+    (message : HashInput) (hmsg : Short.ShortMessage message) : ∀ attempts start,
+    Short.HonestOnly (ReferenceChoice.search parameter lay tree leaf message attempts start)
+  | 0, _ => Short.HonestOnly.pure' _
+  | attempts + 1, start => by
+      rw [ReferenceChoice.search]
+      refine Short.HonestOnly.bind (Short.HonestOnly.encode _ _ _ _ _ hmsg _) (fun found => ?_)
+      cases found with
+      | none => exact HonestOnly.search parameter lay tree leaf message hmsg attempts (start + 1)
+      | some _ => exact Short.HonestOnly.pure' _
 
 theorem onlyC_query_bind {α : Type} {input : CostSpec.Domain} {next : CostSpec.Range input → OracleComp CostSpec α}
     (h : OnlyC (liftM (CostSpec.query input) >>= next)) :
@@ -141,7 +172,7 @@ theorem OnlyC.erase {α : Type} {computation : OracleComp CostSpec α} (h : Only
       have hbind : OnlyShort (HiddenCost.eraseQuery input >>= fun value => HiddenCost.erase (next value)) := by
         have hfirst : OnlyShort (HiddenCost.eraseQuery (D := HashInput) (R := HashOutput)
             (ι := HiddenGraph.Coordinate) input) := by
-          rcases input with source | amount
+          rcases input with source | query
           · change OnlyShort (liftM ((HiddenRows.SourceSpec HashInput HashOutput HiddenGraph.Coordinate).query
               source) : OracleComp _ _)
             rw [OnlyShort, isQueryBoundP_query_iff]
@@ -150,8 +181,11 @@ theorem OnlyC.erase {α : Type} {computation : OracleComp CostSpec α} (h : Only
             · exact hlong.elim
             · exact (hinput hlong).elim
             · exact hlong.elim
-          · exact (trivial : (pure () : OracleComp (HiddenRows.SourceSpec HashInput HashOutput
-              HiddenGraph.Coordinate) Unit).IsQueryBoundP LongSource 0)
+          · change OnlyShort (liftM ((HiddenRows.SourceSpec HashInput HashOutput HiddenGraph.Coordinate).query
+              (.inr (.inl query.input))) : OracleComp _ _)
+            rw [OnlyShort, isQueryBoundP_query_iff]
+            intro hlong
+            exact (hinput fun h => hlong h.1).elim
         have := isQueryBoundP_bind (n := 0) (m := 0) hfirst (fun value _ => ih value (hnext value))
         simpa [OnlyShort] using this
       simpa only [HiddenCost.erase, simulateQ_bind, simulateQ_spec_query] using hbind
@@ -159,6 +193,29 @@ theorem OnlyC.erase {α : Type} {computation : OracleComp CostSpec α} (h : Only
 
 attribute [local irreducible] ReferenceChoice.search encodingAttemptLimit digestAttemptLimit
   Concrete.messageDigest Concrete.messageDigestCall
+
+/-- The honest entries of a short cost program's runs are signer's inputs. -/
+theorem OnlyC.costRun_honest {α : Type} (f : HashInput → HashOutput) (table : HiddenGraph.Table)
+    {computation : OracleComp CostSpec α} (h : OnlyC computation) :
+    ∀ result ∈ support (Stop.costRun f table computation), ∀ x, Sum.inr x ∈ result.2 → IsHonest x := by
+  induction computation using OracleComp.inductionOn with
+  | pure value =>
+      intro result hresult x hx
+      rw [Stop.costRun_pure, support_pure, Set.mem_singleton_iff] at hresult
+      subst hresult
+      simp at hx
+  | query_bind input next ih =>
+      obtain ⟨hinput, hnext⟩ := onlyC_query_bind h
+      intro result hresult x hx
+      rw [Stop.costRun_query_bind, mem_support_bind_iff] at hresult
+      obtain ⟨answer, _, hmap⟩ := hresult
+      rw [support_map] at hmap
+      obtain ⟨tail, htail, rfl⟩ := hmap
+      rcases List.mem_append.1 hx with hrec | hrest
+      · rcases input with (draw | (bytes | coordinate)) | query <;> simp [recorded] at hrec
+        subst hrec
+        exact not_not.mp hinput
+      · exact ih answer (hnext answer) tail htail x hrest
 
 theorem OnlyC.coordCostSource (data : PublicData) (index : Index) (c : Coord) (mark : CoordMark) :
     OnlyC (GraphView.coordCostSource data index c mark) := by
@@ -193,18 +250,12 @@ theorem shortMessage_keyMessage (data : PublicData) (lay : Layer) (tree : TreeIn
 theorem OnlyC.layerCostSearch (parameter : PublicParameter) (data : PublicData) (index : Index)
     (lay : Layer) : OnlyC (GraphView.layerCostSearch parameter data index lay) := by
   unfold GraphView.layerCostSearch GraphView.layerSearch
-  refine OnlyC.bind (OnlyC.tick _) (fun _ => ?_)
-  refine OnlyC.bind (OnlyC.liftHash (Only.search _ _ _ _ _ (shortMessage_keyMessage _ _ _ _) _ _))
-    (fun found => ?_)
-  rcases found with _ | pair
-  · exact OnlyC.pure' _
-  · exact OnlyC.bind (OnlyC.tick _) (fun _ => OnlyC.pure' _)
+  exact OnlyC.honestly (HonestOnly.search _ _ _ _ _ (shortMessage_keyMessage _ _ _ _) _ _)
 
 theorem OnlyC.finishCostSource (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) : OnlyC (GraphView.finishCostSource parameter data message randomness) := by
   unfold GraphView.finishCostSource
-  refine OnlyC.bind (OnlyC.liftHash (Short.Only.messageDigest _ _ _ _)) (fun digest => ?_)
-  refine OnlyC.bind (OnlyC.tick _) (fun _ => ?_)
+  refine OnlyC.bind (OnlyC.honest (Short.isHonest_messageDigestInput _ _ _ _)) (fun first => ?_)
   refine OnlyC.bind (OnlyC.sequenceDep fun lay => OnlyC.layerCostSearch _ _ _ lay) (fun found => ?_)
   rcases found with _ | found
   · exact OnlyC.pure' _
@@ -219,7 +270,7 @@ theorem OnlyC.signCostSourceLoop (parameter : PublicParameter) (data : PublicDat
   | 0, _ => OnlyC.pure' _
   | attempts + 1, randomness => by
       rw [GraphView.signCostSourceLoop]
-      refine OnlyC.bind (OnlyC.liftHash (Short.Only.messageDigestCall _ _ _ _)) (fun first => ?_)
+      refine OnlyC.bind (OnlyC.honest (Short.isHonest_messageDigestInput _ _ _ _)) (fun first => ?_)
       split
       · exact OnlyC.finishCostSource _ _ _ _
       · exact OnlyC.signCostSourceLoop parameter data message step attempts (randomness + step)
@@ -261,7 +312,6 @@ theorem OnlyC.costInteraction (parameter : PublicParameter) (data : PublicData) 
 theorem OnlyC.costGame (parameter : PublicParameter) (data : PublicData) (adversary : Adversary) :
     OnlyC (GraphView.costGame parameter data (internalize adversary)) := by
   unfold GraphView.costGame GraphView.costRest
-  refine OnlyC.bind (OnlyC.tick _) (fun _ => ?_)
   refine OnlyC.bind ?_ (fun output => ?_)
   · exact OnlyC.costInteraction _ _ _ (OnlyAdv.map _ (OnlyAdv.internal _ _))
   · exact OnlyC.bind (OnlyC.liftHash (Short.Only.verify _ _ _)) (fun _ => OnlyC.pure' _)

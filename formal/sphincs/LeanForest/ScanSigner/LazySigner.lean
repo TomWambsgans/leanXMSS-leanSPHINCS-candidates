@@ -55,10 +55,10 @@ theorem interp_liftProb_bind {α β : Type} (sample : ProbComp α)
 
 /-! ### Computations that avoid a set of outside inputs -/
 
-/-- No ordinary query of the computation lies in `avoid`. -/
+/-- No ordinary or honest query of the computation lies in `avoid`. -/
 def Avoids (avoid : D → Prop) {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) : Prop :=
   OracleComp.construct (fun _ => True)
-    (fun input _ next => (∀ bytes, input = .inl (.inr (.inl bytes)) → ¬avoid bytes) ∧ ∀ value, next value)
+    (fun input _ next => (∀ bytes, queryInput input = some bytes → ¬avoid bytes) ∧ ∀ value, next value)
     computation
 
 omit [Fintype ι] [SampleableType R] in
@@ -69,7 +69,7 @@ omit [Fintype ι] [SampleableType R] in
 theorem avoids_query_bind (avoid : D → Prop) {α : Type} (input : (SourceCostSpec D R ι).Domain)
     (next : (SourceCostSpec D R ι).Range input → OracleComp (SourceCostSpec D R ι) α) :
     Avoids avoid (liftM ((SourceCostSpec D R ι).query input) >>= next) ↔
-      (∀ bytes, input = .inl (.inr (.inl bytes)) → ¬avoid bytes) ∧ ∀ value, Avoids avoid (next value) :=
+      (∀ bytes, queryInput input = some bytes → ¬avoid bytes) ∧ ∀ value, Avoids avoid (next value) :=
   Iff.rfl
 
 omit [Fintype ι] [SampleableType R] in
@@ -84,11 +84,32 @@ theorem avoids_bind (avoid : D → Prop) {α β : Type} {first : OracleComp (Sou
       exact ⟨hin, fun value => ih value (hrest value)⟩
 
 omit [Fintype ι] [SampleableType R] in
-theorem avoids_tick (avoid : D → Prop) (amount : ℕ) :
-    Avoids avoid (tick (D := D) (R := R) (ι := ι) amount) := by
-  unfold tick
-  rw [← bind_pure (liftM ((SourceCostSpec D R ι).query (.inr amount)))]
-  exact (avoids_query_bind avoid _ _).2 ⟨fun bytes h => (by cases h), fun _ => trivial⟩
+theorem avoids_honest (avoid : D → Prop) {x : D} (hx : ¬avoid x) :
+    Avoids avoid (honest (D := D) (R := R) (ι := ι) x) := by
+  unfold honest
+  rw [← bind_pure (liftM ((SourceCostSpec D R ι).query (.inr ⟨x⟩)))]
+  exact (avoids_query_bind avoid _ _).2 ⟨fun bytes h => by cases h; exact hx, fun _ => trivial⟩
+
+omit [Fintype ι] [SampleableType R] in
+/-- A hash computation run by honest queries avoids every input it never queries. -/
+theorem avoids_honestLift (avoid : D → Prop) {α : Type} (computation : OracleComp (D →ₒ R) α)
+    (h : computation.IsQueryBoundP avoid 0) :
+    Avoids avoid (simulateQ (fun x => honest (D := D) (R := R) (ι := ι) x) computation) := by
+  induction computation using OracleComp.inductionOn with
+  | pure value => exact avoids_pure avoid value
+  | query_bind query rest ih =>
+      rw [isQueryBoundP_query_bind_iff] at h
+      rw [simulateQ_bind, simulateQ_spec_query]
+      refine avoids_bind avoid (avoids_honest avoid ?_) (fun value => ih value ?_)
+      · rcases h.1 with hnot | hpos
+        · exact hnot
+        · exact absurd hpos (lt_irrefl 0)
+      · have := h.2 value
+        split_ifs at this with hq
+        · rcases h.1 with hnot | hpos
+          · exact absurd hq hnot
+          · exact absurd hpos (lt_irrefl 0)
+        · exact this
 
 omit [Fintype ι] [SampleableType R] in
 theorem avoids_reveal (avoid : D → Prop) (coordinate : ι) :
@@ -178,9 +199,26 @@ theorem interp_avoids_cache (avoid : D → Prop) {α : Type} (computation : Orac
         · change result ∈ support (sampleCoordinate coordinate state) at hresult
           rw [sampleCoordinate_expose _ state result hresult]
           rfl
-        · change result ∈ support (pure ((), state) : ProbComp _) at hresult
-          rw [support_pure, Set.mem_singleton_iff] at hresult
-          rw [hresult]
+        · have hne : x ≠ amount.input := fun heq => hin amount.input rfl (heq ▸ hx)
+          rw [costStep_honest] at hresult
+          unfold ordinaryStep at hresult
+          have hread : ∀ (s' : DebtState D R ι) (r : R × DebtState D R ι),
+              r ∈ support (readOutside amount.input s') → r.2.cache x = s'.cache x := by
+            intro s' r hr
+            rcases readOutside_support amount.input s' r hr with h' | ⟨_, h'⟩
+            · rw [h']
+            · rw [h']
+              exact store_cache_ne s' amount.input x hne r.1
+          split at hresult
+          · exact hread _ result hresult
+          · split at hresult
+            · exact hread (state.record _) result hresult
+            · split at hresult
+              · rw [support_map] at hresult
+                obtain ⟨r, hr, rfl⟩ := hresult
+                rw [sampleCoordinate_expose _ state r hr]
+                rfl
+              · exact hread _ result hresult
       · rw [support_pure, Set.mem_singleton_iff] at hout
         rw [hout]
 

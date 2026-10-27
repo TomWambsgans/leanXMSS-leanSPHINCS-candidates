@@ -79,7 +79,7 @@ theorem signLoop_revealed (parameter : PublicParameter) (data : PublicData) (mes
   | succ attempts ih =>
       rw [signCostSourceLoop] at hresult
       obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
-      obtain rfl := costRun_withReveals_liftHash f table _ r3 h3
+      obtain rfl := costRun_withReveals_honest f table _ r3 h3
       dsimp only at h4 ⊢
       rw [List.nil_append]
       split at h4
@@ -169,9 +169,7 @@ theorem rich_revealed (adversary : Adversary) (q : Nat) (parameter : PublicParam
     SignedRevealed f parameter data outcome.2.1 reveals := by
   have h := costRun_withReveals_cap f table _ q outcome reveals entries hresult
   unfold costGameX costRestX at h
-  obtain ⟨r1, h1, r2, h2, heq⟩ := costRun_withReveals_bind f table _ _ _ h
-  obtain rfl := costRun_withReveals_tick f table _ r1 h1
-  obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ r2 h2
+  obtain ⟨r3, h3, r4, h4, heq⟩ := costRun_withReveals_bind f table _ _ _ h
   have hrev := interaction_revealed f table parameter data _ r3 h3
   obtain ⟨⟨⟨forgery, log⟩, interactionReveals⟩, interactionEntries⟩ := r3
   dsimp only at h4 hrev

@@ -1,5 +1,6 @@
 import LeanForest.Reduction.WinValue
 import LeanForest.Reduction.SeedFreeGame
+import LeanForest.LazyRun.ShortQueries
 
 /-! **Seed elimination for the deterministic-randomizer game.** The SUF-CMA advantage against
 `Seeded.sign` is at most the seed-free, budget-capped win probability of the internalized
@@ -86,50 +87,74 @@ theorem ordinaryCount_le_traceCost (entries : List (Entry HashInput)) :
       | inl input => simp only [ordinaryCount, traceCost, List.map_cons, List.sum_cons, entryCost] at ih ⊢; omega
       | inr amount => simp only [ordinaryCount, traceCost, List.map_cons, List.sum_cons, entryCost] at ih ⊢; omega
 
-theorem trace_marked_probability (entries : List (Entry HashInput)) :
+theorem hashDomain_tag_ne_seven (domain : HashDomain) :
+    (⟨7#5, 0#3, 0#8, 0#32, 0#24, 0#32⟩ : TweakFields).tag ≠ (hashDomainFields domain).tag := by
+  cases domain <;> simp [hashDomainFields, tweakFields, treeFields]
+
+theorem randomizerHashInput_ne_tweakable (parameter parameter' : PublicParameter) (seed : MasterSeed)
+    (message : Message) (domain : HashDomain) (payload : HashInput) :
+    randomizerHashInput parameter seed message ≠ tweakableHashInput parameter' domain payload := by
+  intro h
+  simp only [tweakableHashInput, tweakBytes, randomizerHashInput] at h
+  rw [List.append_assoc (bytesLE 16 parameter ++ fieldBytes _)] at h
+  exact Completeness.fieldInput_ne_of_tag_ne_across parameter parameter'
+    (fields1 := ⟨7#5, 0#3, 0#8, 0#32, 0#24, 0#32⟩) (fields2 := hashDomainFields domain)
+    (hashDomain_tag_ne_seven domain) _ _ h
+
+/-- No seed marks an input of the signer. -/
+theorem not_marked_of_honest {input : HashInput} (h : Short.IsHonest input) (seed : MasterSeed) :
+    ¬Marked seed input := by
+  obtain ⟨-, parameter, domain, payload, rfl⟩ := h
+  rintro (⟨parameter', derive, heq⟩ | ⟨parameter', message, heq⟩)
+  · exact keygenInput_ne_hashInput parameter' parameter derive domain seed payload heq
+  · exact randomizerHashInput_ne_tweakable parameter' parameter seed message domain payload heq
+
+theorem trace_marked_probability (entries : List (Entry HashInput))
+    (hhonest : ∀ x, Sum.inr x ∈ entries → Short.IsHonest x) :
     Pr[fun seed => Hits (Marked seed) entries | sampleMasterSeed] ≤
       ordinaryCount entries * (2 / (2 : ℝ≥0∞) ^ 256) := by
   induction entries with
   | nil => simp [Hits, ordinaryCount]
   | cons entry rest ih =>
+      have ih := ih fun x hx => hhonest x (List.mem_cons_of_mem _ hx)
+      have hrest : ∀ seed, Hits (Marked seed) (entry :: rest) ↔
+          (entry = .inl (Sum.elim id id entry) ∧ Marked seed (Sum.elim id id entry)) ∨
+            Hits (Marked seed) rest := by
+        intro seed
+        constructor
+        · rintro ⟨x, hx, hm⟩
+          simp only [List.mem_cons] at hx
+          rcases hx with (heq | hx) | (heq | hx)
+          · subst heq; exact Or.inl ⟨rfl, hm⟩
+          · exact Or.inr ⟨x, Or.inl hx, hm⟩
+          · subst heq
+            exact absurd hm (not_marked_of_honest (hhonest x List.mem_cons_self) seed)
+          · exact Or.inr ⟨x, Or.inr hx, hm⟩
+        · rintro (⟨heq, hm⟩ | ⟨x, hx, hm⟩)
+          · exact ⟨_, Or.inl (heq ▸ List.mem_cons_self), hm⟩
+          · exact ⟨x, hx.imp (List.mem_cons_of_mem _) (List.mem_cons_of_mem _), hm⟩
+      rw [show (fun seed => Hits (Marked seed) (entry :: rest)) = fun seed =>
+          (entry = .inl (Sum.elim id id entry) ∧ Marked seed (Sum.elim id id entry)) ∨
+            Hits (Marked seed) rest from funext fun seed => propext (hrest seed)]
+      refine (probEvent_or_le _ _ _).trans ?_
       cases entry with
       | inl input =>
-          have hevent : (fun seed => Hits (Marked seed) (.inl input :: rest)) =
-              fun seed => Marked seed input ∨ Hits (Marked seed) rest := by
-            funext seed
-            apply propext
-            constructor
-            · rintro ⟨x, hx, hm⟩
-              rcases List.mem_cons.1 hx with heq | hx
-              · cases heq
-                exact Or.inl hm
-              · exact Or.inr ⟨x, hx, hm⟩
-            · rintro (hm | ⟨x, hx, hm⟩)
-              · exact ⟨input, List.mem_cons_self, hm⟩
-              · exact ⟨x, List.mem_cons_of_mem _ hx, hm⟩
-          rw [hevent]
-          refine (probEvent_or_le _ _ _).trans ?_
-          refine (add_le_add (marked_probability_le input) ih).trans (le_of_eq ?_)
+          refine (add_le_add (probEvent_mono fun seed _ h => h.2) ih).trans ?_
+          refine (add_le_add (marked_probability_le input) le_rfl).trans (le_of_eq ?_)
           simp only [ordinaryCount, Nat.cast_add, Nat.cast_one, add_mul, one_mul]
           rw [add_comm]
-      | inr amount =>
-          have hevent : (fun seed => Hits (Marked seed) (.inr amount :: rest)) =
-              fun seed => Hits (Marked seed) rest := by
-            funext seed
-            apply propext
-            constructor
-            · rintro ⟨x, hx, hm⟩
-              rcases List.mem_cons.1 hx with heq | hx
-              · cases heq
-              · exact ⟨x, hx, hm⟩
-            · rintro ⟨x, hx, hm⟩
-              exact ⟨x, List.mem_cons_of_mem _ hx, hm⟩
-          rw [hevent]
+      | inr input =>
+          have hzero : Pr[fun seed => (Sum.inr input : Entry HashInput) = .inl (Sum.elim id id (Sum.inr input)) ∧
+              Marked seed (Sum.elim id id (Sum.inr input)) | sampleMasterSeed] = 0 :=
+            probEvent_eq_zero fun seed _ h => by cases h.1
+          rw [hzero, zero_add]
           simpa only [ordinaryCount] using ih
 
-/-- Naming the hidden seed in a seed-independent run whose traces cost at most `q`. -/
+/-- Naming the hidden seed in a seed-independent run whose traces cost at most `q` and whose honest
+entries are signer's inputs. -/
 theorem marked_hit_le {Ω : Type} (program : ProbComp Ω) (entries : Ω → List (Entry HashInput)) (q : ℕ)
-    (hcost : ∀ result ∈ support program, traceCost (entries result) ≤ q) :
+    (hcost : ∀ result ∈ support program, traceCost (entries result) ≤ q)
+    (hhonest : ∀ result ∈ support program, ∀ x, Sum.inr x ∈ entries result → Short.IsHonest x) :
     Pr[fun pair : MasterSeed × Ω => Hits (Marked pair.1) (entries pair.2) |
       sampleMasterSeed >>= fun seed => (fun result => (seed, result)) <$> program] ≤
       2 * (q / (2 : ℝ≥0∞) ^ 256) := by
@@ -144,7 +169,7 @@ theorem marked_hit_le {Ω : Type} (program : ProbComp Ω) (entries : Ω → List
       by_cases hr : result ∈ support program
       · refine mul_le_mul' le_rfl ?_
         rw [probEvent_map]
-        refine (trace_marked_probability (entries result)).trans ?_
+        refine (trace_marked_probability (entries result) (hhonest result hr)).trans ?_
         refine mul_le_mul' ?_ le_rfl
         exact_mod_cast (ordinaryCount_le_traceCost _).trans (hcost result hr)
       · rw [probOutput_eq_zero_of_not_mem_support hr]
@@ -281,11 +306,6 @@ theorem evalDist_rtable_split {β : Type} (F : RTable → ProbComp β) :
 
 /-! ### One sample -/
 
-theorem hashDomain_tag_ne_seven (domain : HashDomain) :
-    (⟨7#5, 0#3, 0#8, 0#32, 0#24, 0#32⟩ : TweakFields).tag ≠ (hashDomainFields domain).tag := by
-  cases domain <;> simp [hashDomainFields, tweakFields, treeFields]
-
-
 noncomputable local instance detLabelsSampleable' : SampleableType CanonicalGraphLabels :=
   graphLabelsSampleable
 
@@ -349,6 +369,44 @@ theorem sample_costGameDet (adversary : Adversary) (material : Material) (seed :
       (GraphView.coordinates_correct _ _ _ _ (sample_consistent material seed answers table'))
       (sample_parameter material seed answers table') rnd
       (fun message => sampleFn_randomizer material seed answers table rnd message)]
+
+theorem onlyC_costInteractionDet (parameter : PublicParameter) (data : PublicData) (rnd : RTable)
+    {β : Type} (M : OracleComp AdvSpec β) (hM : OnlyAdv M) :
+    HiddenBridge.OnlyC (simulateQ (costInteractionDet parameter data rnd) M).run := by
+  induction M using OracleComp.inductionOn with
+  | pure value => exact HiddenBridge.OnlyC.pure' _
+  | query_bind input next ih =>
+      rw [OnlyAdv, isQueryBoundP_query_bind_iff] at hM
+      have hnext : ∀ answer, OnlyAdv (next answer) := fun answer => by
+        have := hM.2 answer
+        split at this <;> simpa [OnlyAdv] using this
+      rw [simulateQ_bind, WriterT.run_bind]
+      refine HiddenBridge.OnlyC.bind ?_ (fun result => HiddenBridge.OnlyC.map _ (ih result.1 (hnext result.1)))
+      rw [simulateQ_spec_query]
+      rcases input with (draw | bytes) | message
+      · change HiddenBridge.OnlyC (liftM (liftM (CostSpec.query (.inl (.inl draw))) : OracleComp CostSpec _) :
+          WriterT (QueryLog SigningSpec) (OracleComp CostSpec) _).run
+        exact HiddenBridge.OnlyC.writerLift (HiddenBridge.OnlyC.query (fun h => h))
+      · have hshort : IsShort bytes := by
+          rcases hM.1 with hnot | hzero
+          · simpa [LongAdv] using hnot
+          · omega
+        change HiddenBridge.OnlyC (liftM (liftM (CostSpec.query (.inl (.inr (.inl bytes)))) :
+          OracleComp CostSpec _) : WriterT (QueryLog SigningSpec) (OracleComp CostSpec) _).run
+        exact HiddenBridge.OnlyC.writerLift (HiddenBridge.OnlyC.query (fun hlong => hlong hshort))
+      · change HiddenBridge.OnlyC ((QueryImpl.withLogging (spec := SigningSpec) (m := OracleComp CostSpec)
+          (fun message => signCostDet parameter data rnd message)) message).run
+        rw [QueryImpl.run_withLogging_apply]
+        exact HiddenBridge.OnlyC.bind (HiddenBridge.OnlyC.signCostSourceLoop _ _ _ _ _ _)
+          (fun _ => HiddenBridge.OnlyC.pure' _)
+
+theorem onlyC_costGameDet (parameter : PublicParameter) (data : PublicData) (rnd : RTable)
+    (adversary : Adversary) : HiddenBridge.OnlyC (costGameDet parameter data rnd (internalize adversary)) := by
+  unfold costGameDet costRestDet
+  refine HiddenBridge.OnlyC.bind ?_ (fun output => ?_)
+  · exact onlyC_costInteractionDet _ _ _ _ (OnlyAdv.map _ (OnlyAdv.internal _ _))
+  · exact HiddenBridge.OnlyC.bind (HiddenBridge.OnlyC.liftHash (Short.Only.verify _ _ _))
+      (fun _ => HiddenBridge.OnlyC.pure' _)
 
 /-- The seed-free capped deterministic run of one sample. -/
 noncomputable def detRun (adversary : Adversary) (q : Nat) (material : Material)
@@ -510,5 +568,7 @@ theorem forgeAdvantage_le_seedFree (adversary : Adversary) (q : Nat)
         refine probEvent_bind_le_of _ _ _ _ fun rnd => ?_
         exact marked_hit_le (detRun (internalize adversary) q material answers table rnd)
           (fun result => result.2) q (fun result hresult => costRun_cap_cost_le _ _ _ q result hresult)
+          (fun result hresult => HiddenBridge.OnlyC.costRun_honest _ _
+            (HiddenBridge.OnlyC.cap (onlyC_costGameDet _ _ rnd adversary) q) result hresult)
 
 end LeanForest.Security.Det

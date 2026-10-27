@@ -73,10 +73,7 @@ theorem lazyRun_erase_query_bind {α : Type} (input : (SourceCostSpec D R ι).Do
       costStep model input state >>= fun result => lazyRun model (erase (next result.1)) result.2 := by
   cases input with
   | inl input => rw [erase_query_bind_inl, lazyRun_query_bind]; rfl
-  | inr amount =>
-      rw [erase_query_bind_inr]
-      change _ = (pure ((), state) >>= _)
-      rw [pure_bind]
+  | inr query => rw [erase_query_bind_inr, lazyRun_query_bind]; rfl
 
 omit [Fintype ι] in
 /-- The interpreter agrees with the lazy run of the wrapped computation. -/

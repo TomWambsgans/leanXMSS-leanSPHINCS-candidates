@@ -32,6 +32,12 @@ def recorded {D R ι : Type} : (SourceCostSpec D R ι).Domain → List (Entry D)
   | .inr honest => [.inr honest.input]
   | _ => []
 
+/-- The input that an ordinary or an honest query reads from the oracle. -/
+def queryInput {D R ι : Type} : (SourceCostSpec D R ι).Domain → Option D
+  | .inl (.inr (.inl input)) => some input
+  | .inr honest => some honest.input
+  | _ => none
+
 def entryCost {D : Type} : Entry D → Nat
   | .inl _ => 1
   | .inr _ => 0

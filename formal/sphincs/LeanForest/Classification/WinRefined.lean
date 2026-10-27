@@ -819,9 +819,16 @@ theorem win_implies_badA (hb : 0 < keptHeight topLayer) (adversary : Adversary) 
         (answersT parameterOutput fixed highs remaining table) (finalTable parameterOutput highs table cacheF) input =
       finalFn (sampleModel parameterOutput highs) table cacheF input :=
     fun input hinput => hagreeAll input (hshortE input hinput) (hseed' input hinput)
+  have hagreeH : ∀ input, Sum.inr input ∈ entries →
+      sampleFn (materialT parameterOutput fixed highs remaining table) seed
+        (answersT parameterOutput fixed highs remaining table) (finalTable parameterOutput highs table cacheF) input =
+      finalFn (sampleModel parameterOutput highs) table cacheF input := fun input hinput => by
+    have hhonest := OnlyC.costRun_honest _ table hOnly _ hrun input hinput
+    exact hagreeAll input hhonest.1 (honest_not_seedHit hhonest seed)
   set f' := sampleFn (materialT parameterOutput fixed highs remaining table) seed
     (answersT parameterOutput fixed highs remaining table) (finalTable parameterOutput highs table cacheF) with hf'
-  have hrun' := costRun_support_congr _ f' table _ _ hrun (fun input hinput => (hagree input hinput).symm)
+  have hrun' := costRun_support_congr _ f' table _ _ hrun (fun input hinput =>
+    (hinput.elim (hagree input) (hagreeH input)).symm)
   have hagreement := sample_agreement (materialT parameterOutput fixed highs remaining table) seed
     (answersT parameterOutput fixed highs remaining table) (finalTable parameterOutput highs table cacheF)
   have hcons := sample_consistent (materialT parameterOutput fixed highs remaining table) seed

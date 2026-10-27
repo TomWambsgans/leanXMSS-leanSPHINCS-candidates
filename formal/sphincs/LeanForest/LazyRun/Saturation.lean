@@ -1000,11 +1000,11 @@ open HiddenCost
 
 variable (model : HiddenRows.Model D R A ι)
 
-/-- One lazy comparison step on the cost interface; ticks change nothing. -/
+/-- One lazy comparison step on the cost interface; an honest query is an ordinary one. -/
 noncomputable def costStep : (input : (SourceCostSpec D R ι).Domain) → DebtState D R ι →
     ProbComp ((SourceCostSpec D R ι).Range input × DebtState D R ι)
   | .inl input, state => (lazyStep model input).run state
-  | .inr _, state => pure ((), state)
+  | .inr query, state => (lazyStep model (.inr (.inl query.input))).run state
 
 /-- A digest query pays the baseline exactly when no hit is decided yet. -/
 noncomputable def pays (state : DebtState D R ι) : (SourceCostSpec D R ι).Domain → ℕ
@@ -1020,9 +1020,11 @@ theorem erase_query_bind_inl {α : Type} (input : (HiddenRows.SourceSpec D R ι)
   rfl
 
 omit [Fintype ι] [SampleableType R] in
-theorem erase_query_bind_inr {α : Type} (amount : ℕ)
-    (next : Unit → OracleComp (SourceCostSpec D R ι) α) :
-    erase (liftM ((SourceCostSpec D R ι).query (.inr amount)) >>= next) = erase (next ()) := by
+theorem erase_query_bind_inr {α : Type} (query : Honest D)
+    (next : R → OracleComp (SourceCostSpec D R ι) α) :
+    erase (liftM ((SourceCostSpec D R ι).query (.inr query)) >>= next) =
+      liftM ((HiddenRows.SourceSpec D R ι).query (.inr (.inl query.input))) >>= fun value =>
+        erase (next value) := by
   simp only [erase, simulateQ_bind, simulateQ_spec_query]
   rfl
 

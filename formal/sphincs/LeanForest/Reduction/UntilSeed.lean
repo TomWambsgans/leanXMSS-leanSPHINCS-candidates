@@ -15,14 +15,14 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
-/-- Private draws are real; ordinary queries read a fixed function; reveals read a fixed table;
-honest-work ticks are free here (their cost is kept in the trace). -/
+/-- Private draws are real; ordinary and honest queries read a fixed function; reveals read a fixed
+table. -/
 noncomputable def fixedCostP (f : HashInput → HashOutput) (table : HiddenGraph.Table) :
     QueryImpl CostSpec ProbComp
   | .inl (.inl draw) => liftM (unifSpec.query draw)
   | .inl (.inr (.inl input)) => pure (f input)
   | .inl (.inr (.inr coordinate)) => pure (table coordinate)
-  | .inr _ => pure ()
+  | .inr query => pure (f query.input)
 
 noncomputable def costRun {α : Type} (f : HashInput → HashOutput) (table : HiddenGraph.Table)
     (computation : OracleComp CostSpec α) : ProbComp (α × List (Entry HashInput)) :=
@@ -43,7 +43,7 @@ theorem costRun_query_bind {α : Type} (f : HashInput → HashOutput) (table : H
 /-- The PMF handler underneath the cost writer. -/
 noncomputable def fixedCostPMF (f : QueryImpl HashSpec Id) (table : HiddenGraph.Table) :
     QueryImpl CostSpec PMF :=
-  fun | .inl request => GraphView.fixedSource f table request | .inr _ => PMF.pure ()
+  fun | .inl request => GraphView.fixedSource f table request | .inr query => PMF.pure (f query.input)
 
 /-- Writer cost is the cost of the recorded trace. -/
 theorem run_withAddCost_trace {m : Type → Type} [Monad m] [LawfulMonad m] {α : Type}
@@ -81,29 +81,32 @@ theorem evalDist_fixedCostSource {α : Type} (f : QueryImpl HashSpec Id) (table 
     rw [evalDist_query]
   · exact evalDist_liftM_id (f bytes)
   · exact evalDist_liftM_id (table coordinate)
-  · change 𝒟[PMF.pure ()] = 𝒟[(pure () : ProbComp _)]
-    simp
+  · exact evalDist_liftM_id (f amount.input)
 
 /-! ### Identical until a marked ordinary input -/
 
-/-- Some ordinary input of the trace satisfies the marker. -/
+/-- Some input of the trace, ordinary or honest, satisfies the marker. -/
 def Hits (marked : HashInput → Prop) (entries : List (Entry HashInput)) : Prop :=
-  ∃ input, Sum.inl input ∈ entries ∧ marked input
+  ∃ input, (Sum.inl input ∈ entries ∨ Sum.inr input ∈ entries) ∧ marked input
 
 theorem hits_append_recorded (marked : HashInput → Prop) (input : CostSpec.Domain)
     (entries : List (Entry HashInput))
-    (hinput : ∀ bytes, input = .inl (.inr (.inl bytes)) → ¬marked bytes) :
+    (hinput : ∀ bytes, queryInput input = some bytes → ¬marked bytes) :
     Hits marked (recorded input ++ entries) ↔ Hits marked entries := by
   constructor
   · rintro ⟨bytes, hmem, hmarked⟩
-    rw [List.mem_append] at hmem
-    rcases hmem with hrec | htail
-    · rcases input with (draw | (other | coordinate)) | amount <;> simp [recorded] at hrec
+    simp only [List.mem_append] at hmem
+    rcases hmem with (hrec | htail) | (hrec | htail)
+    · rcases input with (draw | (other | coordinate)) | query <;> simp [recorded] at hrec
       subst other
       exact absurd hmarked (hinput bytes rfl)
-    · exact ⟨bytes, htail, hmarked⟩
+    · exact ⟨bytes, Or.inl htail, hmarked⟩
+    · rcases input with (draw | (other | coordinate)) | query <;> simp [recorded] at hrec
+      subst hrec
+      exact absurd hmarked (hinput _ rfl)
+    · exact ⟨bytes, Or.inr htail, hmarked⟩
   · rintro ⟨bytes, hmem, hmarked⟩
-    exact ⟨bytes, List.mem_append_right _ hmem, hmarked⟩
+    exact ⟨bytes, hmem.imp (List.mem_append_right _) (List.mem_append_right _), hmarked⟩
 
 /-- Changing the answer function on marked inputs costs at most the marked-input probability,
 both measured on the run with the unchanged function. -/
@@ -116,28 +119,32 @@ theorem probEvent_costRun_le {α : Type} (f f₀ : HashInput → HashOutput) (ta
   induction computation using OracleComp.inductionOn generalizing event with
   | pure value => simp [costRun_pure]
   | query_bind input next ih =>
-      by_cases hmarked : ∃ bytes, input = .inl (.inr (.inl bytes)) ∧ marked bytes
-      · obtain ⟨bytes, rfl, hbytes⟩ := hmarked
+      by_cases hmarked : ∃ bytes, queryInput input = some bytes ∧ marked bytes
+      · obtain ⟨bytes, hread, hbytes⟩ := hmarked
         have hone : Pr[fun result => Hits marked result.2 |
-            costRun f₀ table (liftM (CostSpec.query (.inl (.inr (.inl bytes)))) >>= next)] = 1 := by
+            costRun f₀ table (liftM (CostSpec.query input) >>= next)] = 1 := by
           rw [probEvent_eq_one_iff]
           refine ⟨by simp, fun result hresult => ?_⟩
           rw [costRun_query_bind, mem_support_bind_iff] at hresult
           obtain ⟨answer, _, hmap⟩ := hresult
           rw [support_map] at hmap
           obtain ⟨tail, _, rfl⟩ := hmap
-          exact ⟨bytes, by simp [recorded], hbytes⟩
+          refine ⟨bytes, ?_, hbytes⟩
+          rcases input with (draw | (other | coordinate)) | query <;> simp [queryInput] at hread
+          · subst hread; exact Or.inl (by simp [recorded])
+          · subst hread; exact Or.inr (by simp [recorded])
         rw [hone]
         exact probEvent_le_one.trans (le_add_self)
-      · have hsame : fixedCostP f table input = fixedCostP f₀ table input := by
-          rcases input with (draw | (bytes | coordinate)) | amount
+      · have hnot : ∀ bytes, queryInput input = some bytes → ¬marked bytes :=
+          fun bytes heq h => hmarked ⟨bytes, heq, h⟩
+        have hsame : fixedCostP f table input = fixedCostP f₀ table input := by
+          rcases input with (draw | (bytes | coordinate)) | query
           · rfl
           · simp only [fixedCostP]
-            rw [hagree bytes (fun h => hmarked ⟨bytes, rfl, h⟩)]
+            rw [hagree bytes (hnot bytes rfl)]
           · rfl
-          · rfl
-        have hnot : ∀ bytes, input = .inl (.inr (.inl bytes)) → ¬marked bytes :=
-          fun bytes heq h => hmarked ⟨bytes, heq, h⟩
+          · simp only [fixedCostP]
+            rw [hagree query.input (hnot _ rfl)]
         rw [costRun_query_bind, costRun_query_bind, hsame]
         simp only [probEvent_bind_eq_tsum, probEvent_map]
         rw [← ENNReal.tsum_add]

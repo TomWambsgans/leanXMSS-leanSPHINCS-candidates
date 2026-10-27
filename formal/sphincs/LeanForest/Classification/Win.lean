@@ -253,7 +253,7 @@ theorem costRun_entries_short {α : Type} (f : HashInput → HashOutput) (table 
       obtain ⟨tail, htail, rfl⟩ := hresult
       intro bytes hbytes
       rcases List.mem_append.mp hbytes with hrec | hrest
-      · rcases input with (draw | (other | coordinate)) | amount <;> simp [HiddenCost.recorded] at hrec
+      · rcases input with (draw | (other | coordinate)) | query <;> simp [HiddenCost.recorded] at hrec
         subst hrec
         by_contra hlong
         exact hinput hlong
@@ -318,11 +318,18 @@ theorem exists_seed_avoiding (inputs : List HashInput) (hlength : inputs.length 
   simp only [named, List.mem_toFinset, List.mem_filterMap]
   exact ⟨input, hinput, hparse⟩
 
-/-- A fixed-function run depends only on the function at its recorded ordinary inputs. -/
+/-- No seed is named by an input of the signer. -/
+theorem honest_not_seedHit {input : HashInput} (h : Short.IsHonest input) (seed : MasterSeed) :
+    ¬SeedGuess.SeedHit input seed := by
+  obtain ⟨-, parameter, domain, payload, rfl⟩ := h
+  rintro ⟨parameter', derive, heq⟩
+  exact keygenInput_ne_hashInput parameter' parameter derive domain seed payload heq
+
+/-- A fixed-function run depends only on the function at its recorded inputs. -/
 theorem costRun_support_congr {α : Type} (f g : HashInput → HashOutput) (table : HiddenGraph.Table)
     (computation : OracleComp GraphView.CostSpec α) (result : α × List (HiddenCost.Entry HashInput))
     (hresult : result ∈ support (Stop.costRun f table computation))
-    (hagree : ∀ input, Sum.inl input ∈ result.2 → f input = g input) :
+    (hagree : ∀ input, (Sum.inl input ∈ result.2 ∨ Sum.inr input ∈ result.2) → f input = g input) :
     result ∈ support (Stop.costRun g table computation) := by
   induction computation using OracleComp.inductionOn generalizing result with
   | pure value => simpa [Stop.costRun_pure] using hresult
@@ -331,15 +338,16 @@ theorem costRun_support_congr {α : Type} (f g : HashInput → HashOutput) (tabl
       obtain ⟨answer, hanswer, hresult⟩ := hresult
       rw [support_map] at hresult
       obtain ⟨tail, htail, rfl⟩ := hresult
-      have htailAgree : ∀ x, Sum.inl x ∈ tail.2 → f x = g x :=
-        fun x hx => hagree x (List.mem_append_right _ hx)
+      have htailAgree : ∀ x, (Sum.inl x ∈ tail.2 ∨ Sum.inr x ∈ tail.2) → f x = g x :=
+        fun x hx => hagree x (hx.imp (List.mem_append_right _) (List.mem_append_right _))
       refine ⟨answer, ?_, by rw [support_map]; exact ⟨tail, ih answer tail htail htailAgree, rfl⟩⟩
-      rcases input with (draw | (bytes | coordinate)) | amount
+      rcases input with (draw | (bytes | coordinate)) | query
       · exact hanswer
-      · have hb := hagree bytes (by simp [HiddenCost.recorded])
+      · have hb := hagree bytes (Or.inl (by simp [HiddenCost.recorded]))
         simpa [Stop.fixedCostP, hb] using hanswer
       · exact hanswer
-      · exact hanswer
+      · have hb := hagree query.input (Or.inr (by simp [HiddenCost.recorded]))
+        simpa [Stop.fixedCostP, hb] using hanswer
 
 /-! ### Reachable coordinates of the sample model -/
 
@@ -455,7 +463,6 @@ theorem digestInputs_mem (f : QueryImpl HashSpec Id) (pk : PublicKey) (message :
 theorem OnlyC.costGameX (parameter : PublicParameter) (data : GraphView.PublicData) (adversary : Adversary) :
     OnlyC (HiddenBridge.costGameX parameter data (Internalize.internalize adversary)) := by
   unfold HiddenBridge.costGameX HiddenBridge.costRestX
-  refine OnlyC.bind (OnlyC.tick _) (fun _ => ?_)
   refine OnlyC.bind ?_ (fun output => ?_)
   · exact OnlyC.costInteraction _ _ _ (Internalize.OnlyAdv.map _ (Internalize.OnlyAdv.internal _ _))
   · exact OnlyC.bind (OnlyC.liftHash (Short.Only.verify _ _ _)) (fun _ => OnlyC.pure' _)
@@ -1101,9 +1108,16 @@ theorem win_implies_bad (hb : 0 < keptHeight topLayer) (adversary : Adversary) (
         (answersT parameterOutput fixed highs remaining table) (finalTable parameterOutput highs table cacheF) input =
       finalFn (sampleModel parameterOutput highs) table cacheF input :=
     fun input hinput => hagreeAll input (hshortE input hinput) (hseed' input hinput)
+  have hagreeH : ∀ input, Sum.inr input ∈ entries →
+      sampleFn (materialT parameterOutput fixed highs remaining table) seed
+        (answersT parameterOutput fixed highs remaining table) (finalTable parameterOutput highs table cacheF) input =
+      finalFn (sampleModel parameterOutput highs) table cacheF input := fun input hinput => by
+    have hhonest := OnlyC.costRun_honest _ table hOnly _ hrun input hinput
+    exact hagreeAll input hhonest.1 (honest_not_seedHit hhonest seed)
   set f' := sampleFn (materialT parameterOutput fixed highs remaining table) seed
     (answersT parameterOutput fixed highs remaining table) (finalTable parameterOutput highs table cacheF) with hf'
-  have hrun' := costRun_support_congr _ f' table _ _ hrun (fun input hinput => (hagree input hinput).symm)
+  have hrun' := costRun_support_congr _ f' table _ _ hrun (fun input hinput =>
+    (hinput.elim (hagree input) (hagreeH input)).symm)
   have hagreement := sample_agreement (materialT parameterOutput fixed highs remaining table) seed
     (answersT parameterOutput fixed highs remaining table) (finalTable parameterOutput highs table cacheF)
   have hcons := sample_consistent (materialT parameterOutput fixed highs remaining table) seed

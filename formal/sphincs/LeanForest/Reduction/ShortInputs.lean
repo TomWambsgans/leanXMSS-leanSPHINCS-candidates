@@ -260,14 +260,18 @@ theorem Only.forestRecover (parameter : PublicParameter) (index : Index)
     exact Only.bind (Only.tweakableHash _ _ _ (by rw [superPayload_length]; omega))
       (fun _ => Only.bind (Only.topFold _ _ _ _ _ _ _) (fun _ => Only.pure' _))
 
+theorem isShort_messageDigestInput (parameter : PublicParameter) (root : Digest) (message : Message)
+    (randomness : Randomness) :
+    IsShort (tweakableHashInput parameter .message (messageDigestPayload root message randomness)) := by
+  simp only [IsShort, bound, tweakableHashInput_length, messageDigestPayload_length]
+  omega
+
 theorem Only.messageDigestCall (parameter : PublicParameter) (root : Digest) (message : Message)
     (randomness : Randomness) :
     Only (Concrete.messageDigestCall parameter root message randomness :
       OracleComp HashSpec HashOutput) := by
   unfold Concrete.messageDigestCall
-  apply Only.query
-  simp only [IsShort, bound, tweakableHashInput_length, messageDigestPayload_length]
-  omega
+  exact Only.query (isShort_messageDigestInput parameter root message randomness)
 
 theorem Only.messageDigest (parameter : PublicParameter) (root : Digest) (message : Message)
     (randomness : Randomness) :
@@ -514,5 +518,47 @@ theorem Only.finishSign (secretKey : LeanForest.Seeded.SecretKey) (message : Mes
   unfold sequenceLayers
   refine Only.bind (Only.sequenceDep fun lay => Seeded.Only.signLayer secretKey index lay) (fun layers => ?_)
   rcases layers with _ | layers <;> exact Only.pure' _
+
+/-! ### The signer's inputs -/
+
+/-- An input the signer may query: a short tweakable hash input. -/
+def IsHonest (input : HashInput) : Prop :=
+  IsShort input ∧ ∃ parameter domain payload, input = tweakableHashInput parameter domain payload
+
+noncomputable instance : DecidablePred IsHonest := Classical.decPred _
+
+/-- Every hash query of the computation is one the signer may make. -/
+def HonestOnly {α : Type} (oa : OracleComp HashSpec α) : Prop :=
+  oa.IsQueryBoundP (fun input => ¬IsHonest input) 0
+
+theorem HonestOnly.pure' {α : Type} (value : α) : HonestOnly (pure value : OracleComp HashSpec α) := trivial
+
+theorem HonestOnly.bind {α β : Type} {oa : OracleComp HashSpec α} {next : α → OracleComp HashSpec β}
+    (h : HonestOnly oa) (hnext : ∀ value, HonestOnly (next value)) : HonestOnly (oa >>= next) := by
+  have := isQueryBoundP_bind (n := 0) (m := 0) h (fun value _ => hnext value)
+  simpa [HonestOnly] using this
+
+theorem HonestOnly.query {input : HashInput} (h : IsHonest input) :
+    HonestOnly (oracleHash input : OracleComp HashSpec HashOutput) := by
+  simp only [HonestOnly, oracleHash, HasQuery.query]
+  rw [isQueryBoundP_query_iff]
+  intro hnot
+  exact absurd h hnot
+
+theorem isHonest_messageDigestInput (parameter : PublicParameter) (root : Digest) (message : Message)
+    (randomness : Randomness) :
+    IsHonest (tweakableHashInput parameter .message (messageDigestPayload root message randomness)) :=
+  ⟨isShort_messageDigestInput parameter root message randomness, _, _, _, rfl⟩
+
+theorem HonestOnly.encode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex)
+    (leaf : LeafIndex) (message : HashInput) (hmsg : ShortMessage message) (counter : Counter) :
+    HonestOnly (Concrete.encode parameter lay tree leaf message counter :
+      OracleComp HashSpec (Option Encoding)) := by
+  unfold Concrete.encode Concrete.tweakableHash
+  unfold ShortMessage at hmsg
+  refine HonestOnly.bind (HonestOnly.bind (HonestOnly.query ⟨?_, _, _, _, rfl⟩) (fun _ => HonestOnly.pure' _))
+    (fun _ => HonestOnly.pure' _)
+  simp only [IsShort, bound, tweakableHashInput_length, List.length_append, bytesLE_length]
+  omega
 
 end LeanForest.Security.Short

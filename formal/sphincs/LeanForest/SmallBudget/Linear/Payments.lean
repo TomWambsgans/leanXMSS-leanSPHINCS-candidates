@@ -79,8 +79,8 @@ theorem fleafCount_append (IsFleaf : D → Prop) (first second : List (Entry D))
 theorem fleafCount_nil (IsFleaf : D → Prop) : fleafCount IsFleaf ([] : List (Entry D)) = 0 := rfl
 
 @[simp]
-theorem fleafCount_cons_inr (IsFleaf : D → Prop) (amount : ℕ) (entries : List (Entry D)) :
-    fleafCount IsFleaf (.inr amount :: entries) = fleafCount IsFleaf entries := by
+theorem fleafCount_cons_inr (IsFleaf : D → Prop) (input : D) (entries : List (Entry D)) :
+    fleafCount IsFleaf (.inr input :: entries) = fleafCount IsFleaf entries := by
   simp [fleafCount]
 
 theorem fleafCount_cons_inl (IsFleaf : D → Prop) (input : D) (entries : List (Entry D)) :
@@ -101,12 +101,59 @@ theorem fleafCount_recorded_inl (IsFleaf : D → Prop) (input : D) :
 theorem fleafCount_recorded_eq_zero (IsFleaf : D → Prop) (input : (SourceCostSpec D R ι).Domain)
     (h : ∀ bytes, input = .inl (.inr (.inl bytes)) → ¬IsFleaf bytes) :
     fleafCount IsFleaf (recorded input) = 0 := by
-  rcases input with (draw | (bytes | coordinate)) | amount
+  rcases input with (draw | (bytes | coordinate)) | query
   · rfl
   · have hb := h bytes rfl
     simp [fleafCount, recorded, hb]
   · rfl
   · simp [fleafCount, recorded]
+
+/-- Along every lazy path of the computation from the state, every honest query satisfies `ok`
+in the state it is made in, and every final value and state satisfy `post`. -/
+def Fine (ok : D → DebtState D R ι → Prop) {α : Type} (post : α → DebtState D R ι → Prop)
+    (computation : OracleComp (SourceCostSpec D R ι) α) : DebtState D R ι → Prop :=
+  OracleComp.construct (C := fun _ => DebtState D R ι → Prop) (fun value state => post value state)
+    (fun input _ next state => (∀ query, input = .inr query → ok query.input state) ∧
+      ∀ result ∈ support (costStep model input state), next result.1 result.2)
+    computation
+
+omit [Fintype ι] in
+theorem fine_pure (ok : D → DebtState D R ι → Prop) {α : Type} (post : α → DebtState D R ι → Prop)
+    (value : α) (state : DebtState D R ι) :
+    Fine model ok post (pure value) state ↔ post value state := Iff.rfl
+
+omit [Fintype ι] in
+theorem fine_query_bind (ok : D → DebtState D R ι → Prop) {α : Type} (post : α → DebtState D R ι → Prop)
+    (input : (SourceCostSpec D R ι).Domain)
+    (next : (SourceCostSpec D R ι).Range input → OracleComp (SourceCostSpec D R ι) α) (state : DebtState D R ι) :
+    Fine model ok post (liftM ((SourceCostSpec D R ι).query input) >>= next) state ↔
+      (∀ query, input = .inr query → ok query.input state) ∧
+        ∀ result ∈ support (costStep model input state), Fine model ok post (next result.1) result.2 :=
+  Iff.rfl
+
+omit [Fintype ι] in
+theorem fine_bind (ok : D → DebtState D R ι → Prop) {α β : Type} (post : β → DebtState D R ι → Prop)
+    (first : OracleComp (SourceCostSpec D R ι) α) (next : α → OracleComp (SourceCostSpec D R ι) β)
+    (state : DebtState D R ι) :
+    Fine model ok post (first >>= next) state ↔
+      Fine model ok (fun value state' => Fine model ok post (next value) state') first state := by
+  induction first using OracleComp.inductionOn generalizing state with
+  | pure value => rw [pure_bind]; rfl
+  | query_bind input rest ih =>
+      rw [bind_assoc, fine_query_bind, fine_query_bind]
+      exact and_congr Iff.rfl (forall₂_congr fun result _ => ih result.1 result.2)
+
+omit [Fintype ι] in
+theorem fine_mono (ok : D → DebtState D R ι → Prop) {α : Type} {post post' : α → DebtState D R ι → Prop}
+    (hpost : ∀ value state, post value state → post' value state)
+    (computation : OracleComp (SourceCostSpec D R ι) α) :
+    ∀ state, Fine model ok post computation state → Fine model ok post' computation state := by
+  induction computation using OracleComp.inductionOn with
+  | pure value => exact hpost value
+  | query_bind input next ih =>
+      intro state h
+      rw [fine_query_bind] at h ⊢
+      exact ⟨h.1, fun result hresult => ih result.1 result.2 (h.2 result hresult)⟩
 
 /-- Interpreted runs lose no mass. -/
 theorem interp_mass {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) (budget : ℕ)
@@ -116,24 +163,27 @@ theorem interp_mass {α : Type} (computation : OracleComp (SourceCostSpec D R ι
 
 /-- **Linear potential with two payments on the interpreter.** -/
 theorem interp_potential2 {α : Type} (IsFleaf : D → Prop) (Inv : DebtState D R ι → Prop)
+    (ok : D → DebtState D R ι → Prop)
     (Φ : ℕ → DebtState D R ι → ℝ≥0∞) (payoff : (ι → Digest) → DebtState D R ι → ℝ≥0∞) (pay pay2 : ℝ≥0∞)
     (hfinal : ∀ budget state, Inv state → endValue payoff state ≤ Φ budget state)
     (hstep : ∀ (input : (SourceCostSpec D R ι).Domain) budget state, Inv state → sourceCost input ≤ budget →
+      (∀ query, input = .inr query → ok query.input state) →
       ∑' result, Pr[= result | costStep model input state] * Φ (budget - sourceCost input) result.2 +
         pay * digestCount tg (recorded input) + pay2 * fleafCount IsFleaf (recorded input) ≤ Φ budget state)
     (hinv : ∀ input state, Inv state → ∀ result ∈ support (costStep model input state), Inv result.2)
     (computation : OracleComp (SourceCostSpec D R ι) α) :
-    ∀ budget state, Inv state →
+    ∀ budget state, Inv state → Fine model ok (fun _ _ => True) computation state →
       ∑' out, Pr[= out | interp tg initial model computation budget state] *
         (endValue payoff out.2 + pay * digestCount tg out.1.2.2.1 + pay2 * fleafCount IsFleaf out.1.2.2.1) ≤
           Φ budget state := by
   induction computation using OracleComp.inductionOn with
   | pure value =>
-      intro budget state hstate
+      intro budget state hstate _
       rw [interp_pure, tsum_probOutput_pure_mul]
       simpa [digestCount, fleafCount] using hfinal budget state hstate
   | query_bind input next ih =>
-      intro budget state hstate
+      intro budget state hstate hfine
+      rw [fine_query_bind] at hfine
       rw [interp_query_bind]
       split_ifs with hcost
       · rw [tsum_probOutput_bind_mul]
@@ -167,7 +217,7 @@ theorem interp_potential2 {α : Type} (IsFleaf : D → Prop) (Inv : DebtState D 
                       rw [hc]
                       ring
                   _ ≤ Φ (budget - sourceCost input) result.2 + 1 * c :=
-                      add_le_add (ih result.1 _ _ (hinv input state hstate result hr))
+                      add_le_add (ih result.1 _ _ (hinv input state hstate result hr) (hfine.2 result hr))
                         (mul_le_mul' tsum_probOutput_le_one le_rfl)
                   _ = _ := by rw [one_mul]
               · rw [probOutput_eq_zero_of_not_mem_support hr, zero_mul, zero_mul]
@@ -180,7 +230,7 @@ theorem interp_potential2 {α : Type} (IsFleaf : D → Prop) (Inv : DebtState D 
                 1 * c := add_le_add le_rfl (mul_le_mul' tsum_probOutput_le_one le_rfl)
           _ ≤ _ := by
               rw [one_mul, hc, ← add_assoc]
-              exact hstep input budget state hstate hcost
+              exact hstep input budget state hstate hcost hfine.1
       · rw [tsum_probOutput_pure_mul]
         simpa [digestCount, fleafCount] using hfinal budget state hstate
 

@@ -93,4 +93,10 @@ theorem costStep_ordinary (bytes : D) (state : DebtState D R ι) :
           · simp only [ordinaryStep, hp, hk, if_neg heq]
             exact lazyStep_other model bytes state query hp canonical hk heq
 
+omit [Fintype ι] in
+theorem costStep_honest (query : Honest D) (state : DebtState D R ι) :
+    (costStep model (.inr query) state : ProbComp (R × DebtState D R ι)) =
+      ordinaryStep model query.input state.known state :=
+  costStep_ordinary model query.input state
+
 end LeanForest.Security.HiddenDebt

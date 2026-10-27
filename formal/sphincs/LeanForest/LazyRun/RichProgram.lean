@@ -141,9 +141,9 @@ noncomputable def costRestX (parameter : PublicParameter) (data : PublicData) (a
   let verified ← liftM (Concrete.verify pk forgery.message forgery.signature : OracleComp HashSpec Bool)
   return (forgery, log, verified)
 
+/-- The game after key generation, which is free. -/
 noncomputable def costGameX (parameter : PublicParameter) (data : PublicData) (adversary : Adversary) :
-    OracleComp CostSpec Outcome := do
-  HiddenCost.tick Prefix.keygenHashCost
+    OracleComp CostSpec Outcome :=
   costRestX parameter data adversary
 
 theorem costGame_eq_map (parameter : PublicParameter) (data : PublicData) (adversary : Adversary) :

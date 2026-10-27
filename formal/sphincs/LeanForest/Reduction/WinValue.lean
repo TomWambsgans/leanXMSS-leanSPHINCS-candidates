@@ -143,15 +143,6 @@ theorem val_liftProb_bind {γ α : Type} (E : α → Prop) (p : ProbComp γ)
       refine tsum_congr fun a => ?_
       rw [ih a]
 
-theorem val_tick_le {α : Type} (E : α → Prop) (amount : ℕ) (k : Unit → OracleComp CostSpec α) (b : ℕ) :
-    val g c E (HiddenCost.tick amount >>= k) b ≤ val g c E (k ()) b := by
-  rw [HiddenCost.tick, val_query_bind]
-  split
-  · change ∑' a, Pr[= a | (pure () : ProbComp Unit)] * _ ≤ _
-    rw [tsum_probOutput_pure_mul]
-    exact val_mono g c E _ _ _ (Nat.sub_le _ _)
-  · exact bot_le
-
 /-! ### Averaging uniform tables -/
 
 omit g c in
@@ -183,22 +174,15 @@ theorem tsum_prob_mul_le {ρ : Type} (p : ProbComp ρ) (C : ℝ≥0∞) :
 
 /-! ### One message: a derived randomizer base read once is a fresh uniform start -/
 
-/-- Averaging the planted base `R0` of one message, its step fixed: the deterministic signer (one
-tick, then the scan from the base) wins at most as often as the scan from a uniform start. -/
+/-- Averaging the planted base `R0` of one message, its step fixed: the deterministic signer (the
+scan from the base) wins as often as the scan from a uniform start. -/
 theorem row_le {α : Type} (E : α → Prop) (parameter : PublicParameter) (data : PublicData)
     (message : Message) (k : Option Signature → OracleComp CostSpec α) (n b : ℕ) :
     ∑' r, Pr[= r | ($ᵗ Randomness : ProbComp Randomness)] *
-        val g c E ((HiddenCost.tick 1 >>= fun _ =>
-          signCostSourceLoop parameter data message (data.step message) n r) >>= k) b ≤
+        val g c E (signCostSourceLoop parameter data message (data.step message) n r >>= k) b ≤
       val g c E (((liftM ($ᵗ Randomness : ProbComp Randomness) : OracleComp CostSpec Randomness) >>=
         fun start => signCostSourceLoop parameter data message (data.step message) n start) >>= k) b := by
-  calc
-    _ ≤ ∑' r, Pr[= r | ($ᵗ Randomness : ProbComp Randomness)] *
-          val g c E (signCostSourceLoop parameter data message (data.step message) n r >>= k) b := by
-      refine ENNReal.tsum_le_tsum fun r => mul_le_mul' le_rfl ?_
-      rw [bind_assoc]
-      exact val_tick_le g c E 1 _ b
-    _ = _ := by rw [bind_assoc, val_liftProb_bind]
+  rw [bind_assoc, val_liftProb_bind]
 
 /-! ### The adversary's interaction as a cost program -/
 
@@ -363,8 +347,7 @@ theorem avg_advDet (E : Bool → Prop) (parameter : PublicParameter) (data : Pub
             (Det.signCostDet parameter data (Det.joinTable (Function.update lows m low) data.steps) m >>= fun r =>
               advDet parameter data (Det.joinTable (Function.update lows m low) data.steps) (next r)
                 (L ++ [⟨m, r⟩])) =
-            ((HiddenCost.tick 1 >>= fun _ =>
-                signCostSourceLoop parameter data m (data.step m) digestAttemptLimit low) >>= fun r =>
+            (signCostSourceLoop parameter data m (data.step m) digestAttemptLimit low >>= fun r =>
               advDet parameter data (Det.joinTable lows data.steps) (next r) (L ++ [⟨m, r⟩])) := by
           intro low lows
           rw [Det.joinTable_update]
@@ -375,8 +358,7 @@ theorem avg_advDet (E : Bool → Prop) (parameter : PublicParameter) (data : Pub
         simp_rw [hloc]
         calc
           _ ≤ ∑' low, Pr[= low | ($ᵗ Randomness : ProbComp Randomness)] *
-                val g c E ((HiddenCost.tick 1 >>= fun _ =>
-                    signCostSourceLoop parameter data m (data.step m) digestAttemptLimit low) >>= fun r =>
+                val g c E (signCostSourceLoop parameter data m (data.step m) digestAttemptLimit low >>= fun r =>
                   advRand parameter data (next r) (L ++ [⟨m, r⟩])) b := by
             refine ENNReal.tsum_le_tsum fun low => mul_le_mul' le_rfl ?_
             exact val_bind_le_avg g c E _ _ _ _ (fun r _ b' => ih r (S ++ [m]) _ (hrest r) b') b
@@ -401,11 +383,23 @@ theorem fixedCostP_liftHash {γ : Type} (oa : OracleComp HashSpec γ) :
       rw [pure_bind, ih, evalWithAnswerFn_bind]
       rfl
 
-theorem fixedCostP_tick (amount : ℕ) :
-    simulateQ (fixedCostP g c) (HiddenCost.tick (D := HashInput) (R := HashOutput)
-      (ι := HiddenGraph.Coordinate) amount) = pure () := by
-  rw [HiddenCost.tick, simulateQ_spec_query]
+theorem fixedCostP_honest (x : HashInput) :
+    simulateQ (fixedCostP g c) (HiddenCost.honest (D := HashInput) (R := HashOutput)
+      (ι := HiddenGraph.Coordinate) x) = pure (g x) := by
+  rw [HiddenCost.honest, simulateQ_spec_query]
   rfl
+
+theorem fixedCostP_honestly {γ : Type} (oa : OracleComp HashSpec γ) :
+    simulateQ (fixedCostP g c) (honestly oa) = pure (evalWithAnswerFn g oa) := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => rw [honestly_pure, simulateQ_pure, evalWithAnswerFn_pure]
+  | query_bind x next ih =>
+      rw [honestly_bind, simulateQ_bind, evalWithAnswerFn_bind]
+      have hq : honestly (liftM (HashSpec.query x) : OracleComp HashSpec _) =
+          HiddenCost.honest (D := HashInput) (R := HashOutput) (ι := HiddenGraph.Coordinate) x := by
+        simp [honestly, HiddenCost.honest]
+      rw [hq, fixedCostP_honest, pure_bind, ih]
+      rfl
 
 theorem fixedCostP_sequenceFin_pure {α : Type} {n : ℕ} (computation : Fin n → OracleComp CostSpec α)
     (h : ∀ i, ∃ x, simulateQ (fixedCostP g c) (computation i) = pure x) :
@@ -474,16 +468,12 @@ theorem fixedCostP_sequenceDep_det : ∀ {n : Nat} {α : Fin n → Type}
 theorem layerCostSearch_det (parameter : PublicParameter) (data : PublicData) (index : Index)
     (lay : Layer) :
     ∃ x, simulateQ (fixedCostP g c) (layerCostSearch parameter data index lay) = pure x := by
-  simp only [layerCostSearch, simulateQ_bind, fixedCostP_tick, fixedCostP_liftHash, pure_bind]
-  split
-  · simp only [simulateQ_bind, fixedCostP_tick, pure_bind, simulateQ_pure]
-    exact ⟨_, rfl⟩
-  · exact ⟨_, simulateQ_pure _ _⟩
+  exact ⟨_, fixedCostP_honestly g c _⟩
 
 theorem finishCostSource_det (parameter : PublicParameter) (data : PublicData) (message : Message)
     (randomness : Randomness) :
     ∃ x, simulateQ (fixedCostP g c) (finishCostSource parameter data message randomness) = pure x := by
-  simp only [finishCostSource, simulateQ_bind, fixedCostP_liftHash, pure_bind, fixedCostP_tick]
+  simp only [finishCostSource, simulateQ_bind, fixedCostP_honest, pure_bind]
   obtain ⟨xs, hs⟩ := fixedCostP_sequenceDep_det g c _
     (fun lay => layerCostSearch_det g c parameter data _ lay)
   rw [hs, pure_bind]
@@ -502,7 +492,7 @@ theorem signCostDetLoop_det (parameter : PublicParameter) (data : PublicData)
   | zero => intro start; exact ⟨none, rfl⟩
   | succ n ih =>
       intro start
-      simp only [signCostSourceLoop, simulateQ_bind, pure_bind, fixedCostP_liftHash]
+      simp only [signCostSourceLoop, simulateQ_bind, pure_bind, fixedCostP_honest]
       split
       · exact finishCostSource_det g c parameter data message _
       · exact ih (start + step)
@@ -512,7 +502,7 @@ theorem signCostDet_det (parameter : PublicParameter) (data : PublicData) (rnd :
     ∃ x, simulateQ (fixedCostP g c) (Det.signCostDet parameter data rnd message) = pure x := by
   obtain ⟨x, hx⟩ := signCostDetLoop_det g c parameter data message
     (walkStep (upperHash (rnd message))) digestAttemptLimit (truncateHash (rnd message))
-  exact ⟨x, by rw [Det.signCostDet, simulateQ_bind, fixedCostP_tick, pure_bind, hx]⟩
+  exact ⟨x, by rw [Det.signCostDet, hx]⟩
 
 /-! ### Memoizing at the cost level -/
 
@@ -602,13 +592,12 @@ theorem memo_game_le (parameter : PublicParameter) (data : PublicData) (rnd : De
     val g c (· = true) (Det.costGameDet parameter data rnd adversary) b ≤
       val g c (· = true) (Det.costGameDet parameter data rnd (Memo.memoAdv adversary)) b := by
   unfold Det.costGameDet
-  refine val_bind_mono g c _ _ _ _ (fun _ _ b' => ?_) b
   rw [costRestDet_eq, costRestDet_eq]
   change _ ≤ val g c (· = true) (advDet parameter data rnd
-    ((simulateQ Memo.memoImpl (adversary.main ⟨data.root, parameter⟩)).run' Memo.emptyRecord) []) b'
+    ((simulateQ Memo.memoImpl (adversary.main ⟨data.root, parameter⟩)).run' Memo.emptyRecord) []) b
   rw [StateT.run'_eq]
   exact memo_le g c parameter data rnd _ Memo.emptyRecord [] []
-    ⟨fun m σ h => by simp [Memo.emptyRecord] at h, fun e => Iff.rfl, le_rfl⟩ b'
+    ⟨fun m σ h => by simp [Memo.emptyRecord] at h, fun e => Iff.rfl, le_rfl⟩ b
 
 theorem avg_game (parameter : PublicParameter) (data : PublicData) (adversary : Adversary)
     (hnr : adversary.NoRepeat) (b : ℕ) :
@@ -616,9 +605,8 @@ theorem avg_game (parameter : PublicParameter) (data : PublicData) (adversary : 
         val g c (· = true) (Det.costGameDet parameter data (Det.joinTable lows data.steps) adversary) b ≤
       val g c (· = true) (costGame parameter data adversary) b := by
   unfold Det.costGameDet costGame
-  refine val_bind_le_avg g c _ _ _ _ _ (fun _ _ b' => ?_) b
   simp only [costRestDet_eq, costRest_eq]
-  exact avg_advDet g c _ parameter data _ [] [] (hnr _) b'
+  exact avg_advDet g c _ parameter data _ [] [] (hnr _) b
 
 /-- **Deterministic randomizers, memoized and averaged.** With uniform base randomizers and the step
 halves of `data`, the deterministic game of any adversary wins (within budget) at most as often as

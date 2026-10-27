@@ -117,19 +117,43 @@ theorem costRun_withReveals_liftProb {α : Type} (oa : ProbComp α) (result : Ru
       obtain ⟨h1, h2⟩ := ih answer inner hinner
       simp [revealed, recorded, h1, h2]
 
-theorem costRun_withReveals_tick (amount : Nat) (result : RunResult Unit)
+theorem costRun_withReveals_honest (input : HashInput) (result : RunResult HashOutput)
     (hresult : result ∈ support (costRun f table (withReveals
-      (HiddenCost.tick (D := HashInput) (R := HashOutput) (ι := HiddenGraph.Coordinate) amount)))) :
-    result = (((), []), [.inr amount]) := by
-  have h : HiddenCost.tick (D := HashInput) (R := HashOutput) (ι := HiddenGraph.Coordinate) amount =
-      liftM (CostSpec.query (.inr amount)) >>= fun value => pure value := by
+      (HiddenCost.honest (D := HashInput) (R := HashOutput) (ι := HiddenGraph.Coordinate) input)))) :
+    result = ((f input, []), [.inr input]) := by
+  have h : HiddenCost.honest (D := HashInput) (R := HashOutput) (ι := HiddenGraph.Coordinate) input =
+      liftM (CostSpec.query (.inr ⟨input⟩)) >>= fun value => pure value := by
     rw [bind_pure]
     rfl
   rw [h, costRun_withReveals_query_bind, mem_support_bind_iff] at hresult
-  obtain ⟨answer, _, hresult⟩ := hresult
+  obtain ⟨answer, hanswer, hresult⟩ := hresult
+  have hanswer' : answer = f input := by simpa [fixedCostP] using hanswer
+  subst answer
   rw [costRun_withReveals_pure, map_pure, support_pure, Set.mem_singleton_iff] at hresult
   rw [hresult]
   rfl
+
+/-- An honest computation evaluates with the fixed function, reveals nothing and records exactly
+its queried inputs as honest entries. -/
+theorem costRun_withReveals_honestly {α : Type} (oa : OracleComp HashSpec α) (result : RunResult α)
+    (hresult : result ∈ support (costRun f table (withReveals (honestly oa)))) :
+    result = ((evalWithAnswerFn f oa, []), (queriedInputs f oa).map Sum.inr) := by
+  induction oa using OracleComp.inductionOn generalizing result with
+  | pure value =>
+      rw [honestly_pure, costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at hresult
+      rw [hresult]
+      simp
+  | query_bind input next ih =>
+      rw [honestly_bind] at hresult
+      obtain ⟨r1, h1, r2, h2, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
+      have hq : honestly (liftM (HashSpec.query input) : OracleComp HashSpec _) =
+          HiddenCost.honest (D := HashInput) (R := HashOutput) (ι := HiddenGraph.Coordinate) input := by
+        simp [honestly, HiddenCost.honest]
+      rw [hq] at h1
+      obtain rfl := costRun_withReveals_honest f table input r1 h1
+      rw [ih _ r2 h2]
+      simp only [queriedInputs_query_bind, List.nil_append, List.map_cons, List.singleton_append]
+      rfl
 
 theorem costRun_withReveals_reveal (coordinate : HiddenGraph.Coordinate) (result : RunResult Digest)
     (hresult : result ∈ support (costRun f table (withReveals
@@ -328,26 +352,8 @@ theorem costRun_withReveals_layerCostSearch (parameter : PublicParameter) (data 
     result.1 = (firstEncoding f parameter lay (treeIndexAt index lay) (leafIndexAt index lay)
       (data.keyMessage lay (treeIndexAt index lay) (leafIndexAt index lay)) encodingAttemptLimit 0, []) := by
   unfold layerCostSearch at hresult
-  obtain ⟨r1, h1, r2, h2, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
-  obtain rfl := costRun_withReveals_tick f table _ r1 h1
-  obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ r2 h2
-  obtain rfl := costRun_withReveals_liftHash f table _ r3 h3
-  dsimp only at h4 ⊢
-  simp only [layerSearch, ReferenceChoice.eval_search] at h4 ⊢
-  cases hfound : firstEncoding f parameter lay (treeIndexAt index lay) (leafIndexAt index lay)
-      (data.keyMessage lay (treeIndexAt index lay) (leafIndexAt index lay)) encodingAttemptLimit 0 with
-  | none =>
-      rw [hfound] at h4
-      rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at h4
-      subst r4
-      rfl
-  | some pair =>
-      rw [hfound] at h4
-      obtain ⟨r5, h5, r6, h6, rfl⟩ := costRun_withReveals_bind f table _ _ r4 h4
-      obtain rfl := costRun_withReveals_tick f table _ r5 h5
-      rw [costRun_withReveals_pure, support_pure, Set.mem_singleton_iff] at h6
-      subst r6
-      rfl
+  rw [costRun_withReveals_honestly f table _ result hresult]
+  simp only [layerSearch, ReferenceChoice.eval_search]
 
 theorem costRun_withReveals_sequenceDep_quiet : ∀ {n : Nat} {α : Fin n → Type}
     (comp : (i : Fin n) → OracleComp CostSpec (Option (α i))) (v : (i : Fin n) → Option (α i)),
@@ -419,11 +425,16 @@ theorem finish_support (parameter : PublicParameter) (data : PublicData) (messag
       (finishCostSource parameter data message randomness)))) :
     result.1.1 = assembled f parameter data table message randomness ∧
       result.1.2 = revealsOf f parameter data message randomness := by
+  have hdigest : truncateMessageDigest (f (Security.digestInput parameter data.root message randomness)) =
+      evalWithAnswerFn f (messageDigest parameter data.root message randomness :
+        OracleComp HashSpec MessageDigest) := by
+    simp only [messageDigest, messageDigestCall, oracleHash, evalWithAnswerFn_bind, evalWithAnswerFn_pure]
+    rfl
   unfold finishCostSource at hresult
-  obtain ⟨r1, h1, r2, h2, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
-  obtain rfl := costRun_withReveals_liftHash f table _ r1 h1
-  obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ r2 h2
-  obtain rfl := costRun_withReveals_tick f table _ r3 h3
+  obtain ⟨r1, h1, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
+  obtain rfl := costRun_withReveals_honest f table _ r1 h1
+  dsimp only at h4 ⊢
+  rw [hdigest] at h4
   obtain ⟨r5, h5, r6, h6, rfl⟩ := costRun_withReveals_bind f table _ _ r4 h4
   have hv5 := costRun_withReveals_sequenceDep_quiet f table _ _
     (fun lay r hr => costRun_withReveals_layerCostSearch f table parameter data _ lay r hr) r5 h5
@@ -493,13 +504,17 @@ theorem signLoop_support (parameter : PublicParameter) (seed : MasterSeed) (data
   | succ attempts ih =>
       rw [signCostSourceLoop] at hresult
       obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ result hresult
-      obtain rfl := costRun_withReveals_liftHash f table _ r3 h3
+      obtain rfl := costRun_withReveals_honest f table _ r3 h3
       dsimp only at h4 ⊢
       rw [List.nil_append]
       split at h4
       · rename_i hland
         have hland' : Landed parameter (digestIndex (Completeness.digestValue f
             ⟨seed, parameter, data.root⟩ message randomness)) := by
+          have hfirst : f (Security.digestInput parameter data.root message randomness) =
+              evalWithAnswerFn f (messageDigestCall parameter data.root message randomness :
+                OracleComp HashSpec HashOutput) := rfl
+          rw [hfirst] at hland
           simpa only [Completeness.digestValue, messageDigest, evalWithAnswerFn_bind,
             evalWithAnswerFn_pure, Completeness.digestIndex_truncate] using hland
         obtain ⟨hvalue, hreveals⟩ := finish_support f table parameter data message randomness r4 h4
@@ -559,7 +574,7 @@ theorem costRun_withReveals_plainQuery (input : CostSpec.Domain)
   obtain ⟨answer, _, hresult⟩ := hresult
   rw [costRun_withReveals_pure, map_pure, support_pure, Set.mem_singleton_iff] at hresult
   subst result
-  rcases input with (draw | (bytes | coordinate)) | amount
+  rcases input with (draw | (bytes | coordinate)) | query
   · rfl
   · rfl
   · exact (hreveal coordinate rfl).elim
@@ -640,9 +655,7 @@ theorem rich_support (adversary : Adversary) (q : Nat) (parameter : PublicParame
     LogGood f parameter seed data outcome.2.1 reveals := by
   have h := costRun_withReveals_cap f table _ q outcome reveals entries hresult
   unfold costGameX costRestX at h
-  obtain ⟨r1, h1, r2, h2, heq⟩ := costRun_withReveals_bind f table _ _ _ h
-  obtain rfl := costRun_withReveals_tick f table _ r1 h1
-  obtain ⟨r3, h3, r4, h4, rfl⟩ := costRun_withReveals_bind f table _ _ r2 h2
+  obtain ⟨r3, h3, r4, h4, heq⟩ := costRun_withReveals_bind f table _ _ _ h
   have hgood := interaction_support f table parameter seed data hdata htable _ r3 h3
   obtain ⟨⟨⟨forgery, log⟩, interactionReveals⟩, interactionEntries⟩ := r3
   dsimp only at h4 hgood
