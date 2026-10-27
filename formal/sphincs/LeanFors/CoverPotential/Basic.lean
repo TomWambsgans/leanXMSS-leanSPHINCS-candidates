@@ -542,6 +542,140 @@ theorem witness_pos_of_covered {R : List Coordinate} {d : Multiset View} (hD : D
   unfold witness
   rw [if_pos hall]
 
+/-! ### Presampling the other calls of a pair -/
+
+section PresampleFamily
+
+variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate)
+  (initial : HiddenOutside.Cache HashInput HashOutput) (model : HiddenRows.Model HashInput HashOutput A Coordinate)
+
+/-- `HiddenDebt.interp_presample_fresh_le` with the growth hypothesis only at the presampled
+input: the final value of the run is not monotone under a store at a *targeted* input. -/
+theorem interp_presample_fresh_leF (x : HashInput) (hk : tg.kind x = .none) {α : Type}
+    (computation : OracleComp CostSpec α) (budget : ℕ) (state : State) (hx : state.cache x = none)
+    (F : Run HashInput Coordinate α × State → ℝ≥0∞)
+    (hF : ∀ out (v : HashOutput), out.2.cache x = none → F out ≤ F (out.1, out.2.store x v)) :
+    ∑' out, Pr[= out | interp tg initial model computation budget state] * F out ≤
+      (Fintype.card HashOutput : ℝ≥0∞)⁻¹ * ∑ v, ∑' out, Pr[= out | interp tg initial model
+        computation budget (state.store x v)] * F out := by
+  refine le_trans (interp_presample_le tg initial model x hk computation budget state F fun out s hs => ?_) ?_
+  · cases hc : out.2.cache x with
+    | some w =>
+        rw [presample_cached x out.2 w hc, support_pure, Set.mem_singleton_iff] at hs
+        rw [hs]
+    | none =>
+        rw [presample_fresh x out.2 hc, support_map] at hs
+        obtain ⟨v, _, rfl⟩ := hs
+        exact hF out v hc
+  · rw [presample_fresh x state hx, tsum_probOutput_map_mul, tsum_uniform_eq]
+
+set_option maxRecDepth 100000 in
+/-- `HiddenDebt.interp_presampleAll_le` with the growth hypothesis only at the family. -/
+theorem interp_presampleAll_leF {α : Type} (computation : OracleComp CostSpec α) (budget : ℕ)
+    (F : Run HashInput Coordinate α × State → ℝ≥0∞) :
+    ∀ {n : ℕ} (x : Fin n → HashInput), Function.Injective x → (∀ i, tg.kind (x i) = .none) →
+      (∀ out (i : Fin n) (v : HashOutput), out.2.cache (x i) = none →
+        F out ≤ F (out.1, out.2.store (x i) v)) →
+      ∀ state : State, (∀ i, state.cache (x i) = none) →
+        ∑' out, Pr[= out | interp tg initial model computation budget state] * F out ≤
+          ((Fintype.card HashOutput : ℝ≥0∞) ^ n)⁻¹ * ∑ u : Fin n → HashOutput,
+            ∑' out, Pr[= out | interp tg initial model computation budget (storeAll x u state)] * F out
+  | 0, _, _, _, _, _, _ => by
+      simp only [pow_zero, inv_one, one_mul]
+      rw [Fintype.sum_unique]
+      rfl
+  | n + 1, x, hx, hk, hF, state, hfresh => by
+      have hxt : Function.Injective (Fin.tail x) := fun a b e => Fin.succ_injective _ (hx e)
+      refine le_trans (interp_presample_fresh_leF tg initial model (x 0) (hk 0) computation budget state
+        (hfresh 0) F fun out v hc => hF out 0 v hc) ?_
+      have hrest : ∀ v, ∑' out, Pr[= out | interp tg initial model computation budget
+            (state.store (x 0) v)] * F out ≤
+          ((Fintype.card HashOutput : ℝ≥0∞) ^ n)⁻¹ * ∑ w : Fin n → HashOutput, ∑' out,
+            Pr[= out | interp tg initial model computation budget
+              (storeAll (Fin.tail x) w (state.store (x 0) v))] * F out := fun v =>
+        interp_presampleAll_leF computation budget F (Fin.tail x) hxt (fun i => hk i.succ)
+          (fun out i v' hc => hF out i.succ v' hc) _ fun i => by
+            show (state.store (x 0) v).cache (x i.succ) = none
+            rw [store_cache_ne state (x 0) _ (fun e => Fin.succ_ne_zero i (hx e))]
+            exact hfresh i.succ
+      calc (Fintype.card HashOutput : ℝ≥0∞)⁻¹ * ∑ v, ∑' out, Pr[= out | interp tg initial model
+              computation budget (state.store (x 0) v)] * F out
+          ≤ (Fintype.card HashOutput : ℝ≥0∞)⁻¹ * ∑ v, (((Fintype.card HashOutput : ℝ≥0∞) ^ n)⁻¹ *
+              ∑ w : Fin n → HashOutput, ∑' out, Pr[= out | interp tg initial model computation budget
+                (storeAll (Fin.tail x) w (state.store (x 0) v))] * F out) := by
+            gcongr with v
+            exact hrest v
+        _ = ((Fintype.card HashOutput : ℝ≥0∞) ^ (n + 1))⁻¹ * ∑ v, ∑ w : Fin n → HashOutput,
+              ∑' out, Pr[= out | interp tg initial model computation budget
+                (storeAll x (Fin.cons v w) state)] * F out := by
+            rw [← Finset.mul_sum, ← mul_assoc, pow_succ', ENNReal.mul_inv (Or.inr (by simp))
+              (Or.inl (ENNReal.natCast_ne_top _))]
+            rfl
+        _ = _ := by
+            refine congrArg (fun z : ℝ≥0∞ => ((Fintype.card HashOutput : ℝ≥0∞) ^ (n + 1))⁻¹ * z) ?_
+            rw [← Fintype.sum_prod_type']
+            exact Fintype.sum_equiv (Fin.consEquiv fun _ => HashOutput) _ _ fun _ => rfl
+
+set_option maxRecDepth 100000 in
+/-- **A query of one call of a fresh pair**: `HiddenDebt.interp_presample_new` with the growth
+hypothesis only at the family. -/
+theorem interp_presample_newF {α : Type} {n : ℕ} (x : Fin n → HashInput) (hx : Function.Injective x)
+    (hk : ∀ i, tg.kind (x i) = .none) (c : Fin n) (next : HashOutput → OracleComp CostSpec α)
+    (budget : ℕ) (state : State) (hfresh : ∀ i, state.cache (x i) = none)
+    (F : Run HashInput Coordinate α × State → ℝ≥0∞)
+    (hF : ∀ out (i : Fin n) (v : HashOutput), out.2.cache (x i) = none →
+      F out ≤ F (out.1, out.2.store (x i) v)) :
+    ∑' v, Pr[= v | ($ᵗ HashOutput : ProbComp HashOutput)] *
+        ∑' out, Pr[= out | interp tg initial model (next v) budget (state.store (x c) v)] * F out ≤
+      ((Fintype.card HashOutput : ℝ≥0∞) ^ n)⁻¹ * ∑ u : Fin n → HashOutput,
+        ∑' out, Pr[= out | interp tg initial model (next (u c)) budget (storeAll x u state)] * F out := by
+  obtain ⟨mm, rfl⟩ : ∃ mm, n = mm + 1 := ⟨n - 1, by have := c.isLt; omega⟩
+  set σ : Equiv.Perm (Fin (mm + 1)) := Equiv.swap 0 c with hσ
+  set x' : Fin (mm + 1) → HashInput := x ∘ σ with hx'
+  have hx'inj : Function.Injective x' := hx.comp σ.injective
+  have hx'0 : x' 0 = x c := by simp [hx', hσ]
+  have hxt : Function.Injective (Fin.tail x') := fun a b e => Fin.succ_injective _ (hx'inj e)
+  have hrest : ∀ v, ∑' out, Pr[= out | interp tg initial model (next v) budget
+        (state.store (x c) v)] * F out ≤
+      ((Fintype.card HashOutput : ℝ≥0∞) ^ mm)⁻¹ * ∑ w : Fin mm → HashOutput, ∑' out,
+        Pr[= out | interp tg initial model (next v) budget (storeAll x' (Fin.cons v w) state)] * F out := by
+    intro v
+    rw [← hx'0]
+    exact interp_presampleAll_leF tg initial model (next v) budget F (Fin.tail x') hxt
+      (fun i => hk _) (fun out i v' hc => hF out (σ i.succ) v' hc) _ fun i => by
+        show (state.store (x' 0) v).cache (x' i.succ) = none
+        rw [store_cache_ne state (x' 0) _ (fun e => Fin.succ_ne_zero i (hx'inj e))]
+        exact hfresh _
+  rw [tsum_uniform_eq]
+  calc (Fintype.card HashOutput : ℝ≥0∞)⁻¹ * ∑ v, ∑' out, Pr[= out | interp tg initial model (next v) budget
+          (state.store (x c) v)] * F out
+      ≤ (Fintype.card HashOutput : ℝ≥0∞)⁻¹ * ∑ v, (((Fintype.card HashOutput : ℝ≥0∞) ^ mm)⁻¹ *
+          ∑ w : Fin mm → HashOutput, ∑' out, Pr[= out | interp tg initial model (next v) budget
+            (storeAll x' (Fin.cons v w) state)] * F out) := by
+        gcongr with v
+        exact hrest v
+    _ = ((Fintype.card HashOutput : ℝ≥0∞) ^ (mm + 1))⁻¹ * ∑ v, ∑ w : Fin mm → HashOutput,
+          ∑' out, Pr[= out | interp tg initial model (next v) budget
+            (storeAll x' (Fin.cons v w) state)] * F out := by
+        rw [← Finset.mul_sum, ← mul_assoc, pow_succ', ENNReal.mul_inv (Or.inr (by simp))
+          (Or.inl (ENNReal.natCast_ne_top _))]
+    _ = ((Fintype.card HashOutput : ℝ≥0∞) ^ (mm + 1))⁻¹ * ∑ u' : Fin (mm + 1) → HashOutput,
+          ∑' out, Pr[= out | interp tg initial model (next (u' 0)) budget (storeAll x' u' state)] * F out := by
+        refine congrArg (fun z : ℝ≥0∞ => ((Fintype.card HashOutput : ℝ≥0∞) ^ (mm + 1))⁻¹ * z) ?_
+        rw [← Fintype.sum_prod_type']
+        exact Fintype.sum_equiv (Fin.consEquiv fun _ => HashOutput) _ _ fun _ => rfl
+    _ = _ := by
+        refine congrArg (fun z : ℝ≥0∞ => ((Fintype.card HashOutput : ℝ≥0∞) ^ (mm + 1))⁻¹ * z) ?_
+        refine Fintype.sum_equiv (σ.arrowCongr (Equiv.refl HashOutput)) _ _ fun u' => ?_
+        have hu : (σ.arrowCongr (Equiv.refl HashOutput)) u' ∘ σ = u' := by
+          funext i
+          simp [Equiv.arrowCongr_apply, hσ, Equiv.swap_apply_self]
+        conv_lhs => rw [← hu]
+        rw [storeAll_perm x hx _ σ state]
+        congr 3
+
+end PresampleFamily
+
 /-! ### What a signing call adds -/
 
 section SignDefs
