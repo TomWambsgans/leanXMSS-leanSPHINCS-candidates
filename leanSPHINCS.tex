@@ -45,7 +45,7 @@ SP~800-230~\cite{SP800230}, which is the full key at $h=22$ (one tree of few-tim
 differences are:
 \begin{itemize}
   \item a \emph{two-level WOTS forest} (\cref{sec:twolevel}; credit: Jonas Nick, sig.golf~\cite{siggolf}) instead of FORS as the few-time signature (FTS)
-  \item WOTS$^+$C~\cite{HK22C} instead of WOTS$^+$: 64 chains of length $w=4$, with a target sum of 123
+  \item WOTS$^+$C~\cite{HK22C} instead of WOTS$^+$: 64 chains of length $w=4$, with a target sum of 128
   \item the WOTS$^+$C encoding absorbs the FTS: it hashes the two nodes below the root of each of the 8 trees of
         the forest, then the counter; there is no FTS public key and no tree of the forest has a root hash
 \end{itemize}
@@ -114,14 +114,14 @@ the verification cost of the full key of its height.
   \toprule
   $h$ & shape & size (bytes) & Keccak-256 & BLAKE2s & SHA-256 \\
   \midrule
-  22 & one tree & 4\,212 & 263 & 299 & 300 \\
-  22 & layered ($10+6+6$) & 6\,268 & 419 & 473 & 474 \\
-  24 & one tree & 4\,244 & 265 & 301 & 302 \\
-  24 & layered ($12+6+6$) & 6\,300 & 421 & 475 & 476 \\
-  26 & one tree & 4\,276 & 267 & 303 & 304 \\
-  26 & layered ($12+7+7$) & 6\,332 & 423 & 477 & 478 \\
-  28 & one tree & 4\,308 & 269 & 305 & 306 \\
-  28 & layered ($12+8+8$) & 6\,364 & 425 & 479 & 480 \\
+  22 & one tree & 4\,212 & 258 & 294 & 295 \\
+  22 & layered ($10+6+6$) & 6\,268 & 404 & 458 & 459 \\
+  24 & one tree & 4\,244 & 260 & 296 & 297 \\
+  24 & layered ($12+6+6$) & 6\,300 & 406 & 460 & 461 \\
+  26 & one tree & 4\,276 & 262 & 298 & 299 \\
+  26 & layered ($12+7+7$) & 6\,332 & 408 & 462 & 463 \\
+  28 & one tree & 4\,308 & 264 & 300 & 301 \\
+  28 & layered ($12+8+8$) & 6\,364 & 410 & 464 & 465 \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -174,16 +174,16 @@ $5.8$ thousand~\cite{hwbench}.}
   \toprule
   key & lifetime & keygen & signing, 16~KiB cache & signing, 1~MiB cache \\
   \midrule
-  full ($b=24$) & $3.36\cdot10^8$ & $3.9\cdot10^9$ & $3.9\cdot10^6$ & $181\cdot10^3$ \\
-  layered ($12+6+6$) & $3.36\cdot10^8$ & $954\cdot10^3$ & $98\cdot10^3$ & $96\cdot10^3$ \\
-  pruned, $b=20$ & $2.38\cdot10^7$ & $244\cdot10^6$ & $301\cdot10^3$ & $69\cdot10^3$ \\
-  pruned, $b=12$ & $1.16\cdot10^5$ & $954\cdot10^3$ & $68\cdot10^3$ & $66\cdot10^3$ \\
+  full ($b=24$) & $3.36\cdot10^8$ & $3.9\cdot10^9$ & $3.9\cdot10^6$ & $194\cdot10^3$ \\
+  layered ($12+6+6$) & $3.36\cdot10^8$ & $954\cdot10^3$ & $136\cdot10^3$ & $134\cdot10^3$ \\
+  pruned, $b=20$ & $2.38\cdot10^7$ & $244\cdot10^6$ & $314\cdot10^3$ & $82\cdot10^3$ \\
+  pruned, $b=12$ & $1.16\cdot10^5$ & $954\cdot10^3$ & $80\cdot10^3$ & $78\cdot10^3$ \\
   \bottomrule
 \end{tabular}
 \end{center}
 \begin{itemize}
   \item \textbf{Small signatures, long keygen}: the full key, for powerful devices that keep its tree.
-  \item \textbf{Long lifetime, light keygen}: the layered key, for 2\,056 more bytes and 156 more permutations of
+  \item \textbf{Long lifetime, light keygen}: the layered key, for 2\,056 more bytes and 146 more permutations of
         verification at $h=24$.
   \item \textbf{Small signatures, light keygen}: a pruned key, with the lifetime set by $b$; the signer grinds
         $2^{h-b}$ randomizers per signature (4\,096 permutations at $b=12$).
@@ -348,9 +348,9 @@ The minimality makes $R$ a function of $(m, \text{secret key})$ and the prepared
 \paragraph{Hardware wallet costs.} At $h\ge24$ the host hashes $\approx2^{20}$ digests on average and proves them in a STARK at about
 $2^{19}$ hashes per second, 2~s. The device verifies the STARK in about $10^4$ compressions, which we count as 3~s on a Ledger Nano S+
 (1.7~s with Keccak-256 at 5.8 thousand compressions per second~\cite{hwbench}): about 5~s in all. Preparing an instance costs the
-device $61\cdot10^3$ Keccak-f permutations for a pruned key and $96\cdot10^3$ for a layered one at $h=24$
-($185\cdot10^3$ at $h=28$), its WOTS$^+$C counter searches included, in its idle time; a signature consumes one
-instance, and the first $p$ are prepared once (about 2.3~h for the layered key at $h=28$).
+device $74\cdot10^3$ Keccak-f permutations for a pruned key and $133\cdot10^3$ for a layered one at $h=24$
+($223\cdot10^3$ at $h=28$), its WOTS$^+$C counter searches included, in its idle time; a signature consumes one
+instance, and the first $p$ are prepared once (about 2.7~h for the layered key at $h=28$).
 
 \section{The few-time signature: a two-level WOTS forest}
 \label{sec:twolevel}
@@ -460,8 +460,8 @@ most 236 bits, so it still takes one hash.
   \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 28 permutations each
 \end{itemize}
 Every signature has the same size and verification cost. The WOTS$^+$C key that signs
-the forest uses a target sum of 123 instead of 120: 3 fewer chain steps at verification,
-for about 2\,200 counter tries instead of 830 when signing ($1.4\cdot10^3$ more permutations, still within the
+the forest uses a target sum of 128 instead of 120: 8 fewer chain steps at verification,
+for about 14\,700 counter tries instead of 830 when signing ($13.8\cdot10^3$ more permutations, counted in the
 signing costs of \cref{sec:usage}).
 
 \paragraph{Security.} A forgery at an instance with $r$ prior signatures needs every tree to be covered: in

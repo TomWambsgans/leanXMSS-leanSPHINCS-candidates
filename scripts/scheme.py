@@ -62,10 +62,10 @@ class Hash:
 
 HASHES = [Hash("Keccak-256", 136, True, 0, 0), Hash("BLAKE2s", 64, True, 0, 0), Hash("SHA-256", 64, False, 9, 16)]
 
-# WOTS+C: 64 chains of length 4, target sum 123. The forest: 8 coordinates; a coordinate is a top tree of
+# WOTS+C: 64 chains of length 4, target sum 128. The forest: 8 coordinates; a coordinate is a top tree of
 # height 4 over 16 super-children; a super-child hashes the top nodes of its 2 sub-trees of height 3 over 8
 # WOTS children; a child is 6 chains of 4 steps under a leaf hash, signed at a codeword of digit sum 5.
-V, Q, T = 64, 4, 123
+V, Q, T = 64, 4, 128
 COORDS, SUPERS, SUBS, CHILDREN, CHAINS, STEPS, DIGIT_SUM = 8, 16, 2, 8, 6, 4, 5
 SUB_PATH, TOP_PATH = 3, 4
 VALUES = SUBS * (CHAINS + SUB_PATH) + TOP_PATH  # per coordinate

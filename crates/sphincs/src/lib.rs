@@ -1,7 +1,7 @@
 // CREDIT: adapted from leanVM's SPHINCS crate (https://github.com/leanEthereum/leanVM, crates/sphincs),
 // MIT OR Apache-2.0, see licenses/leanVM-LICENSE-MIT and licenses/leanVM-LICENSE-APACHE.
 // Re-parameterized to the leanSphincs candidate (leanSPHINCS.tex): a two-level WOTS forest as the
-// few-time signature, WOTS+C with w = 4, 64 chains and target sum 123, and three toggles: the
+// few-time signature, WOTS+C with w = 4, 64 chains and target sum 128, and three toggles: the
 // height (22, 24, 26 or 28), the shape (one pruned tree, or a hypertree whose key builds the top
 // layer only) and the hash (Keccak-256, BLAKE2s or SHA-256).
 
@@ -45,7 +45,7 @@ pub const CHAIN_LEN: usize = 1 << W;
 /// Number of WOTS chains.
 pub const V: usize = 64;
 /// WOTS+C target sum of the signed positions.
-pub const TARGET_SUM: usize = 123;
+pub const TARGET_SUM: usize = 128;
 
 /// The tree heights `h`, one per lifetime: the full and layered keys last about `20 * 2^h` signatures;
 /// a pruned key lasts much less (7,514 to 28.4M signatures, formal/sphincs/README.md).
@@ -161,7 +161,7 @@ impl Config {
 
     /// Compressions of one verification of an accepted signature: the cached block of `P`
     /// (SHA-256), the digest, the forest, and per layer the encoding, the chain steps that complete
-    /// the 123 signed positions, the one-time leaf and the path.
+    /// the 128 signed positions, the one-time leaf and the path.
     pub fn verify_compressions(&self) -> u64 {
         let c = |payload: usize| self.hash.call(payload);
         let pp = (self.hash == HashFn::Sha256) as u64;
@@ -192,8 +192,8 @@ pub const fn digest_bits(h: usize) -> usize {
 /// The baseline: Keccak-256, one tree of height 24, a full key.
 pub const BASELINE_SIG_SIZE: usize = 4244;
 /// Permutations of one baseline verification: digest 1, forest 8 * 20, encoding 3 (the 16 forest
-/// nodes and the counter), chains 192 - 123, leaf 8, path 24.
-pub const BASELINE_VERIFY_PERMUTATIONS: u64 = 265;
+/// nodes and the counter), chains 192 - 128, leaf 8, path 24.
+pub const BASELINE_VERIFY_PERMUTATIONS: u64 = 260;
 
 const _: () = assert!(W * V == 8 * N);
 const _: () = assert!(TARGET_SUM < V * (CHAIN_LEN - 1));

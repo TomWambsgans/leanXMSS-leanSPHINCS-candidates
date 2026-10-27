@@ -463,8 +463,8 @@ mod tests {
         }
     }
 
-    /// The baseline (Keccak-256, one tree of height 24): 4,244 bytes and 265 permutations, and a
-    /// layer adds 1,028 bytes and 78 permutations.
+    /// The baseline (Keccak-256, one tree of height 24): 4,244 bytes and 260 permutations, and a
+    /// layer adds 1,028 bytes and 73 permutations.
     #[test]
     fn sizes_and_verification_costs() {
         let full = keccak(24, 24);
@@ -472,7 +472,7 @@ mod tests {
         assert_eq!(full.verify_compressions(), BASELINE_VERIFY_PERMUTATIONS);
         let layered = Config::new(HashFn::Keccak256, 24, Shape::Layered);
         assert_eq!(layered.sig_size(), BASELINE_SIG_SIZE + 2 * 1028);
-        assert_eq!(layered.verify_compressions(), BASELINE_VERIFY_PERMUTATIONS + 2 * 78);
+        assert_eq!(layered.verify_compressions(), BASELINE_VERIFY_PERMUTATIONS + 2 * 73);
         for h in HEIGHTS {
             assert_eq!(keccak(h, h).sig_size() + 24 * N, BASELINE_SIG_SIZE + h * N);
             let layered = Config::new(HashFn::Keccak256, h, Shape::Layered);
@@ -490,9 +490,9 @@ mod tests {
             })
             .collect();
         assert_eq!(table, vec![
-            (HashFn::Keccak256, 265, 421),
-            (HashFn::Blake2s, 301, 475),
-            (HashFn::Sha256, 302, 476),
+            (HashFn::Keccak256, 260, 406),
+            (HashFn::Blake2s, 296, 460),
+            (HashFn::Sha256, 297, 461),
         ]);
     }
 
@@ -568,11 +568,11 @@ mod tests {
         let m: Message = std::array::from_fn(|i| (7 * i) as u8);
         let pinned = [
             (HashFn::Keccak256, "ca5d2198161c54565a817acef82364c483b407ccd90523fd2028c5e231630627",
-             "db1533be5b33d880ac7700ab2b10400280b9ef2fb4fb14d4f85bbbe2d5d3965b", 4730),
+             "d7bf691134f95dedae162429d13a9c923a073fda901482a1586b573f5534f19b", 14251),
             (HashFn::Blake2s, "0dd21226f6aef081f5e48b2e8a40bb49bf624b042ba32a5b376f524acba3e0e2",
-             "c988a80bffd8a4ee4d447128372bd35ca12fa148910e109a98f445069e8fa02b", 2228),
+             "b0031d85f007e7442900d524663cf3a3eba73ed482ea29bbe39fcd3187b2ba64", 24021),
             (HashFn::Sha256, "90fc4935641952d106f2310f409c07eca88e97561ea87aa49165698d5742a942",
-             "b03ecd9a64b7a6f0b7947c00afff99b7225b64b46ef02cafc0e2dab8ab8654ec", 125),
+             "28b64621232af734f83f8f40c40e80af95aa083f02394ec2dbcb5352f02b4759", 20215),
         ];
         for (hash, pk_hex, sig_hex, counter) in pinned {
             // `b = 11` is not in `PRUNED`: a small key, quick to build.
@@ -588,7 +588,7 @@ mod tests {
         let (sk, pk) = key_gen(&cfg, &seed(1));
         let digest = keccak::hash(&sign(&sk, &m).to_bytes());
         assert_eq!(hex(&pk.to_bytes()), "a430976f5ddc4c423caf10bb18be21e2696d5390f3f72562b8bcf51965ecaf81");
-        assert_eq!(hex(&digest), "4e9b1918c5fdf6f2dd482a880b563fd8cb218898896913d426577323dee22d70");
+        assert_eq!(hex(&digest), "9323e43e2daac499f3b72cecb44b0fc8c2179de3a097ef12bb1f30f4e6fa8d40");
     }
 
     /// One seed under two configurations gives unrelated keys: two pruning heights, or two heights.
@@ -737,12 +737,12 @@ mod tests {
     }
 
     #[test]
-    fn wots_encoding_takes_about_2197_tries() {
+    fn wots_encoding_takes_about_14670_tries() {
         let pp = Pp::new(HashFn::Keccak256, [7u8; PUBLIC_PARAM_LEN]);
         let tries: u64 = (0..100u32)
             .map(|e| u64::from(wots_encode(&pp, &OtsKey { layer: 0, tree: 0, leaf: e }, &[e as u8; 256]).unwrap().0) + 1)
             .sum();
         let mean = tries as f64 / 100.0;
-        assert!((1100.0..4400.0).contains(&mean), "mean tries {mean}");
+        assert!((7300.0..29300.0).contains(&mean), "mean tries {mean}");
     }
 }

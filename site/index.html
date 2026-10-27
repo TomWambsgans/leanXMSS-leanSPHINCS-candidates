@@ -310,7 +310,7 @@ footer a + a { margin-left: 1.25rem; }
           <tr><th><i>h</i></th><td data-f="h">&hellip;</td></tr>
           <tr><th><i>k</i></th><td>8</td></tr>
           <tr><th><i>a</i></th><td>4 + 3</td></tr>
-          <tr><th>OTS</th><td>WOTS+C<span class="info" tabindex="0" role="button" aria-label="More information" data-tip="v = 64 chains of length w = 4,&#10;target sum T = 123">i</span></td></tr>
+          <tr><th>OTS</th><td>WOTS+C<span class="info" tabindex="0" role="button" aria-label="More information" data-tip="v = 64 chains of length w = 4,&#10;target sum T = 128">i</span></td></tr>
           <tr><th>FTS</th><td class="two">WOTS forest<span class="info" tabindex="0" role="button" aria-label="More information" data-tip="8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5&#10;(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))">i</span></td></tr>
         </tbody>
         <tbody class="out">
@@ -1188,12 +1188,12 @@ footer a + a { margin-left: 1.25rem; }
   // the WOTS+C keys.
   var DRAWN = 3, ROOT = -108, LEAF = 210, GAP = 30;   // GAP: from a leaf to the root of the tree below
   function coin() { return Math.random() < 0.5 ? -1 : 1; }
-  // A WOTS+C encoding: the steps from each revealed value to the end of its chain, 69 in all over 64 chains of
-  // 4 (the target sum 123); 8 of the chains are drawn
+  // A WOTS+C encoding: the steps from each revealed value to the end of its chain, 64 in all over 64 chains of
+  // 4 (the target sum 128); 8 of the chains are drawn
   function wotsc() {
     var m = [], k = 0, i;
     for (i = 0; i < 64; i++) m.push(0);
-    while (k < 69) { i = Math.random() * 64 | 0; if (m[i] < 3) { m[i]++; k++; } }
+    while (k < 64) { i = Math.random() * 64 | 0; if (m[i] < 3) { m[i]++; k++; } }
     return m.slice(0, 8);
   }
   // A codeword of the forest's WOTS keys: 6 digits of 0 to 4 with sum 5, uniform

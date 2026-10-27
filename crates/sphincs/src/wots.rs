@@ -1,5 +1,5 @@
 //! WOTS+C: `v = 64` chains of `2^w - 1 = 3` steps, and the target-sum code that replaces the
-//! Winternitz checksum. A codeword is 64 chunks summing to `T = 123`; the signer searches the least
+//! Winternitz checksum. A codeword is 64 chunks summing to `T = 128`; the signer searches the least
 //! counter whose encoding is a codeword. The encoding hashes the signed message itself, with the
 //! counter last: the forest key at the bottom layer, the root of the tree below at a layer above.
 //!
