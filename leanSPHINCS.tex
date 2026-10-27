@@ -13,7 +13,6 @@
 \usepackage{cleveref}
 \usepackage{tikz}
 \usetikzlibrary{calc,decorations.pathreplacing}
-\definecolor{newfts}{RGB}{20,70,170}
 
 \newcommand{\Th}{\mathsf{Th}}
 \newcommand{\hash}{\mathsf{H}}
@@ -35,12 +34,10 @@
 \section{The scheme}
 \label{sec:scheme}
 
-One scheme with three toggles, 24 configurations in all. It starts from SLH-DSA-128-24 of NIST's
-SP~800-230~\cite{SP800230}, which is the full key at $h=22$ (one tree of few-time signatures); besides the toggles, the
-differences are:
+A SPHINCS-style scheme with three toggles, 24 configurations in all. Its components:
 \begin{itemize}
-  \item a \emph{two-level WOTS forest} (\cref{sec:twolevel}; credit: Jonas Nick, sig.golf~\cite{siggolf}) instead of FORS as the few-time signature (FTS)
-  \item WOTS$^+$C~\cite{HK22C} instead of WOTS$^+$: 64 chains of length $w=4$, with a target sum of 128
+  \item few-time signature (FTS): a \emph{two-level WOTS forest} (\cref{sec:twolevel}, after sig.golf~\cite{siggolf})
+  \item one-time signature: WOTS$^+$C~\cite{HK22C}, 64 chains of length $w=4$, target sum 128
   \item the WOTS$^+$C encoding absorbs the FTS: it hashes the two nodes below the root of each of the 8 trees of
         the forest, then the counter; there is no FTS public key and no tree of the forest has a root hash
 \end{itemize}
@@ -50,14 +47,12 @@ differences are:
   \item[T1, lifetime.] The height $h\in\{22,24,26,28\}$ of the index, for lifetimes of about $2^{26}$, $2^{28}$,
         $2^{30}$ and $2^{32}$ signatures: the full key lasts $N\approx20\cdot2^h$ signatures, proved, 91 to 98\% of the
         $21.45\cdot2^h$ of the best known attack (\cref{sec:lifetimes}).
-  \item[T2, shape.] \emph{Pruned}: one tree of height $h$. Key generation builds only a kept subtree of $2^b$ leaves
-        and replaces the $h-b$ siblings above it by pseudorandom surrogate nodes~\cite{conduition}; the signer
-        grinds the randomizer until the index lands in the kept subtree, $2^{h-b}$ attempts on average
-        ($b=h$ is the full key). The forger must land there too, so the lifetime is not cut by the whole pruning
-        factor $2^{h-b}$ (\cref{sec:lifetimes}). \emph{Layered}: a hypertree of three layers, a top layer of at most 12
-        over two equal layers of at least 6; key generation builds the top layer only, the
-        signer builds the trees below it on the fly and does not grind, and the lifetime is the full key's.
-  \item[T3, hash.] Keccak-256, BLAKE2s or SHA-256, each with its own layout (below).
+  \item[T2, shape.] \emph{Pruned}~\cite{conduition}: one tree of height $h$; key generation builds only a kept subtree
+        of $2^b$ leaves and replaces the $h-b$ siblings above it by pseudorandom surrogate nodes. The signer grinds
+        the randomizer until the index lands in the kept subtree, $2^{h-b}$ attempts on average ($b=h$ is the full
+        key). \emph{Layered}: a hypertree of three layers (table below); key generation builds the top layer only,
+        the signer builds the lower trees on the fly, does not grind, and keeps the full key's lifetime.
+  \item[T3, hash.] Keccak-256, BLAKE2s or SHA-256.
 \end{description}
 
 \begin{center}
@@ -72,38 +67,32 @@ differences are:
 The two lower layers add two WOTS$^+$C signatures with their counters, 2\,056 bytes, and 146 Keccak-f permutations
 of verification (164 compressions with BLAKE2s or SHA-256).
 
-\paragraph{Hash inputs.} $\hash$ is truncated to 16 bytes except where noted. Every hash input is
-$P \concat \mathit{address} \concat \mathit{data}$: the public parameter $P$ (16 bytes), then a 16-byte address:
-two fields of 4 and 3 bytes, one byte for the type of the call and the step in a chain, one byte for the layer
-(counted from the bottom), 4 bytes for the tree in its layer, and 3 zero bytes. With one layer the layer and
-tree bytes are zero. The three hashes differ in how they cut an input into blocks:
+\paragraph{Hash inputs.} $\hash$ is truncated to 16 bytes except where noted. Every input is
+$P \concat \mathit{address} \concat \mathit{data}$, with $P$ the 16-byte public parameter and a 16-byte address:
+two fields of 4 and 3 bytes, one byte for the call type and chain step, one byte for the layer (from the bottom),
+4 bytes for the tree in its layer, 3 zero bytes (layer and tree are zero with one layer). Block cost of $\ell$ bytes:
 \begin{itemize}
-  \item \textbf{Keccak-256} (Ethereum's \texttt{keccak256}): $P$ inline; $\ell$ bytes cost $\lfloor\ell/136\rfloor+1$
-        Keccak-f[1600] permutations (the padding takes at least one byte). The 80-byte digest input is one block.
-  \item \textbf{BLAKE2s}: $P$ inline; $\ell$ bytes cost $\lceil\ell/64\rceil$ compressions (the last block is
-        zero-padded, with no padding byte), so a tree node, $P\concat\mathit{address}\concat\mathit{left}\concat\mathit{right}$,
-        is exactly one block.
-  \item \textbf{SHA-256}: $P$ alone in a zero-padded first block of 64 bytes, compressed once per key and cached, so a
-        chain step and a node cost one compression; the $\ell$ bytes after it cost $\lceil(\ell+9)/64\rceil$ compressions,
-        with the at least 9 bytes of padding.
+  \item \textbf{Keccak-256} (Ethereum's \texttt{keccak256}): $P$ inline; $\lfloor\ell/136\rfloor+1$ Keccak-f[1600]
+        permutations.
+  \item \textbf{BLAKE2s}: $P$ inline; $\lceil\ell/64\rceil$ compressions (no padding byte), so a tree node
+        $P\concat\mathit{address}\concat\mathit{left}\concat\mathit{right}$ is one block.
+  \item \textbf{SHA-256}: $P$ alone in a zero-padded first block, compressed once per key and cached; the $\ell$ bytes
+        after it cost $\lceil(\ell+9)/64\rceil$ compressions.
 \end{itemize}
-With all three, a grinding attempt costs one compression (the digest input is one Keccak block; for BLAKE2s
-and SHA-256, the randomizer $R$ is alone in its last block, SHA-256 putting 16 zero bytes before it), and so does a WOTS$^+$C counter (the counter is in the last block of
-the encoding input). Other details:
+With all three, a chain step, a tree node, a grinding attempt and a WOTS$^+$C counter try each cost one compression
+(the randomizer and the counter sit in the last block of their input). Also:
 \begin{itemize}
   \item the digest hashes $m\concat R$. A pruned signer tries $R = R_0 + i\Delta$ for $i = 0, 1, \dots$ (modulo
         $2^{128}$), with $R_0$ and $\Delta$ the two halves of one hash of the secret key and $m$, the lowest bit of
-        $\Delta$ set, and keeps the first one that lands in its subtree. $\Delta$ is secret: a signature does not tell which
-        randomizers were tried and rejected before it
-  \item the secrets are derived from the secret key two at a time: one hash gives 32 bytes, i.e.\ two chain starts
-  \item the digest is one call of $h + 8\cdot26$ bits: the 16 codeword indices are its first 16 bytes, then the 16
-        WOTS keys (3 bits each), the 8 leaves (4 bits each) and the index ($h$ bits), in that order, so that no field
-        lies across two 64-bit words
+        $\Delta$ set, and keeps the first one that lands in its subtree. $\Delta$ is secret, so a signature does not
+        reveal the rejected randomizers
+  \item one 32-byte hash of the secret key gives two chain starts
+  \item the digest layout is in \cref{sec:twolevel}
 \end{itemize}
 
-\paragraph{The 24 configurations.} Size of a signature and compressions of a verification (Keccak-f[1600]
-permutations for Keccak-256); the public key and the secret key are 32 bytes each. A pruned key has the size and
-the verification cost of the full key of its height.
+\paragraph{The 24 configurations.} Signature size and verification cost in compressions (Keccak-f[1600]
+permutations for Keccak-256); public and secret keys are 32 bytes each. A pruned key has the size and
+verification cost of the full key of its height.
 \begin{center}
 \begin{tabular}{llrrrr}
   \toprule
@@ -126,12 +115,11 @@ lifetimes of \cref{sec:lifetimes}, and $\approx 64$ bits in the QROM (TODO proof
 \section{Lifetimes}
 \label{sec:lifetimes}
 
-Proved in Lean~\cite{proofs}, in the random-oracle model: an adversary making $q$ hash queries (key generation,
-signing and verification included) forges with probability at most $q\cdot2^{-127}$, up to the signature limits
-below, whatever the hash. The proof does not depend on the hash: one proof, for any height, shape and kept subtree
-height, gives the 32 limits below, each with its certificate checked by the Lean kernel; the size and the three
-verification costs (one per hash) of each of the 8 shapes are separate theorems. The second half of the table is the ratio to the lifetime of the best
-attack in the cover model (\cref{sec:twolevel}).
+Proved in Lean~\cite{proofs}, in the random-oracle model, for any hash: an adversary making $q$ hash queries (key
+generation, signing and verification included) forges with probability at most $q\cdot2^{-127}$, up to the
+signature limits below. One proof, for any height, shape and kept subtree height, gives the 32 limits, each with its
+certificate checked by the Lean kernel; the size and the three verification costs of each of the 8 shapes are
+separate theorems. The second half of the table is the ratio to the best attack (cover model, \cref{sec:twolevel}).
 \begin{center}
 \setlength{\tabcolsep}{3.5pt}
 \small
@@ -154,16 +142,15 @@ attack in the cover model (\cref{sec:twolevel}).
   \bottomrule
 \end{tabular}
 \end{center}
-The full key and the layered key of a height have the same lifetime: about $21.45\cdot2^h$ signatures for the attack,
-of which 91\% ($h=22$) to 98\% ($h=28$) are proved. A pruned key lasts much less, but not by the whole pruning factor
-$2^{h-b}$: the forger must land in the kept subtree too, so its rate carries a factor $2^{b-h}$ (\cref{sec:twolevel}).
+A pruned key loses less than the pruning factor $2^{h-b}$: a forger's digest must land in the kept subtree too
+(\cref{sec:twolevel}).
 
 \section{Usage}
 \label{sec:usage}
 
-Costs with Keccak-256 at $h=24$ (\texttt{scripts/scheme.py} gives every configuration and hash).
-\emph{A laptop CPU computes around $2^{27}$ Keccak-f permutations per second, a server $2^{29}$; a Ledger Nano S+ about
-$5.8$ thousand~\cite{hwbench}.}
+Costs in Keccak-f permutations at $h=24$ (\texttt{scripts/scheme.py} gives every configuration and hash).
+A laptop CPU computes around $2^{27}$ per second, a server $2^{29}$, a Ledger Nano S+ about $5.8$
+thousand~\cite{hwbench}.
 \begin{center}
 \begin{tabular}{lrrrr}
   \toprule
@@ -178,9 +165,8 @@ $5.8$ thousand~\cite{hwbench}.}
 \end{center}
 \begin{itemize}
   \item \textbf{Small signatures, long keygen}: the full key, for powerful devices that keep its tree.
-  \item \textbf{Long lifetime, light keygen}: the layered key, for 2\,056 more bytes and 146 more permutations of
-        verification at $h=24$.
-  \item \textbf{Small signatures, light keygen}: a pruned key, with the lifetime set by $b$; the signer grinds
+  \item \textbf{Long lifetime, light keygen}: the layered key, with larger signatures.
+  \item \textbf{Small signatures, light keygen}: a pruned key, lifetime set by $b$; the signer grinds
         $2^{h-b}$ randomizers per signature (4\,096 permutations at $b=12$).
 \end{itemize}
 
@@ -189,58 +175,58 @@ $5.8$ thousand~\cite{hwbench}.}
 
 \begin{itemize}
   \item $t$-of-$n$ with $n=2t-1$ (2-of-3, 3-of-5, \dots), malicious security (with abort) against $t-1$ operators
-  \item key generation: distributed (DKG), no trusted dealer
+  \item distributed key generation (DKG), no trusted dealer
   \item key generation and preprocessing are honest-majority MPCs, so they need all $2t-1$ operators online; signing
         needs only $t$
   \item any configuration with a small kept subtree or top layer (not the full key, whose $2^h$ leaves would all go
         through the MPC); the MPC never builds the few-time signatures of the whole key
 \end{itemize}
 
-\paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS} and Riva Labs~\cite{riva}).} Every secret is derived from a threshold PRF $F$: $t$ operators
-evaluate it together, $t-1$ learn nothing (context-aware, see below). A signature reveals $x_{i,4-d_i}$, the chain secret
-hashed $4-d_i$ times, which no threshold PRF outputs, so the MPC publishes the chain values encrypted under $F$:
+\paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS} and Riva Labs~\cite{riva}).} Every secret comes from a threshold
+PRF $F$: $t$ operators evaluate it together, $t-1$ learn nothing. A signature reveals $x_{i,4-d_i}$, a chain secret
+hashed $4-d_i$ times, which is not an output of $F$, so the MPC publishes the chain values masked under $F$:
 \begin{itemize}
   \item position 0, the secret: $F(\mathit{addr})$
-  \item positions $j = 1$ to 3 (1 to 2 for WOTS$^+$C, whose chains have 4 positions): computed by the MPC, published as $x_{i,j} \oplus F(\mathit{addr}_{i,j})$, for a
-        fresh address $\mathit{addr}_{i,j}$
+  \item positions $j = 1$ to 3 (1 to 2 for WOTS$^+$C): $x_{i,j} \oplus F(\mathit{addr}_{i,j})$, at a fresh address
+        $\mathit{addr}_{i,j}$
   \item position 4 (3 for WOTS$^+$C), the top: published
 \end{itemize}
-Revealing $x_{i,j}$ is then one context-aware evaluation of $F$: the $t$ signers evaluate $F$ at the addresses the message
-selects, and everything else is read from public data.
+Revealing $x_{i,j}$ is then one context-aware evaluation of $F$ at an address the message selects; the rest is public.
 
-\paragraph{Key generation.} The MPC builds the XMSS part alone: the top layer of a layered key, or the kept subtree
-and its surrogates of a pruned key. It never builds a few-time signature.
+\paragraph{Key generation.} The MPC builds only the top layer of a layered key, or the kept subtree and its
+surrogates of a pruned key.
 \begin{enumerate}
   \item coin tossing: $P$ (and the surrogates of a pruned key)
   \item the key of $F$ (hash-based: each seed by commit-reveal among its holders, the commitments broadcast, else a
         holder could give different seeds to the others, which only aborts signings; lattice-based: a verifiable
         Shamir sharing of $\mathit{msk}$), and the pairwise keys $k_{ij}$
-  \item MPC: the WOTS$^+$C chains of every leaf of the top layer (or of the kept subtree); open the chain ends, then build the
-        tree in the clear, and publish the other chain values masked under $F$, as for the forest, so that a WOTS$^+$C
-        signature is later a few openings of $F$
+  \item MPC: the WOTS$^+$C chains of every leaf; open the chain ends and build the tree in the clear; publish the
+        other chain values masked under $F$, so that a WOTS$^+$C signature is later a few openings of $F$
 \end{enumerate}
 
-\paragraph{Preprocessing (before the message).} Pick an instance (index) uniformly at random, in the kept subtree of
-a pruned key, from randomness the operators generate securely together (inside the MPC), so that no coalition can bias
-or predict it. The MPC generates its forest (and the WOTS$^+$C chains of the lower layers of a layered key) and publishes the
-masked chain values as above; in the clear, it builds the forest key (and the lower trees) and the authentication path,
-and it opens the WOTS$^+$C signatures that link the instance to the top layer, which are public once it signs, since
-each WOTS$^+$C key only ever signs one root. It also draws a random $s=F(\mathit{addr})$ at a fresh address and publishes only
-$\hash(s)$, a commitment to the signing randomness. A signature consumes the prepared instance, which is then replaced by a fresh one drawn the
-same way, so the preprocessing is one instance per signature. Each instance is prepared for one quorum $J$ of $t$
-operators, and only $J$ opens it: an honest member of $J$ sees every use and refuses a second one. Otherwise a corrupt
-operator could sign on one instance with two quorums, each with a different honest member, forcing its reuse and,
-knowing $s$ after the first, choosing the second message.
+\paragraph{Preprocessing (before the message).}
+\begin{itemize}
+  \item pick an instance (index) uniformly at random (in the kept subtree of a pruned key), from randomness generated
+        inside the MPC, so that no coalition can bias or predict it
+  \item the MPC generates its forest (and the WOTS$^+$C chains of the lower layers of a layered key) and publishes the
+        masked chain values; in the clear, it builds the forest key, the lower trees and the authentication path, and
+        opens the WOTS$^+$C signatures that link the instance to the top layer (public anyway once it signs, since
+        each WOTS$^+$C key only ever signs one root)
+  \item it draws $s=F(\mathit{addr})$ at a fresh address and publishes only $\hash(s)$, a commitment to the signing
+        randomness
+  \item each instance is prepared for one quorum $J$ of $t$ operators, and only $J$ opens it: an honest member of $J$
+        sees every use and refuses a second one (else a corrupt operator could use it with two quorums and, knowing
+        $s$ after the first, choose the second message)
+  \item a signature consumes its instance, replaced by a fresh one: one instance per signature
+\end{itemize}
 
 \paragraph{Signing (the quorum $J$ of the instance).}
 \begin{enumerate}
   \item agree on $m$
-  \item open $s$ (as below) and check it against $\hash(s)$; $R_0$ and $\Delta$ are the two halves of
-        $\hash(s, m)$, the lowest bit of $\Delta$ set. A part of $s$ has nothing to be checked against but the
-        commitment, fixed before $m$: without it, a signer alone holding a term of $F$ in the quorum could shift $R$
-        at will and choose the chains opened
-  \item grind in the clear: the first $R = R_0 + i\Delta$ whose index is the prepared instance, about $2^h$
-        attempts, cheap in the clear
+  \item open $s$ and check it against $\hash(s)$; $R_0$ and $\Delta$ are the two halves of $\hash(s, m)$, the lowest
+        bit of $\Delta$ set. The commitment, fixed before $m$, stops a signer holding a term of $F$ from shifting $R$
+        and so choosing the chains opened
+  \item grind in the clear: the first $R = R_0 + i\Delta$ whose index is the prepared instance, about $2^h$ attempts
   \item open $F$ at the addresses of the forest chain values the message selects, and only those; check each against
         the published chain
   \item output $R$, the forest opening and the prepared WOTS$^+$C signatures and paths
@@ -249,43 +235,36 @@ knowing $s$ after the first, choosing the second message.
 \paragraph{Choice of $F$.}
 \begin{itemize}
   \item hash-based, for small $\binom{n}{t-1}$: replicated seeds~\cite{CDI05}, one seed $k_T$ per set $T$ of $t-1$
-        operators, held by the others; $F(x)=\bigoplus_T\hash(k_T,x)$. Hash only
-  \item lattice-based, for large $\binom{n}{t-1}$: the threshold PRF of PRAWNS~\cite{PRAWNS},
-        $F(x)=\lfloor\langle\hash(x),\mathit{msk}\rangle\rceil_p$, $\mathit{msk}$ Shamir-shared. LWE. The MPC then
-        converts its shares mod $q$ to bits, a few percent more traffic that we neglect for simplicity
+        operators, held by the others; $F(x)=\bigoplus_T\hash(k_T,x)$
+  \item lattice-based (LWE), for large $\binom{n}{t-1}$: the threshold PRF of PRAWNS~\cite{PRAWNS}, with
+        $\mathit{msk}$ Shamir-shared, $F(x)=\lfloor\langle\hash(x),\mathit{msk}\rangle\rceil_p$; converting shares
+        mod $q$ to bits in the MPC costs a few percent more traffic, neglected here
 \end{itemize}
-\paragraph{Context-awareness~\cite{PRAWNS}.} To reveal $F(x)$ when a quorum $J$ signs $m$, each signer
-$i\in J$ sends a part, and the parts combine into $F(x)$:
+\paragraph{Context-awareness~\cite{PRAWNS}.} To reveal $F(x)$ when a quorum $J$ signs $m$, each signer $i\in J$
+sends a part, and the parts combine into $F(x)$:
 \begin{itemize}
-  \item hash-based: each term $\hash(k_T,x)$ is assigned to one signer of $J$ holding $k_T$. Signer $i$ sends
-        the XOR of its terms and of $\hash(k_{ij},x,m,J)$ for each co-signer $j$, with $k_{ij}$ a key shared by
-        $i$ and $j$: each mask is sent twice and cancels, so the parts XOR to $F(x)$
+  \item hash-based: each term $\hash(k_T,x)$ is assigned to one signer of $J$ holding $k_T$; signer $i$ sends the XOR
+        of its terms and of $\hash(k_{ij},x,m,J)$ for each co-signer $j$, so the masks cancel in pairs
   \item lattice-based: as in PRAWNS, a rounded share $\lfloor\lambda_i\langle\hash(x),\mathit{sk}_i\rangle\rceil_p$
-        plus a rounded share of zero evaluated at $(x,m,J)$; the sum is $F(x)$ up to $\pm t$ per coordinate, so $F$
-        is rounded once more, to a coarser modulus, leaving few candidates, which are checked against the
-        published chain
+        plus a rounded share of zero at $(x,m,J)$; the sum is $F(x)$ up to $\pm t$ per coordinate, so $F$ is rounded
+        once more to a coarser modulus, and the few candidates are checked against the published chain
 \end{itemize}
-Parts from signings of different $(m,J)$ don't combine, so an aborted signing reveals at most its own signature. The last
-signer to send can still complete it alone (fairness is impossible against $t-1$ of $t$~\cite{Cle86}), so a signing that
-reaches step 2 consumes its instance and counts as a signature (else, knowing $s$, a coalition could abort and pick
-the message whose opening suits it); a wrong part makes the check against the published chain fail, and the
-signing aborts.
+Parts from different $(m,J)$ don't combine, so an aborted signing reveals at most its own signature. The last
+signer can still complete it alone (fairness is impossible against $t-1$ of $t$~\cite{Cle86}), so a signing that
+reaches the opening of $s$ (step 2) consumes its instance and counts as a signature; a wrong part fails the check
+against the published chain and aborts the signing.
 
-
-\paragraph{Threshold costs.} Honest-majority MPC with malicious security (with abort) costs essentially the
-semi-honest price: about 1 bit per AND gate per operator with three operators (2-of-3)~\cite{AFLNO16}, the malicious
-check adding sublinear traffic~\cite{BGIN19,GS20}. Replicated sharing over $\mathrm{GF}(2)$ generalizes to $n=2t-1$:
-each AND gate is computed locally and, masked by a pseudorandom sharing, reshared through one collector,
-$(n-1)+t-1$ bits in all, i.e.\ 1, 1.2 and 1.29
-bits per operator for 2-of-3, 3-of-5 and 4-of-7 (the local work grows with the $\binom{n-1}{t-1}$ shares an operator
-holds, which is fine for small committees). The MPC hashes only the chain steps: the
-chain secrets are outputs of $F$, which the operators share locally, and the WOTS public keys, the trees and the
-forest key are hashed in the clear once the chain ends are open. So key generation is $2^k\cdot64\cdot3$ steps, $k$ the height of the
-kept subtree or of the top layer, and preprocessing $2\,048\cdot6\cdot4=49\,152$ (with the chains of the lower trees
-for a layered key), plus the commitment $\hash(s)$. A compression is
-$36.3\cdot10^3$ AND gates for Keccak-f[1600] (1\,600 per round; part of the first round is public, and the truncated
-output skips most of the last one), $22.6\cdot10^3$ for SHA-256 (the Bristol circuit) and $14.9\cdot10^3$ for BLAKE2s
-(10 rounds of 8 functions of 6 additions modulo $2^{32}$, 31 AND gates each). Traffic per operator at $h=24$, 2-of-3:
+\paragraph{Threshold costs.} Honest-majority MPC with malicious security (with abort) costs about the semi-honest
+price: 1 bit per AND gate per operator for 2-of-3~\cite{AFLNO16}, plus sublinear traffic for the malicious
+check~\cite{BGIN19,GS20}. Replicated sharing over $\mathrm{GF}(2)$ generalizes to $n=2t-1$ with $(n-1)+t-1$ bits per
+AND gate through one collector: 1, 1.2 and 1.29 bits per operator for 2-of-3, 3-of-5 and 4-of-7 (the local work grows
+with $\binom{n-1}{t-1}$, fine for small committees). The MPC hashes only chain steps (the chain secrets are outputs of
+$F$; keys, trees and the forest key are hashed in the clear): key generation is $2^k\cdot64\cdot3$ steps, $k$ the
+height of the kept subtree or top layer, and preprocessing $2\,048\cdot6\cdot4=49\,152$ (plus the lower trees' chains
+of a layered key, and $\hash(s)$). AND gates per compression: $36.3\cdot10^3$ for Keccak-f[1600] (1\,600 per round,
+less the public part of the first and most of the truncated last), $22.6\cdot10^3$ for SHA-256 (Bristol circuit),
+$14.9\cdot10^3$ for BLAKE2s (10 rounds of 8 functions of 6 additions modulo $2^{32}$, 31 AND gates each). Traffic per
+operator at $h=24$, 2-of-3:
 \begin{center}
 \begin{tabular}{lrrr}
   \toprule
@@ -297,155 +276,155 @@ output skips most of the last one), $22.6\cdot10^3$ for SHA-256 (the Bristol cir
   \bottomrule
 \end{tabular}
 \end{center}
-For 2-of-3, each layer of AND gates costs one communication round (two through a collector, from 3-of-5 on):
-24 per Keccak-f permutation, and, with ripple-carry adders,
-884 per BLAKE2s and 1\,607 per SHA-256 compression. The chains of every key run in parallel, their steps one after
-another: 3 at key generation and 4 for the forest in preprocessing, then one round opens them, so 73, 2\,653 and
-4\,822 rounds at key generation and 97, 3\,537 and 6\,429 per preprocessing (Keccak-256, BLAKE2s, SHA-256).
-Online, signing grinds about $2^h$ digests in the clear ($1.68\cdot10^7$ at $h=24$) and opens 44 forest chain values
-on average, at most 64: each signer sends one part per value.
+Rounds: one per layer of AND gates for 2-of-3 (two, through a collector, from 3-of-5 on): 24 per Keccak-f
+permutation, and with ripple-carry adders 884 per BLAKE2s and 1\,607 per SHA-256 compression. Chains run in parallel,
+their steps in sequence (3 at key generation, 4 for the forest), then one round opens them: 73, 2\,653 and 4\,822
+rounds at key generation and 97, 3\,537 and 6\,429 per preprocessing (Keccak-256, BLAKE2s, SHA-256). Online, signing
+grinds about $2^h$ digests in the clear ($1.68\cdot10^7$ at $h=24$) and opens 44 forest chain values on average, at
+most 64, one part per signer per value.
 
 \paragraph{Remark.} The Lean proof covers the single deterministic signer. The prepared instances are uniform and each
-is used once, so the indices of the threshold signatures are distributed as the single signer's, and the lifetime is
-meant to be the one of the configuration.
+is used once, so the indices of threshold signatures are distributed as the single signer's, and the lifetime is
+meant to be the configuration's.
 
 \paragraph{Alternative: every forest at key generation.} A pruned key has only $2^b$ instances (4\,096 at $b=12$,
-each used about 28 times over the lifetime), so key generation can prepare all of them once: the MPC computes the
-chains of every forest, publishes their masked values, and opens the WOTS$^+$C signatures that link them to the kept
-subtree. Signing then needs no MPC: a quorum $J$ draws $R_0$ and $\Delta$ as $\hash(m, J, k, r_1,\dots,r_t)$, each
-signer committing to $r_i$ before revealing it, with $k$ the session counter of $J$; it grinds the $2^{h-b}$ attempts
-into the kept subtree in the clear, as the single signer, and opens $F$ at the selected addresses. A session whose
-$r_i$ are revealed counts as a signature, and each quorum has its own range of counters, so that there are at most $N$
-in all. Traffic per operator, at $h=24$ and $b=12$, 2-of-3: 0.91~TB once with Keccak-256 (0.37 and 0.57~TB with BLAKE2s
-and SHA-256), against 26~TB (10.7 and 16.2~TB) of preprocessing over the lifetime.
+each used about 28 times over the lifetime), so key generation can prepare all of them: the MPC computes every
+forest's chains, publishes their masked values, and opens the WOTS$^+$C signatures linking them to the kept subtree.
+Signing then needs no MPC: a quorum $J$ draws $R_0$ and $\Delta$ as $\hash(m, J, k, r_1,\dots,r_t)$, each signer
+committing to $r_i$ before revealing it, with $k$ the session counter of $J$; it grinds the $2^{h-b}$ attempts in the
+clear and opens $F$ at the selected addresses. A session whose $r_i$ are revealed counts as a signature, and each
+quorum has its own counter range, so there are at most $N$ in all. Traffic per operator at $h=24$, $b=12$, 2-of-3:
+0.91~TB once with Keccak-256 (0.37 and 0.57~TB with BLAKE2s and SHA-256), against 26~TB (10.7 and 16.2~TB) of
+preprocessing over the lifetime.
 
 \subsection{Hardware wallets}
 \label{sec:ledger}
 
-A hardware wallet keeps the secret key and signs, but grinding about $2^h$ randomizers onto a few prepared instances is too slow
-there. The idea of
-delegating that work to the untrusted host and proving it with a STARK comes from Riva Labs~\cite{riva}.
+Grinding about $2^h$ randomizers onto a few prepared instances is too slow on a hardware wallet. Following Riva
+Labs~\cite{riva}, the device delegates it to the untrusted host, which proves it with a STARK:
 \begin{enumerate}
-  \item the device prepares $p=\max(16, 2^{h-20})$ uniformly random instances (from its secure randomness) in advance, as in \cref{sec:threshold} (in its
-        idle time), so that the host grinds $\approx2^{20}$ digests or fewer: 16 at $h\le24$, 64 at $h=26$, 256 at $h=28$
+  \item in its idle time, the device prepares $p=\max(16, 2^{h-20})$ uniformly random instances (from its secure
+        randomness), as in \cref{sec:threshold}: 16 at $h\le24$, 64 at $h=26$, 256 at $h=28$
   \item to sign $m$, it derives $R_0$ and $\Delta$ in one hash of its secret key and $m$, and sends $m$, $R_0$,
         $\Delta$ and the $p$ indices to the host
-  \item the host finds the least $i$ such that the index of $R_0 + i\Delta$ is one of the $p$, $\approx2^h/p\le2^{20}$ on average
-        digest hashes, and returns $R = R_0 + i\Delta$ with a STARK that $i$ is the least
+  \item the host finds the least $i$ such that the index of $R_0 + i\Delta$ is one of the $p$, $\approx2^h/p\le2^{20}$
+        digest hashes on average, and returns $R = R_0 + i\Delta$ with a STARK that $i$ is the least
   \item the device verifies the STARK and finishes the signature from the prepared instance
 \end{enumerate}
-The statement of the STARK is public, so it needs no zero knowledge; $\Delta$ is no longer secret against the host.
-The trees of an instance's forest and its WOTS$^+$C signatures and paths (each WOTS$^+$C key only ever signs one root)
-are public data, so the host holds them; the device keeps only the index and a hash of the forest key (its 16 top nodes) of each instance,
-recomputes from its seed the chain values it opens, and checks the host's nodes against that hash.
-The minimality makes $R$ a function of $(m, \text{secret key})$ and the prepared set, as for the deterministic signer; this flow is not covered by the Lean proof.
+The STARK needs no zero knowledge; $\Delta$ is no longer secret against the host. The host holds the public data of
+each instance (forest trees, WOTS$^+$C signatures and paths); the device keeps only its index and a hash of its forest
+key (16 top nodes), recomputes from its seed the chain values it opens, and checks the host's nodes against that hash.
+Minimality makes $R$ a function of $(m, \text{secret key})$ and the prepared set, as for the deterministic signer;
+this flow is not covered by the Lean proof.
 
-\paragraph{Hardware wallet costs.} At $h\ge24$ the host hashes $\approx2^{20}$ digests on average and proves them in a STARK at about
-$2^{19}$ hashes per second, 2~s. The device verifies the STARK in about $10^4$ compressions, which we count as 3~s on a Ledger Nano S+
-(1.7~s with Keccak-256 at 5.8 thousand compressions per second~\cite{hwbench}): about 5~s in all. Preparing an instance costs the
-device $74\cdot10^3$ Keccak-f permutations for a pruned key and $133\cdot10^3$ for a layered one at $h=24$
-($223\cdot10^3$ at $h=28$), its WOTS$^+$C counter searches included, in its idle time; a signature consumes one
-instance, and the first $p$ are prepared once (about 2.7~h for the layered key at $h=28$).
+\paragraph{Costs.} At $h\ge24$ the host hashes $\approx2^{20}$ digests and proves them at about $2^{19}$ hashes per
+second, 2~s. The device verifies the STARK in about $10^4$ compressions, counted as 3~s on a Ledger Nano S+ (1.7~s
+with Keccak-256 at 5.8 thousand per second~\cite{hwbench}): about 5~s in all. Preparing an instance costs the device
+$74\cdot10^3$ Keccak-f permutations for a pruned key and $133\cdot10^3$ for a layered one at $h=24$ ($223\cdot10^3$ at
+$h=28$), WOTS$^+$C counter searches included; the first $p$ are prepared once (about 2.7~h for the layered key at
+$h=28$).
 
 \section{The few-time signature: a two-level WOTS forest}
 \label{sec:twolevel}
 
-The few-time signature (FTS) under each tree leaf is built from small WOTS keys instead of FORS.
-The idea is inspired by Jonas Nick's (Blockstream) sig.golf submission~\cite{siggolf}.
+The FTS under each leaf is built from small WOTS keys instead of FORS, an idea from Jonas Nick's (Blockstream)
+sig.golf submission~\cite{siggolf}.
 
-\paragraph{WOTS keys.} The FTS is built from small WOTS keys: 6 chains of length 5, with leaf
-$\hash(\text{6 chain tops})$. A codeword is a vector $d\in\{0,\dots,4\}^6$ with $\sum_i d_i=5$; there are 246 of them.
-Signing at $d$ reveals each chain $d_i$ steps below its top. The verifier hashes up to the tops: always 5
-steps in total. The fixed sum acts as the checksum: from one signature, hashing forward cannot reach any other codeword. From
-several signatures by the same key, it reaches exactly the codewords below their componentwise max.
+\paragraph{WOTS keys.} 6 chains of length 5, with leaf $\hash(\text{6 chain tops})$. A codeword is a vector
+$d\in\{0,\dots,4\}^6$ with $\sum_i d_i=5$; there are 246 of them. Signing at $d$ reveals each chain $d_i$ steps below
+its top, so verification always takes 5 steps. The fixed sum acts as the checksum: one signature reaches no other
+codeword; several signatures by the same key reach exactly the codewords below their componentwise max.
 
-\paragraph{Trees.} The FTS has 8 independent trees of height 4, and the WOTS$^+$C encoding hashes the 16 nodes just below their
-roots. Each of
-the 16 leaves of a tree is $\hash(S_0,S_1)$, where $S_0$ and $S_1$ are the roots of two subtrees of height 3 over 8
-WOTS keys each. In each tree, the message picks a leaf, and in both of its subtrees a WOTS key and a codeword. A tree or a subtree has
-no root hash: in $\hash(S_0,S_1)$ and in the encoding, $S$ stands for the two nodes just below the root.
+\paragraph{Trees.} The FTS has 8 independent trees of height 4 (\cref{fig:forest}). Each of the 16 leaves of a tree
+is $\hash(S_0,S_1)$, where $S_0$ and $S_1$ are the two top nodes of two subtrees of height 3 over 8 WOTS keys each.
+In each tree, the message picks a leaf, and in both of its subtrees a WOTS key and a codeword.
 
-\begin{center}
-\begin{tikzpicture}[x=1cm,y=1cm,line join=round,
-  tree/.style={draw=newfts!40,line width=0.5pt},
-  path/.style={draw=newfts,line width=1.3pt,line cap=round},
-  on/.style={circle,draw=newfts,line width=0.9pt,fill=white,minimum size=6pt,inner sep=0pt},
-  auth/.style={circle,draw=newfts,line width=0.5pt,fill=newfts!18,minimum size=5.5pt,inner sep=0pt},
-  off/.style={circle,draw=newfts!40,line width=0.4pt,fill=white,minimum size=4.5pt,inner sep=0pt},
-  rev/.style={circle,draw=newfts,fill=newfts,minimum size=5pt,inner sep=0pt},
-  hid/.style={circle,draw=newfts!40,line width=0.4pt,fill=white,minimum size=5pt,inner sep=0pt},
-  lab/.style={font=\footnotesize,text=newfts},
-  note/.style={font=\scriptsize,text=newfts!80}]
-% ---------- top tree, height 4
-\draw[tree] (0,6.4) -- (-2.6,3.6) -- (2.6,3.6) -- cycle;
-\coordinate (t0) at (0,6.4);   \coordinate (t1) at (-0.55,5.7);
-\coordinate (t2) at (-0.15,5.0); \coordinate (t3) at (-0.6,4.3); \coordinate (t4) at (-0.3,3.6);
-\foreach \i/\j/\dx in {0/1/1.0,1/2/-0.75,2/3/0.8,3/4/-0.6} {
-  \draw[tree] (t\i) -- ($(t\j)+(\dx,0)$);
-  \node[auth] at ($(t\j)+(\dx,0)$) {};}
-\draw[path] (t0) -- (t1) -- (t2) -- (t3) -- (t4);
-\foreach \i in {0,...,3} \node[on] at (t\i) {};
-\node[on,minimum size=9pt,fill=newfts!55] (sc) at (t4) {};
-% ---------- two subtrees, height 3
-\foreach \k/\cx/\pk in {0/-2.4/2,1/1.8/5} {
-  \coordinate (r\k) at (\cx,2.7);
-  \draw[tree] (r\k) -- (\cx-1.35,1.0) -- (\cx+1.35,1.0) -- cycle;
-  \foreach \i in {0,...,7} \node[off] (c\k\i) at (\cx-1.12+0.32*\i,0.78) {};
-  \coordinate (u3) at (c\k\pk);
-  \coordinate (u1) at ($(r\k)!0.36!(u3)$); \coordinate (u2) at ($(r\k)!0.7!(u3)$);
-  \draw[tree] (u1) -- ++(0.55,-0.6); \node[auth] at ($(u1)+(0.55,-0.6)$) {};
-  \draw[tree] (u2) -- ++(-0.45,-0.5); \node[auth] at ($(u2)+(-0.45,-0.5)$) {};
-  \node[auth] at ($(u3)+(\ifnum\pk>3 -0.32\else 0.32\fi,0)$) {};
-  \draw[path] (sc) -- (r\k) -- (u3);
-  \node[on] at (r\k) {};
-  \node[on,fill=newfts!55] at (u3) {};
-}
-\node[note,anchor=south east] at ($(r0)+(-0.12,0.05)$) {$R_0$};
-\node[note,anchor=south west] at ($(r1)+(0.12,0.05)$) {$R_1$};
-% ---------- zoom on one WOTS key
-\coordinate (B) at (-4.15,-2.9);   % lower-left chain node
-\draw[newfts!40,line width=0.4pt,dashed] (c02) -- ($(B)+(-0.6,2.45)$);
-\draw[newfts!40,line width=0.4pt,dashed] (c02) -- ($(B)+(2.85,2.45)$);
-\draw[newfts!40,line width=0.5pt,rounded corners=3pt,fill=newfts!3] ($(B)+(-0.6,-0.6)$) rectangle ($(B)+(2.85,2.45)$);
-\foreach \i/\d in {1/0,2/2,3/0,4/1,5/0,6/2} {
-  \pgfmathsetmacro{\xx}{0.45*(\i-1)}
+\begin{figure}[htb]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,line join=round,line cap=round,
+  edge/.style={draw=black!28,line width=0.4pt},
+  hot/.style={draw=black,line width=0.9pt},
+  plain/.style={circle,draw=black!35,line width=0.4pt,fill=white,minimum size=5pt,inner sep=0pt},
+  pathnode/.style={circle,draw=black,line width=0.7pt,fill=white,minimum size=5pt,inner sep=0pt},
+  authnode/.style={circle,draw=black,line width=0.4pt,fill=black!35,minimum size=5pt,inner sep=0pt},
+  revnode/.style={circle,draw=black,line width=0.4pt,fill=black,minimum size=5pt,inner sep=0pt},
+  pair/.style={draw=black!45,line width=0.4pt,densely dashed,rounded corners=3pt},
+  lab/.style={font=\footnotesize,align=left,anchor=west,inner sep=0pt}]
+% #1 name, #2 center x, #3 y of the two top nodes, #4 height, #5 leaf spacing, #6 level spacing, #7 chosen leaf
+\newcommand{\fstree}[7]{%
+  \foreach \l in {1,...,#4} {
+    \pgfmathtruncatemacro{\n}{2^\l-1}
+    \pgfmathtruncatemacro{\p}{floor(#7/2^(#4-\l))}
+    \pgfmathtruncatemacro{\q}{\p+1-2*mod(\p,2)}
+    \foreach \j in {0,...,\n} {
+      \pgfmathsetmacro{\x}{#2+((\j+0.5)*2^(#4-\l)-2^(#4-1))*#5}
+      \pgfmathsetmacro{\y}{#3-(\l-1)*#6}
+      \ifnum\j=\p \node[pathnode] (#1-\l-\j) at (\x,\y) {};
+      \else\ifnum\j=\q \node[authnode] (#1-\l-\j) at (\x,\y) {};
+      \else \node[plain] (#1-\l-\j) at (\x,\y) {};\fi\fi}}
+  \foreach \l in {2,...,#4} {
+    \pgfmathtruncatemacro{\n}{2^\l-1}
+    \pgfmathtruncatemacro{\p}{floor(#7/2^(#4-\l))}
+    \pgfmathtruncatemacro{\u}{\l-1}
+    \foreach \j in {0,...,\n} {
+      \pgfmathtruncatemacro{\k}{floor(\j/2)}
+      \ifnum\j=\p \draw[hot] (#1-\u-\k) -- (#1-\l-\j);
+      \else \draw[edge] (#1-\u-\k) -- (#1-\l-\j);\fi}}}
+% ---- the tree, height 4 (no root: its two top nodes go to the encoding)
+\fstree{T}{0}{0}{4}{0.4}{0.6}{6}
+\draw[pair] ($(T-1-0)+(-0.22,-0.17)$) rectangle ($(T-1-1)+(0.22,0.17)$);
+\node[font=\footnotesize,anchor=south] at (0,0.3) {to the WOTS$^+$C encoding (no root hash)};
+% ---- the two subtrees, height 3, under the chosen leaf
+\fstree{A}{-2.4}{-3.0}{3}{0.36}{0.6}{2}
+\fstree{B}{2.4}{-3.0}{3}{0.36}{0.6}{5}
+\draw[hot] (T-4-6) -- (A-1-0); \draw[edge] (T-4-6) -- (A-1-1);
+\draw[edge] (T-4-6) -- (B-1-0); \draw[hot] (T-4-6) -- (B-1-1);
+\foreach \s/\a/\t in {A/east/S_0,B/west/S_1} {
+  \draw[pair] ($(\s-1-0)+(-0.22,-0.17)$) rectangle ($(\s-1-1)+(0.22,0.17)$);}
+\node[font=\footnotesize,anchor=east] at ($(A-1-0)+(-0.3,0)$) {$S_0$};
+\node[font=\footnotesize,anchor=west] at ($(B-1-1)+(0.3,0)$) {$S_1$};
+% ---- one WOTS key (the chosen leaf of the left subtree), codeword d = (0,2,0,1,0,2)
+\coordinate (W) at (-4.1,-7.3); % bottom of the first chain
+\draw[black!30,line width=0.4pt,dashed] (A-3-2) -- ($(W)+(-0.6,2.45)$);
+\draw[black!30,line width=0.4pt,dashed] (A-3-2) -- ($(W)+(2.85,2.45)$);
+\draw[black!30,line width=0.4pt,rounded corners=2pt,fill=black!3] ($(W)+(-0.6,-0.7)$) rectangle ($(W)+(2.85,2.45)$);
+\foreach \i/\d in {0/0,1/2,2/0,3/1,4/0,5/2} {
+  \pgfmathsetmacro{\xx}{0.45*\i}
   \pgfmathtruncatemacro{\rv}{4-\d}
-  \foreach \j in {0,...,3} \draw[newfts!40,line width=0.4pt] ($(B)+(\xx,0.42*\j)$) -- ($(B)+(\xx,0.42*\j+0.42)$);
-  \foreach \j in {0,...,4} {\ifnum\j=\rv \node[rev] at ($(B)+(\xx,0.42*\j)$) {};
-      \else \node[hid] at ($(B)+(\xx,0.42*\j)$) {}; \fi}
-  \ifnum\rv<4 \draw[path,line width=0.9pt] ($(B)+(\xx,0.42*\rv+0.09)$) -- ($(B)+(\xx,1.59)$); \fi
-  \node[note] at ($(B)+(\xx,-0.33)$) {$\d$};
+  \foreach \k in {0,...,3} \draw[edge] ($(W)+(\xx,0.4*\k)$) -- ($(W)+(\xx,0.4*\k+0.4)$);
+  \ifnum\rv<4 \draw[hot] ($(W)+(\xx,0.4*\rv)$) -- ($(W)+(\xx,1.6)$); \fi
+  \foreach \k in {0,...,4} {
+    \ifnum\k=\rv \node[revnode] at ($(W)+(\xx,0.4*\k)$) {};
+    \else\ifnum\k>\rv \node[pathnode] at ($(W)+(\xx,0.4*\k)$) {};
+    \else \node[plain] at ($(W)+(\xx,0.4*\k)$) {};\fi\fi}
+  \node[font=\footnotesize] at ($(W)+(\xx,-0.4)$) {$\d$};
 }
-\node[note] at ($(B)+(-0.38,-0.33)$) {$d$};
-\draw[newfts!60,line width=0.4pt] ($(B)+(-0.1,1.88)$) -- ($(B)+(2.35,1.88)$);
-\node[note,anchor=south] at ($(B)+(1.125,1.92)$) {leaf $=\hash(\text{6 chain tops})$};
-% ---------- labels (right column)
-\node[lab,anchor=west] at (3.0,5.9)  {tree, height 4};
-\node[note,anchor=west] at (3.0,5.55) {16 leaves; 4 bits};
-\node[lab,anchor=west] at (3.0,3.95) {leaf $\hash(S_0,S_1)$};
-\draw[newfts!40,line width=0.4pt,densely dotted] (2.95,3.95) -- ($(sc)+(0.2,0.05)$);
-\node[lab,anchor=west] at (3.6,1.95) {two subtrees, height 3};
-\node[note,anchor=west] at (3.6,1.6) {both opened, 8 WOTS keys each};
-\node[note,anchor=west] at (3.6,1.3) {per subtree: 3 bits $+$ 8-bit table index};
-\node[lab,anchor=west] at (-0.9,-0.9) {one WOTS key: 6 chains of length 5};
-\node[note,anchor=west] at (-0.9,-1.25) {codeword $d=(0,2,0,1,0,2)$, $\textstyle\sum d_i=5$};
-% ---------- legend
-\node[rev] at (-0.75,-2.0) {}; \node[note,anchor=west] at (-0.6,-2.0) {chain value in the signature};
-\node[auth] at (-0.75,-2.4) {}; \node[note,anchor=west] at (-0.6,-2.4) {authentication node in the signature};
-\draw[path] (-0.9,-2.8) -- (-0.6,-2.8); \node[note,anchor=west] at (-0.5,-2.8) {recomputed by the verifier};
+\node[font=\footnotesize,anchor=east] at ($(W)+(-0.2,-0.4)$) {$d$};
+\draw[black!60,line width=0.4pt] ($(W)+(-0.15,1.85)$) -- ($(W)+(2.4,1.85)$);
+\node[font=\footnotesize] at ($(W)+(1.125,2.15)$) {leaf $=\hash(\text{6 chain tops})$};
+% ---- labels
+\node[lab] at (4.1,-0.9) {tree, height 4\\16 leaves};
+\node[lab] at (4.1,-1.8) {leaf $=\hash(S_0,S_1)$};
+\node[lab] at (4.1,-3.6) {2 subtrees, height 3\\8 WOTS keys each};
+\node[lab] at (-0.6,-5.3) {WOTS key: 6 chains of length 5\\codeword $d$, $\textstyle\sum_i d_i=5$};
+\node[revnode] at (-0.45,-6.2) {};  \node[lab] at (-0.15,-6.2) {chain value in the signature};
+\node[authnode] at (-0.45,-6.6) {}; \node[lab] at (-0.15,-6.6) {authentication node in the signature};
+\draw[hot] (-0.65,-7.0) -- (-0.25,-7.0); \node[pathnode] at (-0.45,-7.0) {};
+\node[lab] at (-0.15,-7.0) {recomputed by the verifier};
 \end{tikzpicture}
-
-\small One of the 8 trees.
-\end{center}
+\caption{One of the 8 trees of the forest. The chosen leaf hashes the two top nodes $S_0$, $S_1$ of its two
+subtrees; in each subtree, the message picks a WOTS key and a codeword.}
+\label{fig:forest}
+\end{figure}
 
 \paragraph{Encoding.} Bit fields and one 256-entry table: the encoding rejects no digest. Each tree takes 26 bits:
 4 for the leaf, then, per subtree, 3 for the WOTS key and 8 for a table index. The 16 table indices are the first
 16 bytes of the digest; its last 16 bytes, as a little-endian integer, hold the 16 WOTS keys, then the 8 leaves,
-then the instance index, so no field lies across two 64-bit words. The table has 256 entries: sort the 246
-codewords by decreasing $\sum_i d_i^2$, then in increasing lexicographic order (first digit most significant); entry $t$ is codeword number $t \bmod 214$.
-Spread-out codewords are easier to forge once a key has signed twice, so the 32 most spread-out ones are left out,
-and the 42 most concentrated ones appear twice. With the $h\le28$ bits of the instance index, the digest is at
-most 236 bits, so it still takes one hash.
+then the instance index, so no field lies across two 64-bit words. With the $h\le28$ bits of the index, the digest
+is $h + 8\cdot26\le236$ bits: one hash. The table: sort the 246 codewords by decreasing $\sum_i d_i^2$, then in
+increasing lexicographic order (first digit most significant); entry $t$ is codeword number $t \bmod 214$. Spread-out
+codewords are easier to forge once a key has signed twice, so the 32 most spread-out ones are left out, and the 42
+most concentrated ones appear twice.
 
 \paragraph{Costs.} Per tree:
 \begin{itemize}
@@ -454,25 +433,24 @@ most 236 bits, so it still takes one hash.
         $\hash(S_0,S_1)$ and 3 for the path in the tree
   \item signing: $16\cdot2\cdot8 = 256$ WOTS keys of 28 permutations each
 \end{itemize}
-Every signature has the same size and verification cost. The WOTS$^+$C key that signs
-the forest uses a target sum of 128 instead of 120: 8 fewer chain steps at verification,
-for about 14\,700 counter tries instead of 830 when signing ($13.8\cdot10^3$ more permutations, counted in the
-signing costs of \cref{sec:usage}).
+Every signature has the same size and verification cost. The WOTS$^+$C key that signs the forest uses a target sum
+of 128 instead of 120: 8 fewer chain steps at verification, for about 14\,700 counter tries instead of 830 when
+signing ($13.8\cdot10^3$ more permutations, counted in \cref{sec:usage}).
 
-\paragraph{Security.} A forgery at an instance with $r$ prior signatures needs every tree to be covered: in
-both subtrees, the target WOTS key must have been opened, and the target codeword must lie below the componentwise
-max of those openings. Let $f_t$ be the probability that $t$ random signatures by one WOTS key cover a random codeword
+\paragraph{Security.} A forgery at an instance with $r$ prior signatures needs every tree to be covered: in both
+subtrees, the target WOTS key must have been opened, and the target codeword must lie below the componentwise max of
+those openings. Let $f_t$ be the probability that $t$ random signatures by one WOTS key cover a random codeword
 ($f_1=0.0052$, $f_2=0.068$, $f_3=0.17$). Then
 \[
 \mathrm{cover}(r)=\Big(\sum_{u\ge1}\mathrm{Bin}(r,\tfrac1{16})(u)\Big[\sum_{t\ge1}\mathrm{Bin}(u,\tfrac18)(t)\,f_t\Big]^2\Big)^8 .
 \]
 The lifetime is the largest $N$ with $2^{127}\,2^{b-h}\,\mathbb{E}_{r\sim\mathrm{Poisson}(N/2^b)}[\mathrm{cover}(r)]\le1$:
-the signatures spread over the $2^b$ instances of the kept subtree, and a forger's digest must also land in it.
-The factor $2^{b-h}$ is what hypertree pruning~\cite{conduition} does not charge the forger: its rule reduces
-the lifetime by the full pruning factor $2^{h-b}$, which is the signer's grinding cost, but the forger pays that
-same cost per attempt. Here the credit is worth about $2^{(h-b)/18}$, from $+17\%$ at $h=24$, $b=20$ to a factor 1.8 at $b=8$.
-The table is at $h=24$. The best known attack also uses the WOTS$^+$C key (a counter search for a neighbouring
-encoding, then one chain preimage): for the forest it is the cover figure, except at $b=8$ where it is 2\% lower~\cite{proofs}. Every figure is rounded down; the last row repeats the proved lifetimes of \cref{sec:lifetimes}.
+the signatures spread over the $2^b$ instances of the kept subtree, and a forger's digest must also land in it. This
+factor $2^{b-h}$ is not credited by hypertree pruning~\cite{conduition}, which cuts the lifetime by the full factor
+$2^{h-b}$ although the forger pays the signer's grinding cost per attempt; it is worth about $2^{(h-b)/18}$, from
+$+17\%$ at $h=24$, $b=20$ to a factor 1.8 at $b=8$. The best known attack also uses the WOTS$^+$C key (a counter
+search for a neighbouring encoding, then one chain preimage); for the forest it is the cover figure, except at $b=8$
+where it is 2\% lower~\cite{proofs}. At $h=24$, rounded down (the last row is \cref{sec:lifetimes}):
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{lrrrrrrr}
@@ -487,15 +465,12 @@ encoding, then one chain preimage): for the forest it is the cover figure, excep
 \end{center}
 
 \begin{thebibliography}{99}
-\bibitem{SP800230} Q.~Dang, D.~Moody. \emph{Additional SLH-DSA Parameter Sets for Limited-Signature Use
-  Cases}. NIST SP~800-230 (draft), 2026. \url{https://csrc.nist.gov/pubs/sp/800/230/ipd}.
 \bibitem{HK22C} A.~H\"ulsing, M.~Kudinov, E.~Ronen, E.~Yogev. \emph{SPHINCS$^+$C: Compressing SPHINCS$^+$
   With (Almost) No Cost}. IEEE S\&P, 2023. \url{https://eprint.iacr.org/2022/778}.
 \bibitem{FIPS205} National Institute of Standards and Technology. \emph{Stateless Hash-Based Digital Signature
   Standard}. FIPS~205, 2024. \url{https://doi.org/10.6028/NIST.FIPS.205}.
 \bibitem{proofs} \emph{leanSphincs proofs in Lean 4} (\texttt{LeanForest}), \texttt{formal/sphincs} in
   \url{https://github.com/TomWambsgans/sphincs.art}.
-
 \bibitem{hwbench} T.~Wambsgans. \emph{Hardware wallet benchmark}.
   \url{https://github.com/TomWambsgans/hardware-wallet-benchmark}.
 \bibitem{conduition} conduition. \emph{Pruning Hypertrees for the Lax and Lazy}, 2026.
@@ -506,7 +481,6 @@ encoding, then one chain preimage): for the forest it is the cover figure, excep
   \url{https://eprint.iacr.org/2020/134}.
 \bibitem{AFLNO16} T.~Araki, J.~Furukawa, Y.~Lindell, A.~Nof, K.~Ohara. \emph{High-Throughput Semi-Honest Secure
   Three-Party Computation with an Honest Majority}. ACM CCS, 2016.
-
 \bibitem{BGIN19} E.~Boyle, N.~Gilboa, Y.~Ishai, A.~Nof. \emph{Practical Fully Secure Three-Party
   Computation via Sublinear Distributed Zero-Knowledge Proofs}. ACM CCS, 2019.
   \url{https://eprint.iacr.org/2019/1390}.
