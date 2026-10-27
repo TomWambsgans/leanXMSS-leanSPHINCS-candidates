@@ -1,6 +1,6 @@
 # FORS in Lean
 
-`LeanFors` (`lakefile.toml`, namespace `LeanFors`) is the Lean library of the vanilla variant. It is
+`FORS` (`lakefile.toml`, namespace `FORS`) is the Lean library of the vanilla variant. It is
 `LeanForest` with one part replaced: the few-time signature is FORS instead of the two-level WOTS
 forest. The hypertree, the WOTS+C keys, the pruning, the deterministic signer and the SUF-CMA
 statement are the same, so this file only records what FORS changes; the rest is in
@@ -37,7 +37,7 @@ uniform (`Security.evalDist_digestBlock_uniform`).
 
 ## Proved lifetimes
 
-Signature limits `N` with 127 bits, one theorem each in [Main.lean](LeanFors/Main.lean) (e.g.
+Signature limits `N` with 127 bits, one theorem each in [Main.lean](FORS/Main.lean) (e.g.
 `h24_pruned12`), collected by `requestedSecurity`; layered keys: 10 + 6 + 6, 12 + 6 + 6, 12 + 7 + 7
 and 12 + 8 + 8.
 
@@ -68,19 +68,19 @@ The route of [PROOF.md](PROOF.md) is unchanged. Two steps differ.
 **The grinding signer reads its pair call by call.** A trial reads only the block that carries the
 index and tests landing on it; the remaining calls of the pair are read later, in the final
 assembly, and only if it landed. So the fair-share argument runs over the pair's whole tuple of
-blocks ([ScanSigner/FairShare.lean](LeanFors/ScanSigner/FairShare.lean): `pblk`, `pcache`, `viewOf`,
+blocks ([ScanSigner/FairShare.lean](FORS/ScanSigner/FairShare.lean): `pblk`, `pcache`, `viewOf`,
 `fresh_view_mean`), while landing and
 the pool counts still rest on the first block alone (`blk`). `all_read_bound` is the ingredient: a
 family of cached entries, read in order, is left untouched, so a value that only reads them is its
 value at their cached answers. A pair that is fresh when a trial reads its first block has its
 remaining calls presampled, so the whole tuple is uniform at once
-([CoverPotential/Presample.lean](LeanFors/CoverPotential/Presample.lean), `interp_presample_new`).
+([CoverPotential/Presample.lean](FORS/CoverPotential/Presample.lean), `interp_presample_new`).
 
 **The cover bound is over `k` independent trees.** A forgery must open, in every tree, a leaf the
 run has already revealed (`TreeCov`, `Covered`). The first two moments of that event have closed
 forms in `A = 2^a` — `1 - (1 - 1/A)^n` and its second-moment companion
-([CoverBound/FirstMoment.lean](LeanFors/CoverBound/FirstMoment.lean),
-[CoverBound/SecondMoment.lean](LeanFors/CoverBound/SecondMoment.lean)) — which replace the forest's
-codeword tables; [CoverBound/MomentBounds.lean](LeanFors/CoverBound/MomentBounds.lean) turns them
+([CoverBound/FirstMoment.lean](FORS/CoverBound/FirstMoment.lean),
+[CoverBound/SecondMoment.lean](FORS/CoverBound/SecondMoment.lean)) — which replace the forest's
+codeword tables; [CoverBound/MomentBounds.lean](FORS/CoverBound/MomentBounds.lean) turns them
 into kernel-checked rational tables and
-[CoverBound/HTermOption.lean](LeanFors/CoverBound/HTermOption.lean) raises them to the k-th power.
+[CoverBound/HTermOption.lean](FORS/CoverBound/HTermOption.lean) raises them to the k-th power.

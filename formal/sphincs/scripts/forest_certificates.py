@@ -78,7 +78,7 @@ def num_layers():
 
 def kcredit(b):
     """Key generation, in hash calls: 32 + 64 * 3 + 2 per leaf of the kept subtree and 2 per surrogate
-    (kCreditF); a layered key builds its top layer, with no surrogate."""
+    (`keygenHashCost`); a layered key builds its top layer, with no surrogate."""
     if LAYERED_TOP is not None:
         return 226 * 2 ** LAYERED_TOP
     return 226 * 2 ** b + 2 * (TOTAL - b)

@@ -4,14 +4,14 @@
 From formal/sphincs, after `lake env lean scripts/Reach.lean` (which writes reach.txt):
     python3 scripts/doc_check.py
 Every relative link must point to an existing file. Every code span that looks like a Lean name or a
-file must be a module of `LeanForest` or `LeanFors`, a file, or the suffix of a declaration of either
+file must be a module of `LeanForest` or `FORS`, a file, or the suffix of a declaration of either
 (or be listed in PROSE below). Exits 1 and lists the offenders otherwise.
 """
 import glob, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCS = ['README.md', 'PROOF.md', 'FOREST.md', 'FORS.md']
-LIBS = ['LeanForest', 'LeanFors']
+LIBS = ['LeanForest', 'FORS']
 # Code spans that are not Lean names: axioms, tactics, script commands, the leanVM commit, symbols.
 PROSE = {'propext', 'Classical.choice', 'Quot.sound', 'sorry', 'native_decide', 'check', 'write',
          'b7a107256', 'SphincsSecurity', 'LAYERED', 'PARAMS', 'idx', 'wbar', "extractLsb'",

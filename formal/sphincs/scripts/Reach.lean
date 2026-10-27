@@ -1,10 +1,10 @@
 import LeanForest
-import LeanFors
+import FORS
 import Lean
 
 /-!
 Reachability audit. `lake env lean scripts/Reach.lean` writes `reach.txt`, one line per declaration
-of a `LeanForest` or `LeanFors` module: module, name, source line range, whether the proof terms of
+of a `LeanForest` or `FORS` module: module, name, source line range, whether the proof terms of
 the theorems pinned in the two `Axioms.lean` reach it, whether they or the names cited in README.md,
 PROOF.md, FOREST.md and FORS.md (any declaration whose name ends with a code span) reach it, and
 whether it is an instance. Declarations that reachability cannot see but the elaborator needs (rfl simp lemmas,
@@ -39,7 +39,7 @@ open Elab Command in
 run_cmd do
   let env ← getEnv
   let forestGuards ← IO.FS.lines "LeanForest/Axioms.lean"
-  let forsGuards ← IO.FS.lines "LeanFors/Axioms.lean"
+  let forsGuards ← IO.FS.lines "FORS/Axioms.lean"
   let guards := forestGuards ++ forsGuards
   let pinned := guards.filterMap fun line =>
     if line.startsWith "#print axioms " then some (line.drop 14).trimAscii.toString.toName else none
@@ -52,7 +52,7 @@ run_cmd do
   let mut cited : Array Name := #[]
   for h : i in [0:env.header.moduleNames.size] do
     let moduleName := env.header.moduleNames[i]
-    if !((`LeanForest).isPrefixOf moduleName || (`LeanFors).isPrefixOf moduleName) then continue
+    if !((`LeanForest).isPrefixOf moduleName || (`FORS).isPrefixOf moduleName) then continue
     for name in env.header.moduleData[i]!.constNames do
       decls := decls.push (moduleName, name)
       if (nameSuffixes name).any spans.contains then cited := cited.push name

@@ -26,7 +26,7 @@ The same figures are pinned by the Rust tests (crates/sphincs, `Config::verify_c
 The vanilla FTS is FORS with k trees of height a and no root hash (the WOTS+C key signs the 2k nodes below
 the roots), as in leanSphincs v1: a = 10, and for each configuration the fewest trees k whose cover attack
 (fors_security.py) needs at least as many signatures as the forest's. Its lifetimes are proved in Lean too,
-by the `LeanFors` library.
+by the `FORS` library.
 """
 
 import argparse

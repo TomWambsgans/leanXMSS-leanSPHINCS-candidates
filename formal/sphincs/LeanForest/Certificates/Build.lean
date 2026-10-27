@@ -355,7 +355,8 @@ end
 
 /-! ### Means -/
 
-/-- `leafMean` of the table `overP P ks`, the weights times the numerators summed in integers. -/
+/-- The mean `poisMean` of `leafQ` over the table `overP P ks`, the weights times the numerators
+summed in integers. -/
 def meanZ (t : PoisT) (P : ℕ) (ks : List ℤ) (J : ℚ) : ℚ :=
   ((List.zipWith (fun (p : ℕ) (k : ℤ) => (p : ℤ) * k) t.pm ks).sum : ℚ) / 2 ^ (t.P + P) +
     t.pb (t.n1 + 1) * ((overP P ks).getD t.n1 0 / (1 - t.r) + J / (1 - t.r) ^ 2)
