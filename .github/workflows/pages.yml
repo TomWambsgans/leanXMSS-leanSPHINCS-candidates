@@ -28,13 +28,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Serve the old page (main before v2) at / and /v1/, this page at /v2-beta/, and redirect /sphincs/ to the root
+      - name: Serve this page at /, the old page at /v1/, and redirect /v2-beta/ and /sphincs/ to the root
         run: |
           mkdir -p _site/v1 _site/v2-beta _site/sphincs
-          cp site/v1/index.html site/v1/sphinx.png _site/
+          cp site/index.html site/sphinx.png site/data.json _site/
           cp site/v1/index.html site/v1/sphinx.png _site/v1/
-          cp site/index.html site/sphinx.png site/data.json _site/v2-beta/
-          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=../"><link rel="canonical" href="../"><title>leanSPHINCS</title><a href="../">leanSPHINCS</a>\n' > _site/sphincs/index.html
+          for d in v2-beta sphincs; do
+            printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=../"><link rel="canonical" href="../"><title>leanSPHINCS</title><a href="../">leanSPHINCS</a>\n' > _site/$d/index.html
+          done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
