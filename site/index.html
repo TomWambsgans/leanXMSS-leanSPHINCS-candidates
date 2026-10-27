@@ -1124,11 +1124,11 @@ footer a + a { margin-left: 1.25rem; }
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       // shown only when it beats signing alone
-      // online: the host grinds and proves, the Ledger verifies the STARK and opens the chain values itself
+      // online: the host grinds and proves, the Ledger verifies the STARK and opens the chain values itself (whole seconds)
       var tt = lay_ ? thr('layered') : thr('pruned', d.b), online = g / W.host_rate + W.stark_verify_s + tt.device_online / d.rate;
       document.querySelector('[data-f="assist-' + k + '"]').closest('tr').classList.toggle('gone', online >= c.sign[d.kib] / d.rate);
       set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.ledger_prep * np / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
-        time(online) + '</span><span class="m-only">' + info(assist(tt), ' w') + '</span></span></div>');
+        (online >= 1 ? Math.round(online) + '&nbsp;s' : time(online)) + '</span><span class="m-only">' + info(assist(tt), ' w') + '</span></span></div>');
       document.getElementById('assist-tip').setAttribute('data-tip', assist(tt).replace(/&nbsp;/g, '\u00a0'));
     });
 
