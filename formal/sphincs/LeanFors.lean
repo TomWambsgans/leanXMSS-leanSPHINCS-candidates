@@ -104,6 +104,7 @@ import LeanFors.Classification.Verifier
 import LeanFors.Classification.Win
 import LeanFors.Classification.WinRefined
 import LeanFors.Classification.Wots
+import LeanFors.CoverPotential.Presample
 import LeanFors.CoverPotential.Basic
 import LeanFors.CoverPotential.FairCoin
 import LeanFors.CoverPotential.Game
@@ -113,12 +114,7 @@ import LeanFors.CoverPotential.OneCoin
 import LeanFors.CoverPotential.OneCoinGame
 import LeanFors.CoverPotential.Price
 import LeanFors.CoverPotential.StartValue
-import LeanFors.CoverBound.CodewordMax
-import LeanFors.CoverBound.CodewordSums
-import LeanFors.CoverBound.CodewordTables
 import LeanFors.CoverBound.FirstMoment
-import LeanFors.CoverBound.Grid
-import LeanFors.CoverBound.GridTensor
 import LeanFors.CoverBound.HTerm
 import LeanFors.CoverBound.HTermCertificate
 import LeanFors.CoverBound.HTermOption
