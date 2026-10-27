@@ -1001,7 +1001,7 @@ footer a + a { margin-left: 1.25rem; }
   // 3 significant digits with K, M, B (as scripts/scheme.py prints them)
   function fmt(x) {
     var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
-    x = up(x, 1);   // a cost, rounded up to one significant digit: 954K is 1M, 244M is 300M
+    x = up(x, 2);   // a cost, rounded up to two significant digits: 954K is 960K, 244M is 250M
     for (var i = 0; i < u.length; i++) if (x >= u[i][0]) return x / u[i][0] + u[i][1];
     return String(x);
   }
