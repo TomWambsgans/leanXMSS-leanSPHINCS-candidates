@@ -286,9 +286,6 @@ def nZ (H k a n1 : ℕ) : List ℤ :=
   zipTab n1 (fun x _ : ℕ => cdivZ (((k * x ^ (k - 1) : ℕ) : ℤ) * 2 ^ 191) (p2 (H + 128 * (k - 1))))
     (P1L a) (P1L a)
 
-theorem two_pow_split (H k : ℕ) : ((2 : ℚ)) ^ (H + 128 * k) = 2 ^ H * (2 ^ 128) ^ k := by
-  rw [pow_add, pow_mul]
-
 theorem gZ_bound {H k a n1 n : ℕ} {o : OptF} (hc : 0 < o.c1) (hn1 : n1 ≤ 150) (hn : n < n1 + 1) :
     gBound H k a o n ≤ ((gZ H k a n1 o.c1).getD n 0 : ℚ) / 2 ^ 191 := by
   have l1 : n1 + 1 ≤ (P1L a).length := by rw [length_P1L]; omega
@@ -299,19 +296,13 @@ theorem gZ_bound {H k a n1 n : ℕ} {o : OptF} (hc : 0 < o.c1) (hn1 : n1 ≤ 150
   have hc1 : (o.c1 : ℚ) = o.c1.num / o.c1.den := (Rat.num_div_den o.c1).symm
   apply min_le_min
   · apply le_cdivZ_div (p2_pos _)
-    unfold κQ
-    push_cast
-    rw [two_pow_split H k, div_pow]
-    field_simp
+    unfold κQ; push_cast; field_simp; ring
   · apply le_cdivZ_div (mul_pos (mul_pos (p2_pos _) (by norm_num)) hu)
     conv_lhs => rw [hc1]
-    unfold κQ
-    push_cast
-    rw [two_pow_split (2 * H) k, div_pow]
+    unfold κQ; push_cast
     have : (0 : ℚ) < o.c1.num := by exact_mod_cast hu
     have : (0 : ℚ) < o.c1.den := by exact_mod_cast o.c1.den_pos
-    field_simp
-    ring
+    field_simp; ring
 
 theorem hZ_bound {H k a n1 n : ℕ} {o : OptF} {E : ℤ} (hE : o.eC - 1 ≤ (E : ℚ) / 2 ^ 128) (hn1 : n1 ≤ 150)
     (hn : n < n1 + 1) : hBound H k a o n ≤ ((hZ H k a n1 o.θ o.A2 E).getD n 0 : ℚ) / 2 ^ 128 := by
@@ -324,24 +315,17 @@ theorem hZ_bound {H k a n1 n : ℕ} {o : OptF} {E : ℤ} (hE : o.eC - 1 ≤ (E :
   apply min_le_min hE
   apply le_cdivZ_div (mul_pos (mul_pos (by exact_mod_cast o.θ.den_pos) (by exact_mod_cast o.A2.den_pos)) (p2_pos _))
   conv_lhs => rw [hθ, hA]
-  unfold κQ
-  push_cast
-  rw [two_pow_split (2 * H) k, div_pow, div_pow]
+  unfold κQ; push_cast
   have : (0 : ℚ) < o.θ.den := by exact_mod_cast o.θ.den_pos
   have : (0 : ℚ) < o.A2.den := by exact_mod_cast o.A2.den_pos
-  field_simp
-  ring
+  field_simp; ring
 
 theorem nZ_bound {H k a n1 n : ℕ} (hn1 : n1 ≤ 150) (hn : n < n1 + 1) :
     nBound H k a n ≤ ((nZ H k a n1).getD n 0 : ℚ) / 2 ^ 191 := by
   have l1 : n1 + 1 ≤ (P1L a).length := by rw [length_P1L]; omega
   rw [nZ, getD_zipTab (a := 0) (b := 0) l1 l1 hn, nBound, getD_tab (P1L_eq a) (by omega)]
   apply le_cdivZ_div (p2_pos _)
-  unfold κQ
-  push_cast
-  rw [two_pow_split H (k - 1), div_pow]
-  field_simp
-  ring
+  unfold κQ; push_cast; field_simp; ring
 
 /-! ### Means -/
 
