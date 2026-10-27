@@ -121,8 +121,7 @@ variable {K data Qtot model}
 
 include hMp hMi hMo in
 /-- **Facts about one step through a signing call.** -/
-theorem sign_step_facts {m : Message} {budget : ℕ} {s : State} {P : List Pair} {Ms : List Message}
-    {d : Multiset View} {R : List Coordinate} (hB : BInvF K data Qtot model s P Ms d R budget)
+theorem sign_step_facts {m : Message} {budget : ℕ} {s : State} {R : List Coordinate}
     (o1 : Run HashInput Coordinate (Option Signature) × State)
     (ho1 : o1 ∈ support (interp K.tg K.initial model (signCostSource K.p data m) budget s))
     (f : FIn) :
@@ -157,8 +156,7 @@ theorem sign_step_facts {m : Message} {budget : ℕ} {s : State} {P : List Pair}
 
 include hMp hMi hMo in
 /-- **The weight of a contact through a signing call**, and its part on runs opening its chain. -/
-theorem sign_cw_mean {m : Message} {budget : ℕ} {s : State} {P : List Pair} {Ms : List Message}
-    {d : Multiset View} {R : List Coordinate} (hB : BInvF K data Qtot model s P Ms d R budget) (f : FIn) :
+theorem sign_cw_mean {m : Message} {budget : ℕ} {s : State} {R : List Coordinate} (f : FIn) :
     ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSource K.p data m) budget s] *
         K.cw o1.2 f ≤ K.cw s f ∧
     ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSource K.p data m) budget s] *
@@ -166,7 +164,7 @@ theorem sign_cw_mean {m : Message} {budget : ℕ} {s : State} {P : List Pair} {M
       K.cw s f * ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSource K.p data m) budget s] *
         (if OpensF f o1.1.2.1 then 1 else 0) := by
   set run := interp K.tg K.initial model (signCostSource K.p data m) budget s with hrun
-  have hfacts := fun o1 (ho1 : o1 ∈ support run) => sign_step_facts hMp hMi hMo hB o1 ho1 f
+  have hfacts := fun o1 (ho1 : o1 ∈ support run) => sign_step_facts (R := R) hMp hMi hMo o1 ho1 f
   have hmass : ∑' o1, Pr[= o1 | run] = 1 := HiddenDebt.interp_mass _ _ _ _ _ _
   by_cases hlat : K.Lat s f
   · -- a latent contact: decided only through an exposure, with chance `2^-128`
@@ -306,8 +304,8 @@ theorem sign_contact {m : Message} {budget : ℕ} {s : State} {P : List Pair} {M
           Z o1) f := by
   set run := interp K.tg K.initial model (signCostSource K.p data m) budget s with hrun
   set nm : ℝ≥0∞ := offMass K.p data s m with hnm
-  have hfacts := fun o1 (ho1 : o1 ∈ support run) => sign_step_facts hMp hMi hMo hB o1 ho1 f
-  obtain ⟨hmean, hopen⟩ := sign_cw_mean (m := m) hMp hMi hMo hB f
+  have hfacts := fun o1 (ho1 : o1 ∈ support run) => sign_step_facts (R := R) hMp hMi hMo o1 ho1 f
+  obtain ⟨hmean, hopen⟩ := sign_cw_mean (m := m) (R := R) hMp hMi hMo f
   have hmass : ∑' o1, Pr[= o1 | run] = 1 := HiddenDebt.interp_mass _ _ _ _ _ _
   by_cases hS : Settled R f
   · unfold gA
@@ -320,9 +318,7 @@ theorem sign_contact {m : Message} {budget : ℕ} {s : State} {P : List Pair} {M
   -- an unsettled contact
   have hkind : ∀ p call, K.tg.kind (pblk K.p data p call) = .none := fun p call =>
     hmsg _ (msgInput_digestInput K.p data.root p.1 p.2 call)
-  have hpi : PairInv K.p data m s := fun ρ =>
-    ⟨fun h call => hB.pinv.first (m, ρ) h call,
-      fun u0 h hl call => Option.isSome_iff_ne_none.2 (hB.pinv.all (m, ρ) ⟨u0, h, hl⟩ call)⟩
+  have hpi : PairInv K.p data m s := pairInv_of_pinv hB.pinv m
   have hPO : ∑' o1, Pr[= o1 | run] * (if OpensF f o1.1.2.1 then 1 else 0) ≤ revRate + nm := by
     refine le_trans (le_of_eq (tsum_congr fun o1 => ?_)) (le_trans (reveal_le_all K.tg K.initial model K.p data m
       hparse hkind hpi budget f.index f.κ f.leaf)
@@ -414,7 +410,8 @@ theorem offSum_after (m : Message) (budget : ℕ) (s : State) (Ms : List Message
     have hne : m' ≠ m := by
       unfold restMsgs at hm'
       simpa using (List.mem_filter.1 hm').2
-    exact offMass_congr fun ρ => other_message_keptS tg initial model budget s out hout (m', ρ) hne
+    exact offMass_congr fun ρ =>
+      other_message_keptS tg initial model budget s out hout (m', ρ) hne firstCall
   rw [live_after, List.map_congr_left hkept]
 
 end Coins
@@ -438,6 +435,8 @@ theorem psiF_sign (hparse : ∀ p call, model.parse (pblk K.p data p call) = non
     (hw : wbar ≤ 1) (Lmax : ℕ) :
     SignPaysF K data Qtot model (psiF K data wbar κ Fail Lmax) := by
   intro budget s P Ms L d R hB m hm
+  have hkind : ∀ p call, K.tg.kind (pblk K.p data p call) = .none := fun p call =>
+    hmsg _ (msgInput_digestInput K.p data.root p.1 p.2 call)
   have hM := hB.minv
   set run := interp K.tg K.initial model (signCostSource K.p data m) budget s with hrun
   set ℓ := (livePairs L P).length with hℓ
@@ -505,7 +504,7 @@ theorem psiF_sign (hparse : ∀ p call, model.parse (pblk K.p data p call) = non
   have hZ1 : ∀ o, Z o ≤ 1 := fun o => min_le_left _ _
   have hse : ∀ k, ∑' o1, Pr[= o1 | run] * canon k o1 ≤ potNF K data wbar Fail s P Ms L d k := fun k =>
     sign_expectG_level K.tg K.initial model K.p data wbar 0 Fail m witnessNear_props (fun _ => False) hparse
-      ENNReal.zero_ne_top budget k s P Ms L hm d hM
+      hkind ENNReal.zero_ne_top budget k s P Ms L hm d hM (pairInv_of_pinv hB.pinv m)
   have hpoint : ∀ o1 ∈ support run, ∀ r, o1.1.1 = some r → ∀ k' K', k' ≤ K' →
       potNF K data wbar Fail o1.2 (newPairs K.p data m s o1.2 ++ P) (addMsg Ms m) (L ++ [⟨m, r⟩])
           (discAfter K.p data m s d o1) k' ≤
