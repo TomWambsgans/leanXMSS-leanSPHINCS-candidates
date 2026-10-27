@@ -858,24 +858,34 @@ open Concrete
 
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
-/-- The secret of a FORS leaf: a half of the derivation of its pair of leaves. -/
+/-- The secret of one FORS leaf, by its own derivation of its pair: a level-0 `forsNode`. Key
+generation and signing derive each pair once (`forsNode` from level 1, `treeOpen`). -/
 def forsSecret (parameter : PublicParameter) (index : Index) (κ : FTree) (leaf : FLeaf)
     (seed : MasterSeed) : m Digest := do
   let output ← deriveOutput parameter (.fors index κ (leafPair leaf)) seed
   return hashHalf leaf.val output
 
-/-- A node of a FORS tree at tree level `level`. -/
+/-- A node of a FORS tree at tree level `level`. A level-1 node derives its pair of leaves once:
+the two halves of the hash are their secrets. -/
 def forsNode (parameter : PublicParameter) (index : Index) (κ : FTree) (seed : MasterSeed) :
     Nat → Nat → m Digest
   | 0, node => do
       let leaf : FLeaf := ⟨node % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩
       let secret ← forsSecret parameter index κ leaf seed
       forsLeafHash parameter index κ leaf secret
-  | level + 1, node => do
-      let left ← forsNode parameter index κ seed level (2 * node)
-      let right ← forsNode parameter index κ seed level (2 * node + 1)
-      if hlevel : level < forsHeight then
-        tweakableHash parameter (.forsNode index κ ⟨level, hlevel⟩
+  | 1, node => do
+      let left : FLeaf := ⟨2 * node % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩
+      let right : FLeaf := ⟨(2 * node + 1) % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩
+      let output ← deriveOutput parameter (.fors index κ (leafPair left)) seed
+      let leftLeaf ← forsLeafHash parameter index κ left (hashHalf 0 output)
+      let rightLeaf ← forsLeafHash parameter index κ right (hashHalf 1 output)
+      tweakableHash parameter (.forsNode index κ ⟨0, by have := Params.forsHeight_ge; omega⟩
+        ⟨node % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩) (nodePayload leftLeaf rightLeaf)
+  | level + 2, node => do
+      let left ← forsNode parameter index κ seed (level + 1) (2 * node)
+      let right ← forsNode parameter index κ seed (level + 1) (2 * node + 1)
+      if hlevel : level + 1 < forsHeight then
+        tweakableHash parameter (.forsNode index κ ⟨level + 1, hlevel⟩
           ⟨node % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩) (nodePayload left right)
       else
         pure 0
@@ -887,14 +897,17 @@ def forsKey (parameter : PublicParameter) (index : Index) (seed : MasterSeed) : 
     let right ← forsNode parameter index κ seed (forsHeight - 1) 1
     return (left, right)
 
-/-- The opening of one tree at a leaf. The last path element (level `a - 1`) is the top node the
-verifier does not compute. -/
+/-- The opening of one tree at a leaf. One derivation gives the secret and the sibling leaf (path
+level 0); the last path element (level `a - 1`) is the top node the verifier does not compute. -/
 def treeOpen (parameter : PublicParameter) (index : Index) (κ : FTree) (leaf : FLeaf)
     (seed : MasterSeed) : m TreeOpening := do
-  let secret ← forsSecret parameter index κ leaf seed
+  let output ← deriveOutput parameter (.fors index κ (leafPair leaf)) seed
+  let sibling : FLeaf := ⟨Nat.xor leaf.val 1 % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩
+  let siblingLeaf ← forsLeafHash parameter index κ sibling (hashHalf sibling.val output)
   let path ← sequenceFin fun level : Fin forsHeight =>
-    forsNode parameter index κ seed level.val (Nat.xor (leaf.val / 2 ^ level.val) 1)
-  return ⟨secret, path⟩
+    if level.val = 0 then pure siblingLeaf
+    else forsNode parameter index κ seed level.val (Nat.xor (leaf.val / 2 ^ level.val) 1)
+  return ⟨hashHalf leaf.val output, path⟩
 
 /-- `Fts.sign`: the opening of every tree. -/
 def forsOpen (parameter : PublicParameter) (index : Index) (leaves : FTree → FLeaf)

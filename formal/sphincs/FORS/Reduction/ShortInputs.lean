@@ -322,10 +322,16 @@ theorem Only.forsNode (parameter : PublicParameter) (index : Index) (κ : FTree)
   | 0, node => by
       rw [FORS.Seeded.forsNode]
       exact Short.Only.bind (Only.forsSecret _ _ _ _ _) (fun _ => Short.Only.forsLeafHash _ _ _ _ _)
-  | level + 1, node => by
+  | 1, node => by
       rw [FORS.Seeded.forsNode]
-      refine Short.Only.bind (Only.forsNode parameter index κ seed level _) (fun _ =>
-        Short.Only.bind (Only.forsNode parameter index κ seed level _) (fun _ => ?_))
+      exact Short.Only.bind (Short.Only.deriveOutput _ _ _) (fun _ =>
+        Short.Only.bind (Short.Only.forsLeafHash _ _ _ _ _) (fun _ =>
+          Short.Only.bind (Short.Only.forsLeafHash _ _ _ _ _) (fun _ =>
+            Short.Only.tweakableHash _ _ _ (by rw [nodePayload_length]; omega))))
+  | level + 2, node => by
+      rw [FORS.Seeded.forsNode]
+      refine Short.Only.bind (Only.forsNode parameter index κ seed (level + 1) _) (fun _ =>
+        Short.Only.bind (Only.forsNode parameter index κ seed (level + 1) _) (fun _ => ?_))
       split
       · exact Short.Only.tweakableHash _ _ _ (by rw [nodePayload_length]; omega)
       · exact Short.Only.pure' _
@@ -341,9 +347,11 @@ theorem Only.forsOpen (parameter : PublicParameter) (index : Index) (leaves : FT
     Short.Only (forsOpen parameter index leaves seed : OracleComp HashSpec (FTree → TreeOpening)) := by
   unfold FORS.Seeded.forsOpen FORS.Seeded.treeOpen
   exact Short.Only.sequenceFin _ fun _ =>
-    Short.Only.bind (Only.forsSecret _ _ _ _ _) (fun _ =>
-      Short.Only.bind (Short.Only.sequenceFin _ fun _ => Only.forsNode _ _ _ _ _ _)
-        (fun _ => Short.Only.pure' _))
+    Short.Only.bind (Short.Only.deriveOutput _ _ _) (fun _ =>
+      Short.Only.bind (Short.Only.forsLeafHash _ _ _ _ _) (fun _ =>
+        Short.Only.bind (Short.Only.sequenceFin _ fun _ =>
+          Short.Only.ite _ (Short.Only.pure' _) (Only.forsNode _ _ _ _ _ _))
+          (fun _ => Short.Only.pure' _)))
 
 theorem Only.surrogate (parameter : PublicParameter) (seed : MasterSeed) (level : Nat) :
     Short.Only (surrogate parameter seed level : OracleComp HashSpec Digest) := by

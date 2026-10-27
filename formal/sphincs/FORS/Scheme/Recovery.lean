@@ -315,25 +315,78 @@ theorem forsSecretValue_eq (leaf : FLeaf) :
 def forsNodeValue (level node : Nat) : Digest :=
   evalWithAnswerFn f (Seeded.forsNode parameter index κ seed level node : OracleComp HashSpec Digest)
 
+/-- The honest leaf of a FORS tree: the hash of its secret. -/
+def forsLeafValue (leaf : FLeaf) : Digest :=
+  truncateHash (f (tweakableHashInput parameter (.forsLeaf index κ leaf)
+    (bytesLE 16 (forsSecretValue f parameter index κ seed leaf))))
+
+private theorem forsNodeValue_zero_mod (node : Nat) :
+    forsNodeValue f parameter index κ seed 0 node =
+      forsLeafValue f parameter index κ seed ⟨node % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩ := by
+  simp only [forsNodeValue, Seeded.forsNode, forsLeafHash, evalWithAnswerFn_bind,
+    eval_tweakableHash, forsLeafValue, forsSecretValue]
+
+theorem forsNodeValue_zero (leaf : FLeaf) :
+    forsNodeValue f parameter index κ seed 0 leaf.val = forsLeafValue f parameter index κ seed leaf := by
+  have hl : (⟨leaf.val % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩ : FLeaf) = leaf :=
+    Fin.ext (Nat.mod_eq_of_lt leaf.isLt)
+  rw [forsNodeValue_zero_mod, hl]
+
+/-- The two leaves below a level-1 node are the even and the odd leaf of one pair. -/
+private theorem forsPair_leaves (node : Nat) :
+    2 * node % 2 ^ forsHeight % 2 = 0 ∧ (2 * node + 1) % 2 ^ forsHeight % 2 = 1 ∧
+      (2 * node + 1) % 2 ^ forsHeight / 2 = 2 * node % 2 ^ forsHeight / 2 := by
+  have ha := Params.forsHeight_ge
+  have hpow : 2 ^ forsHeight = 2 * 2 ^ (forsHeight - 1) := by
+    rw [← Nat.pow_succ']; congr 1; omega
+  have hM : 0 < 2 ^ (forsHeight - 1) := Nat.two_pow_pos _
+  rw [hpow]
+  generalize 2 ^ (forsHeight - 1) = M at hM ⊢
+  have heven : 2 * node % (2 * M) = 2 * (node % M) := Nat.mul_mod_mul_left 2 node M
+  have hodd : (2 * node + 1) % (2 * M) = 2 * (node % M) + 1 := by
+    have hlt : 2 * (node % M) + 1 < 2 * M := by have := Nat.mod_lt node hM; omega
+    conv_lhs => rw [← Nat.div_add_mod node M]
+    rw [show 2 * (M * (node / M) + node % M) + 1 = 2 * (node % M) + 1 + 2 * M * (node / M) by ring,
+      Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hlt]
+  rw [heven, hodd]
+  omega
+
+/-- The sibling of a leaf is in its pair. -/
+private theorem forsSibling_pair (leaf : FLeaf) :
+    Nat.xor leaf.val 1 % 2 ^ forsHeight / 2 = leaf.val / 2 := by
+  have hl := leaf.isLt
+  have ha := Params.forsHeight_ge
+  have hpow : 2 ^ forsHeight = 2 * 2 ^ (forsHeight - 1) := by
+    rw [← Nat.pow_succ']; congr 1; omega
+  cases hbit : leaf.val.testBit 0 with
+  | true =>
+      obtain ⟨h1, h2⟩ := odd_parts leaf.val hbit
+      rw [h2, Nat.mod_eq_of_lt (by omega)]
+      omega
+  | false =>
+      obtain ⟨h1, h2⟩ := even_parts leaf.val hbit
+      rw [h2, Nat.mod_eq_of_lt (by omega)]
+      omega
+
 theorem forsNodeValue_succ (level node : Nat) (hlevel : level < forsHeight) :
     forsNodeValue f parameter index κ seed (level + 1) node
       = truncateHash (f (tweakableHashInput parameter
           (.forsNode index κ ⟨level, hlevel⟩ ⟨node % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩)
           (nodePayload (forsNodeValue f parameter index κ seed level (2 * node))
             (forsNodeValue f parameter index κ seed level (2 * node + 1))))) := by
-  simp only [forsNodeValue, Seeded.forsNode, evalWithAnswerFn_bind, dif_pos hlevel, eval_tweakableHash]
+  cases level with
+  | zero =>
+      obtain ⟨hleft, hright, hpair⟩ := forsPair_leaves node
+      have hp : leafPair ⟨(2 * node + 1) % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩ =
+          leafPair ⟨2 * node % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩ := Fin.ext hpair
+      rw [forsNodeValue_zero_mod, forsNodeValue_zero_mod]
+      rw [forsLeafValue, forsLeafValue, forsSecretValue_eq, forsSecretValue_eq, hp]
+      simp only [forsNodeValue, Seeded.forsNode, forsLeafHash, evalWithAnswerFn_bind, eval_deriveOutput,
+        eval_tweakableHash, hashHalf, Nat.reduceMod, one_ne_zero, ↓reduceIte]
+      rw [if_pos hleft, if_neg (by rw [hright]; decide)]
+  | succ level =>
+      simp only [forsNodeValue, Seeded.forsNode, evalWithAnswerFn_bind, dif_pos hlevel, eval_tweakableHash]
 
-/-- The honest leaf of a FORS tree: the hash of its secret. -/
-def forsLeafValue (leaf : FLeaf) : Digest :=
-  truncateHash (f (tweakableHashInput parameter (.forsLeaf index κ leaf)
-    (bytesLE 16 (forsSecretValue f parameter index κ seed leaf))))
-
-theorem forsNodeValue_zero (leaf : FLeaf) :
-    forsNodeValue f parameter index κ seed 0 leaf.val = forsLeafValue f parameter index κ seed leaf := by
-  have hl : (⟨leaf.val % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩ : FLeaf) = leaf :=
-    Fin.ext (Nat.mod_eq_of_lt leaf.isLt)
-  simp only [forsNodeValue, Seeded.forsNode, hl, forsLeafHash, evalWithAnswerFn_bind,
-    eval_tweakableHash, forsLeafValue, forsSecretValue]
 
 /-- Folding the honest leaf through the honest siblings reaches the honest node above it. -/
 theorem eval_forsFold_path (leaf : FLeaf) (path : Fin forsHeight → Digest) :
@@ -413,8 +466,16 @@ theorem eval_treeOpen (κ : FTree) (leaf : FLeaf) :
       = ⟨forsSecretValue f parameter index κ seed leaf,
           fun level => forsNodeValue f parameter index κ seed level.val
             (Nat.xor (leaf.val / 2 ^ level.val) 1)⟩ := by
+  have hp : leafPair ⟨Nat.xor leaf.val 1 % 2 ^ forsHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩ = leafPair leaf :=
+    Fin.ext (forsSibling_pair leaf)
   simp only [Seeded.treeOpen, evalWithAnswerFn_bind, evalWithAnswerFn_pure, eval_sequenceFin,
-    forsSecretValue, forsNodeValue]
+    eval_deriveOutput, forsSecretValue_eq]
+  congr 1
+  funext level
+  by_cases h0 : level.val = 0
+  · simp only [h0, if_true, evalWithAnswerFn_pure, pow_zero, Nat.div_one, forsNodeValue, Seeded.forsNode,
+      Seeded.forsSecret, evalWithAnswerFn_bind, eval_deriveOutput, hp]
+  · simp only [h0, if_false, forsNodeValue]
 
 /-- The verifier recovers the two honest top nodes of every tree. -/
 theorem eval_treeRecover (κ : FTree) (leaf : FLeaf) :

@@ -45,10 +45,12 @@ attribute [local irreducible] firstEncoding ReferenceChoice.search encodingAttem
   chainWalk sequenceFin encode Seeded.treeRoot Seeded.forsNode
 
 /-- The cost of the FORS key: the two top nodes of every tree. -/
-def forsKeyCost : Nat := forsTrees * (2 * (3 * 2 ^ (forsHeight - 1) - 1))
+def forsKeyCost : Nat := forsTrees * (2 * (5 * 2 ^ (forsHeight - 2) - 1))
 
-/-- The cost of opening one tree: the derivation of its secret, then its `a` path nodes. -/
-def treeOpenCost : Nat := 1 + ∑ level : Fin forsHeight, (3 * 2 ^ level.val - 1)
+/-- The cost of opening one tree: the derivation of the opened pair and the sibling leaf, then the
+path nodes above level 0. -/
+def treeOpenCost : Nat :=
+  2 + ∑ level : Fin forsHeight, if level.val = 0 then 0 else 5 * 2 ^ (level.val - 1) - 1
 
 theorem hashCalls_forsKey_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (seed : MasterSeed) :
@@ -59,11 +61,17 @@ theorem hashCalls_treeOpen_exact (f : QueryImpl HashSpec Id) (parameter : Public
     (index : Index) (κ : FTree) (leaf : FLeaf) (seed : MasterSeed) :
     hashCalls f (Seeded.treeOpen parameter index κ leaf seed : OracleComp HashSpec TreeOpening) =
       treeOpenCost := by
-  rw [Seeded.treeOpen, hashCalls_bind, hashCalls_forsSecret, hashCalls_bind, hashCalls_sequenceFin,
-    hashCalls_pure, Nat.add_zero, treeOpenCost]
+  rw [Seeded.treeOpen, hashCalls_bind, hashCalls_deriveOutput, hashCalls_bind, forsLeafHash,
+    hashCalls_tweakableHash, hashCalls_bind, hashCalls_sequenceFin, hashCalls_pure, Nat.add_zero,
+    ← Nat.add_assoc, treeOpenCost]
   congr 1
-  exact Finset.sum_congr rfl fun level _ =>
-    hashCalls_forsNode f parameter index κ seed _ _ (Nat.le_of_lt level.isLt)
+  refine Finset.sum_congr rfl fun level _ => ?_
+  by_cases h0 : level.val = 0
+  · rw [if_pos h0, if_pos h0, hashCalls_pure]
+  · rw [if_neg h0, if_neg h0]
+    obtain ⟨level', hl⟩ : ∃ level', level.val = level' + 1 := ⟨level.val - 1, by omega⟩
+    rw [hl, hashCalls_forsNode f parameter index κ seed _ _ (by have := level.isLt; omega),
+      Nat.add_sub_cancel]
 
 /-- Opening FORS costs `k` tree openings. -/
 theorem hashCalls_forsOpen_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)

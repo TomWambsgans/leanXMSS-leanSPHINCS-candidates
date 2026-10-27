@@ -21,9 +21,8 @@ j + 1 (`HashDomain`). FORS addresses pack the tree, the level and the node in `h
 (`forsSlot`, `nodePosition`) and the instance in `lo`: type byte 15 for a leaf, 17 for a node.
 
 An opening is one secret and its path of `a` nodes per tree, the last one the other node of level
-`a - 1`, so the signature carries `k` openings (`signature_size`). Key generation costs `forsKeyCost` hashes and one opening costs
-`treeOpenCost`: the model derives a pair's secrets once per leaf (`forsSecret`), a fifth more FORS
-hashes than the scheme, which only loosens the bound.
+`a - 1`, so the signature carries `k` openings (`signature_size`). Key generation costs
+`forsKeyCost` hashes and one opening costs `treeOpenCost`.
 
 ## The digest
 
