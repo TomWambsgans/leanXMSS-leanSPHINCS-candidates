@@ -69,7 +69,7 @@ h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height:
 figure { margin: 0; position: relative; min-height: 18rem; }
 figure svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .titlerow { position: relative; }
-/* the versions, at the bottom: v1 (the old page, in v1/), v2 (this page), v3? (a tip asking for feedback) */
+/* the versions, at the bottom: v1 (the old page, at /v1/), v2 (this page), v3? (a tip asking for feedback) */
 .versions { display: flex; gap: 0.4rem; font-size: 0.85rem; }
 .ver { border: 1px solid var(--tree); border-radius: 6px; padding: 0.05rem 0.55rem; line-height: 1.5; color: var(--muted); }
 a.ver { text-decoration: none; }
@@ -912,7 +912,7 @@ footer a + a { margin-left: 1.25rem; }
 
 <footer>
   <p><a href="https://github.com/TomWambsgans/sphincs.art/blob/v2/leanSPHINCS.tex">Note</a><a href="https://github.com/TomWambsgans/sphincs.art/tree/v2">Code</a><a href="https://github.com/TomWambsgans/sphincs.art/tree/v2/formal/sphincs">Proofs</a></p>
-  <div class="versions" aria-label="Versions"><a class="ver" href="v1/">v1</a><span class="ver cur" aria-current="page">v2</span><span class="ver info" tabindex="0" role="button" aria-label="v3?" data-tip="Feedback welcome, please open an issue in [TomWambsgans/sphincs.art](https://github.com/TomWambsgans/sphincs.art/issues).">v3?</span></div>
+  <div class="versions" aria-label="Versions"><a class="ver" href="/v1/">v1</a><span class="ver cur" aria-current="page">v2</span><span class="ver info" tabindex="0" role="button" aria-label="v3?" data-tip="Feedback welcome, please open an issue in [TomWambsgans/sphincs.art](https://github.com/TomWambsgans/sphincs.art/issues).">v3?</span></div>
 </footer>
 
 </main>
@@ -993,7 +993,7 @@ footer a + a { margin-left: 1.25rem; }
 // The figures: every number comes from data.json (python3 scripts/scheme.py --json > site/data.json),
 // for the configuration chosen with the three toggles (height, shape, hash).
 (function () {
-  var S = { h: 24, shape: 'pruned', hash: 'Keccak-256' }, D = null, KEY = 'leanSphincs.config';
+  var S = { h: 26, shape: 'layered', hash: 'Keccak-256' }, D = null, KEY = 'leanSphincs.config';
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (saved) ['h', 'shape', 'hash'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
