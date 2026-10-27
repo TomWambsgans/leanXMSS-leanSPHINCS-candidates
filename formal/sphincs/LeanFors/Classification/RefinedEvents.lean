@@ -2,11 +2,11 @@ import LeanFors.LazyRun.Expose
 
 /-! Events of the refined classification for small budgets. A cached answer that hits its target
 is a first-order event unless its input is a chain step that is not at or above the prepared word
-of a retained key, or a forest chain step. Hits of those inputs become forgery events only in
-pairs: a contact below the word together with an encoding marker or a second contact at the same
-key, two consecutive edges into the frontier, a forest chain contact at a revealed position, a
-contact completing a near cover of the forgery's digest (every chain covered but one, which is
-contacted), or two forest contacts at one index. -/
+of a retained key, or a FORS leaf. Hits of those inputs become forgery events only in pairs: a
+contact below the word together with an encoding marker or a second contact at the same key, two
+consecutive edges into the frontier, a FORS leaf contact at a revealed secret, a contact completing
+a near cover of the forgery's digest (every tree covered but one, which is contacted), or two FORS
+leaf contacts at one index. -/
 
 open OracleComp OracleSpec ENNReal
 
@@ -30,19 +30,18 @@ variable (parameter : PublicParameter) (results : OtsKey → Option (Counter × 
 def chainInput (key : OtsKey) (chain : ChainIndex) (step : ChainStep) (payload : Digest) : HashInput :=
   tweakableHashInput parameter (.chain key.1 key.2.1 key.2.2 chain step) (bytesLE 16 payload)
 
-/-- A forest chain step input. -/
-def fchainInput (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (t : FStep)
-    (payload : Digest) : HashInput :=
-  tweakableHashInput parameter (.fchain index c s j a i t) (bytesLE 16 payload)
+/-- A FORS leaf input: the hash of a selected secret. -/
+def fleafInput (index : Index) (κ : FTree) (leaf : FLeaf) (payload : Digest) : HashInput :=
+  tweakableHashInput parameter (.forsLeaf index κ leaf) (bytesLE 16 payload)
 
 /-- Inputs whose single hit is not a forgery event by itself: a chain step other than a step of a
-retained key at or above its prepared word, and a forest chain step. -/
+retained key at or above its prepared word, and a FORS leaf. -/
 def SecondOrderInput (input : HashInput) : Prop :=
   (∃ (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex) (chain : ChainIndex) (step : ChainStep) (payload : Digest),
     input = tweakableHashInput parameter (.chain lay tree leaf chain step) (bytesLE 16 payload) ∧
     ¬(PrunedGraph.KeyActive parameter lay tree leaf ∧
       (preparedWord results (lay, tree, leaf) chain).val ≤ step.val)) ∨
-  ∃ index c s j a i t payload, input = fchainInput parameter index c s j a i t payload
+  ∃ index κ leaf payload, input = fleafInput parameter index κ leaf payload
 
 /-- First-order targets. -/
 noncomputable def targetsA (tab : TargetAssignment.Table) (input : HashInput) : Finset Digest :=
@@ -90,32 +89,30 @@ def WotsEvent : Prop :=
   ∃ key : OtsKey, PrunedGraph.KeyActive parameter key.1 key.2.1 key.2.2 ∧
     WotsEventAt parameter results table cache key
 
-/-- A cached forest chain answer from a non-canonical payload equals the next canonical value. -/
-def FContactAt (index : Index) (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i : FChain) (t : FStep) : Prop :=
-  ∃ (payload : Digest) (answer : HashOutput), payload ≠ table (.fchain index c s j a i ⟨t.val, by omega⟩) ∧
-    cache (fchainInput parameter index c s j a i t payload) = some answer ∧
-    truncateHash answer = table (.fchain index c s j a i ⟨t.val + 1, by omega⟩)
+/-- A cached FORS leaf answer from a non-canonical secret equals the canonical leaf value. -/
+def FContactAt (index : Index) (κ : FTree) (leaf : FLeaf) : Prop :=
+  ∃ (payload : Digest) (answer : HashOutput), payload ≠ table (.fors index κ leaf 0) ∧
+    cache (fleafInput parameter index κ leaf payload) = some answer ∧
+    truncateHash answer = table (.fors index κ leaf 1)
 
-/-- A forest contact at a chain step whose input position is revealed (at or below). -/
+/-- A FORS leaf contact whose secret is revealed. -/
 def RevealedContact (reveals : List Coordinate) : Prop :=
-  ∃ index c s j a i t, (∃ q : FPos, q.val ≤ t.val ∧ Coordinate.fchain index c s j a i q ∈ reveals) ∧
-    FContactAt parameter table cache index c s j a i t
+  ∃ index κ leaf, Coordinate.fors index κ leaf 0 ∈ reveals ∧ FContactAt parameter table cache index κ leaf
 
-/-- Two forest contacts at different chains of one index. -/
+/-- Two FORS leaf contacts at different leaves of one index. -/
 def TwoForestContacts : Prop :=
-  ∃ index c s j a i t c' s' j' a' i' t', (c, j, i) ≠ (c', j', i') ∧
-    FContactAt parameter table cache index c s j a i t ∧ FContactAt parameter table cache index c' s' j' a' i' t'
+  ∃ index κ leaf κ' leaf', (κ, leaf) ≠ (κ', leaf') ∧
+    FContactAt parameter table cache index κ leaf ∧ FContactAt parameter table cache index κ' leaf'
 
-/-- A cached, landed, unsigned forgery digest covered at every chain but one, which is contacted. -/
+/-- A cached, landed, unsigned forgery digest covered at every tree but one, which is contacted. -/
 def ForestNear (root : Digest) (outcome : Outcome) (reveals : List Coordinate) : Prop :=
   SigningTranscript.Valid outcome.2.1 ∧
   ∃ digest, cachedDigest cache parameter root outcome.1.message outcome.1.signature.randomness = some digest ∧
     Landed parameter (digestIndex digest) ∧
     (∀ entry ∈ outcome.2.1, ∀ signature, entry.2 = some signature →
       ¬(entry.1 = outcome.1.message ∧ signature.randomness = outcome.1.signature.randomness)) ∧
-    ∃ c j i t, FContactAt parameter table cache (digestIndex digest) c (digestLeaves digest c).super j
-        ((digestLeaves digest c).child j) i t ∧
-      ∀ c' j' i', (c', j', i') ≠ (c, j, i) → ChainCov (revealedSet reveals) (fullDigestView digest) c' j' i'
+    ∃ κ, FContactAt parameter table cache (digestIndex digest) κ (digestLeaves digest κ) ∧
+      ∀ κ' ≠ κ, TreeCov (revealedSet reveals) (fullDigestView digest) κ'
 
 end Events
 
