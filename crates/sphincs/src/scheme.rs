@@ -335,7 +335,8 @@ pub fn forest_key_bytes(key: &ForestKey) -> Vec<u8> {
 
 /// `Sign`: take the least `i` whose randomizer `R_0 + i * delta` lands in the kept subtree (`i = 0`
 /// for a full or layered key), open the forest, sign its key with WOTS+C, then at each layer above
-/// sign the root of the tree below.
+/// sign the root of the tree below. The caller keeps the number of signatures within the limit of the
+/// configuration (formal/sphincs/README.md); nothing here counts them.
 pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
     let (cfg, pp) = (&sk.cfg, &sk.pp);
     let layers = cfg.layers();
@@ -368,7 +369,8 @@ pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
     Signature { randomizer: rho, forest: opening, layers: signed }
 }
 
-/// `Ver`.
+/// `Ver`. A pruned key's `b` plays no part: the same signature verifies under every `b`, and the
+/// verifier cannot tell which limit the signer is under.
 pub fn verify(cfg: &Config, pk: &PublicKey, m: &Message, sig: &Signature) -> Result<(), VerifyError> {
     let layers = cfg.layers();
     if sig.layers.len() != layers.len() || sig.layers.iter().zip(&layers).any(|(s, &h)| s.path.len() != h) {

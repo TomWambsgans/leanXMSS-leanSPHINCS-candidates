@@ -47,7 +47,8 @@ pub const V: usize = 64;
 /// WOTS+C target sum of the signed positions.
 pub const TARGET_SUM: usize = 123;
 
-/// The tree heights `h`, one per lifetime: about `2^(h + 4)` signatures.
+/// The tree heights `h`, one per lifetime: the full and layered keys last about `20 * 2^h` signatures;
+/// a pruned key lasts much less (7,514 to 28.4M signatures, formal/sphincs/README.md).
 pub const HEIGHTS: [usize; 4] = [22, 24, 26, 28];
 /// The tallest height: the digest's index field and the address fields are sized for it.
 pub const MAX_H: usize = 28;

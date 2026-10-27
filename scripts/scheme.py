@@ -180,7 +180,10 @@ class Costs:
         ls = layers(h, shape)
         bb = kept(h, shape, b)
         grind = 2 ** (h - bb) * self.attempt if shape == "pruned" else self.attempt
-        total = self.rnd + self.digest_fixed + grind + self.digest - self.attempt + self.forest_sign
+        # the landing digest is computed once more in full, and opening the forest walks again the chains of
+        # the 16 WOTS keys it opens from their secrets, up to below the tops (as the Rust signer does)
+        total = self.rnd + self.digest_fixed + grind + self.digest + self.forest_sign
+        total += COORDS * SUBS * (CHAINS * STEPS - DIGIT_SUM) * self.step
         total += sum(self.wots_sign(layer) for layer in range(len(ls)))
         total += sum(2**hl * self.leaf + (2**hl - 1) * self.node for hl in ls[1:])  # the lower trees
         return total, grind, self.tree_cost(bb, cache_bytes // N)
