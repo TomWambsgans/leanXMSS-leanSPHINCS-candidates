@@ -107,9 +107,9 @@ theorem potNF_ge_of_near (hw : wbar ≤ 1) {budget : ℕ} {s : State} {P : List 
   obtain ⟨hvalid, digest, hdig, hland, hunsigned, κ, -, hcov⟩ := h
   set q : Pair := (forgery.message, forgery.signature.randomness) with hq
   have hpb : cachedDigest s.cache K.p data.root forgery.message forgery.signature.randomness =
-      (pblocks K.p data s q).map truncateMessageDigest := rfl
+      (pcache K.p data q.1 s q.2).map truncateMessageDigest := rfl
   rw [hpb] at hdig
-  cases h0 : pblocks K.p data s q with
+  cases h0 : pcache K.p data q.1 s q.2 with
   | none =>
       rw [h0] at hdig
       cases hdig
@@ -117,13 +117,12 @@ theorem potNF_ge_of_near (hw : wbar ≤ 1) {budget : ℕ} {s : State} {P : List 
       rw [h0] at hdig
       have hdig' : truncateMessageDigest u = digest := by simpa using hdig
       subst hdig'
-      have hcall : ∀ call, s.cache (pblk K.p data q call) = some (u call) := fun call =>
-        allSome_some h0 call
       have hlanded : LandedIn K.p data s q :=
-        ⟨u firstCall, hcall firstCall, by rwa [Completeness.digestIndex_truncate] at hland⟩
+        ⟨u firstCall, cached_of_pcache K.p data (p := q) h0 firstCall,
+          by rwa [Concrete.digestIndex_truncate] at hland⟩
       have hqP := (hB.pinv.mem q).2 hlanded
-      have hv : pview K.p data s q = Lifetime.localDigestView (truncateMessageDigest u) := by
-        simp only [pview, h0, Option.elim, viewOf]
+      have hv : pview K.p data s q = Lifetime.localDigestView (truncateMessageDigest u) :=
+        pview_of_pcache (q := q) h0
       unfold potNF potG
       rw [if_neg (by
         rintro (h | h)
