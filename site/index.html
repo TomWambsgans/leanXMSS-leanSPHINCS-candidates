@@ -327,7 +327,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
         <span class="sl" id="tl-hash">Hash</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-hash" data-key="hash"><button type="button" role="radio" data-val="BLAKE2s">BLAKE2s</button><button type="button" role="radio" data-val="SHA-256">SHA-256</button><button type="button" role="radio" data-val="Keccak-256">Keccak-256</button></div>
         <span class="sl"><span id="tl-v">FTS variant</span><span class="info w dn" id="v-tip" tabindex="0" role="button" aria-label="More information" data-tip="">i</span></span>
-        <div class="seg" role="radiogroup" aria-labelledby="tl-v" data-key="v"><button type="button" role="radio" data-val="spicy">spicy</button><button type="button" role="radio" data-val="vanilla">vanilla</button></div>
+        <div class="seg" role="radiogroup" aria-labelledby="tl-v" data-key="v"><button type="button" role="radio" data-val="spicy">WOTS forest</button><button type="button" role="radio" data-val="vanilla">FORS</button></div>
       </div>
       <div class="scroll">
       <table>
@@ -1173,7 +1173,7 @@ body[data-v="spicy"] .sphinx .faces { filter: url(#sphinx-spicy); }
       '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + vs(comma(th.vanilla.prep_rounds), comma(th.prep_rounds)) + '</td></tr>');
 
     // what spicy changes, against the vanilla figures of the same configuration (gains rounded down, losses up)
-    document.getElementById('v-tip').setAttribute('data-tip', 'Vanilla: FTS = FORS. Spicy: FTS = WOTS forest.\n\nSpicy, against vanilla:\n' +
+    document.getElementById('v-tip').setAttribute('data-tip', 'The WOTS forest, against FORS:\n' +
       '+ ' + Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures\n' +
       '+ ' + Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification\n' +
       '− novel / more complex\n' +
