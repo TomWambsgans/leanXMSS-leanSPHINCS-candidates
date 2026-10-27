@@ -210,20 +210,21 @@ theorem offMass_congr {s s' : State} {m : Message}
 
 /-- The mass off the identity sees the state only through the digest blocks. -/
 theorem offMass_blocks {s s' : State}
-    (h : ∀ q, s'.cache (pblk parameter data q) = s.cache (pblk parameter data q)) (m : Message) :
-    offMass parameter data s' m = offMass parameter data s m :=
-  offMass_congr fun ρ => h (m, ρ)
+    (h : ∀ q call, s'.cache (pblk parameter data q call) = s.cache (pblk parameter data q call))
+    (m : Message) : offMass parameter data s' m = offMass parameter data s m :=
+  offMass_congr fun ρ => h (m, ρ) firstCall
 
 /-- A new pair of another message keeps the mass off the identity. -/
-theorem offMass_withPair_other (s : State) (p : Pair) (u0 : HashOutput) {m : Message} (hm : m ≠ p.1) :
-    offMass parameter data (withPair parameter data s p u0) m = offMass parameter data s m := by
+theorem offMass_withPair_other (s : State) (p : Pair) (u : DigestCall → HashOutput) {m : Message}
+    (hm : m ≠ p.1) :
+    offMass parameter data (withPair parameter data s p u) m = offMass parameter data s m := by
   unfold offMass
-  rw [stOf_withPair_other s p u0 hm]
+  rw [stOf_withPair_other s p u hm]
 
 /-- **A new pair, the mass off the identity of its message.** In the mean it grows by at most the
 creation rate `(2 − landing)/2^128`. -/
-theorem offMass_newPair (s : State) (p : Pair) (hp0 : s.cache (pblk parameter data p) = none) :
-    pairE (fun u0 => offMass parameter data (withPair parameter data s p u0) p.1) ≤
+theorem offMass_newPair (s : State) (p : Pair) (hp0 : s.cache (pblk parameter data p firstCall) = none) :
+    pairE (fun u => offMass parameter data (withPair parameter data s p u) p.1) ≤
       offMass parameter data s p.1 + rateS := by
   set cinv := (Fintype.card Randomness : ℝ≥0∞)⁻¹ with hcinv
   set st := stOf parameter data p.1 s with hstdef
@@ -232,9 +233,10 @@ theorem offMass_newPair (s : State) (p : Pair) (hp0 : s.cache (pblk parameter da
     simp [hstdef, stOf, h]
   set Gh := gv (nextRand (data.steps p.1)) landing (Function.update st p.2 .hit) (fun _ => (1 : ℝ≥0∞)) 0 1 digestAttemptLimit with hGh
   set Gm := gv (nextRand (data.steps p.1)) landing (Function.update st p.2 .miss) (fun _ => (1 : ℝ≥0∞)) 0 1 digestAttemptLimit with hGm
-  have hpt : ∀ u0, offMass parameter data (withPair parameter data s p u0) p.1 =
-      if Landed parameter (blockIndex u0) then (fun _ : View => cinv * Gh) (viewOf u0) else cinv * Gm := by
-    intro u0
+  have hpt : ∀ u, offMass parameter data (withPair parameter data s p u) p.1 =
+      if Landed parameter (blockIndex (u firstCall)) then (fun _ : View => cinv * Gh) (viewOf u)
+      else cinv * Gm := by
+    intro u
     unfold offMass
     rw [stOf_withPair_self]
     split_ifs <;> rfl
@@ -257,23 +259,23 @@ theorem offMass_newPair (s : State) (p : Pair) (hp0 : s.cache (pblk parameter da
     _ = _ := by ring
 
 /-- A new pair, the masses off the identity of a list of messages without repetition. -/
-theorem offSum_newPair (s : State) (p : Pair) (hp0 : s.cache (pblk parameter data p) = none)
+theorem offSum_newPair (s : State) (p : Pair) (hp0 : s.cache (pblk parameter data p firstCall) = none)
     (l : List Message) (hl : l.Nodup) :
-    pairE (fun u0 => (l.map fun m => offMass parameter data (withPair parameter data s p u0) m).sum) ≤
+    pairE (fun u => (l.map fun m => offMass parameter data (withPair parameter data s p u) m).sum) ≤
       (l.map fun m => offMass parameter data s m).sum + rateS := by
-  have hsame : ∀ (l' : List Message), p.1 ∉ l' → ∀ u0,
-      (l'.map fun m => offMass parameter data (withPair parameter data s p u0) m).sum =
+  have hsame : ∀ (l' : List Message), p.1 ∉ l' → ∀ u,
+      (l'.map fun m => offMass parameter data (withPair parameter data s p u) m).sum =
         (l'.map fun m => offMass parameter data s m).sum := by
-    intro l' hnot u0
-    rw [List.map_congr_left fun m hm => offMass_withPair_other s p u0 fun h => hnot (h ▸ hm)]
+    intro l' hnot u
+    rw [List.map_congr_left fun m hm => offMass_withPair_other s p u fun h => hnot (h ▸ hm)]
   by_cases hp : p.1 ∈ l
   · have hperm : l.Perm (p.1 :: l.erase p.1) := List.perm_cons_erase hp
     have hnot : p.1 ∉ l.erase p.1 := fun h => ((List.Nodup.mem_erase_iff hl).1 h).1 rfl
-    have hpt : ∀ u0, (l.map fun m => offMass parameter data (withPair parameter data s p u0) m).sum =
-        offMass parameter data (withPair parameter data s p u0) p.1 +
+    have hpt : ∀ u, (l.map fun m => offMass parameter data (withPair parameter data s p u) m).sum =
+        offMass parameter data (withPair parameter data s p u) p.1 +
           ((l.erase p.1).map fun m => offMass parameter data s m).sum := by
-      intro u0
-      rw [(hperm.map _).sum_eq, List.map_cons, List.sum_cons, hsame _ hnot u0]
+      intro u
+      rw [(hperm.map _).sum_eq, List.map_cons, List.sum_cons, hsame _ hnot u]
     simp only [hpt]
     rw [pairE_add, pairE_const, (hperm.map _).sum_eq, List.map_cons, List.sum_cons, add_right_comm]
     exact add_le_add (offMass_newPair s p hp0) le_rfl
@@ -310,7 +312,7 @@ variable (K : Ctx) (data : PublicData) (wbar κ : ℝ≥0∞) (Fail : Finset (Fi
 /-- A new pair moves the near potential down by one level. -/
 theorem potNF_newPair (hw : wbar ≤ 1) {s : State} {P : List Pair} {Ms : List Message} (hP : PInv K.p data s P)
     (hM : MInv K.p data s Ms) {p : Pair}
-    (hp0 : s.cache (pblk K.p data p) = none) (L : QueryLog SigningSpec)
+    (hp0 : s.cache (pblk K.p data p firstCall) = none) (L : QueryLog SigningSpec)
     (hrate : MsgLive L p.1 → Rate K.p data wbar s p.1) (d : Multiset View) (j : ℕ) :
     pairE (fun u => potNF K data wbar Fail (withPair K.p data s p u) (addPair K.p P p u) (addMsg Ms p.1) L d j) ≤
       potNF K data wbar Fail s P Ms L d (j + 1) := by
@@ -325,7 +327,7 @@ theorem potNF_newPair (hw : wbar ≤ 1) {s : State} {P : List Pair} {Ms : List M
 /-- **A new pair, the coin risk**: the mass off the identity of the message grows by at most the
 creation rate in the mean, whether or not the message is live. -/
 theorem coinRiskF_newPair {s : State} {Ms : List Message} (hM : MInv K.p data s Ms) (L : QueryLog SigningSpec)
-    (p : Pair) (hp0 : s.cache (pblk K.p data p) = none) (y : ℕ) :
+    (p : Pair) (hp0 : s.cache (pblk K.p data p firstCall) = none) (y : ℕ) :
     pairE (fun u => coinRiskF K data (withPair K.p data s p u) (addMsg Ms p.1) L y) ≤
       coinRiskF K data s Ms L (y + 1) := by
   unfold coinRiskF
@@ -338,7 +340,7 @@ theorem coinRiskF_newPair {s : State} {Ms : List Message} (hM : MInv K.p data s 
 
 /-- **A new pair, the coin potential**: `y (offSum + rateS) + C(y, 2) rateS = y offSum + C(y + 1, 2) rateS`. -/
 theorem coinPotF_newPair {s : State} {Ms : List Message} (hM : MInv K.p data s Ms) (L : QueryLog SigningSpec)
-    (p : Pair) (hp0 : s.cache (pblk K.p data p) = none) (y : ℕ) :
+    (p : Pair) (hp0 : s.cache (pblk K.p data p firstCall) = none) (y : ℕ) :
     pairE (fun u => coinPotF K data (withPair K.p data s p u) (addMsg Ms p.1) L y) ≤
       coinPotF K data s Ms L (y + 1) := by
   unfold coinPotF
@@ -379,7 +381,7 @@ theorem psiF_newPair {Cmax Lmax : ℕ} (hfair : FairS wbar Cmax Lmax) (hQ : Qtot
   have hlam : pairE (fun u => lam Lmax (livePairs L (addPair K.p P p u)).length y) ≤ lam Lmax ℓ (y + 1) := by
     by_cases hlive : MsgLive L p.1
     · have hl : ∀ u, lam Lmax (livePairs L (addPair K.p P p u)).length y =
-          if Landed K.p (blockIndex u) then lam Lmax (ℓ + 1) y else lam Lmax ℓ y := by
+          if Landed K.p (blockIndex (u firstCall)) then lam Lmax (ℓ + 1) y else lam Lmax ℓ y := by
         intro u
         unfold addPair livePairs
         split_ifs with hl
@@ -403,11 +405,13 @@ theorem psiF_newPair {Cmax Lmax : ℕ} (hfair : FairS wbar Cmax Lmax) (hQ : Qtot
   by_cases hL : signatureLimit < L.length
   · simp only [if_pos hL, pairE_const, le_refl]
   simp only [if_neg hL]
-  have hi := initial_none_of_fresh K.initial s hB.inv.prepared _ hp0
-  have hnf : ∀ f : FIn, pblk K.p data p ≠ f.input K.p := fun f =>
-    msg_ne_fleaf (msgInput_digestInput K.p data.root p.1 p.2)
+  have hfresh : ∀ call, s.cache (pblk K.p data p call) = none := hB.pinv.first p hp0
+  have hi : ∀ call, K.initial (pblk K.p data p call) = none := fun call =>
+    initial_none_of_fresh K.initial s hB.inv.prepared _ (hfresh call)
+  have hnf : ∀ (call : DigestCall) (f : FIn), pblk K.p data p call ≠ f.input K.p := fun call f =>
+    msg_ne_fleaf (msgInput_digestInput K.p data.root p.1 p.2 call)
   have hw' : ∀ (g : FIn → ℝ≥0∞) u, K.wsum g (withPair K.p data s p u) = K.wsum g s := fun g u =>
-    K.wsum_store_other g u hp0 hi hnf
+    K.wsum_storeAll_other g _ u s (pblk_call_injective K.p data p) hfresh hi hnf
   set wS := K.wsum (gA R 0) s with hwS
   set wU := K.wsum (fun f => if Settled R f then 0 else 1) s with hwU
   have hpt : ∀ u, K.wsum (gA R (coefU K data wbar Fail (withPair K.p data s p u) (addPair K.p P p u)

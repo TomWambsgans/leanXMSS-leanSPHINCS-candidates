@@ -46,6 +46,50 @@ theorem finalA4_le_one (K : Ctx) (root : Digest) (o : Option HiddenBridge.Outcom
   | none => exact zero_le_one
   | some outcome => exact probEvent_le_one
 
+/-! ### The event is monotone in the cache -/
+
+/-- A cached digest stays cached when the run caches more. -/
+theorem cachedDigest_mono {s s' : State} (hext : Extends s s') {parameter : PublicParameter}
+    {root : Digest} {message : Message} {randomness : Randomness} {digest : MessageDigest}
+    (h : cachedDigest s.cache parameter root message randomness = some digest) :
+    cachedDigest s'.cache parameter root message randomness = some digest := by
+  unfold cachedDigest at h ⊢
+  cases h0 : Completeness.allSome (α := fun _ => HashOutput) fun call : DigestCall =>
+      s.cache (tweakableHashInput parameter (.message call)
+        (messageDigestPayload root message randomness)) with
+  | none =>
+      rw [h0] at h
+      cases h
+  | some w =>
+      rw [h0] at h
+      rw [allSome_of_eq _ w fun call => hext.1 _ _ (allSome_some h0 call)]
+      exact h
+
+/-- **A fresh cache entry keeps the event of A4**: every part of it is monotone in the cache and in
+the guesses. -/
+theorem a4ev_store (K : Ctx) (root : Digest) (T : Coordinate → Digest) (s : State) (outcome : Outcome)
+    (R : List Coordinate) (x : HashInput) (u : HashOutput) (hx : s.cache x = none)
+    (h : A4ev K root T s outcome R) : A4ev K root T (s.store x u) outcome R := by
+  have hext := extends_store s x u hx
+  have hrec : ∀ index κ leaf, RecordedContactAt s T K index κ leaf →
+      RecordedContactAt (s.store x u) T K index κ leaf := by
+    rintro index κ leaf ⟨v, ⟨w, ⟨hc, hi⟩, ht⟩, hr⟩
+    exact ⟨v, ⟨w, ⟨hext.1 _ _ hc, hi⟩, ht⟩, hext.2.2 _ hr⟩
+  rcases h with ⟨index, κ, leaf, hmem, hc⟩ | ⟨hvalid, digest, hdig, hland, hunsigned, κ, hc, hcov⟩
+  · exact Or.inl ⟨index, κ, leaf, hmem, hrec _ _ _ hc⟩
+  · exact Or.inr ⟨hvalid, digest, cachedDigest_mono hext hdig, hland, hunsigned, κ, hrec _ _ _ hc, hcov⟩
+
+/-- The final value of A4 grows with a fresh cache entry. -/
+theorem finalA4_store (K : Ctx) (root : Digest) (o : Option HiddenBridge.Outcome) (R : List Coordinate)
+    (s : State) (x : HashInput) (u : HashOutput) (hx : s.cache x = none) :
+    finalA4 K root o R s ≤ finalA4 K root o R (s.store x u) := by
+  unfold finalA4
+  cases o with
+  | none => exact le_rfl
+  | some outcome =>
+      simp only [Option.elim]
+      exact probEvent_mono fun T _ h => ⟨h.1, a4ev_store K root T s outcome R x u hx h.2⟩
+
 /-! ### The end of the game -/
 
 section Final
@@ -62,22 +106,23 @@ theorem potNF_ge_of_near (hw : wbar ≤ 1) {budget : ℕ} {s : State} {P : List 
     1 ≤ potNF K data wbar Fail s P Ms L d budget := by
   obtain ⟨hvalid, digest, hdig, hland, hunsigned, κ, -, hcov⟩ := h
   set q : Pair := (forgery.message, forgery.signature.randomness) with hq
-  unfold HiddenBridge.cachedDigest at hdig
-  cases h0 : s.cache (pblk K.p data q) with
+  have hpb : cachedDigest s.cache K.p data.root forgery.message forgery.signature.randomness =
+      (pblocks K.p data s q).map truncateMessageDigest := rfl
+  rw [hpb] at hdig
+  cases h0 : pblocks K.p data s q with
   | none =>
-      have h0' : s.cache (tweakableHashInput K.p .message
-          (messageDigestPayload data.root forgery.message forgery.signature.randomness)) = none := h0
-      rw [h0'] at hdig
+      rw [h0] at hdig
       cases hdig
-  | some a =>
-      have h0' : s.cache (tweakableHashInput K.p .message
-          (messageDigestPayload data.root forgery.message forgery.signature.randomness)) = some a := h0
-      rw [h0'] at hdig
-      have hdig' : truncateMessageDigest a = digest := by simpa using hdig
+  | some u =>
+      rw [h0] at hdig
+      have hdig' : truncateMessageDigest u = digest := by simpa using hdig
       subst hdig'
-      have hlanded : LandedIn K.p data s q := ⟨a, h0, by rwa [Completeness.digestIndex_truncate] at hland⟩
+      have hcall : ∀ call, s.cache (pblk K.p data q call) = some (u call) := fun call =>
+        allSome_some h0 call
+      have hlanded : LandedIn K.p data s q :=
+        ⟨u firstCall, hcall firstCall, by rwa [Completeness.digestIndex_truncate] at hland⟩
       have hqP := (hB.pinv.mem q).2 hlanded
-      have hv : pview K.p data s q = Lifetime.localDigestView (truncateMessageDigest a) := by
+      have hv : pview K.p data s q = Lifetime.localDigestView (truncateMessageDigest u) := by
         simp only [pview, h0, Option.elim, viewOf]
       unfold potNF potG
       rw [if_neg (by
@@ -160,6 +205,7 @@ repeats a message, a valid finished game with the event A4 has chance at most th
 `lam Lmax 0 total`) plus `2^-128 N rate + payB` per expected forest step query, once
 `2^-128 ≤ payB + κ 2^-128`. -/
 theorem a4F_bound (hparse : ∀ p call, model.parse (pblk K.p data p call) = none)
+    (hmsg : ∀ x, IsMsgInput x → K.tg.kind x = .none)
     (hclean : ∀ p call, K.initial (pblk K.p data p call) = none)
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared K.initial s1 →
       ∀ out ∈ support (interp K.tg K.initial model (finishRest K.p data m ρ digest) budget s1),
@@ -179,10 +225,11 @@ theorem a4F_bound (hparse : ∀ p call, model.parse (pblk K.p data p call) = non
   exact final_le_startF K data model (IsFleafIn K.p) _ hMp hMi hparse
     (fun p call => by
       rintro ⟨f, hf⟩
-      exact msg_ne_fleaf (msgInput_digestInput K.p data.root p.1 p.2 call) hf) hclean total
-    (fun _ _ => rfl) (finalA4_le_one K data.root) (psiF_newPair K data wbar κ Fail total model hfair hQ)
+      exact msg_ne_fleaf (msgInput_digestInput K.p data.root p.1 p.2 call) hf) hmsg hclean total
+    (fun _ _ => rfl) (finalA4_le_one K data.root) (finalA4_store K data.root)
+    (psiF_newPair K data wbar κ Fail total model hfair hQ)
     (psiF_ordinary K data wbar κ Fail total model hMp hMi hfair.le_one hκ Lmax)
-    (psiF_sign K data wbar κ Fail total model hMp hMi hMo hparse hfail hfair.le_one Lmax)
+    (psiF_sign K data wbar κ Fail total model hMp hMi hMo hparse hmsg hfail hfair.le_one Lmax)
     (psiF_final K data wbar κ Fail total model hfair.le_one Lmax) M hnr known hinv
 
 end Bound

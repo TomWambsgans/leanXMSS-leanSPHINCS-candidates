@@ -106,6 +106,22 @@ theorem wsum_store_other (g : FIn → ℝ≥0∞) {s : St} {x : HashInput} (u : 
   rw [K.cw_store_other u hx hi (hF f)]
   rfl
 
+/-- **A family of fresh stores outside the forest step inputs** keeps the recorded contact
+weights: the digest blocks of a new pair (`storeAll`). -/
+theorem wsum_storeAll_other (g : FIn → ℝ≥0∞) : ∀ {n : ℕ} (x : Fin n → HashInput) (u : Fin n → HashOutput)
+    (s : St), Function.Injective x → (∀ i, s.cache (x i) = none) → (∀ i, K.initial (x i) = none) →
+      (∀ i (f : FIn), x i ≠ f.input K.p) → K.wsum g (storeAll x u s) = K.wsum g s
+  | 0, _, _, _, _, _, _, _ => rfl
+  | _ + 1, x, u, s, hx, hc, hi, hF => by
+      rw [storeAll_succ, wsum_storeAll_other g (Fin.tail x) (Fin.tail u) _
+        (fun a b e => Fin.succ_injective _ (hx e))
+        (fun i => by
+          show (s.store (x 0) (u 0)).cache (x i.succ) = none
+          rw [store_cache_ne s (x 0) _ fun e => Fin.succ_ne_zero i (hx e)]
+          exact hc i.succ)
+        (fun i => hi i.succ) (fun i => hF i.succ),
+        K.wsum_store_other g (u 0) (hc 0) (hi 0) (hF 0)]
+
 theorem wsum_store_new (g : FIn → ℝ≥0∞) {s : St} {x : HashInput} (u : HashOutput) (hx : s.cache x = none)
     (hi : K.initial x = none) {f0 : FIn} (hxf : x = f0.input K.p) :
     K.wsum g (s.store x u) = K.wsum g s + (if Recd s f0 then g f0 * cwNew s f0 (truncateHash u) else 0) := by

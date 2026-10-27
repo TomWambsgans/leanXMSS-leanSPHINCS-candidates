@@ -104,35 +104,77 @@ theorem walk_hit_split (half : Randomness) (st : Randomness → St) (x : ℝ≥0
   rw [h]
   exact add_le_add (walk_le landing_le_one st (fun _ => bot_le) le_rfl bot_le attempts ρ) le_rfl
 
-/-- Every reveal of a run of the final assembly from a cached digest block is opened by its digest. -/
-theorem finish_reveals_ok (ρ : Randomness) (b : ℕ) (s' : State) (u0 : HashOutput)
-    (hparse : model.parse (blk parameter data m ρ) = none)
-    (hc0 : s'.cache (blk parameter data m ρ) = some u0)
+/-- **Reads of cached inputs keep the reveals**: a run that stops inside them reveals nothing, and
+any other run reveals what a run of the continuation at the cached values reveals. -/
+theorem cached_reads_reveals {α : Type} : ∀ {n : ℕ} (x : Fin n → HashInput) (w : Fin n → HashOutput)
+    (state : State), (∀ i, model.parse (x i) = none) → (∀ i, state.cache (x i) = some (w i)) →
+    ∀ (rest : (Fin n → HashOutput) → OracleComp CostSpec α) (budget : ℕ)
+      (out : Run HashInput Coordinate α × State),
+      out ∈ support (interp tg initial model (Concrete.sequenceFin (fun i =>
+        (liftM (CostSpec.query (.inl (.inr (.inl (x i))))) : OracleComp CostSpec HashOutput)) >>= rest)
+        budget state) →
+      out.1.2.1 = [] ∨ ∃ b o, o ∈ support (interp tg initial model (rest w) b state) ∧
+        out.1.2.1 = o.1.2.1
+  | 0, _, w, state, _, _, rest, budget, out, hout => by
+      rw [Concrete.sequenceFin, pure_bind] at hout
+      refine Or.inr ⟨budget, out, ?_, rfl⟩
+      rwa [show w = Fin.elim0 from funext fun i => i.elim0]
+  | n + 1, x, w, state, hp, hc, rest, budget, out, hout => by
+      have hstep : (Concrete.sequenceFin (fun i =>
+          (liftM (CostSpec.query (.inl (.inr (.inl (x i))))) : OracleComp CostSpec HashOutput)) >>= rest) =
+          liftM (CostSpec.query (.inl (.inr (.inl (x 0))))) >>= fun head =>
+            (Concrete.sequenceFin fun i : Fin n =>
+              (liftM (CostSpec.query (.inl (.inr (.inl (x i.succ))))) : OracleComp CostSpec HashOutput)) >>=
+              fun values => rest (Fin.cons head values) := by
+        rw [Concrete.sequenceFin]
+        simp only [bind_assoc, pure_bind]
+        rfl
+      rw [hstep, interp_ordinary] at hout
+      split_ifs at hout with hbudget
+      · rw [ordinaryStep, hp 0] at hout
+        simp only at hout
+        rw [readOutside_cached _ state (w 0) (hc 0), pure_bind, support_map] at hout
+        obtain ⟨o1, ho1, rfl⟩ := hout
+        rcases cached_reads_reveals (Fin.tail x) (Fin.tail w) state (fun i => hp i.succ)
+          (fun i => hc i.succ) (fun values => rest (Fin.cons (w 0) values)) (budget - 1) o1 ho1 with
+          h | ⟨b, o, ho, heq⟩
+        · exact Or.inl h
+        · rw [Fin.cons_self_tail] at ho
+          exact Or.inr ⟨b, o, ho, heq⟩
+      · rw [support_pure, Set.mem_singleton_iff] at hout
+        subst hout
+        exact Or.inl rfl
+
+/-- Every reveal of a run of the final assembly from a wholly cached pair is opened by the digest of
+that pair. -/
+theorem finish_reveals_ok (ρ : Randomness) (b : ℕ) (s' : State) (u : DigestCall → HashOutput)
+    (hparse : ∀ call, model.parse (pblk parameter data (m, ρ) call) = none)
+    (hc : ∀ call, s'.cache (pblk parameter data (m, ρ) call) = some (u call))
     (out : Run HashInput Coordinate (Option Signature) × State)
     (hout : out ∈ support (interp tg initial model (finishCostSource parameter data m ρ) b s')) :
-    ∀ c ∈ out.1.2.1, ForestOk (truncateMessageDigest u0) c := by
-  rw [finishCostSource_eq, interp_ordinary] at hout
-  split_ifs at hout with h1
-  · rw [ordinaryStep, hparse] at hout
-    simp only at hout
-    rw [readOutside_cached _ s' u0 hc0, pure_bind, support_map] at hout
-    obtain ⟨o, ho, rfl⟩ := hout
-    exact interp_reveals tg initial model _ (revealsIn_finishRest parameter data m ρ _) _ _ o ho
-  · rw [support_pure, Set.mem_singleton_iff] at hout
-    subst hout
-    intro c hc
-    cases hc
+    ∀ c ∈ out.1.2.1, ForestOk (truncateMessageDigest u) c := by
+  rw [finishCostSource_eq] at hout
+  rcases cached_reads_reveals tg initial model (pblk parameter data (m, ρ)) u s' hparse hc _ b out hout with
+    h | ⟨b', o, ho, heq⟩
+  · intro c hcmem
+    rw [h] at hcmem
+    cases hcmem
+  · intro c hcmem
+    rw [heq] at hcmem
+    exact interp_reveals tg initial model _ (revealsIn_finishRest parameter data m ρ _) b' s' o ho c hcmem
 
 /-- **The scan from a start, every run.** The scan from a start, completed or not, reveals a given
 FORS leaf with probability at most the walk value paying the reveal rate at a fresh
 landing and 1 at a cached landed pair of the message. -/
-theorem reveal_scan_all (hparse : ∀ p, model.parse (pblk parameter data p) = none)
-    {s : State} (attempts : ℕ) (hA : attempts ≤ 2 ^ 128) (budget : ℕ) (start : Randomness)
-    (index : Index) (κ : FTree) (leaf : FLeaf) :
+theorem reveal_scan_all (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
+    {s : State} (hpi : PairInv parameter data m s) (attempts : ℕ) (hA : attempts ≤ 2 ^ 128) (budget : ℕ)
+    (start : Randomness) (index : Index) (κ : FTree) (leaf : FLeaf) :
     ∑' o1, Pr[= o1 | interp tg initial model (signCostSourceLoop parameter data m (data.step m) attempts start) budget s] *
         (if ∃ q, Coordinate.fors index κ leaf q ∈ o1.1.2.1 then 1 else 0) ≤
       walk (nextRand (data.steps m)) landing (stOf parameter data m s) (fun _ => 1) revRate 0 attempts start := by
-  have hparse' : ∀ ρ, model.parse (blk parameter data m ρ) = none := fun ρ => hparse (m, ρ)
+  have hparse' : ∀ ρ call, model.parse (pblk parameter data (m, ρ) call) = none := fun ρ => hparse (m, ρ)
+  have hkind' : ∀ ρ call, tg.kind (pblk parameter data (m, ρ) call) = .none := fun ρ => hkind (m, ρ)
   set g : View → ℝ≥0∞ := opensAt index κ leaf with hgdef
   set gp : Randomness → View → ℝ≥0∞ := fun _ v => g v with hgp
   set V : List Coordinate → ℝ≥0∞ := fun L =>
@@ -142,35 +184,36 @@ theorem reveal_scan_all (hparse : ∀ p, model.parse (pblk parameter data p) = n
     rw [if_neg]
     rintro ⟨q, h⟩
     cases h
-  have hVfin : ∀ (ρ : Randomness) (s' : State) (u0 : HashOutput) (b : ℕ),
-      RelatedOff parameter data m s s' ρ → s'.cache (blk parameter data m ρ) = some u0 →
-      Landed parameter (blockIndex u0) →
+  have hVfin : ∀ (ρ : Randomness) (s' : State) (u : DigestCall → HashOutput) (b : ℕ),
+      RelatedOff parameter data m s s' ρ →
+      (∀ call, s'.cache (pblk parameter data (m, ρ) call) = some (u call)) →
+      Landed parameter (blockIndex (u firstCall)) →
       ∀ out ∈ support (interp tg initial model (finishCostSource parameter data m ρ) b s'),
-        V out.1.2.1 ≤ pairWeight parameter data m s g gp ρ u0 := by
-    intro ρ s' u0 b _ hc0 hl out hout
+        V out.1.2.1 ≤ pairWeight parameter data m s g gp ρ u := by
+    intro ρ s' u b _ hc hl out hout
     simp only [hV]
     split_ifs with hrev
     swap
     · exact bot_le
     obtain ⟨q, hmem⟩ := hrev
-    obtain ⟨hi, hl⟩ := finish_reveals_ok tg initial model parameter data m ρ b s' u0 (hparse' ρ) hc0 out
+    obtain ⟨hi, hleaf⟩ := finish_reveals_ok tg initial model parameter data m ρ b s' u (hparse' ρ) hc out
       hout _ hmem index κ leaf q rfl
-    have hhit : opensAt index κ leaf (viewOf u0) = 1 := by
+    have hhit : opensAt index κ leaf (viewOf u) = 1 := by
       unfold opensAt viewOf
       rw [if_pos]
-      exact ⟨by rw [localDigestView_fst, hi], by rw [localDigestView_snd, hl]⟩
+      exact ⟨by rw [localDigestView_fst, hi], by rw [localDigestView_snd, hleaf]⟩
     unfold pairWeight
     split_ifs
     · rw [hgdef, hhit]
     · simp only [hgp, hgdef, hhit, le_refl]
-  have hbound := loop_boundV tg initial model parameter data m hparse' s g gp V hV0 hVfin attempts hA budget s start
-    (fun _ => Or.inl rfl) (fun _ _ => rfl)
+  have hbound := loop_boundV tg initial model parameter data m hparse' hkind' s g gp V hV0 hVfin attempts hA
+    budget s start (fun _ => Or.inl rfl) hpi (fun _ _ _ => rfl)
   have hpool : ∀ ρ, poolValue parameter data m s gp ρ ≤ 1 := by
     intro ρ
     unfold poolValue
-    cases s.cache (blk parameter data m ρ) with
+    cases pcache parameter data m s ρ with
     | none => exact bot_le
-    | some u0 =>
+    | some u =>
         simp only [Option.elim]
         split_ifs
         · exact opensAt_le_one index κ leaf _
@@ -180,8 +223,9 @@ theorem reveal_scan_all (hparse : ∀ p, model.parse (pblk parameter data p) = n
 /-- **One signing call, every run.** A signing call, completed or not, reveals a given FORS leaf
 with probability at most the reveal rate plus the probability that the scan signs with
 a cached landed pair of the message. -/
-theorem reveal_le_all (hparse : ∀ p, model.parse (pblk parameter data p) = none)
-    {s : State} (budget : ℕ)
+theorem reveal_le_all (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
+    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
+    {s : State} (hpi : PairInv parameter data m s) (budget : ℕ)
     (index : Index) (κ : FTree) (leaf : FLeaf) :
     ∑' o1, Pr[= o1 | interp tg initial model (signCostSource parameter data m) budget s] *
         (if ∃ q, Coordinate.fors index κ leaf q ∈ o1.1.2.1 then 1 else 0) ≤
@@ -199,7 +243,7 @@ theorem reveal_le_all (hparse : ∀ p, model.parse (pblk parameter data p) = non
   calc _ ≤ cinv * ∑ start : Randomness, (revRate +
           walk (nextRand (data.steps m)) landing (stOf parameter data m s) (fun _ => 1) 0 0 digestAttemptLimit start) :=
         mul_le_mul' le_rfl (Finset.sum_le_sum fun start _ =>
-          le_trans (reveal_scan_all tg initial model parameter data m hparse digestAttemptLimit
+          le_trans (reveal_scan_all tg initial model parameter data m hparse hkind hpi digestAttemptLimit
             (by unfold digestAttemptLimit; norm_num) budget start index κ leaf)
             (walk_hit_split _ _ _ _ _))
     _ = revRate + hitMass parameter data s m := by

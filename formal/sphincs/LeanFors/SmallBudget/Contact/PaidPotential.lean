@@ -259,7 +259,9 @@ theorem goodXF_draw (L : QueryLog SigningSpec) (draw : ℕ)
 theorem goodXF_ordinary (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate)
     (hparse : ∀ p call, model.parse (pblk K.p data p call) = none) (hFp : ∀ p call, ¬IsF (pblk K.p data p call))
+    (hmsg : ∀ x, IsMsgInput x → K.tg.kind x = .none)
     (hG0 : ∀ R s, G none R s = 0) (hG1 : ∀ o R s, G o R s ≤ 1)
+    (hGstore : ∀ o R (s : State) x u, s.cache x = none → G o R s ≤ G o R (s.store x u))
     (hnewp : NewPairPaysF K data Qtot model Φ) (hord : OrdinaryPaysF K data Qtot model IsF pay Φ)
     (L : QueryLog SigningSpec) (x : HashInput) (next : HashOutput → OracleComp CostSpec HiddenBridge.Outcome)
     (h : ∀ v, GoodXF K data Qtot model IsF pay Φ G L (next v)) :
@@ -279,38 +281,62 @@ theorem goodXF_ordinary (hMp : model.parse = HiddenGraph.parse K.p (candidateAct
     congr 1
     simp only [fleafCount_cons_inl, mul_add]
     rw [ENNReal.tsum_add, ENNReal.tsum_mul_right, HiddenDebt.interp_mass, one_mul]
-  by_cases hnew : ∃ p, x = pblk K.p data p ∧ s.cache (pblk K.p data p) = none
-  · obtain ⟨p, rfl, hp0⟩ := hnew
+  by_cases hnew : ∃ p call, x = pblk K.p data p call ∧ s.cache (pblk K.p data p firstCall) = none
+  · obtain ⟨p, c, rfl, hp0⟩ := hnew
     rcases hnewp budget s P Ms L d R hb hB p hp0 with hone | hnewp'
     · -- the potential is at least one: final values are at most one
       calc _ ≤ ∑' out, Pr[= out | interp K.tg K.initial model
-              (liftM (CostSpec.query (.inl (.inr (.inl (pblk K.p data p))))) >>= next) budget s] * 1 :=
+              (liftM (CostSpec.query (.inl (.inr (.inl (pblk K.p data p c))))) >>= next) budget s] * 1 :=
             ENNReal.tsum_le_tsum fun out => mul_le_mul_right (hG1 _ _ _) _
         _ ≤ 1 := by simp only [mul_one]; exact tsum_probOutput_le_one
         _ ≤ _ := le_trans hone le_self_add
+    -- every call of the pair is fresh and untargeted
+    have hfresh : ∀ call, s.cache (pblk K.p data p call) = none := hB.pinv.first p hp0
+    have hkind : ∀ call, K.tg.kind (pblk K.p data p call) = .none := fun call =>
+      hmsg _ (msgInput_digestInput K.p data.root p.1 p.2 call)
+    have hcard : (Fintype.card (DigestCall → HashOutput) : ℝ≥0∞) =
+        (Fintype.card HashOutput : ℝ≥0∞) ^ digestCalls := by
+      rw [Fintype.card_fun, Fintype.card_fin, Nat.cast_pow]
+    have hpairE : ∀ F : (DigestCall → HashOutput) → ℝ≥0∞,
+        pairE F = ((Fintype.card HashOutput : ℝ≥0∞) ^ digestCalls)⁻¹ * ∑ u, F u := by
+      intro F
+      unfold pairE
+      rw [tsum_uniform_eq, hcard]
+    -- the expected number of queries of the class is unchanged by the presampling
+    have hcount : pairE (fun u => expCount K model IsF (next (u c)) (budget - 1)
+          (withPair K.p data s p u)) =
+        ∑' v, Pr[= v | ($ᵗ HashOutput : ProbComp HashOutput)] *
+          expCount K model IsF (next v) (budget - 1) (s.store (pblk K.p data p c) v) := by
+      rw [hpairE]
+      unfold expCount
+      exact (interp_presample_new_eq K.tg K.initial model (pblk K.p data p)
+        (pblk_call_injective K.p data p) hkind c next (budget - 1) s hfresh
+        fun run => (fleafCount IsF run.2.2.1 : ℝ≥0∞)).symm
     rw [hexp, interp_ordinary, if_pos hb, tsum_probOutput_bind_mul]
     simp only [tsum_probOutput_map_mul]
-    simp only [if_neg (hFp p), zero_add]
-    rw [ordinaryStep, hparse p]
+    simp only [if_neg (hFp p c), zero_add]
+    rw [ordinaryStep, hparse p c]
     simp only
-    rw [readOutside_fresh _ s hp0, tsum_probOutput_map_mul, tsum_probOutput_map_mul]
-    calc ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
-          ∑' out, Pr[= out | interp K.tg K.initial model (next u) (budget - 1) (s.store (pblk K.p data p) u)] *
-            G out.1.1 (R ++ out.1.2.1) out.2
-        ≤ ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
-          (Φ (withPair K.p data s p u) (addPair K.p P p u) (addMsg Ms p.1) L d R (budget - 1) +
-            pay * expCount K model IsF (next u) (budget - 1) (s.store (pblk K.p data p) u)) :=
-          ENNReal.tsum_le_tsum fun u => mul_le_mul_right
-            (h u (budget - 1) _ _ _ d R (binvF_withPair hMp hparse hb hB hp0 u)) _
+    rw [readOutside_fresh _ s (hfresh c), tsum_probOutput_map_mul, tsum_probOutput_map_mul]
+    calc ∑' v, Pr[= v | ($ᵗ HashOutput : ProbComp HashOutput)] *
+          ∑' out, Pr[= out | interp K.tg K.initial model (next v) (budget - 1)
+            (s.store (pblk K.p data p c) v)] * G out.1.1 (R ++ out.1.2.1) out.2
+        ≤ pairE (fun u => ∑' out, Pr[= out | interp K.tg K.initial model (next (u c)) (budget - 1)
+            (withPair K.p data s p u)] * G out.1.1 (R ++ out.1.2.1) out.2) := by
+          rw [hpairE]
+          exact interp_presample_new K.tg K.initial model (pblk K.p data p)
+            (pblk_call_injective K.p data p) hkind c next (budget - 1) s hfresh
+            (fun out => G out.1.1 (R ++ out.1.2.1) out.2) fun out y v hy => hGstore _ _ _ _ _ hy
+      _ ≤ pairE (fun u => Φ (withPair K.p data s p u) (addPair K.p P p u) (addMsg Ms p.1) L d R (budget - 1) +
+            pay * expCount K model IsF (next (u c)) (budget - 1) (withPair K.p data s p u)) :=
+          pairE_mono fun u => h (u c) (budget - 1) _ _ _ d R (binvF_withPair hMp hparse hb hB hp0 u)
       _ = pairE (fun u => Φ (withPair K.p data s p u) (addPair K.p P p u) (addMsg Ms p.1) L d R (budget - 1)) +
-          pay * ∑' u, Pr[= u | ($ᵗ HashOutput : ProbComp HashOutput)] *
-            expCount K model IsF (next u) (budget - 1) (s.store (pblk K.p data p) u) := by
-          unfold pairE
-          simp only [mul_add, ENNReal.tsum_add]
-          rw [← ENNReal.tsum_mul_left]
-          congr 1
-          exact tsum_congr fun a => by ring
-      _ ≤ _ := add_le_add hnewp' le_rfl
+            pay * pairE (fun u => expCount K model IsF (next (u c)) (budget - 1)
+              (withPair K.p data s p u)) := by
+          rw [pairE_add, pairE_const_mul]
+      _ ≤ _ := by
+          rw [hcount]
+          exact add_le_add hnewp' le_rfl
   · rw [hexp, interp_ordinary, if_pos hb, tsum_probOutput_bind_mul]
     simp only [tsum_probOutput_map_mul]
     calc _ ≤ ∑' r, Pr[= r | ordinaryStep model x s.known s] *
@@ -348,7 +374,9 @@ theorem goodXF_pure (hfin : FinalPaysF K data Qtot model Φ G) (L : QueryLog Sig
 theorem goodXF_liftHash (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate)
     (hparse : ∀ p call, model.parse (pblk K.p data p call) = none) (hFp : ∀ p call, ¬IsF (pblk K.p data p call))
+    (hmsg : ∀ x, IsMsgInput x → K.tg.kind x = .none)
     (hG0 : ∀ R s, G none R s = 0) (hG1 : ∀ o R s, G o R s ≤ 1)
+    (hGstore : ∀ o R (s : State) x u, s.cache x = none → G o R s ≤ G o R (s.store x u))
     (hnewp : NewPairPaysF K data Qtot model Φ) (hord : OrdinaryPaysF K data Qtot model IsF pay Φ)
     (L : QueryLog SigningSpec) {α : Type} (computation : OracleComp HashSpec α)
     (next : α → OracleComp CostSpec HiddenBridge.Outcome)
@@ -358,7 +386,8 @@ theorem goodXF_liftHash (hMp : model.parse = HiddenGraph.parse K.p (candidateAct
   | pure value => simpa only [liftM_pure, pure_bind] using h value
   | query_bind query rest ih =>
       rw [liftM_bind, bind_assoc]
-      exact goodXF_ordinary K data Qtot model IsF pay hMp hMi hparse hFp hG0 hG1 hnewp hord L query _ ih
+      exact goodXF_ordinary K data Qtot model IsF pay hMp hMi hparse hFp hmsg hG0 hG1 hGstore hnewp hord
+        L query _ ih
 
 /-- **One signing call** on a message that was never signed before, with the payments. -/
 theorem goodXF_sign (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
@@ -426,7 +455,9 @@ theorem goodXF_sign (hMp : model.parse = HiddenGraph.parse K.p (candidateActive 
 theorem goodXF_advProg (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate)
     (hparse : ∀ p call, model.parse (pblk K.p data p call) = none) (hFp : ∀ p call, ¬IsF (pblk K.p data p call))
+    (hmsg : ∀ x, IsMsgInput x → K.tg.kind x = .none)
     (hG0 : ∀ R s, G none R s = 0) (hG1 : ∀ o R s, G o R s ≤ 1)
+    (hGstore : ∀ o R (s : State) x u, s.cache x = none → G o R s ≤ G o R (s.store x u))
     (hnewp : NewPairPaysF K data Qtot model Φ) (hord : OrdinaryPaysF K data Qtot model IsF pay Φ)
     (hsign : SignPaysF K data Qtot model Φ) (hfin : FinalPaysF K data Qtot model Φ G) :
     ∀ (M : OracleComp (OracleWorld + SigningSpec) Forgery) (L : QueryLog SigningSpec),
@@ -438,16 +469,16 @@ theorem goodXF_advProg (hMp : model.parse = HiddenGraph.parse K.p (candidateActi
       intro L _
       rw [advProg_pure]
       unfold finishGame
-      exact goodXF_liftHash K data Qtot model IsF pay hMp hMi hparse hFp hG0 hG1 hnewp hord L _ _ fun v =>
-        goodXF_pure K data Qtot model IsF pay hfin L forgery v
+      exact goodXF_liftHash K data Qtot model IsF pay hMp hMi hparse hFp hmsg hG0 hG1 hGstore hnewp hord
+        L _ _ fun v => goodXF_pure K data Qtot model IsF pay hfin L forgery v
   | query_bind input next ih =>
       intro L hnr
       rcases input with (draw | bytes) | message
       · rw [advProg_draw]
         exact goodXF_draw K data Qtot model IsF pay L draw _ fun v => ih v L (hnr v)
       · rw [advProg_hash]
-        exact goodXF_ordinary K data Qtot model IsF pay hMp hMi hparse hFp hG0 hG1 hnewp hord L bytes _ fun v =>
-          ih v L (hnr v)
+        exact goodXF_ordinary K data Qtot model IsF pay hMp hMi hparse hFp hmsg hG0 hG1 hGstore hnewp hord
+          L bytes _ fun v => ih v L (hnr v)
       · rw [advProg_sign]
         obtain ⟨hnot, hrest⟩ := (noRepeat_sign message next _).1 hnr
         have hm : ∀ entry ∈ L, entry.1 ≠ message := by
@@ -462,8 +493,10 @@ expected number of queries of the class. -/
 theorem final_le_startF (hMp : model.parse = HiddenGraph.parse K.p (candidateActive K.p))
     (hMi : model.incoming = Address.inputCoordinate)
     (hparse : ∀ p call, model.parse (pblk K.p data p call) = none) (hFp : ∀ p call, ¬IsF (pblk K.p data p call))
+    (hmsg : ∀ x, IsMsgInput x → K.tg.kind x = .none)
     (hclean : ∀ p call, K.initial (pblk K.p data p call) = none)
     (total : ℕ) (hG0 : ∀ R s, G none R s = 0) (hG1 : ∀ o R s, G o R s ≤ 1)
+    (hGstore : ∀ o R (s : State) x u, s.cache x = none → G o R s ≤ G o R (s.store x u))
     (hnewp : NewPairPaysF K data total model Φ) (hord : OrdinaryPaysF K data total model IsF pay Φ)
     (hsign : SignPaysF K data total model Φ) (hfin : FinalPaysF K data total model Φ G)
     (M : OracleComp (OracleWorld + SigningSpec) Forgery) (hnr : NoRepeat M []) (known : HiddenReveal.Knowledge Coordinate)
@@ -472,7 +505,8 @@ theorem final_le_startF (hMp : model.parse = HiddenGraph.parse K.p (candidateAct
         G out.1.1 out.1.2.1 out.2 ≤
       Φ (DebtState.start K.initial known) [] [] [] 0 [] total +
         pay * expCount K model IsF (advProg K.p data M []) total (DebtState.start K.initial known) := by
-  have h := goodXF_advProg K data total model IsF pay hMp hMi hparse hFp hG0 hG1 hnewp hord hsign hfin M [] hnr total
+  have h := goodXF_advProg K data total model IsF pay hMp hMi hparse hFp hmsg hG0 hG1 hGstore hnewp hord
+    hsign hfin M [] hnr total
     (DebtState.start K.initial known) [] [] 0 [] (binvF_start hclean known hinv total)
   simpa only [List.nil_append] using h
 

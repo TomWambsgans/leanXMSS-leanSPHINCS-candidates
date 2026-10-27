@@ -297,6 +297,7 @@ reveal rate plus the mass off the identity of the message, and costs at most `1 
 theorem sign_contact {m : Message} {budget : ℕ} {s : State} {P : List Pair} {Ms : List Message}
     {d : Multiset View} {R : List Coordinate} (hB : BInvF K data Qtot model s P Ms d R budget)
     (hparse : ∀ p call, model.parse (pblk K.p data p call) = none)
+    (hmsg : ∀ x, IsMsgInput x → K.tg.kind x = .none)
     (f : FIn) (Cd : ℝ≥0∞) (Z : Run HashInput Coordinate (Option Signature) × State → ℝ≥0∞) (hZ : ∀ o, Z o ≤ 1) :
     ∑' o1, Pr[= o1 | interp K.tg K.initial model (signCostSource K.p data m) budget s] *
         (if o1.1.1.isSome then K.cw o1.2 f * gA (R ++ o1.1.2.1) (Cd + Z o1) f else 0) ≤
@@ -317,9 +318,14 @@ theorem sign_contact {m : Message} {budget : ℕ} {s : State} {P : List Pair} {M
     · exact absurd (settled_append hS _) h2
     · exact zero_le
   -- an unsettled contact
+  have hkind : ∀ p call, K.tg.kind (pblk K.p data p call) = .none := fun p call =>
+    hmsg _ (msgInput_digestInput K.p data.root p.1 p.2 call)
+  have hpi : PairInv K.p data m s := fun ρ =>
+    ⟨fun h call => hB.pinv.first (m, ρ) h call,
+      fun u0 h hl call => Option.isSome_iff_ne_none.2 (hB.pinv.all (m, ρ) ⟨u0, h, hl⟩ call)⟩
   have hPO : ∑' o1, Pr[= o1 | run] * (if OpensF f o1.1.2.1 then 1 else 0) ≤ revRate + nm := by
     refine le_trans (le_of_eq (tsum_congr fun o1 => ?_)) (le_trans (reveal_le_all K.tg K.initial model K.p data m
-      hparse budget f.index f.κ f.leaf)
+      hparse hkind hpi budget f.index f.κ f.leaf)
       (add_le_add le_rfl (hitMass_le_offMass s m)))
     unfold OpensF
     congr 1
@@ -425,6 +431,7 @@ variable (K : Ctx) (data : PublicData) (wbar κ : ℝ≥0∞) (Fail : Finset (Fi
 include hMp hMi hMo in
 /-- **A signing call on a fresh message.** -/
 theorem psiF_sign (hparse : ∀ p call, model.parse (pblk K.p data p call) = none)
+    (hmsg : ∀ x, IsMsgInput x → K.tg.kind x = .none)
     (hfail : ∀ m ρ digest budget (s1 : State), Prepared K.initial s1 →
       ∀ out ∈ support (interp K.tg K.initial model (finishRest K.p data m ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
@@ -566,7 +573,7 @@ theorem psiF_sign (hparse : ∀ p call, model.parse (pblk K.p data p call) = non
     intro f
     by_cases hr : Ctx.Recd s f
     · simp only [if_pos hr]
-      exact sign_contact hMp hMi hMo hB hparse f Cd Z hZ1
+      exact sign_contact hMp hMi hMo hB hparse hmsg f Cd Z hZ1
     · simp only [if_neg hr, mul_zero, tsum_zero, le_refl]
   calc _ ≤ ∑' o1, Pr[= o1 | run] *
         ((∑ f, if Ctx.Recd s f then (if o1.1.1.isSome then K.cw o1.2 f * gA (R ++ o1.1.2.1) (Cd + Z o1) f else 0)
