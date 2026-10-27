@@ -7,6 +7,7 @@
 \usepackage{microtype}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage[hyphens]{url}
 \usepackage{enumitem}
 \usepackage{xcolor}
 \usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
@@ -22,6 +23,7 @@
 
 \setlist{itemsep=2pt}
 \setlength{\parskip}{4pt}
+\renewcommand{\arraystretch}{1.15}
 
 \title{Exploring leanSphincs: hash-based signature for Ethereum}
 \author{}
@@ -32,7 +34,7 @@
 \vspace{-3em}
 
 \begin{center}
-  \fbox{\parbox{0.9\linewidth}{\centering\textbf{Warning:} mostly AI-written.}}
+  \small\itshape Warning: mostly AI-written.
 \end{center}
 
 \section{The scheme}
@@ -503,12 +505,14 @@ $b=8$ where it is 2\% lower~\cite{proofs}. At $h=24$, rounded down (the last row
 \end{tabular}
 \end{center}
 
+\raggedright
 \begin{thebibliography}{99}
 \bibitem{HK22C} A.~H\"ulsing, M.~Kudinov, E.~Ronen, E.~Yogev. \emph{SPHINCS$^+$C: Compressing SPHINCS$^+$
   With (Almost) No Cost}. IEEE S\&P, 2023. \url{https://eprint.iacr.org/2022/778}.
 \bibitem{FIPS205} National Institute of Standards and Technology. \emph{Stateless Hash-Based Digital Signature
   Standard}. FIPS~205, 2024. \url{https://doi.org/10.6028/NIST.FIPS.205}.
-\bibitem{proofs} \emph{leanSphincs proofs in Lean 4} (\texttt{LeanForest}), \texttt{formal/sphincs} in
+\bibitem{proofs} \emph{leanSphincs proofs in Lean 4} (\texttt{LeanForest} for the two-level WOTS forest,
+  \texttt{LeanFors} for FORS), \texttt{formal/sphincs} in
   \url{https://github.com/TomWambsgans/sphincs.art}.
 \bibitem{hwbench} T.~Wambsgans. \emph{Hardware wallet benchmark}.
   \url{https://github.com/TomWambsgans/hardware-wallet-benchmark}.
