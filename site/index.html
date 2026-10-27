@@ -1023,9 +1023,14 @@ footer a + a { margin-left: 1.25rem; }
     for (var i = 0; i < u.length; i++) if (x >= u[i][0]) return x / u[i][0] + u[i][1];
     return String(x);
   }
-  // a lifetime: the limit proved in Lean, to three significant digits rounded down (151K, 31.8M, 1.42B)
+  // a lifetime: the limit proved in Lean, to two significant digits rounded down (150K, 31M, 1.4B)
   function lifeOf(c) { return life1(spicy() ? c.lifetime : c.vanilla.lifetime); }
-  function life1(n) { return rateK(n); }
+  function life1(n) {
+    var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(n)) - 1);
+    n = q >= 1 ? Math.floor(n / q + 1e-9) * q : Math.floor(n);
+    for (var i = 0; i < u.length; i++) if (n >= u[i][0]) return Number((n / u[i][0]).toPrecision(2)) + u[i][1];
+    return String(n);
+  }
   // a rate: three significant digits, rounded down (32.6K, 5.8K)
   function rateK(x) {
     var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(x)) - 2);
