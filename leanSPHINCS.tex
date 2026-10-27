@@ -42,8 +42,8 @@ A SPHINCS-style scheme with three toggles, 24 configurations in all. Its compone
 \begin{itemize}
   \item few-time signature (FTS): a \emph{two-level WOTS forest} (\cref{sec:twolevel}, after sig.golf~\cite{siggolf})
   \item one-time signature: WOTS$^+$C~\cite{HK22C}, 64 chains of length $w=4$, target sum 128
-  \item the WOTS$^+$C encoding absorbs the FTS: it hashes the two nodes below the root of each of the 8 trees of
-        the forest, then the counter; there is no FTS public key and no tree of the forest has a root hash
+  \item the FTS public key is 16 digests (the two nodes below the root of each of the 8 trees); WOTS$^+$C signs
+        them directly
 \end{itemize}
 
 \paragraph{The toggles.}
