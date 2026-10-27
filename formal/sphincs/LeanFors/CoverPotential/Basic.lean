@@ -111,6 +111,12 @@ theorem pcache_congr {s s' : State} {p : Pair}
 noncomputable def pview (s : State) (p : Pair) : View :=
   (pcache parameter data p.1 s p.2).elim default viewOf
 
+theorem pview_congr {s s' : State} {p : Pair}
+    (h : ∀ call, s'.cache (pblk parameter data p call) = s.cache (pblk parameter data p call)) :
+    pview parameter data s' p = pview parameter data s p := by
+  unfold pview
+  rw [pcache_congr parameter data h]
+
 /-- The block of the first call of the pair is cached and lands. -/
 def LandedIn (s : State) (p : Pair) : Prop :=
   ∃ u0, s.cache (pblk parameter data p firstCall) = some u0 ∧ Landed parameter (blockIndex u0)

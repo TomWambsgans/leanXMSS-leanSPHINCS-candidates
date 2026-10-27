@@ -52,6 +52,25 @@ section Basic
 
 variable {parameter : PublicParameter} {data : PublicData}
 
+/-- A randomizer whose status is a hit is a landed pair. -/
+theorem landedIn_of_stOf_hit {s : State} {m : Message} {ρ : Randomness}
+    (h : stOf parameter data m s ρ = .hit) : LandedIn parameter data s (m, ρ) := by
+  unfold stOf at h
+  cases hc : s.cache (blk parameter data m ρ) with
+  | none => rw [hc] at h; cases h
+  | some u0 =>
+      rw [hc] at h
+      simp only [Option.elim] at h
+      by_cases hl : Landed parameter (blockIndex u0)
+      · exact ⟨u0, hc, hl⟩
+      · rw [if_neg hl] at h; cases h
+
+/-- The pair invariant of the scan is the state part of `PInv`. -/
+theorem pairInv_of_pinv {s : State} {P : List Pair} (hP : PInv parameter data s P) (m : Message) :
+    PairInv parameter data m s := fun ρ =>
+  ⟨fun h call => hP.first (m, ρ) h call,
+    fun u0 h hl call => Option.ne_none_iff_isSome.1 (hP.all (m, ρ) ⟨u0, h, hl⟩ call)⟩
+
 theorem grpAll_le_of_le (s : State) (excl : Pair → Prop) {F G : Multiset View → ℝ≥0∞} (h : ∀ e, F e ≤ G e) :
     ∀ (Ms : List Message) (d : Multiset View), grpAll parameter data s excl Ms F d ≤ grpAll parameter data s excl Ms G d
   | [], d => h d
