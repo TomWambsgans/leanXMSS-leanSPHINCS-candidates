@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Sizes and compression counts of the leanSphincs candidate in its 24 configurations (leanSPHINCS.tex).
+"""Sizes and compression counts of the leanSphincs candidate in its 48 configurations (leanSPHINCS.tex).
 
-Three toggles: the height h (22, 24, 26, 28: about 2^26, 2^28, 2^30, 2^32 signatures), the shape
+Four toggles: the height h (22, 24, 26, 28: about 2^26, 2^28, 2^30, 2^32 signatures), the shape
 (pruned: one tree of height h of which the key builds a kept subtree of 2^b leaves, b = h being the
 full key, the signer grinding the randomizer into it; layered: a hypertree whose key builds the top
-layer only) and the hash. Every call hashes P (16 B) || address (16 B) || payload, each hash with its
-own layout:
+layer only), the hash and the few-time signature (FTS): a two-level WOTS forest or FORS. Every call
+hashes P (16 B) || address (16 B) || payload, each hash with its own layout:
 
   Keccak-256  P inline; l bytes cost floor(l / 136) + 1 Keccak-f permutations.
   BLAKE2s     P inline; l bytes cost ceil(l / 64) compressions (no padding byte), so a node,
@@ -17,9 +17,16 @@ The digest input puts the randomizer alone in the last block (Keccak-256: the wh
 block; SHA-256: 16 zero bytes before it), and the WOTS+C encoding puts its counter in the last block:
 a grinding attempt and a counter cost one compression each, with every hash.
 
-The lifetimes are the ones proved in Lean (formal/sphincs/scripts/forest_certificates.py, PARAMS and
-LAYERED) and, for comparison, the cover attack they are measured against (ATTACK, from forest_attack.py).
-The same figures are pinned by the Rust tests (crates/sphincs, `Config::verify_compressions`).
+The lifetimes are the ones proved in Lean (the PARAMS and LAYERED tables of
+formal/sphincs/scripts/forest_certificates.py and fors_certificates.py) and, for comparison, the cover
+attack they are measured against (ATTACK).
+The forest's sizes and verification costs are also pinned by the Rust tests (crates/sphincs,
+`Config::verify_compressions`).
+
+The FORS FTS has k trees of height a and no root hash (the WOTS+C key signs the 2k nodes below
+the roots): a = 10 and k = 25 in every configuration, so that verification does not
+depend on the pruning. 25 is the fewest trees whose cover attack (fors_security.py) lives as long as the
+forest's for the full key; it reaches 97.8-100.7% of the forest's in every configuration.
 """
 
 import argparse
@@ -30,7 +37,9 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "formal", "sphincs", "scripts"))
 import forest_certificates as fc
+import fors_certificates as vc
 import forest_table
+from fors_security import forgery_bits_exact
 
 N = 16  # bytes per hash value
 P_LEN, ADDR = 16, 16
@@ -97,16 +106,47 @@ def kept(h, shape, b):
     return LAYERED[h][0] if shape == "layered" else b
 
 
-def size(h, shape):
-    return 16 + FOREST_BYTES + len(layers(h, shape)) * LAYER_BYTES + h * N
+def fors_log2_lifetime(h, b, a, k, level=127):
+    """log2 of the FORS cover lifetime of a key keeping 2^b of 2^h instances: the signatures spread over the
+    2^b instances, and a forger's digest must also land in the kept subtree (probability 2^(b - h))."""
+    def ok(log2_q):
+        return min(8 * N, (h - b) + forgery_bits_exact(log2_q, b, a, k)) >= level
+    if not ok(0):
+        return None
+    lo, hi = 0.0, b + 14.0
+    for _ in range(45):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if ok(mid) else (lo, mid)
+    return lo
+
+
+FORS_HEIGHT = 10
+FORS_TREES = 25
+
+
+def fors(h, shape, b):
+    """(k, a) of the FORS FTS, the same in every configuration (see above)."""
+    return FORS_TREES, FORS_HEIGHT
+
+
+def fts_bytes(variant, h, shape, b):
+    if variant == "forest":
+        return FOREST_BYTES
+    k, a = fors(h, shape, b)
+    return k * (1 + a) * N
+
+
+def size(h, shape, variant="forest", b=None):
+    return 16 + fts_bytes(variant, h, shape, b) + len(layers(h, shape)) * LAYER_BYTES + h * N
 
 
 class Costs:
     """Per-call and per-component compressions of one hash."""
 
-    def __init__(self, H):
+    def __init__(self, H, fts=None):
+        """`fts` is None for the forest, or the (k, a) of FORS."""
         c = H.call
-        self.H = H
+        self.H, self.fts = H, fts
         self.derive, self.step, self.node = c(32), c(N), c(2 * N)
         self.wots_pk, self.child_leaf, self.super_hash = c(V * N), c(CHAINS * N), c(SUBS * 2 * N)
         self.rnd = c(32 + 32)  # S || m: R_0 and delta
@@ -119,6 +159,20 @@ class Costs:
         self.forest_sign = COORDS * coord
         self.per_coord = (SUBS * (DIGIT_SUM * self.step + self.child_leaf + (SUB_PATH - 1) * self.node)
                           + self.super_hash + (TOP_PATH - 1) * self.node)
+        if fts is None:
+            self.fts_sign, self.fts_verify, self.fts_nodes = self.forest_sign, COORDS * self.per_coord, COORDS * 2
+            # opening the forest walks again the chains of the 16 WOTS keys it opens from their secrets, up to below
+            # the tops (as the Rust signer does)
+            self.fts_open = COORDS * SUBS * (CHAINS * STEPS - DIGIT_SUM) * self.step
+        else:
+            k, a = fts
+            self.fts_sign = k * (2**a // 2 * self.derive + 2**a * self.step + (2**a - 2) * self.node)
+            self.fts_verify, self.fts_nodes, self.fts_open = k * (self.step + (a - 1) * self.node), 2 * k, 0
+
+    def digest_calls(self, h):
+        """Hash calls of the digest: the index and the FTS fields, 256 bits per call."""
+        bits = h + (COORDS * 26 if self.fts is None else self.fts[0] * self.fts[1])
+        return -(-bits // 256)
 
     def encoding(self, message):
         """(verifier's cost, signer's whole blocks absorbed once, cost of one counter)"""
@@ -126,11 +180,11 @@ class Costs:
         return self.H.call(message + 4), fixed, per
 
     def message_len(self, layer):
-        """What the WOTS+C key of a layer (0 = bottom) signs: the 16 forest nodes, or a root."""
-        return COORDS * 2 * N if layer == 0 else N
+        """What the WOTS+C key of a layer (0 = bottom) signs: the FTS's top nodes, or a root."""
+        return self.fts_nodes * N if layer == 0 else N
 
     def verify(self, h, shape):
-        total = self.H.per_key + self.digest + COORDS * self.per_coord
+        total = self.H.per_key + self.digest_calls(h) * self.digest + self.fts_verify
         for layer, height in enumerate(reversed(layers(h, shape))):
             enc, _, _ = self.encoding(self.message_len(layer))
             total += enc + ((Q - 1) * V - T) * self.step + self.wots_pk + height * self.node
@@ -157,9 +211,12 @@ class Costs:
         return 2 ** kept(h, shape, b) * V * (Q - 1) * self.step
 
     def mpc_prep(self, h, shape):
-        forest = COORDS * SUPERS * SUBS * CHILDREN * CHAINS * STEPS * self.step
+        if self.fts is None:
+            fts = COORDS * SUPERS * SUBS * CHILDREN * CHAINS * STEPS * self.step
+        else:  # one hash per FORS leaf
+            fts = self.fts[0] * 2 ** self.fts[1] * self.step
         lower = sum(2**hl * V * (Q - 1) * self.step for hl in layers(h, shape)[1:])
-        return forest + lower + self.step
+        return fts + lower + self.step
 
     # The hardware wallet: preparing an instance (its forest, the lower trees, the WOTS+C signatures and the
     # path in the kept subtree or top layer, with a 16 KiB cache); online, re-deriving the opened chain values
@@ -167,12 +224,15 @@ class Costs:
     def ledger_prep(self, h, shape, b):
         ls = layers(h, shape)
         lower = sum(2**hl * self.leaf + (2**hl - 1) * self.node for hl in ls[1:])
-        return (self.forest_sign + lower + sum(self.wots_sign(layer) for layer in range(len(ls)))
+        return (self.fts_sign + lower + sum(self.wots_sign(layer) for layer in range(len(ls)))
                 + self.tree_cost(kept(h, shape, b), 16 * 1024 // N))
 
     def device_online(self):
-        opened = COORDS * SUBS * (CHAINS // 2 * self.derive + (CHAINS * STEPS - DIGIT_SUM) * self.step)
-        return opened + COORDS * self.per_coord + 1
+        if self.fts is None:
+            opened = COORDS * SUBS * (CHAINS // 2 * self.derive + (CHAINS * STEPS - DIGIT_SUM) * self.step)
+        else:  # the k opened secrets
+            opened = self.fts[0] * self.derive
+        return opened + self.fts_verify + self.H.call(self.fts_nodes * N)  # and the hash of the FTS key
 
     def tree_cost(self, height, cache_nodes):
         """Per-signature work in a tree of 2^height leaves: the best of keeping one level c (rebuild the 2^c
@@ -193,10 +253,8 @@ class Costs:
         ls = layers(h, shape)
         bb = kept(h, shape, b)
         grind = 2 ** (h - bb) * self.attempt if shape == "pruned" else self.attempt
-        # the landing digest is computed once more in full, and opening the forest walks again the chains of
-        # the 16 WOTS keys it opens from their secrets, up to below the tops (as the Rust signer does)
-        total = self.rnd + self.digest_fixed + grind + self.digest + self.forest_sign
-        total += COORDS * SUBS * (CHAINS * STEPS - DIGIT_SUM) * self.step
+        # the landing digest is computed once more in full, then the FTS instance is built and opened
+        total = self.rnd + self.digest_fixed + grind + self.digest_calls(h) * self.digest + self.fts_sign + self.fts_open
         total += sum(self.wots_sign(layer) for layer in range(len(ls)))
         total += sum(2**hl * self.leaf + (2**hl - 1) * self.node for hl in ls[1:])  # the lower trees
         return total, grind, self.tree_cost(bb, cache_bytes // N)
@@ -285,15 +343,24 @@ def site_data():
             for shape in ("pruned", "layered"):
                 for b in ([h] + list(PRUNED) if shape == "pruned" else [h]):
                     proved, attack = lifetimes(h, shape, b)
-                    signs = {}
+                    k, a = fors(h, shape, b)
+                    CV = Costs(H, (k, a))
+                    signs, signs_v = {}, {}
                     for kib in (16, 1024, 16 * 1024):
                         base, grind, tree = C.sign(h, shape, b, kib * 1024)
                         signs[str(kib)] = round(base + tree)
+                        base, grind, tree = CV.sign(h, shape, b, kib * 1024)
+                        signs_v[str(kib)] = round(base + tree)
+                    life_v = fors_log2_lifetime(h, h if shape == "layered" else b, a, k)
                     out["configs"].append(dict(hash=H.name, h=h, shape=shape, b=b, layers=list(layers(h, shape)),
                                                size=size(h, shape), verify=C.verify(h, shape),
                                                keygen=round(C.keygen(h, shape, b)), sign=signs,
                                                grind=round(2 ** (h - b)) if shape == "pruned" else 1,
-                                               lifetime=proved, attack=attack))
+                                               lifetime=proved, attack=attack,
+                                               fors=dict(k=k, a=a, size=size(h, shape, "fors", b),
+                                                            verify=CV.verify(h, shape), sign=signs_v,
+                                                            lifetime=vc.lifetime(h, shape, b),
+                                                            attack=round(2**life_v))))
     for H in HASHES:
         C = Costs(H)
         ands = ANDS[H.name]
@@ -304,12 +371,17 @@ def site_data():
                 # the hardware wallet computes the whole instance, and signs it with WOTS+C
                 lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
                 ledger = C.ledger_prep(h, shape, b)
+                CV = Costs(H, fors(h, shape, b))
+                prep_v = CV.mpc_prep(h, shape)
+                fors_th = dict(lifetime=vc.lifetime(h, shape, b),
+                               prep=round(prep_v), prep_mb=prep_v * ands * BITS_PER_AND / 8 / 1e6, prep_rounds=rounds(H.name, 1 if shape == "pruned" else Q - 1),
+                               ledger_prep=math.ceil(CV.ledger_prep(h, shape, b)), device_online=CV.device_online())
                 out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
                                              keygen=round(keygen), prep=round(prep), grind=2**h // THRESHOLD_PREPARED,
                                              and_depth=and_depth(H.name), keygen_rounds=rounds(H.name, Q - 1), prep_rounds=rounds(H.name, STEPS),
                                              ledger_prep=math.ceil(ledger), device_online=C.device_online(),
                                              keygen_gb=keygen * ands * BITS_PER_AND / 8 / 1e9,
-                                             prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6))
+                                             prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6, fors=fors_th))
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
     out["rates"] = DEVICES
     out["wallet"] = dict(prepared=THRESHOLD_PREPARED, ledger_prepared={h: wallet_prepared(h) for h in HEIGHTS},

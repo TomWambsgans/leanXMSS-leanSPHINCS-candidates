@@ -223,7 +223,7 @@ variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : 
   (parameter : PublicParameter) (data : PublicData) (m : Message)
 
 /-- The base value and the averaged walks of a message are below the law of its signed view (the
-arithmetic of `sign_termS`). -/
+arithmetic of `sign_termSW`). -/
 theorem walk_avg_le_sgnM {X : Multiset View → ℝ≥0∞} (hX : Monotone' X) (s : State) (d : Multiset View)
     (excl : Pair → Prop) :
     X d + (Fintype.card Randomness : ℝ≥0∞)⁻¹ * ∑ start, walk (nextRand (data.steps m)) landing (stOf parameter data m s)
@@ -314,7 +314,7 @@ theorem upper_scanW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = no
   rw [← ENNReal.tsum_add]
   exact tsum_congr fun out => by ring
 
-/-- **One signing call, the law of the signed view, weighted** (the weighted `sign_termS`). -/
+/-- **One signing call, the law of the signed view, weighted**. -/
 theorem sign_termSW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none)
     (hkind : ∀ ρ, tg.kind (blk parameter data m ρ) = .none)
     {X : Multiset View → ℝ≥0∞} (hX : Monotone' X) (s : State) (d : Multiset View)
@@ -336,7 +336,7 @@ variable {A : Type} (tg : Targeting HashInput HashOutput Coordinate) (initial : 
   {parameter : PublicParameter} {data : PublicData} {Qtot : ℕ} {w : ℝ≥0∞} {m : Message} {s : State} {n : ℕ}
   {d : Multiset View} {f : Multiset View → ℝ≥0∞}
 
-/-- **A dominated term, weighted** (the weighted `term_expectH`). -/
+/-- **A dominated term, weighted**. -/
 theorem term_expectHW (hparse : ∀ ρ, model.parse (blk parameter data m ρ) = none)
     (hkind : ∀ ρ, tg.kind (blk parameter data m ρ) = .none) (hf : MonoFin f)
     {Ms : List Message} (hM : MInv parameter data s Ms) {budgetT : ℕ} (hT : TotalInv parameter data Qtot s budgetT)

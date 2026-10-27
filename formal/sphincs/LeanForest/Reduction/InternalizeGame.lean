@@ -1,7 +1,7 @@
 import LeanForest.Reduction.PreparedSample
 
 /-! Internalizing long adversarial hash inputs for the deterministic-randomizer game, and its
-fixed-function form. `Seeded.sign` only makes short queries (its randomizer derivation is 88
+fixed-function form. `Seeded.sign` only makes short queries (its randomizer derivation is 96
 bytes), so the argument of `Reduction/Internalize` applies verbatim with `signingOracle`. -/
 
 open OracleComp OracleSpec ENNReal

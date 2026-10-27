@@ -69,6 +69,9 @@ h1 { font-size: 3.15rem; font-weight: 600; letter-spacing: -0.03em; line-height:
 figure { margin: 0; position: relative; min-height: 18rem; }
 figure svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .titlerow { position: relative; }
+
+/* The FTS variant: FORS or the WOTS forest. Each figure is shown for the selected variant alone. */
+body:not([data-v="forest"]) .forest-only, body[data-v="forest"] .fors-only { display: none !important; }
 /* the versions, at the bottom: v1 (the old page, at /v1/), v2 (this page), v3? (a tip asking for feedback) */
 .versions { display: flex; gap: 0.4rem; font-size: 0.85rem; }
 .ver { border: 1px solid var(--tree); border-radius: 6px; padding: 0.05rem 0.55rem; line-height: 1.5; color: var(--muted); }
@@ -184,7 +187,7 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .thr .cmp thead tr:first-child th { padding-bottom: 0; }
 .tables p { margin: 0 0 0.6rem; }
 
-/* The three toggles of the scheme: segmented buttons */
+/* The four toggles of the scheme: segmented buttons */
 .toggles { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.4rem 0.8rem; align-items: center; margin: 0 0 1rem; font-size: 0.99rem; }
 .toggles .sl { color: var(--muted); }
 .seg { display: inline-flex; flex-wrap: wrap; justify-self: start; border: 1px solid var(--tree); border-radius: 7px; overflow: hidden; }
@@ -287,7 +290,7 @@ footer a + a { margin-left: 1.25rem; }
 .sphinx .dim { fill: currentColor; fill-opacity: 0.035; }        /* a pushed stone sits in the shade of the hole */
 .sphinx .cast { fill: none; stroke: currentColor; stroke-opacity: 0.16; stroke-linejoin: round; filter: url(#sphinx-soft); }
 .sphinx .rim { fill: none; stroke: currentColor; stroke-opacity: 0.2; stroke-width: 0.9; stroke-linejoin: round; }
-/* the face of a pushed stone is the stone itself: its piece of the image, in the accent colour */
+/* the face of a pushed stone is the stone itself: its piece of the image, in the ink colour */
 .sphinx .faces { opacity: 0.3; filter: url(#sphinx-ink); }
 /* Narrow screens: the sphinx has its own band under the title, standing on its own line */
 .sphinx-line.inflow { position: relative; left: auto; top: auto; width: 100%; max-width: 33rem; height: auto; z-index: 0; margin: 1.3rem 0 0; border-bottom: 1px solid var(--rule); }
@@ -299,7 +302,7 @@ footer a + a { margin-left: 1.25rem; }
 }
 </style>
 </head>
-<body>
+<body data-v="forest">
 <main>
 
 <div class="page">
@@ -309,21 +312,22 @@ footer a + a { margin-left: 1.25rem; }
     </header>
     <div class="params">
       <div class="toggles" id="toggles">
-        <span class="sl"><span id="tl-h">Lifetime</span><span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="How many signatures can be made, at ≥ 127 bits of security in the ROM. Security degrades gracefully beyond that.">i</span></span>
+        <span class="sl"><span id="tl-h">Lifetime</span><span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="How many signatures can be made, at ≥ 127 bits of security in the ROM, [proven in Lean 4](https://github.com/TomWambsgans/sphincs.art/tree/main/formal/sphincs). Security degrades gracefully beyond that.">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-h" data-key="h"><button type="button" role="radio" data-val="22" aria-label="2 to the 26">2<sup>26</sup></button><button type="button" role="radio" data-val="24" aria-label="2 to the 28">2<sup>28</sup></button><button type="button" role="radio" data-val="26" aria-label="2 to the 30">2<sup>30</sup></button><button type="button" role="radio" data-val="28" aria-label="2 to the 32">2<sup>32</sup></button></div>
         <span class="sl"><span id="tl-shape">Mode</span><span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="# Pruning&#10;Use a single, large, XMSS layer. Weak devices only construct a subtree of 2ᵇ leaves, and use pseudorandom nodes for the rest, and signing grinds until its index lands in it (An idea from [conduition](https://conduition.io/cryptography/hypertree-pruning/)). Verifier algo is unaffected.&#10;&#10;The risk of reusing a seed under different pruning parameters is fixed by deriving a second seed as H(seed ‖ parameters).&#10;&#10;Privacy: one can select the leaf indexes of the non-pruned FTS at (pseudo)random, but signing a lot will always eventually leak the pruning size. Partial remediation: keep a semi-trusted state S of the previously signed FTS, and when grinding lands on a FTS of S, accept it only with probability 2ᵇ⁻ʰ, so that FTS repeat exactly as often as with a full tree. This essentially gives 2ᵇ⁻¹ signatures with no privacy leak. The state is semi-trusted, because an adversary controlling it can: leak the pruning size, and reduce the lifetime by a factor of 2, but nothing worse.&#10;&#10;# Uniform&#10;Standard signing (the randomizer selects a random FTS among the 2ʰ possible ones).">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-shape" data-key="shape"><button type="button" role="radio" data-val="pruned">Pruning</button><button type="button" role="radio" data-val="layered">Uniform</button></div>
         <span class="sl" id="tl-hash">Hash</span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-hash" data-key="hash"><button type="button" role="radio" data-val="BLAKE2s">BLAKE2s</button><button type="button" role="radio" data-val="SHA-256">SHA-256</button><button type="button" role="radio" data-val="Keccak-256">Keccak-256</button></div>
+        <span class="sl"><span id="tl-v">FTS variant</span><span class="info w dn" id="v-tip" tabindex="0" role="button" aria-label="More information" data-tip="">i</span></span>
+        <div class="seg" role="radiogroup" aria-labelledby="tl-v" data-key="v"><button type="button" role="radio" data-val="forest">WOTS forest</button><button type="button" role="radio" data-val="fors">FORS</button></div>
       </div>
       <div class="scroll">
       <table>
         <tbody>
           <tr><th><i>h</i></th><td data-f="h">&hellip;</td></tr>
-          <tr><th><i>k</i></th><td>8</td></tr>
-          <tr><th><i>a</i></th><td>4 + 3</td></tr>
+          <tr><th><i>k</i></th><td data-f="k">&hellip;</td></tr>
+          <tr><th><i>a</i></th><td data-f="a">&hellip;</td></tr>
           <tr><th>OTS</th><td>WOTS+C<span class="info" tabindex="0" role="button" aria-label="More information" data-tip="v = 64 chains of length w = 4,&#10;target sum T = 128">i</span></td></tr>
-          <tr><th>FTS</th><td class="two">WOTS forest<span class="info" tabindex="0" role="button" aria-label="More information" data-tip="8 trees of height 4. Each leaf is H(R₀, R₁),&#10;the roots of two subtrees of height 3&#10;over WOTS keys of 6 chains of length 5,&#10;with target sum 5&#10;(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))">i</span></td></tr>
         </tbody>
         <tbody class="out">
           <tr><th>Size</th><td data-f="size">&hellip;</td></tr>
@@ -895,7 +899,7 @@ footer a + a { margin-left: 1.25rem; }
 
       <h2>Threshold, <i>t</i>-of-(2<i>t</i>&nbsp;&minus;&nbsp;1)</h2>
       <div class="thr-pair">
-      <p class="lead">As in <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>, the secret values are XOR-encrypted under a context-aware threshold PRF. Unlike PRAWNS, key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick an instance at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate its forest<span data-shape="layered" hidden> and the trees of the lower layers</span> (an idea from <a href="https://www.riva.xyz/">Riva Labs</a>). Online: they grind the randomizer in the clear onto it (about 2<sup><i>h</i></sup> hashes), and open via the context-aware threshold PRF only the forest chain values the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort). Key generation and preprocessing need all 2<i>t</i>&nbsp;&minus;&nbsp;1 operators online; signing needs only <i>t</i>.</p>
+      <p class="lead">As in <a href="https://eprint.iacr.org/2026/2142">PRAWNS</a>, the secret values are XOR-encrypted under a context-aware threshold PRF. Unlike PRAWNS, key generation is an honest-majority MPC among the 2<i>t</i>&nbsp;&minus;&nbsp;1 operators, with no trusted dealer (i.e. it's DKG). It builds only <span data-shape="pruned">the kept subtree of the XMSS tree and the pseudorandom surrogate nodes above it.</span><span data-shape="layered" hidden>the top XMSS layer.</span> Preprocessing, before a message: the operators pick an instance at random<span data-shape="pruned"> in the kept subtree</span> and MPC-generate its <span class="forest-only">WOTS forest</span><span class="fors-only">FORS instance</span><span data-shape="layered" hidden> and the trees of the lower layers</span> (an idea from <a href="https://www.riva.xyz/">Riva Labs</a>). Online: they grind the randomizer in the clear onto it (about 2<sup><i>h</i></sup> hashes), and open via the context-aware threshold PRF only the <span class="forest-only">forest chain values</span><span class="fors-only"><i>k</i> FORS secrets</span> the message selects. Secure against <i>t</i>&nbsp;&minus;&nbsp;1 malicious operators (with abort). Key generation and preprocessing need all 2<i>t</i>&nbsp;&minus;&nbsp;1 operators online; signing needs only <i>t</i>.</p>
       <div class="thr">
         <p class="bn" data-f="th-life">&nbsp;</p>
         <div class="scroll">
@@ -991,18 +995,28 @@ footer a + a { margin-left: 1.25rem; }
 </script>
 <script>
 // The figures: every number comes from data.json (python3 scripts/scheme.py --json > site/data.json),
-// for the configuration chosen with the three toggles (height, shape, hash).
+// for the configuration chosen with the four toggles (height, shape, hash, FTS variant).
 (function () {
-  var S = { h: 26, shape: 'layered', hash: 'Keccak-256' }, D = null, KEY = 'leanSphincs.config';
+  var S = { h: 26, shape: 'layered', hash: 'Keccak-256', v: 'forest' }, D = null, KEY = 'leanSphincs.config';
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (saved) ['h', 'shape', 'hash'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
+    if (saved) ['h', 'shape', 'hash', 'v'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
+    if (S.v !== 'forest' && S.v !== 'fors') S.v = 'forest';
   } catch (e) {}
   // the devices: hashes per second for each hash, from data.json (rates[device][hash])
   function rate(dev) { return D.rates[dev][S.hash]; }
   // an (i) with its tip (cls: more classes)
   function info(tip, cls) { return '<span class="info' + (cls || '') + '" tabindex="0" role="button" aria-label="More information" data-tip="' + tip + '">i</span>'; }
+  var NOTE = 'https://github.com/TomWambsgans/sphincs.art/releases/download/doc-latest/leanSPHINCS.pdf';
   var LIFE_TIP = '127 bits of security (ROM), [proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/main/formal/sphincs)';
+  // the two FTS, for the tip of the FTS variant
+  var FOREST_TIP = '# WOTS forest\n8 trees of height 4. Each leaf hashes\nthe top nodes of two subtrees of height 3\nover WOTS keys of 6 chains of length 5,\nwith target sum 5 ([paragraph 4](' + NOTE + '#page=8))\n(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))';
+  function forsTip(v) {
+    return '# FORS\nk = ' + v.k + ' trees of height a = ' + v.a;
+  }
+  function isForest() { return S.v === 'forest'; }
+  // a figure that depends on the variant: the selected variant's value
+  function vs(a, b) { return isForest() ? b : a; }
 
   // a cost: two significant digits, rounded up, with K, M, B
   function fmt(x) {
@@ -1011,12 +1025,12 @@ footer a + a { margin-left: 1.25rem; }
     for (var i = 0; i < u.length; i++) if (x >= u[i][0]) return x / u[i][0] + u[i][1];
     return String(x);
   }
-  // a lifetime, rounded down to one significant digit (100K, 20M, 1B): never above what is proved
-  function lifeOf(c) { return life1(c.lifetime); }
+  // a lifetime: the limit proved in Lean, to two significant digits rounded down (150K, 31M, 1.4B)
+  function lifeOf(c) { return life1(isForest() ? c.lifetime : c.fors.lifetime); }
   function life1(n) {
-    var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(n)));
-    n = Math.floor(n / q) * q;
-    for (var i = 0; i < u.length; i++) if (n >= u[i][0]) return (n / u[i][0]) + u[i][1];
+    var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(n)) - 1);
+    n = q >= 1 ? Math.floor(n / q + 1e-9) * q : Math.floor(n);
+    for (var i = 0; i < u.length; i++) if (n >= u[i][0]) return Number((n / u[i][0]).toPrecision(2)) + u[i][1];
     return String(n);
   }
   // a rate: three significant digits, rounded down (32.6K, 5.8K)
@@ -1066,7 +1080,8 @@ footer a + a { margin-left: 1.25rem; }
   function split(c) { return c.layers.join(' + '); }
 
   function render() {
-    var W = D.wallet, main = cfg(S.shape), lay = cfg('layered');
+    var W = D.wallet, main = cfg(S.shape), lay = cfg('layered'), V = main.fors;
+    document.body.dataset.v = S.v;
 
     // the toggles
     [].forEach.call(document.querySelectorAll('.seg'), function (g) {
@@ -1079,8 +1094,10 @@ footer a + a { margin-left: 1.25rem; }
 
     // the parameter table
     set('h', S.shape === 'layered' ? split(main) : String(main.h));
-    set('size', comma(main.size) + ' bytes');
-    set('verify', comma(main.verify) + ' ' + unit());
+    set('k', vs(String(V.k), '8'));
+    set('a', vs(String(V.a), '4 + 3'));
+    set('size', vs(comma(V.size), comma(main.size)) + ' bytes');
+    set('verify', vs(comma(V.verify), comma(main.verify)) + ' ' + unit());
     set('dia-h', String(S.h));
 
     [].forEach.call(document.querySelectorAll('[data-shape]'), function (e) { e.hidden = e.dataset.shape !== S.shape; });
@@ -1099,13 +1116,14 @@ footer a + a { margin-left: 1.25rem; }
       return 'Offline: the Ledger prepares ' + np + ' FTS and their ' + (lay_ ? 'hypertree' : 'authentication') + ' paths once (' + fmt(tt.ledger_prep * np) + ' ' + unit() +
         '), then one per signature in idle time. ' +
         'Online: the host finds the randomizer that lands on one of them (≈ ' + pow2t(Math.log2(g)) + ' hashes) and proves it in a STARK (≈ ' +
-        time(g / W.host_rate) + '), which the Ledger verifies (optimistically ≈ ' + time(W.stark_verify_s) + ' after a Ledger OS update; [benchmark](https://github.com/TomWambsgans/hardware-wallet-benchmark)), then opens the FTS chain values itself. Idea from [Riva Labs](https://www.riva.xyz/).';
+        time(g / W.host_rate) + '), which the Ledger verifies (optimistically ≈ ' + time(W.stark_verify_s) + ' after a Ledger OS update; [benchmark](https://github.com/TomWambsgans/hardware-wallet-benchmark)), then opens the ' + (isForest() ? 'forest chain values' : 'FORS secrets') + ' itself. Idea from [Riva Labs](https://www.riva.xyz/).';
     };
     // the layered key has the same lifetime on every device: one cell for all
-    [].forEach.call(document.querySelectorAll('.life-tip'), function (e) { e.setAttribute('data-tip', LIFE_TIP); });
+    var lifeTip = LIFE_TIP;
+    [].forEach.call(document.querySelectorAll('.life-tip'), function (e) { e.setAttribute('data-tip', lifeTip); });
     document.querySelector('[data-f="life-0"]').closest('tr').classList.toggle('gone', lay_);
     document.querySelector('[data-f="life-all"]').closest('tr').classList.toggle('gone', !lay_);
-    set('life-all', '<div>' + lifeOf(lay) + ' signatures<span class="m-only">' + info(LIFE_TIP) + '</span></div>');
+    set('life-all', '<div>' + lifeOf(lay) + ' signatures<span class="m-only">' + info(lifeTip) + '</span></div>');
     set('life-same-1', '<div>' + lifeOf(lay) + ' signatures</div>'); set('life-same-2', '<div>' + lifeOf(lay) + ' signatures</div>');
     devs.forEach(function (d, k) {
       var c = lay_ ? lay : cfg('pruned', d.b), what;
@@ -1117,16 +1135,19 @@ footer a + a { margin-left: 1.25rem; }
       else if (c.b === c.h) what = 'full tree of height ' + c.h;
       else what = 'subtree of height ' + c.b;
       var t = function (n, r) { return '<span class="ex">' + time(n / (r || d.rate)) + '</span>'; };
-      set('life-' + k, '<div>' + lifeOf(c) + ' signatures<span class="m-only">' + info(LIFE_TIP) + '</span>' +
+      set('life-' + k, '<div>' + lifeOf(c) + ' signatures<span class="m-only">' + info(lifeTip) + '</span>' +
         (what ? ' <span class="note">(' + what + ')</span>' : '') + '</div>');
       set('keygen-' + k, '<div class="hd"><span>' + fmt(c.keygen) + '&nbsp;' + unit() + '</span>' + t(c.keygen) + '</div>');
-      set('sign-' + k, '<div class="hd"><span>' + fmt(c.sign[d.kib]) + '&nbsp;' + unit() + ' <span class="note">(' + d.cache + ' cache)</span></span>' + t(c.sign[d.kib]) + '</div>');
+      var sv = c.fors.sign[d.kib], sn = isForest() ? c.sign[d.kib] : sv;
+      set('sign-' + k, '<div class="hd"><span>' + vs(fmt(sv), fmt(c.sign[d.kib])) + '&nbsp;' + unit() + ' <span class="note">(' + d.cache + ' cache)</span></span>' + t(sn) + '</div>');
       if (!d.host) return;
       // the Ledger can also sign with the host: offline, it prepares FTS; online, the host grinds and proves it in a STARK
       // shown only when it beats signing alone
       // online: the host grinds and proves, the Ledger verifies the STARK and opens the chain values itself (whole seconds)
-      var tt = lay_ ? thr('layered') : thr('pruned', d.b), online = g / W.host_rate + W.stark_verify_s + tt.device_online / d.rate;
-      document.querySelector('[data-f="assist-' + k + '"]').closest('tr').classList.toggle('gone', online >= c.sign[d.kib] / d.rate);
+      var tt = lay_ ? thr('layered') : thr('pruned', d.b);
+      if (!isForest()) tt = Object.assign({}, tt, tt.fors);
+      var online = g / W.host_rate + W.stark_verify_s + tt.device_online / d.rate;
+      document.querySelector('[data-f="assist-' + k + '"]').closest('tr').classList.toggle('gone', online >= sn / d.rate);
       set('assist-' + k, '<div>Offline: <span class="ex">' + time(tt.ledger_prep * np / d.rate) + '</span>&emsp;<span class="nw">Online: <span class="ex">&asymp;&thinsp;' +
         (online >= 1 ? Math.round(online) + '&nbsp;s' : time(online)) + '</span><span class="m-only">' + info(assist(tt), ' w') + '</span></span></div>');
       document.getElementById('assist-tip').setAttribute('data-tip', assist(tt).replace(/&nbsp;/g, '\u00a0'));
@@ -1139,13 +1160,21 @@ footer a + a { margin-left: 1.25rem; }
     var ROUNDS = '<th>Rounds' + info('One communication round per layer of AND gates&#10;(' + comma(th.and_depth) + ' per ' + (keccak() ? 'Keccak-f permutation' : S.hash + ' compression') + '), for 2-of-3&#10;(twice as many from 3-of-5 on, through a collector)') + '</th>';
     // with pruning, the Ledger's subtree; the layered key needs no sentence
     set('th-life', lay_ ? '' : 'We recommend the same pruning as on the Ledger, i.e. a kept subtree of height ' + devs[0].b + ', for a lifetime of ' +
-      life1(th.lifetime) + ' signatures:');
+      life1(isForest() ? th.lifetime : th.fors.lifetime) + ' signatures:');
     document.querySelector('[data-f="th-life"]').hidden = lay_;
-    set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + bytes(th.prep_mb / 1000) + '</td></tr>' +
-      '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + comma(th.prep_rounds) + '</td></tr>');
+    set('th-traffic', '<tr>' + MPC + '<td>' + bytes(th.keygen_gb) + '</td><td>' + vs(bytes(th.fors.prep_mb / 1000), bytes(th.prep_mb / 1000)) + '</td></tr>' +
+      '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + vs(comma(th.fors.prep_rounds), comma(th.prep_rounds)) + '</td></tr>');
+
+    // what the forest changes, against the FORS figures of the same configuration (gains rounded down, losses up)
+    document.getElementById('v-tip').setAttribute('data-tip', forsTip(V) + '\n\n' + FOREST_TIP + '\n\n' +
+      'The WOTS forest, against FORS:\n' +
+      '+ ' + Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures\n' +
+      '+ ' + Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification\n' +
+      '− novel\n' +
+      '− ' + String(Math.ceil(10 * th.prep / th.fors.prep - 1e-9) / 10) + '× slower threshold signing');
 
     // the diagram: one pruned tree, or the layers
-    if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers);
+    if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers, S.v, V.k, V.a);
 
     window.dispatchEvent(new Event('resize'));   // the sphinx finds its place again
   }
@@ -1155,6 +1184,7 @@ footer a + a { margin-left: 1.25rem; }
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
     render();
   }
+
   [].forEach.call(document.querySelectorAll('.seg'), function (g) {
     var bs = [].slice.call(g.querySelectorAll('button'));
     g.addEventListener('click', function (e) {
@@ -1178,7 +1208,7 @@ footer a + a { margin-left: 1.25rem; }
   }).then(function (d) {
     D = d;
     // a saved choice that the data no longer has falls back to the default
-    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256' }; }
+    try { cfg(S.shape); } catch (e) { S = { h: 24, shape: 'pruned', hash: 'Keccak-256', v: 'forest' }; }
     render();
   }).catch(function (e) {
     console.error(e);
@@ -1196,7 +1226,7 @@ footer a + a { margin-left: 1.25rem; }
   var NS = 'http://www.w3.org/2000/svg', X = 237.2, TIP = 239;   // the column of the path, the tip of the forest brace
   var pruned = svg.querySelector('.xmss.pruned'), layered = svg.querySelector('.xmss.layered');
   var motion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var shown = 'pruned', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
+  var shown = 'pruned', shownV = 'forest', geo = null;          // geo: the layers as drawn, top first (null for a pruned key)
 
   function el(name, attrs, parent) {
     var e = document.createElementNS(NS, name);
@@ -1323,7 +1353,9 @@ footer a + a { margin-left: 1.25rem; }
   var SY = [317, 327, 334, 340], SO = 5, SD = 11.5;        // a subtree: the same, and its offset from the tree
   var KI = 7, KS = 17, KP = 13, KT = 370, KX;             // the key: its subtree, chain and position spacing, top
   var WT = LEAF + 7;                                      // the top of the small WOTS+C key that signs the forest
+  var VN = 4, VY = [258, 281, 301, 317, 330, 340, 348, 354], VO = 20;   // FORS: the trees drawn; a tree's levels, root first, and its first offset
   function tc(i) { return FX + (i - 3.5) * FS; }
+  function vc(i) { return FX + (i - (VN - 1) / 2) * 88 + (i < VN / 2 ? -6 : 6); }   // a FORS tree, around the dots
   function sc(j) { return tc(j >> 1) + (j & 1 ? SD : -SD); }
   KX = sc(KI);
   function edges(g, cx, ys, o) {                          // every edge of a tree
@@ -1353,36 +1385,57 @@ footer a + a { margin-left: 1.25rem; }
       for (var m = 0; m < 4; m++) el('circle', { cx: n1(X + (c - 3.5) * 6), cy: WT + 4 * m, r: 1.1 }, wd);
     }
     el('text', { x: n1(X + 30), y: WT + 11, 'class': 'lb' }, fts).textContent = 'WOTS+C';
-    var g = el('g', { 'class': 'tree' }, fts);
+    fts.won = el('g', { 'class': 'on' }, fts);            // the encoding of that key, in both variants
+    var fg = el('g', { 'class': 'forest-only' }, fts);         // the forest
+    var g = el('g', { 'class': 'tree' }, fg);
     for (var i = 0; i < 8; i++) edges(g, tc(i), TY, TO);
     for (var j = 0; j < 16; j++) edges(g, sc(j), SY, SO);
     el('path', { 'class': 'brace', d: 'M' + n1(KX - kw) + ',' + kb + ' Q' + n1(KX - kw) + ',' + (kb - 7) + ' ' + n1(KX - kw + 7) + ',' + (kb - 7) +
       ' L' + n1(KX - 7) + ',' + (kb - 7) + ' Q' + n1(KX) + ',' + (kb - 7) + ' ' + n1(KX) + ',' + (kb - 14) + ' Q' + n1(KX) + ',' + (kb - 7) + ' ' + n1(KX + 7) + ',' + (kb - 7) +
-      ' L' + n1(KX + kw - 7) + ',' + (kb - 7) + ' Q' + n1(KX + kw) + ',' + (kb - 7) + ' ' + n1(KX + kw) + ',' + kb }, fts);
-    var ch = el('g', { 'class': 'chain' }, fts);
+      ' L' + n1(KX + kw - 7) + ',' + (kb - 7) + ' Q' + n1(KX + kw) + ',' + (kb - 7) + ' ' + n1(KX + kw) + ',' + kb }, fg);
+    var ch = el('g', { 'class': 'chain' }, fg);
     for (j = 0; j < 6; j++) el('line', { x1: n1(KX + (j - 2.5) * KS), y1: KT, x2: n1(KX + (j - 2.5) * KS), y2: KT + 4 * KP }, ch);
     // the measures: the heights on the left, the key's w and ℓ around it
-    var m = el('g', { 'class': 'tree' }, fts), lx = x0 - 2 * TO - 10;
+    var m = el('g', { 'class': 'tree' }, fg), lx = x0 - 2 * TO - 10;
     bar(m, lx, TY[0], TY[4]); bar(m, lx, SY[0], SY[3]);
-    el('text', { x: n1(lx - 8), y: n1((TY[0] + TY[4]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fts).textContent = '4';
-    el('text', { x: n1(lx - 8), y: n1((SY[0] + SY[3]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fts).textContent = '3';
-    var nm = el('text', { x: n1(x1 + 2 * TO + 14), y: n1((TY[0] + SY[3]) / 2 - 3), 'class': 'nm' }, fts);
+    el('text', { x: n1(lx - 8), y: n1((TY[0] + TY[4]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fg).textContent = '4';
+    el('text', { x: n1(lx - 8), y: n1((SY[0] + SY[3]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fg).textContent = '3';
+    var nm = el('text', { x: n1(x1 + 2 * TO + 14), y: n1((TY[0] + SY[3]) / 2 - 3), 'class': 'nm' }, fg);
     el('tspan', {}, nm).textContent = 'WOTS';
     el('tspan', { x: n1(x1 + 2 * TO + 14), dy: '1.2em' }, nm).textContent = 'forest';
     bar(m, KX - kw - 10, KT, KT + 4 * KP);
-    var t = el('text', { x: n1(KX - kw - 20), y: n1(KT + 2 * KP + 5), 'class': 'pv', 'text-anchor': 'end' }, fts);
+    var t = el('text', { x: n1(KX - kw - 20), y: n1(KT + 2 * KP + 5), 'class': 'pv', 'text-anchor': 'end' }, fg);
     el('tspan', { 'class': 'it' }, t).textContent = 'w'; t.appendChild(document.createTextNode(' = 5'));
     var yl = KT + 4 * KP + 14;
     el('line', { x1: n1(KX - kw), y1: yl, x2: n1(KX + kw), y2: yl }, m);
     el('line', { x1: n1(KX - kw), y1: yl - 4, x2: n1(KX - kw), y2: yl + 4 }, m);
     el('line', { x1: n1(KX + kw), y1: yl - 4, x2: n1(KX + kw), y2: yl + 4 }, m);
-    t = el('text', { x: n1(KX), y: yl + 22, 'class': 'pv', 'text-anchor': 'middle' }, fts);
+    t = el('text', { x: n1(KX), y: yl + 22, 'class': 'pv', 'text-anchor': 'middle' }, fg);
     el('tspan', { 'class': 'it' }, t).textContent = 'ℓ'; t.appendChild(document.createTextNode(' = 6'));
     // what each signature picks
-    fts.conn = el('g', { 'class': 'conn' }, fts);
-    fts.paths = el('g', {}, fts);
-    fts.dot = el('g', { 'class': 'dot' }, fts);
-    fts.on = el('g', { 'class': 'on' }, fts);
+    fts.conn = el('g', { 'class': 'conn' }, fg);
+    fts.paths = el('g', {}, fg);
+    fts.dot = el('g', { 'class': 'dot' }, fg);
+    fts.on = el('g', { 'class': 'on' }, fg);
+    // FORS: 4 of its k trees, the dots between the two pairs standing for the others; the opened leaf
+    // of each and its path, up to the two nodes below the root, which the WOTS+C key signs
+    var vg = el('g', { 'class': 'fors-only' }, fts), vt = el('g', { 'class': 'tree' }, vg);
+    for (i = 0; i < VN; i++) edges(vt, vc(i), VY, VO);
+    el('text', { x: FX, y: VY[4] + 5, 'class': 'pv', 'text-anchor': 'middle' }, vg).textContent = '…';
+    var vm = el('g', { 'class': 'tree' }, vg), vl = vc(0) - 2 * VO - 10, vx = vc(VN - 1) + 2 * VO, vb = VY[VY.length - 1] + 14;
+    bar(vm, vl, VY[0], VY[VY.length - 1]);
+    t = el('text', { x: n1(vl - 8), y: n1((VY[0] + VY[VY.length - 1]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, vg);
+    el('tspan', { 'class': 'it' }, t).textContent = 'a'; t.appendChild(document.createTextNode(' = '));
+    fts.va = el('tspan', {}, t);
+    el('line', { x1: n1(vc(0) - 2 * VO), y1: vb, x2: n1(vx), y2: vb }, vm);
+    el('line', { x1: n1(vc(0) - 2 * VO), y1: vb - 4, x2: n1(vc(0) - 2 * VO), y2: vb + 4 }, vm);
+    el('line', { x1: n1(vx), y1: vb - 4, x2: n1(vx), y2: vb + 4 }, vm);
+    t = el('text', { x: FX, y: vb + 22, 'class': 'pv', 'text-anchor': 'middle' }, vg);
+    el('tspan', { 'class': 'it' }, t).textContent = 'k'; t.appendChild(document.createTextNode(' = '));
+    fts.vk = el('tspan', {}, t);
+    el('text', { x: n1(vx + 14), y: n1((VY[0] + VY[VY.length - 1]) / 2 + 5), 'class': 'nm' }, vg).textContent = 'FORS';
+    fts.vpaths = el('g', {}, vg);
+    fts.von = el('g', { 'class': 'on' }, vg);
   })();
   // The drawing is taller than the text beside it: on a wide screen the figure grows in height so that the drawing
   // keeps the width it would have in the height of the text. The same height for every configuration.
@@ -1416,10 +1469,10 @@ footer a + a { margin-left: 1.25rem; }
     var link = pruned.querySelector('line.conn');   // from the leaf to its WOTS+C key
     link.setAttribute('x1', n1(pp[pl][0])); link.setAttribute('y1', n1(pp[pl][1])); link.setAttribute('x2', X); link.setAttribute('y2', WT - 1);
     // the forest: the path to a leaf of each tree, and to a leaf of each of the two subtrees under it
-    clear(fts.conn); clear(fts.paths); clear(fts.dot); clear(fts.on);
+    clear(fts.conn); clear(fts.paths); clear(fts.dot); clear(fts.on); clear(fts.won); clear(fts.vpaths); clear(fts.von);
     forest = { trees: [], subs: [], key: [], wc: [] };
     wotsc().forEach(function (p, j) {
-      el('circle', { cx: n1(X + (j - 3.5) * 6), cy: WT + 4 * p, r: 1.9 }, fts.on);
+      el('circle', { cx: n1(X + (j - 3.5) * 6), cy: WT + 4 * p, r: 1.9 }, fts.won);
       forest.wc.push([X + (j - 3.5) * 6, WT + 4 * p]);
     });
     for (var i = 0; i < 8; i++) forest.trees.push(walk(tc(i), TY, TO));
@@ -1441,24 +1494,37 @@ footer a + a { margin-left: 1.25rem; }
       el('circle', { cx: n1(cx), cy: KT + KP * p, r: 2.7 }, fts.on);
       forest.key.push([cx, KT + KP * p]);
     });
+    // FORS: the path from the opened leaf of each tree drawn
+    fors = [];
+    for (i = 0; i < VN; i++) {
+      var ft = walk(vc(i), VY, VO);
+      fors.push(ft);
+      el('polyline', { points: pts(ft), 'class': 'path thin' }, fts.vpaths);
+      ft.forEach(function (q, j) { el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: j ? 1.6 : 2.1 }, fts.von); });
+    }
     if (cur && cur.shape === 'layered') geo = drawLayered(cur.layers, cur.h);
   }
+  var fors = null;
   pick();
 
-  window.sigDiagram = function (h, shape, layers) {
+  window.sigDiagram = function (h, shape, layers, v, k, a) {
     cur = { h: h, shape: shape, layers: layers };
-    var want = shape === 'layered' ? 'layered ' + layers.join('+') : 'pruned';
-    if (want === shown) return;
-    shown = want;
-    if (shape === 'layered') {
-      geo = drawLayered(layers, h);
-      layered.removeAttribute('display'); pruned.setAttribute('display', 'none');
-    } else {
-      geo = null;
-      while (layered.firstChild) layered.removeChild(layered.firstChild);
-      pruned.removeAttribute('display'); layered.setAttribute('display', 'none');
+    fts.vk.textContent = String(k); fts.va.textContent = String(a);
+    var tree = shape === 'layered' ? 'layered ' + layers.join('+') : 'pruned';
+    if (tree === shown && v === shownV) return;
+    var redraw = tree !== shown;
+    shown = tree; shownV = v;
+    if (redraw) {
+      if (shape === 'layered') {
+        geo = drawLayered(layers, h);
+        layered.removeAttribute('display'); pruned.setAttribute('display', 'none');
+      } else {
+        geo = null;
+        while (layered.firstChild) layered.removeChild(layered.firstChild);
+        pruned.removeAttribute('display'); layered.setAttribute('display', 'none');
+      }
+      fit();
     }
-    fit();
     if (motion) build();
   };
   if (!motion) return;
@@ -1482,16 +1548,20 @@ footer a + a { margin-left: 1.25rem; }
     // the forest: the key's chains to their ends, which hash into its subtree leaf; each subtree up to its root,
     // which with its sibling hashes into the opened leaf of its tree; each tree up to its root; the 8 roots into
     // the bottom leaf of the hypertree
-    var fo = forest, ks = fo.subs[KI][3];
-    stage(700, fo.key.map(function (c) { return [c, [c[0], KT]]; }), true, 2.2);
-    stage(300, fo.key.map(function (c) { return [[c[0], KT], [KX, KT - 21]]; }), false, 1.8);
-    stage(200, [[[KX, KT - 21], ks]], true, 1.8, 'conn');   // the link appears, in grey
-    stage(600, fo.subs.map(function (q) { return q.slice().reverse(); }), true, 1.6, 'thin');
-    stage(300, fo.subs.map(function (q, i) { return [q[0], fo.trees[i >> 1][4]]; }), true, 1.6, 'conn');   // the link appears, in grey
-    stage(750, fo.trees.map(function (q) { return q.slice().reverse(); }), true, 2, 'thin');
+    // FORS: each opened leaf up its tree
+    var fo = forest, ks = fo.subs[KI][3], tops = fors;
+    if (document.body.dataset.v === 'forest') {
+      stage(700, fo.key.map(function (c) { return [c, [c[0], KT]]; }), true, 2.2);
+      stage(300, fo.key.map(function (c) { return [[c[0], KT], [KX, KT - 21]]; }), false, 1.8);
+      stage(200, [[[KX, KT - 21], ks]], true, 1.8, 'conn');   // the link appears, in grey
+      stage(600, fo.subs.map(function (q) { return q.slice().reverse(); }), true, 1.6, 'thin');
+      stage(300, fo.subs.map(function (q, i) { return [q[0], fo.trees[i >> 1][4]]; }), true, 1.6, 'conn');   // the link appears, in grey
+      tops = fo.trees;
+    }
+    stage(750, tops.map(function (q) { return q.slice().reverse(); }), true, 2, 'thin');
     // the 8 roots into the WOTS+C key of the bottom leaf: its chains to their ends, which hash into that leaf
     function up(leaf) {
-      stage(450, fo.trees.map(function (q) { return [q[0], [X, TIP]]; }), false, 2);
+      stage(450, tops.map(function (q) { return [q[0], [X, TIP]]; }), false, 2);
       stage(300, fo.wc.map(function (c) { return [[X, TIP], c]; }), false, 1.4);
       stage(400, fo.wc.map(function (c) { return [c, [c[0], WT]]; }), true, 1.6);
       stage(300, fo.wc.map(function (c) { return [[c[0], WT], leaf]; }), false, 1.6);
@@ -1570,25 +1640,30 @@ footer a + a { margin-left: 1.25rem; }
   // The sphinx sits on the line, in the widest free place: it never overlaps the text or the diagram.
   var line = document.querySelector('.sphinx-line'), box = document.querySelector('.sphinx'), ratio = D.w / D.h;
   function obstacles() {
-    var out = [];
-    // the title, the toggles and the parameter table: what is written in each cell, not the cell
-    [].forEach.call(document.querySelectorAll('.titlerow, .toggles .sl, .toggles .seg'), function (e) {
-      var r = e.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) out.push(r);
+    var out = [], keep = document.body.dataset.v;
+    // in both variants, so that the sphinx does not move when switching
+    ['fors', 'forest'].forEach(function (v) {
+      document.body.dataset.v = v;
+      // the title, the toggles and the parameter table: what is written in each cell, not the cell
+      [].forEach.call(document.querySelectorAll('.titlerow, .toggles .sl, .toggles .seg'), function (e) {
+        var r = e.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) out.push(r);
+      });
+      [].forEach.call(document.querySelectorAll('.params th, .params td'), function (e) {
+        var rg = document.createRange(); rg.selectNodeContents(e);
+        var r = rg.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) out.push(r);
+      });
+      // the diagram: what is drawn, kept to the frame of its viewBox
+      var fs = document.querySelector('figure svg'), f = fs.getBoundingClientRect(), vb = fs.viewBox.baseVal;
+      var visLeft = f.right - vb.width * Math.min(f.width / vb.width, f.height / vb.height);
+      [].forEach.call(fs.querySelectorAll(':scope > *:not(.anim):not(defs):not(title):not(.part), :scope > .part > *'), function (e) {
+        var r = e.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0 && r.right > visLeft)
+          out.push({ left: Math.max(r.left, visLeft), right: r.right, top: Math.max(r.top, f.top), bottom: Math.min(r.bottom, f.bottom) });
+      });
     });
-    [].forEach.call(document.querySelectorAll('.params th, .params td'), function (e) {
-      var rg = document.createRange(); rg.selectNodeContents(e);
-      var r = rg.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) out.push(r);
-    });
-    // the diagram: what is drawn, kept to the frame of its viewBox
-    var fs = document.querySelector('figure svg'), f = fs.getBoundingClientRect(), vb = fs.viewBox.baseVal;
-    var visLeft = f.right - vb.width * Math.min(f.width / vb.width, f.height / vb.height);
-    [].forEach.call(fs.querySelectorAll(':scope > *:not(.anim):not(defs):not(title):not(.part), :scope > .part > *'), function (e) {
-      var r = e.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0 && r.right > visLeft)
-        out.push({ left: Math.max(r.left, visLeft), right: r.right, top: Math.max(r.top, f.top), bottom: Math.min(r.bottom, f.bottom) });
-    });
+    document.body.dataset.v = keep;
     return out;
   }
   function place() {
