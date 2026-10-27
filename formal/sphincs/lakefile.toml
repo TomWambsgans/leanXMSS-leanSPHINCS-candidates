@@ -13,3 +13,9 @@ name = "LeanForest"
 roots = ["LeanForest", "LeanForest.Axioms"]
 # Every module carries the `[Params]` instance (the height, the layers, the kept subtree).
 leanOptions = { weak.linter.unusedSectionVars = false }
+
+[[lean_lib]]
+name = "LeanFors"
+# The vanilla variant: FORS instead of the forest. `LeanFors.lean` imports every module.
+roots = ["LeanFors", "LeanFors.Axioms"]
+leanOptions = { weak.linter.unusedSectionVars = false }
