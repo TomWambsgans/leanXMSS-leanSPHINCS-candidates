@@ -130,9 +130,9 @@ theorem small_pointwiseF (steps : Message → Randomness) (out : Run HashInput C
   rcases h with hg | ⟨hbad, outcome, hres, hvalid⟩
   · exact Or.inl (hpay (hit_of_correctGuess parameterOutput fixed highs remaining prepared known ρ out.2 T hTe hg))
   · rcases badA_split parameterOutput fixed highs remaining prepared hprepared known ρ out.2 hinv T hTe hfix
-      out.1.1 out.1.2.1 out.1.2.2.1 hbad with hp | ⟨index, c, sp, j, a, i, t, hrev, hrec⟩ | ⟨outcome', hres', hnear | hcov⟩
+      out.1.1 out.1.2.1 out.1.2.2.1 hbad with hp | ⟨index, c, sp, hrev, hrec⟩ | ⟨outcome', hres', hnear | hcov⟩
     · exact Or.inl hp
-    · exact Or.inr (Or.inl ⟨outcome, hres, hvalid, Or.inl ⟨index, c, sp, j, a, i, t, hrev, hrec⟩⟩)
+    · exact Or.inr (Or.inl ⟨outcome, hres, hvalid, Or.inl ⟨index, c, sp, hrev, hrec⟩⟩)
     · exact Or.inr (Or.inl ⟨outcome', hres', hnear.1, Or.inr hnear⟩)
     · by_cases hreal : Realized K.tg prepared.2 out.2
       · exact Or.inl (hpay (Or.inl hreal))
