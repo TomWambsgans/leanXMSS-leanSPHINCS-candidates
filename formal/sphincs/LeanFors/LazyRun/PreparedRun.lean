@@ -31,23 +31,27 @@ def CoverOf (out : Run HashInput Coordinate HiddenBridge.Outcome × State) : Pro
   ∃ outcome, out.1.1 = some outcome ∧
     HiddenBridge.ForestCover parameter data.root outcome out.1.2.1 out.2.cache
 
-theorem start_pinv (hclean : ∀ p, initial (pblk parameter data p) = none) (known : Knowledge Coordinate) :
-    PInv parameter data (DebtState.start initial known) [] := by
-  refine ⟨List.nodup_nil, fun p => ?_⟩
-  constructor
-  · intro h; cases h
-  · rintro ⟨u, hu, _⟩
-    change initial (pblk parameter data p) = some u at hu
-    rw [hclean p] at hu; cases hu
+theorem start_pinv (hclean : ∀ p call, initial (pblk parameter data p call) = none)
+    (known : Knowledge Coordinate) : PInv parameter data (DebtState.start initial known) [] := by
+  have hnone : ∀ p call, (DebtState.start initial known).cache (pblk parameter data p call) = none := by
+    intro p call
+    change initial (pblk parameter data p call) = none
+    exact hclean p call
+  have hnot : ∀ p, ¬LandedIn parameter data (DebtState.start initial known) p := by
+    rintro p ⟨u, hu, -⟩
+    rw [hnone p firstCall] at hu
+    cases hu
+  exact ⟨List.nodup_nil, fun p => ⟨fun h => absurd h (by simp), fun h => absurd h (hnot p)⟩,
+    fun p h => absurd h (hnot p), fun p _ call => hnone p call⟩
 
-theorem start_count (hclean : ∀ p, initial (pblk parameter data p) = none) (known : Knowledge Coordinate)
+theorem start_count (hclean : ∀ p call, initial (pblk parameter data p call) = none) (known : Knowledge Coordinate)
     (budget : ℕ) : CountInv parameter data budget (DebtState.start initial known) budget := by
   intro m
   have : cachedCount parameter data m (DebtState.start initial known) = 0 := by
     unfold cachedCount
     rw [Finset.card_eq_zero, Finset.filter_eq_empty_iff]
     intro ρ _ h
-    exact h (hclean (m, ρ))
+    exact h (hclean (m, ρ) firstCall)
   rw [this, zero_add]
 
 theorem start_prepared (known : Knowledge Coordinate) : Prepared initial (DebtState.start initial known) :=
@@ -499,7 +503,7 @@ theorem noQ_sequenceFin {bad : HashInput → Prop} [DecidablePred bad] {α : Typ
 
 theorem msg_not_graph (parameter : PublicParameter) (position : Position) (payload x : HashInput)
     (hx : IsMsgInput x) : x ≠ tweakableHashInput parameter position.domain payload := by
-  obtain ⟨p', payload', rfl⟩ := hx
+  obtain ⟨p', call', payload', rfl⟩ := hx
   intro heq
   have htag := congrArg TweakFields.tag (tweakableInput_injective heq).1
   cases position <;> simp [Position.domain, hashDomainFields, tweakFields, treeFields] at htag
