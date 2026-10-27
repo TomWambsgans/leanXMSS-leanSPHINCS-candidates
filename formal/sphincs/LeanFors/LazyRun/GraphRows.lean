@@ -54,7 +54,7 @@ theorem coordinates_input (address : Address) :
           canonicalGraphSlots, Position.domain, Position.children, chainLength, winternitzBits]
   | fleaf index κ leaf =>
       simp [input, Address.inputCoordinate, Address.position, coordinates, canonicalGraphInput,
-        canonicalGraphSlots, Position.domain, Position.children]
+        canonicalGraphSlots, Position.domain]
 
 attribute [local irreducible] canonicalGraphInput canonicalGraphSlots
 

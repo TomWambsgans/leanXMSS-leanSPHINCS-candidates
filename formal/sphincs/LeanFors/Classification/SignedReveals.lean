@@ -183,28 +183,24 @@ theorem rich_revealed (adversary : Adversary) (q : Nat) (parameter : PublicParam
   obtain ⟨⟨rfl, rfl⟩, rfl⟩ := heq
   simpa using hrev
 
-/-- A signed entry's forest chain values at and above its opened positions are revealed. -/
-theorem SignedRevealed.fchain_mem {parameter : PublicParameter} {data : PublicData}
+/-- A signed entry's FORS leaf coordinates (secret and leaf value) are revealed. -/
+theorem SignedRevealed.fors_mem {parameter : PublicParameter} {data : PublicData}
     {log : QueryLog SigningSpec} {reveals : List HiddenGraph.Coordinate}
     (h : SignedRevealed f parameter data log reveals) (entry : (t : SigningSpec.Domain) × SigningSpec.Range t)
-    (hentry : entry ∈ log) (signature : Signature) (hsig : entry.2 = some signature) (c : Coord) (j : SubIdx)
-    (ch : FChain) (k : FPos)
-    (hk : (GraphView.openedPos (digestLeaves (evalWithAnswerFn f (messageDigest parameter data.root entry.1
-      signature.randomness : OracleComp HashSpec MessageDigest)) c) j ch).val ≤ k.val) :
-    HiddenGraph.Coordinate.fchain
-      (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root entry.1 signature.randomness :
-        OracleComp HashSpec MessageDigest))) c
-      (digestLeaves (evalWithAnswerFn f (messageDigest parameter data.root entry.1 signature.randomness :
-        OracleComp HashSpec MessageDigest)) c).super j
-      ((digestLeaves (evalWithAnswerFn f (messageDigest parameter data.root entry.1 signature.randomness :
-        OracleComp HashSpec MessageDigest)) c).child j) ch k ∈ reveals := by
+    (hentry : entry ∈ log) (signature : Signature) (hsig : entry.2 = some signature) (κ : FTree)
+    (k : Fin 2) :
+    HiddenGraph.Coordinate.fors
+      (digestIndex (evalWithAnswerFn f (messageDigest parameter data.root entry.1
+        signature.randomness : OracleComp HashSpec MessageDigest))) κ
+      (digestLeaves (evalWithAnswerFn f (messageDigest parameter data.root entry.1
+        signature.randomness : OracleComp HashSpec MessageDigest)) κ) k ∈ reveals := by
   obtain ⟨⟨pair, hpair⟩, hsub⟩ := h entry hentry signature hsig
   apply hsub
   unfold revealsOf
   dsimp only
   rw [hpair]
-  refine List.mem_append_right _ (List.mem_flatten.mpr ⟨_, List.mem_ofFn.mpr ⟨c, rfl⟩, ?_⟩)
-  exact mem_treeReveals_of j ch k hk
+  refine List.mem_append_right _ (List.mem_flatten.mpr ⟨_, List.mem_ofFn.mpr ⟨κ, rfl⟩, ?_⟩)
+  exact mem_treeReveals_of k
 
 end Fixed
 
