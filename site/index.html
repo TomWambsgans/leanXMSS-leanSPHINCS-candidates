@@ -1001,12 +1001,9 @@ footer a + a { margin-left: 1.25rem; }
 // The figures: every number comes from data.json (python3 scripts/scheme.py --json > site/data.json),
 // for the configuration chosen with the four toggles (height, shape, hash, FTS variant).
 (function () {
-  var S = { h: 26, shape: 'layered', hash: 'Keccak-256', v: 'fors' }, D = null, KEY = 'leanSphincs.config';
-  try {
-    var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (saved) ['h', 'shape', 'hash', 'v'].forEach(function (k) { if (saved[k] !== undefined) S[k] = saved[k]; });
-    if (S.v !== 'forest' && S.v !== 'fors') S.v = 'fors';
-  } catch (e) {}
+  // every load starts from the defaults: choices are not remembered
+  var S = { h: 26, shape: 'layered', hash: 'Keccak-256', v: 'fors' }, D = null;
+  try { localStorage.removeItem('leanSphincs.config'); } catch (e) {}   // a choice saved by an earlier version
   // the devices: hashes per second for each hash, from data.json (rates[device][hash])
   function rate(dev) { return D.rates[dev][S.hash]; }
   // an (i) with its tip (cls: more classes)
@@ -1213,7 +1210,6 @@ footer a + a { margin-left: 1.25rem; }
 
   function choose(key, val) {
     S[key] = key === 'h' ? +val : val;
-    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
     render();
   }
 
