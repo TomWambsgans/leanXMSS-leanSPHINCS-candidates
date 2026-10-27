@@ -341,8 +341,8 @@ sig.golf submission~\cite{siggolf}.
 \paragraph{Against FORS.} The \emph{vanilla} variant of the site uses FORS instead, with $k$ trees of height $a$ and no
 root hash (the WOTS$^+$C key signs the $2k$ nodes below the roots): as in leanSphincs v1, $a=10$, and the fewest trees
 that live at least as long as the forest under the cover attack, $k=25$ or $26$ depending on the configuration
-(\texttt{scripts/scheme.py}). Its lifetimes are not proved in
-Lean. At $h=26$, full key, Keccak-256, in permutations (preprocessing: the hashes of the FTS inside the threshold MPC):
+(\texttt{scripts/scheme.py}). Its lifetimes are proved in Lean too, by a second
+library, and reach 85--98\% of the FORS cover attack~\cite{proofs}. At $h=26$, full key, Keccak-256, in permutations (preprocessing: the hashes of the FTS inside the threshold MPC):
 \begin{center}
 \begin{tabular}{lrrrr}
   \toprule

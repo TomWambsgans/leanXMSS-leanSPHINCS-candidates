@@ -75,6 +75,22 @@ These figures do not depend on how the signer picks its randomizer. The proof fi
 all messages and averages only the starts R0 (`Det.forgeAdvantage_le_seedFree`): the bound holds
 for every table of steps, as if the forger knew them.
 
+## Proved lifetimes, vanilla (FORS)
+
+The same statement for `LeanFors`, whose few-time signature is FORS ([FORS.md](FORS.md)): one
+theorem per configuration in [Main.lean](LeanFors/Main.lean), 32 in all, collected by
+`requestedSecurity`, with [Axioms.lean](LeanFors/Axioms.lean) pinning them to the same three axioms.
+
+| h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 22 | 86,910,000 | 23,050,000 | 499,600 | 256,100 | 131,200 | 34,420 | 9,041 | 86,910,000 |
+| 24 | 354,200,000 | 29,540,000 | 537,700 | 275,500 | 141,100 | 37,030 | 9,710 | 354,200,000 |
+| 26 | 1,426,000,000 | 31,810,000 | 579,400 | 296,700 | 151,900 | 39,850 | 10,430 | 1,426,000,000 |
+| 28 | 5,707,000,000 | 34,270,000 | 622,600 | 319,000 | 163,300 | 42,750 | 11,190 | 5,707,000,000 |
+
+These are 85–98% of the FORS cover attack, so each is a larger share of its own attack than the
+forest's figures above are of the forest's.
+
 ## Checked claims
 
 | Claim | Theorem / file |

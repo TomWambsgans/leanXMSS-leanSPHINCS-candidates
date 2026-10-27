@@ -14,7 +14,8 @@ DOCS = ['README.md', 'PROOF.md', 'FOREST.md', 'FORS.md']
 LIBS = ['LeanForest', 'LeanFors']
 # Code spans that are not Lean names: axioms, tactics, script commands, the leanVM commit, symbols.
 PROSE = {'propext', 'Classical.choice', 'Quot.sound', 'sorry', 'native_decide', 'check', 'write',
-         'b7a107256', 'SphincsSecurity', 'LAYERED', 'PARAMS', 'idx', 'wbar', "extractLsb'"}
+         'b7a107256', 'SphincsSecurity', 'LAYERED', 'PARAMS', 'idx', 'wbar', "extractLsb'",
+         'fors_log2_lifetime', 'requestedSecurity'}
 
 
 def module_names(span, modules):

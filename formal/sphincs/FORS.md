@@ -34,6 +34,33 @@ it is read from the first call alone (`digestIndex`, `blockIndex`, `digestIndex_
 leaf of tree `κ` is bits `h + a κ ..` (`leafOffset`, `digestLeaves`). A fresh digest's kept view is
 uniform (`Security.evalDist_digestBlock_uniform`).
 
+## Proved lifetimes
+
+Signature limits `N` with 127 bits, one theorem each in [Main.lean](LeanFors/Main.lean) (e.g.
+`h24_pruned12`), collected by `requestedSecurity`; layered keys: 10 + 6 + 6, 12 + 6 + 6, 12 + 7 + 7
+and 12 + 8 + 8.
+
+| h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 22 | 86,910,000 | 23,050,000 | 499,600 | 256,100 | 131,200 | 34,420 | 9,041 | 86,910,000 |
+| 24 | 354,200,000 | 29,540,000 | 537,700 | 275,500 | 141,100 | 37,030 | 9,710 | 354,200,000 |
+| 26 | 1,426,000,000 | 31,810,000 | 579,400 | 296,700 | 151,900 | 39,850 | 10,430 | 1,426,000,000 |
+| 28 | 5,707,000,000 | 34,270,000 | 622,600 | 319,000 | 163,300 | 42,750 | 11,190 | 5,707,000,000 |
+
+As a share of the lifetime in the FORS cover model (the attack that covers every one of the `k`
+trees; `scripts/scheme.py`, `fors_log2_lifetime`):
+
+| h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 22 | 95.9% | 94.4% | 90.3% | 89.4% | 88.6% | 86.9% | 85.3% | 95.9% |
+| 24 | 97.7% | 95.7% | 90.8% | 89.9% | 89.1% | 87.4% | 85.8% | 97.7% |
+| 26 | 98.4% | 96.2% | 91.4% | 90.6% | 89.7% | 88.1% | 86.3% | 98.4% |
+| 28 | 98.4% | 96.7% | 91.9% | 91.1% | 90.2% | 88.5% | 86.7% | 98.4% |
+
+Every limit is a larger share of its own cover attack than the forest's is of the forest's
+(80.2–97.8%, [README.md](README.md)): FORS has no codeword structure for a forger to exploit
+between trees, so the proof loses less to it.
+
 ## What the proof changes
 
 The route of [PROOF.md](PROOF.md) is unchanged. Two steps differ.

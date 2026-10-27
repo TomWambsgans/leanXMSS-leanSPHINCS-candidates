@@ -18,13 +18,15 @@ The digest input puts the randomizer alone in the last block (Keccak-256: the wh
 block; SHA-256: 16 zero bytes before it), and the WOTS+C encoding puts its counter in the last block:
 a grinding attempt and a counter cost one compression each, with every hash.
 
-The lifetimes are the ones proved in Lean (formal/sphincs/scripts/forest_certificates.py, PARAMS and
-LAYERED) and, for comparison, the cover attack they are measured against (ATTACK, from forest_attack.py).
+The lifetimes are the ones proved in Lean (formal/sphincs/scripts/forest_certificates.py for the forest
+and fors_certificates.py for FORS, PARAMS and LAYERED) and, for comparison, the cover attack they are
+measured against (ATTACK).
 The same figures are pinned by the Rust tests (crates/sphincs, `Config::verify_compressions`).
 
 The vanilla FTS is FORS with k trees of height a and no root hash (the WOTS+C key signs the 2k nodes below
 the roots), as in leanSphincs v1: a = 10, and for each configuration the fewest trees k whose cover attack
-(fors_security.py) needs at least as many signatures as the forest's; its lifetime is not proved in Lean.
+(fors_security.py) needs at least as many signatures as the forest's. Its lifetimes are proved in Lean too,
+by the `LeanFors` library.
 """
 
 import argparse
@@ -35,6 +37,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "formal", "sphincs", "scripts"))
 import forest_certificates as fc
+import fors_certificates as vc
 import forest_table
 from fors_security import forgery_bits_exact
 
@@ -366,6 +369,7 @@ def site_data():
                                                lifetime=proved, attack=attack,
                                                vanilla=dict(k=k, a=a, size=size(h, shape, "vanilla", b),
                                                             verify=CV.verify(h, shape), sign=signs_v,
+                                                            lifetime=vc.lifetime(h, shape, b),
                                                             attack=round(2**life_v))))
     for H in HASHES:
         C = Costs(H)
@@ -379,7 +383,8 @@ def site_data():
                 ledger = C.ledger_prep(h, shape, b)
                 CV = Costs(H, fors(h, shape, b))
                 prep_v = CV.mpc_prep(h, shape)
-                vanilla = dict(prep=round(prep_v), prep_mb=prep_v * ands * BITS_PER_AND / 8 / 1e6, prep_rounds=rounds(H.name, 1),
+                vanilla = dict(lifetime=vc.lifetime(h, shape, b),
+                               prep=round(prep_v), prep_mb=prep_v * ands * BITS_PER_AND / 8 / 1e6, prep_rounds=rounds(H.name, 1),
                                ledger_prep=math.ceil(CV.ledger_prep(h, shape, b)), device_online=CV.device_online())
                 out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
                                              keygen=round(keygen), prep=round(prep), grind=2**h // THRESHOLD_PREPARED,
