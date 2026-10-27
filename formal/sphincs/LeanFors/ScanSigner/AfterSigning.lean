@@ -8,6 +8,80 @@ reveals and a failing index. -/
 
 open OracleComp OracleSpec ENNReal
 
+namespace LeanFors.Security.HiddenDebt
+
+variable [Params]
+
+open HiddenCost HiddenBridge HiddenOutside HiddenReveal
+
+variable {D R A ι : Type} [Fintype ι] [SampleableType R]
+attribute [local instance] saturationDecEqCoordinate
+variable (tg : Targeting D R ι) (initial : Cache D R) (model : HiddenRows.Model D R A ι)
+
+omit [Params] [Fintype ι] [SampleableType R] in
+/-- A family of known values is known. -/
+theorem allSome_of_eq {n : Nat} {α : Type} (values : Fin n → Option α) (u : Fin n → α)
+    (h : ∀ index, values index = some (u index)) :
+    Completeness.allSome (α := fun _ => α) values = some u := by
+  unfold Completeness.allSome
+  rw [dif_pos fun index => by rw [h index]; rfl]
+  refine congrArg some (funext fun index => Option.some_injective _ ?_)
+  rw [Option.some_get, h index]
+
+omit [Fintype ι] in
+/-- **A family of cached entries, read in order and kept, in the support.** The reads disclose
+nothing and leave the state, so a completed outcome of the whole computation is an outcome of its
+rest at the cached answers. -/
+theorem all_read_support {β : Type} : ∀ {n : Nat} (x : Fin n → D), Function.Injective x →
+    (∀ index, model.parse (x index) = none) → ∀ (state : DebtState D R ι) (u : Fin n → R),
+    (∀ index, state.cache (x index) = some (u index)) →
+    ∀ (rest : (Fin n → R) → OracleComp (SourceCostSpec D R ι) β) (budget : ℕ)
+      (out : Run D ι β × DebtState D R ι),
+    out ∈ support (interp tg initial model (Concrete.sequenceFin (fun index =>
+          (liftM ((SourceCostSpec D R ι).query (.inl (.inr (.inl (x index))))) :
+            OracleComp (SourceCostSpec D R ι) R)) >>= rest) budget state) → out.1.1 ≠ none →
+    ∃ b o, o ∈ support (interp tg initial model (rest u) b state) ∧
+      out.1.1 = o.1.1 ∧ out.1.2.1 = o.1.2.1 ∧ out.2 = o.2
+  | 0, _, _, _, state, u, _, rest, budget, out, hout, _ => by
+      have hu : u = Fin.elim0 := funext fun index => index.elim0
+      rw [Concrete.sequenceFin, pure_bind] at hout
+      exact ⟨budget, out, by rw [hu]; exact hout, rfl, rfl, rfl⟩
+  | n + 1, x, hx, hp, state, u, hc, rest, budget, out, hout, hsome => by
+      have hstep : (Concrete.sequenceFin (fun index =>
+          (liftM ((SourceCostSpec D R ι).query (.inl (.inr (.inl (x index))))) :
+            OracleComp (SourceCostSpec D R ι) R)) >>= rest) =
+          liftM ((SourceCostSpec D R ι).query (.inl (.inr (.inl (x 0))))) >>= fun head =>
+            (Concrete.sequenceFin fun index : Fin n =>
+              (liftM ((SourceCostSpec D R ι).query (.inl (.inr (.inl (x index.succ))))) :
+                OracleComp (SourceCostSpec D R ι) R)) >>= fun values =>
+              rest (Fin.cases head values) := by
+        rw [Concrete.sequenceFin]
+        simp only [bind_assoc, pure_bind]
+        rfl
+      rw [hstep, interp_ordinary] at hout
+      split_ifs at hout with hbudget
+      · rw [ordinaryStep, hp 0] at hout
+        simp only at hout
+        rw [readOutside_cached (x 0) state (u 0) (hc 0), pure_bind, support_map] at hout
+        obtain ⟨o1, ho1, rfl⟩ := hout
+        simp only at hsome ⊢
+        have hcons : (Fin.cases (u 0) fun index : Fin n => u index.succ : Fin (n + 1) → R) = u := by
+          funext index
+          induction index using Fin.cases with
+          | zero => rfl
+          | succ index => rfl
+        obtain ⟨b, o, ho, hres, hrev, hst⟩ := all_read_support (fun index : Fin n => x index.succ)
+          (fun a b heq => Fin.succ_injective n (hx heq)) (fun index => hp index.succ) state
+          (fun index => u index.succ) (fun index => hc index.succ)
+          (fun values => rest (Fin.cases (u 0) values)) (budget - 1) o1 ho1 hsome
+        refine ⟨b, o, ?_, hres, hrev, hst⟩
+        rwa [hcons] at ho
+      · rw [support_pure, Set.mem_singleton_iff] at hout
+        rw [hout] at hsome
+        exact absurd rfl hsome
+
+end LeanFors.Security.HiddenDebt
+
 namespace LeanFors.Security.GraphView
 
 variable [Params]
@@ -19,27 +93,19 @@ set_option maxRecDepth 10000
 attribute [local instance] Classical.propDecidable
 
 
-/-- A reveal is a forest chain value the digest opens, or not a forest chain value at all. -/
+/-- A reveal is a FORS position the digest opens, or not a FORS position at all. -/
 def ForestOk (digest : MessageDigest) (x : Coordinate) : Prop :=
-  ∀ i c s j a ch pos, x = .fchain i c s j a ch pos →
-    i = digestIndex digest ∧ s = (digestLeaves digest c).super ∧ a = (digestLeaves digest c).child j ∧
-      (openedPos (digestLeaves digest c) j ch).val ≤ pos.val
+  ∀ i κ l q, x = .fors i κ l q → i = digestIndex digest ∧ l = digestLeaves digest κ
 
-theorem revealsIn_coordCostSource (digest : MessageDigest) (data : PublicData) (c : Coord) :
+theorem revealsIn_treeCostSource (digest : MessageDigest) (data : PublicData) (κ : FTree) :
     RevealsIn (D := HashInput) (R := HashOutput) (ForestOk digest)
-      (coordCostSource data (digestIndex digest) c (digestLeaves digest c)) := by
-  unfold coordCostSource
-  refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun j => ?_) fun _ => revealsIn_pure _ _
-  refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun ch => ?_) fun _ => revealsIn_pure _ _
-  unfold revealChainCost
-  refine revealsIn_sequenceFin _ _ fun k => ?_
-  split
-  · rename_i hk
-    refine revealsIn_reveal _ _ ?_
-    intro i c' s j' a ch' pos h
-    cases h
-    exact ⟨rfl, rfl, rfl, hk⟩
-  · exact revealsIn_pure _ _
+      (treeCostSource data (digestIndex digest) κ (digestLeaves digest κ)) := by
+  unfold treeCostSource
+  refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun k => revealsIn_reveal _ _ ?_)
+    fun _ => revealsIn_pure _ _
+  intro i κ' l q h
+  cases h
+  exact ⟨rfl, rfl⟩
 
 theorem revealsIn_sequenceDep (P : Coordinate → Prop) : ∀ {n : Nat} {α : Fin n → Type}
     {computation : (i : Fin n) → OracleComp CostSpec (Option (α i))},
@@ -78,9 +144,9 @@ theorem revealsIn_finishRest (parameter : PublicParameter) (data : PublicData) (
   · exact revealsIn_pure _ _
   · refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun lay => revealsIn_sequenceFin _ _ fun chain =>
       revealsIn_reveal _ _ ?_) fun _ => ?_
-    · intro i c s j a ch pos h
+    · intro i κ l q h
       cases h
-    refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun c => revealsIn_coordCostSource digest data c)
+    refine revealsIn_bind _ (revealsIn_sequenceFin _ _ fun κ => revealsIn_treeCostSource digest data κ)
       fun _ => ?_
     exact revealsIn_pure _ _
 
@@ -136,47 +202,49 @@ theorem finishRest_none (randomness : Randomness) (digest : MessageDigest) (budg
     rw [hv]
     exact fun h => by cases h
 
-/-- **Final assembly, support.** -/
-theorem finish_post (hparse : ∀ ρ, model.parse (blk parameter data message ρ) = none)
+/-- **Final assembly, support.** Its digest call reads the blocks of its own pair, which the state
+already holds, so it signs the digest of that pair. -/
+theorem finish_post (hparse : ∀ ρ call, model.parse (pblk parameter data message ρ call) = none)
     (Fail : Finset (Fin (2 ^ subtreeHeight)))
     (hfail : ∀ ρ digest budget (s1 : DebtState HashInput HashOutput Coordinate), Prepared initial s1 →
       ∀ out ∈ support (interp tg initial model (finishRest parameter data message ρ digest) budget s1),
         out.1.1 = some none → (Lifetime.localDigestView digest).1 ∈ Fail)
     (ρ : Randomness) (budget : ℕ) (s1 : DebtState HashInput HashOutput Coordinate)
-    (hprep : Prepared initial s1) (u0 : HashOutput) (hc0 : s1.cache (blk parameter data message ρ) = some u0)
+    (hprep : Prepared initial s1) (u : DigestCall → HashOutput)
+    (hc : ∀ call, s1.cache (pblk parameter data message ρ call) = some (u call))
     (out : Run HashInput Coordinate (Option Signature) × DebtState HashInput HashOutput Coordinate)
     (hout : out ∈ support (interp tg initial model (finishCostSource parameter data message ρ) budget s1))
     (r : Option Signature) (hr : out.1.1 = some r) :
-    out.2.cache (blk parameter data message ρ) = some u0 ∧
+    pcache parameter data message out.2 ρ = some u ∧
       (∀ x, IsMsgInput x → out.2.cache x = s1.cache x) ∧
-      (∀ c ∈ out.1.2.1, ForestOk (truncateMessageDigest u0) c) ∧
+      (∀ c ∈ out.1.2.1, ForestOk (truncateMessageDigest u) c) ∧
       (∀ sig, r = some sig → sig.randomness = ρ) ∧
-      (r = none → out.1.2.1 = [] ∧ (Lifetime.localDigestView (truncateMessageDigest u0)).1 ∈ Fail) := by
+      (r = none → out.1.2.1 = [] ∧ (Lifetime.localDigestView (truncateMessageDigest u)).1 ∈ Fail) := by
   have hsig : ∀ sig, r = some sig → sig.randomness = ρ := by
     intro sig hsig
     have hmem := interp_result_mem tg initial model _ budget s1 out hout r hr
     exact finish_randomness parameter data message ρ r hmem sig hsig
+  have hcache : ∀ x, IsMsgInput x → out.2.cache x = s1.cache x := by
+    have hkeep := finish_keeps_msg tg initial model parameter data message ρ budget s1 out hout
+    have hext := interp_extends tg initial model _ budget s1 out hout
+    intro x hx
+    by_cases hpair : ∃ call, x = pblk parameter data message ρ call
+    · obtain ⟨call, rfl⟩ := hpair
+      rw [hext.1 _ _ (hc call), hc call]
+    · exact hkeep x hx fun call h => hpair ⟨call, h⟩
+  have hpc : pcache parameter data message out.2 ρ = some u := by
+    unfold pcache
+    exact allSome_of_eq _ u fun call => by
+      rw [hcache _ (msgInput_digestInput parameter data.root message ρ call), hc call]
   rw [finishCostSource_eq] at hout
-  rw [interp_ordinary] at hout
-  split_ifs at hout with h1
-  · rw [ordinaryStep, hparse ρ] at hout
-    simp only at hout
-    rw [readOutside_cached _ s1 u0 hc0, pure_bind, support_map] at hout
-    obtain ⟨o, ho, rfl⟩ := hout
-    simp only at hr ⊢
-    have havoid := interp_avoids_cache tg initial model IsMsgInput _
-      (avoids_finishRest parameter data message ρ (truncateMessageDigest u0)) _ s1 o ho
-    refine ⟨?_, fun x hx => havoid x hx, ?_, hsig, ?_⟩
-    · rw [havoid _ (msgInput_digestInput parameter data.root message ρ), hc0]
-    · intro c hc
-      exact interp_reveals tg initial model _ (revealsIn_finishRest parameter data message ρ _) _ _ o ho c hc
-    · intro hnone
-      rw [hnone] at hr
-      exact ⟨finishRest_none tg initial model parameter data message ρ _ _ _ o ho hr,
-        hfail ρ _ _ s1 hprep o ho hr⟩
-  · rw [support_pure, Set.mem_singleton_iff] at hout
-    rw [hout] at hr
-    cases hr
+  obtain ⟨b, o, ho, hres, hrev, _⟩ := all_read_support tg initial model _
+    (pblk_injective parameter data message ρ) (hparse ρ) s1 u hc _ budget out hout (by rw [hr]; simp)
+  refine ⟨hpc, hcache, fun c hcmem => ?_, hsig, fun hnone => ?_⟩
+  · rw [hrev] at hcmem
+    exact interp_reveals tg initial model _ (revealsIn_finishRest parameter data message ρ _) b s1 o ho c hcmem
+  · have hro : o.1.1 = some none := by rw [← hres, hr, hnone]
+    exact ⟨by rw [hrev]; exact finishRest_none tg initial model parameter data message ρ _ b s1 o ho hro,
+      hfail ρ _ b s1 hprep o ho hro⟩
 
 end Finish
 
@@ -206,21 +274,24 @@ theorem RelatedAt.trans {s s' s'' : DebtState HashInput HashOutput Coordinate} {
     · exact Or.inr ⟨h1 ▸ h2n, u, hu, hnl⟩
     · rw [hu1] at h2n; cases h2n
 
-/-- The selected pair of a completed signing call. -/
-def Selected (s s' : DebtState HashInput HashOutput Coordinate) (ρ : Randomness) (u0 : HashOutput) : Prop :=
-  s'.cache (blk parameter data message ρ) = some u0 ∧ Landed parameter (blockIndex u0) ∧
-  (s.cache (blk parameter data message ρ) = none ∨ s.cache (blk parameter data message ρ) = some u0) ∧
+/-- The selected pair of a completed signing call: the whole pair is cached, and its index
+block lands. -/
+def Selected (s s' : DebtState HashInput HashOutput Coordinate) (ρ : Randomness)
+    (u : DigestCall → HashOutput) : Prop :=
+  pcache parameter data message s' ρ = some u ∧ Landed parameter (blockIndex (u firstCall)) ∧
+  (s.cache (blk parameter data message ρ) = none ∨
+    s.cache (blk parameter data message ρ) = some (u firstCall)) ∧
   ∀ ρ', ρ' ≠ ρ → RelatedAt parameter data message s s' ρ'
 
 /-- What a completed signing call leaves behind. -/
 def SignPost (Fail : Finset (Fin (2 ^ subtreeHeight))) (s s' : DebtState HashInput HashOutput Coordinate)
     (reveals : List Coordinate) (r : Option Signature) : Prop :=
   (r = none ∧ reveals = [] ∧ ∀ ρ, RelatedAt parameter data message s s' ρ) ∨
-  ∃ ρ u0, Selected parameter data message s s' ρ u0 ∧
-    (∀ c ∈ reveals, ForestOk (truncateMessageDigest u0) c) ∧
+  ∃ ρ u, Selected parameter data message s s' ρ u ∧
+    (∀ c ∈ reveals, ForestOk (truncateMessageDigest u) c) ∧
     (∀ sig, r = some sig → sig.randomness = ρ) ∧
     (r = none → reveals = [] ∧ (s.cache (blk parameter data message ρ) = none →
-      (Lifetime.localDigestView (truncateMessageDigest u0)).1 ∈ Fail))
+      (Lifetime.localDigestView (truncateMessageDigest u)).1 ∈ Fail))
 
 end Loop
 
