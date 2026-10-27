@@ -194,7 +194,11 @@ svg .fors polygon, svg .lyr polygon { fill: none; stroke: var(--tree); stroke-wi
 .assist input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.18); }
 .assist input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.18); }
 @media (prefers-reduced-motion: reduce) { .assist input[type=range]::-webkit-slider-thumb, .assist input[type=range]::-moz-range-thumb { transition: none; } }
-@media (max-width: 600px) { .assist input[type=range] { width: 5rem; } }
+@media (max-width: 600px), (hover: none) {   /* phones: a larger thumb, easy to see and to grab */
+  .assist input[type=range] { width: 5rem; height: 1.6rem; }
+  .assist input[type=range]::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -7px; border-width: 2px; }
+  .assist input[type=range]::-moz-range-thumb { width: 13px; height: 13px; border-width: 2px; }
+}
 .tables p, #tip { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }   /* running text: flush left and right */
 .cmp thead .sub { font-weight: 400; color: var(--muted); }
 .m-only { display: none; }
