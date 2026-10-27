@@ -1,6 +1,5 @@
 import LeanFors.Certificates.Closing
 import LeanFors.CoverBound.MomentTable
-import LeanFors.CoverBound.NearMomentTable
 
 section
 
@@ -32,8 +31,8 @@ def leafJ (n1 : ℕ) (tab : List ℚ) (cap : ℚ) : ℚ :=
 /-! ### Covers option by option -/
 
 /-- The check of one option, with its threshold and its bound `p = (cthr, B)`. -/
-def checkOptB (H b : ℕ) (t : PoisT) (o : OptF) (p : ℚ × ℚ) : Bool :=
-  checkOptF H b t o && decide (o.cthr = p.1) && decide (o.B = p.2)
+def checkOptB (H b k a : ℕ) (t : PoisT) (o : OptF) (p : ℚ × ℚ) : Bool :=
+  checkOptF H b k a t o && decide (o.cthr = p.1) && decide (o.B = p.2)
 
 /-- `checkEntryF` on the thresholds and the bounds of the options. -/
 def checkEntryQ (K N : ℕ) (ps : List (ℚ × ℚ)) (e : EntryF) : Bool :=
@@ -70,9 +69,9 @@ theorem chainQ_map (K N qtop : ℕ) (opts : List OptF) : ∀ (es : List EntryF) 
       simp only [chainQ, chainF, checkEntryQ_map, chainQ_map K N qtop opts rest]
 
 /-- Options checked one by one pass `checkOptF`, and `ps` lists their thresholds and bounds. -/
-theorem checkOptB_all {H b : ℕ} {t : PoisT} : ∀ {opts : List OptF} {ps : List (ℚ × ℚ)},
-    List.Forall₂ (fun o p => checkOptB H b t o p = true) opts ps →
-      opts.all (checkOptF H b t) = true ∧ (opts.map fun o => (o.cthr, o.B)) = ps
+theorem checkOptB_all {H b k a : ℕ} {t : PoisT} : ∀ {opts : List OptF} {ps : List (ℚ × ℚ)},
+    List.Forall₂ (fun o p => checkOptB H b k a t o p = true) opts ps →
+      opts.all (checkOptF H b k a t) = true ∧ (opts.map fun o => (o.cthr, o.B)) = ps
   | _, _, .nil => ⟨rfl, rfl⟩
   | _, _, .cons (a := o) (b := p) h hs => by
       obtain ⟨h1, h2⟩ := checkOptB_all hs
@@ -82,18 +81,18 @@ theorem checkOptB_all {H b : ℕ} {t : PoisT} : ∀ {opts : List OptF} {ps : Lis
       simp only [List.map_cons, h2, hc, hB]
 
 /-- **A light cover from its options checked one by one.** -/
-theorem checkCoverW_of {H b K N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
-    (ho : List.Forall₂ (fun o p => checkOptB H b c.tab o p = true) c.opts ps)
-    (h : checkCoverQ H b K N qstart c ps = true) : checkCoverW H b K N qstart c = true := by
+theorem checkCoverW_of {H b k a K N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
+    (ho : List.Forall₂ (fun o p => checkOptB H b k a c.tab o p = true) c.opts ps)
+    (h : checkCoverQ H b K N qstart c ps = true) : checkCoverW H b k a K N qstart c = true := by
   obtain ⟨h1, h2⟩ := checkOptB_all ho
   simp only [checkCoverQ, Bool.and_eq_true] at h
   simp only [checkCoverW, Bool.and_eq_true]
   exact ⟨⟨⟨h.1.1, h.1.2⟩, h1⟩, by rw [← chainQ_map, h2]; exact h.2⟩
 
 /-- **A heavy cover from its options checked one by one.** -/
-theorem checkCoverH_of {H b K N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
-    (ho : List.Forall₂ (fun o p => checkOptB H b c.tab o p = true) c.opts ps)
-    (h : checkCoverQH H b K N qstart c ps = true) : checkCoverH H b K N qstart c = true := by
+theorem checkCoverH_of {H b k a K N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
+    (ho : List.Forall₂ (fun o p => checkOptB H b k a c.tab o p = true) c.opts ps)
+    (h : checkCoverQH H b K N qstart c ps = true) : checkCoverH H b k a K N qstart c = true := by
   obtain ⟨h1, h2⟩ := checkOptB_all ho
   simp only [checkCoverQH, Bool.and_eq_true] at h
   simp only [checkCoverH, Bool.and_eq_true]
@@ -239,22 +238,9 @@ theorem le_overP {P : ℕ} {ks : List ℤ} {n : ℕ} (h : n < ks.length) {f : �
   rw [getD_overP (by rw [length_convexZ]; exact h)]
   exact le_trans hf (div_le_div_of_nonneg_right (by exact_mod_cast le_convexZ ks n h) (by positivity))
 
-/-! ### Rounding up in integers -/
+/-! ### Rounding up in integers
 
-/-- `⌈x / y⌉` for `y > 0`. -/
-def cdivZ (x y : ℤ) : ℤ := -((-x) / y)
-
-theorem le_cdivZ {x y : ℤ} (hy : 0 < y) : (x : ℚ) / y ≤ cdivZ x y := by
-  have h := Int.ediv_mul_le (-x) (ne_of_gt hy)
-  have h' : x ≤ cdivZ x y * y := by unfold cdivZ; linarith
-  rw [div_le_iff₀ (by exact_mod_cast hy)]
-  exact_mod_cast h'
-
-/-- `q ≤ ⌈x / y⌉ / 2^P` once `q 2^P = x / y`. -/
-theorem le_cdivZ_div {q : ℚ} {x y : ℤ} {P : ℕ} (hy : 0 < y) (h : q * 2 ^ P = x / y) :
-    q ≤ (cdivZ x y : ℚ) / 2 ^ P := by
-  rw [le_div_iff₀ (by positivity), h]
-  exact le_cdivZ hy
+`cdivZ` and its two bounds are in `CoverBound/MomentBounds.lean`, with the moment numerators. -/
 
 theorem min_overP (a b : ℤ) (P : ℕ) : ((min a b : ℤ) : ℚ) / 2 ^ P = min ((a : ℚ) / 2 ^ P) ((b : ℚ) / 2 ^ P) := by
   rw [Int.cast_min, min_div_div_right (by positivity)]
@@ -275,13 +261,6 @@ theorem getD_zipTab {α β γ : Type*} {n1 n : ℕ} {f : α → β → γ} {l : 
   rw [getD_eq_get (by rw [length_zipTab h h']; exact hn), getD_eq_get (by omega), getD_eq_get (by omega)]
   simp [zipTab]
 
-set_option maxRecDepth 100000 in
-theorem length_P1L : P1L.length = 151 := rfl
-set_option maxRecDepth 100000 in
-theorem length_P2L : P2L.length = 151 := rfl
-set_option maxRecDepth 100000 in
-theorem length_PHL : PHL.length = 151 := rfl
-
 theorem getD_tab {L : List ℕ} {T : List ℚ} (hT : L.map (fun x : ℕ => (x : ℚ) / 2 ^ 128) = T) {n : ℕ}
     (hn : n < L.length) : T.getD n 0 = (L.getD n 0 : ℚ) / 2 ^ 128 := by
   rw [← hT, getD_eq_get (by simpa using hn), getD_eq_get hn]; simp
@@ -291,67 +270,78 @@ abbrev p2 (k : ℕ) : ℤ := ((2 ^ k : ℕ) : ℤ)
 
 theorem p2_pos (k : ℕ) : 0 < p2 k := by unfold p2; exact_mod_cast Nat.two_pow_pos k
 
-/-- The numerators of `gBound` over `2^191`, `n ≤ n1`. -/
-def gZ (H n1 : ℕ) (c1 : ℚ) : List ℤ :=
-  zipTab n1 (fun a b : ℕ => min (cdivZ ((a ^ 8 : ℕ) : ℤ) (p2 (H + 833)))
-    (cdivZ ((b ^ 8 : ℕ) * c1.den : ℕ) (p2 (2 * H + 833) * 4 * c1.num))) P1L P2L
+/-- The numerators of `gBound` over `2^191`, `n ≤ n1`, for `k` trees of height `a`. -/
+def gZ (H k a n1 : ℕ) (c1 : ℚ) : List ℤ :=
+  zipTab n1 (fun x y : ℕ => min (cdivZ (((x ^ k : ℕ) : ℤ) * 2 ^ 191) (p2 (H + 128 * k)))
+    (cdivZ (((y ^ k : ℕ) * c1.den : ℕ) * 2 ^ 191) (p2 (2 * H + 128 * k) * 4 * c1.num))) (P1L a) (P2L a)
 
 /-- The numerators of `hBound` over `2^128`, `n ≤ n1`, with `E = ⌈(eC - 1) 2^128⌉`. -/
-def hZ (H n1 : ℕ) (θ A2 : ℚ) (E : ℤ) : List ℤ :=
-  zipTab n1 (fun a b : ℕ => min E (cdivZ (θ.num * A2.den * ((a ^ 8 : ℕ) : ℤ) * p2 H + A2.num * θ.den * ((b ^ 8 : ℕ) : ℤ))
-    (θ.den * A2.den * p2 (2 * H + 896)))) P1L P2L
+def hZ (H k a n1 : ℕ) (θ A2 : ℚ) (E : ℤ) : List ℤ :=
+  zipTab n1 (fun x y : ℕ => min E
+    (cdivZ ((θ.num * A2.den * ((x ^ k : ℕ) : ℤ) * p2 H + A2.num * θ.den * ((y ^ k : ℕ) : ℤ)) * 2 ^ 128)
+      (θ.den * A2.den * p2 (2 * H + 128 * k)))) (P1L a) (P2L a)
 
 /-- The numerators of `nBound` over `2^191`, `n ≤ n1`. -/
-def nZ (H n1 : ℕ) : List ℤ := zipTab n1 (fun c a : ℕ => cdivZ ((16 * c * a ^ 7 : ℕ) : ℤ) (p2 (H + 833))) PHL P1L
+def nZ (H k a n1 : ℕ) : List ℤ :=
+  zipTab n1 (fun x _ : ℕ => cdivZ (((k * x ^ (k - 1) : ℕ) : ℤ) * 2 ^ 191) (p2 (H + 128 * (k - 1))))
+    (P1L a) (P1L a)
 
-section
+theorem two_pow_split (H k : ℕ) : ((2 : ℚ)) ^ (H + 128 * k) = 2 ^ H * (2 ^ 128) ^ k := by
+  rw [pow_add, pow_mul]
 
--- the proofs below meet the shifts `2^833` and `2^896`
-set_option exponentiation.threshold 1024
-
-theorem gZ_bound {H n1 n : ℕ} {o : OptF} (hc : 0 < o.c1) (hn1 : n1 ≤ 150) (hn : n < n1 + 1) :
-    gBound H o n ≤ ((gZ H n1 o.c1).getD n 0 : ℚ) / 2 ^ 191 := by
-  have l1 : n1 + 1 ≤ P1L.length := by rw [length_P1L]; omega
-  have l2 : n1 + 1 ≤ P2L.length := by rw [length_P2L]; omega
-  rw [gZ, getD_zipTab (a := 0) (b := 0) l1 l2 hn, min_overP, gBound, getD_tab P1L_eq (by omega),
-    getD_tab P2L_eq (by omega)]
+theorem gZ_bound {H k a n1 n : ℕ} {o : OptF} (hc : 0 < o.c1) (hn1 : n1 ≤ 150) (hn : n < n1 + 1) :
+    gBound H k a o n ≤ ((gZ H k a n1 o.c1).getD n 0 : ℚ) / 2 ^ 191 := by
+  have l1 : n1 + 1 ≤ (P1L a).length := by rw [length_P1L]; omega
+  have l2 : n1 + 1 ≤ (P2L a).length := by rw [length_P2L]; omega
+  rw [gZ, getD_zipTab (a := 0) (b := 0) l1 l2 hn, min_overP, gBound, getD_tab (P1L_eq a) (by omega),
+    getD_tab (P2L_eq a) (by omega)]
   have hu : 0 < o.c1.num := Rat.num_pos.mpr hc
   have hc1 : (o.c1 : ℚ) = o.c1.num / o.c1.den := (Rat.num_div_den o.c1).symm
   apply min_le_min
   · apply le_cdivZ_div (p2_pos _)
-    unfold κQ; push_cast; field_simp; ring
+    unfold κQ
+    push_cast
+    rw [two_pow_split H k, div_pow]
+    field_simp
   · apply le_cdivZ_div (mul_pos (mul_pos (p2_pos _) (by norm_num)) hu)
     conv_lhs => rw [hc1]
-    unfold κQ; push_cast
+    unfold κQ
+    push_cast
+    rw [two_pow_split (2 * H) k, div_pow]
     have : (0 : ℚ) < o.c1.num := by exact_mod_cast hu
     have : (0 : ℚ) < o.c1.den := by exact_mod_cast o.c1.den_pos
-    field_simp; ring
+    field_simp
+    ring
 
-theorem hZ_bound {H n1 n : ℕ} {o : OptF} {E : ℤ} (hE : o.eC - 1 ≤ (E : ℚ) / 2 ^ 128) (hn1 : n1 ≤ 150)
-    (hn : n < n1 + 1) : hBound H o n ≤ ((hZ H n1 o.θ o.A2 E).getD n 0 : ℚ) / 2 ^ 128 := by
-  have l1 : n1 + 1 ≤ P1L.length := by rw [length_P1L]; omega
-  have l2 : n1 + 1 ≤ P2L.length := by rw [length_P2L]; omega
-  rw [hZ, getD_zipTab (a := 0) (b := 0) l1 l2 hn, min_overP, hBound, getD_tab P1L_eq (by omega),
-    getD_tab P2L_eq (by omega)]
+theorem hZ_bound {H k a n1 n : ℕ} {o : OptF} {E : ℤ} (hE : o.eC - 1 ≤ (E : ℚ) / 2 ^ 128) (hn1 : n1 ≤ 150)
+    (hn : n < n1 + 1) : hBound H k a o n ≤ ((hZ H k a n1 o.θ o.A2 E).getD n 0 : ℚ) / 2 ^ 128 := by
+  have l1 : n1 + 1 ≤ (P1L a).length := by rw [length_P1L]; omega
+  have l2 : n1 + 1 ≤ (P2L a).length := by rw [length_P2L]; omega
+  rw [hZ, getD_zipTab (a := 0) (b := 0) l1 l2 hn, min_overP, hBound, getD_tab (P1L_eq a) (by omega),
+    getD_tab (P2L_eq a) (by omega)]
   have hθ : (o.θ : ℚ) = o.θ.num / o.θ.den := (Rat.num_div_den o.θ).symm
   have hA : (o.A2 : ℚ) = o.A2.num / o.A2.den := (Rat.num_div_den o.A2).symm
   apply min_le_min hE
   apply le_cdivZ_div (mul_pos (mul_pos (by exact_mod_cast o.θ.den_pos) (by exact_mod_cast o.A2.den_pos)) (p2_pos _))
   conv_lhs => rw [hθ, hA]
-  unfold κQ; push_cast
+  unfold κQ
+  push_cast
+  rw [two_pow_split (2 * H) k, div_pow, div_pow]
   have : (0 : ℚ) < o.θ.den := by exact_mod_cast o.θ.den_pos
   have : (0 : ℚ) < o.A2.den := by exact_mod_cast o.A2.den_pos
-  field_simp; ring
+  field_simp
+  ring
 
-theorem nZ_bound {H n1 n : ℕ} (hn1 : n1 ≤ 150) (hn : n < n1 + 1) :
-    nBound H n ≤ ((nZ H n1).getD n 0 : ℚ) / 2 ^ 191 := by
-  have l1 : n1 + 1 ≤ PHL.length := by rw [length_PHL]; omega
-  have l2 : n1 + 1 ≤ P1L.length := by rw [length_P1L]; omega
-  rw [nZ, getD_zipTab (a := 0) (b := 0) l1 l2 hn, nBound, getD_tab PHL_eq (by omega), getD_tab P1L_eq (by omega)]
+theorem nZ_bound {H k a n1 n : ℕ} (hn1 : n1 ≤ 150) (hn : n < n1 + 1) :
+    nBound H k a n ≤ ((nZ H k a n1).getD n 0 : ℚ) / 2 ^ 191 := by
+  have l1 : n1 + 1 ≤ (P1L a).length := by rw [length_P1L]; omega
+  rw [nZ, getD_zipTab (a := 0) (b := 0) l1 l1 hn, nBound, getD_tab (P1L_eq a) (by omega)]
   apply le_cdivZ_div (p2_pos _)
-  unfold κQ; push_cast; field_simp; ring
-
-end
+  unfold κQ
+  push_cast
+  rw [two_pow_split H (k - 1), div_pow]
+  field_simp
+  ring
 
 /-! ### Means -/
 
@@ -418,11 +408,11 @@ theorem expLow_eq {u : ℚ} {un ud J P : ℕ} (hd : 0 < ud) (hu : u = (un : ℚ)
 /-! ### Options -/
 
 /-- The option with cap `c1`, Chernoff parameter `θ`, `s` squarings and threshold `cthr`. -/
-def buildOpt (H b : ℕ) (t : PoisT) (c1 θ : ℚ) (s : ℕ) (cthr : ℚ) : OptF :=
+def buildOpt (H b k a : ℕ) (t : PoisT) (c1 θ : ℚ) (s : ℕ) (cthr : ℚ) : OptF :=
   let eC := expUp (θ * c1) s t.P
   let A2 := rup ((eC - 1 - θ * c1) / c1 ^ 2) (2 * 127 + 64)
-  let gk := convexZ (gZ H t.n1 c1)
-  let hk := convexZ (hZ H t.n1 θ A2 ⌈(eC - 1) * 2 ^ 128⌉)
+  let gk := convexZ (gZ H k a t.n1 c1)
+  let hk := convexZ (hZ H k a t.n1 θ A2 ⌈(eC - 1) * 2 ^ 128⌉)
   let gt := overP 191 gk
   let ht := overP 128 hk
   let Jg := leafJ t.n1 gt (κQ H)
@@ -440,23 +430,25 @@ def buildOk (t : PoisT) (o : OptF) : Bool :=
     decide (0 ≤ o.Eg) && decide (0 ≤ o.Ee)
 
 /-- **A built option passes `checkOptF`.** -/
-theorem checkOptF_build {H b : ℕ} {t : PoisT} {c1 θ : ℚ} {s : ℕ} {cthr : ℚ}
-    (h : buildOk t (buildOpt H b t c1 θ s cthr) = true) : checkOptF H b t (buildOpt H b t c1 θ s cthr) = true := by
+theorem checkOptF_build {H b k a : ℕ} {t : PoisT} {c1 θ : ℚ} {s : ℕ} {cthr : ℚ}
+    (h : buildOk t (buildOpt H b k a t c1 θ s cthr) = true) :
+    checkOptF H b k a t (buildOpt H b k a t c1 θ s cthr) = true := by
   simp only [buildOk, Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, hn1⟩, hn⟩, hg0⟩, hh0⟩, hEg⟩, hEe⟩ := h
-  set o := buildOpt H b t c1 θ s cthr with ho
+  set o := buildOpt H b k a t c1 θ s cthr with ho
   have hp : 2 ≤ t.pm.length := by unfold PoisT.n1 at hn1; omega
-  have l1 : t.n1 + 1 ≤ P1L.length := by rw [length_P1L]; omega
-  have l2 : t.n1 + 1 ≤ P2L.length := by rw [length_P2L]; omega
-  have lgz : (gZ H t.n1 c1).length = t.n1 + 1 := length_zipTab l1 l2
-  have lhz : (hZ H t.n1 θ o.A2 ⌈(o.eC - 1) * 2 ^ 128⌉).length = t.n1 + 1 := length_zipTab l1 l2
-  have lg : (convexZ (gZ H t.n1 c1)).length = t.n1 + 1 := by rw [length_convexZ, lgz]
-  have lh : (convexZ (hZ H t.n1 θ o.A2 ⌈(o.eC - 1) * 2 ^ 128⌉)).length = t.n1 + 1 := by rw [length_convexZ, lhz]
+  have l1 : t.n1 + 1 ≤ (P1L a).length := by rw [length_P1L]; omega
+  have l2 : t.n1 + 1 ≤ (P2L a).length := by rw [length_P2L]; omega
+  have lgz : (gZ H k a t.n1 c1).length = t.n1 + 1 := length_zipTab l1 l2
+  have lhz : (hZ H k a t.n1 θ o.A2 ⌈(o.eC - 1) * 2 ^ 128⌉).length = t.n1 + 1 := length_zipTab l1 l2
+  have lg : (convexZ (gZ H k a t.n1 c1)).length = t.n1 + 1 := by rw [length_convexZ, lgz]
+  have lh : (convexZ (hZ H k a t.n1 θ o.A2 ⌈(o.eC - 1) * 2 ^ 128⌉)).length = t.n1 + 1 := by
+    rw [length_convexZ, lhz]
   have hE : o.eC - 1 ≤ (⌈(o.eC - 1) * 2 ^ 128⌉ : ℚ) / 2 ^ 128 := by
     rw [le_div_iff₀ (by positivity)]; exact Int.le_ceil _
-  have p12 : ∀ n < t.n1 + 1, gBound H o n ≤ o.gt.getD n 0 := fun n hn' =>
+  have p12 : ∀ n < t.n1 + 1, gBound H k a o n ≤ o.gt.getD n 0 := fun n hn' =>
     le_overP (lt_of_lt_of_eq hn' lgz.symm) (gZ_bound (o := o) h1 hn hn')
-  have p13 : ∀ n < t.n1 + 1, hBound H o n ≤ o.ht.getD n 0 := fun n hn' =>
+  have p13 : ∀ n < t.n1 + 1, hBound H k a o n ≤ o.ht.getD n 0 := fun n hn' =>
     le_overP (lt_of_lt_of_eq hn' lhz.symm) (hZ_bound (o := o) hE hn hn')
   have hL : expLow (o.θ * o.cthr) t.J t.P =
       (expLowN (θ * cthr).num.toNat (θ * cthr).den t.P t.J 0 (2 ^ t.P) 0 : ℚ) / 2 ^ t.P := by
@@ -476,10 +468,10 @@ theorem checkOptF_build {H b : ℕ} {t : PoisT} {c1 θ : ℚ} {s : ℕ} {cthr : 
   · exact (meanZ_eq (P := 128) o.Jh lh hp).trans_le (le_rup _ _)
 
 /-- The check of a built option with its threshold and its bound `p = (cthr, B)`. -/
-theorem checkOptB_build {H b : ℕ} {t : PoisT} {c1 θ : ℚ} {s : ℕ} {cthr : ℚ} {p : ℚ × ℚ}
-    (h : (buildOk t (buildOpt H b t c1 θ s cthr) && decide (cthr = p.1) &&
-      decide ((buildOpt H b t c1 θ s cthr).B = p.2)) = true) :
-    checkOptB H b t (buildOpt H b t c1 θ s cthr) p = true := by
+theorem checkOptB_build {H b k a : ℕ} {t : PoisT} {c1 θ : ℚ} {s : ℕ} {cthr : ℚ} {p : ℚ × ℚ}
+    (h : (buildOk t (buildOpt H b k a t c1 θ s cthr) && decide (cthr = p.1) &&
+      decide ((buildOpt H b k a t c1 θ s cthr).B = p.2)) = true) :
+    checkOptB H b k a t (buildOpt H b k a t c1 θ s cthr) p = true := by
   simp only [Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨⟨h1, h2⟩, h3⟩ := h
   simp only [checkOptB, Bool.and_eq_true, decide_eq_true_eq]
@@ -488,10 +480,10 @@ theorem checkOptB_build {H b : ℕ} {t : PoisT} {c1 θ : ℚ} {s : ℕ} {cthr : 
 /-! ### Near certificates -/
 
 /-- The near certificate of a Poisson table. -/
-def buildOptN (H b : ℕ) (t : PoisT) : OptN :=
-  let nk := convexZ (nZ H t.n1)
+def buildOptN (H b k a : ℕ) (t : PoisT) : OptN :=
+  let nk := convexZ (nZ H k a t.n1)
   let nt := overP 191 nk
-  let Jn := leafJ t.n1 nt (16 * κQ H)
+  let Jn := leafJ t.n1 nt ((k : ℚ) * κQ H)
   ⟨nt, Jn, rup (meanZ t 191 nk Jn) (64 + 127 + 2 * b)⟩
 
 /-- What `checkOptN` needs beyond the construction. -/
@@ -499,15 +491,14 @@ def buildOkN (t : PoisT) (o : OptN) : Bool :=
   decide (1 ≤ t.n1) && decide (t.n1 ≤ 150) && decide (0 ≤ o.nt.getD 0 0)
 
 /-- **A built near certificate passes `checkOptN`.** -/
-theorem checkOptN_build {H b : ℕ} {t : PoisT} (h : buildOkN t (buildOptN H b t) = true) :
-    checkOptN H t (buildOptN H b t) = true := by
+theorem checkOptN_build {H b k a : ℕ} {t : PoisT} (h : buildOkN t (buildOptN H b k a t) = true) :
+    checkOptN H k a t (buildOptN H b k a t) = true := by
   simp only [buildOkN, Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨⟨hn1, hn⟩, h0⟩ := h
   have hp : 2 ≤ t.pm.length := by unfold PoisT.n1 at hn1; omega
-  have l1 : t.n1 + 1 ≤ PHL.length := by rw [length_PHL]; omega
-  have l2 : t.n1 + 1 ≤ P1L.length := by rw [length_P1L]; omega
-  have lnz : (nZ H t.n1).length = t.n1 + 1 := length_zipTab l1 l2
-  have ln : (convexZ (nZ H t.n1)).length = t.n1 + 1 := by rw [length_convexZ, lnz]
+  have l1 : t.n1 + 1 ≤ (P1L a).length := by rw [length_P1L]; omega
+  have lnz : (nZ H k a t.n1).length = t.n1 + 1 := length_zipTab l1 l1
+  have ln : (convexZ (nZ H k a t.n1)).length = t.n1 + 1 := by rw [length_convexZ, lnz]
   simp only [checkOptN, Bool.and_eq_true, decide_eq_true_eq]
   refine ⟨⟨⟨⟨⟨hn, (length_overP _ _).trans ln⟩, checkLeaf_overP lnz hn1 h0 _⟩,
     fun n hn' => le_overP (lt_of_lt_of_eq hn' lnz.symm) (nZ_bound hn hn')⟩, le_leafJ _ _ _⟩, ?_⟩
@@ -570,18 +561,18 @@ theorem checkPT_poisOf {m P J n1 p0 : ℕ} (h : buildOkPT (poisOf m P J n1 p0) =
     exact this
 
 /-- **A light cover from its options and its table checked separately.** -/
-theorem checkCoverW_of_pt {H b K N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
-    (ho : List.Forall₂ (fun o p => checkOptB H b c.tab o p = true) c.opts ps) (hpt : checkPT c.tab = true)
+theorem checkCoverW_of_pt {H b k a K N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
+    (ho : List.Forall₂ (fun o p => checkOptB H b k a c.tab o p = true) c.opts ps) (hpt : checkPT c.tab = true)
     (h : (checkRate H b N c.qtop c.tab && chainQ K N c.qtop ps qstart c.entries) = true) :
-    checkCoverW H b K N qstart c = true := by
+    checkCoverW H b k a K N qstart c = true := by
   simp only [Bool.and_eq_true] at h
   exact checkCoverW_of ps ho (by simp only [checkCoverQ, h.1, hpt, h.2, Bool.and_self])
 
 /-- **A heavy cover from its options and its table checked separately.** -/
-theorem checkCoverH_of_pt {H b K N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
-    (ho : List.Forall₂ (fun o p => checkOptB H b c.tab o p = true) c.opts ps) (hpt : checkPT c.tab = true)
+theorem checkCoverH_of_pt {H b k a K N qstart : ℕ} {c : CoverW} (ps : List (ℚ × ℚ))
+    (ho : List.Forall₂ (fun o p => checkOptB H b k a c.tab o p = true) c.opts ps) (hpt : checkPT c.tab = true)
     (h : (checkRateH H b N c.qtop c.tab && chainQ K N c.qtop ps qstart c.entries) = true) :
-    checkCoverH H b K N qstart c = true := by
+    checkCoverH H b k a K N qstart c = true := by
   simp only [Bool.and_eq_true] at h
   exact checkCoverH_of ps ho (by simp only [checkCoverQH, h.1, hpt, h.2, Bool.and_self])
 
