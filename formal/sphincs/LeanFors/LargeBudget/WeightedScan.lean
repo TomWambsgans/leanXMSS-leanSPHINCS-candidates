@@ -164,6 +164,179 @@ theorem interp_presample_newW {α : Type} {n : ℕ} (x : Fin n → D) (hx : Func
         rw [storeAll_perm x hx _ σ state]
         congr 3
 
+/-! ### Presampling and the weighted payments -/
+
+/-- **Presampling an untargeted input keeps the weighted payments.** The payment of a step reads the
+state only through its weight, which an untargeted store leaves alone, and the rest of the run
+commutes with the presample (`presample_costStep`). -/
+theorem wflag_presample_eq (x : D) (hk : tg.kind x = .none) {α : Type}
+    (computation : OracleComp (SourceCostSpec D R ι) α) :
+    ∀ (budget : ℕ) (state : DebtState D R ι),
+      ∑' s, Pr[= s | presample x state] * wflag tg initial model computation budget s =
+        wflag tg initial model computation budget state := by
+  induction computation using OracleComp.inductionOn with
+  | pure value =>
+      intro budget state
+      simp only [wflag_pure, mul_zero, tsum_zero]
+  | query_bind input next ih =>
+      intro budget state
+      have hw : ∀ s ∈ support (presample x state), weight tg initial s = weight tg initial state := by
+        intro s hs
+        cases hc : state.cache x with
+        | some v =>
+            rw [presample_cached x state v hc, support_pure, Set.mem_singleton_iff] at hs
+            rw [hs]
+        | none =>
+            rw [presample_fresh x state hc, support_map] at hs
+            obtain ⟨v, _, rfl⟩ := hs
+            exact weight_store_untargetedW tg initial state x v hk
+      have hpay : ∀ s ∈ support (presample x state),
+          wpays tg initial s input = wpays tg initial state input := by
+        intro s hs
+        have h := hw s hs
+        rcases input with (draw | (bytes | coordinate)) | amount
+        · rfl
+        · simp only [wpays, h]
+        · rfl
+        · rfl
+      simp only [wflag_query_bind]
+      split_ifs with hcost
+      · set K : (SourceCostSpec D R ι).Range input × DebtState D R ι → ℝ≥0∞ := fun r =>
+          wpays tg initial state input +
+            wflag tg initial model (next r.1) (budget - sourceCost input) r.2 with hK
+        have hleft : ∑' s, Pr[= s | presample x state] *
+            ∑' r, Pr[= r | costStep model input s] *
+              (wpays tg initial s input +
+                wflag tg initial model (next r.1) (budget - sourceCost input) r.2) =
+            ∑' s, Pr[= s | presample x state] * ∑' r, Pr[= r | costStep model input s] * K r := by
+          refine tsum_congr fun s => ?_
+          by_cases hs : s ∈ support (presample x state)
+          · rw [hpay s hs]
+          · rw [probOutput_eq_zero_of_not_mem_support hs, zero_mul, zero_mul]
+        have hcomm := presample_costStep model x input state (fun r => (pure r : ProbComp _))
+        simp only [bind_pure] at hcomm
+        rw [hleft, ← tsum_probOutput_bind_mul]
+        calc ∑' r, Pr[= r | presample x state >>= fun s => costStep model input s] * K r
+            = ∑' r, Pr[= r | costStep model input state >>= fun r =>
+                presample x r.2 >>= fun s => (pure (r.1, s) : ProbComp _)] * K r :=
+              tsum_congr fun r => congrArg (· * K r) (probOutput_congr rfl hcomm)
+          _ = ∑' r, Pr[= r | costStep model input state] *
+                ∑' s, Pr[= s | presample x r.2] * K (r.1, s) := by
+              rw [tsum_probOutput_bind_mul]
+              refine tsum_congr fun r => congrArg _ ?_
+              rw [tsum_probOutput_bind_mul]
+              exact tsum_congr fun s => by rw [tsum_probOutput_pure_mul]
+          _ = ∑' r, Pr[= r | costStep model input state] * K r := by
+              refine tsum_congr fun r => congrArg _ ?_
+              simp only [hK]
+              have hsplit : (∑' s, Pr[= s | presample x r.2] *
+                    (wpays tg initial state input +
+                      wflag tg initial model (next r.1) (budget - sourceCost input) s)) =
+                  (∑' s, Pr[= s | presample x r.2] * wpays tg initial state input) +
+                    ∑' s, Pr[= s | presample x r.2] *
+                      wflag tg initial model (next r.1) (budget - sourceCost input) s := by
+                rw [← ENNReal.tsum_add]
+                exact tsum_congr fun s => mul_add _ _ _
+              rw [hsplit, ENNReal.tsum_mul_right, presample_mass, one_mul,
+                ih r.1 (budget - sourceCost input) r.2]
+      · simp only [mul_zero, tsum_zero]
+
+/-- Presampling one fresh untargeted input keeps the weighted payments. -/
+theorem wflag_presample_fresh_eq (x : D) (hk : tg.kind x = .none) {α : Type}
+    (computation : OracleComp (SourceCostSpec D R ι) α) (budget : ℕ) (state : DebtState D R ι)
+    (hx : state.cache x = none) :
+    wflag tg initial model computation budget state =
+      (Fintype.card R : ℝ≥0∞)⁻¹ * ∑ v, wflag tg initial model computation budget (state.store x v) := by
+  rw [← wflag_presample_eq tg initial model x hk computation budget state, presample_fresh x state hx,
+    tsum_probOutput_map_mul, tsum_uniform_eq]
+
+/-- **Presampling an injective family of fresh untargeted inputs** keeps the weighted payments. -/
+theorem wflag_presampleAll_eq {α : Type} (computation : OracleComp (SourceCostSpec D R ι) α) (budget : ℕ) :
+    ∀ {n : ℕ} (x : Fin n → D), Function.Injective x → (∀ i, tg.kind (x i) = .none) →
+      ∀ state : DebtState D R ι, (∀ i, state.cache (x i) = none) →
+        wflag tg initial model computation budget state =
+          ((Fintype.card R : ℝ≥0∞) ^ n)⁻¹ * ∑ u : Fin n → R,
+            wflag tg initial model computation budget (storeAll x u state)
+  | 0, x, _, _, state, _ => by
+      simp only [pow_zero, inv_one, one_mul]
+      rw [Fintype.sum_unique]
+      rfl
+  | n + 1, x, hx, hk, state, hfresh => by
+      have hxt : Function.Injective (Fin.tail x) := fun a b e => Fin.succ_injective _ (hx e)
+      rw [wflag_presample_fresh_eq tg initial model (x 0) (hk 0) computation budget state (hfresh 0)]
+      have hrest : ∀ v, wflag tg initial model computation budget (state.store (x 0) v) =
+          ((Fintype.card R : ℝ≥0∞) ^ n)⁻¹ * ∑ w : Fin n → R,
+            wflag tg initial model computation budget (storeAll (Fin.tail x) w (state.store (x 0) v)) := fun v =>
+        wflag_presampleAll_eq computation budget (Fin.tail x) hxt (fun i => hk i.succ) _ fun i => by
+          show (state.store (x 0) v).cache (x i.succ) = none
+          rw [store_cache_ne state (x 0) _ (fun e => Fin.succ_ne_zero i (hx e))]
+          exact hfresh i.succ
+      calc (Fintype.card R : ℝ≥0∞)⁻¹ * ∑ v, wflag tg initial model computation budget (state.store (x 0) v)
+          = (Fintype.card R : ℝ≥0∞)⁻¹ * ∑ v, (((Fintype.card R : ℝ≥0∞) ^ n)⁻¹ * ∑ w : Fin n → R,
+              wflag tg initial model computation budget (storeAll (Fin.tail x) w (state.store (x 0) v))) :=
+            congrArg (fun A => (Fintype.card R : ℝ≥0∞)⁻¹ * A) (Finset.sum_congr rfl fun v _ => hrest v)
+        _ = ((Fintype.card R : ℝ≥0∞) ^ (n + 1))⁻¹ * ∑ v, ∑ w : Fin n → R,
+              wflag tg initial model computation budget (storeAll x (Fin.cons v w) state) := by
+            rw [← Finset.mul_sum, ← mul_assoc, pow_succ', ENNReal.mul_inv (Or.inr (by simp))
+              (Or.inl (ENNReal.natCast_ne_top _))]
+            rfl
+        _ = _ := by
+            congr 1
+            rw [← Fintype.sum_prod_type']
+            exact Fintype.sum_equiv (Fin.consEquiv fun _ => R) _ _ fun p => rfl
+
+/-- **A query of one input of a fresh family**, for the weighted payments: the uniform answer at
+input `c` followed by the run pays the same as the run after storing uniform answers at the whole
+family. -/
+theorem wflag_presample_new_eq {α : Type} {n : ℕ} (x : Fin n → D) (hx : Function.Injective x)
+    (hk : ∀ i, tg.kind (x i) = .none) (c : Fin n) (next : R → OracleComp (SourceCostSpec D R ι) α)
+    (budget : ℕ) (state : DebtState D R ι) (hfresh : ∀ i, state.cache (x i) = none) :
+    ∑' v, Pr[= v | ($ᵗ R : ProbComp R)] *
+        wflag tg initial model (next v) budget (state.store (x c) v) =
+      ((Fintype.card R : ℝ≥0∞) ^ n)⁻¹ * ∑ u : Fin n → R,
+        wflag tg initial model (next (u c)) budget (storeAll x u state) := by
+  obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by have := c.isLt; omega⟩
+  set σ : Equiv.Perm (Fin (m + 1)) := Equiv.swap 0 c with hσ
+  set x' : Fin (m + 1) → D := x ∘ σ with hx'
+  have hx'inj : Function.Injective x' := hx.comp σ.injective
+  have hx'0 : x' 0 = x c := by simp [hx', hσ]
+  have hxt : Function.Injective (Fin.tail x') := fun a b e => Fin.succ_injective _ (hx'inj e)
+  have hrest : ∀ v, wflag tg initial model (next v) budget (state.store (x c) v) =
+      ((Fintype.card R : ℝ≥0∞) ^ m)⁻¹ * ∑ w : Fin m → R,
+        wflag tg initial model (next v) budget (storeAll x' (Fin.cons v w) state) := by
+    intro v
+    rw [← hx'0]
+    exact wflag_presampleAll_eq tg initial model (next v) budget (Fin.tail x') hxt (fun i => hk _) _
+      fun i => by
+        show (state.store (x' 0) v).cache (x' i.succ) = none
+        rw [store_cache_ne state (x' 0) _ (fun e => Fin.succ_ne_zero i (hx'inj e))]
+        exact hfresh _
+  rw [tsum_uniform_eq]
+  calc (Fintype.card R : ℝ≥0∞)⁻¹ * ∑ v, wflag tg initial model (next v) budget (state.store (x c) v)
+      = (Fintype.card R : ℝ≥0∞)⁻¹ * ∑ v, (((Fintype.card R : ℝ≥0∞) ^ m)⁻¹ * ∑ w : Fin m → R,
+          wflag tg initial model (next v) budget (storeAll x' (Fin.cons v w) state)) :=
+        congrArg (fun A => (Fintype.card R : ℝ≥0∞)⁻¹ * A) (Finset.sum_congr rfl fun v _ => hrest v)
+    _ = ((Fintype.card R : ℝ≥0∞) ^ (m + 1))⁻¹ * ∑ u' : Fin (m + 1) → R,
+          wflag tg initial model (next (u' 0)) budget (storeAll x' u' state) := by
+        rw [← Finset.mul_sum, ← mul_assoc, pow_succ', ENNReal.mul_inv (Or.inr (by simp))
+          (Or.inl (ENNReal.natCast_ne_top _))]
+        congr 1
+        rw [← Fintype.sum_prod_type']
+        exact Fintype.sum_equiv (Fin.consEquiv fun _ => R) _ _ fun p => rfl
+    _ = _ := by
+        congr 1
+        refine Fintype.sum_equiv (σ.arrowCongr (Equiv.refl R)) _ _ fun u' => ?_
+        have hu : (σ.arrowCongr (Equiv.refl R)) u' ∘ σ = u' := by
+          funext i
+          simp [Equiv.arrowCongr_apply, hσ, Equiv.swap_apply_self]
+        have hc0 : ((σ.arrowCongr (Equiv.refl R)) u') c = u' 0 := by
+          conv_rhs => rw [← hu]
+          simp [hσ, Equiv.swap_apply_left]
+        have hstore : storeAll x' u' state = storeAll x ((σ.arrowCongr (Equiv.refl R)) u') state := by
+          conv_lhs => rw [hx', ← hu]
+          exact storeAll_perm x hx _ σ state
+        rw [hc0, hstore]
+
 end LeanFors.Security.HiddenDebt
 
 namespace LeanFors.Security.GraphView
