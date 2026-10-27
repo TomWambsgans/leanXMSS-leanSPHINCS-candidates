@@ -1113,6 +1113,8 @@ footer a + a { margin-left: 1.25rem; }
       { b: 20, rate: rate('laptop'), kib: '1024', cache: '1&nbsp;MiB', dev: 'Laptop' },
       { b: S.h, rate: rate('server'), kib: '16384', cache: '16&nbsp;MiB', dev: 'Server' }
     ];
+    // a layered key needs no large cache: every device keeps the Ledger's 16 KiB
+    if (lay_) devs.forEach(function (d) { d.kib = '16'; d.cache = '16&nbsp;KiB'; });
     // the Ledger with the host: offline, it prepares np FTS; online, the host grinds onto one of them and proves it in a STARK
     var np = W.ledger_prepared[S.h], g = W.ledger_grind[S.h];
     var assist = function (tt) {
