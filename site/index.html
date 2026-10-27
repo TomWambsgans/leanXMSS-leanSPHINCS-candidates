@@ -1023,14 +1023,9 @@ footer a + a { margin-left: 1.25rem; }
     for (var i = 0; i < u.length; i++) if (x >= u[i][0]) return x / u[i][0] + u[i][1];
     return String(x);
   }
-  // a lifetime, rounded down to one significant digit (100K, 20M, 1B): never above what is proved
+  // a lifetime: the limit proved in Lean, exactly (it is already rounded down to four digits there)
   function lifeOf(c) { return life1(spicy() ? c.lifetime : c.vanilla.lifetime); }
-  function life1(n) {
-    var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(n)));
-    n = Math.floor(n / q) * q;
-    for (var i = 0; i < u.length; i++) if (n >= u[i][0]) return (n / u[i][0]) + u[i][1];
-    return String(n);
-  }
+  function life1(n) { return comma(n); }
   // a rate: three significant digits, rounded down (32.6K, 5.8K)
   function rateK(x) {
     var u = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']], q = Math.pow(10, Math.floor(Math.log10(x)) - 2);
