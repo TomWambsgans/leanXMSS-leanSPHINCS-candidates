@@ -1259,6 +1259,9 @@ footer a + a { margin-left: 1.25rem; }
       '+ ' + Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures\n' +
       '+ ' + Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification\n' +
       '− novel\n' +
+      '− security in the standard model will require a new property of the hash, in the same way "interleaved ' +
+      'target subset resilience" has been created ad-hoc for FORS\n' +
+      '− higher variance of the security degradation\n' +
       '− ' + String(Math.ceil(10 * th.prep / th.fors.prep - 1e-9) / 10) + '× slower threshold signing');
 
     if (quiet) return;
