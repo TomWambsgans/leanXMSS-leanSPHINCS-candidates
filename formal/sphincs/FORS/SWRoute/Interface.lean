@@ -83,7 +83,7 @@ and the route's terms (saturation at `ρ`, the cover and near start values, the 
 fit in `(q' + keygenCost) / 2^127`, then the advantage is at most `q / 2^127`. -/
 def DetSW : Prop :=
   ∀ (_hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : ℕ),
-    totalHeight = subtreeHeight → 31 ≤ subtreeHeight + forsHeight →
+    totalHeight = subtreeHeight → 31 ≤ subtreeHeight + forsHeight → digestCalls = 1 →
     HasHashQueryBound adversary q → q < 2 ^ 127 → keygenCost ≤ q → signatureLimit ≤ 2 ^ 70 →
     q - keygenCost + 2 ^ 32 + (H0.scanM - 1) * H0.LmaxOf (q - keygenCost) + (2 * H0.scanM - 1) ≤ 2 ^ 128 →
     ∀ (ρ β δ cU : ℝ) (b0c b0n : ℝ≥0∞),

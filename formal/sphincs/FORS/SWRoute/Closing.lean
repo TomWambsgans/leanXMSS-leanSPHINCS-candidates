@@ -57,7 +57,7 @@ def chainSW (b a K N qtop : ℕ) (En : ℚ) (opts : List OptF) (nopts : List Opt
 
 /-- A SW cover of every budget `qstart ≤ q ≤ qtop`. -/
 def checkCoverSW (H b k a K N qstart : ℕ) (c : CoverSW) : Bool :=
-  decide (H = b) && decide (31 ≤ b + a) && checkRate H b N c.qtop c.tab && checkPT c.tab && checkOptN H k a c.tab c.on && decide (0 ≤ c.on.En) &&
+  decide (H = b) && decide (31 ≤ b + a) && decide ((H + k * a + 255) / 256 = 1) && checkRate H b N c.qtop c.tab && checkPT c.tab && checkOptN H k a c.tab c.on && decide (0 ≤ c.on.En) &&
     c.opts.all (checkOptF H b k a c.tab) && c.nopts.all (checkOptNB H b k a c.tab) &&
     chainSW b a K N c.qtop c.on.En c.opts c.nopts qstart c.entries
 
@@ -135,7 +135,14 @@ theorem det_of_coverSW (hSW : DetSW) (hb0 : 0 < keptHeight topLayer) (H b k a K 
     (hKq : keygenCost ≤ q) (hq0 : qstart ≤ q - keygenCost) (hqt : q - keygenCost ≤ c.qtop) :
     forgeAdvantage adversary ≤ q / 2 ^ 127 := by
   simp only [checkCoverSW, Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq] at hcov
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨hHb, hba⟩, hr⟩, ht⟩, hon⟩, hEn⟩, hopts⟩, hnopts⟩, hchain⟩ := hcov
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨hHb, hba⟩, hdc⟩, hr⟩, ht⟩, hon⟩, hEn⟩, hopts⟩, hnopts⟩, hchain⟩ := hcov
+  have hdc' : digestCalls = 1 := by
+    have e : digestCalls = (H + k * a + 256 - 1) / 256 := by
+      unfold digestCalls messageDigestBits hashOutputBits
+      rw [hH, hk, ha]
+    rw [e]
+    generalize k * a = m at hdc ⊢
+    omega
   set q' := q - keygenCost with hq'def
   obtain ⟨⟨qa, qb, ρ, β, δ, ic, inr⟩, -, hqa, hqb, he⟩ :=
     chainSW_sound b a K N c.qtop c.on.En c.opts c.nopts c.entries qstart hchain q' hq0 hqt
@@ -162,7 +169,7 @@ theorem det_of_coverSW (hSW : DetSW) (hb0 : 0 < keptHeight topLayer) (H b k a K 
     have := (Rat.cast_le (K := ℝ)).mpr hpay
     push_cast at this
     exact this
-  refine hSW hb0 adversary q (by rw [hH, hb, hHb]) (by rw [hb, ha]; exact hba) hbound hq127 hKq hN70 hfair (ρ : ℝ) (β : ℝ) (δ : ℝ) _
+  refine hSW hb0 adversary q (by rw [hH, hb, hHb]) (by rw [hb, ha]; exact hba) hdc' hbound hq127 hKq hN70 hfair (ρ : ℝ) (β : ℝ) (δ : ℝ) _
     (ENNReal.ofReal (o.cthr : ℝ)) (ENNReal.ofReal (n.cthr : ℝ)) hnum' hcU hpayE ?_
   -- the main inequality
   have hρ1 : (1 : ℝ) ≤ (ρ : ℝ) := by linarith [hnum'.low]
