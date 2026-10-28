@@ -1134,7 +1134,7 @@ footer a + a { margin-left: 1.25rem; }
       // never: the message over an invisible slider cell, so that the row keeps its height
       cell.innerHTML = mlab('Assisted signing', '') + (never ? '<div class="assist never"><div class="ghost" aria-hidden="true">' +
         body.replace('<input', '<input tabindex="-1" disabled').replace('class="ex off nw">', 'class="ex off nw">42&nbsp;min').replace('class="ex on" aria-live="polite">', 'class="ex on">&asymp;&thinsp;5.2&nbsp;s') +
-        '</div><span class="note msg">Never faster than signing alone here</span></div>' : '<div class="assist">' + body + '</div>');
+        '</div><span class="note msg">Not faster than signing alone</span></div>' : '<div class="assist">' + body + '</div>');
       var input = cell.querySelector('input');
       if (input) input.addEventListener('input', function () { offChosen = cell.timeOf(+input.value); cell.show(true); });
     }
