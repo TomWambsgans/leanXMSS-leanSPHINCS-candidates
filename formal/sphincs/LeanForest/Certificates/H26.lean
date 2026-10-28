@@ -26,17 +26,17 @@ theorem tab_h26_b26_ok : checkPT tab_h26_b26 = true := checkPT_poisOf (by decide
 theorem rate_h26_b26_ok : checkRate 26 26 1381000000 234976532390629421868243188067598336 tab_h26_b26 = true := by decide +kernel
 
 /-- The small-route option at baseline `ρ / 2^128`. -/
-def small_h26_b26 : OptF := buildOpt 26 26 tab_h26_b26
+def small_h26_b26 : OptF := buildOpt 26 26 8 tab_h26_b26
     (10192343 / 5708990770823839524233143877797980545530986496) 3237329753696580902842956956394460282880 15
     (1908472530469 / 374144419156711147060143317175368453031918731001856)
 
-theorem small_h26_b26_ok : checkOptF 26 26 tab_h26_b26 small_h26_b26 = true :=
+theorem small_h26_b26_ok : checkOptF 26 26 8 tab_h26_b26 small_h26_b26 = true :=
     checkOptF_build (by decide +kernel)
 
 /-- The near certificate. -/
-def near_h26_b26 : OptN := buildOptN 26 26 tab_h26_b26
+def near_h26_b26 : OptN := buildOptN 26 26 8 tab_h26_b26
 
-theorem near_h26_b26_ok : checkOptN 26 tab_h26_b26 near_h26_b26 = true :=
+theorem near_h26_b26_ok : checkOptN 26 8 tab_h26_b26 near_h26_b26 = true :=
     checkOptN_build (by decide +kernel)
 
 /-- The plain rate `ρ`. -/
@@ -52,7 +52,7 @@ def tabc_h26_b26_0 : PoisT := poisOf 379606389764541906945 220 144 150
 theorem tabc_h26_b26_0_ok : checkPT tabc_h26_b26_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 0. -/
-def large_h26_b26_0_0 : OptF := buildOpt 26 26 tabc_h26_b26_0
+def large_h26_b26_0_0 : OptF := buildOpt 26 26 8 tabc_h26_b26_0
     (26824397 / 11417981541647679048466287755595961091061972992) 2722258935367507707706996859454145691648 15
     (2197454604817 / 374144419156711147060143317175368453031918731001856)
 
@@ -61,11 +61,11 @@ def large_h26_b26_0_0_cB : ℚ × ℚ :=
     (2197454604817 / 374144419156711147060143317175368453031918731001856,
      770475594558999 / 392318858461667547739736838950479151006397215279002157056)
 
-theorem large_h26_b26_0_0_ok : checkOptB 26 26 tabc_h26_b26_0 large_h26_b26_0_0 large_h26_b26_0_0_cB = true :=
+theorem large_h26_b26_0_0_ok : checkOptB 26 26 8 tabc_h26_b26_0 large_h26_b26_0_0 large_h26_b26_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 1 of cover 0. -/
-def large_h26_b26_0_1 : OptF := buildOpt 26 26 tabc_h26_b26_0
+def large_h26_b26_0_1 : OptF := buildOpt 26 26 8 tabc_h26_b26_0
     (26823111 / 11417981541647679048466287755595961091061972992) 2722258935367507707706996859454145691648 15
     (1098674642563 / 187072209578355573530071658587684226515959365500928)
 
@@ -74,11 +74,11 @@ def large_h26_b26_0_1_cB : ℚ × ℚ :=
     (1098674642563 / 187072209578355573530071658587684226515959365500928,
      3082177512488937 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b26_0_1_ok : checkOptB 26 26 tabc_h26_b26_0 large_h26_b26_0_1 large_h26_b26_0_1_cB = true :=
+theorem large_h26_b26_0_1_ok : checkOptB 26 26 8 tabc_h26_b26_0 large_h26_b26_0_1 large_h26_b26_0_1_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 2 of cover 0. -/
-def large_h26_b26_0_2 : OptF := buildOpt 26 26 tabc_h26_b26_0
+def large_h26_b26_0_2 : OptF := buildOpt 26 26 8 tabc_h26_b26_0
     (26820275 / 11417981541647679048466287755595961091061972992) 2722258935367507707706996859454145691648 15
     (2197116957361 / 374144419156711147060143317175368453031918731001856)
 
@@ -87,11 +87,11 @@ def large_h26_b26_0_2_cB : ℚ × ℚ :=
     (2197116957361 / 374144419156711147060143317175368453031918731001856,
      770696201581837 / 392318858461667547739736838950479151006397215279002157056)
 
-theorem large_h26_b26_0_2_ok : checkOptB 26 26 tabc_h26_b26_0 large_h26_b26_0_2 large_h26_b26_0_2_cB = true :=
+theorem large_h26_b26_0_2_ok : checkOptB 26 26 8 tabc_h26_b26_0 large_h26_b26_0_2 large_h26_b26_0_2_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 3 of cover 0. -/
-def large_h26_b26_0_3 : OptF := buildOpt 26 26 tabc_h26_b26_0
+def large_h26_b26_0_3 : OptF := buildOpt 26 26 8 tabc_h26_b26_0
     (3351671 / 1427247692705959881058285969449495136382746624) 2722258935367507707706996859454145691648 15
     (549137773327 / 93536104789177786765035829293842113257979682750464)
 
@@ -100,11 +100,11 @@ def large_h26_b26_0_3_cB : ℚ × ℚ :=
     (549137773327 / 93536104789177786765035829293842113257979682750464,
      3084266034262791 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b26_0_3_ok : checkOptB 26 26 tabc_h26_b26_0 large_h26_b26_0_3 large_h26_b26_0_3_cB = true :=
+theorem large_h26_b26_0_3_ok : checkOptB 26 26 8 tabc_h26_b26_0 large_h26_b26_0_3 large_h26_b26_0_3_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 4 of cover 0. -/
-def large_h26_b26_0_4 : OptF := buildOpt 26 26 tabc_h26_b26_0
+def large_h26_b26_0_4 : OptF := buildOpt 26 26 8 tabc_h26_b26_0
     (6698335 / 2854495385411919762116571938898990272765493248) 2722258935367507707706996859454145691648 15
     (2194910378583 / 374144419156711147060143317175368453031918731001856)
 
@@ -113,11 +113,11 @@ def large_h26_b26_0_4_cB : ℚ × ℚ :=
     (2194910378583 / 374144419156711147060143317175368453031918731001856,
      1544288788039931 / 784637716923335095479473677900958302012794430558004314112)
 
-theorem large_h26_b26_0_4_ok : checkOptB 26 26 tabc_h26_b26_0 large_h26_b26_0_4 large_h26_b26_0_4_cB = true :=
+theorem large_h26_b26_0_4_ok : checkOptB 26 26 8 tabc_h26_b26_0 large_h26_b26_0_4 large_h26_b26_0_4_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 5 of cover 0. -/
-def large_h26_b26_0_5 : OptF := buildOpt 26 26 tabc_h26_b26_0
+def large_h26_b26_0_5 : OptF := buildOpt 26 26 8 tabc_h26_b26_0
     (26706081 / 11417981541647679048466287755595961091061972992) 2722258935367507707706996859454145691648 15
     (68367568197 / 11692013098647223345629478661730264157247460343808)
 
@@ -126,11 +126,11 @@ def large_h26_b26_0_5_cB : ℚ × ℚ :=
     (68367568197 / 11692013098647223345629478661730264157247460343808,
      6215314608640643 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b26_0_5_ok : checkOptB 26 26 tabc_h26_b26_0 large_h26_b26_0_5 large_h26_b26_0_5_cB = true :=
+theorem large_h26_b26_0_5_ok : checkOptB 26 26 8 tabc_h26_b26_0 large_h26_b26_0_5 large_h26_b26_0_5_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 6 of cover 0. -/
-def large_h26_b26_0_6 : OptF := buildOpt 26 26 tabc_h26_b26_0
+def large_h26_b26_0_6 : OptF := buildOpt 26 26 8 tabc_h26_b26_0
     (12933671 / 5708990770823839524233143877797980545530986496) 2722258935367507707706996859454145691648 15
     (2119052690073 / 374144419156711147060143317175368453031918731001856)
 
@@ -139,11 +139,11 @@ def large_h26_b26_0_6_cB : ℚ × ℚ :=
     (2119052690073 / 374144419156711147060143317175368453031918731001856,
      3319219245467215 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b26_0_6_ok : checkOptB 26 26 tabc_h26_b26_0 large_h26_b26_0_6 large_h26_b26_0_6_cB = true :=
+theorem large_h26_b26_0_6_ok : checkOptB 26 26 8 tabc_h26_b26_0 large_h26_b26_0_6 large_h26_b26_0_6_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 7 of cover 0. -/
-def large_h26_b26_0_7 : OptF := buildOpt 26 26 tabc_h26_b26_0
+def large_h26_b26_0_7 : OptF := buildOpt 26 26 8 tabc_h26_b26_0
     (3272841 / 2854495385411919762116571938898990272765493248) 3849855440800601594592259505249948008448 15
     (1429926045633 / 374144419156711147060143317175368453031918731001856)
 
@@ -152,11 +152,11 @@ def large_h26_b26_0_7_cB : ℚ × ℚ :=
     (1429926045633 / 374144419156711147060143317175368453031918731001856,
      16753621653304585 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b26_0_7_ok : checkOptB 26 26 tabc_h26_b26_0 large_h26_b26_0_7 large_h26_b26_0_7_cB = true :=
+theorem large_h26_b26_0_7_ok : checkOptB 26 26 8 tabc_h26_b26_0 large_h26_b26_0_7 large_h26_b26_0_7_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 8 of cover 0. -/
-def large_h26_b26_0_8 : OptF := buildOpt 26 26 tabc_h26_b26_0
+def large_h26_b26_0_8 : OptF := buildOpt 26 26 8 tabc_h26_b26_0
     (20132659 / 22835963083295358096932575511191922182123945984) 3237329753696580902842956956394460282880 14
     (274877906669 / 93536104789177786765035829293842113257979682750464)
 
@@ -165,7 +165,7 @@ def large_h26_b26_0_8_cB : ℚ × ℚ :=
     (274877906669 / 93536104789177786765035829293842113257979682750464,
      435469307182239283 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b26_0_8_ok : checkOptB 26 26 tabc_h26_b26_0 large_h26_b26_0_8 large_h26_b26_0_8_cB = true :=
+theorem large_h26_b26_0_8_ok : checkOptB 26 26 8 tabc_h26_b26_0 large_h26_b26_0_8 large_h26_b26_0_8_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 0: every budget from 234976532390629421868243188067598337 to 170141183460469231731687303715884105728. -/
@@ -184,14 +184,14 @@ def cover_h26_b26_0 : CoverW where
     (12308013994538689258248124412691742721, 119012028561403971909047934855963213824, 7),
     (119012028561403971909047934855963213825, 170141183460469231731687303715884105728, 8)]
 
-theorem cover_h26_b26_0_ok : checkCoverW 26 26 15166603264 1381000000 234976532390629421868243188067598337 cover_h26_b26_0 = true :=
+theorem cover_h26_b26_0_ok : checkCoverW 26 26 8 15166603264 1381000000 234976532390629421868243188067598337 cover_h26_b26_0 = true :=
   checkCoverW_of_pt [large_h26_b26_0_0_cB, large_h26_b26_0_1_cB, large_h26_b26_0_2_cB, large_h26_b26_0_3_cB, large_h26_b26_0_4_cB, large_h26_b26_0_5_cB, large_h26_b26_0_6_cB, large_h26_b26_0_7_cB, large_h26_b26_0_8_cB]
     (.cons large_h26_b26_0_0_ok <| .cons large_h26_b26_0_1_ok <| .cons large_h26_b26_0_2_ok <| .cons large_h26_b26_0_3_ok <| .cons large_h26_b26_0_4_ok <| .cons large_h26_b26_0_5_ok <| .cons large_h26_b26_0_6_ok <| .cons large_h26_b26_0_7_ok <| .cons large_h26_b26_0_8_ok <| .nil)
     tabc_h26_b26_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b26_ok : ForestPotential.checkCoversH 26 26 15166603264 1381000000 234976532390629421868243188067598337 [cover_h26_b26_0] [] = true := by
+theorem covers_h26_b26_ok : ForestPotential.checkCoversH 26 26 8 15166603264 1381000000 234976532390629421868243188067598337 [cover_h26_b26_0] [] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b26_0_ok, by decide +kernel⟩
 
@@ -204,17 +204,17 @@ theorem tab_h26_b20_ok : checkPT tab_h26_b20 = true := checkPT_poisOf (by decide
 theorem rate_h26_b20_ok : checkRate 26 20 26030000 558871528355207643822193711415033856 tab_h26_b20 = true := by decide +kernel
 
 /-- The small-route option at baseline `ρ / 2^128`. -/
-def small_h26_b20 : OptF := buildOpt 26 20 tab_h26_b20
+def small_h26_b20 : OptF := buildOpt 26 20 8 tab_h26_b20
     (2547455 / 713623846352979940529142984724747568191373312) 1618664876848290451421478478197230141440 15
     (1027384687483 / 187072209578355573530071658587684226515959365500928)
 
-theorem small_h26_b20_ok : checkOptF 26 20 tab_h26_b20 small_h26_b20 = true :=
+theorem small_h26_b20_ok : checkOptF 26 20 8 tab_h26_b20 small_h26_b20 = true :=
     checkOptF_build (by decide +kernel)
 
 /-- The near certificate. -/
-def near_h26_b20 : OptN := buildOptN 26 20 tab_h26_b20
+def near_h26_b20 : OptN := buildOptN 26 20 8 tab_h26_b20
 
-theorem near_h26_b20_ok : checkOptN 26 tab_h26_b20 near_h26_b20 = true :=
+theorem near_h26_b20_ok : checkOptN 26 8 tab_h26_b20 near_h26_b20 = true :=
     checkOptN_build (by decide +kernel)
 
 /-- The plain rate `ρ`. -/
@@ -230,7 +230,7 @@ def tabc_h26_b20_0 : PoisT := poisOf 457924605229640295660 220 154 150
 theorem tabc_h26_b20_0_ok : checkPT tabc_h26_b20_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 0. -/
-def large_h26_b20_0_0 : OptF := buildOpt 26 20 tabc_h26_b20_0
+def large_h26_b20_0_0 : OptF := buildOpt 26 20 8 tabc_h26_b20_0
     (10887085 / 2854495385411919762116571938898990272765493248) 1484322227467904832594739768790169419776 15
     (1097686151381 / 187072209578355573530071658587684226515959365500928)
 
@@ -239,11 +239,11 @@ def large_h26_b20_0_0_cB : ℚ × ℚ :=
     (1097686151381 / 187072209578355573530071658587684226515959365500928,
      15139120639144969 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b20_0_0_ok : checkOptB 26 20 tabc_h26_b20_0 large_h26_b20_0_0 large_h26_b20_0_0_cB = true :=
+theorem large_h26_b20_0_0_ok : checkOptB 26 20 8 tabc_h26_b20_0 large_h26_b20_0_0 large_h26_b20_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 1 of cover 0. -/
-def large_h26_b20_0_1 : OptF := buildOpt 26 20 tabc_h26_b20_0
+def large_h26_b20_0_1 : OptF := buildOpt 26 20 8 tabc_h26_b20_0
     (1360861 / 356811923176489970264571492362373784095686656) 1484322227467904832594739768790169419776 15
     (548833136629 / 93536104789177786765035829293842113257979682750464)
 
@@ -252,11 +252,11 @@ def large_h26_b20_0_1_cB : ℚ × ℚ :=
     (548833136629 / 93536104789177786765035829293842113257979682750464,
      15139519970703033 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b20_0_1_ok : checkOptB 26 20 tabc_h26_b20_0 large_h26_b20_0_1 large_h26_b20_0_1_cB = true :=
+theorem large_h26_b20_0_1_ok : checkOptB 26 20 8 tabc_h26_b20_0 large_h26_b20_0_1 large_h26_b20_0_1_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 2 of cover 0. -/
-def large_h26_b20_0_2 : OptF := buildOpt 26 20 tabc_h26_b20_0
+def large_h26_b20_0_2 : OptF := buildOpt 26 20 8 tabc_h26_b20_0
     (21773377 / 5708990770823839524233143877797980545530986496) 1484322227467904832594739768790169419776 15
     (1097646178677 / 187072209578355573530071658587684226515959365500928)
 
@@ -265,11 +265,11 @@ def large_h26_b20_0_2_cB : ℚ × ℚ :=
     (1097646178677 / 187072209578355573530071658587684226515959365500928,
      15139923756459267 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b20_0_2_ok : checkOptB 26 20 tabc_h26_b20_0 large_h26_b20_0_2 large_h26_b20_0_2_cB = true :=
+theorem large_h26_b20_0_2_ok : checkOptB 26 20 8 tabc_h26_b20_0 large_h26_b20_0_2 large_h26_b20_0_2_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 3 of cover 0. -/
-def large_h26_b20_0_3 : OptF := buildOpt 26 20 tabc_h26_b20_0
+def large_h26_b20_0_3 : OptF := buildOpt 26 20 8 tabc_h26_b20_0
     (21772567 / 5708990770823839524233143877797980545530986496) 1484322227467904832594739768790169419776 15
     (1097605330685 / 187072209578355573530071658587684226515959365500928)
 
@@ -278,11 +278,11 @@ def large_h26_b20_0_3_cB : ℚ × ℚ :=
     (1097605330685 / 187072209578355573530071658587684226515959365500928,
      15140744573027761 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b20_0_3_ok : checkOptB 26 20 tabc_h26_b20_0 large_h26_b20_0_3 large_h26_b20_0_3_cB = true :=
+theorem large_h26_b20_0_3_ok : checkOptB 26 20 8 tabc_h26_b20_0 large_h26_b20_0_3 large_h26_b20_0_3_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 4 of cover 0. -/
-def large_h26_b20_0_4 : OptF := buildOpt 26 20 tabc_h26_b20_0
+def large_h26_b20_0_4 : OptF := buildOpt 26 20 8 tabc_h26_b20_0
     (21770893 / 5708990770823839524233143877797980545530986496) 1484322227467904832594739768790169419776 15
     (1097520931751 / 187072209578355573530071658587684226515959365500928)
 
@@ -291,11 +291,11 @@ def large_h26_b20_0_4_cB : ℚ × ℚ :=
     (1097520931751 / 187072209578355573530071658587684226515959365500928,
      3785610259218981 / 784637716923335095479473677900958302012794430558004314112)
 
-theorem large_h26_b20_0_4_ok : checkOptB 26 20 tabc_h26_b20_0 large_h26_b20_0_4 large_h26_b20_0_4_cB = true :=
+theorem large_h26_b20_0_4_ok : checkOptB 26 20 8 tabc_h26_b20_0 large_h26_b20_0_4 large_h26_b20_0_4_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 5 of cover 0. -/
-def large_h26_b20_0_5 : OptF := buildOpt 26 20 tabc_h26_b20_0
+def large_h26_b20_0_5 : OptF := buildOpt 26 20 8 tabc_h26_b20_0
     (21767319 / 5708990770823839524233143877797980545530986496) 1484322227467904832594739768790169419776 15
     (2194681516933 / 374144419156711147060143317175368453031918731001856)
 
@@ -304,11 +304,11 @@ def large_h26_b20_0_5_cB : ℚ × ℚ :=
     (2194681516933 / 374144419156711147060143317175368453031918731001856,
      15146064806782265 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b20_0_5_ok : checkOptB 26 20 tabc_h26_b20_0 large_h26_b20_0_5 large_h26_b20_0_5_cB = true :=
+theorem large_h26_b20_0_5_ok : checkOptB 26 20 8 tabc_h26_b20_0 large_h26_b20_0_5 large_h26_b20_0_5_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 6 of cover 0. -/
-def large_h26_b20_0_6 : OptF := buildOpt 26 20 tabc_h26_b20_0
+def large_h26_b20_0_6 : OptF := buildOpt 26 20 8 tabc_h26_b20_0
     (21759171 / 5708990770823839524233143877797980545530986496) 1484322227467904832594739768790169419776 15
     (2193860029511 / 374144419156711147060143317175368453031918731001856)
 
@@ -317,11 +317,11 @@ def large_h26_b20_0_6_cB : ℚ × ℚ :=
     (2193860029511 / 374144419156711147060143317175368453031918731001856,
      15154336974558137 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b20_0_6_ok : checkOptB 26 20 tabc_h26_b20_0 large_h26_b20_0_6 large_h26_b20_0_6_cB = true :=
+theorem large_h26_b20_0_6_ok : checkOptB 26 20 8 tabc_h26_b20_0 large_h26_b20_0_6 large_h26_b20_0_6_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 7 of cover 0. -/
-def large_h26_b20_0_7 : OptF := buildOpt 26 20 tabc_h26_b20_0
+def large_h26_b20_0_7 : OptF := buildOpt 26 20 8 tabc_h26_b20_0
     (21738739 / 5708990770823839524233143877797980545530986496) 1484322227467904832594739768790169419776 15
     (1095900004077 / 187072209578355573530071658587684226515959365500928)
 
@@ -330,11 +330,11 @@ def large_h26_b20_0_7_cB : ℚ × ℚ :=
     (1095900004077 / 187072209578355573530071658587684226515959365500928,
      15175148110292277 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b20_0_7_ok : checkOptB 26 20 tabc_h26_b20_0 large_h26_b20_0_7 large_h26_b20_0_7_cB = true :=
+theorem large_h26_b20_0_7_ok : checkOptB 26 20 8 tabc_h26_b20_0 large_h26_b20_0_7 large_h26_b20_0_7_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 8 of cover 0. -/
-def large_h26_b20_0_8 : OptF := buildOpt 26 20 tabc_h26_b20_0
+def large_h26_b20_0_8 : OptF := buildOpt 26 20 8 tabc_h26_b20_0
     (21667097 / 5708990770823839524233143877797980545530986496) 1484322227467904832594739768790169419776 15
     (546144190739 / 93536104789177786765035829293842113257979682750464)
 
@@ -343,11 +343,11 @@ def large_h26_b20_0_8_cB : ℚ × ℚ :=
     (546144190739 / 93536104789177786765035829293842113257979682750464,
      7624443489534021 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b20_0_8_ok : checkOptB 26 20 tabc_h26_b20_0 large_h26_b20_0_8 large_h26_b20_0_8_cB = true :=
+theorem large_h26_b20_0_8_ok : checkOptB 26 20 8 tabc_h26_b20_0 large_h26_b20_0_8 large_h26_b20_0_8_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 9 of cover 0. -/
-def large_h26_b20_0_9 : OptF := buildOpt 26 20 tabc_h26_b20_0
+def large_h26_b20_0_9 : OptF := buildOpt 26 20 8 tabc_h26_b20_0
     (10633729 / 2854495385411919762116571938898990272765493248) 1618664876848290451421478478197230141440 15
     (134017706619 / 23384026197294446691258957323460528314494920687616)
 
@@ -356,11 +356,11 @@ def large_h26_b20_0_9_cB : ℚ × ℚ :=
     (134017706619 / 23384026197294446691258957323460528314494920687616,
      15705370836421247 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b20_0_9_ok : checkOptB 26 20 tabc_h26_b20_0 large_h26_b20_0_9 large_h26_b20_0_9_cB = true :=
+theorem large_h26_b20_0_9_ok : checkOptB 26 20 8 tabc_h26_b20_0 large_h26_b20_0_9 large_h26_b20_0_9_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 10 of cover 0. -/
-def large_h26_b20_0_10 : OptF := buildOpt 26 20 tabc_h26_b20_0
+def large_h26_b20_0_10 : OptF := buildOpt 26 20 8 tabc_h26_b20_0
     (39 / 10889035741470030830827987437816582766592) 1618664876848290451421478478197230141440 15
     (1030792150009 / 187072209578355573530071658587684226515959365500928)
 
@@ -369,7 +369,7 @@ def large_h26_b20_0_10_cB : ℚ × ℚ :=
     (1030792150009 / 187072209578355573530071658587684226515959365500928,
      16471223955459409 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b20_0_10_ok : checkOptB 26 20 tabc_h26_b20_0 large_h26_b20_0_10 large_h26_b20_0_10_cB = true :=
+theorem large_h26_b20_0_10_ok : checkOptB 26 20 8 tabc_h26_b20_0 large_h26_b20_0_10 large_h26_b20_0_10_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 0: every budget from 558871528355207643822193711415033857 to 21267647932558653966460912964485513216. -/
@@ -393,7 +393,7 @@ def cover_h26_b20_0 : CoverW where
     (2214745380934933985133691863161634817, 8460451160635931439369736817586733056, 9),
     (8460451160635931439369736817586733057, 21267647932558653966460912964485513216, 10)]
 
-theorem cover_h26_b20_0_ok : checkCoverW 26 20 236978188 26030000 558871528355207643822193711415033857 cover_h26_b20_0 = true :=
+theorem cover_h26_b20_0_ok : checkCoverW 26 20 8 236978188 26030000 558871528355207643822193711415033857 cover_h26_b20_0 = true :=
   checkCoverW_of_pt [large_h26_b20_0_0_cB, large_h26_b20_0_1_cB, large_h26_b20_0_2_cB, large_h26_b20_0_3_cB, large_h26_b20_0_4_cB, large_h26_b20_0_5_cB, large_h26_b20_0_6_cB, large_h26_b20_0_7_cB, large_h26_b20_0_8_cB, large_h26_b20_0_9_cB, large_h26_b20_0_10_cB]
     (.cons large_h26_b20_0_0_ok <| .cons large_h26_b20_0_1_ok <| .cons large_h26_b20_0_2_ok <| .cons large_h26_b20_0_3_ok <| .cons large_h26_b20_0_4_ok <| .cons large_h26_b20_0_5_ok <| .cons large_h26_b20_0_6_ok <| .cons large_h26_b20_0_7_ok <| .cons large_h26_b20_0_8_ok <| .cons large_h26_b20_0_9_ok <| .cons large_h26_b20_0_10_ok <| .nil)
     tabc_h26_b20_0_ok
@@ -406,7 +406,7 @@ def tabc_h26_b20_1 : PoisT := poisOf 457924620053489907760 220 154 150
 theorem tabc_h26_b20_1_ok : checkPT tabc_h26_b20_1 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 1. -/
-def large_h26_b20_1_0 : OptF := buildOpt 26 20 tabc_h26_b20_1
+def large_h26_b20_1_0 : OptF := buildOpt 26 20 8 tabc_h26_b20_1
     (30198989 / 11417981541647679048466287755595961091061972992) 1924927720400300797296129752624974004224 15
     (824633720007 / 187072209578355573530071658587684226515959365500928)
 
@@ -415,7 +415,7 @@ def large_h26_b20_1_0_cB : ℚ × ℚ :=
     (824633720007 / 187072209578355573530071658587684226515959365500928,
      22493402372313995 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b20_1_0_ok : checkOptB 26 20 tabc_h26_b20_1 large_h26_b20_1_0 large_h26_b20_1_0_cB = true :=
+theorem large_h26_b20_1_0_ok : checkOptB 26 20 8 tabc_h26_b20_1 large_h26_b20_1_0 large_h26_b20_1_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 1: every budget from 21267647932558653966460912964485513217 to 84739577754630590123170513440188944304. -/
@@ -426,7 +426,7 @@ def cover_h26_b20_1 : CoverW where
   entries := [
     (21267647932558653966460912964485513217, 84739577754630590123170513440188944304, 0)]
 
-theorem cover_h26_b20_1_ok : checkCoverW 26 20 236978188 26030000 21267647932558653966460912964485513217 cover_h26_b20_1 = true :=
+theorem cover_h26_b20_1_ok : checkCoverW 26 20 8 236978188 26030000 21267647932558653966460912964485513217 cover_h26_b20_1 = true :=
   checkCoverW_of_pt [large_h26_b20_1_0_cB]
     (.cons large_h26_b20_1_0_ok <| .nil)
     tabc_h26_b20_1_ok
@@ -439,7 +439,7 @@ def tabch_h26_b20_0 : PoisT := poisOf 457924690113248223300 220 154 150
 theorem tabch_h26_b20_0_ok : checkPT tabch_h26_b20_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of heavy cover 0. -/
-def largeh_h26_b20_0_0 : OptF := buildOpt 26 20 tabch_h26_b20_0
+def largeh_h26_b20_0_0 : OptF := buildOpt 26 20 8 tabch_h26_b20_0
     (30198989 / 22835963083295358096932575511191922182123945984) 2968644454935809665189479537580338839552 14
     (274877906669 / 93536104789177786765035829293842113257979682750464)
 
@@ -448,7 +448,7 @@ def largeh_h26_b20_0_0_cB : ℚ × ℚ :=
     (274877906669 / 93536104789177786765035829293842113257979682750464,
      21457519487950489 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem largeh_h26_b20_0_0_ok : checkOptB 26 20 tabch_h26_b20_0 largeh_h26_b20_0_0 largeh_h26_b20_0_0_cB = true :=
+theorem largeh_h26_b20_0_0_ok : checkOptB 26 20 8 tabch_h26_b20_0 largeh_h26_b20_0_0 largeh_h26_b20_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Heavy cover (one heavy message, one spare slot) 0: every budget from 84739577754630590123170513440188944305 to 170141183460469231731687303715884105728. -/
@@ -459,14 +459,14 @@ def coverh_h26_b20_0 : CoverW where
   entries := [
     (84739577754630590123170513440188944305, 170141183460469231731687303715884105728, 0)]
 
-theorem coverh_h26_b20_0_ok : checkCoverH 26 20 236978188 26030000 84739577754630590123170513440188944305 coverh_h26_b20_0 = true :=
+theorem coverh_h26_b20_0_ok : checkCoverH 26 20 8 236978188 26030000 84739577754630590123170513440188944305 coverh_h26_b20_0 = true :=
   checkCoverH_of_pt [largeh_h26_b20_0_0_cB]
     (.cons largeh_h26_b20_0_0_ok <| .nil)
     tabch_h26_b20_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b20_ok : ForestPotential.checkCoversH 26 20 236978188 26030000 558871528355207643822193711415033857 [cover_h26_b20_0, cover_h26_b20_1] [coverh_h26_b20_0] = true := by
+theorem covers_h26_b20_ok : ForestPotential.checkCoversH 26 20 8 236978188 26030000 558871528355207643822193711415033857 [cover_h26_b20_0, cover_h26_b20_1] [coverh_h26_b20_0] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b20_0_ok, cover_h26_b20_1_ok, coverh_h26_b20_0_ok, by decide +kernel⟩
 
@@ -479,17 +479,17 @@ theorem tab_h26_b14_ok : checkPT tab_h26_b14 = true := checkPT_poisOf (by decide
 theorem rate_h26_b14_ok : checkRate 26 14 480100 1117743056710415287644387422830067712 tab_h26_b14 = true := by decide +kernel
 
 /-- The small-route option at baseline `ρ / 2^128`. -/
-def small_h26_b14 : OptF := buildOpt 26 14 tab_h26_b14
+def small_h26_b14 : OptF := buildOpt 26 14 8 tab_h26_b14
     (1517653 / 356811923176489970264571492362373784095686656) 1248161232840080511386332291615267225600 15
     (2121832685657 / 374144419156711147060143317175368453031918731001856)
 
-theorem small_h26_b14_ok : checkOptF 26 14 tab_h26_b14 small_h26_b14 = true :=
+theorem small_h26_b14_ok : checkOptF 26 14 8 tab_h26_b14 small_h26_b14 = true :=
     checkOptF_build (by decide +kernel)
 
 /-- The near certificate. -/
-def near_h26_b14 : OptN := buildOptN 26 14 tab_h26_b14
+def near_h26_b14 : OptN := buildOptN 26 14 8 tab_h26_b14
 
-theorem near_h26_b14_ok : checkOptN 26 tab_h26_b14 near_h26_b14 = true :=
+theorem near_h26_b14_ok : checkOptN 26 8 tab_h26_b14 near_h26_b14 = true :=
     checkOptN_build (by decide +kernel)
 
 /-- The plain rate `ρ`. -/
@@ -505,7 +505,7 @@ def tabc_h26_b14_0 : PoisT := poisOf 540544706275189544908 220 165 150
 theorem tabc_h26_b14_0_ok : checkPT tabc_h26_b14_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 0. -/
-def large_h26_b14_0_0 : OptF := buildOpt 26 14 tabc_h26_b14_0
+def large_h26_b14_0_0 : OptF := buildOpt 26 14 8 tabc_h26_b14_0
     (6270565 / 1427247692705959881058285969449495136382746624) 1248161232840080511386332291615267225600 15
     (2191721352171 / 374144419156711147060143317175368453031918731001856)
 
@@ -514,11 +514,11 @@ def large_h26_b14_0_0_cB : ℚ × ℚ :=
     (2191721352171 / 374144419156711147060143317175368453031918731001856,
      30137652404005031 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b14_0_0_ok : checkOptB 26 14 tabc_h26_b14_0 large_h26_b14_0_0 large_h26_b14_0_0_cB = true :=
+theorem large_h26_b14_0_0_ok : checkOptB 26 14 8 tabc_h26_b14_0 large_h26_b14_0_0 large_h26_b14_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 1 of cover 0. -/
-def large_h26_b14_0_1 : OptF := buildOpt 26 14 tabc_h26_b14_0
+def large_h26_b14_0_1 : OptF := buildOpt 26 14 8 tabc_h26_b14_0
     (12540675 / 2854495385411919762116571938898990272765493248) 1248161232840080511386332291615267225600 15
     (34244403745 / 5846006549323611672814739330865132078623730171904)
 
@@ -527,11 +527,11 @@ def large_h26_b14_0_1_cB : ℚ × ℚ :=
     (34244403745 / 5846006549323611672814739330865132078623730171904,
      7534691014253473 / 784637716923335095479473677900958302012794430558004314112)
 
-theorem large_h26_b14_0_1_ok : checkOptB 26 14 tabc_h26_b14_0 large_h26_b14_0_1 large_h26_b14_0_1_cB = true :=
+theorem large_h26_b14_0_1_ok : checkOptB 26 14 8 tabc_h26_b14_0 large_h26_b14_0_1 large_h26_b14_0_1_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 2 of cover 0. -/
-def large_h26_b14_0_2 : OptF := buildOpt 26 14 tabc_h26_b14_0
+def large_h26_b14_0_2 : OptF := buildOpt 26 14 8 tabc_h26_b14_0
     (25079501 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (273935025971 / 46768052394588893382517914646921056628989841375232)
 
@@ -540,11 +540,11 @@ def large_h26_b14_0_2_cB : ℚ × ℚ :=
     (273935025971 / 46768052394588893382517914646921056628989841375232,
      30141024461921369 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b14_0_2_ok : checkOptB 26 14 tabc_h26_b14_0 large_h26_b14_0_2 large_h26_b14_0_2_cB = true :=
+theorem large_h26_b14_0_2_ok : checkOptB 26 14 8 tabc_h26_b14_0 large_h26_b14_0_2 large_h26_b14_0_2_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 3 of cover 0. -/
-def large_h26_b14_0_3 : OptF := buildOpt 26 14 tabc_h26_b14_0
+def large_h26_b14_0_3 : OptF := buildOpt 26 14 8 tabc_h26_b14_0
     (25075679 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (2191146248609 / 374144419156711147060143317175368453031918731001856)
 
@@ -553,11 +553,11 @@ def large_h26_b14_0_3_cB : ℚ × ℚ :=
     (2191146248609 / 374144419156711147060143317175368453031918731001856,
      30145697437007009 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b14_0_3_ok : checkOptB 26 14 tabc_h26_b14_0 large_h26_b14_0_3 large_h26_b14_0_3_cB = true :=
+theorem large_h26_b14_0_3_ok : checkOptB 26 14 8 tabc_h26_b14_0 large_h26_b14_0_3 large_h26_b14_0_3_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 4 of cover 0. -/
-def large_h26_b14_0_4 : OptF := buildOpt 26 14 tabc_h26_b14_0
+def large_h26_b14_0_4 : OptF := buildOpt 26 14 8 tabc_h26_b14_0
     (765 / 174224571863520493293247799005065324265472) 1248161232840080511386332291615267225600 15
     (2190433318769 / 374144419156711147060143317175368453031918731001856)
 
@@ -566,11 +566,11 @@ def large_h26_b14_0_4_cB : ℚ × ℚ :=
     (2190433318769 / 374144419156711147060143317175368453031918731001856,
      30155685169025663 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b14_0_4_ok : checkOptB 26 14 tabc_h26_b14_0 large_h26_b14_0_4 large_h26_b14_0_4_cB = true :=
+theorem large_h26_b14_0_4_ok : checkOptB 26 14 8 tabc_h26_b14_0 large_h26_b14_0_4 large_h26_b14_0_4_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 5 of cover 0. -/
-def large_h26_b14_0_5 : OptF := buildOpt 26 14 tabc_h26_b14_0
+def large_h26_b14_0_5 : OptF := buildOpt 26 14 8 tabc_h26_b14_0
     (3131115 / 713623846352979940529142984724747568191373312) 1248161232840080511386332291615267225600 15
     (547202010507 / 93536104789177786765035829293842113257979682750464)
 
@@ -579,11 +579,11 @@ def large_h26_b14_0_5_cB : ℚ × ℚ :=
     (547202010507 / 93536104789177786765035829293842113257979682750464,
      15089257616952573 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b14_0_5_ok : checkOptB 26 14 tabc_h26_b14_0 large_h26_b14_0_5 large_h26_b14_0_5_cB = true :=
+theorem large_h26_b14_0_5_ok : checkOptB 26 14 8 tabc_h26_b14_0 large_h26_b14_0_5 large_h26_b14_0_5_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 6 of cover 0. -/
-def large_h26_b14_0_6 : OptF := buildOpt 26 14 tabc_h26_b14_0
+def large_h26_b14_0_6 : OptF := buildOpt 26 14 8 tabc_h26_b14_0
     (25000497 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (546144190739 / 93536104789177786765035829293842113257979682750464)
 
@@ -592,11 +592,11 @@ def large_h26_b14_0_6_cB : ℚ × ℚ :=
     (546144190739 / 93536104789177786765035829293842113257979682750464,
      15119174646919099 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b14_0_6_ok : checkOptB 26 14 tabc_h26_b14_0 large_h26_b14_0_6 large_h26_b14_0_6_cB = true :=
+theorem large_h26_b14_0_6_ok : checkOptB 26 14 8 tabc_h26_b14_0 large_h26_b14_0_6 large_h26_b14_0_6_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 7 of cover 0. -/
-def large_h26_b14_0_7 : OptF := buildOpt 26 14 tabc_h26_b14_0
+def large_h26_b14_0_7 : OptF := buildOpt 26 14 8 tabc_h26_b14_0
     (6209683 / 1427247692705959881058285969449495136382746624) 1248161232840080511386332291615267225600 15
     (2170441507367 / 374144419156711147060143317175368453031918731001856)
 
@@ -605,11 +605,11 @@ def large_h26_b14_0_7_cB : ℚ × ℚ :=
     (2170441507367 / 374144419156711147060143317175368453031918731001856,
      1902651812491717 / 196159429230833773869868419475239575503198607639501078528)
 
-theorem large_h26_b14_0_7_ok : checkOptB 26 14 tabc_h26_b14_0 large_h26_b14_0_7 large_h26_b14_0_7_cB = true :=
+theorem large_h26_b14_0_7_ok : checkOptB 26 14 8 tabc_h26_b14_0 large_h26_b14_0_7 large_h26_b14_0_7_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 8 of cover 0. -/
-def large_h26_b14_0_8 : OptF := buildOpt 26 14 tabc_h26_b14_0
+def large_h26_b14_0_8 : OptF := buildOpt 26 14 8 tabc_h26_b14_0
     (23939773 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (1045944643423 / 187072209578355573530071658587684226515959365500928)
 
@@ -618,11 +618,11 @@ def large_h26_b14_0_8_cB : ℚ × ℚ :=
     (1045944643423 / 187072209578355573530071658587684226515959365500928,
      3962347892476977 / 392318858461667547739736838950479151006397215279002157056)
 
-theorem large_h26_b14_0_8_ok : checkOptB 26 14 tabc_h26_b14_0 large_h26_b14_0_8 large_h26_b14_0_8_cB = true :=
+theorem large_h26_b14_0_8_ok : checkOptB 26 14 8 tabc_h26_b14_0 large_h26_b14_0_8 large_h26_b14_0_8_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 9 of cover 0. -/
-def large_h26_b14_0_9 : OptF := buildOpt 26 14 tabc_h26_b14_0
+def large_h26_b14_0_9 : OptF := buildOpt 26 14 8 tabc_h26_b14_0
     (45 / 10889035741470030830827987437816582766592) 1248161232840080511386332291615267225600 15
     (1030792150009 / 187072209578355573530071658587684226515959365500928)
 
@@ -631,7 +631,7 @@ def large_h26_b14_0_9_cB : ℚ × ℚ :=
     (1030792150009 / 187072209578355573530071658587684226515959365500928,
      1008026847190379 / 98079714615416886934934209737619787751599303819750539264)
 
-theorem large_h26_b14_0_9_ok : checkOptB 26 14 tabc_h26_b14_0 large_h26_b14_0_9 large_h26_b14_0_9_cB = true :=
+theorem large_h26_b14_0_9_ok : checkOptB 26 14 8 tabc_h26_b14_0 large_h26_b14_0_9 large_h26_b14_0_9_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 0: every budget from 1117743056710415287644387422830067713 to 21267647932558653966460912964485513216. -/
@@ -652,7 +652,7 @@ def cover_h26_b14_0 : CoverW where
     (4398925243926885076565020393294790657, 16533351890307625788680071262790221824, 8),
     (16533351890307625788680071262790221825, 21267647932558653966460912964485513216, 9)]
 
-theorem cover_h26_b14_0_ok : checkCoverW 26 14 3702808 480100 1117743056710415287644387422830067713 cover_h26_b14_0 = true :=
+theorem cover_h26_b14_0_ok : checkCoverW 26 14 8 3702808 480100 1117743056710415287644387422830067713 cover_h26_b14_0 = true :=
   checkCoverW_of_pt [large_h26_b14_0_0_cB, large_h26_b14_0_1_cB, large_h26_b14_0_2_cB, large_h26_b14_0_3_cB, large_h26_b14_0_4_cB, large_h26_b14_0_5_cB, large_h26_b14_0_6_cB, large_h26_b14_0_7_cB, large_h26_b14_0_8_cB, large_h26_b14_0_9_cB]
     (.cons large_h26_b14_0_0_ok <| .cons large_h26_b14_0_1_ok <| .cons large_h26_b14_0_2_ok <| .cons large_h26_b14_0_3_ok <| .cons large_h26_b14_0_4_ok <| .cons large_h26_b14_0_5_ok <| .cons large_h26_b14_0_6_ok <| .cons large_h26_b14_0_7_ok <| .cons large_h26_b14_0_8_ok <| .cons large_h26_b14_0_9_ok <| .nil)
     tabc_h26_b14_0_ok
@@ -665,7 +665,7 @@ def tabc_h26_b14_1 : PoisT := poisOf 540545670898059575135 220 165 150
 theorem tabc_h26_b14_1_ok : checkPT tabc_h26_b14_1 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 1. -/
-def large_h26_b14_1_0 : OptF := buildOpt 26 14 tabc_h26_b14_1
+def large_h26_b14_1_0 : OptF := buildOpt 26 14 8 tabc_h26_b14_1
     (17616077 / 5708990770823839524233143877797980545530986496) 1618664876848290451421478478197230141440 15
     (824633720007 / 187072209578355573530071658587684226515959365500928)
 
@@ -674,7 +674,7 @@ def large_h26_b14_1_0_cB : ℚ × ℚ :=
     (824633720007 / 187072209578355573530071658587684226515959365500928,
      40235960950682099 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b14_1_0_ok : checkOptB 26 14 tabc_h26_b14_1 large_h26_b14_1_0 large_h26_b14_1_0_cB = true :=
+theorem large_h26_b14_1_0_ok : checkOptB 26 14 8 tabc_h26_b14_1 large_h26_b14_1_0 large_h26_b14_1_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 1: every budget from 21267647932558653966460912964485513217 to 84739577754630590123170513440188944304. -/
@@ -685,7 +685,7 @@ def cover_h26_b14_1 : CoverW where
   entries := [
     (21267647932558653966460912964485513217, 84739577754630590123170513440188944304, 0)]
 
-theorem cover_h26_b14_1_ok : checkCoverW 26 14 3702808 480100 21267647932558653966460912964485513217 cover_h26_b14_1 = true :=
+theorem cover_h26_b14_1_ok : checkCoverW 26 14 8 3702808 480100 21267647932558653966460912964485513217 cover_h26_b14_1 = true :=
   checkCoverW_of_pt [large_h26_b14_1_0_cB]
     (.cons large_h26_b14_1_0_ok <| .nil)
     tabc_h26_b14_1_ok
@@ -698,7 +698,7 @@ def tabch_h26_b14_0 : PoisT := poisOf 540550317106307185251 220 165 150
 theorem tabch_h26_b14_0_ok : checkPT tabch_h26_b14_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of heavy cover 0. -/
-def largeh_h26_b14_0_0 : OptF := buildOpt 26 14 tabch_h26_b14_0
+def largeh_h26_b14_0_0 : OptF := buildOpt 26 14 8 tabch_h26_b14_0
     (21810381 / 11417981541647679048466287755595961091061972992) 2099148588858086940623571502253532512256 15
     (274877906669 / 93536104789177786765035829293842113257979682750464)
 
@@ -707,7 +707,7 @@ def largeh_h26_b14_0_0_cB : ℚ × ℚ :=
     (274877906669 / 93536104789177786765035829293842113257979682750464,
      7624190328461051 / 392318858461667547739736838950479151006397215279002157056)
 
-theorem largeh_h26_b14_0_0_ok : checkOptB 26 14 tabch_h26_b14_0 largeh_h26_b14_0_0 largeh_h26_b14_0_0_cB = true :=
+theorem largeh_h26_b14_0_0_ok : checkOptB 26 14 8 tabch_h26_b14_0 largeh_h26_b14_0_0 largeh_h26_b14_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Heavy cover (one heavy message, one spare slot) 0: every budget from 84739577754630590123170513440188944305 to 170141183460469231731687303715884105728. -/
@@ -718,14 +718,14 @@ def coverh_h26_b14_0 : CoverW where
   entries := [
     (84739577754630590123170513440188944305, 170141183460469231731687303715884105728, 0)]
 
-theorem coverh_h26_b14_0_ok : checkCoverH 26 14 3702808 480100 84739577754630590123170513440188944305 coverh_h26_b14_0 = true :=
+theorem coverh_h26_b14_0_ok : checkCoverH 26 14 8 3702808 480100 84739577754630590123170513440188944305 coverh_h26_b14_0 = true :=
   checkCoverH_of_pt [largeh_h26_b14_0_0_cB]
     (.cons largeh_h26_b14_0_0_ok <| .nil)
     tabch_h26_b14_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b14_ok : ForestPotential.checkCoversH 26 14 3702808 480100 1117743056710415287644387422830067713 [cover_h26_b14_0, cover_h26_b14_1] [coverh_h26_b14_0] = true := by
+theorem covers_h26_b14_ok : ForestPotential.checkCoversH 26 14 8 3702808 480100 1117743056710415287644387422830067713 [cover_h26_b14_0, cover_h26_b14_1] [coverh_h26_b14_0] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b14_0_ok, cover_h26_b14_1_ok, coverh_h26_b14_0_ok, by decide +kernel⟩
 
@@ -738,17 +738,17 @@ theorem tab_h26_b13_ok : checkPT tab_h26_b13 = true := checkPT_poisOf (by decide
 theorem rate_h26_b13_ok : checkRate 26 13 246900 1329227995784915872903807060280344576 tab_h26_b13 = true := by decide +kernel
 
 /-- The small-route option at baseline `ρ / 2^128`. -/
-def small_h26_b13 : OptF := buildOpt 26 13 tab_h26_b13
+def small_h26_b13 : OptF := buildOpt 26 13 8 tab_h26_b13
     (24414605 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (266672596289 / 46768052394588893382517914646921056628989841375232)
 
-theorem small_h26_b13_ok : checkOptF 26 13 tab_h26_b13 small_h26_b13 = true :=
+theorem small_h26_b13_ok : checkOptF 26 13 8 tab_h26_b13 small_h26_b13 = true :=
     checkOptF_build (by decide +kernel)
 
 /-- The near certificate. -/
-def near_h26_b13 : OptN := buildOptN 26 13 tab_h26_b13
+def near_h26_b13 : OptN := buildOptN 26 13 8 tab_h26_b13
 
-theorem near_h26_b13_ok : checkOptN 26 tab_h26_b13 near_h26_b13 = true :=
+theorem near_h26_b13_ok : checkOptN 26 8 tab_h26_b13 near_h26_b13 = true :=
     checkOptN_build (by decide +kernel)
 
 /-- The plain rate `ρ`. -/
@@ -764,7 +764,7 @@ def tabc_h26_b13_0 : PoisT := poisOf 555969696021489803479 220 166 150
 theorem tabc_h26_b13_0_ok : checkPT tabc_h26_b13_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 0. -/
-def large_h26_b13_0_0 : OptF := buildOpt 26 13 tabc_h26_b13_0
+def large_h26_b13_0_0 : OptF := buildOpt 26 13 8 tabc_h26_b13_0
     (97903 / 22300745198530623141535718272648361505980416) 1248161232840080511386332291615267225600 15
     (1095026504937 / 187072209578355573530071658587684226515959365500928)
 
@@ -773,11 +773,11 @@ def large_h26_b13_0_0_cB : ℚ × ℚ :=
     (1095026504937 / 187072209578355573530071658587684226515959365500928,
      34774782290024555 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b13_0_0_ok : checkOptB 26 13 tabc_h26_b13_0 large_h26_b13_0_0 large_h26_b13_0_0_cB = true :=
+theorem large_h26_b13_0_0_ok : checkOptB 26 13 8 tabc_h26_b13_0 large_h26_b13_0_0 large_h26_b13_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 1 of cover 0. -/
-def large_h26_b13_0_1 : OptF := buildOpt 26 13 tabc_h26_b13_0
+def large_h26_b13_0_1 : OptF := buildOpt 26 13 8 tabc_h26_b13_0
     (25056275 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (2189450744133 / 374144419156711147060143317175368453031918731001856)
 
@@ -786,11 +786,11 @@ def large_h26_b13_0_1_cB : ℚ × ℚ :=
     (2189450744133 / 374144419156711147060143317175368453031918731001856,
      17391692240576025 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b13_0_1_ok : checkOptB 26 13 tabc_h26_b13_0 large_h26_b13_0_1 large_h26_b13_0_1_cB = true :=
+theorem large_h26_b13_0_1_ok : checkOptB 26 13 8 tabc_h26_b13_0 large_h26_b13_0_1 large_h26_b13_0_1_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 2 of cover 0. -/
-def large_h26_b13_0_2 : OptF := buildOpt 26 13 tabc_h26_b13_0
+def large_h26_b13_0_2 : OptF := buildOpt 26 13 8 tabc_h26_b13_0
     (25041071 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (2188122188647 / 374144419156711147060143317175368453031918731001856)
 
@@ -799,11 +799,11 @@ def large_h26_b13_0_2_cB : ℚ × ℚ :=
     (2188122188647 / 374144419156711147060143317175368453031918731001856,
      8700601780354297 / 784637716923335095479473677900958302012794430558004314112)
 
-theorem large_h26_b13_0_2_ok : checkOptB 26 13 tabc_h26_b13_0 large_h26_b13_0_2 large_h26_b13_0_2_cB = true :=
+theorem large_h26_b13_0_2_ok : checkOptB 26 13 8 tabc_h26_b13_0 large_h26_b13_0_2 large_h26_b13_0_2_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 3 of cover 0. -/
-def large_h26_b13_0_3 : OptF := buildOpt 26 13 tabc_h26_b13_0
+def large_h26_b13_0_3 : OptF := buildOpt 26 13 8 tabc_h26_b13_0
     (12501139 / 2854495385411919762116571938898990272765493248) 1248161232840080511386332291615267225600 15
     (273091547545 / 46768052394588893382517914646921056628989841375232)
 
@@ -812,11 +812,11 @@ def large_h26_b13_0_3_cB : ℚ × ℚ :=
     (273091547545 / 46768052394588893382517914646921056628989841375232,
      34851234022593047 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b13_0_3_ok : checkOptB 26 13 tabc_h26_b13_0 large_h26_b13_0_3 large_h26_b13_0_3_cB = true :=
+theorem large_h26_b13_0_3_ok : checkOptB 26 13 8 tabc_h26_b13_0 large_h26_b13_0_3 large_h26_b13_0_3_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 4 of cover 0. -/
-def large_h26_b13_0_4 : OptF := buildOpt 26 13 tabc_h26_b13_0
+def large_h26_b13_0_4 : OptF := buildOpt 26 13 8 tabc_h26_b13_0
     (24884751 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (271807835405 / 46768052394588893382517914646921056628989841375232)
 
@@ -825,11 +825,11 @@ def large_h26_b13_0_4_cB : ℚ × ℚ :=
     (271807835405 / 46768052394588893382517914646921056628989841375232,
      8750428199608845 / 784637716923335095479473677900958302012794430558004314112)
 
-theorem large_h26_b13_0_4_ok : checkOptB 26 13 tabc_h26_b13_0 large_h26_b13_0_4 large_h26_b13_0_4_cB = true :=
+theorem large_h26_b13_0_4_ok : checkOptB 26 13 8 tabc_h26_b13_0 large_h26_b13_0_4 large_h26_b13_0_4_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 5 of cover 0. -/
-def large_h26_b13_0_5 : OptF := buildOpt 26 13 tabc_h26_b13_0
+def large_h26_b13_0_5 : OptF := buildOpt 26 13 8 tabc_h26_b13_0
     (24362171 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (2128799016089 / 374144419156711147060143317175368453031918731001856)
 
@@ -838,11 +838,11 @@ def large_h26_b13_0_5_cB : ℚ × ℚ :=
     (2128799016089 / 374144419156711147060143317175368453031918731001856,
      35717798088166119 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b13_0_5_ok : checkOptB 26 13 tabc_h26_b13_0 large_h26_b13_0_5 large_h26_b13_0_5_cB = true :=
+theorem large_h26_b13_0_5_ok : checkOptB 26 13 8 tabc_h26_b13_0 large_h26_b13_0_5 large_h26_b13_0_5_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 6 of cover 0. -/
-def large_h26_b13_0_6 : OptF := buildOpt 26 13 tabc_h26_b13_0
+def large_h26_b13_0_6 : OptF := buildOpt 26 13 8 tabc_h26_b13_0
     (45 / 10889035741470030830827987437816582766592) 1248161232840080511386332291615267225600 15
     (1030792150009 / 187072209578355573530071658587684226515959365500928)
 
@@ -851,7 +851,7 @@ def large_h26_b13_0_6_cB : ℚ × ℚ :=
     (1030792150009 / 187072209578355573530071658587684226515959365500928,
      36936162573272215 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b13_0_6_ok : checkOptB 26 13 tabc_h26_b13_0 large_h26_b13_0_6 large_h26_b13_0_6_cB = true :=
+theorem large_h26_b13_0_6_ok : checkOptB 26 13 8 tabc_h26_b13_0 large_h26_b13_0_6 large_h26_b13_0_6_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 0: every budget from 1329227995784915872903807060280344577 to 21267647932558653966460912964485513216. -/
@@ -868,7 +868,7 @@ def cover_h26_b13_0 : CoverW where
     (3780038907605437954829029500560343041, 10837291512341473411221759442433343488, 5),
     (10837291512341473411221759442433343489, 21267647932558653966460912964485513216, 6)]
 
-theorem cover_h26_b13_0_ok : checkCoverW 26 13 1851418 246900 1329227995784915872903807060280344577 cover_h26_b13_0 = true :=
+theorem cover_h26_b13_0_ok : checkCoverW 26 13 8 1851418 246900 1329227995784915872903807060280344577 cover_h26_b13_0 = true :=
   checkCoverW_of_pt [large_h26_b13_0_0_cB, large_h26_b13_0_1_cB, large_h26_b13_0_2_cB, large_h26_b13_0_3_cB, large_h26_b13_0_4_cB, large_h26_b13_0_5_cB, large_h26_b13_0_6_cB]
     (.cons large_h26_b13_0_0_ok <| .cons large_h26_b13_0_1_ok <| .cons large_h26_b13_0_2_ok <| .cons large_h26_b13_0_3_ok <| .cons large_h26_b13_0_4_ok <| .cons large_h26_b13_0_5_ok <| .cons large_h26_b13_0_6_ok <| .nil)
     tabc_h26_b13_0_ok
@@ -881,7 +881,7 @@ def tabc_h26_b13_1 : PoisT := poisOf 555971625521693197272 220 166 150
 theorem tabc_h26_b13_1_ok : checkPT tabc_h26_b13_1 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 1. -/
-def large_h26_b13_1_0 : OptF := buildOpt 26 13 tabc_h26_b13_1
+def large_h26_b13_1_0 : OptF := buildOpt 26 13 8 tabc_h26_b13_1
     (9 / 2722258935367507707706996859454145691648) 1484322227467904832594739768790169419776 15
     (824633720007 / 187072209578355573530071658587684226515959365500928)
 
@@ -890,7 +890,7 @@ def large_h26_b13_1_0_cB : ℚ × ℚ :=
     (824633720007 / 187072209578355573530071658587684226515959365500928,
      22967483858972947 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b13_1_0_ok : checkOptB 26 13 tabc_h26_b13_1 large_h26_b13_1_0 large_h26_b13_1_0_cB = true :=
+theorem large_h26_b13_1_0_ok : checkOptB 26 13 8 tabc_h26_b13_1 large_h26_b13_1_0 large_h26_b13_1_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 1: every budget from 21267647932558653966460912964485513217 to 84739577754630590123170513440188944304. -/
@@ -901,7 +901,7 @@ def cover_h26_b13_1 : CoverW where
   entries := [
     (21267647932558653966460912964485513217, 84739577754630590123170513440188944304, 0)]
 
-theorem cover_h26_b13_1_ok : checkCoverW 26 13 1851418 246900 21267647932558653966460912964485513217 cover_h26_b13_1 = true :=
+theorem cover_h26_b13_1_ok : checkCoverW 26 13 8 1851418 246900 21267647932558653966460912964485513217 cover_h26_b13_1 = true :=
   checkCoverW_of_pt [large_h26_b13_1_0_cB]
     (.cons large_h26_b13_1_0_ok <| .nil)
     tabc_h26_b13_1_ok
@@ -914,7 +914,7 @@ def tabch_h26_b13_0 : PoisT := poisOf 555980920606238891290 220 166 150
 theorem tabch_h26_b13_0_ok : checkPT tabch_h26_b13_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of heavy cover 0. -/
-def largeh_h26_b13_0_0 : OptF := buildOpt 26 13 tabch_h26_b13_0
+def largeh_h26_b13_0_0 : OptF := buildOpt 26 13 8 tabch_h26_b13_0
     (21810381 / 11417981541647679048466287755595961091061972992) 2099148588858086940623571502253532512256 15
     (274877906669 / 93536104789177786765035829293842113257979682750464)
 
@@ -923,7 +923,7 @@ def largeh_h26_b13_0_0_cB : ℚ × ℚ :=
     (274877906669 / 93536104789177786765035829293842113257979682750464,
      33766635790385201 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem largeh_h26_b13_0_0_ok : checkOptB 26 13 tabch_h26_b13_0 largeh_h26_b13_0_0 largeh_h26_b13_0_0_cB = true :=
+theorem largeh_h26_b13_0_0_ok : checkOptB 26 13 8 tabch_h26_b13_0 largeh_h26_b13_0_0 largeh_h26_b13_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Heavy cover (one heavy message, one spare slot) 0: every budget from 84739577754630590123170513440188944305 to 170141183460469231731687303715884105728. -/
@@ -934,14 +934,14 @@ def coverh_h26_b13_0 : CoverW where
   entries := [
     (84739577754630590123170513440188944305, 170141183460469231731687303715884105728, 0)]
 
-theorem coverh_h26_b13_0_ok : checkCoverH 26 13 1851418 246900 84739577754630590123170513440188944305 coverh_h26_b13_0 = true :=
+theorem coverh_h26_b13_0_ok : checkCoverH 26 13 8 1851418 246900 84739577754630590123170513440188944305 coverh_h26_b13_0 = true :=
   checkCoverH_of_pt [largeh_h26_b13_0_0_cB]
     (.cons largeh_h26_b13_0_0_ok <| .nil)
     tabch_h26_b13_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b13_ok : ForestPotential.checkCoversH 26 13 1851418 246900 1329227995784915872903807060280344577 [cover_h26_b13_0, cover_h26_b13_1] [coverh_h26_b13_0] = true := by
+theorem covers_h26_b13_ok : ForestPotential.checkCoversH 26 13 8 1851418 246900 1329227995784915872903807060280344577 [cover_h26_b13_0, cover_h26_b13_1] [coverh_h26_b13_0] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b13_0_ok, cover_h26_b13_1_ok, coverh_h26_b13_0_ok, by decide +kernel⟩
 
@@ -954,17 +954,17 @@ theorem tab_h26_b12_ok : checkPT tab_h26_b12 = true := checkPT_poisOf (by decide
 theorem rate_h26_b12_ok : checkRate 26 12 126900 1449533407878593313898110627080044544 tab_h26_b12 = true := by decide +kernel
 
 /-- The small-route option at baseline `ρ / 2^128`. -/
-def small_h26_b12 : OptF := buildOpt 26 12 tab_h26_b12
+def small_h26_b12 : OptF := buildOpt 26 12 8 tab_h26_b12
     (24473523 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (1069264541809 / 187072209578355573530071658587684226515959365500928)
 
-theorem small_h26_b12_ok : checkOptF 26 12 tab_h26_b12 small_h26_b12 = true :=
+theorem small_h26_b12_ok : checkOptF 26 12 8 tab_h26_b12 small_h26_b12 = true :=
     checkOptF_build (by decide +kernel)
 
 /-- The near certificate. -/
-def near_h26_b12 : OptN := buildOptN 26 12 tab_h26_b12
+def near_h26_b12 : OptN := buildOptN 26 12 8 tab_h26_b12
 
-theorem near_h26_b12_ok : checkOptN 26 tab_h26_b12 near_h26_b12 = true :=
+theorem near_h26_b12_ok : checkOptN 26 8 tab_h26_b12 near_h26_b12 = true :=
     checkOptN_build (by decide +kernel)
 
 /-- The plain rate `ρ`. -/
@@ -980,7 +980,7 @@ def tabc_h26_b12_0 : PoisT := poisOf 571507436781030933567 220 168 150
 theorem tabc_h26_b12_0_ok : checkPT tabc_h26_b12_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 0. -/
-def large_h26_b12_0_0 : OptF := buildOpt 26 12 tabc_h26_b12_0
+def large_h26_b12_0_0 : OptF := buildOpt 26 12 8 tabc_h26_b12_0
     (25057455 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (547388464769 / 93536104789177786765035829293842113257979682750464)
 
@@ -989,11 +989,11 @@ def large_h26_b12_0_0_cB : ℚ × ℚ :=
     (547388464769 / 93536104789177786765035829293842113257979682750464,
      39246384370292611 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b12_0_0_ok : checkOptB 26 12 tabc_h26_b12_0 large_h26_b12_0_0 large_h26_b12_0_0_cB = true :=
+theorem large_h26_b12_0_0_ok : checkOptB 26 12 8 tabc_h26_b12_0 large_h26_b12_0_0 large_h26_b12_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 1 of cover 0. -/
-def large_h26_b12_0_1 : OptF := buildOpt 26 12 tabc_h26_b12_0
+def large_h26_b12_0_1 : OptF := buildOpt 26 12 8 tabc_h26_b12_0
     (25056275 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (2189450744133 / 374144419156711147060143317175368453031918731001856)
 
@@ -1002,11 +1002,11 @@ def large_h26_b12_0_1_cB : ℚ × ℚ :=
     (2189450744133 / 374144419156711147060143317175368453031918731001856,
      19623927427488027 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b12_0_1_ok : checkOptB 26 12 tabc_h26_b12_0 large_h26_b12_0_1 large_h26_b12_0_1_cB = true :=
+theorem large_h26_b12_0_1_ok : checkOptB 26 12 8 tabc_h26_b12_0 large_h26_b12_0_1 large_h26_b12_0_1_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 2 of cover 0. -/
-def large_h26_b12_0_2 : OptF := buildOpt 26 12 tabc_h26_b12_0
+def large_h26_b12_0_2 : OptF := buildOpt 26 12 8 tabc_h26_b12_0
     (12527541 / 2854495385411919762116571938898990272765493248) 1248161232840080511386332291615267225600 15
     (1094673253171 / 187072209578355573530071658587684226515959365500928)
 
@@ -1015,11 +1015,11 @@ def large_h26_b12_0_2_cB : ℚ × ℚ :=
     (1094673253171 / 187072209578355573530071658587684226515959365500928,
      19624670875631743 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b12_0_2_ok : checkOptB 26 12 tabc_h26_b12_0 large_h26_b12_0_2 large_h26_b12_0_2_cB = true :=
+theorem large_h26_b12_0_2_ok : checkOptB 26 12 8 tabc_h26_b12_0 large_h26_b12_0_2 large_h26_b12_0_2_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 3 of cover 0. -/
-def large_h26_b12_0_3 : OptF := buildOpt 26 12 tabc_h26_b12_0
+def large_h26_b12_0_3 : OptF := buildOpt 26 12 8 tabc_h26_b12_0
     (25052657 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (1094567306587 / 187072209578355573530071658587684226515959365500928)
 
@@ -1028,11 +1028,11 @@ def large_h26_b12_0_3_cB : ℚ × ℚ :=
     (1094567306587 / 187072209578355573530071658587684226515959365500928,
      39252365700873283 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b12_0_3_ok : checkOptB 26 12 tabc_h26_b12_0 large_h26_b12_0_3 large_h26_b12_0_3_cB = true :=
+theorem large_h26_b12_0_3_ok : checkOptB 26 12 8 tabc_h26_b12_0 large_h26_b12_0_3 large_h26_b12_0_3_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 4 of cover 0. -/
-def large_h26_b12_0_4 : OptF := buildOpt 26 12 tabc_h26_b12_0
+def large_h26_b12_0_4 : OptF := buildOpt 26 12 8 tabc_h26_b12_0
     (25047647 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (1094348402835 / 187072209578355573530071658587684226515959365500928)
 
@@ -1041,11 +1041,11 @@ def large_h26_b12_0_4_cB : ℚ × ℚ :=
     (1094348402835 / 187072209578355573530071658587684226515959365500928,
      306707966130735 / 24519928653854221733733552434404946937899825954937634816)
 
-theorem large_h26_b12_0_4_ok : checkOptB 26 12 tabc_h26_b12_0 large_h26_b12_0_4 large_h26_b12_0_4_cB = true :=
+theorem large_h26_b12_0_4_ok : checkOptB 26 12 8 tabc_h26_b12_0 large_h26_b12_0_4 large_h26_b12_0_4_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 5 of cover 0. -/
-def large_h26_b12_0_5 : OptF := buildOpt 26 12 tabc_h26_b12_0
+def large_h26_b12_0_5 : OptF := buildOpt 26 12 8 tabc_h26_b12_0
     (25036951 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (68367568197 / 11692013098647223345629478661730264157247460343808)
 
@@ -1054,11 +1054,11 @@ def large_h26_b12_0_5_cB : ℚ × ℚ :=
     (68367568197 / 11692013098647223345629478661730264157247460343808,
      9817999147257001 / 784637716923335095479473677900958302012794430558004314112)
 
-theorem large_h26_b12_0_5_ok : checkOptB 26 12 tabc_h26_b12_0 large_h26_b12_0_5 large_h26_b12_0_5_cB = true :=
+theorem large_h26_b12_0_5_ok : checkOptB 26 12 8 tabc_h26_b12_0 large_h26_b12_0_5 large_h26_b12_0_5_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 6 of cover 0. -/
-def large_h26_b12_0_6 : OptF := buildOpt 26 12 tabc_h26_b12_0
+def large_h26_b12_0_6 : OptF := buildOpt 26 12 8 tabc_h26_b12_0
     (3126571 / 713623846352979940529142984724747568191373312) 1248161232840080511386332291615267225600 15
     (2185631507539 / 374144419156711147060143317175368453031918731001856)
 
@@ -1067,11 +1067,11 @@ def large_h26_b12_0_6_cB : ℚ × ℚ :=
     (2185631507539 / 374144419156711147060143317175368453031918731001856,
      19651313121245011 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b12_0_6_ok : checkOptB 26 12 tabc_h26_b12_0 large_h26_b12_0_6 large_h26_b12_0_6_cB = true :=
+theorem large_h26_b12_0_6_ok : checkOptB 26 12 8 tabc_h26_b12_0 large_h26_b12_0_6 large_h26_b12_0_6_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 7 of cover 0. -/
-def large_h26_b12_0_7 : OptF := buildOpt 26 12 tabc_h26_b12_0
+def large_h26_b12_0_7 : OptF := buildOpt 26 12 8 tabc_h26_b12_0
     (24951421 / 5708990770823839524233143877797980545530986496) 1248161232840080511386332291615267225600 15
     (545072118295 / 93536104789177786765035829293842113257979682750464)
 
@@ -1080,11 +1080,11 @@ def large_h26_b12_0_7_cB : ℚ × ℚ :=
     (545072118295 / 93536104789177786765035829293842113257979682750464,
      39380252526092299 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b12_0_7_ok : checkOptB 26 12 tabc_h26_b12_0 large_h26_b12_0_7 large_h26_b12_0_7_cB = true :=
+theorem large_h26_b12_0_7_ok : checkOptB 26 12 8 tabc_h26_b12_0 large_h26_b12_0_7 large_h26_b12_0_7_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 8 of cover 0. -/
-def large_h26_b12_0_8 : OptF := buildOpt 26 12 tabc_h26_b12_0
+def large_h26_b12_0_8 : OptF := buildOpt 26 12 8 tabc_h26_b12_0
     (12370819 / 2854495385411919762116571938898990272765493248) 1248161232840080511386332291615267225600 15
     (2161957314617 / 374144419156711147060143317175368453031918731001856)
 
@@ -1093,11 +1093,11 @@ def large_h26_b12_0_8_cB : ℚ × ℚ :=
     (2161957314617 / 374144419156711147060143317175368453031918731001856,
      39655454998118245 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b12_0_8_ok : checkOptB 26 12 tabc_h26_b12_0 large_h26_b12_0_8 large_h26_b12_0_8_cB = true :=
+theorem large_h26_b12_0_8_ok : checkOptB 26 12 8 tabc_h26_b12_0 large_h26_b12_0_8 large_h26_b12_0_8_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 9 of cover 0. -/
-def large_h26_b12_0_9 : OptF := buildOpt 26 12 tabc_h26_b12_0
+def large_h26_b12_0_9 : OptF := buildOpt 26 12 8 tabc_h26_b12_0
     (45 / 10889035741470030830827987437816582766592) 1248161232840080511386332291615267225600 15
     (1030792150009 / 187072209578355573530071658587684226515959365500928)
 
@@ -1106,7 +1106,7 @@ def large_h26_b12_0_9_cB : ℚ × ℚ :=
     (1030792150009 / 187072209578355573530071658587684226515959365500928,
      41434135401263083 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b12_0_9_ok : checkOptB 26 12 tabc_h26_b12_0 large_h26_b12_0_9 large_h26_b12_0_9_cB = true :=
+theorem large_h26_b12_0_9_ok : checkOptB 26 12 8 tabc_h26_b12_0 large_h26_b12_0_9 large_h26_b12_0_9_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 0: every budget from 1449533407878593313898110627080044545 to 21267647932558653966460912964485513216. -/
@@ -1128,7 +1128,7 @@ def cover_h26_b12_0 : CoverW where
     (2892963818839586200838423962779123713, 5708125403515500766514461168367566848, 8),
     (5708125403515500766514461168367566849, 21267647932558653966460912964485513216, 9)]
 
-theorem cover_h26_b12_0_ok : checkCoverW 26 12 925724 126900 1449533407878593313898110627080044545 cover_h26_b12_0 = true :=
+theorem cover_h26_b12_0_ok : checkCoverW 26 12 8 925724 126900 1449533407878593313898110627080044545 cover_h26_b12_0 = true :=
   checkCoverW_of_pt [large_h26_b12_0_0_cB, large_h26_b12_0_1_cB, large_h26_b12_0_2_cB, large_h26_b12_0_3_cB, large_h26_b12_0_4_cB, large_h26_b12_0_5_cB, large_h26_b12_0_6_cB, large_h26_b12_0_7_cB, large_h26_b12_0_8_cB, large_h26_b12_0_9_cB]
     (.cons large_h26_b12_0_0_ok <| .cons large_h26_b12_0_1_ok <| .cons large_h26_b12_0_2_ok <| .cons large_h26_b12_0_3_ok <| .cons large_h26_b12_0_4_ok <| .cons large_h26_b12_0_5_ok <| .cons large_h26_b12_0_6_ok <| .cons large_h26_b12_0_7_ok <| .cons large_h26_b12_0_8_ok <| .cons large_h26_b12_0_9_ok <| .nil)
     tabc_h26_b12_0_ok
@@ -1141,7 +1141,7 @@ def tabc_h26_b12_1 : PoisT := poisOf 571511296035926508278 220 168 150
 theorem tabc_h26_b12_1_ok : checkPT tabc_h26_b12_1 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 1. -/
-def large_h26_b12_1_0 : OptF := buildOpt 26 12 tabc_h26_b12_1
+def large_h26_b12_1_0 : OptF := buildOpt 26 12 8 tabc_h26_b12_1
     (9 / 2722258935367507707706996859454145691648) 1484322227467904832594739768790169419776 15
     (824633720007 / 187072209578355573530071658587684226515959365500928)
 
@@ -1150,7 +1150,7 @@ def large_h26_b12_1_0_cB : ℚ × ℚ :=
     (824633720007 / 187072209578355573530071658587684226515959365500928,
      51034242540317649 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b12_1_0_ok : checkOptB 26 12 tabc_h26_b12_1 large_h26_b12_1_0 large_h26_b12_1_0_cB = true :=
+theorem large_h26_b12_1_0_ok : checkOptB 26 12 8 tabc_h26_b12_1 large_h26_b12_1_0 large_h26_b12_1_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 1: every budget from 21267647932558653966460912964485513217 to 84739577754630590123170513440188944304. -/
@@ -1161,7 +1161,7 @@ def cover_h26_b12_1 : CoverW where
   entries := [
     (21267647932558653966460912964485513217, 84739577754630590123170513440188944304, 0)]
 
-theorem cover_h26_b12_1_ok : checkCoverW 26 12 925724 126900 21267647932558653966460912964485513217 cover_h26_b12_1 = true :=
+theorem cover_h26_b12_1_ok : checkCoverW 26 12 8 925724 126900 21267647932558653966460912964485513217 cover_h26_b12_1 = true :=
   checkCoverW_of_pt [large_h26_b12_1_0_cB]
     (.cons large_h26_b12_1_0_ok <| .nil)
     tabc_h26_b12_1_ok
@@ -1174,7 +1174,7 @@ def tabch_h26_b12_0 : PoisT := poisOf 571529888874173157904 220 168 150
 theorem tabch_h26_b12_0_ok : checkPT tabch_h26_b12_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of heavy cover 0. -/
-def largeh_h26_b12_0_0 : OptF := buildOpt 26 12 tabch_h26_b12_0
+def largeh_h26_b12_0_0 : OptF := buildOpt 26 12 8 tabch_h26_b12_0
     (21810381 / 11417981541647679048466287755595961091061972992) 2099148588858086940623571502253532512256 15
     (274877906669 / 93536104789177786765035829293842113257979682750464)
 
@@ -1183,7 +1183,7 @@ def largeh_h26_b12_0_0_cB : ℚ × ℚ :=
     (274877906669 / 93536104789177786765035829293842113257979682750464,
      73186589001371821 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem largeh_h26_b12_0_0_ok : checkOptB 26 12 tabch_h26_b12_0 largeh_h26_b12_0_0 largeh_h26_b12_0_0_cB = true :=
+theorem largeh_h26_b12_0_0_ok : checkOptB 26 12 8 tabch_h26_b12_0 largeh_h26_b12_0_0 largeh_h26_b12_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Heavy cover (one heavy message, one spare slot) 0: every budget from 84739577754630590123170513440188944305 to 170141183460469231731687303715884105728. -/
@@ -1194,14 +1194,14 @@ def coverh_h26_b12_0 : CoverW where
   entries := [
     (84739577754630590123170513440188944305, 170141183460469231731687303715884105728, 0)]
 
-theorem coverh_h26_b12_0_ok : checkCoverH 26 12 925724 126900 84739577754630590123170513440188944305 coverh_h26_b12_0 = true :=
+theorem coverh_h26_b12_0_ok : checkCoverH 26 12 8 925724 126900 84739577754630590123170513440188944305 coverh_h26_b12_0 = true :=
   checkCoverH_of_pt [largeh_h26_b12_0_0_cB]
     (.cons largeh_h26_b12_0_0_ok <| .nil)
     tabch_h26_b12_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b12_ok : ForestPotential.checkCoversH 26 12 925724 126900 1449533407878593313898110627080044545 [cover_h26_b12_0, cover_h26_b12_1] [coverh_h26_b12_0] = true := by
+theorem covers_h26_b12_ok : ForestPotential.checkCoversH 26 12 8 925724 126900 1449533407878593313898110627080044545 [cover_h26_b12_0, cover_h26_b12_1] [coverh_h26_b12_0] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b12_0_ok, cover_h26_b12_1_ok, coverh_h26_b12_0_ok, by decide +kernel⟩
 
@@ -1214,17 +1214,17 @@ theorem tab_h26_b10_ok : checkPT tab_h26_b10 = true := checkPT_poisOf (by decide
 theorem rate_h26_b10_ok : checkRate 26 10 33480 1723795442083364420290692123923054592 tab_h26_b10 = true := by decide +kernel
 
 /-- The small-route option at baseline `ρ / 2^128`. -/
-def small_h26_b10 : OptF := buildOpt 26 10 tab_h26_b10
+def small_h26_b10 : OptF := buildOpt 26 10 8 tab_h26_b10
     (13108549 / 2854495385411919762116571938898990272765493248) 1144568906919068019302703401460945649664 15
     (1073852346925 / 187072209578355573530071658587684226515959365500928)
 
-theorem small_h26_b10_ok : checkOptF 26 10 tab_h26_b10 small_h26_b10 = true :=
+theorem small_h26_b10_ok : checkOptF 26 10 8 tab_h26_b10 small_h26_b10 = true :=
     checkOptF_build (by decide +kernel)
 
 /-- The near certificate. -/
-def near_h26_b10 : OptN := buildOptN 26 10 tab_h26_b10
+def near_h26_b10 : OptN := buildOptN 26 10 8 tab_h26_b10
 
-theorem near_h26_b10_ok : checkOptN 26 tab_h26_b10 near_h26_b10 = true :=
+theorem near_h26_b10_ok : checkOptN 26 8 tab_h26_b10 near_h26_b10 = true :=
     checkOptN_build (by decide +kernel)
 
 /-- The plain rate `ρ`. -/
@@ -1240,7 +1240,7 @@ def tabc_h26_b10_0 : PoisT := poisOf 603124638435849852682 220 172 150
 theorem tabc_h26_b10_0_ok : checkPT tabc_h26_b10_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 0. -/
-def large_h26_b10_0_0 : OptF := buildOpt 26 10 tabc_h26_b10_0
+def large_h26_b10_0_0 : OptF := buildOpt 26 10 8 tabc_h26_b10_0
     (25036951 / 5708990770823839524233143877797980545530986496) 1144568906919068019302703401460945649664 15
     (68367568197 / 11692013098647223345629478661730264157247460343808)
 
@@ -1249,11 +1249,11 @@ def large_h26_b10_0_0_cB : ℚ × ℚ :=
     (68367568197 / 11692013098647223345629478661730264157247460343808,
      46599934922282293 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b10_0_0_ok : checkOptB 26 10 tabc_h26_b10_0 large_h26_b10_0_0 large_h26_b10_0_0_cB = true :=
+theorem large_h26_b10_0_0_ok : checkOptB 26 10 8 tabc_h26_b10_0 large_h26_b10_0_0 large_h26_b10_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 1 of cover 0. -/
-def large_h26_b10_0_1 : OptF := buildOpt 26 10 tabc_h26_b10_0
+def large_h26_b10_0_1 : OptF := buildOpt 26 10 8 tabc_h26_b10_0
     (6258887 / 1427247692705959881058285969449495136382746624) 1144568906919068019302703401460945649664 15
     (68363736165 / 11692013098647223345629478661730264157247460343808)
 
@@ -1262,11 +1262,11 @@ def large_h26_b10_0_1_cB : ℚ × ℚ :=
     (68363736165 / 11692013098647223345629478661730264157247460343808,
      23301219482700287 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b10_0_1_ok : checkOptB 26 10 tabc_h26_b10_0 large_h26_b10_0_1 large_h26_b10_0_1_cB = true :=
+theorem large_h26_b10_0_1_ok : checkOptB 26 10 8 tabc_h26_b10_0 large_h26_b10_0_1 large_h26_b10_0_1_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 2 of cover 0. -/
-def large_h26_b10_0_2 : OptF := buildOpt 26 10 tabc_h26_b10_0
+def large_h26_b10_0_2 : OptF := buildOpt 26 10 8 tabc_h26_b10_0
     (25032695 / 5708990770823839524233143877797980545530986496) 1144568906919068019302703401460945649664 15
     (2187390286795 / 374144419156711147060143317175368453031918731001856)
 
@@ -1275,11 +1275,11 @@ def large_h26_b10_0_2_cB : ℚ × ℚ :=
     (2187390286795 / 374144419156711147060143317175368453031918731001856,
      46607531203068633 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b10_0_2_ok : checkOptB 26 10 tabc_h26_b10_0 large_h26_b10_0_2 large_h26_b10_0_2_cB = true :=
+theorem large_h26_b10_0_2_ok : checkOptB 26 10 8 tabc_h26_b10_0 large_h26_b10_0_2 large_h26_b10_0_2_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 3 of cover 0. -/
-def large_h26_b10_0_3 : OptF := buildOpt 26 10 tabc_h26_b10_0
+def large_h26_b10_0_3 : OptF := buildOpt 26 10 8 tabc_h26_b10_0
     (25026801 / 5708990770823839524233143877797980545530986496) 1144568906919068019302703401460945649664 15
     (2186875251365 / 374144419156711147060143317175368453031918731001856)
 
@@ -1288,11 +1288,11 @@ def large_h26_b10_0_3_cB : ℚ × ℚ :=
     (2186875251365 / 374144419156711147060143317175368453031918731001856,
      11654514919438195 / 784637716923335095479473677900958302012794430558004314112)
 
-theorem large_h26_b10_0_3_ok : checkOptB 26 10 tabc_h26_b10_0 large_h26_b10_0_3 large_h26_b10_0_3_cB = true :=
+theorem large_h26_b10_0_3_ok : checkOptB 26 10 8 tabc_h26_b10_0 large_h26_b10_0_3 large_h26_b10_0_3_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 4 of cover 0. -/
-def large_h26_b10_0_4 : OptF := buildOpt 26 10 tabc_h26_b10_0
+def large_h26_b10_0_4 : OptF := buildOpt 26 10 8 tabc_h26_b10_0
     (12507109 / 2854495385411919762116571938898990272765493248) 1144568906919068019302703401460945649664 15
     (136610985203 / 23384026197294446691258957323460528314494920687616)
 
@@ -1301,11 +1301,11 @@ def large_h26_b10_0_4_cB : ℚ × ℚ :=
     (136610985203 / 23384026197294446691258957323460528314494920687616,
      5830071104733013 / 392318858461667547739736838950479151006397215279002157056)
 
-theorem large_h26_b10_0_4_ok : checkOptB 26 10 tabc_h26_b10_0 large_h26_b10_0_4 large_h26_b10_0_4_cB = true :=
+theorem large_h26_b10_0_4_ok : checkOptB 26 10 8 tabc_h26_b10_0 large_h26_b10_0_4 large_h26_b10_0_4_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 5 of cover 0. -/
-def large_h26_b10_0_5 : OptF := buildOpt 26 10 tabc_h26_b10_0
+def large_h26_b10_0_5 : OptF := buildOpt 26 10 8 tabc_h26_b10_0
     (12492767 / 2854495385411919762116571938898990272765493248) 1144568906919068019302703401460945649664 15
     (2183269243865 / 374144419156711147060143317175368453031918731001856)
 
@@ -1314,11 +1314,11 @@ def large_h26_b10_0_5_cB : ℚ × ℚ :=
     (2183269243865 / 374144419156711147060143317175368453031918731001856,
      46692050963925723 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b10_0_5_ok : checkOptB 26 10 tabc_h26_b10_0 large_h26_b10_0_5 large_h26_b10_0_5_cB = true :=
+theorem large_h26_b10_0_5_ok : checkOptB 26 10 8 tabc_h26_b10_0 large_h26_b10_0_5 large_h26_b10_0_5_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 6 of cover 0. -/
-def large_h26_b10_0_6 : OptF := buildOpt 26 10 tabc_h26_b10_0
+def large_h26_b10_0_6 : OptF := buildOpt 26 10 8 tabc_h26_b10_0
     (6643627 / 1427247692705959881058285969449495136382746624) 1144568906919068019302703401460945649664 15
     (1088491857159 / 187072209578355573530071658587684226515959365500928)
 
@@ -1327,11 +1327,11 @@ def large_h26_b10_0_6_cB : ℚ × ℚ :=
     (1088491857159 / 187072209578355573530071658587684226515959365500928,
      47386455163564699 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b10_0_6_ok : checkOptB 26 10 tabc_h26_b10_0 large_h26_b10_0_6 large_h26_b10_0_6_cB = true :=
+theorem large_h26_b10_0_6_ok : checkOptB 26 10 8 tabc_h26_b10_0 large_h26_b10_0_6 large_h26_b10_0_6_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 7 of cover 0. -/
-def large_h26_b10_0_7 : OptF := buildOpt 26 10 tabc_h26_b10_0
+def large_h26_b10_0_7 : OptF := buildOpt 26 10 8 tabc_h26_b10_0
     (26328283 / 5708990770823839524233143877797980545530986496) 1144568906919068019302703401460945649664 15
     (67400405737 / 11692013098647223345629478661730264157247460343808)
 
@@ -1340,11 +1340,11 @@ def large_h26_b10_0_7_cB : ℚ × ℚ :=
     (67400405737 / 11692013098647223345629478661730264157247460343808,
      47642740332237801 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b10_0_7_ok : checkOptB 26 10 tabc_h26_b10_0 large_h26_b10_0_7 large_h26_b10_0_7_cB = true :=
+theorem large_h26_b10_0_7_ok : checkOptB 26 10 8 tabc_h26_b10_0 large_h26_b10_0_7 large_h26_b10_0_7_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 8 of cover 0. -/
-def large_h26_b10_0_8 : OptF := buildOpt 26 10 tabc_h26_b10_0
+def large_h26_b10_0_8 : OptF := buildOpt 26 10 8 tabc_h26_b10_0
     (45 / 10889035741470030830827987437816582766592) 1248161232840080511386332291615267225600 15
     (1030792150009 / 187072209578355573530071658587684226515959365500928)
 
@@ -1353,7 +1353,7 @@ def large_h26_b10_0_8_cB : ℚ × ℚ :=
     (1030792150009 / 187072209578355573530071658587684226515959365500928,
      49234473873180529 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b10_0_8_ok : checkOptB 26 10 tabc_h26_b10_0 large_h26_b10_0_8 large_h26_b10_0_8_cB = true :=
+theorem large_h26_b10_0_8_ok : checkOptB 26 10 8 tabc_h26_b10_0 large_h26_b10_0_8 large_h26_b10_0_8_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 0: every budget from 1723795442083364420290692123923054593 to 21267647932558653966460912964485513216. -/
@@ -1374,7 +1374,7 @@ def cover_h26_b10_0 : CoverW where
     (3391838258075849534701042867367837697, 6531343909603256588809016829494165504, 7),
     (6531343909603256588809016829494165505, 21267647932558653966460912964485513216, 8)]
 
-theorem cover_h26_b10_0_ok : checkCoverW 26 10 231456 33480 1723795442083364420290692123923054593 cover_h26_b10_0 = true :=
+theorem cover_h26_b10_0_ok : checkCoverW 26 10 8 231456 33480 1723795442083364420290692123923054593 cover_h26_b10_0 = true :=
   checkCoverW_of_pt [large_h26_b10_0_0_cB, large_h26_b10_0_1_cB, large_h26_b10_0_2_cB, large_h26_b10_0_3_cB, large_h26_b10_0_4_cB, large_h26_b10_0_5_cB, large_h26_b10_0_6_cB, large_h26_b10_0_7_cB, large_h26_b10_0_8_cB]
     (.cons large_h26_b10_0_0_ok <| .cons large_h26_b10_0_1_ok <| .cons large_h26_b10_0_2_ok <| .cons large_h26_b10_0_3_ok <| .cons large_h26_b10_0_4_ok <| .cons large_h26_b10_0_5_ok <| .cons large_h26_b10_0_6_ok <| .cons large_h26_b10_0_7_ok <| .cons large_h26_b10_0_8_ok <| .nil)
     tabc_h26_b10_0_ok
@@ -1387,7 +1387,7 @@ def tabc_h26_b10_1 : PoisT := poisOf 603140076218943062256 220 172 150
 theorem tabc_h26_b10_1_ok : checkPT tabc_h26_b10_1 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 1. -/
-def large_h26_b10_1_0 : OptF := buildOpt 26 10 tabc_h26_b10_1
+def large_h26_b10_1_0 : OptF := buildOpt 26 10 8 tabc_h26_b10_1
     (9 / 2722258935367507707706996859454145691648) 1484322227467904832594739768790169419776 15
     (824633720007 / 187072209578355573530071658587684226515959365500928)
 
@@ -1396,7 +1396,7 @@ def large_h26_b10_1_0_cB : ℚ × ℚ :=
     (824633720007 / 187072209578355573530071658587684226515959365500928,
      59345742229615527 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b10_1_0_ok : checkOptB 26 10 tabc_h26_b10_1 large_h26_b10_1_0 large_h26_b10_1_0_cB = true :=
+theorem large_h26_b10_1_0_ok : checkOptB 26 10 8 tabc_h26_b10_1 large_h26_b10_1_0 large_h26_b10_1_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 1: every budget from 21267647932558653966460912964485513217 to 84739577754630590123170513440188944304. -/
@@ -1407,7 +1407,7 @@ def cover_h26_b10_1 : CoverW where
   entries := [
     (21267647932558653966460912964485513217, 84739577754630590123170513440188944304, 0)]
 
-theorem cover_h26_b10_1_ok : checkCoverW 26 10 231456 33480 21267647932558653966460912964485513217 cover_h26_b10_1 = true :=
+theorem cover_h26_b10_1_ok : checkCoverW 26 10 8 231456 33480 21267647932558653966460912964485513217 cover_h26_b10_1 = true :=
   checkCoverW_of_pt [large_h26_b10_1_0_cB]
     (.cons large_h26_b10_1_0_ok <| .nil)
     tabc_h26_b10_1_ok
@@ -1420,7 +1420,7 @@ def tabch_h26_b10_0 : PoisT := poisOf 603214455581329768403 220 172 150
 theorem tabch_h26_b10_0_ok : checkPT tabch_h26_b10_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of heavy cover 0. -/
-def largeh_h26_b10_0_0 : OptF := buildOpt 26 10 tabch_h26_b10_0
+def largeh_h26_b10_0_0 : OptF := buildOpt 26 10 8 tabch_h26_b10_0
     (11744051 / 5708990770823839524233143877797980545530986496) 1924927720400300797296129752624974004224 14
     (274877906669 / 93536104789177786765035829293842113257979682750464)
 
@@ -1429,7 +1429,7 @@ def largeh_h26_b10_0_0_cB : ℚ × ℚ :=
     (274877906669 / 93536104789177786765035829293842113257979682750464,
      80826992382353999 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem largeh_h26_b10_0_0_ok : checkOptB 26 10 tabch_h26_b10_0 largeh_h26_b10_0_0 largeh_h26_b10_0_0_cB = true :=
+theorem largeh_h26_b10_0_0_ok : checkOptB 26 10 8 tabch_h26_b10_0 largeh_h26_b10_0_0 largeh_h26_b10_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Heavy cover (one heavy message, one spare slot) 0: every budget from 84739577754630590123170513440188944305 to 170141183460469231731687303715884105728. -/
@@ -1440,14 +1440,14 @@ def coverh_h26_b10_0 : CoverW where
   entries := [
     (84739577754630590123170513440188944305, 170141183460469231731687303715884105728, 0)]
 
-theorem coverh_h26_b10_0_ok : checkCoverH 26 10 231456 33480 84739577754630590123170513440188944305 coverh_h26_b10_0 = true :=
+theorem coverh_h26_b10_0_ok : checkCoverH 26 10 8 231456 33480 84739577754630590123170513440188944305 coverh_h26_b10_0 = true :=
   checkCoverH_of_pt [largeh_h26_b10_0_0_cB]
     (.cons largeh_h26_b10_0_0_ok <| .nil)
     tabch_h26_b10_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b10_ok : ForestPotential.checkCoversH 26 10 231456 33480 1723795442083364420290692123923054593 [cover_h26_b10_0, cover_h26_b10_1] [coverh_h26_b10_0] = true := by
+theorem covers_h26_b10_ok : ForestPotential.checkCoversH 26 10 8 231456 33480 1723795442083364420290692123923054593 [cover_h26_b10_0, cover_h26_b10_1] [coverh_h26_b10_0] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b10_0_ok, cover_h26_b10_1_ok, coverh_h26_b10_0_ok, by decide +kernel⟩
 
@@ -1460,17 +1460,17 @@ theorem tab_h26_b8_ok : checkPT tab_h26_b8 = true := checkPT_poisOf (by decide +
 theorem rate_h26_b8_ok : checkRate 26 8 8830 2049949804534797888604160119780933632 tab_h26_b8 = true := by decide +kernel
 
 /-- The small-route option at baseline `ρ / 2^128`. -/
-def small_h26_b8 : OptF := buildOpt 26 8 tab_h26_b8
+def small_h26_b8 : OptF := buildOpt 26 8 8 tab_h26_b8
     (26312827 / 5708990770823839524233143877797980545530986496) 1144568906919068019302703401460945649664 15
     (1077773402553 / 187072209578355573530071658587684226515959365500928)
 
-theorem small_h26_b8_ok : checkOptF 26 8 tab_h26_b8 small_h26_b8 = true :=
+theorem small_h26_b8_ok : checkOptF 26 8 8 tab_h26_b8 small_h26_b8 = true :=
     checkOptF_build (by decide +kernel)
 
 /-- The near certificate. -/
-def near_h26_b8 : OptN := buildOptN 26 8 tab_h26_b8
+def near_h26_b8 : OptN := buildOptN 26 8 8 tab_h26_b8
 
-theorem near_h26_b8_ok : checkOptN 26 tab_h26_b8 near_h26_b8 = true :=
+theorem near_h26_b8_ok : checkOptN 26 8 tab_h26_b8 near_h26_b8 = true :=
     checkOptN_build (by decide +kernel)
 
 /-- The plain rate `ρ`. -/
@@ -1486,7 +1486,7 @@ def tabc_h26_b8_0 : PoisT := poisOf 636278860776009132668 220 176 150
 theorem tabc_h26_b8_0_ok : checkPT tabc_h26_b8_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 0. -/
-def large_h26_b8_0_0 : OptF := buildOpt 26 8 tabc_h26_b8_0
+def large_h26_b8_0_0 : OptF := buildOpt 26 8 8 tabc_h26_b8_0
     (26676493 / 5708990770823839524233143877797980545530986496) 1144568906919068019302703401460945649664 15
     (1092669133245 / 187072209578355573530071658587684226515959365500928)
 
@@ -1495,11 +1495,11 @@ def large_h26_b8_0_0_cB : ℚ × ℚ :=
     (1092669133245 / 187072209578355573530071658587684226515959365500928,
      54086378691805721 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b8_0_0_ok : checkOptB 26 8 tabc_h26_b8_0 large_h26_b8_0_0 large_h26_b8_0_0_cB = true :=
+theorem large_h26_b8_0_0_ok : checkOptB 26 8 8 tabc_h26_b8_0 large_h26_b8_0_0 large_h26_b8_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 1 of cover 0. -/
-def large_h26_b8_0_1 : OptF := buildOpt 26 8 tabc_h26_b8_0
+def large_h26_b8_0_1 : OptF := buildOpt 26 8 8 tabc_h26_b8_0
     (3333637 / 713623846352979940529142984724747568191373312) 1144568906919068019302703401460945649664 15
     (273091547545 / 46768052394588893382517914646921056628989841375232)
 
@@ -1508,11 +1508,11 @@ def large_h26_b8_0_1_cB : ℚ × ℚ :=
     (273091547545 / 46768052394588893382517914646921056628989841375232,
      6761467006599311 / 392318858461667547739736838950479151006397215279002157056)
 
-theorem large_h26_b8_0_1_ok : checkOptB 26 8 tabc_h26_b8_0 large_h26_b8_0_1 large_h26_b8_0_1_cB = true :=
+theorem large_h26_b8_0_1_ok : checkOptB 26 8 8 tabc_h26_b8_0 large_h26_b8_0_1 large_h26_b8_0_1_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 2 of cover 0. -/
-def large_h26_b8_0_2 : OptF := buildOpt 26 8 tabc_h26_b8_0
+def large_h26_b8_0_2 : OptF := buildOpt 26 8 8 tabc_h26_b8_0
     (6662809 / 1427247692705959881058285969449495136382746624) 1144568906919068019302703401460945649664 15
     (2183269243865 / 374144419156711147060143317175368453031918731001856)
 
@@ -1521,11 +1521,11 @@ def large_h26_b8_0_2_cB : ℚ × ℚ :=
     (2183269243865 / 374144419156711147060143317175368453031918731001856,
      54104799606524659 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b8_0_2_ok : checkOptB 26 8 tabc_h26_b8_0 large_h26_b8_0_2 large_h26_b8_0_2_cB = true :=
+theorem large_h26_b8_0_2_ok : checkOptB 26 8 8 tabc_h26_b8_0 large_h26_b8_0_2 large_h26_b8_0_2_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 3 of cover 0. -/
-def large_h26_b8_0_3 : OptF := buildOpt 26 8 tabc_h26_b8_0
+def large_h26_b8_0_3 : OptF := buildOpt 26 8 8 tabc_h26_b8_0
     (13304921 / 2854495385411919762116571938898990272765493248) 1144568906919068019302703401460945649664 15
     (2179878234913 / 374144419156711147060143317175368453031918731001856)
 
@@ -1534,11 +1534,11 @@ def large_h26_b8_0_3_cB : ℚ × ℚ :=
     (2179878234913 / 374144419156711147060143317175368453031918731001856,
      54135736593761133 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b8_0_3_ok : checkOptB 26 8 tabc_h26_b8_0 large_h26_b8_0_3 large_h26_b8_0_3_cB = true :=
+theorem large_h26_b8_0_3_ok : checkOptB 26 8 8 tabc_h26_b8_0 large_h26_b8_0_3 large_h26_b8_0_3_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 4 of cover 0. -/
-def large_h26_b8_0_4 : OptF := buildOpt 26 8 tabc_h26_b8_0
+def large_h26_b8_0_4 : OptF := buildOpt 26 8 8 tabc_h26_b8_0
     (13249203 / 2854495385411919762116571938898990272765493248) 1144568906919068019302703401460945649664 15
     (2170749389557 / 374144419156711147060143317175368453031918731001856)
 
@@ -1547,11 +1547,11 @@ def large_h26_b8_0_4_cB : ℚ × ℚ :=
     (2170749389557 / 374144419156711147060143317175368453031918731001856,
      27111777921613723 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b8_0_4_ok : checkOptB 26 8 tabc_h26_b8_0 large_h26_b8_0_4 large_h26_b8_0_4_cB = true :=
+theorem large_h26_b8_0_4_ok : checkOptB 26 8 8 tabc_h26_b8_0 large_h26_b8_0_4 large_h26_b8_0_4_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 5 of cover 0. -/
-def large_h26_b8_0_5 : OptF := buildOpt 26 8 tabc_h26_b8_0
+def large_h26_b8_0_5 : OptF := buildOpt 26 8 8 tabc_h26_b8_0
     (26098899 / 5708990770823839524233143877797980545530986496) 1144568906919068019302703401460945649664 15
     (1069010890813 / 187072209578355573530071658587684226515959365500928)
 
@@ -1560,11 +1560,11 @@ def large_h26_b8_0_5_cB : ℚ × ℚ :=
     (1069010890813 / 187072209578355573530071658587684226515959365500928,
      27295306888983703 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b8_0_5_ok : checkOptB 26 8 tabc_h26_b8_0 large_h26_b8_0_5 large_h26_b8_0_5_cB = true :=
+theorem large_h26_b8_0_5_ok : checkOptB 26 8 8 tabc_h26_b8_0 large_h26_b8_0_5 large_h26_b8_0_5_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Option 6 of cover 0. -/
-def large_h26_b8_0_6 : OptF := buildOpt 26 8 tabc_h26_b8_0
+def large_h26_b8_0_6 : OptF := buildOpt 26 8 8 tabc_h26_b8_0
     (45 / 10889035741470030830827987437816582766592) 1248161232840080511386332291615267225600 15
     (1030792150009 / 187072209578355573530071658587684226515959365500928)
 
@@ -1573,7 +1573,7 @@ def large_h26_b8_0_6_cB : ℚ × ℚ :=
     (1030792150009 / 187072209578355573530071658587684226515959365500928,
      27960403754218783 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem large_h26_b8_0_6_ok : checkOptB 26 8 tabc_h26_b8_0 large_h26_b8_0_6 large_h26_b8_0_6_cB = true :=
+theorem large_h26_b8_0_6_ok : checkOptB 26 8 8 tabc_h26_b8_0 large_h26_b8_0_6 large_h26_b8_0_6_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 0: every budget from 2049949804534797888604160119780933633 to 21267647932558653966460912964485513216. -/
@@ -1590,7 +1590,7 @@ def cover_h26_b8_0 : CoverW where
     (4363338301285412798132067471544287233, 9439520547698725731004908275075383296, 5),
     (9439520547698725731004908275075383297, 21267647932558653966460912964485513216, 6)]
 
-theorem cover_h26_b8_0_ok : checkCoverW 26 8 57892 8830 2049949804534797888604160119780933633 cover_h26_b8_0 = true :=
+theorem cover_h26_b8_0_ok : checkCoverW 26 8 8 57892 8830 2049949804534797888604160119780933633 cover_h26_b8_0 = true :=
   checkCoverW_of_pt [large_h26_b8_0_0_cB, large_h26_b8_0_1_cB, large_h26_b8_0_2_cB, large_h26_b8_0_3_cB, large_h26_b8_0_4_cB, large_h26_b8_0_5_cB, large_h26_b8_0_6_cB]
     (.cons large_h26_b8_0_0_ok <| .cons large_h26_b8_0_1_ok <| .cons large_h26_b8_0_2_ok <| .cons large_h26_b8_0_3_ok <| .cons large_h26_b8_0_4_ok <| .cons large_h26_b8_0_5_ok <| .cons large_h26_b8_0_6_ok <| .nil)
     tabc_h26_b8_0_ok
@@ -1603,7 +1603,7 @@ def tabc_h26_b8_1 : PoisT := poisOf 636340612671916748863 220 176 150
 theorem tabc_h26_b8_1_ok : checkPT tabc_h26_b8_1 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of cover 1. -/
-def large_h26_b8_1_0 : OptF := buildOpt 26 8 tabc_h26_b8_1
+def large_h26_b8_1_0 : OptF := buildOpt 26 8 8 tabc_h26_b8_1
     (9 / 2722258935367507707706996859454145691648) 1484322227467904832594739768790169419776 15
     (824633720007 / 187072209578355573530071658587684226515959365500928)
 
@@ -1612,7 +1612,7 @@ def large_h26_b8_1_0_cB : ℚ × ℚ :=
     (824633720007 / 187072209578355573530071658587684226515959365500928,
      65894812750479511 / 3138550867693340381917894711603833208051177722232017256448)
 
-theorem large_h26_b8_1_0_ok : checkOptB 26 8 tabc_h26_b8_1 large_h26_b8_1_0 large_h26_b8_1_0_cB = true :=
+theorem large_h26_b8_1_0_ok : checkOptB 26 8 8 tabc_h26_b8_1 large_h26_b8_1_0 large_h26_b8_1_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Cover 1: every budget from 21267647932558653966460912964485513217 to 84739577754630590123170513440188944304. -/
@@ -1623,7 +1623,7 @@ def cover_h26_b8_1 : CoverW where
   entries := [
     (21267647932558653966460912964485513217, 84739577754630590123170513440188944304, 0)]
 
-theorem cover_h26_b8_1_ok : checkCoverW 26 8 57892 8830 21267647932558653966460912964485513217 cover_h26_b8_1 = true :=
+theorem cover_h26_b8_1_ok : checkCoverW 26 8 8 57892 8830 21267647932558653966460912964485513217 cover_h26_b8_1 = true :=
   checkCoverW_of_pt [large_h26_b8_1_0_cB]
     (.cons large_h26_b8_1_0_ok <| .nil)
     tabc_h26_b8_1_ok
@@ -1636,7 +1636,7 @@ def tabch_h26_b8_0 : PoisT := poisOf 636638138131900186970 220 176 150
 theorem tabch_h26_b8_0_ok : checkPT tabch_h26_b8_0 = true := checkPT_poisOf (by decide +kernel)
 
 /-- Option 0 of heavy cover 0. -/
-def largeh_h26_b8_0_0 : OptF := buildOpt 26 8 tabch_h26_b8_0
+def largeh_h26_b8_0_0 : OptF := buildOpt 26 8 8 tabch_h26_b8_0
     (3 / 1361129467683753853853498429727072845824) 1924927720400300797296129752624974004224 15
     (274877906669 / 93536104789177786765035829293842113257979682750464)
 
@@ -1645,7 +1645,7 @@ def largeh_h26_b8_0_0_cB : ℚ × ℚ :=
     (274877906669 / 93536104789177786765035829293842113257979682750464,
      43773908677479479 / 1569275433846670190958947355801916604025588861116008628224)
 
-theorem largeh_h26_b8_0_0_ok : checkOptB 26 8 tabch_h26_b8_0 largeh_h26_b8_0_0 largeh_h26_b8_0_0_cB = true :=
+theorem largeh_h26_b8_0_0_ok : checkOptB 26 8 8 tabch_h26_b8_0 largeh_h26_b8_0_0 largeh_h26_b8_0_0_cB = true :=
     checkOptB_build (by decide +kernel)
 
 /-- Heavy cover (one heavy message, one spare slot) 0: every budget from 84739577754630590123170513440188944305 to 170141183460469231731687303715884105728. -/
@@ -1656,27 +1656,27 @@ def coverh_h26_b8_0 : CoverW where
   entries := [
     (84739577754630590123170513440188944305, 170141183460469231731687303715884105728, 0)]
 
-theorem coverh_h26_b8_0_ok : checkCoverH 26 8 57892 8830 84739577754630590123170513440188944305 coverh_h26_b8_0 = true :=
+theorem coverh_h26_b8_0_ok : checkCoverH 26 8 8 57892 8830 84739577754630590123170513440188944305 coverh_h26_b8_0 = true :=
   checkCoverH_of_pt [largeh_h26_b8_0_0_cB]
     (.cons largeh_h26_b8_0_0_ok <| .nil)
     tabch_h26_b8_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_b8_ok : ForestPotential.checkCoversH 26 8 57892 8830 2049949804534797888604160119780933633 [cover_h26_b8_0, cover_h26_b8_1] [coverh_h26_b8_0] = true := by
+theorem covers_h26_b8_ok : ForestPotential.checkCoversH 26 8 8 57892 8830 2049949804534797888604160119780933633 [cover_h26_b8_0, cover_h26_b8_1] [coverh_h26_b8_0] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_b8_0_ok, cover_h26_b8_1_ok, coverh_h26_b8_0_ok, by decide +kernel⟩
 
 /-! Height 26, layered (10 + 8 + 8), 1,381,000,000 signatures: the certificate of the height 26, full key, 1,381,000,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 231424` enters: the cover chains. -/
 
-theorem cover_h26_L_0_ok : checkCoverW 26 26 231424 1381000000 234976532390629421868243188067598337 cover_h26_b26_0 = true :=
+theorem cover_h26_L_0_ok : checkCoverW 26 26 8 231424 1381000000 234976532390629421868243188067598337 cover_h26_b26_0 = true :=
   checkCoverW_of_pt [large_h26_b26_0_0_cB, large_h26_b26_0_1_cB, large_h26_b26_0_2_cB, large_h26_b26_0_3_cB, large_h26_b26_0_4_cB, large_h26_b26_0_5_cB, large_h26_b26_0_6_cB, large_h26_b26_0_7_cB, large_h26_b26_0_8_cB]
     (.cons large_h26_b26_0_0_ok <| .cons large_h26_b26_0_1_ok <| .cons large_h26_b26_0_2_ok <| .cons large_h26_b26_0_3_ok <| .cons large_h26_b26_0_4_ok <| .cons large_h26_b26_0_5_ok <| .cons large_h26_b26_0_6_ok <| .cons large_h26_b26_0_7_ok <| .cons large_h26_b26_0_8_ok <| .nil)
     tabc_h26_b26_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h26_L_ok : ForestPotential.checkCoversH 26 26 231424 1381000000 234976532390629421868243188067598337 [cover_h26_b26_0] [] = true := by
+theorem covers_h26_L_ok : ForestPotential.checkCoversH 26 26 8 231424 1381000000 234976532390629421868243188067598337 [cover_h26_b26_0] [] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h26_L_0_ok, by decide +kernel⟩
 

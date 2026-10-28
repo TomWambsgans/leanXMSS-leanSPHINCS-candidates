@@ -1,16 +1,17 @@
 # The two-level WOTS forest in Lean
 
 `LeanForest` (`lakefile.toml`, namespace `LeanForest`) is the Lean library of the candidate. Its
-few-time signature is a two-level WOTS forest: 8 trees of height 4; each leaf of a tree is the hash
+few-time signature is a two-level WOTS forest: `T` trees of height 4 (`forestCoords`: 8, and 6 and 7 for the
+uniform keys of the `2^24` and `2^26` lifetimes); each leaf of a tree is the hash
 of two subtrees of height 3 over WOTS keys. The digest picks, per tree, a leaf, a WOTS key in each of
 its two subtrees and a codeword for each WOTS key (`lut`, entries in `{0..4}` summing to 5); the
 signature opens each chain of the two WOTS keys at position `4 - d_i`.
 
 No tree of the forest has a root hash. A subtree is hashed up to level 2 and a tree leaf is the hash of the four
 level-2 nodes `m_0[0] ‖ m_0[1] ‖ m_1[0] ‖ m_1[1]` of its two subtrees; a tree is hashed up to level 3
-and the few-time key is the sixteen level-3 nodes `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]` themselves:
+and the few-time key is the `2T` level-3 nodes `t_0[0] ‖ t_0[1] ‖ … ‖ t_{T-1}[0] ‖ t_{T-1}[1]` themselves:
 no hash folds them, and the WOTS+C encoding of the bottom layer absorbs them before its counter,
-`Th(P, A(4, 0, leaf; layer 0, tree), t_0[0] ‖ … ‖ t_7[1] ‖ ctr)` (`Concrete.encode`, `ForestKey`). A key of
+`Th(P, A(4, 0, leaf; layer 0, tree), t_0[0] ‖ … ‖ t_{T-1}[1] ‖ ctr)` (`Concrete.encode`, `ForestKey`). A key of
 a higher layer signs the root of the tree below it (`rootPayload`, 16 bytes). The WOTS+C keys have 64
 chains of 4 positions and target sum 128 (`targetSum`).
 The signature is unchanged (3 path elements per subtree, 4 per tree): the last path element is the
@@ -30,6 +31,10 @@ for the deterministic Lean signer in every configuration of [README.md](README.m
 | 12 | 116,600 | 1.39374e5 | 1.32e5 | 88% |
 | 10 | 30,810 | 3.74550e4 | 3.49e4 | 88% |
 | 8 | 8,154 | 1.00543e4 | 9.19e3 | 89% |
+
+The uniform keys of the `2^24` and `2^26` lifetimes are layered at `h = 24` (10 + 7 + 7) with 6 and 7
+coordinates: 26,670,000 and 144,300,000 proved signatures, 60.0% and 85.6% of their cover attacks
+(4.44835e7 and 1.68664e8, `forest_attack.py cover 24 T`).
 
 The cover attack column is the lifetime in the cover model: the number of signatures at which a
 digest query covers a forest with probability `2^-127` (Poisson loads of the kept indices). The best
@@ -127,7 +132,7 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 | WOTS+C chain step onto position `to` | 1 | `to − 1` | chain | leaf | value |
 | WOTS+C leaf | 2 | 0 | 0 | leaf | 64 chain ends |
 | tree node | 3 | 0 | level | node | left ‖ right |
-| WOTS+C encoding | 4 | 0 | 0 | leaf | bottom layer: `t_0[0] ‖ t_0[1] ‖ … ‖ t_7[0] ‖ t_7[1]` (the forest key, 256 bytes) ‖ counter (4 bytes); above: the root of the tree below (16 bytes) ‖ counter |
+| WOTS+C encoding | 4 | 0 | 0 | leaf | bottom layer: `t_0[0] ‖ t_0[1] ‖ … ‖ t_{T-1}[0] ‖ t_{T-1}[1]` (the forest key, 32·T bytes) ‖ counter (4 bytes); above: the root of the tree below (16 bytes) ‖ counter |
 | parameter derivation, under `P = 0` | 5 | 0 | 0 | 0 | seed |
 | randomizer base `R0` and step `δ` (both halves of the hash) | 7 | 0 | 0 | 0 | seed ‖ message |
 | message digest | 12 | 0 | 0 | 0 | message ‖ randomizer |
@@ -169,25 +174,26 @@ its callers and ignores it.
 
 ### Digest fields
 
-The digest is the first `h + 208` bits of the hash output (`truncateMessageDigest`), read as a little-endian
+The digest is the first `h + 26 T` bits of the hash output (`truncateMessageDigest`), read as a little-endian
 number; a field is `extractLsb'` at a bit offset (`Scheme.lean`: `wordOffset`, `indexOffset`,
-`superOffset`, `childOffset`, `digestMarks`, `digestIndex`). With `c < 8` the tree and `j < 2` the
+`superOffset`, `childOffset`, `digestMarks`, `digestIndex`). With `c < T` the tree and `j < 2` the
 subtree:
 
-| field | bits | bit offset |
+| field | bits | bit offset (`T = 8`) |
 | --- | ---: | --- |
 | codeword-table index of WOTS key `(c, j)` | 8 | `8 (2c + j)`: byte `2c + j` of the digest |
-| WOTS key of subtree `(c, j)` | 3 | `128 + 3 (2c + j)` |
-| leaf of tree `c` | 4 | `176 + 4c` |
-| instance index `idx` | `h` | 208, in the last 64-bit word (`h ≤ 28`) |
+| WOTS key of subtree `(c, j)` | 3 | `16 T + 3 (2c + j)` (128) |
+| leaf of tree `c` | 4 | `22 T + 4c` (176) |
+| instance index `idx` | `h` | `26 T` (208, in the last 64-bit word, `h ≤ 28`) |
 
-Bits `h + 208` to 255 are unused. No field lies across two 64-bit words: the children, the leaves and
-the index are laid out in that order, which is what makes the three groups fall inside words.
+Bits `h + 26 T` to 255 are unused. With `T = 8` no field lies across two 64-bit words: the children, the
+leaves and the index are laid out in that order, which is what makes the three groups fall inside words;
+with 6 or 7 coordinates some do, which the proof does not care about (the Rust reader takes an 8-byte window at the field's byte).
 The proof reads a digest as its
 index and one 26-bit field per tree (`Scheme/DigestView.lean`): `coordField` gathers the 26 bits of a
 tree from the three places that hold them (leaf, then per subtree WOTS key and table index), and
-`fullDigestView_bijective` states that the index and the 8 fields are a bijection of the `h + 208` bits,
-so a uniform digest gives a uniform index and 8 independent uniform fields
+`fullDigestView_bijective` states that the index and the `T` fields are a bijection of the `h + 26 T` bits,
+so a uniform digest gives a uniform index and `T` independent uniform fields
 (`evalDist_fullDigestView_uniform`), each a uniform mark (`Concrete.markEquiv`). The index of a
 uniform hash output is uniform (`evalDist_blockIndex_uniform`, from
 `evalDist_hashOutput_extractAt_uniform`: the bits at any offset of a uniform output are uniform).
@@ -202,13 +208,13 @@ inputs of different types differ whatever their parameters (`fieldInput_ne_of_ta
 call are part of its address (`layerByte_injective`, `fieldBytes_injective`), so the calls of distinct
 trees of distinct layers are separated as well.
 
-`Layout.signature_size`: a signature serializes to `2832 + 1028 d + 16 h` bytes (4,244 for one layer of
-height 24). `Cost.verification_compressions`: an accepted signature costs exactly `verifyCost`
+`Layout.signature_size`: a signature serializes to `16 + 352 T + 1028 d + 16 h` bytes (4,244 for one layer of
+height 24 and 8 coordinates). `Cost.verification_compressions`: an accepted signature costs exactly `verifyCost`
 compressions of the hash, and no signature costs more (`verification_compressions_le`). With
 Keccak-256 at `h = 24` and one layer that is 260 permutations: 1 for the 80-byte digest input, 160
 for the forest, 99 for WOTS+C and the path (3 for the encoding of the key, 64 chain steps, 8 for the
 leaf and 24 nodes). The forest is 20 per tree (`compressions_coordRecover`: in each of the two
-subtrees 5 chain steps, 1 for the WOTS-key leaf and 2 folds; 1 for the tree leaf; 3 folds), times 8.
+subtrees 5 chain steps, 1 for the WOTS-key leaf and 2 folds; 1 for the tree leaf; 3 folds), times `T`.
 The key is not hashed. Each further layer adds 1 for the encoding of a root, 64 chain steps and 8 for
 the leaf; the path nodes of all layers are `h` in total. `Configurations.lean` states the size
 and the three costs of each of the 10 shapes.
@@ -225,14 +231,14 @@ counts on any oracle):
 | subtree node at level `l ≤ 2` (`hashCalls_subNode`) | `29 · 2^l − 1` |
 | tree leaf (`hashCalls_superNode`) | `2 · 2 · 115 + 1 = 461` |
 | tree node at level `l ≤ 3` (`hashCalls_topNode`) | `462 · 2^l − 1` |
-| forest key of an instance (`hashCalls_forestKey`) | `8 · 2 · 3,695 = 59,120` |
+| forest key of an instance (`hashCalls_forestKey`) | `T · 2 · 3,695 = 7,390 T` (59,120) |
 | opening of one tree (`hashCalls_coordOpen_exact`) | `2 · 222 + 6,926 = 7,370` |
-| forest opening (`hashCalls_forestOpen_exact`) | 58,960 |
+| forest opening (`hashCalls_forestOpen_exact`) | `7,370 T` (58,960) |
 | WOTS+C values of a signature (`hashCalls_published_values`) | `32 + 128 = 160` |
-| signature after the scan (`hashCalls_finishSign_exact`) | `1 + 58,960 + Σ_layers (message + counter search + 160 + path)` |
+| signature after the scan (`hashCalls_finishSign_exact`) | `1 + 7,370 T + Σ_layers (message + counter search + 160 + path)` |
 
-The message of the bottom key is the forest key (59,120 calls); the message of a key above is the root
-of the tree below (`226 · 2^l − 1` calls for a lower layer of height `l`, 6 to 9). Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less, and without the key
+The message of the bottom key is the forest key (`7,390 T` calls, 59,120 with 8 coordinates); the message of a
+key above is the root of the tree below (`226 · 2^l − 1` calls for a lower layer of height `l`, 7 to 9). Without the root hashes a tree leaf costs 2 calls less and a tree 1 call less, and without the key
 hash the key costs 1 call less: the forest key went from 59,385 to 59,120 calls, the opening from
 59,200 to 58,960 and the fixed part of a signature from 118,586 to 118,081 (`1 + 58,960 + 59,120`; the
 signer's tick is 118,080 after the digest call). A counter of the encoding search is one hash call,
@@ -275,16 +281,16 @@ contact, or a cover. Budgets are split at `qh ≈ 2^(128 + lx)`.
 
 **No root hashes.** The graph of hashed values (`GraphView/Position.lean`) keeps its positions; only
 the children of two kinds of position change: a tree leaf (`superChild`) reads the four level-2
-nodes of its two subtrees and the position `roots` the sixteen level-3 nodes of the trees. The root
+nodes of its two subtrees and the position `roots` the `2T` level-3 nodes of the trees. The root
 of a subtree, the root of a tree and `roots` remain positions that nothing reads (the key is not
-hashed; `GraphCorrectness.keyLabels` reads it off the sixteen level-3 positions): the position set already
+hashed; `GraphCorrectness.keyLabels` reads it off the `2T` level-3 positions): the position set already
 over-approximates what is hashed, every position is prepared, and an address still determines one
 position, so a query has one target as before. The values a signature reveals are unchanged
 (`GraphView.publicData`: the subtree path at levels 0 to 2 and the tree path at levels 0 to 3, the
 last of each being the other top node, which was already a path element). In the forest witness
 (`Classification/Forest.lean`) an opening gives two top nodes per tree, the one its fold reaches and
 its last path element (`opSubTops`, `opTops`). An opening that recovers the honest key has the
-sixteen honest level-3 nodes, since the key is those nodes (a different key is a different encoding
+`2T` honest level-3 nodes, since the key is those nodes (a different key is a different encoding
 input, which the WOTS+C classification handles). So each tree has the honest last path element and its fold of 3
 levels reaches an honest node (`Completeness.orderTops_eq_iff`), which is classified as a fold to
 the root was (`top_fold_classification`: honest tree leaf and path, or a node match at levels 1 to
@@ -375,5 +381,6 @@ of covers of `[qh + 1, 2^127)`, each with its own Poisson table: light covers (`
 `wbarH`). For `b = h` (the full key and the layered key) there is no grinding and one light cover
 reaches `2^127`. The splits `lx` are in [PROOF.md](PROOF.md) (`PARAMS` and `LAYERED` in the script),
 the best of a grid of step 1/8; the limits are the largest `N` both routes certify there, rounded
-down to four significant digits. Every checker takes the total height `H`, the kept height `b` and
-the keygen credit `K` as arguments, so one checker serves every configuration.
+down to four significant digits. Every checker takes the total height `H`, the kept height `b`, the number
+of coordinates `T` (the exponent of the moment tables, which depend only on the shape of one tree) and the
+keygen credit `K` as arguments, so one checker serves every configuration.

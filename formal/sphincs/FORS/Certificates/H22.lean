@@ -1638,34 +1638,4 @@ theorem covers_h22_b8_ok : ForsPotential.checkCoversH 22 8 24 10 57884 6547 2899
   simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h22_b8_0_ok, cover_h22_b8_1_ok, coverh_h22_b8_0_ok, by decide +kernel⟩
 
-/-! Height 22, layered (10 + 6 + 6), 71,490,000 signatures: the certificate of the height 22, full key, 71,490,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 231424` enters: the cover chains. -/
-
-/-- Cover 0 with the entries of this keygen credit. -/
-def cover_h22_L_0 : CoverW := { cover_h22_b22_0 with
-  entries := [
-    (790363695024114415431440669675094017, 791844707781712970422449440359301534, 0),
-    (791844707781712970422449440359301535, 793991616581556405132260684381290496, 0),
-    (793991616581556405132260684381290497, 798302912543988591344410003834404864, 0),
-    (798302912543988591344410003834404865, 806995861314585681448077013561638912, 1),
-    (806995861314585681448077013561638913, 824666769653048054173094250972971008, 2),
-    (824666769653048054173094250972971009, 861177886787785182093660378454032384, 3),
-    (861177886787785182093660378454032385, 939121144742405662841087888891838464, 4),
-    (939121144742405662841087888891838465, 1110778131763429793083222294249078784, 5),
-    (1110778131763429793083222294249078785, 1549754217094366138180856396510134272, 6),
-    (1549754217094366138180856396510134273, 3000419929019964904272927643788115968, 7),
-    (3000419929019964904272927643788115969, 10857598830464301804714930669856227328, 8),
-    (10857598830464301804714930669856227329, 84999543014787616508956228090350010368, 9),
-    (84999543014787616508956228090350010369, 170141183460469231731687303715884105728, 10)] }
-
-theorem cover_h22_L_0_ok : checkCoverW 22 22 24 10 231424 71490000 790363695024114415431440669675094017 cover_h22_L_0 = true :=
-  checkCoverW_of_pt [large_h22_b22_0_0_cB, large_h22_b22_0_1_cB, large_h22_b22_0_2_cB, large_h22_b22_0_3_cB, large_h22_b22_0_4_cB, large_h22_b22_0_5_cB, large_h22_b22_0_6_cB, large_h22_b22_0_7_cB, large_h22_b22_0_8_cB, large_h22_b22_0_9_cB, large_h22_b22_0_10_cB]
-    (.cons large_h22_b22_0_0_ok <| .cons large_h22_b22_0_1_ok <| .cons large_h22_b22_0_2_ok <| .cons large_h22_b22_0_3_ok <| .cons large_h22_b22_0_4_ok <| .cons large_h22_b22_0_5_ok <| .cons large_h22_b22_0_6_ok <| .cons large_h22_b22_0_7_ok <| .cons large_h22_b22_0_8_ok <| .cons large_h22_b22_0_9_ok <| .cons large_h22_b22_0_10_ok <| .nil)
-    tabc_h22_b22_0_ok
-    (by decide +kernel)
-
-/-- The covers reach every budget below `2^127`. -/
-theorem covers_h22_L_ok : ForsPotential.checkCoversH 22 22 24 10 231424 71490000 790363695024114415431440669675094017 [cover_h22_L_0] [] = true := by
-  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
-  exact ⟨cover_h22_L_0_ok, by decide +kernel⟩
-
 end FORS.Security.H0

@@ -140,8 +140,10 @@ theorem compressions_chainWalk (f : QueryImpl HashSpec Id) (parameter : PublicPa
   rw [leafHash, compressions_tweakableHash, leafPayload, digest_vector_length]
   rfl
 
-theorem rootsPayload_length (tops : Coord → Digest × Digest) : (rootsPayload tops).length = 256 := by
-  simp [rootsPayload, nodePayload, bytesLE_length, forestCoords]
+theorem rootsPayload_length (tops : Coord → Digest × Digest) :
+    (rootsPayload tops).length = 32 * forestCoords := by
+  simp [rootsPayload, nodePayload, bytesLE_length, List.sum_ofFn]
+  ring
 
 theorem rootPayload_length (root : Digest) : (rootPayload root).length = 16 := by
   simp [rootPayload, bytesLE_length]
@@ -307,7 +309,7 @@ def layerCost (lay : Layer) (messageLength : Nat) : Nat :=
   otsCost H messageLength + layerHeight lay * nodeCost H
 
 /-- The message length of the layer `k` steps above the bottom: the forest key, then a root. -/
-def messageLength (k : Nat) : Nat := if k = 0 then 256 else 16
+def messageLength (k : Nat) : Nat := if k = 0 then 32 * forestCoords else 16
 
 attribute [local irreducible] otsLeaf encode sequenceFin chainWalk recoverChain leafHash
   forestRecover treeFold messageDigest
@@ -370,28 +372,28 @@ theorem compressions_verifyLayers (f : QueryImpl HashSpec Id) (parameter : Publi
             ring
 
 /-- The verifier's cost of an accepted signature: SHA-256's block of `P`, the 80-byte digest, the
-forest, the encoding of the forest key (292 bytes) and of each root above it (52 bytes), at every
+forest, the encoding of the forest key (`36 + 32 T` bytes) and of each root above it (52 bytes), at every
 layer the 64 chain steps and the one-time leaf, and one node per level of the hypertree. -/
 def verifyCost : Nat :=
-  H.keyBlocks + H.cost 80 + forestCoords * coordCost H + H.cost 292 + (numLayers - 1) * H.cost 52 +
+  H.keyBlocks + H.cost 80 + forestCoords * coordCost H + H.cost (32 + (32 * forestCoords + 4)) + (numLayers - 1) * H.cost 52 +
     numLayers * (64 * stepCost H + H.cost 1056) + totalHeight * nodeCost H
 
 /-- The cost of every layer of the walk, in closed form. -/
 theorem sum_layerCost :
     ∑ j ∈ Finset.Ico 0 numLayers, layerCost H (layerUp j) (messageLength j) =
-      H.cost 292 + (numLayers - 1) * H.cost 52 + numLayers * (64 * stepCost H + H.cost 1056) +
+      H.cost (32 + (32 * forestCoords + 4)) + (numLayers - 1) * H.cost 52 + numLayers * (64 * stepCost H + H.cost 1056) +
         totalHeight * nodeCost H := by
   have hpos := numLayers_pos
   have hheights : ∑ j ∈ Finset.Ico 0 numLayers, layerHeight (layerUp j) = totalHeight := by
     rw [← Finset.range_eq_Ico, ← Fin.sum_univ_eq_sum_range (fun j => layerHeight (layerUp j))]
     rw [Function.Bijective.sum_comp layerUp_bijective (fun lay => layerHeight lay), sum_layerHeight]
   have hmsg : ∑ j ∈ Finset.Ico 0 numLayers, H.cost (32 + (messageLength j + 4)) =
-      H.cost 292 + (numLayers - 1) * H.cost 52 := by
+      H.cost (32 + (32 * forestCoords + 4)) + (numLayers - 1) * H.cost 52 := by
     rw [Finset.sum_eq_sum_Ico_succ_bot hpos]
     simp only [messageLength, if_true, Nat.zero_add]
     rw [Finset.sum_congr rfl (fun j hj => by
       rw [if_neg (by simp only [Finset.mem_Ico] at hj; omega)] : ∀ j ∈ Finset.Ico (0 + 1) numLayers,
-        H.cost (32 + ((if j = 0 then 256 else 16) + 4)) = H.cost 52), Finset.sum_const, Nat.card_Ico,
+        H.cost (32 + ((if j = 0 then 32 * forestCoords else 16) + 4)) = H.cost 52), Finset.sum_const, Nat.card_Ico,
       smul_eq_mul]
   simp only [layerCost, otsCost, Finset.sum_add_distrib, ← Finset.sum_mul, hheights, hmsg,
     Finset.sum_const, Nat.card_Ico, smul_eq_mul, Nat.sub_zero]

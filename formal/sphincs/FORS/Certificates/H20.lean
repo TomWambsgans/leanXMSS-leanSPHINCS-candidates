@@ -1433,17 +1433,4 @@ theorem covers_h20_b8_ok : ForsPotential.checkCoversH 20 8 24 10 57880 6029 2899
   simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h20_b8_0_ok, cover_h20_b8_1_ok, coverh_h20_b8_0_ok, by decide +kernel⟩
 
-/-! Height 20, layered (8 + 6 + 6), 17,440,000 signatures: the certificate of the height 20, full key, 17,440,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 57856` enters: the cover chains. -/
-
-theorem cover_h20_L_0_ok : checkCoverW 20 20 24 10 57856 17440000 1117743056710415287644387422830067713 cover_h20_b20_0 = true :=
-  checkCoverW_of_pt [large_h20_b20_0_0_cB, large_h20_b20_0_1_cB, large_h20_b20_0_2_cB, large_h20_b20_0_3_cB, large_h20_b20_0_4_cB, large_h20_b20_0_5_cB, large_h20_b20_0_6_cB, large_h20_b20_0_7_cB, large_h20_b20_0_8_cB, large_h20_b20_0_9_cB]
-    (.cons large_h20_b20_0_0_ok <| .cons large_h20_b20_0_1_ok <| .cons large_h20_b20_0_2_ok <| .cons large_h20_b20_0_3_ok <| .cons large_h20_b20_0_4_ok <| .cons large_h20_b20_0_5_ok <| .cons large_h20_b20_0_6_ok <| .cons large_h20_b20_0_7_ok <| .cons large_h20_b20_0_8_ok <| .cons large_h20_b20_0_9_ok <| .nil)
-    tabc_h20_b20_0_ok
-    (by decide +kernel)
-
-/-- The covers reach every budget below `2^127`. -/
-theorem covers_h20_L_ok : ForsPotential.checkCoversH 20 20 24 10 57856 17440000 1117743056710415287644387422830067713 [cover_h20_b20_0] [] = true := by
-  simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
-  exact ⟨cover_h20_L_0_ok, by decide +kernel⟩
-
 end FORS.Security.H0

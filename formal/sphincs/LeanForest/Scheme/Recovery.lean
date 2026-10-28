@@ -301,7 +301,7 @@ theorem lut_sum (t : LutIdx) : ∑ i, (lut t i).val = codewordSum := by
 
 Each opened chain is the signer's partial walk from the derived secret, so the verifier's `d_i` steps
 reach the chain top; the child leaf, the sub-tree fold, the super-child and the top-tree fold then
-climb the honest trees up to their two top nodes, and the hash of the top nodes of the 8 trees is the
+climb the honest trees up to their two top nodes, and the hash of the top nodes of the `T` trees is the
 forest key the bottom layer signed. -/
 
 section Chain

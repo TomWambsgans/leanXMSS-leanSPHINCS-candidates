@@ -87,13 +87,15 @@ impl Signature {
             &bytes[at - len..at]
         };
         let randomizer = take(RANDOMIZER_LEN).try_into().unwrap();
-        let forest: ForestOpening = std::array::from_fn(|_| CoordOpening {
-            sub: std::array::from_fn(|_| SubOpening {
-                values: std::array::from_fn(|_| take(N).try_into().unwrap()),
-                path: std::array::from_fn(|_| take(N).try_into().unwrap()),
-            }),
-            top: std::array::from_fn(|_| take(N).try_into().unwrap()),
-        });
+        let forest: ForestOpening = (0..cfg.coords())
+            .map(|_| CoordOpening {
+                sub: std::array::from_fn(|_| SubOpening {
+                    values: std::array::from_fn(|_| take(N).try_into().unwrap()),
+                    path: std::array::from_fn(|_| take(N).try_into().unwrap()),
+                }),
+                top: std::array::from_fn(|_| take(N).try_into().unwrap()),
+            })
+            .collect();
         let layers = cfg
             .layers()
             .iter()
@@ -129,34 +131,51 @@ pub fn digest_block(pp: &Pp, rho: &Randomizer, m: &Message) -> [u8; 32] {
     digest_midstate(pp, m).finish(rho)
 }
 
-/// The leaf index alone (what grinding computes).
-pub fn digest_index(pp: &Pp, h: usize, rho: &Randomizer, m: &Message) -> u64 {
-    index_of_block(&digest_block(pp, rho, m), h)
+/// The leaf index alone (what grinding computes), for a forest of `coords` coordinates.
+pub fn digest_index(pp: &Pp, h: usize, coords: usize, rho: &Randomizer, m: &Message) -> u64 {
+    index_of_block(&digest_block(pp, rho, m), h, coords)
 }
 
-/// The leaf index: `h` bits from bit 208, in the high bits of the last 64-bit word.
-pub fn index_of_block(d0: &[u8; 32], h: usize) -> u64 {
-    u64::from_le_bytes(d0[24..32].try_into().unwrap()) >> (INDEX_OFFSET - 192) & ((1 << h) - 1)
+/// The `bits`-bit field of the digest from bit `offset`, the bits read little endian.
+fn digest_field(d: &[u8; 32], offset: usize, bits: usize) -> usize {
+    debug_assert!(bits <= 32 && offset + bits <= 256);
+    let (start, mut word) = (offset / 8, [0u8; 8]);
+    let end = (start + 8).min(32);
+    word[..end - start].copy_from_slice(&d[start..end]);
+    ((u64::from_le_bytes(word) >> (offset % 8)) & ((1 << bits) - 1)) as usize
 }
 
-/// Bit offset of the leaf index in the digest: the last 16 bytes carry the 16 children, the 8
-/// super-children and then the index.
-pub const INDEX_OFFSET: usize = 128 + SUBS * COORDS * SUB_HEIGHT + COORDS * TOP_HEIGHT;
+/// The leaf index: `h` bits from bit [`index_offset`].
+pub fn index_of_block(d0: &[u8; 32], h: usize, coords: usize) -> u64 {
+    digest_field(d0, index_offset(coords), h) as u64
+}
 
-/// The message digest, one call: the 16 codeword indices are its first 16 bytes (byte `2c + j` for
-/// sub-tree `j` of coordinate `c`), then the last 16 bytes hold the 16 children (3 bits each, in
-/// the order `2c + j`), the 8 super-children (4 bits each, from bit 176) and the leaf index (from
-/// bit 208). No field lies across two 64-bit words.
-pub fn message_digest(pp: &Pp, h: usize, rho: &Randomizer, m: &Message) -> (u64, [CoordMark; COORDS]) {
+/// Bit offset of the leaf index in the digest: after the `2 coords` codeword indices, children and
+/// the `coords` super-children, `26 coords` (208 with `COORDS = 8`).
+pub const fn index_offset(coords: usize) -> usize {
+    coords * COORD_BITS
+}
+
+/// Bit offset of the leaf index with `COORDS` coordinates.
+pub const INDEX_OFFSET: usize = index_offset(COORDS);
+
+/// The message digest, one call, its fields packed from bit 0 for a forest of `coords = C`
+/// coordinates: the `2C` codeword indices are its first `2C` bytes (byte `2c + j` for sub-tree `j` of
+/// coordinate `c`), then the `2C` children (3 bits each, in the order `2c + j`, from bit `16C`), the
+/// `C` super-children (4 bits each, from bit `22C`) and the leaf index (from bit `26C`). With
+/// `C = 8` these are bits 128, 176 and 208, and no field lies across two 64-bit words.
+pub fn message_digest(pp: &Pp, h: usize, coords: usize, rho: &Randomizer, m: &Message) -> (u64, Vec<CoordMark>) {
     let d = digest_block(pp, rho, m);
-    let high = u128::from_le_bytes(d[16..32].try_into().unwrap());
-    let field = |offset: usize, bits: usize| ((high >> offset) & ((1u128 << bits) - 1)) as usize;
-    let marks = std::array::from_fn(|c| CoordMark {
-        super_child: field(SUBS * COORDS * SUB_HEIGHT + TOP_HEIGHT * c, TOP_HEIGHT),
-        child: std::array::from_fn(|j| field(SUB_HEIGHT * (SUBS * c + j), SUB_HEIGHT)),
-        word: std::array::from_fn(|j| d[SUBS * c + j]),
-    });
-    (index_of_block(&d, h), marks)
+    let children = 8 * SUBS * coords;
+    let supers = children + SUBS * SUB_HEIGHT * coords;
+    let marks = (0..coords)
+        .map(|c| CoordMark {
+            super_child: digest_field(&d, supers + TOP_HEIGHT * c, TOP_HEIGHT),
+            child: std::array::from_fn(|j| digest_field(&d, children + SUB_HEIGHT * (SUBS * c + j), SUB_HEIGHT)),
+            word: std::array::from_fn(|j| d[SUBS * c + j]),
+        })
+        .collect();
+    (index_of_block(&d, h, coords), marks)
 }
 
 /// The node `j` of level `level` (counted from the one-time leaves) of tree `tree` at layer `layer`.
@@ -268,18 +287,22 @@ impl SecretKey {
 }
 
 /// The seed a key is built from, `H(tag | configuration | seed)`: one seed used under two
-/// configurations (in particular two pruning heights `b`) gives unrelated keys, which share no
-/// one-time key and no few-time signature. One hash, outside the cost model.
+/// configurations (in particular two pruning heights `b`, or two forests) gives unrelated keys, which
+/// share no one-time key and no few-time signature. The configuration is the hash, `h`, the shape and
+/// `b`, then the number of coordinates when it is not `COORDS`. One hash, outside the cost model.
 pub fn configured_seed(cfg: &Config, seed: &MasterSecret) -> MasterSecret {
-    let (shape, b) = match cfg.shape {
+    let (shape, b) = match cfg.shape() {
         Shape::Pruned { b } => (0, b),
-        Shape::Layered => (1, cfg.h),
+        Shape::Layered => (1, cfg.h()),
     };
-    let hash = HashFn::ALL.iter().position(|&f| f == cfg.hash).unwrap() as u8;
+    let hash = HashFn::ALL.iter().position(|&f| f == cfg.hash()).unwrap() as u8;
     let mut input = b"leanSPHINCS seed".to_vec();
-    input.extend_from_slice(&[hash, cfg.h as u8, shape, b as u8]);
+    input.extend_from_slice(&[hash, cfg.h() as u8, shape, b as u8]);
+    if cfg.coords() != COORDS {
+        input.push(cfg.coords() as u8);
+    }
     input.extend_from_slice(seed);
-    hash_bytes(cfg.hash, &input)
+    hash_bytes(cfg.hash(), &input)
 }
 
 /// `Gen`: the key is built from the configured seed. The public parameter is derived from it; for a
@@ -329,7 +352,7 @@ pub fn randomizer(walk: &RandomizerWalk, i: u32) -> Randomizer {
 }
 
 /// The flattened forest key, the message of the bottom layer's WOTS+C key.
-pub fn forest_key_bytes(key: &ForestKey) -> Vec<u8> {
+pub fn forest_key_bytes(key: &[[Digest; 2]]) -> Vec<u8> {
     key.as_flattened().as_flattened().to_vec()
 }
 
@@ -347,10 +370,10 @@ pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
     let (walk, digests) = (randomizer_walk(pp, &sk.master, m), digest_midstate(pp, m));
     let rho = (0u32..)
         .map(|i| randomizer(&walk, i))
-        .find(|rho| sk.top.contains(index_of_block(&digests.finish(rho), cfg.h) >> below_top))
+        .find(|rho| sk.top.contains(index_of_block(&digests.finish(rho), cfg.h(), cfg.coords()) >> below_top))
         .unwrap();
-    let (idx, marks) = message_digest(pp, cfg.h, &rho, m);
-    let forest = Forest::new(pp, &sk.master, idx);
+    let (idx, marks) = message_digest(pp, cfg.h(), cfg.coords(), &rho, m);
+    let forest = Forest::new(pp, &sk.master, idx, cfg.coords());
     let opening = forest.open(pp, idx, &marks);
     let mut message = forest_key_bytes(forest.key());
     let mut signed = Vec::with_capacity(layers.len());
@@ -373,11 +396,14 @@ pub fn sign(sk: &SecretKey, m: &Message) -> Signature {
 /// verifier cannot tell which limit the signer is under.
 pub fn verify(cfg: &Config, pk: &PublicKey, m: &Message, sig: &Signature) -> Result<(), VerifyError> {
     let layers = cfg.layers();
-    if sig.layers.len() != layers.len() || sig.layers.iter().zip(&layers).any(|(s, &h)| s.path.len() != h) {
+    if sig.forest.len() != cfg.coords()
+        || sig.layers.len() != layers.len()
+        || sig.layers.iter().zip(&layers).any(|(s, &h)| s.path.len() != h)
+    {
         return Err(VerifyError::Malformed);
     }
-    let pp = &Pp::new(cfg.hash, pk.public_param);
-    let (idx, marks) = message_digest(pp, cfg.h, &sig.randomizer, m);
+    let pp = &Pp::new(cfg.hash(), pk.public_param);
+    let (idx, marks) = message_digest(pp, cfg.h(), cfg.coords(), &sig.randomizer, m);
     let key = forest_recover(pp, idx, &marks, &sig.forest);
     let mut message = forest_key_bytes(&key);
     for (layer, signed) in sig.layers.iter().enumerate() {
@@ -418,70 +444,86 @@ mod tests {
             + (height - b) as u64 * (c(MASTER_SECRET_LEN) + c(2 * N))
     }
 
-    /// Every hash, height and shape (pruned at `b = max(h / 2, 12)`, so that key generation and
-    /// grinding both stay small, and layered): a signature has the configuration's size, verifies at the
-    /// configuration's cost, and is rejected under another message, a tampered value, or another
-    /// public parameter.
+    /// Every configuration of the note, per hash: a pruned key per height (at `b = max(h / 2, 12)`, so
+    /// that key generation and grinding both stay small) and every layered key, the lifetimes `2^24`
+    /// and `2^26` with their lighter forests included. A signature has the configuration's size,
+    /// verifies at the configuration's cost, and is rejected under another message, a tampered value,
+    /// or another public parameter.
     #[test]
     fn every_configuration_signs_and_verifies() {
         for hash in HashFn::ALL {
-            for h in HEIGHTS {
-                for shape in [Shape::Pruned { b: (h / 2).max(12) }, Shape::Layered] {
-                    let cfg = Config::new(hash, h, shape);
+            let pruned = HEIGHTS.map(|h| Config::new(hash, h, Shape::Pruned { b: (h / 2).max(12) }));
+            let layered = UNIFORM.map(|(lifetime, _, _)| Config::uniform(hash, lifetime));
+            for cfg in pruned.into_iter().chain(layered) {
+                let before = compressions();
+                let (sk, pk) = key_gen(&cfg, &seed(cfg.h() as u8 + cfg.coords() as u8));
+                assert_eq!(compressions() - before, keygen_compressions(&cfg), "{cfg:?}");
+                for t in 0..2u8 {
+                    let m: Message = std::array::from_fn(|i| t ^ i as u8);
+                    let sig = sign(&sk, &m);
+                    let bytes = sig.to_bytes();
+                    assert_eq!(bytes.len(), cfg.sig_size(), "{cfg:?}");
+                    assert_eq!(Signature::from_bytes(&cfg, &bytes).unwrap(), sig);
                     let before = compressions();
-                    let (sk, pk) = key_gen(&cfg, &seed(h as u8));
-                    assert_eq!(compressions() - before, keygen_compressions(&cfg), "{cfg:?}");
-                    for t in 0..2u8 {
-                        let m: Message = std::array::from_fn(|i| t ^ i as u8);
-                        let sig = sign(&sk, &m);
-                        let bytes = sig.to_bytes();
-                        assert_eq!(bytes.len(), cfg.sig_size(), "{cfg:?}");
-                        assert_eq!(Signature::from_bytes(&cfg, &bytes).unwrap(), sig);
-                        let before = compressions();
-                        assert_eq!(verify(&cfg, &pk, &m, &sig), Ok(()), "{cfg:?}");
-                        assert_eq!(compressions() - before, cfg.verify_compressions(), "{cfg:?}");
-                        let mut other = m;
-                        other[0] ^= 1;
-                        assert!(verify(&cfg, &pk, &other, &sig).is_err());
+                    assert_eq!(verify(&cfg, &pk, &m, &sig), Ok(()), "{cfg:?}");
+                    assert_eq!(compressions() - before, cfg.verify_compressions(), "{cfg:?}");
+                    let mut other = m;
+                    other[0] ^= 1;
+                    assert!(verify(&cfg, &pk, &other, &sig).is_err());
+                    let mut bad = sig.clone();
+                    bad.forest[3].sub[0].values[0][0] ^= 1;
+                    assert!(verify(&cfg, &pk, &m, &bad).is_err());
+                    for layer in 0..bad.layers.len() {
                         let mut bad = sig.clone();
-                        bad.forest[3].sub[0].values[0][0] ^= 1;
-                        assert!(verify(&cfg, &pk, &m, &bad).is_err());
-                        for layer in 0..bad.layers.len() {
-                            let mut bad = sig.clone();
-                            bad.layers[layer].wots[11][5] ^= 4;
-                            assert!(verify(&cfg, &pk, &m, &bad).is_err(), "{cfg:?} layer {layer}");
-                            let mut bad = sig.clone();
-                            bad.layers[layer].path[0][0] ^= 1;
-                            assert!(verify(&cfg, &pk, &m, &bad).is_err(), "{cfg:?} layer {layer}");
-                        }
-                        let mut other = pk;
-                        other.public_param[0] ^= 1;
-                        assert!(verify(&cfg, &other, &m, &sig).is_err());
+                        bad.layers[layer].wots[11][5] ^= 4;
+                        assert!(verify(&cfg, &pk, &m, &bad).is_err(), "{cfg:?} layer {layer}");
+                        let mut bad = sig.clone();
+                        bad.layers[layer].path[0][0] ^= 1;
+                        assert!(verify(&cfg, &pk, &m, &bad).is_err(), "{cfg:?} layer {layer}");
                     }
+                    let mut other = pk;
+                    other.public_param[0] ^= 1;
+                    assert!(verify(&cfg, &other, &m, &sig).is_err());
                 }
             }
         }
     }
 
     /// The baseline (Keccak-256, one tree of height 24): 4,244 bytes and 260 permutations, and a
-    /// layer adds 1,028 bytes and 73 permutations.
+    /// layer adds 1,028 bytes and 73 permutations; a forest coordinate is 352 bytes. The layered
+    /// keys of `2^24` and `2^26` (height 24, 6 and 7 coordinates) are pinned with every hash.
     #[test]
     fn sizes_and_verification_costs() {
         let full = keccak(24, 24);
         assert_eq!(full.sig_size(), BASELINE_SIG_SIZE);
         assert_eq!(full.verify_compressions(), BASELINE_VERIFY_PERMUTATIONS);
         let layered = Config::new(HashFn::Keccak256, 24, Shape::Layered);
+        assert_eq!(layered, Config::uniform(HashFn::Keccak256, 28));
         assert_eq!(layered.sig_size(), BASELINE_SIG_SIZE + 2 * 1028);
         assert_eq!(layered.verify_compressions(), BASELINE_VERIFY_PERMUTATIONS + 2 * 73);
         for h in HEIGHTS {
             assert_eq!(keccak(h, h).sig_size() + 24 * N, BASELINE_SIG_SIZE + h * N);
-            let layered = Config::new(HashFn::Keccak256, h, Shape::Layered);
+        }
+        for (lifetime, h, coords) in UNIFORM {
+            let layered = Config::uniform(HashFn::Keccak256, lifetime);
+            assert_eq!((layered.h(), layered.coords()), (h, coords));
             let heights = layered_heights(h);
             assert_eq!(heights.iter().sum::<usize>(), h);
             assert!(heights.len() == 3 && heights[1] == heights[2] && heights[1] >= 6 && heights[0] <= 12);
             assert_eq!(layered.layers().len(), heights.len());
-            assert_eq!(layered.sig_size(), keccak(h, h).sig_size() + (heights.len() - 1) * LAYER_SIZE);
+            assert_eq!(
+                layered.sig_size(),
+                keccak(h, h).sig_size() + (heights.len() - 1) * LAYER_SIZE - (COORDS - coords) * 352
+            );
         }
+        let light: Vec<(usize, usize, Vec<u64>)> = [24, 26]
+            .map(|lifetime| {
+                let cfg = Config::uniform(HashFn::Keccak256, lifetime);
+                let costs = HashFn::ALL.map(|hash| Config::uniform(hash, lifetime).verify_compressions());
+                (lifetime, cfg.sig_size(), costs.to_vec())
+            })
+            .to_vec();
+        assert_eq!(light, vec![(24, 5596, vec![365, 413, 414]), (26, 5948, vec![385, 437, 437])]);
         let table: Vec<(HashFn, u64, u64)> = HashFn::ALL
             .iter()
             .map(|&hash| {
@@ -496,13 +538,22 @@ mod tests {
         ]);
     }
 
-    /// Only the heights and the kept subtrees of the note make a configuration.
+    /// Only the heights, the kept subtrees and the lifetimes of the note make a configuration.
     #[test]
     fn unsupported_configurations_are_rejected() {
         for (h, b, ok) in [(24, 11, false), (24, 25, false), (18, 10, false), (21, 21, false), (20, 20, true),
                            (20, 14, true), (22, 22, true), (28, 20, true), (28, 9, false)] {
             assert_eq!(std::panic::catch_unwind(|| keccak(h, b)).is_ok(), ok, "h = {h}, b = {b}");
         }
+        for (h, ok) in [(20, false), (22, false), (24, true), (25, false), (26, true), (28, true)] {
+            let layered = std::panic::catch_unwind(|| Config::new(HashFn::Keccak256, h, Shape::Layered));
+            assert_eq!(layered.is_ok(), ok, "layered h = {h}");
+        }
+        for (lifetime, ok) in [(22, false), (24, true), (25, false), (26, true), (28, true), (30, true), (32, true), (34, false)] {
+            let uniform = std::panic::catch_unwind(|| Config::uniform(HashFn::Keccak256, lifetime));
+            assert_eq!(uniform.is_ok(), ok, "uniform 2^{lifetime}");
+        }
+        assert_eq!(Config::pruned(HashFn::Keccak256, 24, 12), keccak(20, 12));
     }
 
     #[test]
@@ -576,7 +627,7 @@ mod tests {
         ];
         for (hash, pk_hex, sig_hex, counter) in pinned {
             // `b = 11` is not in `PRUNED`: a small key, quick to build.
-            let cfg = Config { hash, h: 24, shape: Shape::Pruned { b: 11 } };
+            let cfg = Config { hash, h: 24, shape: Shape::Pruned { b: 11 }, coords: COORDS };
             let (sk, pk) = key_gen(&cfg, &seed(1));
             let sig = sign(&sk, &m);
             let digest = keccak::hash(&sig.to_bytes());
@@ -584,11 +635,23 @@ mod tests {
             assert_eq!(hex(&digest), sig_hex, "{hash:?}");
             assert_eq!(sig.layers[0].counter, counter, "{hash:?}");
         }
-        let cfg = Config::new(HashFn::Keccak256, 22, Shape::Layered);
-        let (sk, pk) = key_gen(&cfg, &seed(1));
-        let digest = keccak::hash(&sign(&sk, &m).to_bytes());
-        assert_eq!(hex(&pk.to_bytes()), "a430976f5ddc4c423caf10bb18be21e2696d5390f3f72562b8bcf51965ecaf81");
-        assert_eq!(hex(&digest), "9323e43e2daac499f3b72cecb44b0fc8c2179de3a097ef12bb1f30f4e6fa8d40");
+        // the layered key of height 24 (the same bytes as before the lighter forests existed), then
+        // the layered keys of 2^24 and 2^26
+        let layered = [
+            (28, "0b5e3aa421434f80badd1a5af9cdd7663fafb0f593515556c4797f672621c2fc",
+             "cafdd9580d45967d80f109872a453b579093d2c63feea3fca59030ce16d5be50"),
+            (24, "6e9915ded835767a08efd9809839ec8ad60017402305fcecac43c4d39c9e81ae",
+             "1c53143babdb893e560450229f80f1d074e461920fb978cf0e82234a0568445b"),
+            (26, "d34a30c1f68dc14604d526a837a64b60ef5886fa10066a5b183ad71bdc49cd58",
+             "61be492958cf39a760e70be3aa92dc08df9a6986af4ecf56d523e75f29ab2b25"),
+        ];
+        for (lifetime, pk_hex, sig_hex) in layered {
+            let cfg = Config::uniform(HashFn::Keccak256, lifetime);
+            let (sk, pk) = key_gen(&cfg, &seed(1));
+            let digest = keccak::hash(&sign(&sk, &m).to_bytes());
+            assert_eq!(hex(&pk.to_bytes()), pk_hex, "2^{lifetime}");
+            assert_eq!(hex(&digest), sig_hex, "2^{lifetime}");
+        }
     }
 
     /// One seed under two configurations gives unrelated keys: two pruning heights, or two heights.
@@ -599,6 +662,9 @@ mod tests {
         assert_ne!(a, configured_seed(&keccak(22, 12), &seed(5)));
         assert_ne!(a, configured_seed(&Config::new(HashFn::Keccak256, 24, Shape::Layered), &seed(5)));
         assert_ne!(a, configured_seed(&Config::new(HashFn::Blake2s, 24, Shape::Pruned { b: 12 }), &seed(5)));
+        let layered = UNIFORM.map(|(lifetime, _, _)| configured_seed(&Config::uniform(HashFn::Keccak256, lifetime), &seed(5)));
+        let distinct: std::collections::BTreeSet<_> = layered.iter().collect();
+        assert_eq!(distinct.len(), UNIFORM.len(), "2^24, 2^26 and 2^28 share the height 24, not the key");
     }
 
     /// The signature's randomizer is the first attempt of the message's walk that lands, and the
@@ -611,7 +677,7 @@ mod tests {
             let m: Message = std::array::from_fn(|i| t.wrapping_mul(17) ^ i as u8);
             let walk = randomizer_walk(pp, &sk.master, &m);
             assert_eq!(walk.step[0] & 1, 1);
-            let lands = |rho: &Randomizer| sk.top.contains(digest_index(pp, 24, rho, &m));
+            let lands = |rho: &Randomizer| sk.top.contains(digest_index(pp, 24, COORDS, rho, &m));
             let i = (0u32..).find(|&i| lands(&randomizer(&walk, i))).unwrap();
             let sig = sign(&sk, &m);
             assert_eq!(sig.randomizer, randomizer(&walk, i));
@@ -621,7 +687,7 @@ mod tests {
                 assert_ne!(previous, u128::from_le_bytes(sig.randomizer).wrapping_sub(1));
             }
         }
-        let (sk, _) = key_gen(&Config::new(HashFn::Sha256, 22, Shape::Layered), &seed(4));
+        let (sk, _) = key_gen(&Config::uniform(HashFn::Sha256, 24), &seed(4));
         let m = [3u8; MESSAGE_LEN];
         assert_eq!(sign(&sk, &m).randomizer, randomizer_walk(&sk.pp, &sk.master, &m).base);
     }
@@ -637,9 +703,9 @@ mod tests {
             assert_eq!(compressions() - before, hash.call(MASTER_SECRET_LEN + MESSAGE_LEN) + fixed as u64);
             for i in 0..4 {
                 let before = compressions();
-                let index = index_of_block(&digests.finish(&randomizer(&walk, i)), 24);
+                let index = index_of_block(&digests.finish(&randomizer(&walk, i)), 24, COORDS);
                 assert_eq!(compressions() - before, 1, "{hash:?}");
-                assert_eq!(index, digest_index(&pp, 24, &randomizer(&walk, i), &m));
+                assert_eq!(index, digest_index(&pp, 24, COORDS, &randomizer(&walk, i), &m));
             }
         }
     }
@@ -691,11 +757,11 @@ mod tests {
         let d = digest_block(&pp, &rho, &m);
         let word = |w: usize| u64::from_le_bytes(d[8 * w..][..8].try_into().unwrap());
         for h in HEIGHTS {
-            let (index, _) = message_digest(&pp, h, &rho, &m);
+            let (index, _) = message_digest(&pp, h, COORDS, &rho, &m);
             assert_eq!(index, word(3) >> 16 & ((1 << h) - 1));
             assert!(INDEX_OFFSET % 64 + h <= 64, "the index lies across two words");
         }
-        let (_, marks) = message_digest(&pp, 24, &rho, &m);
+        let (_, marks) = message_digest(&pp, 24, COORDS, &rho, &m);
         for (c, mark) in marks.iter().enumerate() {
             assert_eq!(mark.super_child as u64, word(2 + (48 + 4 * c) / 64) >> ((48 + 4 * c) % 64) & 15);
             for j in 0..SUBS {
@@ -707,6 +773,22 @@ mod tests {
             assert!((48 + 4 * c) % 64 + TOP_HEIGHT <= 64, "a super-child lies across two words");
         }
         assert_eq!(INDEX_OFFSET, 208);
+        // With fewer coordinates the fields are packed the same way from bit 0, read bit by bit here.
+        let bit = |i: usize| (d[i / 8] >> (i % 8) & 1) as usize;
+        let field = |at: usize, bits: usize| (0..bits).map(|k| bit(at + k) << k).sum::<usize>();
+        for coords in [6, 7] {
+            let (index, marks) = message_digest(&pp, 24, coords, &rho, &m);
+            assert_eq!(index as usize, field(26 * coords, 24), "{coords} coordinates");
+            assert_eq!(marks.len(), coords);
+            for (c, mark) in marks.iter().enumerate() {
+                assert_eq!(mark.super_child, field(22 * coords + 4 * c, 4));
+                for j in 0..SUBS {
+                    assert_eq!(mark.child[j], field(16 * coords + 3 * (2 * c + j), 3));
+                    assert_eq!(mark.word[j], d[2 * c + j]);
+                }
+            }
+            assert!(digest_bits(24, coords) <= 256);
+        }
     }
 
     /// Pins the encoding's input, `P | A(enc, 0, e) | message | counter`, and its costs: the
@@ -714,7 +796,7 @@ mod tests {
     /// forest key at the bottom and for a 16-byte root above.
     #[test]
     fn encoding_absorbs_the_message_and_the_counter() {
-        let key: ForestKey = std::array::from_fn(|c| std::array::from_fn(|half| [(2 * c + half) as u8; N]));
+        let key: ForestKey = (0..COORDS).map(|c| std::array::from_fn(|half| [(2 * c + half) as u8; N])).collect();
         let pp = Pp::new(HashFn::Keccak256, [3u8; PUBLIC_PARAM_LEN]);
         let input = [&pp.bytes()[..], &address(&tweak(TWEAK_ENC, 0, 77)), &forest_key_bytes(&key), &5u32.to_le_bytes()].concat();
         assert_eq!(input.len(), 292);

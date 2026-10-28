@@ -1,8 +1,9 @@
 //! The two-level WOTS forest: the few-time signature under each XMSS leaf.
 //!
-//! An instance has `COORDS = 8` independent coordinates. A coordinate is a top Merkle tree of
+//! An instance has independent coordinates, `COORDS = 8` (6 or 7 for the layered keys of the
+//! lifetimes `2^24` and `2^26`, [`UNIFORM`]). A coordinate is a top Merkle tree of
 //! height 4 over 16 super-children, hashed up to level 3 only: its two level-3 nodes are not hashed
-//! into a root, and the forest key is the sixteen nodes themselves, which the WOTS+C encoding
+//! into a root, and the forest key is these two nodes per coordinate, which the WOTS+C encoding
 //! absorbs. A super-child hashes the two level-2 nodes of each of its two sub-trees; a sub-tree is a
 //! Merkle tree of height 3 over 8 children, also hashed up to its two top nodes only. A child is a
 //! small WOTS key: 6 chains of length 5 under a leaf hash, signed at a codeword of digit sum 5.
@@ -15,7 +16,7 @@ pub const SUPERS: usize = 1 << TOP_HEIGHT;
 pub const CHILDREN: usize = 1 << SUB_HEIGHT;
 
 /// The forest key of an instance: the two level-3 nodes of every coordinate's top tree.
-pub type ForestKey = [[Digest; 2]; COORDS];
+pub type ForestKey = Vec<[Digest; 2]>;
 
 /// What the digest selects in one coordinate: the super-child, and per sub-tree a child and a
 /// codeword index.
@@ -40,8 +41,8 @@ pub struct CoordOpening {
     pub top: [Digest; TOP_HEIGHT],
 }
 
-/// What a signature carries for the forest: `COORDS * 22` values.
-pub type ForestOpening = [CoordOpening; COORDS];
+/// What a signature carries for the forest: 22 values per coordinate.
+pub type ForestOpening = Vec<CoordOpening>;
 
 /// Values a coordinate's opening carries: per sub-tree 6 chain values and 3 nodes, plus 4 nodes.
 pub const VALUES_PER_COORD: usize = SUBS * (CHILD_CHAINS + SUB_HEIGHT) + TOP_HEIGHT;
@@ -180,13 +181,14 @@ fn sub_index(c: usize, s: usize, j: usize) -> usize {
 }
 
 impl Forest {
-    /// Builds the whole forest of instance `idx` from the master secret.
-    pub fn new(pp: &Pp, master: &MasterSecret, idx: u64) -> Self {
-        let mut starts = vec![[0u8; N]; COORDS * SUPERS * SUBS * CHILDREN * CHILD_CHAINS];
-        let mut sub = vec![Vec::new(); COORDS * SUPERS * SUBS];
-        let mut top = vec![Vec::new(); COORDS];
-        let mut key = [[[0u8; N]; 2]; COORDS];
-        for c in 0..COORDS {
+    /// Builds the whole forest of instance `idx`, with `coords` coordinates, from the master secret.
+    pub fn new(pp: &Pp, master: &MasterSecret, idx: u64, coords: usize) -> Self {
+        assert!((1..=COORDS).contains(&coords));
+        let mut starts = vec![[0u8; N]; coords * SUPERS * SUBS * CHILDREN * CHILD_CHAINS];
+        let mut sub = vec![Vec::new(); coords * SUPERS * SUBS];
+        let mut top = vec![Vec::new(); coords];
+        let mut key = vec![[[0u8; N]; 2]; coords];
+        for c in 0..coords {
             let mut supers = Vec::with_capacity(SUPERS);
             for s in 0..SUPERS {
                 let mut tops = [[[0u8; N]; 2]; SUBS];
@@ -225,8 +227,9 @@ impl Forest {
     }
 
     /// The opening of every coordinate at the digest's marks.
-    pub fn open(&self, pp: &Pp, idx: u64, marks: &[CoordMark; COORDS]) -> ForestOpening {
-        std::array::from_fn(|c| {
+    pub fn open(&self, pp: &Pp, idx: u64, marks: &[CoordMark]) -> ForestOpening {
+        assert_eq!(marks.len(), self.key.len());
+        (0..marks.len()).map(|c| {
             let mark = marks[c];
             let s = mark.super_child;
             CoordOpening {
@@ -242,6 +245,7 @@ impl Forest {
                 top: std::array::from_fn(|level| self.top[c][level][(s >> level) ^ 1]),
             }
         })
+        .collect()
     }
 }
 
@@ -262,11 +266,10 @@ fn fold_levels(
 /// The levels of a Merkle tree, level 0 being its leaves.
 type Levels = Vec<Vec<Digest>>;
 
-/// `Fts.recover`: the forest key an opening reaches.
-pub fn forest_recover(
-    pp: &Pp, idx: u64, marks: &[CoordMark; COORDS], opening: &ForestOpening,
-) -> ForestKey {
-    std::array::from_fn(|c| {
+/// `Fts.recover`: the forest key an opening reaches; one coordinate per mark.
+pub fn forest_recover(pp: &Pp, idx: u64, marks: &[CoordMark], opening: &[CoordOpening]) -> ForestKey {
+    assert_eq!(marks.len(), opening.len());
+    (0..marks.len()).map(|c| {
         let (mark, open) = (marks[c], &opening[c]);
         let s = mark.super_child;
         let tops: [[Digest; 2]; SUBS] = std::array::from_fn(|j| {
@@ -292,6 +295,7 @@ pub fn forest_recover(
         });
         order_tops((s >> (TOP_HEIGHT - 1)) & 1 == 1, node, open.top[TOP_HEIGHT - 1])
     })
+    .collect()
 }
 
 #[cfg(test)]
@@ -331,7 +335,7 @@ mod tests {
             let pp = Pp::new(hash, [5u8; PUBLIC_PARAM_LEN]);
             let c = |payload: usize| hash.call(payload);
             let before = compressions();
-            let forest = Forest::new(&pp, &master, 3);
+            let forest = Forest::new(&pp, &master, 3, COORDS);
             // per child 3 derivations, 24 chain steps and a leaf; per sub-tree 6 nodes; per
             // super-child 1 hash; per coordinate 14 top nodes.
             let child = (CHILD_CHAINS / 2) as u64 * c(MASTER_SECRET_LEN)
@@ -344,11 +348,9 @@ mod tests {
                 assert_eq!(expected, 59_120);
             }
 
-            let marks: [CoordMark; COORDS] = std::array::from_fn(|c| CoordMark {
-                super_child: c % SUPERS,
-                child: [c % 8, (c + 3) % 8],
-                word: [c as u8, 200],
-            });
+            let marks: Vec<CoordMark> = (0..COORDS)
+                .map(|c| CoordMark { super_child: c % SUPERS, child: [c % 8, (c + 3) % 8], word: [c as u8, 200] })
+                .collect();
             let opening = forest.open(&pp, 3, &marks);
             let before = compressions();
             assert_eq!(forest_recover(&pp, 3, &marks, &opening), forest.key);

@@ -17,235 +17,274 @@ open Security ForestPotential
 
 /-- Height 20, full key, 19,830,000 signatures (88.2% of the cover attack's 2.249e+07). -/
 theorem h20_full_bits : SecurityBits (.pruned 20 20 19830000) 127 :=
-  @det_bitsFH (.pruned 20 20 19830000) (by decide) 20 20 236978176 19830000 (by decide) (by decide) (by decide) (by decide) 724766703939296656949055313540022272
+  @det_bitsFH (.pruned 20 20 19830000) (by decide) 20 20 8 236978176 19830000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 724766703939296656949055313540022272
     H0.rho_h20_b20 H0.tab_h20_b20 H0.small_h20_b20 H0.near_h20_b20 H0.tab_h20_b20_ok H0.rate_h20_b20_ok H0.small_h20_b20_ok
     H0.near_h20_b20_ok H0.check_h20_b20_ok [H0.cover_h20_b20_0] [] H0.covers_h20_b20_ok
 
 /-- Height 20, kept subtree height 14, 371,400 signatures (83.4% of the cover attack's 4.455e+05). -/
 theorem h20_pruned14_bits : SecurityBits (.pruned 20 14 371400) 127 :=
-  @det_bitsFH (.pruned 20 14 371400) (by decide) 20 14 3702796 371400 (by decide) (by decide) (by decide) (by decide) 1449533407878593313898110627080044544
+  @det_bitsFH (.pruned 20 14 371400) (by decide) 20 14 8 3702796 371400 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1449533407878593313898110627080044544
     H0.rho_h20_b14 H0.tab_h20_b14 H0.small_h20_b14 H0.near_h20_b14 H0.tab_h20_b14_ok H0.rate_h20_b14_ok H0.small_h20_b14_ok
     H0.near_h20_b14_ok H0.check_h20_b14_ok [H0.cover_h20_b14_0, H0.cover_h20_b14_1] [H0.coverh_h20_b14_0] H0.covers_h20_b14_ok
 
 /-- Height 20, kept subtree height 13, 191,200 signatures (82.6% of the cover attack's 2.314e+05). -/
 theorem h20_pruned13_bits : SecurityBits (.pruned 20 13 191200) 127 :=
-  @det_bitsFH (.pruned 20 13 191200) (by decide) 20 13 1851406 191200 (by decide) (by decide) (by decide) (by decide) 1580727390048228830862881339350188032
+  @det_bitsFH (.pruned 20 13 191200) (by decide) 20 13 8 1851406 191200 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1580727390048228830862881339350188032
     H0.rho_h20_b13 H0.tab_h20_b13 H0.small_h20_b13 H0.near_h20_b13 H0.tab_h20_b13_ok H0.rate_h20_b13_ok H0.small_h20_b13_ok
     H0.near_h20_b13_ok H0.check_h20_b13_ok [H0.cover_h20_b13_0, H0.cover_h20_b13_1] [H0.coverh_h20_b13_0] H0.covers_h20_b13_ok
 
 /-- Height 20, kept subtree height 12, 98,480 signatures (81.9% of the cover attack's 1.202e+05). -/
 theorem h20_pruned12_bits : SecurityBits (.pruned 20 12 98480) 127 :=
-  @det_bitsFH (.pruned 20 12 98480) (by decide) 20 12 925712 98480 (by decide) (by decide) (by decide) (by decide) 1723795442083364420290692123923054592
+  @det_bitsFH (.pruned 20 12 98480) (by decide) 20 12 8 925712 98480 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1723795442083364420290692123923054592
     H0.rho_h20_b12 H0.tab_h20_b12 H0.small_h20_b12 H0.near_h20_b12 H0.tab_h20_b12_ok H0.rate_h20_b12_ok H0.small_h20_b12_ok
     H0.near_h20_b12_ok H0.check_h20_b12_ok [H0.cover_h20_b12_0, H0.cover_h20_b12_1] [H0.coverh_h20_b12_0] H0.covers_h20_b12_ok
 
 /-- Height 20, kept subtree height 10, 26,080 signatures (80.6% of the cover attack's 3.238e+04). -/
 theorem h20_pruned10_bits : SecurityBits (.pruned 20 10 26080) 127 :=
-  @det_bitsFH (.pruned 20 10 26080) (by decide) 20 10 231444 26080 (by decide) (by decide) (by decide) (by decide) 2049949804534797888604160119780933632
+  @det_bitsFH (.pruned 20 10 26080) (by decide) 20 10 8 231444 26080 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 2049949804534797888604160119780933632
     H0.rho_h20_b10 H0.tab_h20_b10 H0.small_h20_b10 H0.near_h20_b10 H0.tab_h20_b10_ok H0.rate_h20_b10_ok H0.small_h20_b10_ok
     H0.near_h20_b10_ok H0.check_h20_b10_ok [H0.cover_h20_b10_0, H0.cover_h20_b10_1] [H0.coverh_h20_b10_0] H0.covers_h20_b10_ok
 
 /-- Height 20, kept subtree height 8, 6,926 signatures (79.5% of the cover attack's 8711). -/
 theorem h20_pruned8_bits : SecurityBits (.pruned 20 8 6926) 127 :=
-  @det_bitsFH (.pruned 20 8 6926) (by decide) 20 8 57880 6926 (by decide) (by decide) (by decide) (by decide) 2235486113420830575288774845660135424
+  @det_bitsFH (.pruned 20 8 6926) (by decide) 20 8 8 57880 6926 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 2235486113420830575288774845660135424
     H0.rho_h20_b8 H0.tab_h20_b8 H0.small_h20_b8 H0.near_h20_b8 H0.tab_h20_b8_ok H0.rate_h20_b8_ok H0.small_h20_b8_ok
     H0.near_h20_b8_ok H0.check_h20_b8_ok [H0.cover_h20_b8_0, H0.cover_h20_b8_1] [H0.coverh_h20_b8_0] H0.covers_h20_b8_ok
 
-/-- Height 20, layered (8 + 6 + 6), 19,830,000 signatures (88.2% of the cover attack's 2.249e+07). -/
-theorem h20_layered_bits : SecurityBits (.layered 20 3 6 19830000) 127 :=
-  @det_bitsFH (.layered 20 3 6 19830000) (by decide) 20 20 57856 19830000 (by decide) (by decide) (by decide) (by decide) 724766703939296656949055313540022272
-    H0.rho_h20_b20 H0.tab_h20_b20 H0.small_h20_b20 H0.near_h20_b20 H0.tab_h20_b20_ok H0.rate_h20_b20_ok H0.small_h20_b20_ok
-    H0.near_h20_b20_ok H0.check_h20_b20_ok [H0.cover_h20_L_0] [] H0.covers_h20_L_ok
-
 /-- Height 22, full key, 81,860,000 signatures (91.0% of the cover attack's 8.998e+07). -/
 theorem h22_full_bits : SecurityBits (.pruned 22 22 81860000) 127 :=
-  @det_bitsFH (.pruned 22 22 81860000) (by decide) 22 22 947912704 81860000 (by decide) (by decide) (by decide) (by decide) 512487451133699472151040029945233408
+  @det_bitsFH (.pruned 22 22 81860000) (by decide) 22 22 8 947912704 81860000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 512487451133699472151040029945233408
     H0.rho_h22_b22 H0.tab_h22_b22 H0.small_h22_b22 H0.near_h22_b22 H0.tab_h22_b22_ok H0.rate_h22_b22_ok H0.small_h22_b22_ok
     H0.near_h22_b22_ok H0.check_h22_b22_ok [H0.cover_h22_b22_0] [] H0.covers_h22_b22_ok
 
 /-- Height 22, kept subtree height 20, 21,760,000 signatures (89.2% of the cover attack's 2.438e+07). -/
 theorem h22_pruned20_bits : SecurityBits (.pruned 22 20 21760000) 127 :=
-  @det_bitsFH (.pruned 22 20 21760000) (by decide) 22 20 236978180 21760000 (by decide) (by decide) (by decide) (by decide) 664613997892457936451903530140172288
+  @det_bitsFH (.pruned 22 20 21760000) (by decide) 22 20 8 236978180 21760000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 664613997892457936451903530140172288
     H0.rho_h22_b20 H0.tab_h22_b20 H0.small_h22_b20 H0.near_h22_b20 H0.tab_h22_b20_ok H0.rate_h22_b20_ok H0.small_h22_b20_ok
     H0.near_h22_b20_ok H0.check_h22_b20_ok [H0.cover_h22_b20_0, H0.cover_h22_b20_1] [H0.coverh_h22_b20_0] H0.covers_h22_b20_ok
 
 /-- Height 22, kept subtree height 14, 405,300 signatures (84.3% of the cover attack's 4.807e+05). -/
 theorem h22_pruned14_bits : SecurityBits (.pruned 22 14 405300) 127 :=
-  @det_bitsFH (.pruned 22 14 405300) (by decide) 22 14 3702800 405300 (by decide) (by decide) (by decide) (by decide) 1329227995784915872903807060280344576
+  @det_bitsFH (.pruned 22 14 405300) (by decide) 22 14 8 3702800 405300 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1329227995784915872903807060280344576
     H0.rho_h22_b14 H0.tab_h22_b14 H0.small_h22_b14 H0.near_h22_b14 H0.tab_h22_b14_ok H0.rate_h22_b14_ok H0.small_h22_b14_ok
     H0.near_h22_b14_ok H0.check_h22_b14_ok [H0.cover_h22_b14_0, H0.cover_h22_b14_1] [H0.coverh_h22_b14_0] H0.covers_h22_b14_ok
 
 /-- Height 22, kept subtree height 13, 208,500 signatures (83.6% of the cover attack's 2.495e+05). -/
 theorem h22_pruned13_bits : SecurityBits (.pruned 22 13 208500) 127 :=
-  @det_bitsFH (.pruned 22 13 208500) (by decide) 22 13 1851410 208500 (by decide) (by decide) (by decide) (by decide) 1449533407878593313898110627080044544
+  @det_bitsFH (.pruned 22 13 208500) (by decide) 22 13 8 1851410 208500 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1449533407878593313898110627080044544
     H0.rho_h22_b13 H0.tab_h22_b13 H0.small_h22_b13 H0.near_h22_b13 H0.tab_h22_b13_ok H0.rate_h22_b13_ok H0.small_h22_b13_ok
     H0.near_h22_b13_ok H0.check_h22_b13_ok [H0.cover_h22_b13_0, H0.cover_h22_b13_1] [H0.coverh_h22_b13_0] H0.covers_h22_b13_ok
 
 /-- Height 22, kept subtree height 12, 107,200 signatures (82.8% of the cover attack's 1.295e+05). -/
 theorem h22_pruned12_bits : SecurityBits (.pruned 22 12 107200) 127 :=
-  @det_bitsFH (.pruned 22 12 107200) (by decide) 22 12 925716 107200 (by decide) (by decide) (by decide) (by decide) 1580727390048228830862881339350188032
+  @det_bitsFH (.pruned 22 12 107200) (by decide) 22 12 8 925716 107200 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1580727390048228830862881339350188032
     H0.rho_h22_b12 H0.tab_h22_b12 H0.small_h22_b12 H0.near_h22_b12 H0.tab_h22_b12_ok H0.rate_h22_b12_ok H0.small_h22_b12_ok
     H0.near_h22_b12_ok H0.check_h22_b12_ok [H0.cover_h22_b12_0, H0.cover_h22_b12_1] [H0.coverh_h22_b12_0] H0.covers_h22_b12_ok
 
 /-- Height 22, kept subtree height 10, 28,410 signatures (81.5% of the cover attack's 3.484e+04). -/
 theorem h22_pruned10_bits : SecurityBits (.pruned 22 10 28410) 127 :=
-  @det_bitsFH (.pruned 22 10 28410) (by decide) 22 10 231448 28410 (by decide) (by decide) (by decide) (by decide) 1879812259125035374945945504540786688
+  @det_bitsFH (.pruned 22 10 28410) (by decide) 22 10 8 231448 28410 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1879812259125035374945945504540786688
     H0.rho_h22_b10 H0.tab_h22_b10 H0.small_h22_b10 H0.near_h22_b10 H0.tab_h22_b10_ok H0.rate_h22_b10_ok H0.small_h22_b10_ok
     H0.near_h22_b10_ok H0.check_h22_b10_ok [H0.cover_h22_b10_0, H0.cover_h22_b10_1] [H0.coverh_h22_b10_0] H0.covers_h22_b10_ok
 
 /-- Height 22, kept subtree height 8, 7,514 signatures (80.2% of the cover attack's 9364). -/
 theorem h22_pruned8_bits : SecurityBits (.pruned 22 8 7514) 127 :=
-  @det_bitsFH (.pruned 22 8 7514) (by decide) 22 8 57884 7514 (by decide) (by decide) (by decide) (by decide) 2235486113420830575288774845660135424
+  @det_bitsFH (.pruned 22 8 7514) (by decide) 22 8 8 57884 7514 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 2235486113420830575288774845660135424
     H0.rho_h22_b8 H0.tab_h22_b8 H0.small_h22_b8 H0.near_h22_b8 H0.tab_h22_b8_ok H0.rate_h22_b8_ok H0.small_h22_b8_ok
     H0.near_h22_b8_ok H0.check_h22_b8_ok [H0.cover_h22_b8_0, H0.cover_h22_b8_1] [H0.coverh_h22_b8_0] H0.covers_h22_b8_ok
 
-/-- Height 22, layered (10 + 6 + 6), 81,860,000 signatures (91.0% of the cover attack's 8.998e+07). -/
-theorem h22_layered_bits : SecurityBits (.layered 22 3 6 81860000) 127 :=
-  @det_bitsFH (.layered 22 3 6 81860000) (by decide) 22 22 231424 81860000 (by decide) (by decide) (by decide) (by decide) 512487451133699472151040029945233408
-    H0.rho_h22_b22 H0.tab_h22_b22 H0.small_h22_b22 H0.near_h22_b22 H0.tab_h22_b22_ok H0.rate_h22_b22_ok H0.small_h22_b22_ok
-    H0.near_h22_b22_ok H0.check_h22_b22_ok [H0.cover_h22_b22_0] [] H0.covers_h22_L_ok
-
 /-- Height 24, full key, 336,700,000 signatures (93.5% of the cover attack's 3.599e+08). -/
 theorem h24_full_bits : SecurityBits (.pruned 24 24 336700000) 127 :=
-  @det_bitsFH (.pruned 24 24 336700000) (by decide) 24 24 3791650816 336700000 (by decide) (by decide) (by decide) (by decide) 332306998946228968225951765070086144
+  @det_bitsFH (.pruned 24 24 336700000) (by decide) 24 24 8 3791650816 336700000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 332306998946228968225951765070086144
     H0.rho_h24_b24 H0.tab_h24_b24 H0.small_h24_b24 H0.near_h24_b24 H0.tab_h24_b24_ok H0.rate_h24_b24_ok H0.small_h24_b24_ok
     H0.near_h24_b24_ok H0.check_h24_b24_ok [H0.cover_h24_b24_0] [] H0.covers_h24_b24_ok
 
 /-- Height 24, kept subtree height 20, 23,830,000 signatures (90.3% of the cover attack's 2.639e+07). -/
 theorem h24_pruned20_bits : SecurityBits (.pruned 24 20 23830000) 127 :=
-  @det_bitsFH (.pruned 24 20 23830000) (by decide) 24 20 236978184 23830000 (by decide) (by decide) (by decide) (by decide) 609453723237804761606486446491828224
+  @det_bitsFH (.pruned 24 20 23830000) (by decide) 24 20 8 236978184 23830000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 609453723237804761606486446491828224
     H0.rho_h24_b20 H0.tab_h24_b20 H0.small_h24_b20 H0.near_h24_b20 H0.tab_h24_b20_ok H0.rate_h24_b20_ok H0.small_h24_b20_ok
     H0.near_h24_b20_ok H0.check_h24_b20_ok [H0.cover_h24_b20_0, H0.cover_h24_b20_1] [H0.coverh_h24_b20_0] H0.covers_h24_b20_ok
 
 /-- Height 24, kept subtree height 14, 441,500 signatures (85.2% of the cover attack's 5.18e+05). -/
 theorem h24_pruned14_bits : SecurityBits (.pruned 24 14 441500) 127 :=
-  @det_bitsFH (.pruned 24 14 441500) (by decide) 24 14 3702804 441500 (by decide) (by decide) (by decide) (by decide) 1218907446475609523212972892983656448
+  @det_bitsFH (.pruned 24 14 441500) (by decide) 24 14 8 3702804 441500 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1218907446475609523212972892983656448
     H0.rho_h24_b14 H0.tab_h24_b14 H0.small_h24_b14 H0.near_h24_b14 H0.tab_h24_b14_ok H0.rate_h24_b14_ok H0.small_h24_b14_ok
     H0.near_h24_b14_ok H0.check_h24_b14_ok [H0.cover_h24_b14_0, H0.cover_h24_b14_1] [H0.coverh_h24_b14_0] H0.covers_h24_b14_ok
 
 /-- Height 24, kept subtree height 13, 226,800 signatures (84.4% of the cover attack's 2.687e+05). -/
 theorem h24_pruned13_bits : SecurityBits (.pruned 24 13 226800) 127 :=
-  @det_bitsFH (.pruned 24 13 226800) (by decide) 24 13 1851414 226800 (by decide) (by decide) (by decide) (by decide) 1329227995784915872903807060280344576
+  @det_bitsFH (.pruned 24 13 226800) (by decide) 24 13 8 1851414 226800 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1329227995784915872903807060280344576
     H0.rho_h24_b13 H0.tab_h24_b13 H0.small_h24_b13 H0.near_h24_b13 H0.tab_h24_b13_ok H0.rate_h24_b13_ok H0.small_h24_b13_ok
     H0.near_h24_b13_ok H0.check_h24_b13_ok [H0.cover_h24_b13_0, H0.cover_h24_b13_1] [H0.coverh_h24_b13_0] H0.covers_h24_b13_ok
 
 /-- Height 24, kept subtree height 12, 116,600 signatures (83.7% of the cover attack's 1.394e+05). -/
 theorem h24_pruned12_bits : SecurityBits (.pruned 24 12 116600) 127 :=
-  @det_bitsFH (.pruned 24 12 116600) (by decide) 24 12 925720 116600 (by decide) (by decide) (by decide) (by decide) 1580727390048228830862881339350188032
+  @det_bitsFH (.pruned 24 12 116600) (by decide) 24 12 8 925720 116600 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1580727390048228830862881339350188032
     H0.rho_h24_b12 H0.tab_h24_b12 H0.small_h24_b12 H0.near_h24_b12 H0.tab_h24_b12_ok H0.rate_h24_b12_ok H0.small_h24_b12_ok
     H0.near_h24_b12_ok H0.check_h24_b12_ok [H0.cover_h24_b12_0, H0.cover_h24_b12_1] [H0.coverh_h24_b12_0] H0.covers_h24_b12_ok
 
 /-- Height 24, kept subtree height 10, 30,810 signatures (82.3% of the cover attack's 3.746e+04). -/
 theorem h24_pruned10_bits : SecurityBits (.pruned 24 10 30810) 127 :=
-  @det_bitsFH (.pruned 24 10 30810) (by decide) 24 10 231452 30810 (by decide) (by decide) (by decide) (by decide) 1723795442083364420290692123923054592
+  @det_bitsFH (.pruned 24 10 30810) (by decide) 24 10 8 231452 30810 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1723795442083364420290692123923054592
     H0.rho_h24_b10 H0.tab_h24_b10 H0.small_h24_b10 H0.near_h24_b10 H0.tab_h24_b10_ok H0.rate_h24_b10_ok H0.small_h24_b10_ok
     H0.near_h24_b10_ok H0.check_h24_b10_ok [H0.cover_h24_b10_0, H0.cover_h24_b10_1] [H0.coverh_h24_b10_0] H0.covers_h24_b10_ok
 
 /-- Height 24, kept subtree height 8, 8,154 signatures (81.1% of the cover attack's 1.005e+04). -/
 theorem h24_pruned8_bits : SecurityBits (.pruned 24 8 8154) 127 :=
-  @det_bitsFH (.pruned 24 8 8154) (by decide) 24 8 57888 8154 (by decide) (by decide) (by decide) (by decide) 2049949804534797888604160119780933632
+  @det_bitsFH (.pruned 24 8 8154) (by decide) 24 8 8 57888 8154 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 2049949804534797888604160119780933632
     H0.rho_h24_b8 H0.tab_h24_b8 H0.small_h24_b8 H0.near_h24_b8 H0.tab_h24_b8_ok H0.rate_h24_b8_ok H0.small_h24_b8_ok
     H0.near_h24_b8_ok H0.check_h24_b8_ok [H0.cover_h24_b8_0, H0.cover_h24_b8_1] [H0.coverh_h24_b8_0] H0.covers_h24_b8_ok
 
 /-- Height 24, layered (10 + 7 + 7), 336,700,000 signatures (93.5% of the cover attack's 3.599e+08). -/
 theorem h24_layered_bits : SecurityBits (.layered 24 3 7 336700000) 127 :=
-  @det_bitsFH (.layered 24 3 7 336700000) (by decide) 24 24 231424 336700000 (by decide) (by decide) (by decide) (by decide) 332306998946228968225951765070086144
+  @det_bitsFH (.layered 24 3 7 336700000) (by decide) 24 24 8 231424 336700000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 332306998946228968225951765070086144
     H0.rho_h24_b24 H0.tab_h24_b24 H0.small_h24_b24 H0.near_h24_b24 H0.tab_h24_b24_ok H0.rate_h24_b24_ok H0.small_h24_b24_ok
     H0.near_h24_b24_ok H0.check_h24_b24_ok [H0.cover_h24_b24_0] [] H0.covers_h24_L_ok
 
+/-- Height 24, layered (10 + 7 + 7), 6 coordinates, 26,670,000 signatures (60.0% of the cover attack's 4.448e+07). -/
+theorem h24_layered_t6_bits : SecurityBits (.layered 24 3 7 26670000 6) 127 :=
+  @det_bitsFH (.layered 24 3 7 26670000 6) (by decide) 24 24 6 231424 26670000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1117743056710415287644387422830067712
+    H0.rho_h24_L6 H0.tab_h24_L6 H0.small_h24_L6 H0.near_h24_L6 H0.tab_h24_L6_ok H0.rate_h24_L6_ok H0.small_h24_L6_ok
+    H0.near_h24_L6_ok H0.check_h24_L6_ok [H0.cover_h24_L6_0] [] H0.covers_h24_L6_ok
+
+/-- Height 24, layered (10 + 7 + 7), 7 coordinates, 144,300,000 signatures (85.6% of the cover attack's 1.687e+08). -/
+theorem h24_layered_t7_bits : SecurityBits (.layered 24 3 7 144300000 7) 127 :=
+  @det_bitsFH (.layered 24 3 7 144300000 7) (by decide) 24 24 7 231424 144300000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 512487451133699472151040029945233408
+    H0.rho_h24_L7 H0.tab_h24_L7 H0.small_h24_L7 H0.near_h24_L7 H0.tab_h24_L7_ok H0.rate_h24_L7_ok H0.small_h24_L7_ok
+    H0.near_h24_L7_ok H0.check_h24_L7_ok [H0.cover_h24_L7_0] [] H0.covers_h24_L7_ok
+
 /-- Height 26, full key, 1,381,000,000 signatures (95.9% of the cover attack's 1.44e+09). -/
 theorem h26_full_bits : SecurityBits (.pruned 26 26 1381000000) 127 :=
-  @det_bitsFH (.pruned 26 26 1381000000) (by decide) 26 26 15166603264 1381000000 (by decide) (by decide) (by decide) (by decide) 234976532390629421868243188067598336
+  @det_bitsFH (.pruned 26 26 1381000000) (by decide) 26 26 8 15166603264 1381000000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 234976532390629421868243188067598336
     H0.rho_h26_b26 H0.tab_h26_b26 H0.small_h26_b26 H0.near_h26_b26 H0.tab_h26_b26_ok H0.rate_h26_b26_ok H0.small_h26_b26_ok
     H0.near_h26_b26_ok H0.check_h26_b26_ok [H0.cover_h26_b26_0] [] H0.covers_h26_b26_ok
 
 /-- Height 26, kept subtree height 20, 26,030,000 signatures (91.3% of the cover attack's 2.851e+07). -/
 theorem h26_pruned20_bits : SecurityBits (.pruned 26 20 26030000) 127 :=
-  @det_bitsFH (.pruned 26 20 26030000) (by decide) 26 20 236978188 26030000 (by decide) (by decide) (by decide) (by decide) 558871528355207643822193711415033856
+  @det_bitsFH (.pruned 26 20 26030000) (by decide) 26 20 8 236978188 26030000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 558871528355207643822193711415033856
     H0.rho_h26_b20 H0.tab_h26_b20 H0.small_h26_b20 H0.near_h26_b20 H0.tab_h26_b20_ok H0.rate_h26_b20_ok H0.small_h26_b20_ok
     H0.near_h26_b20_ok H0.check_h26_b20_ok [H0.cover_h26_b20_0, H0.cover_h26_b20_1] [H0.coverh_h26_b20_0] H0.covers_h26_b20_ok
 
 /-- Height 26, kept subtree height 14, 480,100 signatures (86.1% of the cover attack's 5.575e+05). -/
 theorem h26_pruned14_bits : SecurityBits (.pruned 26 14 480100) 127 :=
-  @det_bitsFH (.pruned 26 14 480100) (by decide) 26 14 3702808 480100 (by decide) (by decide) (by decide) (by decide) 1117743056710415287644387422830067712
+  @det_bitsFH (.pruned 26 14 480100) (by decide) 26 14 8 3702808 480100 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1117743056710415287644387422830067712
     H0.rho_h26_b14 H0.tab_h26_b14 H0.small_h26_b14 H0.near_h26_b14 H0.tab_h26_b14_ok H0.rate_h26_b14_ok H0.small_h26_b14_ok
     H0.near_h26_b14_ok H0.check_h26_b14_ok [H0.cover_h26_b14_0, H0.cover_h26_b14_1] [H0.coverh_h26_b14_0] H0.covers_h26_b14_ok
 
 /-- Height 26, kept subtree height 13, 246,900 signatures (85.4% of the cover attack's 2.89e+05). -/
 theorem h26_pruned13_bits : SecurityBits (.pruned 26 13 246900) 127 :=
-  @det_bitsFH (.pruned 26 13 246900) (by decide) 26 13 1851418 246900 (by decide) (by decide) (by decide) (by decide) 1329227995784915872903807060280344576
+  @det_bitsFH (.pruned 26 13 246900) (by decide) 26 13 8 1851418 246900 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1329227995784915872903807060280344576
     H0.rho_h26_b13 H0.tab_h26_b13 H0.small_h26_b13 H0.near_h26_b13 H0.tab_h26_b13_ok H0.rate_h26_b13_ok H0.small_h26_b13_ok
     H0.near_h26_b13_ok H0.check_h26_b13_ok [H0.cover_h26_b13_0, H0.cover_h26_b13_1] [H0.coverh_h26_b13_0] H0.covers_h26_b13_ok
 
 /-- Height 26, kept subtree height 12, 126,900 signatures (84.7% of the cover attack's 1.498e+05). -/
 theorem h26_pruned12_bits : SecurityBits (.pruned 26 12 126900) 127 :=
-  @det_bitsFH (.pruned 26 12 126900) (by decide) 26 12 925724 126900 (by decide) (by decide) (by decide) (by decide) 1449533407878593313898110627080044544
+  @det_bitsFH (.pruned 26 12 126900) (by decide) 26 12 8 925724 126900 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1449533407878593313898110627080044544
     H0.rho_h26_b12 H0.tab_h26_b12 H0.small_h26_b12 H0.near_h26_b12 H0.tab_h26_b12_ok H0.rate_h26_b12_ok H0.small_h26_b12_ok
     H0.near_h26_b12_ok H0.check_h26_b12_ok [H0.cover_h26_b12_0, H0.cover_h26_b12_1] [H0.coverh_h26_b12_0] H0.covers_h26_b12_ok
 
 /-- Height 26, kept subtree height 10, 33,480 signatures (83.2% of the cover attack's 4.022e+04). -/
 theorem h26_pruned10_bits : SecurityBits (.pruned 26 10 33480) 127 :=
-  @det_bitsFH (.pruned 26 10 33480) (by decide) 26 10 231456 33480 (by decide) (by decide) (by decide) (by decide) 1723795442083364420290692123923054592
+  @det_bitsFH (.pruned 26 10 33480) (by decide) 26 10 8 231456 33480 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1723795442083364420290692123923054592
     H0.rho_h26_b10 H0.tab_h26_b10 H0.small_h26_b10 H0.near_h26_b10 H0.tab_h26_b10_ok H0.rate_h26_b10_ok H0.small_h26_b10_ok
     H0.near_h26_b10_ok H0.check_h26_b10_ok [H0.cover_h26_b10_0, H0.cover_h26_b10_1] [H0.coverh_h26_b10_0] H0.covers_h26_b10_ok
 
 /-- Height 26, kept subtree height 8, 8,830 signatures (81.9% of the cover attack's 1.078e+04). -/
 theorem h26_pruned8_bits : SecurityBits (.pruned 26 8 8830) 127 :=
-  @det_bitsFH (.pruned 26 8 8830) (by decide) 26 8 57892 8830 (by decide) (by decide) (by decide) (by decide) 2049949804534797888604160119780933632
+  @det_bitsFH (.pruned 26 8 8830) (by decide) 26 8 8 57892 8830 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 2049949804534797888604160119780933632
     H0.rho_h26_b8 H0.tab_h26_b8 H0.small_h26_b8 H0.near_h26_b8 H0.tab_h26_b8_ok H0.rate_h26_b8_ok H0.small_h26_b8_ok
     H0.near_h26_b8_ok H0.check_h26_b8_ok [H0.cover_h26_b8_0, H0.cover_h26_b8_1] [H0.coverh_h26_b8_0] H0.covers_h26_b8_ok
 
 /-- Height 26, layered (10 + 8 + 8), 1,381,000,000 signatures (95.9% of the cover attack's 1.44e+09). -/
 theorem h26_layered_bits : SecurityBits (.layered 26 3 8 1381000000) 127 :=
-  @det_bitsFH (.layered 26 3 8 1381000000) (by decide) 26 26 231424 1381000000 (by decide) (by decide) (by decide) (by decide) 234976532390629421868243188067598336
+  @det_bitsFH (.layered 26 3 8 1381000000) (by decide) 26 26 8 231424 1381000000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 234976532390629421868243188067598336
     H0.rho_h26_b26 H0.tab_h26_b26 H0.small_h26_b26 H0.near_h26_b26 H0.tab_h26_b26_ok H0.rate_h26_b26_ok H0.small_h26_b26_ok
     H0.near_h26_b26_ok H0.check_h26_b26_ok [H0.cover_h26_b26_0] [] H0.covers_h26_L_ok
 
 /-- Height 28, full key, 5,634,000,000 signatures (97.8% of the cover attack's 5.759e+09). -/
 theorem h28_full_bits : SecurityBits (.pruned 28 28 5634000000) 127 :=
-  @det_bitsFH (.pruned 28 28 5634000000) (by decide) 28 28 60666413056 5634000000 (by decide) (by decide) (by decide) (by decide) 181191675984824164237263828385005568
+  @det_bitsFH (.pruned 28 28 5634000000) (by decide) 28 28 8 60666413056 5634000000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 181191675984824164237263828385005568
     H0.rho_h28_b28 H0.tab_h28_b28 H0.small_h28_b28 H0.near_h28_b28 H0.tab_h28_b28_ok H0.rate_h28_b28_ok H0.small_h28_b28_ok
     H0.near_h28_b28_ok H0.check_h28_b28_ok [H0.cover_h28_b28_0] [] H0.covers_h28_b28_ok
 
 /-- Height 28, kept subtree height 20, 28,350,000 signatures (92.1% of the cover attack's 3.077e+07). -/
 theorem h28_pruned20_bits : SecurityBits (.pruned 28 20 28350000) 127 :=
-  @det_bitsFH (.pruned 28 20 28350000) (by decide) 28 20 236978192 28350000 (by decide) (by decide) (by decide) (by decide) 512487451133699472151040029945233408
+  @det_bitsFH (.pruned 28 20 28350000) (by decide) 28 20 8 236978192 28350000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 512487451133699472151040029945233408
     H0.rho_h28_b20 H0.tab_h28_b20 H0.small_h28_b20 H0.near_h28_b20 H0.tab_h28_b20_ok H0.rate_h28_b20_ok H0.small_h28_b20_ok
     H0.near_h28_b20_ok H0.check_h28_b20_ok [H0.cover_h28_b20_0, H0.cover_h28_b20_1] [H0.coverh_h28_b20_0] H0.covers_h28_b20_ok
 
 /-- Height 28, kept subtree height 14, 522,000 signatures (87.1% of the cover attack's 5.993e+05). -/
 theorem h28_pruned14_bits : SecurityBits (.pruned 28 14 522000) 127 :=
-  @det_bitsFH (.pruned 28 14 522000) (by decide) 28 14 3702812 522000 (by decide) (by decide) (by decide) (by decide) 1117743056710415287644387422830067712
+  @det_bitsFH (.pruned 28 14 522000) (by decide) 28 14 8 3702812 522000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1117743056710415287644387422830067712
     H0.rho_h28_b14 H0.tab_h28_b14 H0.small_h28_b14 H0.near_h28_b14 H0.tab_h28_b14_ok H0.rate_h28_b14_ok H0.small_h28_b14_ok
     H0.near_h28_b14_ok H0.check_h28_b14_ok [H0.cover_h28_b14_0, H0.cover_h28_b14_1] [H0.coverh_h28_b14_0] H0.covers_h28_b14_ok
 
 /-- Height 28, kept subtree height 13, 267,900 signatures (86.3% of the cover attack's 3.105e+05). -/
 theorem h28_pruned13_bits : SecurityBits (.pruned 28 13 267900) 127 :=
-  @det_bitsFH (.pruned 28 13 267900) (by decide) 28 13 1851422 267900 (by decide) (by decide) (by decide) (by decide) 1218907446475609523212972892983656448
+  @det_bitsFH (.pruned 28 13 267900) (by decide) 28 13 8 1851422 267900 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1218907446475609523212972892983656448
     H0.rho_h28_b13 H0.tab_h28_b13 H0.small_h28_b13 H0.near_h28_b13 H0.tab_h28_b13_ok H0.rate_h28_b13_ok H0.small_h28_b13_ok
     H0.near_h28_b13_ok H0.check_h28_b13_ok [H0.cover_h28_b13_0, H0.cover_h28_b13_1] [H0.coverh_h28_b13_0] H0.covers_h28_b13_ok
 
 /-- Height 28, kept subtree height 12, 137,400 signatures (85.4% of the cover attack's 1.609e+05). -/
 theorem h28_pruned12_bits : SecurityBits (.pruned 28 12 137400) 127 :=
-  @det_bitsFH (.pruned 28 12 137400) (by decide) 28 12 925728 137400 (by decide) (by decide) (by decide) (by decide) 1329227995784915872903807060280344576
+  @det_bitsFH (.pruned 28 12 137400) (by decide) 28 12 8 925728 137400 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1329227995784915872903807060280344576
     H0.rho_h28_b12 H0.tab_h28_b12 H0.small_h28_b12 H0.near_h28_b12 H0.tab_h28_b12_ok H0.rate_h28_b12_ok H0.small_h28_b12_ok
     H0.near_h28_b12_ok H0.check_h28_b12_ok [H0.cover_h28_b12_0, H0.cover_h28_b12_1] [H0.coverh_h28_b12_0] H0.covers_h28_b12_ok
 
 /-- Height 28, kept subtree height 10, 36,190 signatures (83.9% of the cover attack's 4.314e+04). -/
 theorem h28_pruned10_bits : SecurityBits (.pruned 28 10 36190) 127 :=
-  @det_bitsFH (.pruned 28 10 36190) (by decide) 28 10 231460 36190 (by decide) (by decide) (by decide) (by decide) 1580727390048228830862881339350188032
+  @det_bitsFH (.pruned 28 10 36190) (by decide) 28 10 8 231460 36190 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1580727390048228830862881339350188032
     H0.rho_h28_b10 H0.tab_h28_b10 H0.small_h28_b10 H0.near_h28_b10 H0.tab_h28_b10_ok H0.rate_h28_b10_ok H0.small_h28_b10_ok
     H0.near_h28_b10_ok H0.check_h28_b10_ok [H0.cover_h28_b10_0, H0.cover_h28_b10_1] [H0.coverh_h28_b10_0] H0.covers_h28_b10_ok
 
 /-- Height 28, kept subtree height 8, 9,541 signatures (82.6% of the cover attack's 1.156e+04). -/
 theorem h28_pruned8_bits : SecurityBits (.pruned 28 8 9541) 127 :=
-  @det_bitsFH (.pruned 28 8 9541) (by decide) 28 8 57896 9541 (by decide) (by decide) (by decide) (by decide) 1879812259125035374945945504540786688
+  @det_bitsFH (.pruned 28 8 9541) (by decide) 28 8 8 57896 9541 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 1879812259125035374945945504540786688
     H0.rho_h28_b8 H0.tab_h28_b8 H0.small_h28_b8 H0.near_h28_b8 H0.tab_h28_b8_ok H0.rate_h28_b8_ok H0.small_h28_b8_ok
     H0.near_h28_b8_ok H0.check_h28_b8_ok [H0.cover_h28_b8_0, H0.cover_h28_b8_1] [H0.coverh_h28_b8_0] H0.covers_h28_b8_ok
 
 /-- Height 28, layered (10 + 9 + 9), 5,634,000,000 signatures (97.8% of the cover attack's 5.759e+09). -/
 theorem h28_layered_bits : SecurityBits (.layered 28 3 9 5634000000) 127 :=
-  @det_bitsFH (.layered 28 3 9 5634000000) (by decide) 28 28 231424 5634000000 (by decide) (by decide) (by decide) (by decide) 181191675984824164237263828385005568
+  @det_bitsFH (.layered 28 3 9 5634000000) (by decide) 28 28 8 231424 5634000000 (by decide) (by decide) (by decide) (by decide)
+    (by decide) 181191675984824164237263828385005568
     H0.rho_h28_b28 H0.tab_h28_b28 H0.small_h28_b28 H0.near_h28_b28 H0.tab_h28_b28_ok H0.rate_h28_b28_ok H0.small_h28_b28_ok
     H0.near_h28_b28_ok H0.check_h28_b28_ok [H0.cover_h28_b28_0] [] H0.covers_h28_L_ok
 

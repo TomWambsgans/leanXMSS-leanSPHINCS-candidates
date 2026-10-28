@@ -51,10 +51,11 @@ theorem sample_boundF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hn
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℝ) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
       (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ κ) (hκ1 : κ ≤ 1)
-    (H b N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
+    (H b T N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hTT : forestCoords = T)
+    (hNN : signatureLimit = N)
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
     (hrt : H0.checkRate H b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
-    (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
+    (ho : H0.checkOptF H b T t o = true) (hon : H0.checkOptN H T t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
     Pr[HiddenReveal.StopOr RichWin | HiddenOutside.stoppedExperiment (sampleModel parameterOutput highs)
         (erase (trace (richProgram (internalize adversary) q (truncateHash parameterOutput)
           (sampleData parameterOutput fixed highs remaining steps)))) known prepared.2] ≤
@@ -153,7 +154,7 @@ theorem sample_boundF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hn
         (start_minv param data prepared.2 hclean known)
         (fun _ _ _ _ _ _ _ h => by cases h) (start_count param data prepared.2 hclean known q')
       have hval : startExcessO wbar b0 q' ≤ ENNReal.ofReal (o.B : ℝ) :=
-        H0.startExcessO_le_opt H b N qtop t o hrt hpt ho hHH hbb hNN q' hqtop b0 (ENNReal.ofReal_le_ofReal hcthr)
+        H0.startExcessO_le_opt H b T N qtop t o hrt hpt ho hHH hbb hTT hNN q' hqtop b0 (ENNReal.ofReal_le_ofReal hcthr)
       have hpot : potO param data wbar b0 Fset tgA prepared.2 Lmax start [] [] [] 0 q' ≤
           (((q' : ℕ) : ℝ≥0∞) * (ENNReal.ofReal (o.B : ℝ) + φ) + signatureLimit * φ) + lam Lmax 0 q' := by
         refine le_trans (potO_start_le param data wbar b0 Fset tgA prepared.2 Lmax start q') ?_
@@ -193,7 +194,7 @@ theorem sample_boundF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (hn
       simp only [fleafCount_cons_inr]
       refine add_le_add ?_ le_rfl
       have hnear : startNearF wbar q' ≤ 2 * ENNReal.ofReal ((c / 2 : ℚ) : ℝ) :=
-        le_trans (H0.hNearOf_le H b N qtop hHH hbb hNN t on hrt hpt hon q' hqtop) (ofReal_le_two_halfF c)
+        le_trans (H0.hNearOf_le H b T N qtop hHH hbb hTT hNN t on hrt hpt hon q' hqtop) (ofReal_le_two_halfF c)
       have hsum := start_sum_leF hfair.le_one q' φ _ hnear
       refine add_le_add (add_le_add le_rfl ?_) le_rfl
       exact mul_le_mul_right hsum _

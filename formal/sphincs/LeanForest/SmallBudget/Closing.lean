@@ -183,10 +183,11 @@ theorem small_seedFree_boundF (hb : 0 < keptHeight topLayer) (adversary : Advers
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℚ) (hκ0 : 0 ≤ κ) (hκ1 : κ ≤ 1) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
       (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ))
-    (H b N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
+    (H b T N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hTT : forestCoords = T)
+    (hNN : signatureLimit = N)
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
     (hrt : H0.checkRate H b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
-    (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
+    (ho : H0.checkOptF H b T t o = true) (hon : H0.checkOptN H T t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
     Pr[Win | seedFreeExperiment (internalize adversary) q steps] ≤
       (smallMainFF ρ q o.B (κ * ((2 ^ b * on.En : ℚ) / 2)) +
         2 * lam (H0.LmaxOf (q - keygenCost)) 0 (q - keygenCost)) + smallFailF q * expectedFail := by
@@ -205,7 +206,7 @@ theorem small_seedFree_boundF (hb : 0 < keptHeight topLayer) (adversary : Advers
         A + C * failMass (failSet prepared.1) := by
     intro parameterOutput fixed highs remaining prepared hprepared known hk
     refine le_trans (sample_boundF hb adversary hnr q hq parameterOutput fixed highs remaining steps prepared
-      hprepared known hk ρ hN (κ : ℝ) hκ hκ1R H b N hHH hbb hNN t o on hpt qtop hrt hqtop ho hon hcthr) (le_of_eq ?_)
+      hprepared known hk ρ hN (κ : ℝ) hκ hκ1R H b T N hHH hbb hTT hNN t o on hpt qtop hrt hqtop ho hon hcthr) (le_of_eq ?_)
     rw [hA, hC]
     unfold smallMainFF smallFailF
     rw [Rat.cast_mul, ENNReal.ofReal_mul (Rat.cast_nonneg.2 hκ0)]
@@ -233,16 +234,17 @@ theorem det_smallF (hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : �
     (ρ : ℝ) (hN : Numeric ρ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128))
     (κ : ℚ) (hκ0 : 0 ≤ κ) (hκ1 : κ ≤ 1) (hκ : 2 - ρ + ((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 +
       (signatureLimit : ℝ) * (123 * ((2 : ℝ) ^ subtreeHeight * 2 ^ 15)⁻¹) ≤ (κ : ℝ))
-    (H b N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hNN : signatureLimit = N)
+    (H b T N : ℕ) (hHH : totalHeight = H) (hbb : subtreeHeight = b) (hTT : forestCoords = T)
+    (hNN : signatureLimit = N)
     (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true) (qtop : ℕ)
     (hrt : H0.checkRate H b N qtop t = true) (hqtop : q - keygenCost ≤ qtop)
-    (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
+    (ho : H0.checkOptF H b T t o = true) (hon : H0.checkOptN H T t on = true) (hcthr : (o.cthr : ℝ) ≤ ρ / 2 ^ 128) :
     forgeAdvantage adversary ≤
       smallMainFF ρ q o.B (κ * ((2 ^ b * on.En : ℚ) / 2)) + smallFailF q * (2 : ℝ≥0∞)⁻¹ ^ 201 +
         2 * lam (H0.LmaxOf (q - keygenCost)) 0 (q - keygenCost) + 2 * ((q : ℝ≥0∞) / 2 ^ 256) := by
   refine le_trans (Det.forgeAdvantage_le_seedFree adversary q hbound _ fun steps =>
     small_seedFree_boundF hb (Memo.memoAdv adversary) (Memo.memoAdv_noRepeat adversary) q steps hq ρ hN
-      κ hκ0 hκ1 hκ H b N hHH hbb hNN t o on hpt qtop hrt hqtop ho hon hcthr) (add_le_add ?_ le_rfl)
+      κ hκ0 hκ1 hκ H b T N hHH hbb hTT hNN t o on hpt qtop hrt hqtop ho hon hcthr) (add_le_add ?_ le_rfl)
   rw [add_right_comm]
   exact add_le_add (add_le_add le_rfl (mul_le_mul_right expectedFail_le _)) le_rfl
 

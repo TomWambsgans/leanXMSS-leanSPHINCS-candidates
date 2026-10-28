@@ -57,13 +57,6 @@ theorem h20_pruned8_bits : SecurityBits (.pruned 20 8 24 10 6029) 127 :=
     H0.rho_h20_b8 H0.tab_h20_b8 H0.small_h20_b8 H0.near_h20_b8 H0.tab_h20_b8_ok H0.rate_h20_b8_ok H0.small_h20_b8_ok
     H0.near_h20_b8_ok H0.check_h20_b8_ok [H0.cover_h20_b8_0, H0.cover_h20_b8_1] [H0.coverh_h20_b8_0] H0.covers_h20_b8_ok
 
-/-- Height 20, layered (8 + 6 + 6), 17,440,000 signatures (92.8% of the cover attack's 1.88e+07). -/
-theorem h20_layered_bits : SecurityBits (.layered 20 3 6 24 10 17440000) 127 :=
-  @det_bitsFH (.layered 20 3 6 24 10 17440000) (by decide) 20 20 24 10 57856 17440000
-    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) 1117743056710415287644387422830067712
-    H0.rho_h20_b20 H0.tab_h20_b20 H0.small_h20_b20 H0.near_h20_b20 H0.tab_h20_b20_ok H0.rate_h20_b20_ok H0.small_h20_b20_ok
-    H0.near_h20_b20_ok H0.check_h20_b20_ok [H0.cover_h20_b20_0] [] H0.covers_h20_L_ok
-
 /-- Height 22, full key, 71,490,000 signatures (95.1% of the cover attack's 7.52e+07). -/
 theorem h22_full_bits : SecurityBits (.pruned 22 22 24 10 71490000) 127 :=
   @det_bitsFH (.pruned 22 22 24 10 71490000) (by decide) 22 22 24 10 947912704 71490000
@@ -112,13 +105,6 @@ theorem h22_pruned8_bits : SecurityBits (.pruned 22 8 24 10 6547) 127 :=
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) 2899066815757186627796221254160089088
     H0.rho_h22_b8 H0.tab_h22_b8 H0.small_h22_b8 H0.near_h22_b8 H0.tab_h22_b8_ok H0.rate_h22_b8_ok H0.small_h22_b8_ok
     H0.near_h22_b8_ok H0.check_h22_b8_ok [H0.cover_h22_b8_0, H0.cover_h22_b8_1] [H0.coverh_h22_b8_0] H0.covers_h22_b8_ok
-
-/-- Height 22, layered (10 + 6 + 6), 71,490,000 signatures (95.1% of the cover attack's 7.52e+07). -/
-theorem h22_layered_bits : SecurityBits (.layered 22 3 6 24 10 71490000) 127 :=
-  @det_bitsFH (.layered 22 3 6 24 10 71490000) (by decide) 22 22 24 10 231424 71490000
-    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) 790363695024114415431440669675094016
-    H0.rho_h22_b22 H0.tab_h22_b22 H0.small_h22_b22 H0.near_h22_b22 H0.tab_h22_b22_ok H0.rate_h22_b22_ok H0.small_h22_b22_ok
-    H0.near_h22_b22_ok H0.check_h22_b22_ok [H0.cover_h22_L_0] [] H0.covers_h22_L_ok
 
 /-- Height 24, full key, 292,300,000 signatures (97.2% of the cover attack's 3.008e+08). -/
 theorem h24_full_bits : SecurityBits (.pruned 24 24 24 10 292300000) 127 :=
@@ -175,6 +161,20 @@ theorem h24_layered_bits : SecurityBits (.layered 24 3 7 24 10 292300000) 127 :=
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) 609453723237804761606486446491828224
     H0.rho_h24_b24 H0.tab_h24_b24 H0.small_h24_b24 H0.near_h24_b24 H0.tab_h24_b24_ok H0.rate_h24_b24_ok H0.small_h24_b24_ok
     H0.near_h24_b24_ok H0.check_h24_b24_ok [H0.cover_h24_b24_0] [] H0.covers_h24_L_ok
+
+/-- Height 24, layered (10 + 7 + 7), 23 FORS trees of height 9, 71,650,000 signatures (86.6% of the cover attack's 8.278e+07). -/
+theorem h24_layered_k23_bits : SecurityBits (.layered 24 3 7 23 9 71650000) 127 :=
+  @det_bitsFH (.layered 24 3 7 23 9 71650000) (by decide) 24 24 23 9 231424 71650000
+    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) 1723795442083364420290692123923054592
+    H0.rho_h24_Lk23 H0.tab_h24_Lk23 H0.small_h24_Lk23 H0.near_h24_Lk23 H0.tab_h24_Lk23_ok H0.rate_h24_Lk23_ok H0.small_h24_Lk23_ok
+    H0.near_h24_Lk23_ok H0.check_h24_Lk23_ok [H0.cover_h24_Lk23_0] [] H0.covers_h24_Lk23_ok
+
+/-- Height 24, layered (10 + 7 + 7), 20 FORS trees of height 9, 24,410,000 signatures (79.0% of the cover attack's 3.09e+07). -/
+theorem h24_layered_k20_bits : SecurityBits (.layered 24 3 7 20 9 24410000) 127 :=
+  @det_bitsFH (.layered 24 3 7 20 9 24410000) (by decide) 24 24 20 9 231424 24410000
+    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) 1879812259125035374945945504540786688
+    H0.rho_h24_Lk20 H0.tab_h24_Lk20 H0.small_h24_Lk20 H0.near_h24_Lk20 H0.tab_h24_Lk20_ok H0.rate_h24_Lk20_ok H0.small_h24_Lk20_ok
+    H0.near_h24_Lk20_ok H0.check_h24_Lk20_ok [H0.cover_h24_Lk20_0] [] H0.covers_h24_Lk20_ok
 
 /-- Height 26, full key, 1,182,000,000 signatures (98.2% of the cover attack's 1.203e+09). -/
 theorem h26_full_bits : SecurityBits (.pruned 26 26 24 10 1182000000) 127 :=

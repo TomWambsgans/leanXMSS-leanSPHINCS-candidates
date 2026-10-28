@@ -2,16 +2,17 @@
 """Generate FORS/Certificates/H*.lean: exact rational certificates for the FORS lifetimes.
 
 A configuration is a total height H (20, 22, 24, 26, 28), a shape (pruned: one tree with a kept subtree
-of height B; layered: the hypertree of SPLITS, nothing pruned, B = H) and a signature limit N. Its
-FTS is FORS with `k = 24` trees of height `a = 10`, the same in every configuration (`scripts/scheme.py` `fors`).
+of height B; layered: the hypertree of SPLITS, nothing pruned, B = H), its FTS, FORS with `k` trees of
+height `a`, and a signature limit N. FORS is 24 trees of height 10 except in the uniform keys of the
+lifetimes 2^24 and 2^26, both at H = 24: 20 and 23 trees of height 9 (LAYERED; `scripts/scheme.py`).
 
 Usage (from formal/sphincs):
-    python3 scripts/fors_certificates.py check H SHAPE B N LX   # check one parameter set (exit status 1 if it fails)
+    python3 scripts/fors_certificates.py check H SHAPE B N LX [K A]   # check one parameter set (exit 1 if it fails)
     python3 scripts/fors_certificates.py emit                   # write FORS/Certificates/H*.lean
     python3 scripts/fors_certificates.py emit-lifetimes         # and FORS/Lifetimes.lean
-    python3 scripts/fors_certificates.py maxn H SHAPE B N0 [STEP LXLO LXHI]   # search the largest N above N0
+    python3 scripts/fors_certificates.py maxn H SHAPE B N0 [STEP LXLO LXHI [K A]]   # search the largest N above N0
     python3 scripts/fors_certificates.py scan H SHAPE B N LX... # the terms of the small route at several lx
-SHAPE is `pruned` or `layered` (then B = H). Then `lake build FORS.Lifetimes` (the kernel re-checks every
+SHAPE is `pruned` or `layered` (then B = H); K A default to 24 10. Then `lake build FORS.Lifetimes` (the kernel re-checks every
 certificate). `maxn` is a search: its result counts only once `check` accepts it and it is in PARAMS or LAYERED.
 
 For each parameter set (b, N, lx), with qh = floor(2^(128 + lx)):
@@ -63,18 +64,20 @@ TOTAL = 24          # tree height: the full key keeps all 2^TOTAL instances (set
 KQ = Fr(1, 2 ** TOTAL)
 LAYERED_TOP = None  # the top layer's height of a layered key, None for a pruned key (set_config)
 SHAPE = "pruned"
-FA = 10             # a: the height of a FORS tree, the same in every configuration
-FK = 24             # k: the number of FORS trees, the same in every configuration
+FA = 10             # a: the height of a FORS tree (set_config)
+FK = 24             # k: the number of FORS trees (set_config)
 
 # The layer split of a layered key, top layer first (crates/sphincs `layered_heights`).
-SPLITS = {20: (8, 6, 6), 22: (10, 6, 6), 24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}
+SPLITS = {24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}
 
-def set_config(h, shape='pruned', b=None):
-    """Select the height and the shape every function below works at."""
-    global TOTAL, KQ, LAYERED_TOP, SHAPE
+def set_config(h, shape='pruned', b=None, k=24, a=10):
+    """Select the height, the shape and the FORS shape (k, a) every function below works at."""
+    global TOTAL, KQ, LAYERED_TOP, SHAPE, FK, FA, P1, P2
     assert shape in ('pruned', 'layered')
     TOTAL, KQ, SHAPE = h, Fr(1, 2 ** h), shape
     LAYERED_TOP = SPLITS[h][0] if shape == 'layered' else None
+    FK, FA = k, a
+    P1, P2 = moment_tables(a)
 
 def num_layers():
     return len(SPLITS[TOTAL]) if SHAPE == 'layered' else 1
@@ -115,8 +118,16 @@ def moment_tabs(a):
     return ([Fr(p1N(a, n), 2 ** 128) for n in range(151)],
             [Fr(p2N(a, n), 2 ** 128) for n in range(151)])
 
-P1, P2 = moment_tabs(FA)
-assert len(P1) == 151 and len(P2) == 151
+_TABS = {}
+
+def moment_tables(a):
+    """moment_tabs(a), computed once per tree height"""
+    if a not in _TABS:
+        _TABS[a] = moment_tabs(a)
+        assert all(len(x) == 151 for x in _TABS[a])
+    return _TABS[a]
+
+P1, P2 = moment_tables(FA)
 
 def getD(lst, n): return lst[n] if 0 <= n < len(lst) else Fr(0)
 
@@ -480,12 +491,19 @@ def lean_tab(t):
     assert (again.m, again.P, again.J, again.pm) == (t.m, t.P, t.J, t.pm), 'the scalars do not rebuild the table'
     return 'poisOf %d %d %d %d\n    %d' % (t.m, t.P, t.J, t.n1, t.pm[0])
 
+def light(c):
+    """FORS other than 24 trees of height 10"""
+    return (c['k'], c['a']) != (24, 10)
+
+def upper1(s): return s[:1].upper() + s[1:]
+
 def tag_of(c):
-    return 'h%d_%s' % (c['h'], 'L' if c['shape'] == 'layered' else 'b%d' % c['b'])
+    return 'h%d_%s' % (c['h'], ('Lk%d' % c['k'] if light(c) else 'L') if c['shape'] == 'layered' else 'b%d' % c['b'])
 
 def describe(c):
     if c['shape'] == 'layered':
-        return 'height %d, layered (%s), %s signatures' % (c['h'], ' + '.join(map(str, SPLITS[c['h']])), format(c['N'], ','))
+        return 'height %d, layered (%s)%s, %s signatures' % (c['h'], ' + '.join(map(str, SPLITS[c['h']])),
+            ', %d FORS trees of height %d' % (c['k'], c['a']) if light(c) else '', format(c['N'], ','))
     if c['b'] == c['h']:
         return 'height %d, full key, %s signatures' % (c['h'], format(c['N'], ','))
     return 'height %d, kept subtree height %d, %s signatures' % (c['h'], c['b'], format(c['N'], ','))
@@ -519,7 +537,8 @@ def same_cover(a, b):
 def reuses(c, f):
     """A layered configuration whose certificate is the full key's but for the keygen credit K, which enters
     only the cover chains (checkEntryF): the same table, small-route option, near certificate and covers."""
-    return f is not None and (c['b'], c['N'], c['qh'], c['rho']) == (f['b'], f['N'], f['qh'], f['rho']) and \
+    return f is not None and (c['k'], c['a']) == (f['k'], f['a']) and \
+        (c['b'], c['N'], c['qh'], c['rho']) == (f['b'], f['N'], f['qh'], f['rho']) and \
         (c['t'].m, c['t'].P, c['t'].J, c['t'].pm) == (f['t'].m, f['t'].P, f['t'].J, f['t'].pm) and \
         all(getattr(c['o'], x) == getattr(f['o'], x) for x in OPT_FIELDS) and \
         (c['on'].nt, c['on'].Jn, c['on'].En) == (f['on'].nt, f['on'].Jn, f['on'].En) and \
@@ -539,7 +558,7 @@ def emit(certs, path):
     out = [HEADER % certs[0]['h']]
     full = None
     for c in certs:
-        set_config(c['h'], c['shape'], c['b'])
+        set_config(c['h'], c['shape'], c['b'], c['k'], c['a'])
         b, N, K, H, k, a = c['b'], c['N'], c['K'], c['h'], c['k'], c['a']
         tag = tag_of(c)
         base = full if c['shape'] == 'layered' and reuses(c, full) else None
@@ -567,7 +586,7 @@ def emit(certs, path):
         else:
             out.append('/-! %s: the certificate of the %s (table, small-route option, near certificate, '
                        'cover tables and options), checked again only where the keygen credit `K = %d` enters: the '
-                       'cover chains. -/\n' % (describe(c).capitalize(), describe(base), K))
+                       'cover chains. -/\n' % (upper1(describe(c)), describe(base), K))
         names = {'': [], 'h': []}
         for kind, lst, chk, of in (('', c['covers'], 'checkCoverW', 'checkCoverW_of_pt'),
                                    ('h', c['heavy'], 'checkCoverH', 'checkCoverH_of_pt')):
@@ -623,7 +642,8 @@ def emit(certs, path):
 
 # Attack lifetimes of the FORS FTS in the cover model (one expected cover per 2^127 digest
 # queries), by height and kept subtree height (`scripts/scheme.py` `fors_log2_lifetime(h, b, a, k)` at
-# a = 10 and k = 24, rounded down). A layered key is attacked as the full key of the same height.
+# a = 10 and k = 24, rounded down). A layered key is attacked as the full key of the same height; with
+# lighter FORS, by (h, k, a) in ATTACK_LIGHT.
 ATTACK = {
     20: {20: 18798990, 14: 371851, 13: 193219, 12: 100380, 10: 27078, 8: 7303},
     22: {22: 75195938, 20: 20356598, 14: 401494, 13: 208531, 12: 108288, 10: 29187, 8: 7865},
@@ -633,11 +653,13 @@ ATTACK = {
 }
 
 
+ATTACK_LIGHT = {(24, 20, 9): 30900666, (24, 23, 9): 82781654}
+
 HEIGHTS = (20, 22, 24, 26, 28)
 
 def pname(c):
     if c['shape'] == 'layered':
-        return 'h%d_layered' % c['h']
+        return 'h%d_layered' % c['h'] + ('_k%d' % c['k'] if light(c) else '')
     return 'h%d_full' % c['h'] if c['b'] == c['h'] else 'h%d_pruned%d' % (c['h'], c['b'])
 
 LIFETIMES_HEADER = '''%s
@@ -667,8 +689,8 @@ def emit_lifetimes(certs, path):
     for c in certs:
         b, N, H, K, k, a = c['b'], c['N'], c['h'], c['K'], c['k'], c['a']
         tag, name, P = tag_of(c), pname(c), lean_params(c)
-        att = ATTACK[H][H if c['shape'] == 'layered' else b]
-        out.append("/-- %s (%.1f%% of the cover attack's %.4g). -/" % (describe(c).capitalize(), 100.0 * N / att, att))
+        att = attack(H, c['shape'], b, k, a)
+        out.append("/-- %s (%.1f%% of the cover attack's %.4g). -/" % (upper1(describe(c)), 100.0 * N / att, att))
         bt = c['base']
         names = ', '.join('H0.' + n for n in c['cover_names'][''])
         hnames = ', '.join('H0.' + n for n in c['cover_names']['h'])
@@ -731,39 +753,56 @@ PARAMS = {
     ],
 }
 
-# Parameter sets of layered keys, by height: (N, lx). The index is not ground (b = h); the smaller keygen credit
-# of the top layer alone does not move the largest N, which is the full key's.
+# Parameter sets of layered keys, by height and FORS shape (h, k, a): (N, lx). The index is not ground (b = h);
+# with 24 trees of height 10 the smaller keygen credit of the top layer alone does not move the largest N, which
+# is the full key's. The uniform keys of the lifetimes 2^24 and 2^26 are at h = 24 with lighter FORS (19 trees of
+# height 9 do not reach 2^24: the largest certified N is about 14.6 million).
 LAYERED = {
-    20: (17440000, -8.25),
-    22: (71490000, -8.75),
-    24: (292300000, -9.125),
-    26: (1182000000, -9.375),
-    28: (4731000000, -11.25),
+    (24, 20, 9): (24410000, -7.5),
+    (24, 23, 9): (71650000, -7.625),
+    (24, 24, 10): (292300000, -9.125),
+    (26, 24, 10): (1182000000, -9.375),
+    (28, 24, 10): (4731000000, -11.25),
 }
 
-def lifetime(h, shape, b=None):
+def lifetime(h, shape, b=None, k=24, a=10):
     """The proved signature limit of a configuration, None if it has no certificate here."""
     if shape == 'layered':
-        return LAYERED[h][0] if h in LAYERED else None
+        return (LAYERED.get((h, k, a)) or (None,))[0]
+    if (k, a) != (24, 10):
+        return None
     return next((n for (bb, n, _) in PARAMS.get(h, []) if bb == b), None)
 
-def attack(h, shape, b=None):
+def attack(h, shape, b=None, k=24, a=10):
     """The cover attack's lifetime of a configuration, None if not computed."""
+    if (k, a) != (24, 10):
+        return ATTACK_LIGHT.get((h, k, a)) if shape == 'layered' else None
     return ATTACK.get(h, {}).get(h if shape == 'layered' else b)
 
+# The uniform (layered) key of each lifetime 2^L: (h, k, a).
+UNIFORM = {24: (24, 20, 9), 26: (24, 23, 9), 28: (24, 24, 10), 30: (26, 24, 10), 32: (28, 24, 10)}
+
+def uniform_lifetime(L):
+    """The proved signature limit of the uniform key of the lifetime 2^L, None if not certified here."""
+    return lifetime(*UNIFORM[L][:1], 'layered', None, *UNIFORM[L][1:])
+
+def uniform_attack(L):
+    """The cover attack's lifetime of the uniform key of the lifetime 2^L."""
+    return attack(*UNIFORM[L][:1], 'layered', None, *UNIFORM[L][1:])
+
 def configs():
-    """Every configuration with a parameter set: (h, shape, b, N, lx)."""
+    """Every configuration with a parameter set: (h, shape, b, N, lx, k, a)."""
     out = []
     for h in HEIGHTS:
         for (b, N, lx) in PARAMS.get(h, []):
-            out.append((h, 'pruned', b, N, lx))
-        if h in LAYERED:
-            N, lx = LAYERED[h]
-            out.append((h, 'layered', h, N, lx))
+            out.append((h, 'pruned', b, N, lx, 24, 10))
+        for (hh, k, a), v in sorted(LAYERED.items(), key=lambda e: (e[0][0], -e[0][1])):
+            if hh == h and v is not None:
+                out.append((h, 'layered', h, v[0], v[1], k, a))
     return out
 
-def certify_config(h, shape, b, N, lx, verbose=True):
-    set_config(h, shape, b)
+def certify_config(h, shape, b, N, lx, verbose=True, k=24, a=10):
+    set_config(h, shape, b, k, a)
     if shape == 'layered':
         assert b == h, 'a layered key keeps every index: B = H'
     return certify(b, N, lx, verbose)
@@ -772,7 +811,8 @@ if __name__ == '__main__':
     cmd = sys.argv[1] if len(sys.argv) > 1 else None
     if cmd == 'check':
         h, shape, b, N, lx = int(sys.argv[2]), sys.argv[3], int(sys.argv[4]), int(float(sys.argv[5])), float(sys.argv[6])
-        c = certify_config(h, shape, b, N, lx)
+        k, a = (int(sys.argv[7]), int(sys.argv[8])) if len(sys.argv) > 8 else (24, 10)
+        c = certify_config(h, shape, b, N, lx, k=k, a=a)
         if c is None or not c['complete']:
             sys.exit('NOT certified')
     elif cmd == 'maxn':
@@ -780,9 +820,10 @@ if __name__ == '__main__':
         # split lx of the grid LXLO, LXLO + STEP, ..., LXHI, starting from a certified N0
         h, shape, b, best = int(sys.argv[2]), sys.argv[3], int(sys.argv[4]), int(float(sys.argv[5]))
         step, lx_lo, lx_hi = [float(a) for a in sys.argv[6:9]] if len(sys.argv) > 8 else (0.125, -11.5, -6.0)
+        k, a = (int(sys.argv[9]), int(sys.argv[10])) if len(sys.argv) > 10 else (24, 10)
         def feasible(N, lx):
             try:
-                c = certify_config(h, shape, b, N, lx, verbose=False)
+                c = certify_config(h, shape, b, N, lx, verbose=False, k=k, a=a)
             except Exception:       # the float search found no option
                 return False
             return c is not None and c['complete']
@@ -824,9 +865,9 @@ if __name__ == '__main__':
                 float(near), float(small_lhs(b, N, qh, rho, o.B, c)), rate <= rho - 1 - x), flush=True)
     elif cmd in ('emit', 'emit-lifetimes'):
         certs = []
-        for (h, shape, b, N, lx) in configs():
-            c = certify_config(h, shape, b, N, lx)
-            assert c is not None and c['complete'], (h, shape, b, N, lx)
+        for (h, shape, b, N, lx, k, a) in configs():
+            c = certify_config(h, shape, b, N, lx, k=k, a=a)
+            assert c is not None and c['complete'], (h, shape, b, N, lx, k, a)
             certs.append(c)
         os.makedirs(os.path.join(ROOT, 'FORS', 'Certificates'), exist_ok=True)
         for h in sorted({c['h'] for c in certs}):

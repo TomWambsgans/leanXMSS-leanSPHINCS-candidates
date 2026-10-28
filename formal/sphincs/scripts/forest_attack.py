@@ -145,11 +145,12 @@ def life(P,ys,b,r,N0):
 if __name__=='__main__':
     name=sys.argv[1] if len(sys.argv)>1 else 'rule'
     set_height(int(sys.argv[2]) if len(sys.argv)>2 else 24)
-    if name=='cover':
+    if name=='cover':      # cover H [T]: T coordinates (8 by default)
+        T=int(sys.argv[3]) if len(sys.argv)>3 else 8
         cnt=np.zeros((5,)*6,dtype=np.int64)
         for w in tables('rule'): cnt[tuple(w)]+=1
         P=tree_P(f_of_counts(cnt),4,2,3)
-        print('H %d cover model'%TOTAL,' '.join('%d:%.5e'%(b,lifetime(P,8,b)) for b in BS))
+        print('H %d cover model'%TOTAL,' '.join('%d:%.5e'%(b,lifetime(P,T,b)) for b in BS))
         sys.exit(0)
     P,ys,chk=prepare(name)
     print('pool mean / exact:',' '.join('%d:%.3f'%(n,chk[n]) for n in (10,20,40,80,120)))

@@ -5,9 +5,9 @@ import LeanForest.Base.Split
 
 /-! **From the forest price to per-index moments.** The cover price of a multiset of disclosed views
 is a sum over the indices of the probability that a uniform mark is covered by the marks at the
-index, a product over the 8 trees of the per-tree cover fraction `φ`. The excess over a threshold
+index, a product over the `T` trees of the per-tree cover fraction `φ`. The excess over a threshold
 splits pointwise into per-index functions of the marks; their mark averages are
-bounded by the first and second moments `E[y | n] = Ψ1(n)^8`, `E[y^2 | n] = Ψ2(n)^8`. -/
+bounded by the first and second moments `E[y | n] = Ψ1(n)^T`, `E[y^2 | n] = Ψ2(n)^T`. -/
 
 open ENNReal
 
@@ -210,20 +210,17 @@ theorem avgN_φF_sq (n : ℕ) : avgN (fun Xs => φF Xs ^ 2) n 0 = ENNReal.ofReal
     (fun X => sq_nonneg _) (fun Xs => by rw [φF_eq, ← ENNReal.ofReal_pow (coverAvg_nonneg _)]) n 0]
   rfl
 
-theorem card_coord : Fintype.card Coord = 8 := by
-  show Fintype.card (Fin forestCoords) = 8
-  rw [Fintype.card_fin]
-  rfl
+theorem card_coord : Fintype.card Coord = forestCoords := Fintype.card_fin _
 
-/-- **`E[y | n] = Ψ1(n)^8`.** -/
-theorem avgN_yM (n : ℕ) : avgN yM n 0 = ENNReal.ofReal (Ψ1R n) ^ 8 := by
+/-- **`E[y | n] = Ψ1(n)^T`.** -/
+theorem avgN_yM (n : ℕ) : avgN yM n 0 = ENNReal.ofReal (Ψ1R n) ^ forestCoords := by
   unfold yM
   rw [avgN_prod_coords (fun _ => φF) n 0]
   simp only [Multiset.map_zero, avgN_φF]
   rw [Finset.prod_const, Finset.card_univ, card_coord]
 
-/-- **`E[y^2 | n] = Ψ2(n)^8`.** -/
-theorem avgN_yM_sq (n : ℕ) : avgN (fun Ms => yM Ms ^ 2) n 0 = ENNReal.ofReal (Ψ2R n) ^ 8 := by
+/-- **`E[y^2 | n] = Ψ2(n)^T`.** -/
+theorem avgN_yM_sq (n : ℕ) : avgN (fun Ms => yM Ms ^ 2) n 0 = ENNReal.ofReal (Ψ2R n) ^ forestCoords := by
   unfold yM
   simp only [← Finset.prod_pow]
   rw [avgN_prod_coords (fun _ Xs => φF Xs ^ 2) n 0]

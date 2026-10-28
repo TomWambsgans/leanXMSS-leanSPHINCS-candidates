@@ -12,17 +12,9 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.requestedSecurity
 
-/-- info: 'LeanForest.Configurations.blake2s_h20_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Configurations.blake2s_h20_layered
-
 /-- info: 'LeanForest.Configurations.blake2s_h20_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Configurations.blake2s_h20_pruned
-
-/-- info: 'LeanForest.Configurations.blake2s_h22_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Configurations.blake2s_h22_layered
 
 /-- info: 'LeanForest.Configurations.blake2s_h22_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -31,6 +23,14 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 /-- info: 'LeanForest.Configurations.blake2s_h24_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Configurations.blake2s_h24_layered
+
+/-- info: 'LeanForest.Configurations.blake2s_h24_layered_t6' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Configurations.blake2s_h24_layered_t6
+
+/-- info: 'LeanForest.Configurations.blake2s_h24_layered_t7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Configurations.blake2s_h24_layered_t7
 
 /-- info: 'LeanForest.Configurations.blake2s_h24_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -52,17 +52,9 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Configurations.blake2s_h28_pruned
 
-/-- info: 'LeanForest.Configurations.keccak256_h20_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Configurations.keccak256_h20_layered
-
 /-- info: 'LeanForest.Configurations.keccak256_h20_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Configurations.keccak256_h20_pruned
-
-/-- info: 'LeanForest.Configurations.keccak256_h22_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Configurations.keccak256_h22_layered
 
 /-- info: 'LeanForest.Configurations.keccak256_h22_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -71,6 +63,14 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 /-- info: 'LeanForest.Configurations.keccak256_h24_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Configurations.keccak256_h24_layered
+
+/-- info: 'LeanForest.Configurations.keccak256_h24_layered_t6' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Configurations.keccak256_h24_layered_t6
+
+/-- info: 'LeanForest.Configurations.keccak256_h24_layered_t7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Configurations.keccak256_h24_layered_t7
 
 /-- info: 'LeanForest.Configurations.keccak256_h24_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -92,17 +92,9 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Configurations.keccak256_h28_pruned
 
-/-- info: 'LeanForest.Configurations.sha256_h20_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Configurations.sha256_h20_layered
-
 /-- info: 'LeanForest.Configurations.sha256_h20_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Configurations.sha256_h20_pruned
-
-/-- info: 'LeanForest.Configurations.sha256_h22_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Configurations.sha256_h22_layered
 
 /-- info: 'LeanForest.Configurations.sha256_h22_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -111,6 +103,14 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 /-- info: 'LeanForest.Configurations.sha256_h24_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Configurations.sha256_h24_layered
+
+/-- info: 'LeanForest.Configurations.sha256_h24_layered_t6' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Configurations.sha256_h24_layered_t6
+
+/-- info: 'LeanForest.Configurations.sha256_h24_layered_t7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Configurations.sha256_h24_layered_t7
 
 /-- info: 'LeanForest.Configurations.sha256_h24_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -132,17 +132,9 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Configurations.sha256_h28_pruned
 
-/-- info: 'LeanForest.Configurations.size_h20_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Configurations.size_h20_layered
-
 /-- info: 'LeanForest.Configurations.size_h20_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Configurations.size_h20_pruned
-
-/-- info: 'LeanForest.Configurations.size_h22_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs (whitespace := lax) in
-#print axioms LeanForest.Configurations.size_h22_layered
 
 /-- info: 'LeanForest.Configurations.size_h22_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -151,6 +143,14 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 /-- info: 'LeanForest.Configurations.size_h24_layered' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms LeanForest.Configurations.size_h24_layered
+
+/-- info: 'LeanForest.Configurations.size_h24_layered_t6' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Configurations.size_h24_layered_t6
+
+/-- info: 'LeanForest.Configurations.size_h24_layered_t7' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms LeanForest.Configurations.size_h24_layered_t7
 
 /-- info: 'LeanForest.Configurations.size_h24_pruned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

@@ -20,7 +20,8 @@ generation, signing and verification), it wins with probability at most `q / 2^1
 * `.pruned (h := h) (b := b) (N := N)`: a **pruned key**, the same tree, of which key generation
   builds only a subtree of height `b`; the signer grinds its randomizer until the index lands in it;
 * `.layered (h := h) (d := 3) (ℓ := ℓ) (N := N)`: a **layered key**, three layers, the two lower
-  ones of height `ℓ` and the top one of height `h - 2ℓ`.
+  ones of height `ℓ` and the top one of height `h - 2ℓ`; at `h = 24` also with a forest of `T = 6` or
+  `T = 7` coordinates (`(T := T)`, the uniform keys of the `2^24` and `2^26` lifetimes), 8 otherwise.
 
 **The hash** is not a parameter: the random oracle stands for Keccak-256, BLAKE2s and SHA-256
 alike, so each theorem covers the three hashes. Sizes and verification costs, which depend on the
@@ -38,7 +39,7 @@ def Secure127 (P : Params) : Prop :=
   ∀ q : ℕ, 1 ≤ q → ∀ adversary : Adversary, HasHashQueryBound adversary q →
     forgeAdvantage adversary ≤ q / ((2 ^ 127 : ℕ) : ℝ≥0∞)
 
-/-! ## h = 20 (layered: 8 + 6 + 6) -/
+/-! ## h = 20 -/
 
 /-- Full key: 19,830,000 signatures. -/
 theorem h20_full : Secure127 (.pruned (h := 20) (b := 20) (N := 19_830_000)) := Lifetimes.h20_full_bits
@@ -52,10 +53,8 @@ theorem h20_pruned12 : Secure127 (.pruned (h := 20) (b := 12) (N := 98_480)) := 
 theorem h20_pruned10 : Secure127 (.pruned (h := 20) (b := 10) (N := 26_080)) := Lifetimes.h20_pruned10_bits
 /-- Pruned key, kept subtree of height 8: 6,926 signatures. -/
 theorem h20_pruned8 : Secure127 (.pruned (h := 20) (b := 8) (N := 6_926)) := Lifetimes.h20_pruned8_bits
-/-- Layered key, 8 + 6 + 6: 19,830,000 signatures. -/
-theorem h20_layered : Secure127 (.layered (h := 20) (d := 3) (ℓ := 6) (N := 19_830_000)) := Lifetimes.h20_layered_bits
 
-/-! ## h = 22 (layered: 10 + 6 + 6) -/
+/-! ## h = 22 -/
 
 /-- Full key: 81,860,000 signatures. -/
 theorem h22_full : Secure127 (.pruned (h := 22) (b := 22) (N := 81_860_000)) := Lifetimes.h22_full_bits
@@ -71,10 +70,8 @@ theorem h22_pruned12 : Secure127 (.pruned (h := 22) (b := 12) (N := 107_200)) :=
 theorem h22_pruned10 : Secure127 (.pruned (h := 22) (b := 10) (N := 28_410)) := Lifetimes.h22_pruned10_bits
 /-- Pruned key, kept subtree of height 8: 7,514 signatures. -/
 theorem h22_pruned8 : Secure127 (.pruned (h := 22) (b := 8) (N := 7_514)) := Lifetimes.h22_pruned8_bits
-/-- Layered key, 10 + 6 + 6: 81,860,000 signatures. -/
-theorem h22_layered : Secure127 (.layered (h := 22) (d := 3) (ℓ := 6) (N := 81_860_000)) := Lifetimes.h22_layered_bits
 
-/-! ## h = 24 (layered: 10 + 7 + 7) -/
+/-! ## h = 24 (layered: 10 + 7 + 7, with 8, 6 or 7 coordinates) -/
 
 /-- Full key: 336,700,000 signatures. -/
 theorem h24_full : Secure127 (.pruned (h := 24) (b := 24) (N := 336_700_000)) := Lifetimes.h24_full_bits
@@ -92,6 +89,12 @@ theorem h24_pruned10 : Secure127 (.pruned (h := 24) (b := 10) (N := 30_810)) := 
 theorem h24_pruned8 : Secure127 (.pruned (h := 24) (b := 8) (N := 8_154)) := Lifetimes.h24_pruned8_bits
 /-- Layered key, 10 + 7 + 7: 336,700,000 signatures. -/
 theorem h24_layered : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (N := 336_700_000)) := Lifetimes.h24_layered_bits
+/-- Layered key, 10 + 7 + 7, 6 coordinates (the uniform key of the `2^24` lifetime): 26,670,000 signatures. -/
+theorem h24_layered_t6 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (T := 6) (N := 26_670_000)) :=
+  Lifetimes.h24_layered_t6_bits
+/-- Layered key, 10 + 7 + 7, 7 coordinates (the uniform key of the `2^26` lifetime): 144,300,000 signatures. -/
+theorem h24_layered_t7 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (T := 7) (N := 144_300_000)) :=
+  Lifetimes.h24_layered_t7_bits
 
 /-! ## h = 26 (layered: 10 + 8 + 8) -/
 
@@ -136,11 +139,12 @@ theorem h28_layered : Secure127 (.layered (h := 28) (d := 3) (ℓ := 9) (N := 5_
 /-- The 39 configurations above. -/
 def configurations : List Params := [
   .pruned 20 20 19_830_000, .pruned 20 14 371_400, .pruned 20 13 191_200, .pruned 20 12 98_480,
-  .pruned 20 10 26_080, .pruned 20 8 6_926, .layered 20 3 6 19_830_000,
+  .pruned 20 10 26_080, .pruned 20 8 6_926,
   .pruned 22 22 81_860_000, .pruned 22 20 21_760_000, .pruned 22 14 405_300, .pruned 22 13 208_500,
-  .pruned 22 12 107_200, .pruned 22 10 28_410, .pruned 22 8 7_514, .layered 22 3 6 81_860_000,
+  .pruned 22 12 107_200, .pruned 22 10 28_410, .pruned 22 8 7_514,
   .pruned 24 24 336_700_000, .pruned 24 20 23_830_000, .pruned 24 14 441_500, .pruned 24 13 226_800,
   .pruned 24 12 116_600, .pruned 24 10 30_810, .pruned 24 8 8_154, .layered 24 3 7 336_700_000,
+  .layered 24 3 7 26_670_000 6, .layered 24 3 7 144_300_000 7,
   .pruned 26 26 1_381_000_000, .pruned 26 20 26_030_000, .pruned 26 14 480_100, .pruned 26 13 246_900,
   .pruned 26 12 126_900, .pruned 26 10 33_480, .pruned 26 8 8_830, .layered 26 3 8 1_381_000_000,
   .pruned 28 28 5_634_000_000, .pruned 28 20 28_350_000, .pruned 28 14 522_000, .pruned 28 13 267_900,
@@ -150,12 +154,12 @@ def configurations : List Params := [
 theorem requestedSecurity : ∀ P ∈ configurations, Secure127 P := by
   simp only [configurations, List.forall_mem_cons, List.not_mem_nil, IsEmpty.forall_iff,
     implies_true, and_true]
-  exact ⟨h20_full, h20_pruned14, h20_pruned13, h20_pruned12, h20_pruned10, h20_pruned8, h20_layered,
+  exact ⟨h20_full, h20_pruned14, h20_pruned13, h20_pruned12, h20_pruned10, h20_pruned8,
     h22_full, h22_pruned20, h22_pruned14, h22_pruned13, h22_pruned12, h22_pruned10, h22_pruned8,
-    h22_layered, h24_full, h24_pruned20, h24_pruned14, h24_pruned13, h24_pruned12, h24_pruned10,
-    h24_pruned8, h24_layered, h26_full, h26_pruned20, h26_pruned14, h26_pruned13, h26_pruned12,
-    h26_pruned10, h26_pruned8, h26_layered, h28_full, h28_pruned20, h28_pruned14, h28_pruned13,
-    h28_pruned12, h28_pruned10, h28_pruned8, h28_layered⟩
+    h24_full, h24_pruned20, h24_pruned14, h24_pruned13, h24_pruned12, h24_pruned10,
+    h24_pruned8, h24_layered, h24_layered_t6, h24_layered_t7, h26_full, h26_pruned20, h26_pruned14,
+    h26_pruned13, h26_pruned12, h26_pruned10, h26_pruned8, h26_layered, h28_full, h28_pruned20,
+    h28_pruned14, h28_pruned13, h28_pruned12, h28_pruned10, h28_pruned8, h28_layered⟩
 
 /-- `Secure127` is the target `SecurityBits P 127` of `Statement.lean`, spelled out. -/
 theorem secure127_iff (P : Params) : Secure127 P ↔ SecurityBits P 127 := Iff.rfl

@@ -51,7 +51,8 @@ theorem tweakableInput_injective {parameter parameter' : PublicParameter}
 
 theorem subSlot_lt (c : Coord) (s : SuperIdx) (j : SubIdx) : subSlot c s j < 256 := by
   have := c.isLt; have := s.isLt; have := j.isLt
-  simp only [subSlot, forestCoords, topHeight] at *
+  have := Params.forestCoords_le
+  simp only [subSlot, topHeight] at *
   omega
 
 theorem childSlot_lt (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) : childSlot c s j a < 2048 := by
@@ -68,7 +69,8 @@ theorem chainSlot_lt (c : Coord) (s : SuperIdx) (j : SubIdx) (a : ChildIdx) (i :
 theorem subSlot_inj {c c' : Coord} {s s' : SuperIdx} {j j' : SubIdx}
     (h : subSlot c s j = subSlot c' s' j') : c = c' ∧ s = s' ∧ j = j' := by
   have := c.isLt; have := s.isLt; have := j.isLt; have := c'.isLt; have := s'.isLt; have := j'.isLt
-  simp only [subSlot, forestCoords, topHeight] at *
+  have := Params.forestCoords_le
+  simp only [subSlot, topHeight] at *
   refine ⟨Fin.ext ?_, Fin.ext ?_, Fin.ext ?_⟩ <;> omega
 
 theorem childSlot_inj {c c' : Coord} {s s' : SuperIdx} {j j' : SubIdx} {a a' : ChildIdx}

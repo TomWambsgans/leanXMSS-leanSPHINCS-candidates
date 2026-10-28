@@ -339,7 +339,7 @@ footer a + a { margin-left: 1.25rem; }
     <div class="params">
       <div class="toggles" id="toggles">
         <span class="sl"><span id="tl-h">Lifetime</span><span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="How many signatures can be made, at ≥ 127 bits of security in the ROM, [proven in Lean 4](https://github.com/TomWambsgans/sphincs.art/tree/main/formal/sphincs). Security degrades gracefully beyond that.">i</span></span>
-        <div class="seg" role="radiogroup" aria-labelledby="tl-h" data-key="h"><button type="button" role="radio" data-val="20" aria-label="2 to the 24">2<sup>24</sup></button><button type="button" role="radio" data-val="22" aria-label="2 to the 26">2<sup>26</sup></button><button type="button" role="radio" data-val="24" aria-label="2 to the 28">2<sup>28</sup></button><button type="button" role="radio" data-val="26" aria-label="2 to the 30">2<sup>30</sup></button><button type="button" role="radio" data-val="28" aria-label="2 to the 32">2<sup>32</sup></button></div>
+        <div class="seg" role="radiogroup" aria-labelledby="tl-h" data-key="lt"><button type="button" role="radio" data-val="24" aria-label="2 to the 24">2<sup>24</sup></button><button type="button" role="radio" data-val="26" aria-label="2 to the 26">2<sup>26</sup></button><button type="button" role="radio" data-val="28" aria-label="2 to the 28">2<sup>28</sup></button><button type="button" role="radio" data-val="30" aria-label="2 to the 30">2<sup>30</sup></button><button type="button" role="radio" data-val="32" aria-label="2 to the 32">2<sup>32</sup></button></div>
         <span class="sl"><span id="tl-shape">Mode</span><span class="info w dn" tabindex="0" role="button" aria-label="More information" data-tip="# Uniform&#10;Standard signing (the randomizer selects a random FTS among the 2ʰ possible ones).&#10;&#10;# Pruning&#10;Use a single, large, XMSS layer. Weak devices only construct a subtree of 2ᵇ leaves, and use pseudorandom nodes for the rest, and signing grinds until its index lands in it (An idea from [conduition](https://conduition.io/cryptography/hypertree-pruning/)). Verifier algo is unaffected.&#10;&#10;The risk of reusing a seed under different pruning parameters is fixed by deriving a second seed as H(seed ‖ parameters).&#10;&#10;Privacy: one can select the leaf indexes of the non-pruned FTS at (pseudo)random, but signing a lot will always eventually leak the pruning size. Partial remediation: keep a semi-trusted state S of the previously signed FTS, and when grinding lands on a FTS of S, accept it only with probability (2ᵇ − |S|) / (2ʰ − |S|), so that FTS repeat exactly as often as with a full tree. This essentially gives 2ᵇ⁻¹ signatures with no privacy leak. The state is semi-trusted, because an adversary controlling it can: leak the pruning size, and reduce the lifetime by a factor of 2, but nothing worse.">i</span></span>
         <div class="seg" role="radiogroup" aria-labelledby="tl-shape" data-key="shape"><button type="button" role="radio" data-val="layered">Uniform</button><button type="button" role="radio" data-val="pruned">Pruning</button></div>
         <span class="sl" id="tl-hash">Hash</span>
@@ -1026,7 +1026,8 @@ footer a + a { margin-left: 1.25rem; }
 // for the configuration chosen with the four toggles (height, shape, hash, FTS variant).
 (function () {
   // every load starts from the defaults: choices are not remembered
-  var S = { h: 26, shape: 'layered', hash: 'Keccak-256', v: 'fors' }, D = null;
+  // lt: log2 of the lifetime; the pruned key of a lifetime is lt - 4 high, the layered key 24 to 28 (its config's h)
+  var S = { lt: 30, shape: 'layered', hash: 'Keccak-256', v: 'fors' }, D = null;
   try { localStorage.removeItem('leanSphincs.config'); } catch (e) {}   // a choice saved by an earlier version
   // the devices: hashes per second for each hash, from data.json (rates[device][hash])
   function rate(dev) { return D.rates[dev][S.hash]; }
@@ -1035,7 +1036,7 @@ footer a + a { margin-left: 1.25rem; }
   var NOTE = 'https://github.com/TomWambsgans/sphincs.art/releases/download/doc-latest/leanSPHINCS.pdf';
   var LIFE_TIP = '127 bits of security (ROM), [proved in Lean](https://github.com/TomWambsgans/sphincs.art/tree/main/formal/sphincs)';
   // the two FTS, for the tip of the FTS variant
-  var FOREST_TIP = '# WOTS forest\n8 trees of height 4. Each leaf hashes the top nodes of two subtrees of height 3 over WOTS keys of 6 chains of length 5, with target sum 5 ([paragraph 4](' + NOTE + '#page=8))\n(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))';
+  function forestTip(T) { return '# WOTS forest\n' + T + ' trees of height 4. Each leaf hashes the top nodes of two subtrees of height 3 over WOTS keys of 6 chains of length 5, with target sum 5 ([paragraph 4](' + NOTE + '#page=8))\n(credit: Jonas Nick, [sig.golf](https://github.com/Layr-Labs/sig.golf/commit/3321b777a511a6b454aad7ab721e8ab1af21c4d0))'; }
   function forsTip(v) {
     return '# FORS\nk = ' + v.k + ' trees of height a = ' + v.a;
   }
@@ -1087,20 +1088,21 @@ footer a + a { margin-left: 1.25rem; }
   // the STARK prover's rate, as written: 500K Keccak‑f permutations, 750K SHA-256 or 1M BLAKE2s compressions
   function prover() { return fmt(D.wallet.host_rate[S.hash]) + ' ' + (keccak() ? 'Keccak‑f permutations' : S.hash + ' compressions'); }
   function units() { return keccak() ? 'Keccak-f permutations' : S.hash + ' compressions'; }
-  function cfg(shape, b, hash, h) {
-    hash = hash || S.hash; h = h || S.h;
+  // the configuration of the chosen lifetime and hash: the layered key, or the pruned key keeping 2^b leaves (the full
+  // key when b is not given)
+  function cfg(shape, b) {
     for (var i = 0; i < D.configs.length; i++) {
       var c = D.configs[i];
-      if (c.hash === hash && c.h === h && c.shape === shape && c.b === (shape === 'layered' || b === undefined ? h : b)) return c;
+      if (c.hash === S.hash && c.lt === S.lt && c.shape === shape && (shape === 'layered' || c.b === (b === undefined ? c.h : b))) return c;
     }
-    throw new Error('no configuration ' + [hash, h, shape, b].join(' '));
+    throw new Error('no configuration ' + [S.hash, S.lt, shape, b].join(' '));
   }
   function thr(shape, b) {
     for (var i = 0; i < D.threshold.length; i++) {
       var t = D.threshold[i];
-      if (t.h === S.h && t.hash === S.hash && t.shape === shape && (b === undefined || t.b === b)) return t;
+      if (t.lt === S.lt && t.hash === S.hash && t.shape === shape && (b === undefined || t.b === b)) return t;
     }
-    throw new Error('no threshold figures for h = ' + S.h + ', ' + S.hash + ', ' + shape + (b === undefined ? '' : ', b = ' + b));
+    throw new Error('no threshold figures for 2^' + S.lt + ', ' + S.hash + ', ' + shape + (b === undefined ? '' : ', b = ' + b));
   }
   function set(f, html) { [].forEach.call(document.querySelectorAll('[data-f="' + f + '"]'), function (e) { e.innerHTML = html; }); }
   // on a phone card, the row's name with its (i), as on the desktop row header (cells of class lab)
@@ -1113,13 +1115,13 @@ footer a + a { margin-left: 1.25rem; }
   var offChosen = null, OFF_MAX = 2 * 3600;
   function assistCell(cell, tt, d, W, assist, alone) {
     var per = tt.ledger_prep / d.rate, host = W.host_rate[S.hash], fixed = W.stark_verify_s + tt.device_online / d.rate;
-    var online = function (np) { return Math.max(1, Math.round(Math.pow(2, S.h) / np)) / host + fixed; };
+    var online = function (np) { return Math.max(1, Math.round(Math.pow(2, tt.h) / np)) / host + fixed; };
     // the least count that beats signing alone, visibly (as displayed, the online time is below the signing time):
     // a binary search, the online time falling with the count; none where even 2^h prepared FTS do not beat it
     var pays = function (np) { return online(np) < alone && time(online(np)) !== time(alone); };
-    var never = !pays(Math.pow(2, S.h)), xmin = 1;
+    var never = !pays(Math.pow(2, tt.h)), xmin = 1;
     if (!never) {
-      var a = 1, b = Math.pow(2, S.h);
+      var a = 1, b = Math.pow(2, tt.h);
       while (a < b) { var m = Math.floor((a + b) / 2); if (pays(m)) b = m; else a = m + 1; }
       xmin = a;
     }
@@ -1173,7 +1175,7 @@ footer a + a { margin-left: 1.25rem; }
 
     // the parameter table
     set('h', S.shape === 'layered' ? split(main) : String(main.h));
-    set('k', vs(String(V.k), '8'));
+    set('k', vs(String(V.k), String(main.coords)));
     set('a', vs(String(V.a), '4 + 3'));
     set('size', vs(comma(V.size), comma(main.size)) + ' bytes');
     // aggregation: signatures verified per second by a prover of 500K Keccak-f permutations, 750K SHA-256 or 1M BLAKE2s
@@ -1181,7 +1183,7 @@ footer a + a { margin-left: 1.25rem; }
     var ver = isForest() ? main.verify : V.verify;
     set('verify', comma(ver) + ' ' + unit() + info(comma(Math.floor(W.host_rate[S.hash] / ver)) + ' signatures aggregated per second, at ' +
       prover() + ' proven per second, neglecting glue overhead'));
-    set('dia-h', String(S.h));
+    set('dia-h', String(main.h));
 
     [].forEach.call(document.querySelectorAll('[data-shape]'), function (e) { e.hidden = e.dataset.shape !== S.shape; });
 
@@ -1191,7 +1193,7 @@ footer a + a { margin-left: 1.25rem; }
       { b: 12, rate: ledger, kib: '16', cache: '16&nbsp;KiB', host: true,
         dev: 'Ledger Nano S+', bench: 'https://github.com/TomWambsgans/hardware-wallet-benchmark' },
       { b: 20, rate: rate('laptop'), kib: '1024', cache: '1&nbsp;MiB', dev: 'Laptop' },
-      { b: S.h, rate: rate('server'), kib: '16384', cache: '16&nbsp;MiB', dev: 'Server' }
+      { b: S.lt - 4, rate: rate('server'), kib: '16384', cache: '16&nbsp;MiB', dev: 'Server' }
     ];
     // a layered key needs no large cache: every device keeps the Ledger's 16 KiB
     if (lay_) devs.forEach(function (d) { d.kib = '16'; d.cache = '16&nbsp;KiB'; });
@@ -1201,7 +1203,7 @@ footer a + a { margin-left: 1.25rem; }
     var assist = function (tt) {
       return 'Offline: the Ledger prepares X FTS and their ' + (lay_ ? 'hypertree' : 'authentication') + ' paths once (' + fmt(tt.ledger_prep) +
         ' ' + unit() + ' each), then one per signature in idle time. ' +
-        'Online: the host finds the first randomizer that lands on one of them (≈\u00a0' + pow2t(S.h) + '/X hashes) and proves it in a STARK (at ' +
+        'Online: the host finds the first randomizer that lands on one of them (≈\u00a0' + pow2t(tt.h) + '/X hashes) and proves it in a STARK (at ' +
         prover() + ' proven per second), which the Ledger verifies (optimistically ≈ ' + time(W.stark_verify_s) +
         ' after a Ledger OS update; [benchmark](https://github.com/TomWambsgans/hardware-wallet-benchmark)), then opens the ' +
         (isForest() ? 'forest chain values' : 'FORS secrets') + ' itself. Idea from [Riva Labs](https://www.riva.xyz/).';
@@ -1254,7 +1256,7 @@ footer a + a { margin-left: 1.25rem; }
       '<tr>' + ROUNDS + '<td>' + comma(th.keygen_rounds) + '</td><td>' + vs(comma(th.fors.prep_rounds), comma(th.prep_rounds)) + '</td></tr>');
 
     // what the forest changes, against the FORS figures of the same configuration (gains rounded down, losses up)
-    document.getElementById('v-tip').setAttribute('data-tip', forsTip(V) + '\n\n' + FOREST_TIP + '\n\n' +
+    document.getElementById('v-tip').setAttribute('data-tip', forsTip(V) + '\n\n' + forestTip(main.coords) + '\n\n' +
       'The WOTS forest, against FORS:\n' +
       '+ ' + Math.floor(100 * (1 - main.size / V.size)) + '% smaller signatures\n' +
       '+ ' + Math.floor(100 * (1 - main.verify / V.verify)) + '% faster verification\n' +
@@ -1268,7 +1270,7 @@ footer a + a { margin-left: 1.25rem; }
     stabilize();
 
     // the diagram: one pruned tree, or the layers
-    if (window.sigDiagram) window.sigDiagram(S.h, S.shape, main.layers, S.v, V.k, V.a);
+    if (window.sigDiagram) window.sigDiagram(main.h, S.shape, main.layers, S.v, V.k, V.a, main.coords);
 
     window.dispatchEvent(new Event('resize'));   // the sphinx finds its place again
   }
@@ -1293,7 +1295,7 @@ footer a + a { margin-left: 1.25rem; }
   });
 
   function choose(key, val) {
-    S[key] = key === 'h' ? +val : val;
+    S[key] = key === 'lt' ? +val : val;
     render();
   }
 
@@ -1454,17 +1456,18 @@ footer a + a { margin-left: 1.25rem; }
     return ls;
   }
 
-  // The forest, under the bottom leaf (whose small WOTS+C key signs it): 8 trees of height 4; under the
-  // opened leaf of each, its two subtrees of height 3; under one of the 16 opened subtree leaves, its WOTS key
-  // of 6 chains of 5, drawn large. Every tree is drawn whole, its path in ink.
+  // The forest, under the bottom leaf (whose small WOTS+C key signs it): FT trees of height 4 (8, or 6 and 7 for the
+  // layered keys of 2^24 and 2^26); under the opened leaf of each, its two subtrees of height 3; under one of the
+  // 2 FT opened subtree leaves (KI, below the middle tree), its WOTS key of 6 chains of 5, drawn large. Every tree is
+  // drawn whole, its path in ink.
   var fts = svg.querySelector('.fts'), forest = null;
   var FX = 250, FS = 54;                                  // the centre of the forest, the spacing of its trees
   var TY = [258, 274, 287, 297, 305], TO = 11.5;           // a tree: its levels, root first, and its first offset
   var SY = [317, 327, 334, 340], SO = 5, SD = 11.5;        // a subtree: the same, and its offset from the tree
-  var KI = 7, KS = 17, KP = 13, KT = 370, KX;             // the key: its subtree, chain and position spacing, top
+  var FT = 8, KI = 7, KS = 17, KP = 13, KT = 370, KX;     // the trees; the key: its subtree, chain and position spacing, top
   var WT = LEAF + 7;                                      // the top of the small WOTS+C key that signs the forest
   var VN = 4, VY = [258, 281, 301, 317, 330, 340, 348, 354], VO = 20;   // FORS: the trees drawn; a tree's levels, root first, and its first offset
-  function tc(i) { return FX + (i - 3.5) * FS; }
+  function tc(i) { return FX + (i - (FT - 1) / 2) * FS; }
   function vc(i) { return FX + (i - (VN - 1) / 2) * 88 + (i < VN / 2 ? -6 : 6); }   // a FORS tree, around the dots
   function sc(j) { return tc(j >> 1) + (j & 1 ? SD : -SD); }
   KX = sc(KI);
@@ -1484,7 +1487,7 @@ footer a + a { margin-left: 1.25rem; }
     return nodes;
   }
   (function () {                                          // what does not change: the trees, the key's chains, the labels
-    var x0 = tc(0), x1 = tc(7), kb = KT - 7, kw = 2.5 * KS + 4;
+    var x0 = FX - 3.5 * FS, x1 = FX + 3.5 * FS;            // the brace keeps the width of 8 trees, in both variants
     el('path', { 'class': 'brace', d: 'M' + n1(x0) + ',' + (TIP + 14) + ' Q' + n1(x0) + ',' + (TIP + 7) + ' ' + n1(x0 + 7) + ',' + (TIP + 7) +
       ' L' + n1(X - 7) + ',' + (TIP + 7) + ' Q' + X + ',' + (TIP + 7) + ' ' + X + ',' + TIP + ' Q' + X + ',' + (TIP + 7) + ' ' + n1(X + 7) + ',' + (TIP + 7) +
       ' L' + n1(x1 - 7) + ',' + (TIP + 7) + ' Q' + n1(x1) + ',' + (TIP + 7) + ' ' + n1(x1) + ',' + (TIP + 14) }, fts);
@@ -1497,31 +1500,8 @@ footer a + a { margin-left: 1.25rem; }
     el('text', { x: n1(X + 30), y: WT + 11, 'class': 'lb' }, fts).textContent = 'WOTS+C';
     fts.won = el('g', { 'class': 'on' }, fts);            // the encoding of that key, in both variants
     var fg = el('g', { 'class': 'forest-only' }, fts);         // the forest
-    var g = el('g', { 'class': 'tree' }, fg);
-    for (var i = 0; i < 8; i++) edges(g, tc(i), TY, TO);
-    for (var j = 0; j < 16; j++) edges(g, sc(j), SY, SO);
-    el('path', { 'class': 'brace', d: 'M' + n1(KX - kw) + ',' + kb + ' Q' + n1(KX - kw) + ',' + (kb - 7) + ' ' + n1(KX - kw + 7) + ',' + (kb - 7) +
-      ' L' + n1(KX - 7) + ',' + (kb - 7) + ' Q' + n1(KX) + ',' + (kb - 7) + ' ' + n1(KX) + ',' + (kb - 14) + ' Q' + n1(KX) + ',' + (kb - 7) + ' ' + n1(KX + 7) + ',' + (kb - 7) +
-      ' L' + n1(KX + kw - 7) + ',' + (kb - 7) + ' Q' + n1(KX + kw) + ',' + (kb - 7) + ' ' + n1(KX + kw) + ',' + kb }, fg);
-    var ch = el('g', { 'class': 'chain' }, fg);
-    for (j = 0; j < 6; j++) el('line', { x1: n1(KX + (j - 2.5) * KS), y1: KT, x2: n1(KX + (j - 2.5) * KS), y2: KT + 4 * KP }, ch);
-    // the measures: the heights on the left, the key's w and ℓ around it
-    var m = el('g', { 'class': 'tree' }, fg), lx = x0 - 2 * TO - 10;
-    bar(m, lx, TY[0], TY[4]); bar(m, lx, SY[0], SY[3]);
-    el('text', { x: n1(lx - 8), y: n1((TY[0] + TY[4]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fg).textContent = '4';
-    el('text', { x: n1(lx - 8), y: n1((SY[0] + SY[3]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fg).textContent = '3';
-    var nm = el('text', { x: n1(x1 + 2 * TO + 14), y: n1((TY[0] + SY[3]) / 2 - 3), 'class': 'nm' }, fg);
-    el('tspan', {}, nm).textContent = 'WOTS';
-    el('tspan', { x: n1(x1 + 2 * TO + 14), dy: '1.2em' }, nm).textContent = 'forest';
-    bar(m, KX - kw - 10, KT, KT + 4 * KP);
-    var t = el('text', { x: n1(KX - kw - 20), y: n1(KT + 2 * KP + 5), 'class': 'pv', 'text-anchor': 'end' }, fg);
-    el('tspan', { 'class': 'it' }, t).textContent = 'w'; t.appendChild(document.createTextNode(' = 5'));
-    var yl = KT + 4 * KP + 14;
-    el('line', { x1: n1(KX - kw), y1: yl, x2: n1(KX + kw), y2: yl }, m);
-    el('line', { x1: n1(KX - kw), y1: yl - 4, x2: n1(KX - kw), y2: yl + 4 }, m);
-    el('line', { x1: n1(KX + kw), y1: yl - 4, x2: n1(KX + kw), y2: yl + 4 }, m);
-    t = el('text', { x: n1(KX), y: yl + 22, 'class': 'pv', 'text-anchor': 'middle' }, fg);
-    el('tspan', { 'class': 'it' }, t).textContent = 'ℓ'; t.appendChild(document.createTextNode(' = 6'));
+    fts.fstat = el('g', {}, fg);                              // its trees, its key and their measures (drawForest)
+    var i, t;
     // what each signature picks
     fts.conn = el('g', { 'class': 'conn' }, fg);
     fts.paths = el('g', {}, fg);
@@ -1547,6 +1527,44 @@ footer a + a { margin-left: 1.25rem; }
     fts.vpaths = el('g', {}, vg);
     fts.von = el('g', { 'class': 'on' }, vg);
   })();
+  // The forest's trees, subtrees and key, with their measures: drawn again when the number of trees changes.
+  function drawForest() {
+    clear(fts.fstat);
+    var x0 = tc(0), x1 = tc(FT - 1), kb = KT - 7, kw = 2.5 * KS + 4, i, j, t;
+    var g = el('g', { 'class': 'tree' }, fts.fstat);
+    for (i = 0; i < FT; i++) edges(g, tc(i), TY, TO);
+    for (j = 0; j < 2 * FT; j++) edges(g, sc(j), SY, SO);
+    el('path', { 'class': 'brace', d: 'M' + n1(KX - kw) + ',' + kb + ' Q' + n1(KX - kw) + ',' + (kb - 7) + ' ' + n1(KX - kw + 7) + ',' + (kb - 7) +
+      ' L' + n1(KX - 7) + ',' + (kb - 7) + ' Q' + n1(KX) + ',' + (kb - 7) + ' ' + n1(KX) + ',' + (kb - 14) + ' Q' + n1(KX) + ',' + (kb - 7) + ' ' + n1(KX + 7) + ',' + (kb - 7) +
+      ' L' + n1(KX + kw - 7) + ',' + (kb - 7) + ' Q' + n1(KX + kw) + ',' + (kb - 7) + ' ' + n1(KX + kw) + ',' + kb }, fts.fstat);
+    var ch = el('g', { 'class': 'chain' }, fts.fstat);
+    for (j = 0; j < 6; j++) el('line', { x1: n1(KX + (j - 2.5) * KS), y1: KT, x2: n1(KX + (j - 2.5) * KS), y2: KT + 4 * KP }, ch);
+    // the measures: the heights on the left, the key's w and ℓ around it
+    var m = el('g', { 'class': 'tree' }, fts.fstat), lx = x0 - 2 * TO - 10;
+    bar(m, lx, TY[0], TY[4]); bar(m, lx, SY[0], SY[3]);
+    el('text', { x: n1(lx - 8), y: n1((TY[0] + TY[4]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fts.fstat).textContent = '4';
+    el('text', { x: n1(lx - 8), y: n1((SY[0] + SY[3]) / 2 + 5), 'class': 'pv', 'text-anchor': 'end' }, fts.fstat).textContent = '3';
+    var nm = el('text', { x: n1(x1 + 2 * TO + 14), y: n1((TY[0] + SY[3]) / 2 - 3), 'class': 'nm' }, fts.fstat);
+    el('tspan', {}, nm).textContent = 'WOTS';
+    el('tspan', { x: n1(x1 + 2 * TO + 14), dy: '1.2em' }, nm).textContent = 'forest';
+    bar(m, KX - kw - 10, KT, KT + 4 * KP);
+    t = el('text', { x: n1(KX - kw - 20), y: n1(KT + 2 * KP + 5), 'class': 'pv', 'text-anchor': 'end' }, fts.fstat);
+    el('tspan', { 'class': 'it' }, t).textContent = 'w'; t.appendChild(document.createTextNode(' = 5'));
+    var yl = KT + 4 * KP + 14;
+    el('line', { x1: n1(KX - kw), y1: yl, x2: n1(KX + kw), y2: yl }, m);
+    el('line', { x1: n1(KX - kw), y1: yl - 4, x2: n1(KX - kw), y2: yl + 4 }, m);
+    el('line', { x1: n1(KX + kw), y1: yl - 4, x2: n1(KX + kw), y2: yl + 4 }, m);
+    t = el('text', { x: n1(KX), y: yl + 22, 'class': 'pv', 'text-anchor': 'middle' }, fts.fstat);
+    el('tspan', { 'class': 'it' }, t).textContent = 'ℓ'; t.appendChild(document.createTextNode(' = 6'));
+  }
+  // the number of trees of the chosen configuration: true when it changed (the forest is drawn again)
+  function setForest(T) {
+    if (T === FT) return false;
+    FT = T; KI = 2 * Math.floor((FT - 1) / 2) + 1; KX = sc(KI);
+    drawForest();
+    return true;
+  }
+  drawForest();
   // The drawing is taller than the text beside it: on a wide screen the figure grows in height so that the drawing
   // keeps the width it would have in the height of the text. The same height for every configuration.
   function fit() {
@@ -1585,15 +1603,15 @@ footer a + a { margin-left: 1.25rem; }
       el('circle', { cx: n1(X + (j - 3.5) * 6), cy: WT + 4 * p, r: 1.9 }, fts.won);
       forest.wc.push([X + (j - 3.5) * 6, WT + 4 * p]);
     });
-    for (var i = 0; i < 8; i++) forest.trees.push(walk(tc(i), TY, TO));
-    for (i = 0; i < 16; i++) {
+    for (var i = 0; i < FT; i++) forest.trees.push(walk(tc(i), TY, TO));
+    for (i = 0; i < 2 * FT; i++) {
       var s = walk(sc(i), SY, SO), lf = forest.trees[i >> 1][4];
       forest.subs.push(s);
       el('line', { x1: n1(lf[0]), y1: n1(lf[1]), x2: n1(s[0][0]), y2: n1(s[0][1]) }, fts.conn);
     }
     forest.trees.concat(forest.subs).forEach(function (t, i) {
       el('polyline', { points: pts(t), 'class': 'path thin' }, fts.paths);
-      t.forEach(function (q, j) { el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: i < 8 ? (j ? 1.6 : 2.1) : 1.25 }, fts.on); });
+      t.forEach(function (q, j) { el('circle', { cx: n1(q[0]), cy: n1(q[1]), r: i < FT ? (j ? 1.6 : 2.1) : 1.25 }, fts.on); });
     });
     // the WOTS key under one subtree leaf: 6 chains of 5, its codeword's digits the steps to the top
     var kl = forest.subs[KI][3];
@@ -1617,11 +1635,13 @@ footer a + a { margin-left: 1.25rem; }
   var fors = null;
   pick();
 
-  window.sigDiagram = function (h, shape, layers, v, k, a) {
+  window.sigDiagram = function (h, shape, layers, v, k, a, coords) {
     cur = { h: h, shape: shape, layers: layers };
     fts.vk.textContent = String(k); fts.va.textContent = String(a);
     var tree = shape === 'layered' ? 'layered ' + layers.join('+') : 'pruned';
-    if (tree === shown && v === shownV) return;
+    var trees = setForest(coords || 8);                 // the forest drawn again: a new signature on it
+    if (trees) pick();
+    if (!trees && tree === shown && v === shownV) return;
     var redraw = tree !== shown;
     shown = tree; shownV = v;
     if (redraw) {
@@ -1656,7 +1676,7 @@ footer a + a { margin-left: 1.25rem; }
       t += ms;
     }
     // the forest: the key's chains to their ends, which hash into its subtree leaf; each subtree up to its root,
-    // which with its sibling hashes into the opened leaf of its tree; each tree up to its root; the 8 roots into
+    // which with its sibling hashes into the opened leaf of its tree; each tree up to its root; the roots into
     // the bottom leaf of the hypertree
     // FORS: each opened leaf up its tree
     var fo = forest, ks = fo.subs[KI][3], tops = fors;
@@ -1669,7 +1689,7 @@ footer a + a { margin-left: 1.25rem; }
       tops = fo.trees;
     }
     stage(750, tops.map(function (q) { return q.slice().reverse(); }), true, 2, 'thin');
-    // the 8 roots into the WOTS+C key of the bottom leaf: its chains to their ends, which hash into that leaf
+    // the roots into the WOTS+C key of the bottom leaf: its chains to their ends, which hash into that leaf
     function up(leaf) {
       stage(450, tops.map(function (q) { return [q[0], [X, TIP]]; }), false, 2);
       stage(300, fo.wc.map(function (c) { return [[X, TIP], c]; }), false, 1.4);
