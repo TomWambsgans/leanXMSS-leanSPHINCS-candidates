@@ -28,8 +28,8 @@ def poisGo (m : ℕ) : ℕ → ℕ → ℕ → List ℕ
 /-! ### Covers option by option -/
 
 /-- The check of one option, with its threshold and its bound `p = (cthr, B)`. -/
-def checkOptB (H b k a : ℕ) (t : PoisT) (o : OptF) (p : ℚ × ℚ) : Bool :=
-  checkOptF H b k a t o && decide (o.cthr = p.1) && decide (o.B = p.2)
+def checkOptB (H b k a : ℕ) (t : PoisT) (o : Opt) (p : ℚ × ℚ) : Bool :=
+  checkOpt H b k a t o && decide (o.cthr = p.1) && decide (o.B = p.2)
 
 /-- `checkEntryF` on the thresholds and the bounds of the options. -/
 def checkEntryQ (K N : ℕ) (ps : List (ℚ × ℚ)) (e : EntryF) : Bool :=
@@ -53,22 +53,22 @@ def checkCoverQ (H b K N qstart : ℕ) (c : CoverW) (ps : List (ℚ × ℚ)) : B
 def checkCoverQH (H b K N qstart : ℕ) (c : CoverW) (ps : List (ℚ × ℚ)) : Bool :=
   checkRateH H b N c.qtop c.tab && checkPT c.tab && chainQ K N c.qtop ps qstart c.entries
 
-theorem checkEntryQ_map (K N : ℕ) (opts : List OptF) (e : EntryF) :
+theorem checkEntryQ_map (K N : ℕ) (opts : List Opt) (e : EntryF) :
     checkEntryQ K N (opts.map fun o => (o.cthr, o.B)) e = checkEntryF K N opts e := by
   unfold checkEntryQ checkEntryF
   rw [List.getElem?_map]
   cases opts[e.2.2]? <;> rfl
 
-theorem chainQ_map (K N qtop : ℕ) (opts : List OptF) : ∀ (es : List EntryF) (last : ℕ),
+theorem chainQ_map (K N qtop : ℕ) (opts : List Opt) : ∀ (es : List EntryF) (last : ℕ),
     chainQ K N qtop (opts.map fun o => (o.cthr, o.B)) last es = chainF K N qtop opts last es
   | [], _ => rfl
   | e :: rest, last => by
       simp only [chainQ, chainF, checkEntryQ_map, chainQ_map K N qtop opts rest]
 
-/-- Options checked one by one pass `checkOptF`, and `ps` lists their thresholds and bounds. -/
-theorem checkOptB_all {H b k a : ℕ} {t : PoisT} : ∀ {opts : List OptF} {ps : List (ℚ × ℚ)},
+/-- Options checked one by one pass `checkOpt`, and `ps` lists their thresholds and bounds. -/
+theorem checkOptB_all {H b k a : ℕ} {t : PoisT} : ∀ {opts : List Opt} {ps : List (ℚ × ℚ)},
     List.Forall₂ (fun o p => checkOptB H b k a t o p = true) opts ps →
-      opts.all (checkOptF H b k a t) = true ∧ (opts.map fun o => (o.cthr, o.B)) = ps
+      opts.all (checkOpt H b k a t) = true ∧ (opts.map fun o => (o.cthr, o.B)) = ps
   | _, _, .nil => ⟨rfl, rfl⟩
   | _, _, .cons (a := o) (b := p) h hs => by
       obtain ⟨h1, h2⟩ := checkOptB_all hs
@@ -239,10 +239,10 @@ theorem checkOptF_build {H b k a : ℕ} {t : PoisT} {c1 θ : ℚ} {s : ℕ} {cth
 theorem checkOptB_build {H b k a : ℕ} {t : PoisT} {c1 θ : ℚ} {s : ℕ} {cthr : ℚ} {p : ℚ × ℚ}
     (h : (buildOk t (buildOpt H b k a t c1 θ s cthr) && decide (cthr = p.1) &&
       decide ((buildOpt H b k a t c1 θ s cthr).B = p.2)) = true) :
-    checkOptB H b k a t (buildOpt H b k a t c1 θ s cthr) p = true := by
+    checkOptB H b k a t (.F (buildOpt H b k a t c1 θ s cthr)) p = true := by
   simp only [Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨⟨h1, h2⟩, h3⟩ := h
-  simp only [checkOptB, Bool.and_eq_true, decide_eq_true_eq]
+  simp only [checkOptB, checkOpt, Opt.cthr, Opt.B, Bool.and_eq_true, decide_eq_true_eq]
   exact ⟨⟨checkOptF_build h1, h2⟩, h3⟩
 
 /-! ### Near certificates -/

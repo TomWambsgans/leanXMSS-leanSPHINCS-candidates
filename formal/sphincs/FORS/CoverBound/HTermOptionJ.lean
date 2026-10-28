@@ -200,9 +200,15 @@ def eHN (H k a : ℕ) (o : OptJ) (P j : ℕ) : ℕ := expQN (o.θ j * capQ H k a
 /-- The numerator over `2^128` of `e^{θ_j cap_j} - 1`, rounded up. -/
 def eH1N (H k a : ℕ) (o : OptJ) (P j : ℕ) : ℕ := cdiv (2 ^ 128 * (eHN H k a o P j - 2 ^ P)) (2 ^ P)
 
-/-- The quadratic coefficient `(e^{θ cap} - 1 - θ cap) / cap^2`, rounded up. -/
-def A2J (H k a : ℕ) (o : OptJ) (P j : ℕ) : ℚ :=
-  rup (((eHN H k a o P j : ℚ) / 2 ^ P - 1 - o.θ j * capQ H k a o j) / capQ H k a o j ^ 2) (2 * 127 + 64)
+/-- The cap of the quadratic bound at `n` views: `U(n) = n^k / 2^(H + a k)` (which bounds `y` there) if
+`n ≥ 1` and it is below `cap_j`, else `cap_j`. -/
+def zQ (H k a : ℕ) (o : OptJ) (j n : ℕ) : ℚ :=
+  if 1 ≤ n ∧ c2Q H k a n < capQ H k a o j then c2Q H k a n else capQ H k a o j
+
+/-- The quadratic coefficient `(e^{θ z} - 1 - θ z) / z^2` at `z = zQ`, rounded up. -/
+def A2Jn (H k a : ℕ) (o : OptJ) (P j n : ℕ) : ℚ :=
+  rup (((expQN (o.θ j * zQ H k a o j n) o.s P : ℚ) / 2 ^ P - 1 - o.θ j * zQ H k a o j n) / zQ H k a o j n ^ 2)
+    (2 * 127 + 64)
 
 /-- The numerator over `2^128` of `ā_j(n)`. -/
 def aEntryJ (H k a : ℕ) (o : OptJ) (P j n : ℕ) : ℤ :=
@@ -215,9 +221,9 @@ def hEntryJ (H k a : ℕ) (o : OptJ) (P j n : ℕ) : ℤ :=
   if j < o.m ∧ o.nb < n then (eH1N H k a o P j : ℤ)
   else if n ∈ o.nx then ((lawEN H k a n o.T o.s P (o.θ j) (capQ H k a o j) - 2 ^ 128 : ℕ) : ℤ)
   else min (eH1N H k a o P j : ℤ)
-    (cdivZ (((o.θ j).num * (A2J H k a o P j).den * ((p1N a n ^ k : ℕ) : ℤ) * p2 H +
-      (A2J H k a o P j).num * (o.θ j).den * ((p2N a n ^ k : ℕ) : ℤ)) * 2 ^ 128)
-      ((o.θ j).den * (A2J H k a o P j).den * p2 (2 * H + 128 * k)))
+    (cdivZ (((o.θ j).num * (A2Jn H k a o P j n).den * ((p1N a n ^ k : ℕ) : ℤ) * p2 H +
+      (A2Jn H k a o P j n).num * (o.θ j).den * ((p2N a n ^ k : ℕ) : ℤ)) * 2 ^ 128)
+      ((o.θ j).den * (A2Jn H k a o P j n).den * p2 (2 * H + 128 * k)))
 
 /-- A table of numerators over `n ≤ n1`, made convex. -/
 def tabJ (n1 : ℕ) (f : ℕ → ℤ) : List ℤ := convexZ ((List.range (n1 + 1)).map f)
@@ -719,23 +725,46 @@ theorem avgN_hS_le_entry {H b k a : ℕ} (hH : totalHeight = H) (hb : subtreeHei
       unfold lawEN at this ⊢
       push_cast at this ⊢
       exact this
-  · -- the moments
-    set A2 := A2J H k a o t.P j
-    have hA2 : (Real.exp ((o.θ j : ℝ) * capQ H k a o j) - 1 - (o.θ j : ℝ) * capQ H k a o j) /
-        ((capQ H k a o j : ℚ) : ℝ) ^ 2 ≤ (A2 : ℝ) := by
-      have he := exp_le_expQN (o.θ j * capQ H k a o j) o.s t.P (by positivity) hs
-      have hr0 : ((eHN H k a o t.P j : ℚ) / 2 ^ t.P - 1 - o.θ j * capQ H k a o j) / capQ H k a o j ^ 2 ≤ A2 :=
-        le_rup _ _
+  · -- the moments, with the cap `z = zQ`
+    set A2 := A2Jn H k a o t.P j n
+    have hz0 : 0 < zQ H k a o j n := by
+      unfold zQ
+      split_ifs with hn1
+      · unfold c2Q; have : 0 < n ^ k := Nat.pow_pos hn1.1; positivity
+      · exact hcap
+    have hzc : zQ H k a o j n ≤ capQ H k a o j := by
+      unfold zQ; split_ifs with hn1
+      · exact hn1.2.le
+      · exact le_rfl
+    have hzs : o.θ j * zQ H k a o j n < 2 ^ o.s := lt_of_le_of_lt (mul_le_mul_of_nonneg_left hzc hθ.le) hs
+    have hA2 : (Real.exp ((o.θ j : ℝ) * zQ H k a o j n) - 1 - (o.θ j : ℝ) * zQ H k a o j n) /
+        ((zQ H k a o j n : ℚ) : ℝ) ^ 2 ≤ (A2 : ℝ) := by
+      have he := exp_le_expQN (o.θ j * zQ H k a o j n) o.s t.P (by positivity) hzs
+      have hr0 : ((expQN (o.θ j * zQ H k a o j n) o.s t.P : ℚ) / 2 ^ t.P - 1 - o.θ j * zQ H k a o j n) /
+          zQ H k a o j n ^ 2 ≤ A2 := le_rup _ _
       have hr := (Rat.cast_le (K := ℝ)).mpr hr0
       push_cast at he hr
       refine le_trans ?_ hr
-      have hc0 : (0 : ℝ) < ((capQ H k a o j : ℚ) : ℝ) ^ 2 := by
-        have : (0 : ℝ) < ((capQ H k a o j : ℚ) : ℝ) := by exact_mod_cast hcap
+      have hc0 : (0 : ℝ) < ((zQ H k a o j n : ℚ) : ℝ) ^ 2 := by
+        have : (0 : ℝ) < ((zQ H k a o j n : ℚ) : ℝ) := by exact_mod_cast hz0
         positivity
       apply div_le_div_of_nonneg_right _ hc0.le
-      unfold eHN at *
       linarith
-    have hmom := avgN_hS_le_mom hH hb hk ha (capQ H k a o j) (o.θ j) A2 hcap hθ hA2 n hn
+    -- with `n` views `y ≤ U(n)`, so the cap `z` gives the same factor
+    have hzeq : avgN (hS (capQ H k a o j : ℝ) (o.θ j : ℝ)) n 0 ≤ avgN (hS (zQ H k a o j n : ℝ) (o.θ j : ℝ)) n 0 := by
+      refine avgN_mono_card n 0 fun Ms hMs => le_of_eq ?_
+      rw [Multiset.card_zero, add_zero] at hMs
+      unfold hS
+      congr 3
+      unfold zQ
+      split_ifs with hn1
+      · have hy : κE.toReal * (yM Ms).toReal ≤ ((c2Q H k a n : ℚ) : ℝ) := by
+          refine le_trans (κy_le_card hH hb hk ha Ms) ?_
+          rw [hMs]; unfold c2Q; push_cast; exact le_rfl
+        have hlt : ((c2Q H k a n : ℚ) : ℝ) < ((capQ H k a o j : ℚ) : ℝ) := by exact_mod_cast hn1.2
+        rw [min_eq_left (hy.trans hlt.le), min_eq_left hy]
+      · rfl
+    have hmom := le_trans hzeq (avgN_hS_le_mom hH hb hk ha (zQ H k a o j n) (o.θ j) A2 hz0 hθ hA2 n hn)
     rw [Int.cast_min, ← min_div_div_right (by positivity)]
     rcases min_choice (((eH1N H k a o t.P j : ℤ) : ℚ) / 2 ^ 128)
       (((cdivZ (((o.θ j).num * A2.den * ((p1N a n ^ k : ℕ) : ℤ) * p2 H +
@@ -1006,11 +1035,7 @@ theorem hTermO_le_optJ {H b k a : ℕ} (hH : totalHeight = H) (hb : subtreeHeigh
     exact_mod_cast this
   have hEgr : (0 : ℝ) ≤ (EgJ H b k a t o : ℝ) := by exact_mod_cast hEg0
   rw [hL, hcard]
-  calc (2 : ℝ≥0∞) ^ b * poisMean μ (fun n => ENNReal.ofReal ((leafQ (gtJ H k a t o) (JgJ H k a t o) n : ℚ) : ℝ)) +
-        ∑ j ∈ S, ENNReal.ofReal (prefR ((o.θ j : ℚ) : ℝ) (o.cthr : ℝ)) * (((2 ^ b).choose j : ℝ≥0∞) *
-          poisMean μ (fun n => ENNReal.ofReal ((leafQ (atJ H k a t o j) (JaJ H k a t o j) n : ℚ) : ℝ)) ^ j *
-          poisMean μ (fun n => 1 + ENNReal.ofReal ((leafQ (htJ H k a t o j) (JhJ H k a t o j) n : ℚ) : ℝ)) ^ (2 ^ b - j))
-      ≤ ENNReal.ofReal ((2 : ℝ) ^ b * (EgJ H b k a t o : ℝ)) + ∑ j ∈ S, ENNReal.ofReal (termJ H b k a t o j : ℝ) := by
+  calc _ ≤ ENNReal.ofReal ((2 : ℝ) ^ b * (EgJ H b k a t o : ℝ)) + ∑ j ∈ S, ENNReal.ofReal (termJ H b k a t o j : ℝ) := by
         gcongr with j hj
         · rw [ENNReal.ofReal_mul (by positivity), ENNReal.ofReal_pow (by norm_num), ENNReal.ofReal_ofNat]
           exact mul_le_mul_right hEg _
@@ -1053,5 +1078,58 @@ theorem optJ_B_nonneg {H b k a : ℕ} {t : PoisT} {o : OptJ} (ho : checkOptJ H b
   have : (0 : ℚ) < eLowQ := by unfold eLowQ; norm_num
   unfold termJ
   positivity
+
+/-! ### Options of either kind -/
+
+theorem optF_B_nonneg {H b k a : ℕ} {t : PoisT} {o : OptF} (ho : checkOptF H b k a t o = true) :
+    0 ≤ o.B := by
+  obtain ⟨-, hθ, hcthr, -, -, -, -, -, -, -, -, -, -, -, -, -, -, hB, hEg0, hEe0⟩ := checkOptF_parts ho
+  have hsq0 : 0 ≤ sqUp t.P b (1 + o.Ee) := sqUp_nonneg_of t.P b _ (by linarith)
+  have hE := one_le_expLow (o.θ * o.cthr) t.J t.P (by positivity)
+  have he : (0 : ℚ) < eLowQ := by unfold eLowQ; norm_num
+  refine le_trans ?_ hB
+  positivity
+
+/-- An option of either kind: the option of one Chernoff factor (`OptF`, `CoverBound/HTermOption.lean`)
+or of the split by big indices (`OptJ`). -/
+inductive Opt where
+  | F (o : OptF)
+  | J (o : OptJ)
+
+namespace Opt
+
+/-- The threshold of an option. -/
+def cthr : Opt → ℚ
+  | .F o => o.cthr
+  | .J o => o.cthr
+
+/-- The bound of an option. -/
+def B : Opt → ℚ
+  | .F o => o.B
+  | .J o => o.B
+
+end Opt
+
+/-- The check of an option of either kind. -/
+def checkOpt (H b k a : ℕ) (t : PoisT) : Opt → Bool
+  | .F o => checkOptF H b k a t o
+  | .J o => checkOptJ H b k a t o
+
+/-- **A checked option of either kind bounds the FORS H-term** (`hTermO_le_optF`, `hTermO_le_optJ`). -/
+theorem hTermO_le_opt {H b k a : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b)
+    (hk : forsTrees = k) (ha : forsHeight = a) (t : PoisT) (o : Opt) (ht : checkPT t = true)
+    (ho : checkOpt H b k a t o = true) (w lam : ℝ≥0∞) (hw : w ≤ 1) (hlam : lam ≤ 1) (N q : ℕ)
+    (hrate : (N : ℝ) / 2 ^ b + (q : ℝ) * (lam * w).toReal / 2 ^ b ≤ (t.mu : ℝ))
+    (b0 : ℝ≥0∞) (hb0 : ENNReal.ofReal (o.cthr : ℝ) ≤ b0) :
+    hTermO (Finset.univ : Finset View) w lam N q (ForsPotential.excess b0) ≤ ENNReal.ofReal (o.B : ℝ) := by
+  cases o with
+  | F o => exact hTermO_le_optF hH hb hk ha t o ht ho w lam hw hlam N q hrate b0 hb0
+  | J o => exact hTermO_le_optJ hH hb hk ha t o ht ho w lam hw hlam N q hrate b0 hb0
+
+/-- The bound of a checked option is nonnegative. -/
+theorem opt_B_nonneg {H b k a : ℕ} {t : PoisT} {o : Opt} (ho : checkOpt H b k a t o = true) : 0 ≤ o.B := by
+  cases o with
+  | F o => exact optF_B_nonneg ho
+  | J o => exact optJ_B_nonneg ho
 
 end FORS.Security.H0

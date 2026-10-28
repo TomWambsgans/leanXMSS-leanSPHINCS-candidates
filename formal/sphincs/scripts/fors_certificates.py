@@ -18,7 +18,8 @@ certificate). `maxn` is a search: its result counts only once `check` accepts it
 For each parameter set (b, N, lx), with qh = floor(2^(128 + lx)):
   * a Poisson table at rate N/2^b + (2M - 1) qtop / (M denB 2^b), M = 2^(TOTAL - b), qtop the largest budget
     it serves (rate_of; checkPT, checkRate);
-  * the small route at qh: a Chernoff option at baseline rho/2^128 (checkOptF), the near certificate
+  * the small route at qh: an option at baseline rho/2^128 (checkOpt: one Chernoff factor, checkOptF, or the split
+    by big indices with the class law, checkOptJ; the lower bound is kept), the near certificate
     (checkOptN) and the rational check checkSmallF (SmallBudget/Closing.lean);
   * the large route: a cover of every budget q' in [qh + 1, 2^127] at the survival-weighted baseline
     (checkCoverW, LargeBudget/Covers.lean).
@@ -27,7 +28,8 @@ The Lean file stores the scalars of each table, option and near certificate; the
 buildOpt and buildOptN (Certificates/Build.lean) rebuild their lists as fill_poisT, fill_opt and make_optN
 do here (in integers, from the numerators P1L, P2L of the moment tables), and a rebuilt
 table, option or near certificate passes its checker by construction (checkPT_poisOf, checkOptF_build,
-checkOptN_build): the kernel evaluates the construction and a few scalar conditions.
+checkOptN_build): the kernel evaluates the construction and a few scalar conditions. An option of the split by
+big indices (OptJ) stores its scalars and its bound, and the kernel evaluates checkOptJ (fill_optJ here).
 A layered configuration whose certificate is the full key's but for the keygen credit reuses it (`reuses`).
 The moment tables P1tab, P2tab (CoverBound/MomentTable.lean) are the closed forms of the FORS moments
 (CoverBound/MomentBounds.lean), computed here by the same integer recipe as the Lean kernel.
@@ -202,7 +204,7 @@ def convexify(xs):
 # ---------------- options (CoverBound/HTermOption.lean) ----------------
 
 class OptF:
-    pass
+    kind = 'F'
 
 def gBound(o, n): return min(KQ * getD(P1, n) ** FK, KQ ** 2 * getD(P2, n) ** FK / (4 * o.c1))
 def hBound(o, n): return min(o.eC - 1, o.th * KQ * getD(P1, n) ** FK + o.A2 * KQ ** 2 * getD(P2, n) ** FK)
@@ -281,15 +283,301 @@ def dyadic(x, bits=24):
     e = math.floor(math.log2(x)) - bits
     return Fr(round(x / 2.0 ** e)) * Fr(2) ** e
 
-def make_opt(b, t, fm, cthr):
-    """an option at the exact threshold cthr (absolute units)"""
+def make_optF(b, t, fm, cthr):
+    """an option of one Chernoff factor at the exact threshold cthr (absolute units)"""
     L = 2 ** b
     H, c1s, ths = fm.best(L, float(cthr * 2 ** 127))
     c1 = dyadic(c1s, 24) * Fr(1, 2 ** 127)
     th = dyadic(ths, 24) * 2 ** 127
     u = float(th * c1)
     s = max(0, math.ceil(math.log2(u + 1e-300)) + 12)
-    return fill_opt(b, t, c1, th, s, cthr), H
+    o = fill_opt(b, t, c1, th, s, cthr)
+    o.seed = (c1s, ths)
+    return o, H
+
+# ---------------- the option of the split by big indices (CoverBound/HTermOptionJ.lean) ----------------
+
+# An option OptJ: the cap c1, the Chernoff parameters th = [th_0, ..., th_m], the threshold cthr, s squarings, the
+# big-index count nb (c2 = U(nb) = nb^k / 2^(H + a k) <= c1), the counts nx read through the class law with
+# overflow T, and the bound B. Everything here mirrors the Lean definitions of HTermOptionJ.lean, in integers
+# (checkOptJ evaluates them directly): the per-index tables are the support bound, the class law on nx and the
+# moment tables elsewhere, made convex, and B = BJ is their bound rounded up.
+
+M_TERMS = 2          # m: the terms j = 0..m of the split
+TCL = 8              # T: the overflow of the class law
+NX_LEN = 5           # nx = nb, ..., nb + NX_LEN - 1
+
+def sqUpN(P, s, x):
+    for _ in range(s):
+        x = (x * x + (2 ** P - 1)) // 2 ** P
+    return x
+
+def expUpN(un, ud, s, P):
+    d = 2 ** s * ud
+    assert un < d
+    return sqUpN(P, s, (2 ** P * d + (d - un - 1)) // (d - un))
+
+def expQN(u, s, P):
+    u = Fr(u)
+    assert u >= 0
+    return expUpN(u.numerator, u.denominator, s, P)
+
+def expAtN(th, cap, E, Y, s, P):
+    th, cap = Fr(th), Fr(cap)
+    return expUpN(th.numerator * min(Y * cap.denominator, cap.numerator * 2 ** E), th.denominator * 2 ** E * cap.denominator, s, P)
+
+def chooseF(n, r): return math.factorial(n) // (math.factorial(r) * math.factorial(n - r))
+
+def descF(A, n):
+    out = 1
+    for i in range(n): out *= A - i
+    return out
+
+_LAWZ = {}
+
+def lawZ(k, a, n, T):
+    """the classes (w, v), v <= w < T, as (lawWt, lawY), and the overflow ((2^a)^(n k) - lawMass, lawY k n T 0)"""
+    key = (k, a, n, T)
+    if key not in _LAWZ:
+        A = 2 ** a
+        W0 = descF(A, n)
+        W1 = n * (n - 1) // 2 * descF(A, n - 1)
+        W2 = A ** n - W0 - W1
+        assert W2 >= 0
+        sts = []
+        for w in range(T):
+            for v in range(w + 1):
+                wt = chooseF(k, w) * chooseF(w, v) * W0 ** (k - w) * W1 ** (w - v) * W2 ** v
+                sts.append((wt, n ** (k - w) * (n - 1) ** (w - v) * (n - 2) ** v))
+        mass = sum(wt for wt, _ in sts)
+        over = A ** (n * k) - mass
+        assert over >= 0
+        _LAWZ[key] = (sts, (over, n ** (k - T) * (n - 1) ** T))
+    return _LAWZ[key]
+
+def lawSumN(k, a, n, T, f):
+    sts, (over, Yo) = lawZ(k, a, n, T)
+    return sum(wt * f(Y) for wt, Y in sts) + over * f(Yo)
+
+class OptJ:
+    kind = 'J'
+
+def c2Q(nb): return Fr(nb ** FK, 2 ** (TOTAL + FA * FK))
+
+def optJ_m(o): return len(o.th) - 1
+
+def capQ(o, j): return c2Q(o.nb) if j < optJ_m(o) else o.c1
+
+def tabJ(n1, f):
+    return convexify([f(n) for n in range(n1 + 1)])
+
+def leafJ(n1, tab, cap):
+    return max(tab[n1] - tab[n1 - 1], cap - tab[n1], Fr(0))
+
+def fill_optJ(b, t, c1, ths, s, cthr, nb, nx, T=TCL):
+    """the option from its scalars, B = BJ (checkOptJ, CoverBound/HTermOptionJ.lean)"""
+    H, k, a = TOTAL, FK, FA
+    E = H + a * k
+    o = OptJ()
+    o.c1, o.th, o.s, o.cthr, o.nb, o.nx, o.T = Fr(c1), [Fr(x) for x in ths], s, Fr(cthr), nb, list(nx), T
+    m, n1, P = optJ_m(o), t.n1, t.P
+    c1 = o.c1
+    c1n, c1d = c1.numerator, c1.denominator
+    def gEntry(n):
+        if n ** k * c1d <= c1n * 2 ** E: return 0
+        if n in o.nx:
+            return cdiv(2 ** 191 * lawSumN(k, a, n, T, lambda Y: max(0, Y * c1d - c1n * 2 ** E)), (2 ** a) ** (n * k) * (2 ** E * c1d))
+        return min(cdiv(p1N(a, n) ** k * 2 ** 191, 2 ** (H + 128 * k)),
+                   cdiv(p2N(a, n) ** k * c1d * 2 ** 191, 2 ** (2 * H + 128 * k) * 4 * c1n))
+    def lawEN(n, th, cap):
+        return cdiv(2 ** 128 * lawSumN(k, a, n, T, lambda Y: expAtN(th, cap, E, Y, s, P)), (2 ** a) ** (n * k) * 2 ** P)
+    gk = tabJ(n1, gEntry)
+    o.gt = [Fr(x, 2 ** 191) for x in gk]
+    o.Jg = leafJ(n1, o.gt, Fr(1, 2 ** H))
+    o.Eg = rup(tailSum(t, o.gt, o.Jg), 64 + 127 + 2 * b)
+    o.at, o.Ja, o.Ea, o.ht, o.Jh, o.Eh = [], [], [], [], [], []
+    for j in range(m + 1):
+        th, cap = o.th[j], capQ(o, j)
+        eA = expQN(th * c1, s, P)
+        eH = expQN(th * cap, s, P)
+        eH1 = cdiv(2 ** 128 * (eH - 2 ** P), 2 ** P)
+        def aEntry(n):
+            if n <= o.nb: return 0
+            if n in o.nx: return lawEN(n, th, c1)
+            return cdiv(2 ** 128 * eA, 2 ** P)
+        def hEntry(n):
+            if j < m and o.nb < n: return eH1
+            if n in o.nx: return max(0, lawEN(n, th, cap) - 2 ** 128)
+            # the quadratic bound with the cap z = U(n) when it is below cap (y <= U(n) with n views): zQ, A2Jn
+            z = c2Q(n) if 1 <= n and c2Q(n) < cap else cap
+            A2n = rup((Fr(expQN(th * z, s, P), 2 ** P) - 1 - th * z) / z ** 2, 2 * 127 + 64)
+            return min(eH1, cdiv((th.numerator * A2n.denominator * p1N(a, n) ** k * 2 ** H +
+                                  A2n.numerator * th.denominator * p2N(a, n) ** k) * 2 ** 128,
+                                 th.denominator * A2n.denominator * 2 ** (2 * H + 128 * k)))
+        at = [Fr(x, 2 ** 128) for x in tabJ(n1, aEntry)]
+        Ja = leafJ(n1, at, Fr(eA, 2 ** P))
+        ht = [Fr(x, 2 ** 128) for x in tabJ(n1, hEntry)]
+        Jh = leafJ(n1, ht, Fr(eH, 2 ** P) - 1)
+        o.at.append(at); o.Ja.append(Ja); o.Ea.append(rup(tailSum(t, at, Ja), 64 + 2 * b))
+        o.ht.append(ht); o.Jh.append(Jh); o.Eh.append(rup(tailSum(t, ht, Jh), 64 + 2 * b))
+    o.B = rup(optBJ(b, t, o), 64 + 127)
+    return o
+
+def optBJ(b, t, o):
+    """2^b Eg + sum_j C(2^b, j) Ea_j^j sqUp(1 + Eh_j) / (expLow(th_j cthr) e th_j)"""
+    tot = 2 ** b * o.Eg
+    for j in range(optJ_m(o) + 1):
+        th = o.th[j]
+        tot += Fr(descF(2 ** b, j) // math.factorial(j)) * o.Ea[j] ** j * sqUp(t.P, b, 1 + o.Eh[j]) / \
+            (expLow(th * o.cthr, t.J, t.P) * ELOW * th)
+    return tot
+
+def okJ(b, t, o):
+    H, k, a = TOTAL, FK, FA
+    c1 = o.c1
+    m = optJ_m(o)
+    return (0 < c1 and len(o.th) >= 1 and all(0 < th and th * c1 < 2 ** o.s for th in o.th) and 0 <= o.cthr and
+            1 <= o.nb and o.nb ** k * c1.denominator <= c1.numerator * 2 ** (H + a * k) and o.T <= k and
+            all(2 <= n for n in o.nx) and 1 <= t.n1 <= 150 and 0 <= o.gt[0] and
+            all(0 <= o.at[j][0] and 0 <= o.ht[j][0] for j in range(m + 1)) and 0 <= o.Eg and
+            all(0 <= o.Ea[j] and 0 <= o.Eh[j] for j in range(m + 1)))
+
+def checkOptJ(b, t, o):
+    again = fill_optJ(b, t, o.c1, o.th, o.s, o.cthr, o.nb, o.nx, o.T)
+    return okJ(b, t, again) and optBJ(b, t, again) <= o.B
+
+def Uq(n): return Fr(min(n, 2 ** FA) ** FK, 2 ** (TOTAL + FA * FK))
+
+def class_law_f(k, a, n, T):
+    """the class law in floats: [(y 2^H A^k / ..., P)] as (Y, P) with y = Y / 2^(H + a k)"""
+    sts, (over, Yo) = lawZ(k, a, n, T)
+    den = (2 ** a) ** (n * k)
+    return [(Y, float(Fr(wt, den))) for wt, Y in sts] + [(Yo, float(Fr(over, den)))]
+
+def conv_np(v):
+    h = [v[0]]
+    for i in range(1, len(v)):
+        h.append(max(v[1], h[0]) if i == 1 else max(v[i], 2 * h[-1] - h[-2]))
+    return h
+
+class JModel:
+    """float model of BJ in units 2^-127"""
+    def __init__(self, t, nb, nx):
+        import numpy as np
+        self.np = np
+        H, k, a = TOTAL, FK, FA
+        self.t, self.nb, self.nx = t, nb, [n for n in nx if n <= t.n1]
+        mu = float(t.mu)
+        ps = [math.exp(-mu + n * math.log(mu) - math.lgamma(n + 1)) for n in range(t.n1 + 1)]
+        # the float model stops where the Poisson weights vanish (the tables are convexified from the left)
+        n1 = max([n for n in range(t.n1 + 1) if ps[n] > 1e-60 * max(ps)] + [min(t.n1, nb + NX_LEN + 1)])
+        self.ps = np.array(ps[:n1 + 1])
+        sc = 2.0 ** 127
+        self.m1 = np.array([sc * 2.0 ** -H * float(P1[n]) ** k for n in range(n1 + 1)])
+        self.m2 = np.array([(sc * 2.0 ** -H) ** 2 * float(P2[n]) ** k for n in range(n1 + 1)])
+        self.U = np.array([sc * float(Uq(n)) for n in range(n1 + 1)])
+        scY = sc * 2.0 ** -(H + a * k)
+        self.laws = {}
+        for n in self.nx:
+            law = class_law_f(k, a, n, TCL)
+            self.laws[n] = (np.array([scY * float(Y) for Y, _ in law]), np.array([p for _, p in law]))
+        self.ns = np.arange(n1 + 1)
+    def pmean(self, v):
+        return float(self.np.sum(self.ps * self.np.array(conv_np(list(v)))))
+    def B(self, L, c, c1, ths):
+        np = self.np
+        nb = self.nb
+        c2 = self.U[nb]; m = len(ths) - 1
+        if c1 < c2: return 1e300
+        g = np.where(self.U <= c1, 0.0, np.minimum(self.m1, self.m2 / (4 * c1)))
+        for n, (y, p) in self.laws.items():
+            if self.U[n] > c1: g[n] = np.sum(p * np.maximum(y - c1, 0))
+        tot = L * self.pmean(g)
+        for j, th in enumerate(ths):
+            cap = c1 if j == m else c2
+            if th * c1 > 600: return 1e300
+            eA, eH = math.exp(th * c1), math.exp(th * cap)
+            capn = np.minimum(self.U, cap); capn = np.where(capn > 0, capn, cap)
+            A2 = (np.exp(th * capn) - 1 - th * capn) / capn ** 2
+            h = np.minimum(eH - 1, th * self.m1 + A2 * self.m2)
+            if j < m: h = np.where(self.ns > nb, eH - 1, h)
+            av = np.where(self.ns > nb, eA, 0.0)
+            for n, (y, p) in self.laws.items():
+                if not (j < m and n > nb): h[n] = np.sum(p * np.exp(th * np.minimum(y, cap))) - 1
+                if n > nb: av[n] = np.sum(p * np.exp(th * np.minimum(y, c1)))
+            Eh = self.pmean(h)
+            Ea = self.pmean(av) if j > 0 else 1.0
+            if Ea <= 0: return 1e300
+            lt = math.lgamma(L + 1) - math.lgamma(j + 1) - math.lgamma(L - j + 1) + j * math.log(Ea) + \
+                L * math.log1p(Eh) - th * c - 1 - math.log(th)
+            tot += math.exp(min(lt, 700))
+        return tot
+    def best(self, L, c, seeds=()):
+        """Nelder-Mead over (log c1, log th_0, ..., log th_m) from a few starts: three relative to the threshold c
+        and the seeds (c1, th), absolute (one Chernoff factor: every th_j = th)"""
+        from scipy.optimize import minimize
+        np = self.np
+        c2 = self.U[self.nb]
+        def f(z):
+            c1 = math.exp(z[0]); ths = list(np.exp(z[1:]))
+            if c1 <= c2 * (1 + 1e-6): return 1e300
+            return self.B(L, c, c1, ths)
+        best = None
+        starts = [np.log(np.array(s0[:M_TERMS + 2]) * np.array([c / 2] + [2 / c] * (M_TERMS + 1)))
+                  for s0 in ([1.77, 8.0, 2.6, 0.5], [1.6, 8.0, 3.0, 0.6], [1.9, 8.0, 2.3, 0.45])]
+        starts += [np.log(np.array([c1] + [th] * (M_TERMS + 1))) for c1, th in seeds]
+        for x0 in starts:
+            x0[0] = max(x0[0], math.log(c2 * 1.01 + 1e-300))
+            r = minimize(f, x0, method='Nelder-Mead', options=dict(maxiter=4000, xatol=1e-6, fatol=1e-13))
+            if best is None or r.fun < best.fun: best = r
+        z = best.x
+        return best.fun, math.exp(z[0]), list(np.exp(z[1:]))
+
+def nb_of(c):
+    """the largest count of views n with U(n) <= c (absolute units)"""
+    n = 1
+    while n + 1 <= 150 and Uq(n + 1) <= c: n += 1
+    return n
+
+_JM = {}
+
+def make_optJ(b, t, cthr, seeds=()):
+    """the best option of the split by big indices at the threshold cthr, None if none is found; seeds: float
+    parameters (c1, th) of one Chernoff factor in units 2^-127, 2^127 (FModel.best)"""
+    L = 2 ** b
+    c = float(cthr * 2 ** 127)
+    best = None
+    nb0 = nb_of(cthr)
+    for nb in (nb0 - 1, nb0):
+        if nb < 1 or Uq(nb) == 0: continue
+        key = (id(t), nb)
+        if key not in _JM:
+            _JM[key] = JModel(t, nb, range(max(2, nb), nb + NX_LEN))
+        jm = _JM[key]
+        val, c1s, ths = jm.best(L, c, seeds)
+        if not val < 1e299: continue
+        c1 = dyadic(c1s, 24) * Fr(1, 2 ** 127)
+        while Uq(nb) > c1: c1 += Fr(1, 2 ** 127) * Fr(2) ** (math.floor(math.log2(c1s)) - 24)
+        thq = [dyadic(x, 24) * 2 ** 127 for x in ths]
+        s = max(0, math.ceil(math.log2(float(max(thq) * c1) + 1e-300)) + 12)
+        o = fill_optJ(b, t, c1, thq, s, cthr, nb, jm.nx)
+        if okJ(b, t, o) and (best is None or o.B < best.B): best = o
+    return best
+
+USE_J = True         # also try the option of the split by big indices; the smaller bound is kept
+
+def make_opt(b, t, fm, cthr):
+    """the option of the smaller bound at the exact threshold cthr: one Chernoff factor (OptF) or the split by
+    big indices (OptJ)"""
+    o, H = make_optF(b, t, fm, cthr)
+    if USE_J:
+        oj = make_optJ(b, t, cthr, seeds=[o.seed])
+        if oj is not None and oj.B < o.B:
+            return oj, H
+    return o, H
+
+def checkOpt(b, t, o):
+    return checkOptJ(b, t, o) if o.kind == 'J' else checkOptF(b, t, o)
 
 # ---------------- the near certificate (CoverBound/NearOption.lean) ----------------
 
@@ -427,7 +715,7 @@ def certify(b, N, lx, verbose=True):
     rho = choose_rho(qh)
     cthr = rho / 2 ** 128
     o, _ = make_opt(b, t, fm, cthr)
-    assert checkOptF(b, t, o)
+    assert checkOpt(b, t, o)
     on = make_optN(b, t)
     assert checkOptN(t, on)
     c = (2 ** b * on.En) / 2
@@ -454,7 +742,7 @@ def certify(b, N, lx, verbose=True):
         idx = {k: i for i, k in enumerate(keys)}
         opts = [B.opts[k] for k in keys]
         entries = [(qa, qb, idx[k]) for (qa, qb, k) in raw]
-        assert all(checkOptF(b, tc, oo) for oo in opts)
+        assert all(checkOpt(b, tc, oo) for oo in opts)
         assert chainF(b, N, qtop, opts, qstart, entries)
         if verbose: print('  cover up to 2^%.4f OK: %d entries, %d options' % (math.log2(qtop), len(entries), len(opts)), flush=True)
         (heavy if hv else covers).append(dict(qtop=qtop, qstart=qstart, t=tc, opts=opts, entries=entries))
@@ -476,10 +764,25 @@ def q(x):
 
 OPT_FIELDS = ('c1', 'th', 'cthr', 's', 'eC', 'A2', 'gt', 'Jg', 'ht', 'Jh', 'Eg', 'Ee', 'B')
 
+def opt_sig(o):
+    """what identifies an option: its scalars and its bound"""
+    if o.kind == 'J':
+        return ('J', o.c1, tuple(o.th), o.cthr, o.s, o.nb, tuple(o.nx), o.T, o.B)
+    return ('F',) + tuple(getattr(o, f) for f in OPT_FIELDS)
+
 def lean_opt(b, tab, t, o):
+    if o.kind == 'J':
+        again = fill_optJ(b, t, o.c1, o.th, o.s, o.cthr, o.nb, o.nx, o.T)
+        assert okJ(b, t, again) and again.B == o.B, 'the scalars do not give the bound'
+        return '.J ⟨%s,\n    [%s],\n    %s, %d, %d, [%s], %d,\n    %s⟩' % (
+            q(o.c1), ', '.join(q(x) for x in o.th), q(o.cthr), o.s, o.nb, ', '.join(str(n) for n in o.nx), o.T, q(o.B))
     again = fill_opt(b, t, o.c1, o.th, o.s, o.cthr)
     assert all(getattr(again, f) == getattr(o, f) for f in OPT_FIELDS), 'the scalars do not rebuild the option'
-    return 'buildOpt %d %d %d %d %s\n    (%s) %s %d\n    (%s)' % (TOTAL, b, FK, FA, tab, q(o.c1), q(o.th), o.s, q(o.cthr))
+    return '.F (buildOpt %d %d %d %d %s\n    (%s) %s %d\n    (%s))' % (TOTAL, b, FK, FA, tab, q(o.c1), q(o.th), o.s, q(o.cthr))
+
+def lean_opt_proof(o):
+    """the proof of the check of an option: by construction (OptF) or evaluated (OptJ)"""
+    return 'by decide +kernel' if o.kind == 'J' else None
 
 def lean_optN(b, tab, t, on):
     again = make_optN(b, t)
@@ -516,8 +819,9 @@ arithmetic, no `native_decide`). For each configuration: a Poisson table, the sm
 baseline `ρ / 2^128`, the near certificate and `checkSmallF` at `qh ≈ 2^(128 + lx)`, and a cover of
 every larger budget up to `2^127` at the survival-weighted baseline. The tables, the options and the
 near certificates are rebuilt from their scalars (`poisOf`, `buildOpt`, `buildOptN`) and pass their
-checkers by construction (`checkPT_poisOf`, `checkOptB_build`, `checkOptN_build`, `Build.lean`); a cover
-is checked from its options and its table (`checkCoverW_of_pt`). The layered key reuses the full key's
+checkers by construction (`checkPT_poisOf`, `checkOptB_build`, `checkOptN_build`, `Build.lean`); an option
+of the split by big indices (`.J`, `CoverBound/HTermOptionJ.lean`) stores its scalars and its bound and is
+checked directly (`checkOptJ`); a cover is checked from its options and its table (`checkCoverW_of_pt`). The layered key reuses the full key's
 certificate and checks again only its cover chains, where its keygen credit enters. -/
 
 namespace FORS.Security.H0
@@ -532,7 +836,7 @@ def same_cover(a, b):
     """Two covers with the same budgets, table and options (their entries may differ)."""
     return (a['qtop'], a['qstart'], a['t'].pm, a['t'].m, a['t'].P, a['t'].J) == \
         (b['qtop'], b['qstart'], b['t'].pm, b['t'].m, b['t'].P, b['t'].J) and len(a['opts']) == len(b['opts']) and \
-        all(getattr(x, f) == getattr(y, f) for x, y in zip(a['opts'], b['opts']) for f in OPT_FIELDS)
+        all(opt_sig(x) == opt_sig(y) for x, y in zip(a['opts'], b['opts']))
 
 def reuses(c, f):
     """A layered configuration whose certificate is the full key's but for the keygen credit K, which enters
@@ -540,7 +844,7 @@ def reuses(c, f):
     return f is not None and (c['k'], c['a']) == (f['k'], f['a']) and \
         (c['b'], c['N'], c['qh'], c['rho']) == (f['b'], f['N'], f['qh'], f['rho']) and \
         (c['t'].m, c['t'].P, c['t'].J, c['t'].pm) == (f['t'].m, f['t'].P, f['t'].J, f['t'].pm) and \
-        all(getattr(c['o'], x) == getattr(f['o'], x) for x in OPT_FIELDS) and \
+        opt_sig(c['o']) == opt_sig(f['o']) and \
         (c['on'].nt, c['on'].Jn, c['on'].En) == (f['on'].nt, f['on'].Jn, f['on'].En) and \
         len(c['covers']) == len(f['covers']) and len(c['heavy']) == len(f['heavy']) and \
         all(same_cover(a, b) for a, b in zip(c['covers'] + c['heavy'], f['covers'] + f['heavy']))
@@ -570,9 +874,9 @@ def emit(certs, path):
             out.append('theorem rate_%s_ok : checkRate %d %d %d %d tab_%s = true := by decide +kernel\n'
                        % (tag, H, b, N, c['qh'], tag))
             out.append('/-- The small-route option at baseline `ρ / 2^128`. -/')
-            out.append('def small_%s : OptF := %s\n' % (tag, lean_opt(b, 'tab_' + tag, c['t'], c['o'])))
-            out.append('theorem small_%s_ok : checkOptF %d %d %d %d tab_%s small_%s = true :=\n    checkOptF_build (by decide +kernel)\n'
-                       % (tag, H, b, k, a, tag, tag))
+            out.append('def small_%s : Opt := %s\n' % (tag, lean_opt(b, 'tab_' + tag, c['t'], c['o'])))
+            out.append('theorem small_%s_ok : checkOpt %d %d %d %d tab_%s small_%s = true :=\n    %s\n'
+                       % (tag, H, b, k, a, tag, tag, lean_opt_proof(c['o']) or 'checkOptF_build (by decide +kernel)'))
             on = c['on']
             out.append('/-- The near certificate. -/')
             out.append('def near_%s : OptN := %s\n' % (tag, lean_optN(b, 'tab_' + tag, c['t'], on)))
@@ -601,11 +905,12 @@ def emit(certs, path):
                     for oi, o in enumerate(cv['opts']):
                         out.append('/-- Option %d of %scover %d. -/' % (oi, 'heavy ' if kind else '', ci))
                         name, tabn = 'large%s_%s_%d_%d' % (kind, tag, ci, oi), 'tabc%s_%s_%d' % (kind, tag, ci)
-                        out.append('def %s : OptF := %s\n' % (name, lean_opt(b, tabn, cv['t'], o)))
+                        out.append('def %s : Opt := %s\n' % (name, lean_opt(b, tabn, cv['t'], o)))
                         out.append('/-- Its threshold and its bound. -/')
                         out.append('def %s_cB : ℚ × ℚ :=\n    (%s,\n     %s)\n' % (name, q(o.cthr), q(o.B)))
-                        out.append('theorem %s_ok : checkOptB %d %d %d %d %s %s %s_cB = true :=\n    checkOptB_build (by decide +kernel)\n'
-                                   % (name, H, b, k, a, tabn, name, name))
+                        out.append('theorem %s_ok : checkOptB %d %d %d %d %s %s %s_cB = true :=\n    %s\n'
+                                   % (name, H, b, k, a, tabn, name, name,
+                                      lean_opt_proof(o) or 'checkOptB_build (by decide +kernel)'))
                     opts = ['large%s_%s_%d_%d' % (kind, tag, ci, oi) for oi in range(len(cv['opts']))]
                     out.append('/-- %s %d: every budget from %d to %d. -/' % (
                         'Heavy cover (one heavy message, one spare slot)' if kind else 'Cover', ci, cv['qstart'], cv['qtop']))
