@@ -4,6 +4,7 @@ Exploring leanSphincs: a hash-based stateless signature scheme for Post-Quantum 
 
 - [Website](https://sphincs.art/)
 - [Note (PDF)](https://github.com/TomWambsgans/sphincs.art/releases/download/doc-latest/leanSPHINCS.pdf)
+- [Slides (PDF)](https://github.com/TomWambsgans/sphincs.art/releases/download/doc-latest/slides.pdf): the WOTS forest, and the privacy of a pruned key.
 - [Security proofs in Lean 4](formal/sphincs/README.md)
 
 ## Credits

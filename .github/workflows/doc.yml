@@ -5,11 +5,15 @@ on:
     branches: [ "main" ]
     paths:
       - 'leanSPHINCS.tex'
+      - 'slides.tex'
+      - 'site/sphinx.png'
       - 'latexmkrc'
       - '.github/workflows/doc.yml'
   pull_request:
     paths:
       - 'leanSPHINCS.tex'
+      - 'slides.tex'
+      - 'site/sphinx.png'
       - 'latexmkrc'
       - '.github/workflows/doc.yml'
   workflow_dispatch:
@@ -31,9 +35,10 @@ jobs:
         with:
           root_file: |
             leanSPHINCS.tex
+            slides.tex
       - name: Fail on an undefined reference or citation
         run: |
-          ! grep -qE 'Reference .* undefined|Citation .* undefined|multiply defined' .build/leanSPHINCS.log
+          ! grep -qE 'Reference .* undefined|Citation .* undefined|multiply defined' .build/leanSPHINCS.log .build/slides.log
 
   build-pdf:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -47,11 +52,12 @@ jobs:
         with:
           root_file: |
             leanSPHINCS.tex
+            slides.tex
       - name: Fail on an undefined reference or citation
         run: |
-          ! grep -qE 'Reference .* undefined|Citation .* undefined|multiply defined' .build/leanSPHINCS.log
+          ! grep -qE 'Reference .* undefined|Citation .* undefined|multiply defined' .build/leanSPHINCS.log .build/slides.log
       - name: Name the artifacts
-        run: cp .build/leanSPHINCS.pdf .
+        run: cp .build/leanSPHINCS.pdf .build/slides.pdf .
       - name: Drop the old assets (lowercase names clash case-insensitively; the leanXMSS note is gone)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -67,7 +73,9 @@ jobs:
           body: |
             Auto-built on every push to `main`.
 
-            `leanSPHINCS.pdf` is the note describing the leanSphincs candidate.
+            `leanSPHINCS.pdf` is the note describing the leanSphincs candidate,
+            `slides.pdf` the talk on the WOTS forest and the privacy of a pruned key.
           make_latest: false
           files: |
             leanSPHINCS.pdf
+            slides.pdf
