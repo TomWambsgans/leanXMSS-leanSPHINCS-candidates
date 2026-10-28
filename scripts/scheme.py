@@ -24,9 +24,8 @@ The forest's sizes and verification costs are also pinned by the Rust tests (cra
 `Config::verify_compressions`).
 
 The FORS FTS has k trees of height a and no root hash (the WOTS+C key signs the 2k nodes below
-the roots): a = 10 and k = 25 in every configuration, so that verification does not
-depend on the pruning. 25 is the fewest trees whose cover attack (fors_security.py) lives as long as the
-forest's for the full key; it reaches 97.8-100.7% of the forest's in every configuration.
+the roots): a = 10 and k = 24 in every configuration, so that verification does not depend on the pruning.
+24 is the fewest trees whose proved limit for the full key still reaches 2^(h+4) signatures.
 """
 
 import argparse
@@ -121,7 +120,7 @@ def fors_log2_lifetime(h, b, a, k, level=127):
 
 
 FORS_HEIGHT = 10
-FORS_TREES = 25
+FORS_TREES = 24
 
 
 def fors(h, shape, b):
@@ -360,7 +359,7 @@ def site_data():
                                                fors=dict(k=k, a=a, size=size(h, shape, "fors", b),
                                                             verify=CV.verify(h, shape), sign=signs_v,
                                                             lifetime=vc.lifetime(h, shape, b),
-                                                            attack=round(2**life_v))))
+                                                            attack=math.floor(2**life_v))))
     for H in HASHES:
         C = Costs(H)
         ands = ANDS[H.name]

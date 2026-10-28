@@ -3,7 +3,7 @@
 
 A configuration is a total height H (20, 22, 24, 26, 28), a shape (pruned: one tree with a kept subtree
 of height B; layered: the hypertree of SPLITS, nothing pruned, B = H) and a signature limit N. Its
-FTS is FORS with `k = 25` trees of height `a = 10` in every configuration (`scripts/scheme.py` `fors`).
+FTS is FORS with `k = 24` trees of height `a = 10`, the same in every configuration (`scripts/scheme.py` `fors`).
 
 Usage (from formal/sphincs):
     python3 scripts/fors_certificates.py check H SHAPE B N LX   # check one parameter set (exit status 1 if it fails)
@@ -64,7 +64,7 @@ KQ = Fr(1, 2 ** TOTAL)
 LAYERED_TOP = None  # the top layer's height of a layered key, None for a pruned key (set_config)
 SHAPE = "pruned"
 FA = 10             # a: the height of a FORS tree, the same in every configuration
-FK = 25             # k: the number of FORS trees, the same in every configuration
+FK = 24             # k: the number of FORS trees, the same in every configuration
 
 # The layer split of a layered key, top layer first (crates/sphincs `layered_heights`).
 SPLITS = {20: (8, 6, 6), 22: (10, 6, 6), 24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}
@@ -623,14 +623,15 @@ def emit(certs, path):
 
 # Attack lifetimes of the FORS FTS in the cover model (one expected cover per 2^127 digest
 # queries), by height and kept subtree height (`scripts/scheme.py` `fors_log2_lifetime(h, b, a, k)` at
-# k = 25, a = 10). A layered key is attacked as the full key of the same height.
+# a = 10 and k = 24, rounded down). A layered key is attacked as the full key of the same height.
 ATTACK = {
-    20: {20: 22652451, 14: 441810, 13: 229065, 12: 118744, 10: 31896, 8: 8567},
-    22: {22: 90609779, 20: 24410410, 14: 474947, 13: 246156, 12: 127558, 10: 34240, 8: 9190},
-    24: {24: 362439088, 20: 26282430, 14: 510203, 13: 264337, 12: 136933, 10: 36733, 8: 9853},
-    26: {26: 1449756325, 20: 28275246, 14: 547704, 13: 283674, 12: 146903, 10: 39383, 8: 10558},
-    28: {28: 5799025272, 20: 30396021, 14: 587586, 13: 304237, 12: 157505, 10: 42201, 8: 11307},
+    20: {20: 18798990, 14: 371851, 13: 193219, 12: 100380, 10: 27078, 8: 7303},
+    22: {22: 75195938, 20: 20356598, 14: 401494, 13: 208531, 12: 108288, 10: 29187, 8: 7865},
+    24: {24: 300783729, 20: 22020747, 14: 433126, 13: 224867, 12: 116724, 10: 31437, 8: 8465},
+    26: {26: 1203134891, 20: 23797932, 14: 466871, 13: 242292, 12: 125721, 10: 33835, 8: 9104},
+    28: {28: 4812539541, 20: 25695072, 14: 502859, 13: 260873, 12: 135314, 10: 36392, 8: 9786},
 }
+
 
 HEIGHTS = (20, 22, 24, 26, 28)
 
@@ -685,59 +686,59 @@ def emit_lifetimes(certs, path):
 # `maxn` certified on the grid of lx (step 1/8), rounded down to four significant digits.
 PARAMS = {
     20: [
-        (20, 21240000, -8.25),
-        (14, 392100, -7.375),
-        (13, 201300, -7.25),
-        (12, 103200, -7.125),
-        (10, 27260, -7.0),
-        (8, 7186, -6.875),
+        (20, 17440000, -8.25),
+        (14, 325200, -7.375),
+        (13, 167400, -7.25),
+        (12, 86200, -7.125),
+        (10, 22790, -7.0),
+        (8, 6029, -6.875),
     ],
     22: [
-        (22, 86910000, -8.75),
-        (20, 23050000, -8.375),
-        (14, 424100, -7.5),
-        (13, 217700, -7.375),
-        (12, 111800, -7.25),
-        (10, 29440, -7.0),
-        (8, 7759, -6.875),
+        (22, 71490000, -8.75),
+        (20, 19030000, -8.375),
+        (14, 354500, -7.375),
+        (13, 182200, -7.25),
+        (12, 93560, -7.25),
+        (10, 24770, -7.0),
+        (8, 6547, -6.875),
     ],
     24: [
-        (24, 354200000, -9.125),
-        (20, 24970000, -8.5),
-        (14, 459500, -7.5),
-        (13, 235700, -7.375),
-        (12, 120900, -7.25),
-        (10, 31760, -7.125),
-        (8, 8359, -6.875),
+        (24, 292300000, -9.125),
+        (20, 20740000, -8.375),
+        (14, 385300, -7.5),
+        (13, 198000, -7.375),
+        (12, 101700, -7.25),
+        (10, 26860, -7.0),
+        (8, 7099, -6.875),
     ],
     26: [
-        (26, 1426000000, -9.75),
-        (20, 27030000, -8.5),
-        (14, 496100, -7.625),
-        (13, 254400, -7.5),
-        (12, 130500, -7.375),
-        (10, 34330, -7.125),
-        (8, 9019, -7.0),
+        (26, 1182000000, -9.375),
+        (20, 22590000, -8.5),
+        (14, 418900, -7.5),
+        (13, 215200, -7.375),
+        (12, 110500, -7.25),
+        (10, 29130, -7.125),
+        (8, 7677, -7.0),
     ],
     28: [
-        (28, 5707000000, -11.75),
-        (20, 29240000, -8.625),
-        (14, 536400, -7.625),
-        (13, 275000, -7.5),
-        (12, 140900, -7.375),
-        (10, 37030, -7.125),
-        (8, 9721, -7.0),
+        (28, 4731000000, -11.25),
+        (20, 24540000, -8.625),
+        (14, 454500, -7.625),
+        (13, 233300, -7.5),
+        (12, 119800, -7.375),
+        (10, 31600, -7.125),
+        (8, 8313, -7.0),
     ],
 }
 
 # Parameter sets of layered keys, by height: (N, lx). The index is not ground (b = h); the smaller keygen credit
 # of the top layer alone does not move the largest N, which is the full key's.
 LAYERED = {
-    20: (21240000, -8.25),
-    22: (86910000, -8.75),
-    24: (354200000, -9.125),
-    26: (1426000000, -9.75),
-    28: (5707000000, -11.75),
+    20: (17440000, -8.25),
+    22: (71490000, -8.75),
+    24: (292300000, -9.125),
+    26: (1182000000, -9.375),
+    28: (4731000000, -11.25),
 }
 
 def lifetime(h, shape, b=None):

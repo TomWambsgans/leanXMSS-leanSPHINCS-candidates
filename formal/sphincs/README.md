@@ -41,7 +41,7 @@ heights, five at h = 20, and the layered key, below), 10 size theorems and 30 co
 
 The scheme, the digest layout, the codeword table, the costs and the forest are documented in
 [FOREST.md](FOREST.md); the proof route and the modeling differences with the Rust code are in
-[PROOF.md](PROOF.md). `FORS/` is the same proof with FORS (25 trees of height 10) as the
+[PROOF.md](PROOF.md). `FORS/` is the same proof with FORS (24 trees of height 10) as the
 few-time signature: what FORS changes, and what that changes in the proof, is
 in [FORS.md](FORS.md).
 
@@ -85,14 +85,14 @@ theorem per height, shape and kept subtree height in [Main.lean](FORS/Main.lean)
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 20 | 21,240,000 | — | 392,100 | 201,300 | 103,200 | 27,260 | 7,186 | 21,240,000 |
-| 22 | 86,910,000 | 23,050,000 | 424,100 | 217,700 | 111,800 | 29,440 | 7,759 | 86,910,000 |
-| 24 | 354,200,000 | 24,970,000 | 459,500 | 235,700 | 120,900 | 31,760 | 8,359 | 354,200,000 |
-| 26 | 1,426,000,000 | 27,030,000 | 496,100 | 254,400 | 130,500 | 34,330 | 9,019 | 1,426,000,000 |
-| 28 | 5,707,000,000 | 29,240,000 | 536,400 | 275,000 | 140,900 | 37,030 | 9,721 | 5,707,000,000 |
+| 20 | 17,440,000 | — | 325,200 | 167,400 | 86,200 | 22,790 | 6,029 | 17,440,000 |
+| 22 | 71,490,000 | 19,030,000 | 354,500 | 182,200 | 93,560 | 24,770 | 6,547 | 71,490,000 |
+| 24 | 292,300,000 | 20,740,000 | 385,300 | 198,000 | 101,700 | 26,860 | 7,099 | 292,300,000 |
+| 26 | 1,182,000,000 | 22,590,000 | 418,900 | 215,200 | 110,500 | 29,130 | 7,677 | 1,182,000,000 |
+| 28 | 4,731,000,000 | 24,540,000 | 454,500 | 233,300 | 119,800 | 31,600 | 8,313 | 4,731,000,000 |
 
-These are 84–98% of the FORS cover attack, in every configuration a larger share than the forest's
-limit is of the forest's attack.
+These are 82.6–98.3% of the FORS cover attack, in every configuration a larger share than the forest's
+limit is of the forest's attack, and 12–16% below the forest's limits.
 
 ## Checked claims
 

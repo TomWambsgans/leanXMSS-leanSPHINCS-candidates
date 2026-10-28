@@ -9,8 +9,9 @@ statement are the same, so this file only records what FORS changes; the rest is
 ## The few-time signature
 
 FORS is `k` trees of `2^a` leaves (`Params.forsTrees`, `Params.forsHeight`); the library is generic
-in `(k, a)` and only the certificates fix them: `a = 10` and `k = 25` everywhere, so that
-verification is the same for every pruning (`scripts/scheme.py`, `fors`). A leaf is the hash of one
+in `(k, a)` and only the certificates fix them: `a = 10` and `k = 24` in every configuration, so that
+verification is the same for every pruning; 24 is the fewest trees whose cover attack reaches the
+`2^(h+4)` signatures of each lifetime (`scripts/scheme.py`, `fors`). A leaf is the hash of one
 secret, and one hash of the seed gives the two secrets of a sibling pair (`leafPair`), as everywhere
 else in the scheme.
 
@@ -43,22 +44,22 @@ Signature limits `N` with 127 bits, one theorem each in [Main.lean](FORS/Main.le
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 20 | 21,240,000 | — | 392,100 | 201,300 | 103,200 | 27,260 | 7,186 | 21,240,000 |
-| 22 | 86,910,000 | 23,050,000 | 424,100 | 217,700 | 111,800 | 29,440 | 7,759 | 86,910,000 |
-| 24 | 354,200,000 | 24,970,000 | 459,500 | 235,700 | 120,900 | 31,760 | 8,359 | 354,200,000 |
-| 26 | 1,426,000,000 | 27,030,000 | 496,100 | 254,400 | 130,500 | 34,330 | 9,019 | 1,426,000,000 |
-| 28 | 5,707,000,000 | 29,240,000 | 536,400 | 275,000 | 140,900 | 37,030 | 9,721 | 5,707,000,000 |
+| 20 | 17,440,000 | — | 325,200 | 167,400 | 86,200 | 22,790 | 6,029 | 17,440,000 |
+| 22 | 71,490,000 | 19,030,000 | 354,500 | 182,200 | 93,560 | 24,770 | 6,547 | 71,490,000 |
+| 24 | 292,300,000 | 20,740,000 | 385,300 | 198,000 | 101,700 | 26,860 | 7,099 | 292,300,000 |
+| 26 | 1,182,000,000 | 22,590,000 | 418,900 | 215,200 | 110,500 | 29,130 | 7,677 | 1,182,000,000 |
+| 28 | 4,731,000,000 | 24,540,000 | 454,500 | 233,300 | 119,800 | 31,600 | 8,313 | 4,731,000,000 |
 
 As a share of the lifetime in the FORS cover model (the attack that covers every one of the `k`
 trees; `scripts/scheme.py`, `fors_log2_lifetime`):
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 20 | 93.8% | — | 88.7% | 87.9% | 86.9% | 85.5% | 83.9% | 93.8% |
-| 22 | 95.9% | 94.4% | 89.3% | 88.4% | 87.6% | 86.0% | 84.4% | 95.9% |
-| 24 | 97.7% | 95.0% | 90.1% | 89.2% | 88.3% | 86.5% | 84.8% | 97.7% |
-| 26 | 98.4% | 95.6% | 90.6% | 89.7% | 88.8% | 87.2% | 85.4% | 98.4% |
-| 28 | 98.4% | 96.2% | 91.3% | 90.4% | 89.5% | 87.7% | 86.0% | 98.4% |
+| 20 | 92.8% | — | 87.5% | 86.6% | 85.9% | 84.2% | 82.6% | 92.8% |
+| 22 | 95.1% | 93.5% | 88.3% | 87.4% | 86.4% | 84.9% | 83.2% | 95.1% |
+| 24 | 97.2% | 94.2% | 89.0% | 88.1% | 87.1% | 85.4% | 83.9% | 97.2% |
+| 26 | 98.2% | 94.9% | 89.7% | 88.8% | 87.9% | 86.1% | 84.3% | 98.2% |
+| 28 | 98.3% | 95.5% | 90.4% | 89.4% | 88.5% | 86.8% | 84.9% | 98.3% |
 
 Every limit is a larger share of its own cover attack than the forest's is of the forest's
 (79.5–97.8%, [README.md](README.md)).
