@@ -499,8 +499,8 @@ mod tests {
     /// Only the heights and the kept subtrees of the note make a configuration.
     #[test]
     fn unsupported_configurations_are_rejected() {
-        for (h, b) in [(24, 11), (24, 25), (18, 10), (20, 20), (22, 22), (28, 20)] {
-            let ok = HEIGHTS.contains(&h) && (b == h || PRUNED.contains(&b));
+        for (h, b, ok) in [(24, 11, false), (24, 25, false), (18, 10, false), (21, 21, false), (20, 20, true),
+                           (20, 14, true), (22, 22, true), (28, 20, true), (28, 9, false)] {
             assert_eq!(std::panic::catch_unwind(|| keccak(h, b)).is_ok(), ok, "h = {h}, b = {b}");
         }
     }

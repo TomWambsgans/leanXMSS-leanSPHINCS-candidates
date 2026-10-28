@@ -52,7 +52,7 @@ A SPHINCS-style scheme with four toggles, 60 configurations in all. Its componen
 \paragraph{The toggles.}
 \begin{description}[leftmargin=1.2em]
   \item[T1, lifetime.] The height $h\in\{20,22,24,26,28\}$ of the index, for lifetimes of about $2^{24}$, $2^{26}$,
-        $2^{28}$, $2^{30}$ and $2^{32}$ signatures: the full key lasts $N\approx20\cdot2^h$ signatures (FORS: $17\cdot2^h$), proved (forest: 88 to 98\% of
+        $2^{28}$, $2^{30}$ and $2^{32}$ signatures: the full key lasts $N\approx19$--$21\cdot2^h$ signatures (FORS: $16.6$--$17.6\cdot2^h$), proved (forest: 88 to 98\% of
         the cover attack's $21.45\cdot2^h$; \cref{sec:lifetimes}).
   \item[T2, shape.] \emph{Pruned}~\cite{conduition}: one tree of height $h$; key generation builds only a kept subtree
         of $2^b$ leaves and replaces the $h-b$ siblings above it by pseudorandom surrogate nodes. The signer grinds
@@ -230,7 +230,7 @@ thousand~\cite{hwbench}.
 
 \paragraph{Idea (adapted from PRAWNS~\cite{PRAWNS} and Riva Labs~\cite{riva}).} Every secret comes from a threshold
 PRF $F$: $t$ operators evaluate it together, $t-1$ learn nothing. A signature reveals $x_{i,4-d_i}$, a chain secret
-hashed $4-d_i$ times, which is not an output of $F$, so the MPC publishes the chain values masked under $F$:
+hashed $4-d_i$ times ($d_i$ a digit of its codeword, \cref{sec:twolevel}), which for $d_i<4$ is not an output of $F$, so the MPC publishes the chain values masked under $F$:
 \begin{itemize}
   \item position 0, the secret: $F(\mathit{addr})$
   \item positions $j = 1$ to 3 (1 to 2 for WOTS$^+$C): $x_{i,j} \oplus F(\mathit{addr}_{i,j})$, at a fresh address
@@ -344,8 +344,8 @@ meant to be the configuration's.
 each used about 28 times over the lifetime), so key generation can prepare all of them: the MPC computes every
 forest's chains, publishes their masked values, and opens the WOTS$^+$C signatures linking them to the kept subtree.
 Signing then needs no MPC: the quorum $J$ agrees on $m$, then draws $R_0$ and $\Delta$ as
-$\hash(m, J, k, r_1,\dots,r_t)$, each signer committing to $r_i$ before revealing it, with $k$ the session counter of
-$J$; it grinds the $2^{h-b}$ attempts in the clear and opens $F$ at the selected addresses. A signer advances $k$ (the
+$\hash(m, J, c, r_1,\dots,r_t)$, each signer committing to $r_i$ before revealing it, with $c$ the session counter of
+$J$; it grinds the $2^{h-b}$ attempts in the clear and opens $F$ at the selected addresses. A signer advances $c$ (the
 session counts as a signature) when it reveals its own $r_i$, and each quorum has its own counter range, so there are
 at most $N$ in all. Traffic per operator at $h=24$, $b=12$, 2-of-3:
 0.92~TB once with Keccak-256 (0.38 and 0.57~TB with BLAKE2s and SHA-256), against 26~TB (10.6 and 16.1~TB) of
@@ -359,7 +359,7 @@ Labs~\cite{riva}, the device delegates it to the untrusted host, which proves it
 \begin{enumerate}
   \item in its idle time, the device prepares $p$ uniformly random instances (from its secure randomness), as in
         \cref{sec:threshold}: 16 at $h\le24$, 64 at $h=26$ and $h=28$, doubled with BLAKE2s or SHA-256 until
-        assisted signing is faster than signing alone (up to 256 for a pruned key with $b=12$ or a layered key;
+        assisted signing is faster than signing alone (up to 256 for a pruned key with $b=12$; a layered key keeps 16 or 64;
         \texttt{scripts/scheme.py}); where signing alone beats the 3~s of the STARK below, the device signs alone
   \item to sign $m$, it derives $R_0$ and $\Delta$ in one hash of its secret key and $m$, and sends $m$, $R_0$,
         $\Delta$ and the $p$ indices to the host
@@ -377,8 +377,8 @@ this flow is not covered by the Lean proof.
 
 \paragraph{Costs.} At $h=24$ and $26$ the host hashes $\approx2^{20}$ digests and proves them at 500 thousand Keccak-f
 permutations per second (750 thousand SHA-256, 1 million BLAKE2s compressions), 2.1~s with Keccak-256 (8.4~s at $h=28$).
-The device verifies the STARK in about $10^4$ compressions (1.8~s with Keccak-256 at 5.8 thousand per second on a
-Ledger Nano S+~\cite{hwbench}), counted optimistically as 3~s: 5.2~s in all (11.5~s at $h=28$), less where more
+The device verifies the STARK: its hashing alone is about $10^4$ compressions (1.8~s with Keccak-256 at 5.8 thousand
+per second on a Ledger Nano S+~\cite{hwbench}), and we count the whole verification, optimistically, as 3~s: 5.2~s in all (11.5~s at $h=28$), less where more
 instances are prepared. Preparing an instance costs the device $76\cdot10^3$ Keccak-f permutations for a pruned
 key with $b=12$ and $164\cdot10^3$ for a layered one at $h=24$ ($343\cdot10^3$
 at $h=28$), WOTS$^+$C counter searches and the path included; the first $p$ are prepared once (about 63~min for
@@ -396,7 +396,7 @@ not depend on the pruning; its digest is $h+240$ bits, from two hash calls. 24 i
 key still lasts $2^{h+4}$ signatures: with 23, even the cover attack falls short at every height. Its cover lifetime is
 83--85\% of the forest's (\texttt{scripts/scheme.py}); its proved lifetimes (\cref{sec:lifetimes}) are 83--98\% of
 its cover attack, and 12--16\% below the forest's. At $h=26$, full key,
-Keccak-256, in permutations (preprocessing: the hashes of the FTS inside the threshold MPC):
+Keccak-256, in permutations (preprocessing: the hashes of one FTS instance inside the threshold MPC):
 \begin{center}
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{lrrrrr}
@@ -549,9 +549,9 @@ factor $2^{b-h}$ is not credited by hypertree pruning~\cite{conduition}, which c
 $2^{h-b}$ although the forger pays the signer's grinding cost per attempt; it is worth about $2^{(h-b)/18}$, from
 $+17\%$ at $h=24$, $b=20$ to a factor 1.8 at $b=8$. The best known attack also uses the WOTS$^+$C key (a counter
 search for a neighbouring encoding, then one chain preimage); at $h=24$ it is 100, 99, 96, 95, 95, 93 and 91\% of the
-forest's cover figure for $b=24,20,14,13,12,10,8$~\cite{proofs}. For FORS, a tree is covered when the target leaf
+forest's cover figure for $b=24,20,14,13,12,10,8$ (a Monte Carlo estimate, \texttt{formal/sphincs/scripts/forest\_attack.py}). For FORS, a tree is covered when the target leaf
 is among the revealed ones, so $\mathrm{cover}(r)=(1-(1-2^{-a})^r)^k$, with the same lifetime rule (the loads
-exactly binomial). At $h=24$, rounded down (the last row is \cref{sec:lifetimes}):
+exactly binomial). For the forest at $h=24$, rounded down (the last row is \cref{sec:lifetimes}):
 \begin{center}
 \setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{lrrrrrrr}

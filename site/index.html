@@ -1149,7 +1149,7 @@ footer a + a { margin-left: 1.25rem; }
       var T = Math.min(hi, Math.max(lo, offChosen == null ? per * tt.ledger_prepared : offChosen));
       var np = Math.max(xmin, Math.floor(T / per + 1e-9));
       if (!dragging) slider.value = String(Math.round(1000 * Math.log(T / lo) / Math.log(hi / lo)));   // not under the finger
-      slider.parentNode.style.setProperty('--p', String(slider.value / 1000));   // the thumb's place and the inked track   // the inked part of the track
+      slider.parentNode.style.setProperty('--p', String(slider.value / 1000));   // the thumb's place and the inked track
       var off = time(np * per);
       slider.setAttribute('aria-valuetext', off.replace(/&nbsp;/g, ' ') + ', ' + np + ' FTS prepared');
       cell.querySelector('.off').innerHTML = off;

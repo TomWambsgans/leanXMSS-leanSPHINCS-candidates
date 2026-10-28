@@ -1,4 +1,4 @@
-% Build with: latexmk slides-forest-privacy.tex   (output in .build/)
+% Build with: latexmk slides.tex   (output in .build/)
 \documentclass[aspectratio=169,11pt]{beamer}
 
 \usepackage[T1]{fontenc}
@@ -726,15 +726,16 @@
 \end{frame}
 
 %============================================================ 2. vs FORS ===
-\begin{frame}{Against FORS $k=25, a=10$ (similar lifetime / signing time)}
+\begin{frame}{Against FORS $k=24, a=10$ (similar signing time)}
 \vspace{0.6em}
 
 (FTS alone, not considering the top XMSS paths)
 
 Pros:
 \begin{itemize}\setlength{\itemsep}{12pt}
-  \item \textbf{36\% smaller}: 2\,816 against 4\,400 bytes.
-  \item \textbf{36\% fewer hashes to verify}: 160 against 250.
+  \item \textbf{33\% smaller}: 2\,816 against 4\,224 bytes.
+  \item \textbf{33\% fewer hashes to verify}: 160 against 240.
+  \item \textbf{lasts 12--16\% longer} (proved lifetimes).
 \end{itemize}
 
 Cons:

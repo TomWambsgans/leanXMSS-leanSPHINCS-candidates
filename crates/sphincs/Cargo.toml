@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
-description = "The leanSphincs candidate: a two-level WOTS forest under WOTS+C (64 chains of length 4, T = 128), heights 22 to 28, pruned or layered, over Keccak-256, BLAKE2s or SHA-256"
+description = "The leanSphincs candidate: a two-level WOTS forest under WOTS+C (64 chains of length 4, T = 128), heights 20 to 28, pruned or layered, over Keccak-256, BLAKE2s or SHA-256"
 
 [lints]
 workspace = true

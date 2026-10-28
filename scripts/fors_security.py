@@ -196,7 +196,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="examples:\n"
         "  %(prog)s                          # the FORS comparison row (h=24, a=10, k=24)\n"
-        "  %(prog)s --h 23                   # same set with one more level of tree height\n"
+        "  %(prog)s --h 23                   # same set with one level less of tree height\n"
         "  %(prog)s --sigs 24 24.5 25 --levels 128 100\n"
         "  %(prog)s --preset 128s\n"
         "  %(prog)s --selftest",
@@ -217,6 +217,8 @@ def main():
     overrides = {f: getattr(args, f) for f in ("n", "h", "a", "k") if getattr(args, f) is not None}
     if overrides:
         p = replace(p, name=p.name + " with " + ", ".join(f"{f}={v}" for f, v in overrides.items()), **overrides)
+        if args.preset == "lean" and "h" in overrides:
+            p = replace(p, limit=p.h + 4)  # leanSPHINCS: about 2^(h+4) signatures
 
     L = p.limit
     sigs = args.sigs or [L - 4, L - 2, L - 1, L, L + 0.5, L + 1, L + 2, L + 3, L + 4, L + 6, L + 8]

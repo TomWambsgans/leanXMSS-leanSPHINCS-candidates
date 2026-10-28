@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""How well an adversary tells a pruned key from a full one (leanSPHINCS.tex, the privacy of a pruned key).
+"""How well an adversary tells a pruned key from a full one (the site's Mode tip and slides.tex, "Pruning: the privacy question").
 
 THE GAME. The challenger tosses a bit beta and runs a signer:
 
@@ -47,7 +47,7 @@ test is exactly "pruned iff some index repeats", and its advantage is the distan
 To first order Adv(N) = N^2 / 2^(b+1), so it reaches a threshold d after about sqrt(2d) * 2^(b/2)
 signatures, and no N is private in the cryptographic sense: N = 2 already gives 2^-b.
 
-WITH THE SEMI-TRUSTED STATE (same section). The signer keeps the set S of leaves it has already signed
+WITH THE SEMI-TRUSTED STATE (same places). The signer keeps the set S of leaves it has already signed
 and, when the grind lands on one of them again, accepts it only with some probability beta, otherwise
 keeps grinding. Every attempt yields a uniform kept leaf, so with s = |S| already used,
 
@@ -78,7 +78,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "formal", "sphincs", "scripts"))
 import forest_certificates as fc
 
-HEIGHTS = (22, 24, 26, 28)
+HEIGHTS = (20, 22, 24, 26, 28)
 PRUNED = (8, 10, 12, 13, 14, 20)
 
 
