@@ -28,7 +28,7 @@ BS = [24, 20, 14, 13, 12, 10, 8]
 
 def set_height(h):
     global TOTAL, BS
-    TOTAL, BS = h, [h, 20, 14, 13, 12, 10, 8]
+    TOTAL, BS = h, [h] + [b for b in (20, 14, 13, 12, 10, 8) if b < h]
 
 def rate_wots(search=2.0 ** 116):
     """best success rate per query, in units 2^-127, of: `search` hashes, then 2 * 2^-128 per query"""

@@ -6,8 +6,8 @@ for every `Params` (height `h ≤ 28`, `d` layers, kept subtree height `b`, sign
 the last step, the certificates, is numeric.
 
 Units: S = 2^128 digests, a budget of q hash queries is x = q/S, and the target is q/2^127 = 2x.
-The layers below the top have height ℓ = `lowerHeight` ≥ 6 (6, 7, 8, 9 for the layered keys of
-h = 22, 24, 26, 28). The top layer has height t = h − ℓ(d − 1) and keeps a subtree of height k = b − ℓ(d − 1) (k = t for a
+The layers below the top have height ℓ = `lowerHeight` ≥ 6 (6, 6, 7, 8, 9 for the layered keys of
+h = 20, 22, 24, 26, 28). The top layer has height t = h − ℓ(d − 1) and keeps a subtree of height k = b − ℓ(d − 1) (k = t for a
 layered key, k = b for a pruned one). K = 226·2^k + 2(t − k) is the key-generation cost in hash calls
 (`keygenCost`, `Prefix.keygenHashCost`, `Prefix.hashCalls_keygenFromSeed`) and q' = q − K. The
 landing probability of a digest is p = 2^-(h−b).

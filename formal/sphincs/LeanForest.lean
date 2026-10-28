@@ -164,6 +164,7 @@ import LeanForest.LargeBudget.WeightedPotential
 import LeanForest.LargeBudget.WeightedScan
 import LeanForest.Certificates.Build
 import LeanForest.Certificates.Closing
+import LeanForest.Certificates.H20
 import LeanForest.Certificates.H22
 import LeanForest.Certificates.H24
 import LeanForest.Certificates.H26

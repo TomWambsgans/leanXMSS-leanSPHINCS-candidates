@@ -158,6 +158,7 @@ import FORS.LargeBudget.WeightedPotential
 import FORS.LargeBudget.WeightedScan
 import FORS.Certificates.Build
 import FORS.Certificates.Closing
+import FORS.Certificates.H20
 import FORS.Certificates.H22
 import FORS.Certificates.H24
 import FORS.Certificates.H26

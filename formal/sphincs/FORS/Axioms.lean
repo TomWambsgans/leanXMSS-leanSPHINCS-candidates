@@ -1,7 +1,7 @@
 import FORS
 
 /-!
-Axiom guards. The `#print axioms` below pin the main theorem, the 32 size and cost theorems of
+Axiom guards. The `#print axioms` below pin the main theorem, the 40 size and cost theorems of
 `Configurations` and the theorems the documentation cites. The last command checks
 every declaration of every `FORS` module (`FORS.lean` imports all of them) and fails if
 one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound`, such as the
@@ -12,9 +12,17 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms FORS.requestedSecurity
 
+/-- info: 'FORS.Configurations.blake2s_h20_layered_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms FORS.Configurations.blake2s_h20_layered_k25
+
 /-- info: 'FORS.Configurations.blake2s_h22_layered_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms FORS.Configurations.blake2s_h22_layered_k25
+
+/-- info: 'FORS.Configurations.blake2s_h20_pruned_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms FORS.Configurations.blake2s_h20_pruned_k25
 
 /-- info: 'FORS.Configurations.blake2s_h22_pruned_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -44,9 +52,17 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms FORS.Configurations.blake2s_h28_pruned_k25
 
+/-- info: 'FORS.Configurations.keccak256_h20_layered_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms FORS.Configurations.keccak256_h20_layered_k25
+
 /-- info: 'FORS.Configurations.keccak256_h22_layered_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms FORS.Configurations.keccak256_h22_layered_k25
+
+/-- info: 'FORS.Configurations.keccak256_h20_pruned_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms FORS.Configurations.keccak256_h20_pruned_k25
 
 /-- info: 'FORS.Configurations.keccak256_h22_pruned_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -76,9 +92,17 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms FORS.Configurations.keccak256_h28_pruned_k25
 
+/-- info: 'FORS.Configurations.sha256_h20_layered_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms FORS.Configurations.sha256_h20_layered_k25
+
 /-- info: 'FORS.Configurations.sha256_h22_layered_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms FORS.Configurations.sha256_h22_layered_k25
+
+/-- info: 'FORS.Configurations.sha256_h20_pruned_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms FORS.Configurations.sha256_h20_pruned_k25
 
 /-- info: 'FORS.Configurations.sha256_h22_pruned_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
@@ -108,9 +132,17 @@ one depends on an axiom other than `propext`, `Classical.choice` and `Quot.sound
 #guard_msgs (whitespace := lax) in
 #print axioms FORS.Configurations.sha256_h28_pruned_k25
 
+/-- info: 'FORS.Configurations.size_h20_layered_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms FORS.Configurations.size_h20_layered_k25
+
 /-- info: 'FORS.Configurations.size_h22_layered_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in
 #print axioms FORS.Configurations.size_h22_layered_k25
+
+/-- info: 'FORS.Configurations.size_h20_pruned_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs (whitespace := lax) in
+#print axioms FORS.Configurations.size_h20_pruned_k25
 
 /-- info: 'FORS.Configurations.size_h22_pruned_k25' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs (whitespace := lax) in

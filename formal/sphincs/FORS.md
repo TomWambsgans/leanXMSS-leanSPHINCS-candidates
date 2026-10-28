@@ -38,11 +38,12 @@ uniform (`Security.evalDist_digestBlock_uniform`).
 ## Proved lifetimes
 
 Signature limits `N` with 127 bits, one theorem each in [Main.lean](FORS/Main.lean) (e.g.
-`h24_pruned12`), collected by `requestedSecurity`; layered keys: 10 + 6 + 6, 10 + 7 + 7, 10 + 8 + 8
-and 10 + 9 + 9.
+`h24_pruned12`), collected by `requestedSecurity`; layered keys: 8 + 6 + 6, 10 + 6 + 6, 10 + 7 + 7,
+10 + 8 + 8 and 10 + 9 + 9.
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20 | 21,240,000 | — | 392,100 | 201,300 | 103,200 | 27,260 | 7,186 | 21,240,000 |
 | 22 | 86,910,000 | 23,050,000 | 424,100 | 217,700 | 111,800 | 29,440 | 7,759 | 86,910,000 |
 | 24 | 354,200,000 | 24,970,000 | 459,500 | 235,700 | 120,900 | 31,760 | 8,359 | 354,200,000 |
 | 26 | 1,426,000,000 | 27,030,000 | 496,100 | 254,400 | 130,500 | 34,330 | 9,019 | 1,426,000,000 |
@@ -53,13 +54,14 @@ trees; `scripts/scheme.py`, `fors_log2_lifetime`):
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20 | 93.8% | — | 88.7% | 87.9% | 86.9% | 85.5% | 83.9% | 93.8% |
 | 22 | 95.9% | 94.4% | 89.3% | 88.4% | 87.6% | 86.0% | 84.4% | 95.9% |
 | 24 | 97.7% | 95.0% | 90.1% | 89.2% | 88.3% | 86.5% | 84.8% | 97.7% |
 | 26 | 98.4% | 95.6% | 90.6% | 89.7% | 88.8% | 87.2% | 85.4% | 98.4% |
 | 28 | 98.4% | 96.2% | 91.3% | 90.4% | 89.5% | 87.7% | 86.0% | 98.4% |
 
 Every limit is a larger share of its own cover attack than the forest's is of the forest's
-(80.2–97.8%, [README.md](README.md)).
+(79.5–97.8%, [README.md](README.md)).
 
 ## What the proof changes
 

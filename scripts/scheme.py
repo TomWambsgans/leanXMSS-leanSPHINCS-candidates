@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Sizes and compression counts of the leanSphincs candidate in its 48 configurations (leanSPHINCS.tex).
+"""Sizes and compression counts of the leanSphincs candidate in its 60 configurations (leanSPHINCS.tex).
 
-Four toggles: the height h (22, 24, 26, 28: about 2^26, 2^28, 2^30, 2^32 signatures), the shape
+Four toggles: the height h (20, 22, 24, 26, 28: about 2^24 to 2^32 signatures), the shape
 (pruned: one tree of height h of which the key builds a kept subtree of 2^b leaves, b = h being the
 full key, the signer grinding the randomizer into it; layered: a hypertree whose key builds the top
 layer only), the hash and the few-time signature (FTS): a two-level WOTS forest or FORS. Every call
@@ -43,8 +43,8 @@ from fors_security import forgery_bits_exact
 
 N = 16  # bytes per hash value
 P_LEN, ADDR = 16, 16
-HEIGHTS = (22, 24, 26, 28)
-LAYERED = {22: (10, 6, 6), 24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}  # top layer first
+HEIGHTS = (20, 22, 24, 26, 28)
+LAYERED = {20: (8, 6, 6), 22: (10, 6, 6), 24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}  # top layer first
 PRUNED = (8, 10, 12, 13, 14, 20)  # kept subtree heights b < h with a certificate, besides b = h
 
 
@@ -341,7 +341,7 @@ def site_data():
         C = Costs(H)
         for h in HEIGHTS:
             for shape in ("pruned", "layered"):
-                for b in ([h] + list(PRUNED) if shape == "pruned" else [h]):
+                for b in ([h] + [bb for bb in PRUNED if bb < h] if shape == "pruned" else [h]):
                     proved, attack = lifetimes(h, shape, b)
                     k, a = fors(h, shape, b)
                     CV = Costs(H, (k, a))

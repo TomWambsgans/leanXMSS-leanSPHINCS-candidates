@@ -5,7 +5,7 @@ import Mathlib.Data.BitVec
 /-!
 # leanSPHINCS, FORS variant: FORS under a hypertree of WOTS+C keys
 
-The scheme has a height `h = totalHeight` (22, 24, 26 or 28) and a shape (`Params`): one tree of
+The scheme has a height `h = totalHeight` (20, 22, 24, 26 or 28) and a shape (`Params`): one tree of
 height `h` of which the key keeps a subtree of `2^b` leaves (`numLayers = 1`, `b = subtreeHeight`,
 `b = h` being the full key), or a hypertree of `numLayers = d` layers whose layers below the top have
 one height (`lowerHeight`, at least 6) and whose key builds the top layer only (`b = h`). The few-time

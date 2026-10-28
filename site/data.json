@@ -2,6 +2,239 @@
  "configs": [
   {
    "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 20,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 256,
+   "keygen": 244318208,
+   "sign": {
+    "16": 313873,
+    "1024": 81714,
+    "16384": 74724
+   },
+   "grind": 1,
+   "lifetime": 19830000,
+   "attack": 22494700.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 351,
+    "sign": {
+     "16": 318404,
+     "1024": 86245,
+     "16384": 79255
+    },
+    "lifetime": 21240000,
+    "attack": 22652451
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 8,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 256,
+   "keygen": 59672,
+   "sign": {
+    "16": 78354,
+    "1024": 78354,
+    "16384": 78354
+   },
+   "grind": 4096,
+   "lifetime": 6926,
+   "attack": 8710.85,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 351,
+    "sign": {
+     "16": 82885,
+     "1024": 82885,
+     "16384": 82885
+    },
+    "lifetime": 7186,
+    "attack": 8567
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 10,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 256,
+   "keygen": 238612,
+   "sign": {
+    "16": 75747,
+    "1024": 75282,
+    "16384": 75282
+   },
+   "grind": 1024,
+   "lifetime": 26080,
+   "attack": 32375.4,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 351,
+    "sign": {
+     "16": 80278,
+     "1024": 79813,
+     "16384": 79813
+    },
+    "lifetime": 27260,
+    "attack": 31896
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 12,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 256,
+   "keygen": 954384,
+   "sign": {
+    "16": 76377,
+    "1024": 74514,
+    "16384": 74514
+   },
+   "grind": 256,
+   "lifetime": 98480,
+   "attack": 120177.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 351,
+    "sign": {
+     "16": 80908,
+     "1024": 79045,
+     "16384": 79045
+    },
+    "lifetime": 103200,
+    "attack": 118744
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 13,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 256,
+   "keygen": 1908750,
+   "sign": {
+    "16": 77272,
+    "1024": 74386,
+    "16384": 74386
+   },
+   "grind": 128,
+   "lifetime": 191200,
+   "attack": 231424.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 351,
+    "sign": {
+     "16": 81803,
+     "1024": 78917,
+     "16384": 78917
+    },
+    "lifetime": 201300,
+    "attack": 229065
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 14,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 256,
+   "keygen": 3817484,
+   "sign": {
+    "16": 79072,
+    "1024": 74322,
+    "16384": 74322
+   },
+   "grind": 64,
+   "lifetime": 371400,
+   "attack": 445499.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 351,
+    "sign": {
+     "16": 83603,
+     "1024": 78853,
+     "16384": 78853
+    },
+    "lifetime": 392100,
+    "attack": 441810
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "layered",
+   "b": 20,
+   "layers": [
+    8,
+    6,
+    6
+   ],
+   "size": 6236,
+   "verify": 402,
+   "keygen": 59648,
+   "sign": {
+    "16": 133742,
+    "1024": 133742,
+    "16384": 133742
+   },
+   "grind": 1,
+   "lifetime": 19830000,
+   "attack": 22494700.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 7820,
+    "verify": 497,
+    "sign": {
+     "16": 138273,
+     "1024": 138273,
+     "16384": 138273
+    },
+    "lifetime": 21240000,
+    "attack": 22652451
+   }
+  },
+  {
+   "hash": "Keccak-256",
    "h": 22,
    "shape": "pruned",
    "b": 22,
@@ -1066,6 +1299,239 @@
   },
   {
    "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 20,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 292,
+   "keygen": 253755392,
+   "sign": {
+    "16": 325270,
+    "1024": 84183,
+    "16384": 76923
+   },
+   "grind": 1,
+   "lifetime": 19830000,
+   "attack": 22494700.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 327631,
+     "1024": 86544,
+     "16384": 79284
+    },
+    "lifetime": 21240000,
+    "attack": 22652451
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 8,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 292,
+   "keygen": 61976,
+   "sign": {
+    "16": 80535,
+    "1024": 80535,
+    "16384": 80535
+   },
+   "grind": 4096,
+   "lifetime": 6926,
+   "attack": 8710.85,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 82896,
+     "1024": 82896,
+     "16384": 82896
+    },
+    "lifetime": 7186,
+    "attack": 8567
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 10,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 292,
+   "keygen": 247828,
+   "sign": {
+    "16": 77946,
+    "1024": 77463,
+    "16384": 77463
+   },
+   "grind": 1024,
+   "lifetime": 26080,
+   "attack": 32375.4,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 80307,
+     "1024": 79824,
+     "16384": 79824
+    },
+    "lifetime": 27260,
+    "attack": 31896
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 12,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 292,
+   "keygen": 991248,
+   "sign": {
+    "16": 78630,
+    "1024": 76695,
+    "16384": 76695
+   },
+   "grind": 256,
+   "lifetime": 98480,
+   "attack": 120177.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 80991,
+     "1024": 79056,
+     "16384": 79056
+    },
+    "lifetime": 103200,
+    "attack": 118744
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 13,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 292,
+   "keygen": 1982478,
+   "sign": {
+    "16": 79525,
+    "1024": 76567,
+    "16384": 76567
+   },
+   "grind": 128,
+   "lifetime": 191200,
+   "attack": 231424.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 81886,
+     "1024": 78928,
+     "16384": 78928
+    },
+    "lifetime": 201300,
+    "attack": 229065
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 14,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 292,
+   "keygen": 3964940,
+   "sign": {
+    "16": 81397,
+    "1024": 76503,
+    "16384": 76503
+   },
+   "grind": 64,
+   "lifetime": 371400,
+   "attack": 445499.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 83758,
+     "1024": 78864,
+     "16384": 78864
+    },
+    "lifetime": 392100,
+    "attack": 441810
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "layered",
+   "b": 20,
+   "layers": [
+    8,
+    6,
+    6
+   ],
+   "size": 6236,
+   "verify": 456,
+   "keygen": 61952,
+   "sign": {
+    "16": 137075,
+    "1024": 137075,
+    "16384": 137075
+   },
+   "grind": 1,
+   "lifetime": 19830000,
+   "attack": 22494700.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 7820,
+    "verify": 533,
+    "sign": {
+     "16": 139436,
+     "1024": 139436,
+     "16384": 139436
+    },
+    "lifetime": 21240000,
+    "attack": 22652451
+   }
+  },
+  {
+   "hash": "BLAKE2s",
    "h": 22,
    "shape": "pruned",
    "b": 22,
@@ -2126,6 +2592,239 @@
     },
     "lifetime": 5707000000,
     "attack": 5799025272
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 20,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 293,
+   "keygen": 253755394,
+   "sign": {
+    "16": 325270,
+    "1024": 84183,
+    "16384": 76923
+   },
+   "grind": 1,
+   "lifetime": 19830000,
+   "attack": 22494700.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 327630,
+     "1024": 86543,
+     "16384": 79283
+    },
+    "lifetime": 21240000,
+    "attack": 22652451
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 8,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 293,
+   "keygen": 61978,
+   "sign": {
+    "16": 80535,
+    "1024": 80535,
+    "16384": 80535
+   },
+   "grind": 4096,
+   "lifetime": 6926,
+   "attack": 8710.85,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 82895,
+     "1024": 82895,
+     "16384": 82895
+    },
+    "lifetime": 7186,
+    "attack": 8567
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 10,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 293,
+   "keygen": 247830,
+   "sign": {
+    "16": 77946,
+    "1024": 77463,
+    "16384": 77463
+   },
+   "grind": 1024,
+   "lifetime": 26080,
+   "attack": 32375.4,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 80306,
+     "1024": 79823,
+     "16384": 79823
+    },
+    "lifetime": 27260,
+    "attack": 31896
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 12,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 293,
+   "keygen": 991250,
+   "sign": {
+    "16": 78630,
+    "1024": 76695,
+    "16384": 76695
+   },
+   "grind": 256,
+   "lifetime": 98480,
+   "attack": 120177.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 80990,
+     "1024": 79055,
+     "16384": 79055
+    },
+    "lifetime": 103200,
+    "attack": 118744
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 13,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 293,
+   "keygen": 1982480,
+   "sign": {
+    "16": 79525,
+    "1024": 76567,
+    "16384": 76567
+   },
+   "grind": 128,
+   "lifetime": 191200,
+   "attack": 231424.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 81885,
+     "1024": 78927,
+     "16384": 78927
+    },
+    "lifetime": 201300,
+    "attack": 229065
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 14,
+   "layers": [
+    20
+   ],
+   "size": 4180,
+   "verify": 293,
+   "keygen": 3964942,
+   "sign": {
+    "16": 81397,
+    "1024": 76503,
+    "16384": 76503
+   },
+   "grind": 64,
+   "lifetime": 371400,
+   "attack": 445499.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 5764,
+    "verify": 369,
+    "sign": {
+     "16": 83757,
+     "1024": 78863,
+     "16384": 78863
+    },
+    "lifetime": 392100,
+    "attack": 441810
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "layered",
+   "b": 20,
+   "layers": [
+    8,
+    6,
+    6
+   ],
+   "size": 6236,
+   "verify": 457,
+   "keygen": 61954,
+   "sign": {
+    "16": 137075,
+    "1024": 137075,
+    "16384": 137075
+   },
+   "grind": 1,
+   "lifetime": 19830000,
+   "attack": 22494700.0,
+   "fors": {
+    "k": 25,
+    "a": 10,
+    "size": 7820,
+    "verify": 533,
+    "sign": {
+     "16": 139435,
+     "1024": 139435,
+     "16384": 139435
+    },
+    "lifetime": 21240000,
+    "attack": 22652451
    }
   },
   {
@@ -3196,6 +3895,195 @@
  "threshold": [
   {
    "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 8,
+   "lifetime": 6926,
+   "keygen": 49152,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 24,
+   "keygen_rounds": 73,
+   "prep_rounds": 97,
+   "ledger_prep": 73953,
+   "device_online": 515,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 0.2230272,
+   "prep_mb": 223.0317375,
+   "fors": {
+    "lifetime": 7186,
+    "prep": 25601,
+    "prep_mb": 116.1645375,
+    "prep_rounds": 25,
+    "ledger_prep": 78787,
+    "device_online": 282
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 10,
+   "lifetime": 26080,
+   "keygen": 196608,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 24,
+   "keygen_rounds": 73,
+   "prep_rounds": 97,
+   "ledger_prep": 74418,
+   "device_online": 515,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 0.8921088,
+   "prep_mb": 223.0317375,
+   "fors": {
+    "lifetime": 27260,
+    "prep": 25601,
+    "prep_mb": 116.1645375,
+    "prep_rounds": 25,
+    "ledger_prep": 79252,
+    "device_online": 282
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 12,
+   "lifetime": 98480,
+   "keygen": 786432,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 24,
+   "keygen_rounds": 73,
+   "prep_rounds": 97,
+   "ledger_prep": 75816,
+   "device_online": 515,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 3.5684352,
+   "prep_mb": 223.0317375,
+   "fors": {
+    "lifetime": 103200,
+    "prep": 25601,
+    "prep_mb": 116.1645375,
+    "prep_rounds": 25,
+    "ledger_prep": 80650,
+    "device_online": 282
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 13,
+   "lifetime": 191200,
+   "keygen": 1572864,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 24,
+   "keygen_rounds": 73,
+   "prep_rounds": 97,
+   "ledger_prep": 76839,
+   "device_online": 515,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 7.1368704,
+   "prep_mb": 223.0317375,
+   "fors": {
+    "lifetime": 201300,
+    "prep": 25601,
+    "prep_mb": 116.1645375,
+    "prep_rounds": 25,
+    "ledger_prep": 81673,
+    "device_online": 282
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 14,
+   "lifetime": 371400,
+   "keygen": 3145728,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 24,
+   "keygen_rounds": 73,
+   "prep_rounds": 97,
+   "ledger_prep": 78703,
+   "device_online": 515,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 14.2737408,
+   "prep_mb": 223.0317375,
+   "fors": {
+    "lifetime": 392100,
+    "prep": 25601,
+    "prep_mb": 116.1645375,
+    "prep_rounds": 25,
+    "ledger_prep": 83537,
+    "device_online": 282
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 20,
+   "lifetime": 19830000,
+   "keygen": 201326592,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 24,
+   "keygen_rounds": 73,
+   "prep_rounds": 97,
+   "ledger_prep": 313567,
+   "device_online": 515,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 913.5194112,
+   "prep_mb": 223.0317375,
+   "fors": {
+    "lifetime": 21240000,
+    "prep": 25601,
+    "prep_mb": 116.1645375,
+    "prep_rounds": 25,
+    "ledger_prep": 318401,
+    "device_online": 282
+   }
+  },
+  {
+   "hash": "Keccak-256",
+   "h": 20,
+   "shape": "layered",
+   "b": 20,
+   "lifetime": 19830000,
+   "keygen": 49152,
+   "prep": 73729,
+   "grind": 1048576,
+   "and_depth": 24,
+   "keygen_rounds": 73,
+   "prep_rounds": 97,
+   "ledger_prep": 133436,
+   "device_online": 515,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 0.2230272,
+   "prep_mb": 334.5453375,
+   "fors": {
+    "lifetime": 21240000,
+    "prep": 50177,
+    "prep_mb": 227.6781375,
+    "prep_rounds": 73,
+    "ledger_prep": 138270,
+    "device_online": 282
+   }
+  },
+  {
+   "hash": "Keccak-256",
    "h": 22,
    "shape": "pruned",
    "b": 8,
@@ -3952,6 +4840,195 @@
   },
   {
    "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 8,
+   "lifetime": 6926,
+   "keygen": 49152,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 884,
+   "keygen_rounds": 2653,
+   "prep_rounds": 3537,
+   "ledger_prep": 76131,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 0.09142272,
+   "prep_mb": 91.42458,
+   "fors": {
+    "lifetime": 7186,
+    "prep": 25601,
+    "prep_mb": 47.61786,
+    "prep_rounds": 885,
+    "ledger_prep": 78794,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 10,
+   "lifetime": 26080,
+   "keygen": 196608,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 884,
+   "keygen_rounds": 2653,
+   "prep_rounds": 3537,
+   "ledger_prep": 76614,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 0.36569088,
+   "prep_mb": 91.42458,
+   "fors": {
+    "lifetime": 27260,
+    "prep": 25601,
+    "prep_mb": 47.61786,
+    "prep_rounds": 885,
+    "ledger_prep": 79277,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 12,
+   "lifetime": 98480,
+   "keygen": 786432,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 884,
+   "keygen_rounds": 2653,
+   "prep_rounds": 3537,
+   "ledger_prep": 78066,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 1.46276352,
+   "prep_mb": 91.42458,
+   "fors": {
+    "lifetime": 103200,
+    "prep": 25601,
+    "prep_mb": 47.61786,
+    "prep_rounds": 885,
+    "ledger_prep": 80729,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 13,
+   "lifetime": 191200,
+   "keygen": 1572864,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 884,
+   "keygen_rounds": 2653,
+   "prep_rounds": 3537,
+   "ledger_prep": 79089,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 2.92552704,
+   "prep_mb": 91.42458,
+   "fors": {
+    "lifetime": 201300,
+    "prep": 25601,
+    "prep_mb": 47.61786,
+    "prep_rounds": 885,
+    "ledger_prep": 81752,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 14,
+   "lifetime": 371400,
+   "keygen": 3145728,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 884,
+   "keygen_rounds": 2653,
+   "prep_rounds": 3537,
+   "ledger_prep": 81025,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 5.85105408,
+   "prep_mb": 91.42458,
+   "fors": {
+    "lifetime": 392100,
+    "prep": 25601,
+    "prep_mb": 47.61786,
+    "prep_rounds": 885,
+    "ledger_prep": 83688,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "pruned",
+   "b": 20,
+   "lifetime": 19830000,
+   "keygen": 201326592,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 884,
+   "keygen_rounds": 2653,
+   "prep_rounds": 3537,
+   "ledger_prep": 324961,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 374.46746112,
+   "prep_mb": 91.42458,
+   "fors": {
+    "lifetime": 21240000,
+    "prep": 25601,
+    "prep_mb": 47.61786,
+    "prep_rounds": 885,
+    "ledger_prep": 327624,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "BLAKE2s",
+   "h": 20,
+   "shape": "layered",
+   "b": 20,
+   "lifetime": 19830000,
+   "keygen": 49152,
+   "prep": 73729,
+   "grind": 1048576,
+   "and_depth": 884,
+   "keygen_rounds": 2653,
+   "prep_rounds": 3537,
+   "ledger_prep": 136766,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 0.09142272,
+   "prep_mb": 137.13594,
+   "fors": {
+    "lifetime": 21240000,
+    "prep": 50177,
+    "prep_mb": 93.32922,
+    "prep_rounds": 2653,
+    "ledger_prep": 139429,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "BLAKE2s",
    "h": 22,
    "shape": "pruned",
    "b": 8,
@@ -4703,6 +5780,195 @@
     "prep_mb": 413.30874,
     "prep_rounds": 2653,
     "ledger_prep": 356744,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 8,
+   "lifetime": 6926,
+   "keygen": 49152,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 1607,
+   "keygen_rounds": 4822,
+   "prep_rounds": 6429,
+   "ledger_prep": 76131,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 0.138688512,
+   "prep_mb": 138.691333625,
+   "fors": {
+    "lifetime": 7186,
+    "prep": 25601,
+    "prep_mb": 72.236421625,
+    "prep_rounds": 1608,
+    "ledger_prep": 78793,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 10,
+   "lifetime": 26080,
+   "keygen": 196608,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 1607,
+   "keygen_rounds": 4822,
+   "prep_rounds": 6429,
+   "ledger_prep": 76614,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 0.554754048,
+   "prep_mb": 138.691333625,
+   "fors": {
+    "lifetime": 27260,
+    "prep": 25601,
+    "prep_mb": 72.236421625,
+    "prep_rounds": 1608,
+    "ledger_prep": 79276,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 12,
+   "lifetime": 98480,
+   "keygen": 786432,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 1607,
+   "keygen_rounds": 4822,
+   "prep_rounds": 6429,
+   "ledger_prep": 78066,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 2.219016192,
+   "prep_mb": 138.691333625,
+   "fors": {
+    "lifetime": 103200,
+    "prep": 25601,
+    "prep_mb": 72.236421625,
+    "prep_rounds": 1608,
+    "ledger_prep": 80728,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 13,
+   "lifetime": 191200,
+   "keygen": 1572864,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 1607,
+   "keygen_rounds": 4822,
+   "prep_rounds": 6429,
+   "ledger_prep": 79089,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 4.438032384,
+   "prep_mb": 138.691333625,
+   "fors": {
+    "lifetime": 201300,
+    "prep": 25601,
+    "prep_mb": 72.236421625,
+    "prep_rounds": 1608,
+    "ledger_prep": 81751,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 14,
+   "lifetime": 371400,
+   "keygen": 3145728,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 1607,
+   "keygen_rounds": 4822,
+   "prep_rounds": 6429,
+   "ledger_prep": 81025,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 8.876064768,
+   "prep_mb": 138.691333625,
+   "fors": {
+    "lifetime": 392100,
+    "prep": 25601,
+    "prep_mb": 72.236421625,
+    "prep_rounds": 1608,
+    "ledger_prep": 83687,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "pruned",
+   "b": 20,
+   "lifetime": 19830000,
+   "keygen": 201326592,
+   "prep": 49153,
+   "grind": 1048576,
+   "and_depth": 1607,
+   "keygen_rounds": 4822,
+   "prep_rounds": 6429,
+   "ledger_prep": 324961,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 568.068145152,
+   "prep_mb": 138.691333625,
+   "fors": {
+    "lifetime": 21240000,
+    "prep": 25601,
+    "prep_mb": 72.236421625,
+    "prep_rounds": 1608,
+    "ledger_prep": 327623,
+    "device_online": 288
+   }
+  },
+  {
+   "hash": "SHA-256",
+   "h": 20,
+   "shape": "layered",
+   "b": 20,
+   "lifetime": 19830000,
+   "keygen": 49152,
+   "prep": 73729,
+   "grind": 1048576,
+   "and_depth": 1607,
+   "keygen_rounds": 4822,
+   "prep_rounds": 6429,
+   "ledger_prep": 136766,
+   "device_online": 541,
+   "ledger_prepared": 16,
+   "ledger_grind": 65536,
+   "keygen_gb": 0.138688512,
+   "prep_mb": 208.035589625,
+   "fors": {
+    "lifetime": 21240000,
+    "prep": 50177,
+    "prep_mb": 141.580677625,
+    "prep_rounds": 4822,
+    "ledger_prep": 139428,
     "device_online": 288
    }
   },

@@ -51,8 +51,8 @@ A SPHINCS-style scheme with four toggles, 48 configurations in all. Its componen
 
 \paragraph{The toggles.}
 \begin{description}[leftmargin=1.2em]
-  \item[T1, lifetime.] The height $h\in\{22,24,26,28\}$ of the index, for lifetimes of about $2^{26}$, $2^{28}$,
-        $2^{30}$ and $2^{32}$ signatures: the full key lasts $N\approx20\cdot2^h$ signatures, proved (forest: 91 to 98\% of
+  \item[T1, lifetime.] The height $h\in\{20,22,24,26,28\}$ of the index, for lifetimes of about $2^{24}$, $2^{26}$,
+        $2^{28}$, $2^{30}$ and $2^{32}$ signatures: the full key lasts $N\approx20\cdot2^h$ signatures, proved (forest: 88 to 98\% of
         the cover attack's $21.45\cdot2^h$; \cref{sec:lifetimes}).
   \item[T2, shape.] \emph{Pruned}~\cite{conduition}: one tree of height $h$; key generation builds only a kept subtree
         of $2^b$ leaves and replaces the $h-b$ siblings above it by pseudorandom surrogate nodes. The signer grinds
@@ -62,16 +62,16 @@ A SPHINCS-style scheme with four toggles, 48 configurations in all. Its componen
   \item[T3, hash.] Keccak-256, BLAKE2s or SHA-256.
   \item[T4, FTS.] The \emph{two-level WOTS forest} of \cref{sec:twolevel}, the candidate (the figures below are
         for it unless a table also gives FORS), or \emph{FORS}, 25 trees of height 10. Both are proved in Lean, each
-        with its own 32 lifetimes. FORS signatures are 37\% larger with one tree (25\% layered), and its threshold
+        with its own 39 lifetimes. FORS signatures are 37\% larger with one tree (25\% layered), and its threshold
         preprocessing is about half with one tree (\cref{sec:twolevel}).
 \end{description}
 
 \begin{center}
-\begin{tabular}{lcccc}
+\begin{tabular}{lccccc}
   \toprule
-  $h$ & 22 & 24 & 26 & 28 \\
+  $h$ & 20 & 22 & 24 & 26 & 28 \\
   \midrule
-  layered: layer heights, top first & $10+6+6$ & $10+7+7$ & $10+8+8$ & $10+9+9$ \\
+  layered: layer heights, top first & $8+6+6$ & $10+6+6$ & $10+7+7$ & $10+8+8$ & $10+9+9$ \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -110,6 +110,8 @@ verification cost of the full key of its height. Throughout, costs are rounded u
   $h$ & shape & size (bytes) & Keccak-256 & BLAKE2s & SHA-256 \\
   \midrule
   \multicolumn{6}{l}{\emph{two-level WOTS forest}} \\
+  20 & one tree & 4\,180 & 256 & 292 & 293 \\
+  20 & layered ($8+6+6$) & 6\,236 & 402 & 456 & 457 \\
   22 & one tree & 4\,212 & 258 & 294 & 295 \\
   22 & layered ($10+6+6$) & 6\,268 & 404 & 458 & 459 \\
   24 & one tree & 4\,244 & 260 & 296 & 297 \\
@@ -120,6 +122,8 @@ verification cost of the full key of its height. Throughout, costs are rounded u
   28 & layered ($10+9+9$) & 6\,364 & 410 & 464 & 465 \\
   \midrule
   \multicolumn{6}{l}{\emph{FORS, $k=25$, $a=10$}} \\
+  20 & one tree & 5\,764 & 351 & 369 & 369 \\
+  20 & layered ($8+6+6$) & 7\,820 & 497 & 533 & 533 \\
   22 & one tree & 5\,796 & 353 & 371 & 371 \\
   22 & layered ($10+6+6$) & 7\,852 & 499 & 535 & 535 \\
   24 & one tree & 5\,828 & 355 & 373 & 373 \\
@@ -141,9 +145,9 @@ Proved in Lean~\cite{proofs}, in the random-oracle model, for any hash (SHA-256'
 re-encoding, argued in the proofs' documentation): if the whole game makes $q$ hash
 queries in total (the adversary's, and those of key generation, signing and verification), a forgery has
 probability at most $q\cdot2^{-127}$, up to the
-signature limits below. One proof, for any height, shape and kept subtree height, gives the 32 limits, each with its
-certificate checked by the Lean kernel; the size and the three verification costs of each of the 8 shapes are
-separate theorems; FORS has the same statement and axioms in a second library, with its own 32 limits. Each block of
+signature limits below. One proof, for any height, shape and kept subtree height, gives the 39 limits, each with its
+certificate checked by the Lean kernel; the size and the three verification costs of each of the 10 shapes are
+separate theorems; FORS has the same statement and axioms in a second library, with its own 39 limits. Each block of
 the table gives the limits, then their ratio to that FTS's cover attack (\cref{sec:twolevel}).
 \begin{center}
 \setlength{\tabcolsep}{3.5pt}
@@ -155,24 +159,28 @@ the table gives the limits, then their ratio to that FTS's cover attack (\cref{s
   $h$ & $b=h$ & 20 & 14 & 13 & 12 & 10 & 8 & \\
   \midrule
   \multicolumn{9}{l}{\emph{two-level WOTS forest}} \\
+  20 & $1.98\cdot10^{7}$ & -- & $3.71\cdot10^{5}$ & $1.91\cdot10^{5}$ & $9.84\cdot10^{4}$ & $2.60\cdot10^{4}$ & $6.92\cdot10^{3}$ & $1.98\cdot10^{7}$ \\
   22 & $8.18\cdot10^{7}$ & $2.17\cdot10^{7}$ & $4.05\cdot10^{5}$ & $2.08\cdot10^{5}$ & $1.07\cdot10^{5}$ & $2.84\cdot10^{4}$ & $7.51\cdot10^{3}$ & $8.18\cdot10^{7}$ \\
   24 & $3.36\cdot10^{8}$ & $2.38\cdot10^{7}$ & $4.41\cdot10^{5}$ & $2.26\cdot10^{5}$ & $1.16\cdot10^{5}$ & $3.08\cdot10^{4}$ & $8.15\cdot10^{3}$ & $3.36\cdot10^{8}$ \\
   26 & $1.38\cdot10^{9}$ & $2.60\cdot10^{7}$ & $4.80\cdot10^{5}$ & $2.46\cdot10^{5}$ & $1.26\cdot10^{5}$ & $3.34\cdot10^{4}$ & $8.83\cdot10^{3}$ & $1.38\cdot10^{9}$ \\
   28 & $5.63\cdot10^{9}$ & $2.83\cdot10^{7}$ & $5.22\cdot10^{5}$ & $2.67\cdot10^{5}$ & $1.37\cdot10^{5}$ & $3.61\cdot10^{4}$ & $9.54\cdot10^{3}$ & $5.63\cdot10^{9}$ \\
   \midrule
   \multicolumn{9}{l}{\emph{ratio to the cover attack}} \\
+  20 & 88.2\% & -- & 83.4\% & 82.6\% & 81.9\% & 80.6\% & 79.5\% & 88.2\% \\
   22 & 91.0\% & 89.2\% & 84.3\% & 83.6\% & 82.8\% & 81.5\% & 80.2\% & 91.0\% \\
   24 & 93.5\% & 90.3\% & 85.2\% & 84.4\% & 83.7\% & 82.3\% & 81.1\% & 93.5\% \\
   26 & 95.9\% & 91.3\% & 86.1\% & 85.4\% & 84.7\% & 83.2\% & 81.9\% & 95.9\% \\
   28 & 97.8\% & 92.1\% & 87.1\% & 86.3\% & 85.4\% & 83.9\% & 82.6\% & 97.8\% \\
   \midrule
   \multicolumn{9}{l}{\emph{FORS, $k=25$, $a=10$}} \\
+  20 & $2.12\cdot10^{7}$ & -- & $3.92\cdot10^{5}$ & $2.01\cdot10^{5}$ & $1.03\cdot10^{5}$ & $2.72\cdot10^{4}$ & $7.18\cdot10^{3}$ & $2.12\cdot10^{7}$ \\
   22 & $8.69\cdot10^{7}$ & $2.30\cdot10^{7}$ & $4.24\cdot10^{5}$ & $2.17\cdot10^{5}$ & $1.11\cdot10^{5}$ & $2.94\cdot10^{4}$ & $7.75\cdot10^{3}$ & $8.69\cdot10^{7}$ \\
   24 & $3.54\cdot10^{8}$ & $2.49\cdot10^{7}$ & $4.59\cdot10^{5}$ & $2.35\cdot10^{5}$ & $1.20\cdot10^{5}$ & $3.17\cdot10^{4}$ & $8.35\cdot10^{3}$ & $3.54\cdot10^{8}$ \\
   26 & $1.42\cdot10^{9}$ & $2.70\cdot10^{7}$ & $4.96\cdot10^{5}$ & $2.54\cdot10^{5}$ & $1.30\cdot10^{5}$ & $3.43\cdot10^{4}$ & $9.01\cdot10^{3}$ & $1.42\cdot10^{9}$ \\
   28 & $5.70\cdot10^{9}$ & $2.92\cdot10^{7}$ & $5.36\cdot10^{5}$ & $2.75\cdot10^{5}$ & $1.40\cdot10^{5}$ & $3.70\cdot10^{4}$ & $9.72\cdot10^{3}$ & $5.70\cdot10^{9}$ \\
   \midrule
   \multicolumn{9}{l}{\emph{ratio to the cover attack}} \\
+  20 & 93.8\% & -- & 88.7\% & 87.9\% & 86.9\% & 85.5\% & 83.9\% & 93.8\% \\
   22 & 95.9\% & 94.4\% & 89.3\% & 88.4\% & 87.6\% & 86.0\% & 84.4\% & 95.9\% \\
   24 & 97.7\% & 95.0\% & 90.1\% & 89.2\% & 88.3\% & 86.5\% & 84.8\% & 97.7\% \\
   26 & 98.4\% & 95.6\% & 90.6\% & 89.7\% & 88.8\% & 87.2\% & 85.4\% & 98.4\% \\
@@ -387,7 +395,7 @@ the $2k$ nodes below the roots), $k=25$ trees of height $a=10$ in every configur
 not depend on the pruning; its digest is $h+250$ bits, from two hash calls. 25 is the fewest trees for which FORS
 lasts as long as the forest under the cover attack with the full key; over all configurations its cover lifetime is
 97.8--100.7\% of the forest's (\texttt{scripts/scheme.py}). Its proved lifetimes (\cref{sec:lifetimes}) are
-84--98\% of its cover attack, and 1--6\% above the forest's in every configuration. At $h=26$, full key,
+84--98\% of its cover attack, and 1--7\% above the forest's in every configuration. At $h=26$, full key,
 Keccak-256, in permutations (preprocessing: the hashes of the FTS inside the threshold MPC):
 \begin{center}
 \setlength{\tabcolsep}{4pt}

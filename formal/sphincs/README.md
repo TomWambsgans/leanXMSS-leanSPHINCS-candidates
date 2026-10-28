@@ -2,13 +2,13 @@
 
 **Status: the leanSphincs signer has 127 bits of classical SUF-CMA security in the random-oracle
 model in each of its configurations, at the signature limits below: one theorem per height, shape and kept
-subtree height, 32 in all, stated together in [Main.lean](LeanForest/Main.lean); the FORS variant has its own 32 in
+subtree height, 39 in all, stated together in [Main.lean](LeanForest/Main.lean); the FORS variant has its own 39 in
 [FORS/Main.lean](FORS/Main.lean).** The
 proof uses only `propext`, `Classical.choice` and `Quot.sound`: [Axioms.lean](LeanForest/Axioms.lean)
 pins the main theorems to their axioms and checks that no declaration of the library uses another.
 
 **To audit the statement**, read three files: [Main.lean](LeanForest/Main.lean) (what is proved,
-`Secure127`, and the 32 theorems, e.g. `h24_pruned12`, then `requestedSecurity`, which collects
+`Secure127`, and the 39 theorems, e.g. `h24_pruned12`, then `requestedSecurity`, which collects
 them), [Scheme.lean](LeanForest/Scheme.lean) (the scheme and its parameters, `Params.pruned` and
 `Params.layered`) and [Statement.lean](LeanForest/Statement.lean) (the SUF-CMA game). Every
 other file is proof: [PROOF.md](PROOF.md) maps it.
@@ -35,9 +35,9 @@ probability at most q / 2^127.
 
 The proof is the same for every hash: the random oracle stands for Keccak-256, BLAKE2s or SHA-256,
 and only the costs depend on the hash ([Scheme/VerificationCost.lean](LeanForest/Scheme/VerificationCost.lean),
-[Configurations.lean](LeanForest/Configurations.lean)). So the 24 configurations of the candidate
-(4 heights, 2 shapes, 3 hashes) take 32 lifetime theorems (per height: the full key, six kept subtree
-heights and the layered key, below), 8 size theorems and 24 cost theorems.
+[Configurations.lean](LeanForest/Configurations.lean)). So the 30 configurations of the candidate
+(5 heights, 2 shapes, 3 hashes) take 39 lifetime theorems (per height: the full key, six kept subtree
+heights, five at h = 20, and the layered key, below), 10 size theorems and 30 cost theorems.
 
 The scheme, the digest layout, the codeword table, the costs and the forest are documented in
 [FOREST.md](FOREST.md); the proof route and the modeling differences with the Rust code are in
@@ -48,10 +48,11 @@ in [FORS.md](FORS.md).
 ## Proved lifetimes
 
 Signature limits N with 127 bits (one theorem each in [Main.lean](LeanForest/Main.lean), e.g.
-`h24_pruned12`); layered keys: 10 + 6 + 6, 10 + 7 + 7, 10 + 8 + 8 and 10 + 9 + 9.
+`h24_pruned12`); layered keys: 8 + 6 + 6, 10 + 6 + 6, 10 + 7 + 7, 10 + 8 + 8 and 10 + 9 + 9.
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20 | 19,830,000 | — | 371,400 | 191,200 | 98,480 | 26,080 | 6,926 | 19,830,000 |
 | 22 | 81,860,000 | 21,760,000 | 405,300 | 208,500 | 107,200 | 28,410 | 7,514 | 81,860,000 |
 | 24 | 336,700,000 | 23,830,000 | 441,500 | 226,800 | 116,600 | 30,810 | 8,154 | 336,700,000 |
 | 26 | 1,381,000,000 | 26,030,000 | 480,100 | 246,900 | 126,900 | 33,480 | 8,830 | 1,381,000,000 |
@@ -62,6 +63,7 @@ the best known attack, with the WOTS+C unit-neighbour route, is 91–100% of it;
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20 | 88.2% | — | 83.4% | 82.6% | 81.9% | 80.6% | 79.5% | 88.2% |
 | 22 | 91.0% | 89.2% | 84.3% | 83.6% | 82.8% | 81.5% | 80.2% | 91.0% |
 | 24 | 93.5% | 90.3% | 85.2% | 84.4% | 83.7% | 82.3% | 81.1% | 93.5% |
 | 26 | 95.9% | 91.3% | 86.1% | 85.4% | 84.7% | 83.2% | 81.9% | 95.9% |
@@ -78,11 +80,12 @@ for every table of steps, as if the forger knew them.
 ## Proved lifetimes, FORS variant
 
 The same statement for the `FORS` library ([FORS.md](FORS.md)): one
-theorem per height, shape and kept subtree height in [Main.lean](FORS/Main.lean), 32 in all, collected by
+theorem per height, shape and kept subtree height in [Main.lean](FORS/Main.lean), 39 in all, collected by
 `requestedSecurity`, with [Axioms.lean](FORS/Axioms.lean) pinning them to the same three axioms.
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20 | 21,240,000 | — | 392,100 | 201,300 | 103,200 | 27,260 | 7,186 | 21,240,000 |
 | 22 | 86,910,000 | 23,050,000 | 424,100 | 217,700 | 111,800 | 29,440 | 7,759 | 86,910,000 |
 | 24 | 354,200,000 | 24,970,000 | 459,500 | 235,700 | 120,900 | 31,760 | 8,359 | 354,200,000 |
 | 26 | 1,426,000,000 | 27,030,000 | 496,100 | 254,400 | 130,500 | 34,330 | 9,019 | 1,426,000,000 |

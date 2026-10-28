@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate FORS/Certificates/H*.lean: exact rational certificates for the FORS lifetimes.
 
-A configuration is a total height H (22, 24, 26, 28), a shape (pruned: one tree with a kept subtree
+A configuration is a total height H (20, 22, 24, 26, 28), a shape (pruned: one tree with a kept subtree
 of height B; layered: the hypertree of SPLITS, nothing pruned, B = H) and a signature limit N. Its
 FTS is FORS with `k = 25` trees of height `a = 10` in every configuration (`scripts/scheme.py` `fors`).
 
@@ -67,7 +67,7 @@ FA = 10             # a: the height of a FORS tree, the same in every configurat
 FK = 25             # k: the number of FORS trees, the same in every configuration
 
 # The layer split of a layered key, top layer first (crates/sphincs `layered_heights`).
-SPLITS = {22: (10, 6, 6), 24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}
+SPLITS = {20: (8, 6, 6), 22: (10, 6, 6), 24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}
 
 def set_config(h, shape='pruned', b=None):
     """Select the height and the shape every function below works at."""
@@ -625,13 +625,14 @@ def emit(certs, path):
 # queries), by height and kept subtree height (`scripts/scheme.py` `fors_log2_lifetime(h, b, a, k)` at
 # k = 25, a = 10). A layered key is attacked as the full key of the same height.
 ATTACK = {
+    20: {20: 22652451, 14: 441810, 13: 229065, 12: 118744, 10: 31896, 8: 8567},
     22: {22: 90609779, 20: 24410410, 14: 474947, 13: 246156, 12: 127558, 10: 34240, 8: 9190},
     24: {24: 362439088, 20: 26282430, 14: 510203, 13: 264337, 12: 136933, 10: 36733, 8: 9853},
     26: {26: 1449756325, 20: 28275246, 14: 547704, 13: 283674, 12: 146903, 10: 39383, 8: 10558},
     28: {28: 5799025272, 20: 30396021, 14: 587586, 13: 304237, 12: 157505, 10: 42201, 8: 11307},
 }
 
-HEIGHTS = (22, 24, 26, 28)
+HEIGHTS = (20, 22, 24, 26, 28)
 
 def pname(c):
     if c['shape'] == 'layered':
@@ -683,6 +684,14 @@ def emit_lifetimes(certs, path):
 # Parameter sets of pruned keys, by height: (b, N, lx), b = h being the full key. N is the largest limit that
 # `maxn` certified on the grid of lx (step 1/8), rounded down to four significant digits.
 PARAMS = {
+    20: [
+        (20, 21240000, -8.25),
+        (14, 392100, -7.375),
+        (13, 201300, -7.25),
+        (12, 103200, -7.125),
+        (10, 27260, -7.0),
+        (8, 7186, -6.875),
+    ],
     22: [
         (22, 86910000, -8.75),
         (20, 23050000, -8.375),
@@ -724,6 +733,7 @@ PARAMS = {
 # Parameter sets of layered keys, by height: (N, lx). The index is not ground (b = h); the smaller keygen credit
 # of the top layer alone does not move the largest N, which is the full key's.
 LAYERED = {
+    20: (21240000, -8.25),
     22: (86910000, -8.75),
     24: (354200000, -9.125),
     26: (1426000000, -9.75),
