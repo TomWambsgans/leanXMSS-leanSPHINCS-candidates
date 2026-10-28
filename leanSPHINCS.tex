@@ -65,8 +65,8 @@ A SPHINCS-style scheme with four toggles, 60 configurations in all. Its componen
   \item[T4, FTS.] The \emph{two-level WOTS forest} of \cref{sec:twolevel}, the candidate (the figures below are
         for it unless a table also gives FORS), of 8 trees, or \emph{FORS}, 24 trees of height 10; the
         layered keys of $2^{24}$ and $2^{26}$ take a forest of 6 and 7 trees, and FORS of 20 and 23 trees of
-        height 9. Both are proved in Lean, each with its own 39 lifetimes. FORS signatures are 33--34\% larger with
-        one tree (19--22\% layered), and its threshold preprocessing is about half with one tree
+        height 9. Both are proved in Lean, each with its own 39 lifetimes. FORS signatures are 33--34\% larger for
+        pruned keys (19--22\% layered), and its threshold preprocessing is about half for pruned keys
         (\cref{sec:twolevel}).
 \end{description}
 
@@ -82,7 +82,8 @@ A SPHINCS-style scheme with four toggles, 60 configurations in all. Its componen
   \bottomrule
 \end{tabular}
 \end{center}
-The two lower layers add two WOTS$^+$C signatures with their counters, 2\,056 bytes, and 146 Keccak-f permutations
+Against a one-layer key of the same height and FTS, the two lower layers add two WOTS$^+$C signatures with their
+counters, 2\,056 bytes, and 146 Keccak-f permutations
 of verification (164 compressions with BLAKE2s or SHA-256).
 
 \paragraph{Hash inputs.} $\hash$ is truncated to 16 bytes except where noted. Every input is

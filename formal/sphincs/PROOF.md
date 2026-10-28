@@ -197,7 +197,7 @@ coordinates, 60% and 86% for the layered keys with 6 and 7 coordinates, and 79.5
 - Rust's key generation builds the key from one hash of a tag, the configuration and the seed
   (configured_seed in crates/sphincs), so that one seed never gives two configurations the same one-time keys. The model's seed
   is that value, uniform in the random-oracle model; the extra hash is outside the hash-call counts. For
-  Keccak-256 and BLAKE2s its 52-byte input also parses as a model input (P = the tag), so the reduction
+  Keccak-256 and BLAKE2s its 52-byte input (53 with 6 or 7 trees) also parses as a model input (P = the tag), so the reduction
   adds the chance of guessing the 32-byte seed, at most q / 2^256.
 - Strong unforgeability carries over to byte strings because Rust's Signature::from_bytes and
   to_bytes are inverse bijections at the configuration's length: fixed widths, no padding, every

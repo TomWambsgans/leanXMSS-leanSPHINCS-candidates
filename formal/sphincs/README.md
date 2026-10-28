@@ -16,7 +16,7 @@ other file is proof: [PROOF.md](PROOF.md) maps it.
 `LeanForest/` models the candidate for every height `h ≤ 28`, number of layers `d` and kept subtree
 height `b` (`Params`, [Scheme.lean](LeanForest/Scheme.lean)): an index of `h` bits; a hypertree of
 `d` layers of WOTS+C keys (64 chains of four positions, target sum 128), whose layers below the top
-share one height `ℓ ≥ 6` (`lowerHeight`) and whose top layer has the rest; a two-level WOTS forest of `T ≤ 8` coordinates (`forestCoords`) as the few-time signature; one
+share one height `ℓ ≥ 6` (`lowerHeight`) and whose top layer has the rest; a two-level WOTS forest of `T ≤ 8` trees (its coordinates, `forestCoords`) as the few-time signature; one
 message-digest call; and pruning of the top layer with surrogate siblings. A pruned key is `d = 1`,
 `b ≤ h` (`b = h` is the full key); a layered key keeps everything, `b = h`, `d ≥ 2`. No tree of the
 forest has a root hash and the forest key is not hashed: the WOTS+C encoding of the bottom layer
@@ -50,7 +50,7 @@ in [FORS.md](FORS.md).
 
 Signature limits N with 127 bits (one theorem each in [Main.lean](LeanForest/Main.lean), e.g.
 `h24_pruned12`). A pruned key has height h = log2(lifetime) − 4; the layered key of each lifetime is 10 + 7 + 7
-(h = 24) up to 2^28, then 10 + 8 + 8 and 10 + 9 + 9, with a forest of 6 and 7 coordinates at 2^24 and 2^26 (8
+(h = 24) up to 2^28, then 10 + 8 + 8 and 10 + 9 + 9, with a forest of 6 and 7 trees at 2^24 and 2^26 (8
 otherwise).
 
 | lifetime | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
@@ -72,9 +72,9 @@ the best known attack, with the WOTS+C unit-neighbour route, is 91–100% of it;
 | 2^30 | 26 | 95.9% | 91.3% | 86.1% | 85.4% | 84.7% | 83.2% | 81.9% | 95.9% |
 | 2^32 | 28 | 97.8% | 92.1% | 87.1% | 86.3% | 85.4% | 83.9% | 82.6% | 97.8% |
 
-The full key lasts about 21.45 · 2^h signatures in the cover model; a layered key of 8 coordinates has the
+The full key lasts about 21.45 · 2^h signatures in the cover model; a layered key of 8 trees has the
 same limit, since the proof only charges its smaller key generation. The lighter layered keys of 2^24 and 2^26
-are proved further from their cover attack (60.0% and 85.6%), still well above 2^24 and 2^26. A pruned key loses less than its
+are proved further from their cover attack than the 8-tree layered keys (60.0% and 85.6%, against 93.5–97.8%), still well above 2^24 and 2^26. A pruned key loses less than its
 pruning factor 2^(h−b): the forger must land in the kept subtree as well.
 
 These figures do not depend on how the signer picks its randomizer. The proof fixes the steps δ of

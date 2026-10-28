@@ -247,7 +247,7 @@ theorem superPayload_length (tops : SubIdx → Digest × Digest) : (superPayload
 
 end Coord
 
-/-- The forest recovery: 8 coordinates. The key is not hashed: the encoding absorbs it. -/
+/-- The forest recovery: `T` coordinates. The key is not hashed: the encoding absorbs it. -/
 @[simp] theorem compressions_forestRecover (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (marks : Coord → CoordMark) (opening : Coord → CoordOpening) :
     compressions H f (forestRecover parameter index marks opening) = forestCoords * coordCost H := by

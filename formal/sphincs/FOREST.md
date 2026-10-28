@@ -24,7 +24,7 @@ for the deterministic Lean signer in every configuration of [README.md](README.m
 
 | b | proved N | cover attack | best known attack | proved / best known |
 | ---: | ---: | ---: | ---: | ---: |
-| 24 (full tree, and layered) | 336,700,000 | 3.59915e8 | 3.60e8 | 94% |
+| 24 (full tree, and layered with 8 trees) | 336,700,000 | 3.59915e8 | 3.60e8 | 94% |
 | 20 | 23,830,000 | 2.63862e7 | 2.62e7 | 91% |
 | 14 | 441,500 | 5.18006e5 | 5.00e5 | 88% |
 | 13 | 226,800 | 2.68735e5 | 2.56e5 | 89% |
@@ -122,7 +122,7 @@ counts the layers from the bottom (`layerByte`); the forest calls, the digest an
 outside the trees have layer and tree 0, and so has every call of a one-layer key. There is no exception: the parameter
 derivation (under `P = 0`), the randomizer base, the seed derivations and the surrogates have the same
 address format. `Th` keeps the first 16 bytes of the hash. The public key is `root ‖ P`, 32 bytes.
-Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`, chain `i < 6`,
+Forest positions: tree `c < T`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`, chain `i < 6`,
 `idx` the `h`-bit instance. A seed derivation of chain starts is addressed by a pair of chains `t`
 (chains `2t` and `2t + 1`): `t < 32` in a WOTS+C key, `t < 3` in a forest WOTS key.
 
@@ -146,8 +146,8 @@ Forest positions: tree `c < 8`, leaf `s < 16`, subtree `j < 2`, WOTS key `a < 8`
 
 With Keccak-256 a call of `n` bytes costs `n / 136 + 1` Keccak-f permutations: a chain step is 48 bytes,
 a node 64, a forest WOTS-key leaf 128, a tree leaf 96 and the digest 80 (1 permutation each), the
-encoding 292 (3: the counter falls in the last block, so the signer absorbs the key once and pays
-one permutation per counter), a one-time leaf 1,056 (8). The addresses of a subtree root (type 17,
+encoding 292 with 8 trees (3: the counter falls in the last block, so the signer absorbs the key once and pays
+one permutation per counter; 228 and 260 bytes, 2 permutations, with 6 and 7 trees), a one-time leaf 1,056 (8). The addresses of a subtree root (type 17,
 level 3), of a tree root (type 19, level 4) and of the former key hash (type 20, `roots`) exist in
 `HashDomain` and no algorithm uses them.
 

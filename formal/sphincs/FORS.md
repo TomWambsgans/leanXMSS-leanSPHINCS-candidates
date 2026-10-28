@@ -13,7 +13,7 @@ in `(k, a)` and only the certificates fix them: `a = 10` and `k = 24`, the same 
 of a height so that verification does not depend on it (24 is the fewest trees whose cover attack
 reaches the `2^(h+4)` signatures of each lifetime), except the layered keys of the lifetimes `2^24`
 and `2^26`, both at `h = 24`: 20 and 23 trees of height 9, the fewest of height 9 whose certificate
-reaches `2^24` and `2^26` (19 trees certify only about 14.6 million; `scripts/scheme.py`, `fors`). A leaf is the hash of one
+reaches `2^24` and `2^26` (19 trees certify only about 14.6 million; `scripts/fors_certificates.py`, above its UNIFORM table). A leaf is the hash of one
 secret, and one hash of the seed gives the two secrets of a sibling pair (`leafPair`), as everywhere
 else in the scheme.
 
@@ -70,9 +70,9 @@ The layered keys with lighter FORS, at `h = 24` (10 + 7 + 7):
 | 20 trees of height 9 | `2^24` | 24,410,000 | 30,900,666 | 79.0% |
 | 23 trees of height 9 | `2^26` | 71,650,000 | 82,781,654 | 86.6% |
 
-With about one signature per instance, their limits are a smaller share of the cover attack than
-with 24 trees of height 10. Every other limit is a larger share of its own cover attack than the
-forest's is of the forest's (79.5–97.8%, [README.md](README.md)).
+With 1.5 and 4.3 signatures per instance, their limits are a smaller share of the cover attack than
+the 24×10 layered key of the same height (97.2%). Every limit, these two included, is a larger share of its
+own cover attack than the forest's is of the forest's (79.5–97.8%, [README.md](README.md)).
 
 ## What the proof changes
 

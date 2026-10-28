@@ -165,7 +165,7 @@ class Costs:
                           + self.super_hash + (TOP_PATH - 1) * self.node)
         if fts is None:
             self.fts_sign, self.fts_verify, self.fts_nodes = self.forest_sign, coords * self.per_coord, coords * 2
-            # opening the forest walks again the chains of the 16 WOTS keys it opens from their secrets, up to below
+            # opening the forest walks again the chains of the 2 * coords WOTS keys it opens from their secrets, up to below
             # the tops (as the Rust signer does)
             self.fts_open = coords * SUBS * (CHAINS * STEPS - DIGIT_SUM) * self.step
         else:
@@ -305,8 +305,8 @@ def main():
                       f"{fmt(C.keygen(h, shape, b)):>7}  {life}")
         return
 
-    print(f"leanSphincs candidate: a two-level WOTS forest of {COORDS} coordinates (fewer for the layered keys of "
-          f"2^24 and 2^26) under WOTS+C with {V} chains of "
+    print(f"leanSphincs candidate: a two-level WOTS forest of {COORDS} trees (fewer for the layered keys of "
+          f"2^24 and 2^26: 6 and 7 trees) under WOTS+C with {V} chains of "
           f"length {Q} and T={T}; {math.log2(n_sum(V, Q, T)):.2f} bits of valid encodings, expected "
           f"{1 / ALPHA:.0f} counters; costs in compressions (Keccak-f permutations for Keccak-256)")
     for H in hashes:
@@ -529,7 +529,7 @@ def threshold(lts):
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
     opened = COORDS * SUBS
     print(f"threshold (Keccak-256): {opened * sum(nonzero) / len(nonzero):.2f} forest chain values opened per "
-          f"signature on average, at most {opened * max(nonzero)}")
+          f"signature on average, at most {opened * max(nonzero)} (with {COORDS} trees)")
     for L in lts:
         for shape in ("pruned", "layered"):
             h, coords = (L - 4, COORDS) if shape == "pruned" else UNIFORM[L][:2]
