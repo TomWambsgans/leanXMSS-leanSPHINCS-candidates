@@ -293,7 +293,7 @@ def main():
         for H in hashes:
             C = Costs(H)
             for h in x.h:
-                for shape, b in [("pruned", h)] + [("pruned", bb) for bb in x.pruned] + [("layered", None)]:
+                for shape, b in [("pruned", h)] + [("pruned", bb) for bb in x.pruned if bb < h] + [("layered", None)]:
                     proved, attack = lifetimes(h, shape, b)
                     label = shape if shape == "layered" else ("full" if b == h else f"pruned {b}")
                     life = "not certified" if proved is None else f"{proved:>11,} ({fmt(attack) if attack else '?'})"
@@ -316,7 +316,7 @@ def main():
         for h in x.h:
             for shape in ("pruned", "layered"):
                 ls = layers(h, shape)
-                bs = [h] + x.pruned if shape == "pruned" else [None]
+                bs = [h] + [bb for bb in x.pruned if bb < h] if shape == "pruned" else [None]
                 desc = "one tree" if shape == "pruned" else "layers " + "+".join(map(str, ls))
                 print(f"  h={h} {shape} ({desc}): signature {size(h, shape):,} B, verification {C.verify(h, shape)}")
                 for b in bs:
@@ -365,7 +365,7 @@ def site_data():
         C = Costs(H)
         ands = ANDS[H.name]
         for h in HEIGHTS:
-            for shape, b in [("pruned", bb) for bb in PRUNED] + [("layered", h)]:
+            for shape, b in [("pruned", bb) for bb in PRUNED if bb < h] + [("layered", h)]:
                 ls = layers(h, shape)
                 keygen, prep = C.mpc_keygen(h, shape, b), C.mpc_prep(h, shape)
                 # the hardware wallet computes the whole instance, and signs it with WOTS+C

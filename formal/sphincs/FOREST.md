@@ -211,7 +211,7 @@ leaf and 24 nodes). The forest is 20 per tree (`compressions_coordRecover`: in e
 subtrees 5 chain steps, 1 for the WOTS-key leaf and 2 folds; 1 for the tree leaf; 3 folds), times 8.
 The key is not hashed. Each further layer adds 1 for the encoding of a root, 64 chain steps and 8 for
 the leaf; the path nodes of all layers are `h` in total. `Configurations.lean` states the size
-and the three costs of each of the 8 shapes.
+and the three costs of each of the 10 shapes.
 
 Hash calls of the signer (`GraphView/HashCalls.lean`, `GraphView/Cost.lean`; exact
 counts on any oracle):

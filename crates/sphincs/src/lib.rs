@@ -52,8 +52,8 @@ pub const TARGET_SUM: usize = 128;
 pub const HEIGHTS: [usize; 5] = [20, 22, 24, 26, 28];
 /// The tallest height: the digest's index field and the address fields are sized for it.
 pub const MAX_H: usize = 28;
-/// The kept subtree heights `b < h` of a pruned key besides the full key `b = h`: those whose
-/// lifetime is proved in Lean (`PRUNED` in scripts/scheme.py).
+/// The kept subtree heights `b` of a pruned key besides the full key `b = h`: those whose
+/// lifetime is proved in Lean (`PRUNED` in scripts/scheme.py); `b = 20` at `h = 20` is the full key.
 pub const PRUNED: [usize; 6] = [8, 10, 12, 13, 14, 20];
 
 /// The layer heights of a layered key of height `h`, top layer first: three layers, a top layer of 10

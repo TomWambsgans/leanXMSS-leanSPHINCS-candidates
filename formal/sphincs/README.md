@@ -108,7 +108,7 @@ limit is of the forest's attack.
 | Computed subtree and surrogate path recover the root, at every layer | `Completeness.eval_treeFold_pruned_path`, [Scheme/Pruning](LeanForest/Scheme/Pruning.lean) |
 | Serialized signature length = 2832 + 1028·d + 16·h bytes | `signature_size`, [Scheme/Layout](LeanForest/Scheme/Layout.lean) |
 | An accepted verification costs exactly `verifyCost` compressions of each hash (at most that for any signature) | `Cost.verification_compressions`, [Scheme/VerificationCost](LeanForest/Scheme/VerificationCost.lean) |
-| The size and the three verification costs of each of the 8 shapes | [Configurations](LeanForest/Configurations.lean) |
+| The size and the three verification costs of each of the 10 shapes | [Configurations](LeanForest/Configurations.lean) |
 
 ## Build
 
