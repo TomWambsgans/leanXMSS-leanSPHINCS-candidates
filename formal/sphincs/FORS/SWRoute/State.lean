@@ -4,8 +4,8 @@ import FORS.SmallBudget.SampleEvents
 /-! **The SW route: its state.** The route runs on the small route's comparison (`PotentialA.Ctx`,
 the targeting `tgA` under which second-order inputs are untargeted). This file fixes
 
-* the bad set `BadP` (a decided hit, a WOTS event, a FORS payoff event, two contacts, or a FORS
-  contact at a revealed or near-covered cell) and the weight `weightA` (zero on `BadP`, the
+* the bad set `BadP` (a decided hit, a WOTS event, two contacts, or a FORS contact at a revealed or
+  near cell) and the weight `weightA` (zero on `BadP`, the
   survival weight otherwise);
 * the near cells: `NearLeaf` (a cached landed pair selects the cell and every other tree's leaf
   secret is known) and `NearMiss` (also the cell's own secret is unknown);
@@ -13,7 +13,7 @@ the targeting `tgA` under which second-order inputs are untargeted). This file f
   armed status `ArmedS` and the exponent `expo` (`ρ` unarmed, `2` armed, `+ 64` after a WOTS
   contact, `+ 1` after a FORS contact), the pending two-edge credit `pendA`;
 * the ghost accounts of the route, at the granularity of the interpreted cost steps: `WF` (weight
-  at digest queries), `WC` (weight at FORS leaf queries at cells that are not near-missing), `WA`
+  at digest queries), `WC` (weight at FORS leaf queries whose contact would survive), `WA`
   (weight at the arming moments of the near flag) and `WK` (weight at the steps other than FORS leaf
   queries at which a FORS contact becomes a near or revealed contact). -/
 
@@ -65,18 +65,20 @@ which is a near cell. Monotone along the run. -/
 def NearContact (s : St) : Prop :=
   ∃ f, K.FC s f ∧ (s.known f.inC ≠ none ∨ NearLeaf K root s f.index f.κ f.leaf)
 
-/-- **Dead states**: two distinct WOTS contacts, or two distinct decided FORS contacts. -/
+/-- **Dead states**: two distinct WOTS contacts, two distinct decided FORS contacts, or a WOTS
+contact together with a FORS contact. At most one contact survives with positive weight. -/
 def Dead (s : St) : Prop :=
   (∃ (l : OtsKey) (i : ChainIndex) (v : Digest) (l' : OtsKey) (i' : ChainIndex) (v' : Digest),
       Retained K.p l ∧ Retained K.p l' ∧ v ∈ K.ContactB s l i ∧ v' ∈ K.ContactB s l' i' ∧
         (l, i, v) ≠ (l', i', v')) ∨
-    ∃ f g, f ≠ g ∧ K.FC s f ∧ K.FC s g
+    (∃ f g, f ≠ g ∧ K.FC s f ∧ K.FC s g) ∨ (WContact K s ∧ FContact K s)
 
-/-- **The bad set of the route**: a decided first-order hit, a WOTS event, a FORS contact without
-guess record, two related FORS contacts, a dead state, or a completed FORS contact. -/
+/-- **The bad set of the route**: a decided first-order hit, a WOTS event, a dead state, or a
+completed FORS contact. (A FORS contact without guess record has its secret known, and two related
+FORS contacts are a dead state, so the FORS payoff events are in the bad set.) Monotone along the
+run. -/
 def BadP (s : St) : Prop :=
-  Realized K.tg K.initial s ∨ K.WotsBad s ∨ (∃ f, K.FC s f ∧ ¬Ctx.Recd s f) ∨
-    (∃ f g, f.Rel g ∧ K.FC s f ∧ K.FC s g) ∨ Dead K s ∨ NearContact K root s
+  Realized K.tg K.initial s ∨ K.WotsBad s ∨ Dead K s ∨ NearContact K root s
 
 /-- **The weight of the route**: zero on the bad set, the survival weight otherwise. -/
 noncomputable def weightA (s : St) : ℝ≥0∞ :=
@@ -92,8 +94,8 @@ noncomputable def expo (ρ : ℝ) (flag : Bool) (s : St) : ℝ :=
   (if ArmedS K flag s then 2 else ρ) + (if WContact K s then 64 else 0) + (if FContact K s then 1 else 0)
 
 /-- **The pending two-edge credit**: half a unit per input two steps below the word whose answer is
-no payload one step below. -/
-noncomputable def pendA (s : St) : ℝ≥0∞ := ν / 2 * ((K.UAset s).encard : ℝ≥0∞)
+no payload one step below; none once a WOTS contact exists (then any further contact kills). -/
+noncomputable def pendA (s : St) : ℝ≥0∞ := if WContact K s then 0 else ν / 2 * ((K.UAset s).encard : ℝ≥0∞)
 
 /-! ### Steps -/
 
@@ -113,9 +115,15 @@ noncomputable def payF (s : St) : CostSpec.Domain → ℝ≥0∞
   | .inl (.inr (.inl x)) => if K.tg.digest x then weightA K root s else 0
   | _ => 0
 
-/-- Payment of a FORS leaf query at a cell that is not near-missing: the weight. -/
+/-- **A FORS leaf query whose contact would survive**: its secret is unknown (so the query carries
+its guess record), its cell is not a near cell, and no contact exists yet. Otherwise a contact
+kills the weight. -/
+def SurvivesAt (s : St) (f : FIn) : Prop :=
+  s.known f.inC = none ∧ ¬NearLeaf K root s f.index f.κ f.leaf ∧ ¬FContact K s ∧ ¬WContact K s
+
+/-- Payment of a FORS leaf query whose contact would survive: the weight. -/
 noncomputable def payC (s : St) (input : CostSpec.Domain) : ℝ≥0∞ :=
-  if ∃ f : FIn, input = .inl (.inr (.inl (f.input K.p))) ∧ ¬NearMiss K root s f then weightA K root s else 0
+  if ∃ f : FIn, input = .inl (.inr (.inl (f.input K.p))) ∧ SurvivesAt K root s f then weightA K root s else 0
 
 /-- Booking of an arming moment: the weight. -/
 noncomputable def payA (flag : Bool) (s : St) (input : CostSpec.Domain) : ℝ≥0∞ :=
@@ -183,7 +191,7 @@ theorem acctA_query_bind {α : Type} (input : CostSpec.Domain)
 noncomputable def WF {α : Type} (comp : OracleComp CostSpec α) : ℕ → St → ℝ≥0∞ :=
   acct model (fun s input _ => payF K root s input) comp
 
-/-- **WC**: the expected weight at the FORS leaf queries at cells that are not near-missing. -/
+/-- **WC**: the expected weight at the FORS leaf queries whose contact would survive. -/
 noncomputable def WC {α : Type} (comp : OracleComp CostSpec α) : ℕ → St → ℝ≥0∞ :=
   acct model (fun s input _ => payC K root s input) comp
 
