@@ -4,7 +4,7 @@ import LeanForest.Lifetimes
 # leanSPHINCS: every security theorem
 
 This file states every security theorem of the library: one theorem per height, shape and kept
-subtree, 32 in all, then `requestedSecurity`, which collects them. The proofs live elsewhere
+subtree, 39 in all, then `requestedSecurity`, which collects them. The proofs live elsewhere
 (`Lifetimes.lean`, from the certificates of `Certificates/`); here each one is a single reference,
 so a statement below that is not exactly the one proved does not typecheck.
 
@@ -15,7 +15,7 @@ outputs a message and a signature that verify, other than a pair the signing ora
 every run of the game makes at most `q ≥ 1` hash queries in total (the adversary's, and those of key
 generation, signing and verification), it wins with probability at most `q / 2^127`.
 
-**The parameters** (`Scheme.lean`). Every key has an index of `h` bits, `h ∈ {22, 24, 26, 28}`:
+**The parameters** (`Scheme.lean`). Every key has an index of `h` bits, `h ∈ {20, 22, 24, 26, 28}`:
 * `.pruned (h := h) (b := h) (N := N)`: the **full key**, one tree of height `h`, all built;
 * `.pruned (h := h) (b := b) (N := N)`: a **pruned key**, the same tree, of which key generation
   builds only a subtree of height `b`; the signer grinds its randomizer until the index lands in it;
@@ -37,6 +37,23 @@ def Secure127 (P : Params) : Prop :=
   letI := P
   ∀ q : ℕ, 1 ≤ q → ∀ adversary : Adversary, HasHashQueryBound adversary q →
     forgeAdvantage adversary ≤ q / ((2 ^ 127 : ℕ) : ℝ≥0∞)
+
+/-! ## h = 20 (layered: 8 + 6 + 6) -/
+
+/-- Full key: 19,830,000 signatures. -/
+theorem h20_full : Secure127 (.pruned (h := 20) (b := 20) (N := 19_830_000)) := Lifetimes.h20_full_bits
+/-- Pruned key, kept subtree of height 14: 371,400 signatures. -/
+theorem h20_pruned14 : Secure127 (.pruned (h := 20) (b := 14) (N := 371_400)) := Lifetimes.h20_pruned14_bits
+/-- Pruned key, kept subtree of height 13: 191,200 signatures. -/
+theorem h20_pruned13 : Secure127 (.pruned (h := 20) (b := 13) (N := 191_200)) := Lifetimes.h20_pruned13_bits
+/-- Pruned key, kept subtree of height 12: 98,480 signatures. -/
+theorem h20_pruned12 : Secure127 (.pruned (h := 20) (b := 12) (N := 98_480)) := Lifetimes.h20_pruned12_bits
+/-- Pruned key, kept subtree of height 10: 26,080 signatures. -/
+theorem h20_pruned10 : Secure127 (.pruned (h := 20) (b := 10) (N := 26_080)) := Lifetimes.h20_pruned10_bits
+/-- Pruned key, kept subtree of height 8: 6,926 signatures. -/
+theorem h20_pruned8 : Secure127 (.pruned (h := 20) (b := 8) (N := 6_926)) := Lifetimes.h20_pruned8_bits
+/-- Layered key, 8 + 6 + 6: 19,830,000 signatures. -/
+theorem h20_layered : Secure127 (.layered (h := 20) (d := 3) (ℓ := 6) (N := 19_830_000)) := Lifetimes.h20_layered_bits
 
 /-! ## h = 22 (layered: 10 + 6 + 6) -/
 
@@ -116,8 +133,10 @@ theorem h28_layered : Secure127 (.layered (h := 28) (d := 3) (ℓ := 9) (N := 5_
 
 /-! ## All together -/
 
-/-- The 32 configurations above. -/
+/-- The 39 configurations above. -/
 def configurations : List Params := [
+  .pruned 20 20 19_830_000, .pruned 20 14 371_400, .pruned 20 13 191_200, .pruned 20 12 98_480,
+  .pruned 20 10 26_080, .pruned 20 8 6_926, .layered 20 3 6 19_830_000,
   .pruned 22 22 81_860_000, .pruned 22 20 21_760_000, .pruned 22 14 405_300, .pruned 22 13 208_500,
   .pruned 22 12 107_200, .pruned 22 10 28_410, .pruned 22 8 7_514, .layered 22 3 6 81_860_000,
   .pruned 24 24 336_700_000, .pruned 24 20 23_830_000, .pruned 24 14 441_500, .pruned 24 13 226_800,
@@ -131,7 +150,8 @@ def configurations : List Params := [
 theorem requestedSecurity : ∀ P ∈ configurations, Secure127 P := by
   simp only [configurations, List.forall_mem_cons, List.not_mem_nil, IsEmpty.forall_iff,
     implies_true, and_true]
-  exact ⟨h22_full, h22_pruned20, h22_pruned14, h22_pruned13, h22_pruned12, h22_pruned10, h22_pruned8,
+  exact ⟨h20_full, h20_pruned14, h20_pruned13, h20_pruned12, h20_pruned10, h20_pruned8, h20_layered,
+    h22_full, h22_pruned20, h22_pruned14, h22_pruned13, h22_pruned12, h22_pruned10, h22_pruned8,
     h22_layered, h24_full, h24_pruned20, h24_pruned14, h24_pruned13, h24_pruned12, h24_pruned10,
     h24_pruned8, h24_layered, h26_full, h26_pruned20, h26_pruned14, h26_pruned13, h26_pruned12,
     h26_pruned10, h26_pruned8, h26_layered, h28_full, h28_pruned20, h28_pruned14, h28_pruned13,

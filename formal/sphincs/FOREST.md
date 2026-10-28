@@ -41,8 +41,8 @@ cover lifetime (`b = 24 … 8`). `scripts/forest_attack.py` computes both column
 Monte Carlo of the realized key (loads, leaves, WOTS keys, codewords), with about 0.3% of noise on `N`
 and 0.6% at `b = 8`: the column has three digits and the ratios are good to about a point. The rate is
 `r = 0.9694`: a search of about `2^116` hashes for a neighbouring encoding, then one chain preimage at
-`2 · 2^-128` per query, is at its best after about `2^122` queries. The FORS variant (`k = 25`) lasts
-97.8–100.7% as long under its own cover attack ([FORS.md](FORS.md)).
+`2 · 2^-128` per query, is at its best after about `2^122` queries. The FORS variant (`k = 24`) lasts
+83–85% as long under its own cover attack ([FORS.md](FORS.md)).
 
 ## The codeword table
 
@@ -211,7 +211,7 @@ leaf and 24 nodes). The forest is 20 per tree (`compressions_coordRecover`: in e
 subtrees 5 chain steps, 1 for the WOTS-key leaf and 2 folds; 1 for the tree leaf; 3 folds), times 8.
 The key is not hashed. Each further layer adds 1 for the encoding of a root, 64 chain steps and 8 for
 the leaf; the path nodes of all layers are `h` in total. `Configurations.lean` states the size
-and the three costs of each of the 8 shapes.
+and the three costs of each of the 10 shapes.
 
 Hash calls of the signer (`GraphView/HashCalls.lean`, `GraphView/Cost.lean`; exact
 counts on any oracle):

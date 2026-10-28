@@ -2,7 +2,7 @@
 // MIT OR Apache-2.0, see licenses/leanVM-LICENSE-MIT and licenses/leanVM-LICENSE-APACHE.
 // Re-parameterized to the leanSphincs candidate (leanSPHINCS.tex): a two-level WOTS forest as the
 // few-time signature, WOTS+C with 64 chains of length 4 and target sum 128, and three toggles: the
-// height (22, 24, 26 or 28), the shape (one pruned tree, or a hypertree whose key builds the top
+// height (20, 22, 24, 26 or 28), the shape (one pruned tree, or a hypertree whose key builds the top
 // layer only) and the hash (Keccak-256, BLAKE2s or SHA-256).
 
 //! The leanSphincs candidate.
@@ -48,18 +48,20 @@ pub const V: usize = 64;
 pub const TARGET_SUM: usize = 128;
 
 /// The tree heights `h`, one per lifetime: the full and layered keys last about `20 * 2^h` signatures;
-/// a pruned key lasts much less (7,514 to 28.35M signatures, formal/sphincs/README.md).
-pub const HEIGHTS: [usize; 4] = [22, 24, 26, 28];
+/// a pruned key lasts much less (6,926 to 28.35M signatures, formal/sphincs/README.md).
+pub const HEIGHTS: [usize; 5] = [20, 22, 24, 26, 28];
 /// The tallest height: the digest's index field and the address fields are sized for it.
 pub const MAX_H: usize = 28;
-/// The kept subtree heights `b < h` of a pruned key besides the full key `b = h`: those whose
-/// lifetime is proved in Lean (`PRUNED` in scripts/scheme.py).
+/// The kept subtree heights `b` of a pruned key besides the full key `b = h`: those whose
+/// lifetime is proved in Lean (`PRUNED` in scripts/scheme.py); `b = 20` at `h = 20` is the full key.
 pub const PRUNED: [usize; 6] = [8, 10, 12, 13, 14, 20];
 
 /// The layer heights of a layered key of height `h`, top layer first: three layers, a top layer of 10
-/// (about 41 s of key generation on a Ledger with Keccak-256) and two equal bottom layers of 6 to 9.
+/// (about 41 s of key generation on a Ledger with Keccak-256; 8 at h = 20, about 10 s) and two equal
+/// bottom layers of 6 to 9.
 pub fn layered_heights(h: usize) -> &'static [usize] {
     match h {
+        20 => &[8, 6, 6],
         22 => &[10, 6, 6],
         24 => &[10, 7, 7],
         26 => &[10, 8, 8],
@@ -200,4 +202,4 @@ const _: () = assert!(TARGET_SUM < V * (CHAIN_LEN - 1));
 const _: () = assert!(RANDOMIZER_LEN + FOREST_SIZE + LAYER_SIZE + 24 * N == BASELINE_SIG_SIZE);
 const _: () = assert!(digest_bits(24) == 232 && digest_bits(MAX_H) <= 8 * 32);
 const _: () = assert!(PUB_KEY_SIZE == 32);
-const _: () = assert!(PRUNED[PRUNED.len() - 1] < HEIGHTS[0]);
+const _: () = assert!(PRUNED[PRUNED.len() - 1] <= HEIGHTS[0]);   // b = 20 at h = 20 is the full key

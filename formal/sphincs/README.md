@@ -2,13 +2,13 @@
 
 **Status: the leanSphincs signer has 127 bits of classical SUF-CMA security in the random-oracle
 model in each of its configurations, at the signature limits below: one theorem per height, shape and kept
-subtree height, 32 in all, stated together in [Main.lean](LeanForest/Main.lean); the FORS variant has its own 32 in
+subtree height, 39 in all, stated together in [Main.lean](LeanForest/Main.lean); the FORS variant has its own 39 in
 [FORS/Main.lean](FORS/Main.lean).** The
 proof uses only `propext`, `Classical.choice` and `Quot.sound`: [Axioms.lean](LeanForest/Axioms.lean)
 pins the main theorems to their axioms and checks that no declaration of the library uses another.
 
 **To audit the statement**, read three files: [Main.lean](LeanForest/Main.lean) (what is proved,
-`Secure127`, and the 32 theorems, e.g. `h24_pruned12`, then `requestedSecurity`, which collects
+`Secure127`, and the 39 theorems, e.g. `h24_pruned12`, then `requestedSecurity`, which collects
 them), [Scheme.lean](LeanForest/Scheme.lean) (the scheme and its parameters, `Params.pruned` and
 `Params.layered`) and [Statement.lean](LeanForest/Statement.lean) (the SUF-CMA game). Every
 other file is proof: [PROOF.md](PROOF.md) maps it.
@@ -35,23 +35,24 @@ probability at most q / 2^127.
 
 The proof is the same for every hash: the random oracle stands for Keccak-256, BLAKE2s or SHA-256,
 and only the costs depend on the hash ([Scheme/VerificationCost.lean](LeanForest/Scheme/VerificationCost.lean),
-[Configurations.lean](LeanForest/Configurations.lean)). So the 24 configurations of the candidate
-(4 heights, 2 shapes, 3 hashes) take 32 lifetime theorems (per height: the full key, six kept subtree
-heights and the layered key, below), 8 size theorems and 24 cost theorems.
+[Configurations.lean](LeanForest/Configurations.lean)). So the 30 configurations of the candidate
+(5 heights, 2 shapes, 3 hashes) take 39 lifetime theorems (per height: the full key, six kept subtree
+heights, five at h = 20, and the layered key, below), 10 size theorems and 30 cost theorems.
 
 The scheme, the digest layout, the codeword table, the costs and the forest are documented in
 [FOREST.md](FOREST.md); the proof route and the modeling differences with the Rust code are in
-[PROOF.md](PROOF.md). `FORS/` is the same proof with FORS (25 trees of height 10) as the
+[PROOF.md](PROOF.md). `FORS/` is the same proof with FORS (24 trees of height 10) as the
 few-time signature: what FORS changes, and what that changes in the proof, is
 in [FORS.md](FORS.md).
 
 ## Proved lifetimes
 
 Signature limits N with 127 bits (one theorem each in [Main.lean](LeanForest/Main.lean), e.g.
-`h24_pruned12`); layered keys: 10 + 6 + 6, 10 + 7 + 7, 10 + 8 + 8 and 10 + 9 + 9.
+`h24_pruned12`); layered keys: 8 + 6 + 6, 10 + 6 + 6, 10 + 7 + 7, 10 + 8 + 8 and 10 + 9 + 9.
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20 | 19,830,000 | — | 371,400 | 191,200 | 98,480 | 26,080 | 6,926 | 19,830,000 |
 | 22 | 81,860,000 | 21,760,000 | 405,300 | 208,500 | 107,200 | 28,410 | 7,514 | 81,860,000 |
 | 24 | 336,700,000 | 23,830,000 | 441,500 | 226,800 | 116,600 | 30,810 | 8,154 | 336,700,000 |
 | 26 | 1,381,000,000 | 26,030,000 | 480,100 | 246,900 | 126,900 | 33,480 | 8,830 | 1,381,000,000 |
@@ -62,6 +63,7 @@ the best known attack, with the WOTS+C unit-neighbour route, is 91–100% of it;
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20 | 88.2% | — | 83.4% | 82.6% | 81.9% | 80.6% | 79.5% | 88.2% |
 | 22 | 91.0% | 89.2% | 84.3% | 83.6% | 82.8% | 81.5% | 80.2% | 91.0% |
 | 24 | 93.5% | 90.3% | 85.2% | 84.4% | 83.7% | 82.3% | 81.1% | 93.5% |
 | 26 | 95.9% | 91.3% | 86.1% | 85.4% | 84.7% | 83.2% | 81.9% | 95.9% |
@@ -78,18 +80,19 @@ for every table of steps, as if the forger knew them.
 ## Proved lifetimes, FORS variant
 
 The same statement for the `FORS` library ([FORS.md](FORS.md)): one
-theorem per height, shape and kept subtree height in [Main.lean](FORS/Main.lean), 32 in all, collected by
+theorem per height, shape and kept subtree height in [Main.lean](FORS/Main.lean), 39 in all, collected by
 `requestedSecurity`, with [Axioms.lean](FORS/Axioms.lean) pinning them to the same three axioms.
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 22 | 86,910,000 | 23,050,000 | 424,100 | 217,700 | 111,800 | 29,440 | 7,759 | 86,910,000 |
-| 24 | 354,200,000 | 24,970,000 | 459,500 | 235,700 | 120,900 | 31,760 | 8,359 | 354,200,000 |
-| 26 | 1,426,000,000 | 27,030,000 | 496,100 | 254,400 | 130,500 | 34,330 | 9,019 | 1,426,000,000 |
-| 28 | 5,707,000,000 | 29,240,000 | 536,400 | 275,000 | 140,900 | 37,030 | 9,721 | 5,707,000,000 |
+| 20 | 17,440,000 | — | 325,200 | 167,400 | 86,200 | 22,790 | 6,029 | 17,440,000 |
+| 22 | 71,490,000 | 19,030,000 | 354,500 | 182,200 | 93,560 | 24,770 | 6,547 | 71,490,000 |
+| 24 | 292,300,000 | 20,740,000 | 385,300 | 198,000 | 101,700 | 26,860 | 7,099 | 292,300,000 |
+| 26 | 1,182,000,000 | 22,590,000 | 418,900 | 215,200 | 110,500 | 29,130 | 7,677 | 1,182,000,000 |
+| 28 | 4,731,000,000 | 24,540,000 | 454,500 | 233,300 | 119,800 | 31,600 | 8,313 | 4,731,000,000 |
 
-These are 84–98% of the FORS cover attack, in every configuration a larger share than the forest's
-limit is of the forest's attack.
+These are 82.6–98.3% of the FORS cover attack, in every configuration a larger share than the forest's
+limit is of the forest's attack, and 12–16% below the forest's limits.
 
 ## Checked claims
 
@@ -105,7 +108,7 @@ limit is of the forest's attack.
 | Computed subtree and surrogate path recover the root, at every layer | `Completeness.eval_treeFold_pruned_path`, [Scheme/Pruning](LeanForest/Scheme/Pruning.lean) |
 | Serialized signature length = 2832 + 1028·d + 16·h bytes | `signature_size`, [Scheme/Layout](LeanForest/Scheme/Layout.lean) |
 | An accepted verification costs exactly `verifyCost` compressions of each hash (at most that for any signature) | `Cost.verification_compressions`, [Scheme/VerificationCost](LeanForest/Scheme/VerificationCost.lean) |
-| The size and the three verification costs of each of the 8 shapes | [Configurations](LeanForest/Configurations.lean) |
+| The size and the three verification costs of each of the 10 shapes | [Configurations](LeanForest/Configurations.lean) |
 
 ## Build
 

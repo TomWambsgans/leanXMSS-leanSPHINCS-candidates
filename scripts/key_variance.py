@@ -174,13 +174,14 @@ def main():
     ap.add_argument("--samples", type=int, default=100000, help="Monte Carlo coordinates per load (forest)")
     args = ap.parse_args()
     h = args.h
-    bs = [int(x) for x in args.b.split(",")] if args.b else [h, 20, 14, 8]
-    forest, fors = forest_cond(args.samples), fors_cond(scheme.FORS_TREES)
+    bs = [int(x) for x in args.b.split(",")] if args.b else [h] + [b for b in (20, 14, 8) if b < h]
+    k = scheme.fors(h, "pruned", h)[0]
+    forest, fors = forest_cond(args.samples), fors_cond(k)
     print(f"h = {h}; log2(Y / E[Y]) at the quantiles, each variant at its own cover lifetime N")
     print("  b variant            N   E[Y]  sd/mean  cover   1e-2    1e-3    1e-6   beyond NMAX")
     for b in bs:
         report("forest", forest, h, b, fc.attack(h, "pruned", b))
-        report("FORS", fors, h, b, 2.0 ** scheme.fors_log2_lifetime(h, b, A, scheme.FORS_TREES))
+        report("FORS", fors, h, b, 2.0 ** scheme.fors_log2_lifetime(h, b, A, k))
 
 
 if __name__ == "__main__":

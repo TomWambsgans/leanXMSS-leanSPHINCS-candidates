@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Sizes and compression counts of the leanSphincs candidate in its 48 configurations (leanSPHINCS.tex).
+"""Sizes and compression counts of the leanSphincs candidate in its 60 configurations (leanSPHINCS.tex).
 
-Four toggles: the height h (22, 24, 26, 28: about 2^26, 2^28, 2^30, 2^32 signatures), the shape
+Four toggles: the height h (20, 22, 24, 26, 28: about 2^24 to 2^32 signatures), the shape
 (pruned: one tree of height h of which the key builds a kept subtree of 2^b leaves, b = h being the
 full key, the signer grinding the randomizer into it; layered: a hypertree whose key builds the top
 layer only), the hash and the few-time signature (FTS): a two-level WOTS forest or FORS. Every call
@@ -24,9 +24,8 @@ The forest's sizes and verification costs are also pinned by the Rust tests (cra
 `Config::verify_compressions`).
 
 The FORS FTS has k trees of height a and no root hash (the WOTS+C key signs the 2k nodes below
-the roots): a = 10 and k = 25 in every configuration, so that verification does not
-depend on the pruning. 25 is the fewest trees whose cover attack (fors_security.py) lives as long as the
-forest's for the full key; it reaches 97.8-100.7% of the forest's in every configuration.
+the roots): a = 10 and k = 24 in every configuration, so that verification does not depend on the pruning.
+24 is the fewest trees whose proved limit for the full key still reaches 2^(h+4) signatures.
 """
 
 import argparse
@@ -43,8 +42,8 @@ from fors_security import forgery_bits_exact
 
 N = 16  # bytes per hash value
 P_LEN, ADDR = 16, 16
-HEIGHTS = (22, 24, 26, 28)
-LAYERED = {22: (10, 6, 6), 24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}  # top layer first
+HEIGHTS = (20, 22, 24, 26, 28)
+LAYERED = {20: (8, 6, 6), 22: (10, 6, 6), 24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}  # top layer first
 PRUNED = (8, 10, 12, 13, 14, 20)  # kept subtree heights b < h with a certificate, besides b = h
 
 
@@ -121,7 +120,7 @@ def fors_log2_lifetime(h, b, a, k, level=127):
 
 
 FORS_HEIGHT = 10
-FORS_TREES = 25
+FORS_TREES = 24
 
 
 def fors(h, shape, b):
@@ -293,7 +292,7 @@ def main():
         for H in hashes:
             C = Costs(H)
             for h in x.h:
-                for shape, b in [("pruned", h)] + [("pruned", bb) for bb in x.pruned] + [("layered", None)]:
+                for shape, b in [("pruned", h)] + [("pruned", bb) for bb in x.pruned if bb < h] + [("layered", None)]:
                     proved, attack = lifetimes(h, shape, b)
                     label = shape if shape == "layered" else ("full" if b == h else f"pruned {b}")
                     life = "not certified" if proved is None else f"{proved:>11,} ({fmt(attack) if attack else '?'})"
@@ -316,7 +315,7 @@ def main():
         for h in x.h:
             for shape in ("pruned", "layered"):
                 ls = layers(h, shape)
-                bs = [h] + x.pruned if shape == "pruned" else [None]
+                bs = [h] + [bb for bb in x.pruned if bb < h] if shape == "pruned" else [None]
                 desc = "one tree" if shape == "pruned" else "layers " + "+".join(map(str, ls))
                 print(f"  h={h} {shape} ({desc}): signature {size(h, shape):,} B, verification {C.verify(h, shape)}")
                 for b in bs:
@@ -341,7 +340,7 @@ def site_data():
         C = Costs(H)
         for h in HEIGHTS:
             for shape in ("pruned", "layered"):
-                for b in ([h] + list(PRUNED) if shape == "pruned" else [h]):
+                for b in ([h] + [bb for bb in PRUNED if bb < h] if shape == "pruned" else [h]):
                     proved, attack = lifetimes(h, shape, b)
                     k, a = fors(h, shape, b)
                     CV = Costs(H, (k, a))
@@ -360,12 +359,12 @@ def site_data():
                                                fors=dict(k=k, a=a, size=size(h, shape, "fors", b),
                                                             verify=CV.verify(h, shape), sign=signs_v,
                                                             lifetime=vc.lifetime(h, shape, b),
-                                                            attack=round(2**life_v))))
+                                                            attack=math.floor(2**life_v))))
     for H in HASHES:
         C = Costs(H)
         ands = ANDS[H.name]
         for h in HEIGHTS:
-            for shape, b in [("pruned", bb) for bb in PRUNED] + [("layered", h)]:
+            for shape, b in [("pruned", bb) for bb in PRUNED if bb < h] + [("layered", h)]:
                 ls = layers(h, shape)
                 keygen, prep = C.mpc_keygen(h, shape, b), C.mpc_prep(h, shape)
                 # the hardware wallet computes the whole instance, and signs it with WOTS+C

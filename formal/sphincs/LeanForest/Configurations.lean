@@ -1,10 +1,10 @@
 import LeanForest.Scheme.VerificationCost
 
-/-! **The 24 configurations: sizes and verification costs.** A configuration is a height `h` (22, 24,
-26, 28, for lifetimes of about `2^26` to `2^32` signatures), a shape (pruned: one tree of height `h`,
+/-! **The 30 configurations: sizes and verification costs.** A configuration is a height `h` (20, 22,
+24, 26, 28, for lifetimes of about `2^24` to `2^32` signatures), a shape (pruned: one tree of height `h`,
 of which key generation builds a kept subtree; layered: a hypertree of three layers, a top layer of 10
-over two equal layers of 6 to 9) and a hash (Keccak-256, BLAKE2s, SHA-256). The size of a signature
-and the compressions of an accepted verification depend only on the height and the number of layers
+(8 at h = 20) over two equal layers of 6 to 9) and a hash (Keccak-256, BLAKE2s, SHA-256). The size of a
+signature and the compressions of an accepted verification depend only on the height and the number of layers
 (`Layout.signature_size`, `Cost.verification_compressions`): the theorems below hold for every
 `Params` of the configuration, whatever its kept subtree and signature limit. The figures are those of
 `scripts/scheme.py`. -/
@@ -16,6 +16,76 @@ namespace LeanForest.Configurations
 variable [Params]
 
 open Concrete Cost
+
+section h20_pruned
+
+variable (hH : totalHeight = 20) (hd : numLayers = 1)
+include hH hd
+
+/-- Signature size, height 20, one tree: 4,180 bytes. -/
+theorem size_h20_pruned (signature : Signature) : (serializeSignature signature).length = 4180 := by
+  rw [signature_size, hH, hd]
+
+/-- Keccak-256, height 20, one tree: an accepted signature costs 256 Keccak-f permutations. -/
+theorem keccak256_h20_pruned (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
+    (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
+      : OracleComp HashSpec Bool) = true) :
+    verifyCompressions .keccak256 f pk message signature = 256 := by
+  rw [verification_compressions _ f pk message signature haccept, verifyCost, hH, hd]
+  rfl
+
+/-- BLAKE2s, height 20, one tree: an accepted signature costs 292 compressions. -/
+theorem blake2s_h20_pruned (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
+    (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
+      : OracleComp HashSpec Bool) = true) :
+    verifyCompressions .blake2s f pk message signature = 292 := by
+  rw [verification_compressions _ f pk message signature haccept, verifyCost, hH, hd]
+  rfl
+
+/-- SHA-256, height 20, one tree: an accepted signature costs 293 compressions. -/
+theorem sha256_h20_pruned (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
+    (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
+      : OracleComp HashSpec Bool) = true) :
+    verifyCompressions .sha256 f pk message signature = 293 := by
+  rw [verification_compressions _ f pk message signature haccept, verifyCost, hH, hd]
+  rfl
+
+end h20_pruned
+
+section h20_layered
+
+variable (hH : totalHeight = 20) (hd : numLayers = 3)
+include hH hd
+
+/-- Signature size, height 20, layers 8 + 6 + 6: 6,236 bytes. -/
+theorem size_h20_layered (signature : Signature) : (serializeSignature signature).length = 6236 := by
+  rw [signature_size, hH, hd]
+
+/-- Keccak-256, height 20, layers 8 + 6 + 6: an accepted signature costs 402 Keccak-f permutations. -/
+theorem keccak256_h20_layered (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
+    (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
+      : OracleComp HashSpec Bool) = true) :
+    verifyCompressions .keccak256 f pk message signature = 402 := by
+  rw [verification_compressions _ f pk message signature haccept, verifyCost, hH, hd]
+  rfl
+
+/-- BLAKE2s, height 20, layers 8 + 6 + 6: an accepted signature costs 456 compressions. -/
+theorem blake2s_h20_layered (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
+    (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
+      : OracleComp HashSpec Bool) = true) :
+    verifyCompressions .blake2s f pk message signature = 456 := by
+  rw [verification_compressions _ f pk message signature haccept, verifyCost, hH, hd]
+  rfl
+
+/-- SHA-256, height 20, layers 8 + 6 + 6: an accepted signature costs 457 compressions. -/
+theorem sha256_h20_layered (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
+    (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
+      : OracleComp HashSpec Bool) = true) :
+    verifyCompressions .sha256 f pk message signature = 457 := by
+  rw [verification_compressions _ f pk message signature haccept, verifyCost, hH, hd]
+  rfl
+
+end h20_layered
 
 section h22_pruned
 
