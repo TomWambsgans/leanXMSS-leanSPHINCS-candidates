@@ -106,22 +106,46 @@ def termQ (b k a : ℕ) (mu : ℚ) (q : ℕ) (m : ℚ) (c : TailCert) (D : ℕ) 
 def tailQ (b k a : ℕ) (t : PoisT) (q : ℕ) (m : ℚ) (c : TailCert) : ℚ :=
   2 ^ b * lightTail t (c.n0 - 1) + ((List.range c.n0).map (termQ b k a t.mu q m c)).sum + 1 / 2 ^ 99
 
+/-! ### The coin condition -/
+
+/-- The cap floor at heights `b`, `a` and `k` trees (`capFloor` of the parameters). -/
+def capFloorN (b k a : ℕ) : ℕ := 2 * (b + (a + 1) * k + 101)
+
+/-- **The check of the coin condition** at budget `q` and cap `n0`. -/
+def checkCoin (b k a : ℕ) (t : PoisT) (q n0 : ℕ) : Bool :=
+  decide (0 < t.mu) &&
+    decide (∀ r < k, 1 ≤ r → 4 * ((patCapN b a (capFloorN b k a) q 1 : ℕ) : ℚ) * coinR b a (capFloorN b k a) q t.mu r ≤
+      (1 / 2 ^ 10) * (1 + ((patCapN b a (capFloorN b k a) q 1 : ℕ) : ℚ) * phiK a t.mu r)) &&
+    decide (((1 + coinRateK b a (capFloorN b k a) q / t.mu) ^ (k - 1) - 1) * (1 + freshK b k a t.mu q n0) ≤
+      (1 / 2 ^ 10) / 2)
+
+theorem checkCoin_parts {b k a : ℕ} {t : PoisT} {q n0 : ℕ} (h : checkCoin b k a t q n0 = true) :
+    0 < t.mu ∧
+      (∀ r < k, 1 ≤ r → 4 * ((patCapN b a (capFloorN b k a) q 1 : ℕ) : ℚ) * coinR b a (capFloorN b k a) q t.mu r ≤
+        (1 / 2 ^ 10) * (1 + ((patCapN b a (capFloorN b k a) q 1 : ℕ) : ℚ) * phiK a t.mu r)) ∧
+      ((1 + coinRateK b a (capFloorN b k a) q / t.mu) ^ (k - 1) - 1) * (1 + freshK b k a t.mu q n0) ≤
+        (1 / 2 ^ 10) / 2 := by
+  simp only [checkCoin, Bool.and_eq_true, decide_eq_true_eq] at h
+  obtain ⟨⟨h1, h2⟩, h3⟩ := h
+  exact ⟨h1, h2, h3⟩
+
+
 /-- **The check of a tail certificate.** -/
 def checkTail (b k a : ℕ) (t : PoisT) (q : ℕ) (m : ℚ) (c : TailCert) (Pb : ℚ) : Bool :=
   decide (1 ≤ c.n0) && decide (c.th.length = c.n0) && decide (1 ≤ t.n1) &&
     decide (∀ D < c.n0, 0 ≤ c.th.getD D 0 ∧ (∀ j < k, c.th.getD D 0 * phiK a t.mu j < 2 ^ c.s) ∧
       0 ≤ vQ b k a t.mu q m c D) &&
-    decide (max 0 (1 - m) * tailQ b k a t q m c ≤ Pb)
+    decide (max 0 (1 - m) * tailQ b k a t q m c ≤ Pb) && checkCoin b k a t q c.n0
 
 theorem checkTail_parts {b k a : ℕ} {t : PoisT} {q : ℕ} {m : ℚ} {c : TailCert} {Pb : ℚ}
     (h : checkTail b k a t q m c Pb = true) :
     1 ≤ c.n0 ∧ c.th.length = c.n0 ∧ 1 ≤ t.n1 ∧
       (∀ D < c.n0, 0 ≤ c.th.getD D 0 ∧ (∀ j < k, c.th.getD D 0 * phiK a t.mu j < 2 ^ c.s) ∧
         0 ≤ vQ b k a t.mu q m c D) ∧
-      max 0 (1 - m) * tailQ b k a t q m c ≤ Pb := by
+      max 0 (1 - m) * tailQ b k a t q m c ≤ Pb ∧ checkCoin b k a t q c.n0 = true := by
   simp only [checkTail, Bool.and_eq_true, decide_eq_true_eq] at h
-  obtain ⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩ := h
-  exact ⟨h1, h2, h3, h4, h5⟩
+  obtain ⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩ := h
+  exact ⟨h1, h2, h3, h4, h5, h6⟩
 
 /-! ### Real bounds -/
 
@@ -256,6 +280,180 @@ theorem freshK_mono (b k a : ℕ) {μ : ℝ} (hμ : 0 ≤ μ) {q q' : ℕ} (hq :
   have hq' : (q : ℝ) ≤ q' := by exact_mod_cast hq
   gcongr
 
+theorem coinGo_cast (b a cf q : ℕ) : ∀ (t n : ℕ) (L : List ℚ),
+    (coinGo b a cf q t n L).map (fun x : ℚ => (x : ℝ)) = coinGo b a cf q t n (L.map fun x : ℚ => (x : ℝ))
+  | 0, _, _ => rfl
+  | t + 1, n, L => by
+      simp only [coinGo]
+      rw [coinGo_cast b a cf q t (n + 1)]
+      congr 1
+      rw [List.map_append, List.map_singleton]
+      congr 2
+      rw [Rat.cast_list_sum, List.map_map]
+      congr 1
+      refine List.map_congr_left fun j _ => ?_
+      simp only [Function.comp_apply]
+      rw [Rat.cast_mul, Rat.cast_div, Rat.cast_mul, chooseK_cast, getD_map_cast, Rat.cast_natCast, Rat.cast_pow,
+        Rat.cast_ofNat]
+
+theorem coinV_cast (b a cf q s : ℕ) : ((coinV b a cf q s : ℚ) : ℝ) = coinV b a cf q s := by
+  unfold coinV
+  rw [← getD_map_cast, coinGo_cast]
+  simp
+
+theorem coinR_cast (b a cf q : ℕ) (μ : ℚ) (r : ℕ) : ((coinR b a cf q μ r : ℚ) : ℝ) = coinR b a cf q (μ : ℝ) r := by
+  unfold coinR
+  rw [Rat.cast_list_sum, List.map_map]
+  congr 1
+  refine List.map_congr_left fun s _ => ?_
+  simp only [Function.comp_apply]
+  split_ifs
+  · rw [Rat.cast_mul, Rat.cast_mul, chooseK_cast, coinV_cast, phiK_cast]
+  · simp
+
+theorem coinRateK_cast (b a cf q : ℕ) : ((coinRateK b a cf q : ℚ) : ℝ) = coinRateK b a cf q := by
+  unfold coinRateK; push_cast; rfl
+
+theorem patCapN_mono (b a cf s : ℕ) {q q' : ℕ} (hq : q ≤ q') : patCapN b a cf q s ≤ patCapN b a cf q' s := by
+  unfold patCapN
+  exact max_le_max (Nat.add_le_add_right (Nat.div_le_div_right (Nat.mul_le_mul_left 6 hq)) 1) le_rfl
+
+theorem one_le_patCapN (b a cf q s : ℕ) : 1 ≤ patCapN b a cf q s := by
+  unfold patCapN; exact le_trans (Nat.le_add_left 1 _) (le_max_left _ _)
+
+theorem getD_append_single (L : List ℝ) (x : ℝ) (i : ℕ) :
+    (L ++ [x]).getD i 0 = if i < L.length then L.getD i 0 else if i = L.length then x else 0 := by
+  split_ifs with h1 h2
+  · exact List.getD_append _ _ _ _ h1
+  · rw [List.getD_append_right _ _ _ _ (by omega), h2, Nat.sub_self]; rfl
+  · rw [List.getD_append_right _ _ _ _ (by omega)]
+    rw [List.getD_eq_default _ _ (by simp; omega)]
+
+theorem coinGo_mono {b a cf q q' : ℕ} (hq : q ≤ q') : ∀ (t n : ℕ) (L L' : List ℝ), L.length = L'.length →
+    (∀ i, 0 ≤ L.getD i 0 ∧ L.getD i 0 ≤ L'.getD i 0) →
+    ∀ i, 0 ≤ (coinGo b a cf q t n L).getD i 0 ∧ (coinGo b a cf q t n L).getD i 0 ≤ (coinGo b a cf q' t n L').getD i 0
+  | 0, _, _, _, _, hL, i => hL i
+  | t + 1, n, L, L', hlen, hL, i => by
+      simp only [coinGo]
+      refine coinGo_mono hq t (n + 1) _ _ (by simp [hlen]) (fun i => ?_) i
+      rw [getD_append_single, getD_append_single, hlen]
+      split_ifs
+      · exact hL i
+      · rw [list_sum_range, list_sum_range]
+        constructor
+        · refine Finset.sum_nonneg fun j _ => ?_
+          have := chooseK_nonneg n j
+          have := (hL (n - j)).1
+          positivity
+        · refine Finset.sum_le_sum fun j _ => ?_
+          have h1 : ((patCapN b a cf q (j + 1) : ℕ) : ℝ) ≤ ((patCapN b a cf q' (j + 1) : ℕ) : ℝ) := by
+            exact_mod_cast patCapN_mono b a cf (j + 1) hq
+          have hc := chooseK_nonneg n j
+          have h0 := (hL (n - j)).1
+          have h2 := (hL (n - j)).2
+          have : chooseK n j * ((patCapN b a cf q (j + 1) : ℕ) : ℝ) / 2 ^ 128 ≤
+              chooseK n j * ((patCapN b a cf q' (j + 1) : ℕ) : ℝ) / 2 ^ 128 := by gcongr
+          exact mul_le_mul this h2 h0 (by positivity)
+      · exact ⟨le_rfl, le_rfl⟩
+
+theorem coinV_mono (b a cf s : ℕ) {q q' : ℕ} (hq : q ≤ q') :
+    0 ≤ (coinV b a cf q s : ℝ) ∧ (coinV b a cf q s : ℝ) ≤ coinV b a cf q' s := by
+  unfold coinV
+  exact coinGo_mono hq s 0 [1] [1] rfl (fun i => ⟨by rcases i with _ | i <;> simp, le_rfl⟩) s
+
+theorem coinR_mono (b a cf : ℕ) {μ : ℝ} (hμ : 0 ≤ μ) (r : ℕ) {q q' : ℕ} (hq : q ≤ q') :
+    0 ≤ coinR b a cf q μ r ∧ coinR b a cf q μ r ≤ coinR b a cf q' μ r := by
+  unfold coinR
+  rw [list_sum_range, list_sum_range]
+  constructor
+  · refine Finset.sum_nonneg fun s _ => ?_
+    split_ifs
+    · have := chooseK_nonneg r s
+      have := (coinV_mono b a cf s hq).1
+      have := phiK_nonneg a hμ (r - s)
+      positivity
+    · exact le_rfl
+  · refine Finset.sum_le_sum fun s _ => ?_
+    split_ifs
+    · have := chooseK_nonneg r s
+      have h1 := coinV_mono b a cf s hq
+      have := phiK_nonneg a hμ (r - s)
+      gcongr
+      exact h1.2
+    · exact le_rfl
+
+/-- **The coin condition at every budget below the checked one.** -/
+theorem coinCond_of_check {b k a : ℕ} {t : PoisT} {qb n0 : ℕ} (h : checkCoin b k a t qb n0 = true)
+    {q : ℕ} (hq : q ≤ qb) : CoinCond b k a (capFloorN b k a) q (t.mu : ℝ) n0 := by
+  obtain ⟨hmu, h1, h2⟩ := checkCoin_parts h
+  have hmuR : (0 : ℝ) < (t.mu : ℝ) := by exact_mod_cast hmu
+  set cf := capFloorN b k a
+  refine ⟨fun r hr1 hrk => ?_, ?_, hmuR⟩
+  · have hc := h1 r hrk hr1
+    have hcR : 4 * ((patCapN b a cf qb 1 : ℕ) : ℝ) * coinR b a cf qb (t.mu : ℝ) r ≤
+        coinSlack * (1 + ((patCapN b a cf qb 1 : ℕ) : ℝ) * phiK a (t.mu : ℝ) r) := by
+      have := (Rat.cast_le (K := ℝ)).mpr hc
+      push_cast at this
+      rw [coinR_cast, phiK_cast] at this
+      unfold coinSlack
+      linarith
+    have hA : (1 : ℝ) ≤ ((patCapN b a cf qb 1 : ℕ) : ℝ) := by exact_mod_cast one_le_patCapN b a cf qb 1
+    have ha1 : (1 : ℝ) ≤ ((patCapN b a cf q 1 : ℕ) : ℝ) := by exact_mod_cast one_le_patCapN b a cf q 1
+    have haA : ((patCapN b a cf q 1 : ℕ) : ℝ) ≤ ((patCapN b a cf qb 1 : ℕ) : ℝ) := by
+      exact_mod_cast patCapN_mono b a cf 1 hq
+    obtain ⟨hR0, hRle⟩ := coinR_mono b a cf hmuR.le r hq
+    have hφ := phiK_nonneg a hmuR.le r
+    have hs : (0 : ℝ) < coinSlack := by unfold coinSlack; norm_num
+    -- coinR(qb) ≤ s / (4 A) + s φ / 4, so 4 a coinR(q) ≤ s a / A + s a φ ≤ s + s a φ
+    set A := ((patCapN b a cf qb 1 : ℕ) : ℝ)
+    set a' := ((patCapN b a cf q 1 : ℕ) : ℝ)
+    set φr := phiK a (t.mu : ℝ) r
+    have key : 4 * a' * coinR b a cf q (t.mu : ℝ) r * A ≤ coinSlack * (1 + a' * φr) * A := by
+      have ha0 : (0 : ℝ) ≤ 4 * a' * A := mul_nonneg (mul_nonneg (by norm_num) (by linarith)) (by linarith)
+      have e1 : 4 * a' * coinR b a cf q (t.mu : ℝ) r * A ≤ a' * (4 * A * coinR b a cf qb (t.mu : ℝ) r) := by
+        calc 4 * a' * coinR b a cf q (t.mu : ℝ) r * A = (4 * a' * A) * coinR b a cf q (t.mu : ℝ) r := by ring
+          _ ≤ (4 * a' * A) * coinR b a cf qb (t.mu : ℝ) r := mul_le_mul_of_nonneg_left hRle ha0
+          _ = a' * (4 * A * coinR b a cf qb (t.mu : ℝ) r) := by ring
+      have e2 : a' * (4 * A * coinR b a cf qb (t.mu : ℝ) r) ≤ a' * (coinSlack * (1 + A * φr)) :=
+        mul_le_mul_of_nonneg_left hcR (by linarith)
+      have e3 : a' * (coinSlack * (1 + A * φr)) ≤ coinSlack * (1 + a' * φr) * A := by
+        have h' : a' * coinSlack ≤ A * coinSlack := mul_le_mul_of_nonneg_right haA hs.le
+        have eq1 : a' * (coinSlack * (1 + A * φr)) = a' * coinSlack + coinSlack * a' * A * φr := by ring
+        have eq2 : coinSlack * (1 + a' * φr) * A = A * coinSlack + coinSlack * a' * A * φr := by ring
+        rw [eq1, eq2]
+        linarith
+      linarith
+    exact le_of_mul_le_mul_right key (by linarith)
+  · have h2R : ((1 + coinRateK b a cf qb / (t.mu : ℝ)) ^ (k - 1) - 1) * (1 + freshK b k a (t.mu : ℝ) qb n0) ≤
+        coinSlack / 2 := by
+      have := (Rat.cast_le (K := ℝ)).mpr h2
+      push_cast at this
+      rw [coinRateK_cast, freshK_cast] at this
+      unfold coinSlack
+      linarith
+    have hr : (coinRateK b a cf q : ℝ) ≤ coinRateK b a cf qb := by
+      unfold coinRateK
+      have : ((patCapN b a cf q 1 : ℕ) : ℝ) ≤ ((patCapN b a cf qb 1 : ℕ) : ℝ) := by
+        exact_mod_cast patCapN_mono b a cf 1 hq
+      gcongr
+    have hr0 : (0 : ℝ) ≤ coinRateK b a cf q := by unfold coinRateK; positivity
+    have hf := freshK_mono b k a hmuR.le hq n0
+    have hf0 : 0 ≤ freshK b k a (t.mu : ℝ) q n0 := by
+      unfold freshK
+      refine mul_nonneg (by positivity) (div_nonneg (List.sum_nonneg fun y hy => ?_) (by positivity))
+      obtain ⟨i, -, rfl⟩ := List.mem_map.1 hy
+      have := chooseK_nonneg (k - 1) i
+      have := touchard_nonneg hmuR.le i
+      positivity
+    have hp : (1 + coinRateK b a cf q / (t.mu : ℝ)) ^ (k - 1) ≤ (1 + coinRateK b a cf qb / (t.mu : ℝ)) ^ (k - 1) := by
+      gcongr
+    have hp1 : 1 ≤ (1 + coinRateK b a cf q / (t.mu : ℝ)) ^ (k - 1) :=
+      one_le_pow₀ (by have : 0 ≤ coinRateK b a cf q / (t.mu : ℝ) := div_nonneg hr0 hmuR.le; linarith)
+    calc ((1 + coinRateK b a cf q / (t.mu : ℝ)) ^ (k - 1) - 1) * (1 + freshK b k a (t.mu : ℝ) q n0)
+        ≤ ((1 + coinRateK b a cf qb / (t.mu : ℝ)) ^ (k - 1) - 1) * (1 + freshK b k a (t.mu : ℝ) qb n0) :=
+          mul_le_mul (by linarith) (by linarith) (by linarith) (by linarith)
+      _ ≤ _ := h2R
+
 /-! ### Soundness -/
 
 /-- **A checked tail certificate proves `ForecastTail` at every budget `q ≤ qb`.** -/
@@ -264,11 +462,11 @@ theorem forecastTail_of_check (H b k a N qtop : ℕ) (hH : totalHeight = H) (hb 
     (hr : checkRate H b N qtop t = true) (ht : checkPT t = true) (qb : ℕ) (hqb : qb ≤ qtop)
     (m : ℚ) (c : TailCert) (Pb : ℚ) (h : checkTail b k a t qb m c Pb = true) (q : ℕ) (hq : q ≤ qb) :
     ForecastTail (m : ℝ) q (Pb : ℝ) := by
-  obtain ⟨hn0, hlen, h1, hD, hfin⟩ := checkTail_parts h
+  obtain ⟨hn0, hlen, h1, hD, hfin, hcoin⟩ := checkTail_parts h
   have hmu0 : (0 : ℚ) ≤ t.mu := t.mu_nonneg
   have hmuR : (0 : ℝ) ≤ (t.mu : ℝ) := by exact_mod_cast hmu0
   set μ : ℝ≥0 := ⟨(t.mu : ℝ), hmuR⟩ with hμ
-  refine ⟨c.n0, μ, fun D => (c.th.getD D 0 : ℝ), hn0, ?_, fun D => ?_, ?_⟩
+  refine ⟨c.n0, μ, fun D => (c.th.getD D 0 : ℝ), hn0, ?_, fun D => ?_, ?_, ?_⟩
   · have := rate_le_tableF H b N qtop t hr hH hb hN q (le_trans hq hqb)
     rw [hb]
     exact this
@@ -276,6 +474,9 @@ theorem forecastTail_of_check (H b k a N qtop : ℕ) (hH : totalHeight = H) (hb 
     by_cases hDn : D < c.n0
     · exact_mod_cast (hD D hDn).1
     · rw [List.getD_eq_default _ _ (by omega)]; simp
+  · have hcf : capFloor = capFloorN b k a := by unfold capFloor capFloorN; rw [hb, hk, ha]
+    rw [hb, hk, ha, hcf]
+    exact coinCond_of_check hcoin hq
   · rw [hb, hk, ha]
     unfold tailSum
     -- the light term

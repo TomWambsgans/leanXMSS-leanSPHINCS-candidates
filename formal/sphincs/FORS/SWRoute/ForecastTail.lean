@@ -22,6 +22,9 @@ parameters `θ_D`,
   the cached pairs (a signature using a cached pair) in the forecast; `2^-99` covers the failure of
   the cell-count events.
 * `(1 - m)⁺`: the excess form (`(min(1, Π_c) - m)⁺ ≤ (1 - m)⁺ 1[Π_c > m]`).
+* `CoinCond`: the coins of the cached pairs in the forecast (a signature using a cached pair, mass
+  `2^-128` each) fit in `coinSlack`, given the multi-leaf pattern caps `patCapN` (half for the
+  coin-assisted completions `coinR`, half for the coin rate `coinRateK` at one index).
 
 The rational checker and its soundness are in `ForecastCert.lean`. -/
 
@@ -67,6 +70,41 @@ noncomputable def gammaR (b k a : ℕ) (θ : ℝ) (φ : ℕ → ℝ) (D : ℕ) :
 /-- The allowance for the coins of the cached pairs in the forecast. -/
 noncomputable def coinSlack : ℝ := 1 / 2 ^ 10
 
+/-! ### The coins of the cached pairs: pattern caps and the coin-assisted forecast -/
+
+/-- The floor of the pattern caps. -/
+def capFloor : ℕ := 2 * (subtreeHeight + (forsHeight + 1) * forsTrees + 101)
+
+/-- The pattern cap at budget `q` and size `s`: `max(6 q / 2^(b + a s) + 1, cf)`. -/
+def patCapN (b a cf q s : ℕ) : ℕ := max (6 * q / 2 ^ (b + a * s) + 1) cf
+
+/-- The coin covering bounds `coinV 0 … coinV n` (in `L`), then `t` more steps:
+`coinV (n + 1) = Σ_{j ≤ n} C(n, j) patCapN(j + 1) / 2^128 · coinV (n - j)`. -/
+def coinGo {K : Type} [DivisionRing K] (b a cf q : ℕ) : ℕ → ℕ → List K → List K
+  | 0, _, L => L
+  | t + 1, n, L => coinGo b a cf q t (n + 1)
+      (L ++ [((List.range (n + 1)).map fun j =>
+        chooseK n j * ((patCapN b a cf q (j + 1) : ℕ) : K) / 2 ^ 128 * L.getD (n - j) 0).sum])
+
+/-- The chance bound that the group coins of the cached pairs cover `s` given leaves of a pair. -/
+def coinV {K : Type} [DivisionRing K] (b a cf q s : ℕ) : K := (coinGo b a cf q s 0 [1]).getD s 0
+
+/-- The coin-assisted part of one pair's forecast at `r` missing trees:
+`Σ_{1 ≤ s ≤ r} C(r, s) coinV s φ(r - s)`. -/
+def coinR {K : Type} [DivisionRing K] (b a cf q : ℕ) (μ : K) (r : ℕ) : K :=
+  ((List.range (r + 1)).map fun s => if 1 ≤ s then chooseK r s * coinV b a cf q s * phiK a μ (r - s) else 0).sum
+
+/-- The coin rate of the cached pairs at one index: `2^a patCapN(1) / 2^128`. -/
+def coinRateK {K : Type} [DivisionRing K] (b a cf q : ℕ) : K := 2 ^ a * ((patCapN b a cf q 1 : ℕ) : K) / 2 ^ 128
+
+/-- **The coin condition**: the coin-assisted forecast and the coin rate of the cached pairs fit in
+`coinSlack` (half each). -/
+def CoinCond (b k a cf q : ℕ) (μ : ℝ) (n0 : ℕ) : Prop :=
+  (∀ r, 1 ≤ r → r < k →
+      4 * ((patCapN b a cf q 1 : ℕ) : ℝ) * coinR b a cf q μ r ≤
+        coinSlack * (1 + ((patCapN b a cf q 1 : ℕ) : ℝ) * phiK a μ r)) ∧
+    ((1 + coinRateK b a cf q / μ) ^ (k - 1) - 1) * (1 + freshK b k a μ q n0) ≤ coinSlack / 2 ∧ 0 < μ
+
 /-- **The tail sum** (before the excess factor). -/
 noncomputable def tailSum (b k a : ℕ) (n0 : ℕ) (μ : ℝ≥0) (θ : ℕ → ℝ) (m : ℝ) (q : ℕ) : ℝ≥0∞ :=
   (2 : ℝ≥0∞) ^ b * poisMean μ (fun n => ((n - (n0 - 1) : ℕ) : ℝ≥0∞)) +
@@ -81,6 +119,7 @@ def ForecastTail (m : ℝ) (q : ℕ) (Pb : ℝ) : Prop :=
     1 ≤ n0 ∧
     (signatureLimit : ℝ) / 2 ^ subtreeHeight + (q : ℝ) * (landing * wbarOf q).toReal / 2 ^ subtreeHeight ≤ μ ∧
     (∀ D, 0 ≤ θ D) ∧
+    CoinCond subtreeHeight forsTrees forsHeight capFloor q (μ : ℝ) n0 ∧
     ENNReal.ofReal (1 - m) * tailSum subtreeHeight forsTrees forsHeight n0 μ θ m q ≤ ENNReal.ofReal Pb
 
 end FORS.Security.SWRoute

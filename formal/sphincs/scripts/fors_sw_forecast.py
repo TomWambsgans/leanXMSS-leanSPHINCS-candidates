@@ -125,7 +125,41 @@ def checkTail(b, k, a, t, q, m, c, Pb):
         if th < 0: return False
         if not all(th * phiQ(a, t.mu, j) < 2 ** c.s for j in range(k)): return False
         if vQ(b, k, a, t.mu, q, m, c, D) < 0: return False
-    return max(Fr(0), 1 - m) * tailQ(b, k, a, t, q, m, c) <= Pb
+    return max(Fr(0), 1 - m) * tailQ(b, k, a, t, q, m, c) <= Pb and checkCoin(b, k, a, t, q, c.n0)
+
+
+# ---------------- the coin condition (ForecastTail.lean CoinCond, ForecastCert.lean checkCoin) ----------------
+
+def capFloorN(b, k, a): return 2 * (b + (a + 1) * k + 101)
+
+
+def patCapN(b, a, cf, q, s): return max(6 * q // 2 ** (b + a * s) + 1, cf)
+
+
+def coinVList(b, a, cf, q, smax):
+    """coinGo: coinV 0 .. smax, coinV (n+1) = sum_{j<=n} C(n, j) patCapN(j+1) / 2^128 coinV(n-j)."""
+    L = [Fr(1)]
+    for n in range(smax):
+        L.append(sum((chooseQ(n, j) * patCapN(b, a, cf, q, j + 1) / Fr(2 ** 128) * L[n - j] for j in range(n + 1)), Fr(0)))
+    return L
+
+
+def coinR(b, a, cf, q, mu, r):
+    V = coinVList(b, a, cf, q, r)
+    return sum((chooseQ(r, s) * V[s] * phiQ(a, mu, r - s) for s in range(1, r + 1)), Fr(0))
+
+
+def coinRateK(b, a, cf, q): return Fr(2 ** a * patCapN(b, a, cf, q, 1), 2 ** 128)
+
+
+def checkCoin(b, k, a, t, q, n0):
+    """checkCoin: the coin-assisted forecast and the coin rate of the cached pairs fit in coinSlack (exact)."""
+    cf = capFloorN(b, k, a)
+    if not t.mu > 0: return False
+    P1 = patCapN(b, a, cf, q, 1)
+    for r in range(1, k):
+        if not 4 * P1 * coinR(b, a, cf, q, t.mu, r) <= COIN_SLACK * (1 + P1 * phiQ(a, t.mu, r)): return False
+    return ((1 + coinRateK(b, a, cf, q) / t.mu) ** (k - 1) - 1) * (1 + freshQ(b, k, a, t.mu, q, n0)) <= COIN_SLACK / 2
 
 
 # ---------------- the float search ----------------
@@ -144,9 +178,11 @@ class _F:
         A = 2 ** self.a
         tot = 0.0
         for j in range(1, self.k):
+            coef = math.comb(self.k - 1, j) * (D / A) ** (self.k - 1 - j)
+            if coef == 0: continue          # D = 0: only j = k - 1 counts (no overflow from the others)
             u = th * self.phi[j]
             if u > 700: return math.inf
-            tot += math.comb(self.k - 1, j) * (D / A) ** (self.k - 1 - j) * math.expm1(u)
+            tot += coef * math.expm1(u)
         return self.q / 2 ** (self.b + self.a) * tot
 
     def logterm(self, D, th, m):
@@ -157,7 +193,12 @@ class _F:
     def best(self, D, m):
         """theta >= 0 minimizing the D-term (theta = 0 gives the term cells mu^D / D!)."""
         f = lambda lt: self.logterm(D, math.exp(lt), m)
-        lo, hi = math.log(1e-3), math.log(1e7)
+        # a log grid first (the objective is +inf beyond the overflow of e^{theta phi} and flat below),
+        # then golden section on the bracket around the best grid point
+        grid = [e / 8 * math.log(2) for e in range(-80, 200)]
+        vals = [f(lt) for lt in grid]
+        i = min(range(len(grid)), key=lambda j: vals[j])
+        lo, hi = grid[max(i - 1, 0)], grid[min(i + 1, len(grid) - 1)]
         g = (math.sqrt(5) - 1) / 2
         x1, x2 = hi - g * (hi - lo), lo + g * (hi - lo)
         f1, f2 = f(x1), f(x2)
