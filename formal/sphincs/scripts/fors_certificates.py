@@ -1394,7 +1394,7 @@ def checkEntrySW(b, k, a, K, N, qtop, t, opts, nopts, tails, e, tail):
     return (qa <= qb and qb <= qtop and tail.check(b, t, qb, m, tc, Pb) and
             checkNumSW(rho, beta, delta, Fr(qb, 2 ** 128), cUQ(b, a, N, m)) and
             0 <= delta and 0 <= o.cthr and 0 <= n.cthr and o.cthr + delta * n.cthr <= beta / 2 ** 128 and
-            0 <= o.B and 0 <= n.B and 0 <= Pb and swMainQ(K, N, qa, qb, rho, delta, o.B, n.B, Pb))
+            0 <= o.B and 0 <= n.B and 0 <= Pb and 0 <= m and swMainQ(K, N, qa, qb, rho, delta, o.B, n.B, Pb))
 
 def chainSW(b, k, a, K, N, qtop, t, opts, nopts, tails, last, entries, tail):
     """chainSW (SWRoute/Closing.lean)"""
