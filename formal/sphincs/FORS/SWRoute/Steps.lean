@@ -32,6 +32,8 @@ structure StepHyp (K : Ctx) (model : HiddenRows.Model HashInput HashOutput Addre
   msg : ∀ x, ForsSigner.IsMsgInput x → K.tg.kind x = .none
   digest : K.tg.digest = ForsSigner.IsMsgInput
   fleaf : ∀ f : FIn, K.initial (f.input K.p) = none
+  trunc : UniformTruncation (R := HashOutput) K.tg
+  parsedFresh : ∀ x q, HiddenGraph.parse K.p (candidateActive K.p) x = some q → K.initial x = none
 
 section Step
 
@@ -49,15 +51,6 @@ def StepBound (input : CostSpec.Domain) (s : St) (flag : Bool) (probes remaining
           weightA K root r.2) +
       (weightA K root s * pendA K s + ENNReal.ofReal δ * payA K root flag s input +
         ∑' r, Pr[= r | costStep model input s] * payK K root s input r.2)
-
-/-- **One step of the S-part.** -/
-theorem sStep {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 2 ^ 128) cU) (hH : StepHyp K model)
-    (input : CostSpec.Domain) (s : St) (flag : Bool) (probes remaining : ℕ) (hinv : InvS K s probes)
-    (hcost : sourceCost input ≤ remaining) (hsum : probes + remaining ≤ total) :
-    ∃ probes', probes' + (remaining - sourceCost input) ≤ total ∧
-      (∀ r ∈ support (costStep model input s), InvS K r.2 probes') ∧
-      StepBound K root model ρ β δ cU input s flag probes remaining probes' := by
-  sorry
 
 end Step
 
