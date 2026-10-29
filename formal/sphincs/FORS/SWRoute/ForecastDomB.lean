@@ -332,7 +332,7 @@ theorem countGood_single {H : ℕ → ℝ≥0∞} (hH : Good1 H) (I : ι) : Coun
       simp [hij]
     · by_cases hj : I = j
       · subst hj
-        simp only [hi, if_false, add_zero, if_true, eq_self_iff_true]
+        simp only [hi, if_false, add_zero, if_true]
         exact le_of_eq (add_comm _ _)
       · simp [hi, hj]
   convex := by
@@ -368,12 +368,12 @@ theorem poisIID_single (μ : ℝ≥0) (H : ℕ → ℝ≥0∞) (I : ι) :
   unfold poisIID
   refine h.trans ?_
   rw [Finset.prod_eq_single I]
-  · simp only [eq_self_iff_true, if_true]
+  · simp only [if_true]
     exact pois1_zero μ H
   · intro l _ hl
     simp only [hl, if_false]
     unfold pois1
-    simp [ENNReal.tsum_mul_right, poisW_tsum]
+    simp [poisW_tsum]
   · intro h; exact absurd (Finset.mem_univ I) h
 
 end FORS.Security.SWRoute

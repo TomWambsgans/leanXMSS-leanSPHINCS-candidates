@@ -51,7 +51,7 @@ theorem probeFactor_ne_top (p : ℕ) : probeFactor p ≠ ⊤ := ENNReal.ofReal_n
 
 /-! ### Kill forms -/
 
-theorem one_sub_mul_le_inv_pow {hz : ℝ} (h0 : 0 ≤ hz) (h1 : hz ≤ 1) (n : ℕ) :
+theorem one_sub_mul_le_inv_pow {hz : ℝ} (h1 : hz ≤ 1) (n : ℕ) :
     (1 - hz) ^ n * (1 + n * hz) ≤ 1 := by
   induction n with
   | zero => simp
@@ -62,7 +62,7 @@ theorem one_sub_mul_le_inv_pow {hz : ℝ} (h0 : 0 ≤ hz) (h1 : hz ≤ 1) (n : �
           = (1 - hz) ^ n * ((1 - hz) * (1 + (n + 1) * hz)) := by push_cast; ring
         _ ≤ (1 - hz) ^ n * (1 + n * hz) := by
             apply mul_le_mul_of_nonneg_left _ (pow_nonneg hg n)
-            nlinarith [mul_nonneg h0 h0]
+            nlinarith [sq_nonneg hz]
         _ ≤ 1 := ih
 
 section Kill
@@ -132,7 +132,7 @@ theorem kill_enc66 :
     rw [hN, div_le_div_iff₀ (by linarith [(Nat.cast_nonneg r : (0 : ℝ) ≤ r)]) (by positivity)]
     nlinarith [(Nat.cast_nonneg r : (0 : ℝ) ≤ r)]
   have hv0 := swV_pos h hle
-  have hpow := one_sub_mul_le_inv_pow hz0.le hz1.le 66
+  have hpow := one_sub_mul_le_inv_pow hz1.le 66
   have key : (1 - swHz p) ^ (66 : ℕ) + 64 * (1 / 2 ^ 128) ≤ 1 := by
     have hpos : 0 < 1 + (66 : ℕ) * swHz p := by positivity
     have hle1 : (1 - swHz p) ^ (66 : ℕ) ≤ 1 / (1 + (66 : ℕ) * swHz p) := by
@@ -225,7 +225,7 @@ theorem dec_expo_add {flag : Bool} {s : St} (hb : ¬BadP K root s) (p r : ℕ) (
   have hd := dec_expo K root h (flag := flag) hb p r hle
   have hmono : budgetE (expo K ρ flag s) p (r + 1) ≤ budgetE (expo K ρ flag s) p r :=
     budgetE_succ_le (expo_nonneg K ρ (by linarith [h.low]) flag s) p r
-      (by have := sw_lt h hle; push_cast; linarith [(Nat.cast_nonneg p : (0 : ℝ) ≤ p)])
+      (by have := sw_lt h hle; linarith [(Nat.cast_nonneg p : (0 : ℝ) ≤ p)])
   calc budgetE (expo K ρ flag s) p (r + 1) + ENNReal.ofReal (β / 2 ^ 128)
       ≤ budgetE (expo K ρ flag s) p (r + 1) +
           (budgetE (expo K ρ flag s) p r - budgetE (expo K ρ flag s) p (r + 1)) := add_le_add le_rfl hd

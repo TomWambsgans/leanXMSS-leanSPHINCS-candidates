@@ -48,12 +48,12 @@ theorem finish_boundAllA (randomness : Randomness)
 /-- **One trial of the scan, weighted**, with any continuation. -/
 theorem trial_boundSA
     (hparse : ∀ ρ call, model.parse (pblk parameter data message ρ call) = none)
-    (hkind : ∀ ρ call, tg.kind (pblk parameter data message ρ call) = .none)
+    (_hkind : ∀ ρ call, tg.kind (pblk parameter data message ρ call) = .none)
     (reference : DebtState HashInput HashOutput Coordinate) (ρ : Randomness)
     (gf : Lifetime.KeptDigestView → ℝ≥0∞) (gp : Randomness → Lifetime.KeptDigestView → ℝ≥0∞)
     (V : Option (Option Signature) → DebtState HashInput HashOutput Coordinate → ℝ≥0∞)
     (hVabort : ∀ s', V none s' = 0)
-    (hVstore : ∀ r (s' : DebtState HashInput HashOutput Coordinate) (y : HashInput) (v : HashOutput),
+    (_hVstore : ∀ r (s' : DebtState HashInput HashOutput Coordinate) (y : HashInput) (v : HashOutput),
       s'.cache y = none → V r s' ≤ V r (s'.store y v))
     (hVfin : ∀ (s' : DebtState HashInput HashOutput Coordinate) (u : DigestCall → HashOutput) (b : ℕ),
       RelatedOff parameter data message reference s' ρ →

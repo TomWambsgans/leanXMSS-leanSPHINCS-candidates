@@ -79,7 +79,7 @@ theorem khValueG_le (hH : totalHeight = subtreeHeight) (hw : wbar ≤ 1) (s : St
         fun X => c0 * (fun j => F1 (j + countAt e I)) (countAt X I) := by
       funext X; rw [countAt_add]
     rw [e1, hTermO_const_mulD]
-    refine mul_le_mul_left' ?_ c0
+    refine mul_le_mul_right ?_ c0
     refine le_trans (hTermO_fst_le (hF1.shift (countAt e I)) I wbar hw hn hk μ hμ) (le_of_eq ?_)
     unfold poisMean pois1
     congr 1
@@ -90,7 +90,7 @@ theorem khValueG_le (hH : totalHeight = subtreeHeight) (hw : wbar ≤ 1) (s : St
   have h4 : grpAll parameter data s (fun _ => False) (live L Ms) (fun e => c0 * pois1 μ F1 (countAt e I)) 0 ≤
       c0 * poisMean (μ + δ) F1 := by
     rw [grpAll_const_mul]
-    refine mul_le_mul_left' ?_ c0
+    refine mul_le_mul_right ?_ c0
     refine le_trans (grpAll_count_le parameter data s (fun _ => False) I hH (hF1.pois1 μ) (live L Ms)
       (live_nodup L hMnd) 0) ?_
     rw [countAt_zero', pois1_pois1, ← pois1_zero]
@@ -114,9 +114,9 @@ theorem khValueG_le (hH : totalHeight = subtreeHeight) (hw : wbar ≤ 1) (s : St
     rw [hcA, pow_mul, ENNReal.inv_pow]
   have hS := freshSum_nonneg (μ + δ) D
   calc (k : ℝ≥0∞) * hValueG parameter data (ownW c) wbar 0 s Ms L d n k
-      ≤ (k : ℝ≥0∞) * (c0 * (cA * ENNReal.ofReal (freshSum (((μ + δ : ℝ≥0)) : ℝ) D))) := mul_le_mul_left' hle _
+      ≤ (k : ℝ≥0∞) * (c0 * (cA * ENNReal.ofReal (freshSum (((μ + δ : ℝ≥0)) : ℝ) D))) := mul_le_mul_right hle _
     _ ≤ (qq : ℝ≥0∞) * (c0 * (cA * ENNReal.ofReal (freshSum (((μ + δ : ℝ≥0)) : ℝ) D))) :=
-        mul_le_mul_right' (by exact_mod_cast hk) _
+        mul_le_mul_left (by exact_mod_cast hk) _
     _ = ENNReal.ofReal (freshK subtreeHeight forsTrees forsHeight ((μ + δ : ℝ≥0) : ℝ) qq D) := by
         rw [freshK_eq, ENNReal.ofReal_mul (by positivity), ENNReal.ofReal_div_of_pos (by positivity),
           ENNReal.ofReal_div_of_pos (by positivity), ENNReal.ofReal_natCast, ENNReal.ofReal_pow (by norm_num),

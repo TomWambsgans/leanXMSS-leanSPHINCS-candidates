@@ -113,7 +113,7 @@ theorem grpAll_cov_vE (hH : totalHeight = subtreeHeight) (b a cf q : ℕ) (Ms : 
       calc grpAll parameter data s excl Ms (covI I ℓ S) e
           ≤ ∑ g ∈ Z, ε * grpAll parameter data s excl Ms (covI I ℓ S) (e + {pview parameter data s g}) := hstep
         _ ≤ ∑ g ∈ Z, ε * vE b a cf q (t + 1 - (Bg g).card) :=
-            Finset.sum_le_sum fun g hg => mul_le_mul_left' (hIH g hg) ε
+            Finset.sum_le_sum fun g hg => mul_le_mul_right (hIH g hg) ε
         _ = ∑ B ∈ T, ∑ g ∈ Z.filter (fun g => Bg g = B), ε * vE b a cf q (t + 1 - (Bg g).card) :=
             (Finset.sum_fiberwise_of_maps_to hmaps _).symm
         _ = ∑ B ∈ T, ((Z.filter fun g => Bg g = B).card : ℝ≥0∞) * (ε * vE b a cf q (t + 1 - B.card)) := by
@@ -121,7 +121,7 @@ theorem grpAll_cov_vE (hH : totalHeight = subtreeHeight) (b a cf q : ℕ) (Ms : 
             rw [Finset.sum_congr rfl (fun g hg => by rw [(Finset.mem_filter.1 hg).2]), Finset.sum_const,
               nsmul_eq_mul]
         _ ≤ ∑ B ∈ T, (patCapN b a cf q B.card : ℝ≥0∞) * (ε * vE b a cf q (t + 1 - B.card)) :=
-            Finset.sum_le_sum fun B hB => mul_le_mul_right' (by exact_mod_cast hcount B hB) _
+            Finset.sum_le_sum fun B hB => mul_le_mul_left (by exact_mod_cast hcount B hB) _
         _ = ∑ B' ∈ (U.erase κ0).powerset, (patCapN b a cf q (B'.card + 1) : ℝ≥0∞) *
               (ε * vE b a cf q (t - B'.card)) := by
             rw [Finset.sum_image hinj]
@@ -225,7 +225,7 @@ theorem grpAll_count_le (hH : totalHeight = subtreeHeight) {G : ℕ → ℝ≥0�
               ∑ ρ, grpAll parameter data s excl Ms (fun e => G (countAt e I)) (e + gx parameter data s excl m ρ) := by
             rw [grpAll, grpM_eq parameter data hH, freshAvg_univ_eq]
         _ ≤ (Fintype.card Randomness : ℝ≥0∞)⁻¹ * ∑ ρ, P (countAt e I + if ρ ∈ A then 1 else 0) := by
-            refine mul_le_mul_left' (Finset.sum_le_sum fun ρ _ => ?_) _
+            refine mul_le_mul_right (Finset.sum_le_sum fun ρ _ => ?_) _
             rw [← hcnt]
             exact grpAll_count_le hH hG Ms hnd.2 _
         _ = (1 - ((pa : ℝ≥0) : ℝ≥0∞)) * P (countAt e I) + ((pa : ℝ≥0) : ℝ≥0∞) * P (countAt e I + 1) := by

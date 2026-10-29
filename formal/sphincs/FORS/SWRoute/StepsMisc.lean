@@ -75,7 +75,7 @@ theorem step_cached {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 2 ^ 
 /-- **A guess at a cached FORS leaf query**: after arming, the decrement pays the contact
 coefficient if the contact would survive. -/
 theorem step_flq_cached {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 2 ^ 128) cU) (hH : StepHyp K model)
-    (f : FIn) (s : St) (flag : Bool) (p r0 : ℕ) (hinv : InvS K s p) (hb : ¬BadP K root s) (u : HashOutput)
+    (f : FIn) (s : St) (flag : Bool) (p r0 : ℕ) (hinv : InvS K s p) (_hb : ¬BadP K root s) (u : HashOutput)
     (hx : s.cache (f.input K.p) = some u) (hk : s.known f.inC = none) (hle : p + r0 + 1 ≤ total) :
     StepBound K root model ρ β δ cU (flq K f) s flag p (r0 + 1) p := by
   set x := f.input K.p with hxdef
@@ -103,7 +103,7 @@ theorem step_flq_cached {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 
     have h7 := swR7 hN p r0 hle (expo K ρ fl s) he
     have hmono : budgetE (expo K ρ fl s) p (r0 + 1) ≤ budgetE (expo K ρ fl s) p r0 :=
       budgetE_succ_le (expo_nonneg K ρ (by linarith [hN.low]) fl s) p r0
-        (by have := sw_lt hN hle; push_cast; linarith [(Nat.cast_nonneg p : (0 : ℝ) ≤ p)])
+        (by have := sw_lt hN hle; linarith [(Nat.cast_nonneg p : (0 : ℝ) ≤ p)])
     have hdec : budgetE (expo K ρ fl s) p (r0 + 1) + ENNReal.ofReal (cU / 2 ^ 128) ≤ budgetE (expo K ρ fl s) p r0 :=
       calc _ ≤ budgetE (expo K ρ fl s) p (r0 + 1) +
             (budgetE (expo K ρ fl s) p r0 - budgetE (expo K ρ fl s) p (r0 + 1)) := add_le_add le_rfl h7
@@ -123,7 +123,7 @@ theorem step_flq_cached {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 
   · rw [if_neg hsv, mul_zero, add_zero]
     have hmono : budgetE (expo K ρ fl s) p (r0 + 1) ≤ budgetE (expo K ρ fl s) p r0 :=
       budgetE_succ_le (expo_nonneg K ρ (by linarith [hN.low]) fl s) p r0
-        (by have := sw_lt hN hle; push_cast; linarith [(Nat.cast_nonneg p : (0 : ℝ) ≤ p)])
+        (by have := sw_lt hN hle; linarith [(Nat.cast_nonneg p : (0 : ℝ) ≤ p)])
     calc budgetE (expo K ρ flag s) p (r0 + 1) * weightA K root s + weightA K root s * pendA K s
         ≤ (budgetE (expo K ρ fl s) p (r0 + 1) * weightA K root s + ENNReal.ofReal δ * payA K root flag s (flq K f)) +
             weightA K root s * pendA K s := add_le_add harm le_rfl

@@ -216,7 +216,7 @@ theorem goodN_draw (L : QueryLog SigningSpec) (draw : ℕ)
 /-- **One ordinary query.** An arming query is paid by the release; any other query is a step of
 the one-coin potential with a fixed gate. -/
 theorem goodN_ordinary (hparse : ∀ p call, model.parse (pblk parameter data p call) = none)
-    (hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
+    (_hkind : ∀ p call, tg.kind (pblk parameter data p call) = .none)
     (hdigest : ∀ p call, tg.digest (pblk parameter data p call))
     (hrel : ∀ (s : State) (P : List Pair) (Ms : List Message) (L : QueryLog SigningSpec) (d : Multiset View)
       (R : List Coordinate) (n k : ℕ) (input : CostSpec.Domain), PInv parameter data s P → DInv R d → J s L R →

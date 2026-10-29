@@ -92,7 +92,7 @@ theorem checkEntrySW_sound {b k a K N qtop : ℕ} {t : PoisT} {opts : List Opt} 
       0 ≤ Pb ∧ 0 ≤ m ∧ swMainQ K N qa qb ρ δ o.B n.B Pb = true := by
   rcases ho : opts[ic]? with _ | o <;> rcases hn : nopts[inr]? with _ | n <;>
     rcases htc : tails[itl]? with _ | tc <;>
-    simp only [checkEntrySW, ho, hn, htc, Bool.and_eq_true, decide_eq_true_eq, reduceCtorEq,
+    simp only [checkEntrySW, ho, hn, htc, Bool.and_eq_true, decide_eq_true_eq,
       Bool.false_eq_true] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h0'⟩, h0''⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, hm⟩, h10⟩ := h
   exact ⟨o, List.mem_of_getElem? ho, n, List.mem_of_getElem? hn, tc, List.mem_of_getElem? htc, h0, h0', h0'',
@@ -261,7 +261,7 @@ attribute [local instance] Classical.propDecidable
 
 set_option maxRecDepth 100000 in
 /-- The small-budget case of `det_bitsFH`, on its own. -/
-theorem det_small_caseF (hb0 : 0 < keptHeight topLayer) (H b k a K N : ℕ) (hH : totalHeight = H)
+theorem det_small_caseF (hb0 : 0 < keptHeight topLayer) (H b k a _K N : ℕ) (hH : totalHeight = H)
     (hb : subtreeHeight = b) (hk : forsTrees = k) (ha : forsHeight = a)
     (hN : signatureLimit = N)
     (qh : ℕ) (ρ : ℚ) (t : H0.PoisT) (o : H0.Opt) (on : H0.OptN) (hpt : H0.checkPT t = true)

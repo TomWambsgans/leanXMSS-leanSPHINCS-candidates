@@ -199,7 +199,7 @@ theorem grpAll_cov_le (hH : totalHeight = subtreeHeight) (S : Finset FTree) (κ0
       calc G' e = ε * ∑ ρ, G (e + gx parameter data s excl m ρ) := hG'e e
         _ ≤ ε * ∑ ρ, ((if MatchP parameter data s excl I ℓ κ0 (m, ρ) then
               G' (e + {pview parameter data s (m, ρ)}) else 0) + Bsum (e + gx parameter data s excl m ρ)) :=
-            mul_le_mul_left' (Finset.sum_le_sum fun ρ _ => hpt ρ) ε
+            mul_le_mul_right (Finset.sum_le_sum fun ρ _ => hpt ρ) ε
         _ = (∑ ρ, if MatchP parameter data s excl I ℓ κ0 (m, ρ) then
               ε * G' (e + {pview parameter data s (m, ρ)}) else 0) +
             ε * ∑ ρ, Bsum (e + gx parameter data s excl m ρ) := by

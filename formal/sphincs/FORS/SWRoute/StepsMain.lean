@@ -63,7 +63,7 @@ theorem stepBound_or_bad (input : CostSpec.Domain) (s : St) (flag : Bool) (p r p
 /-! ### Exposure steps -/
 
 theorem step_canonical {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 2 ^ 128) cU) (s : St) (flag : Bool)
-    (p r0 : ℕ) (hb : ¬BadP K root s) (x : HashInput) (c : Coordinate) (comb : Digest → HashOutput)
+    (p r0 : ℕ) (_hb : ¬BadP K root s) (x : HashInput) (c : Coordinate) (comb : Digest → HashOutput)
     (hcs : costStep model (.inl (.inr (.inl x))) s = (fun r => (comb r.1, r.2)) <$> sampleCoordinate c s)
     (hQ : IsFLQ K (.inl (.inr (.inl x))) → s.known c ≠ none) (hF : payF K root s (.inl (.inr (.inl x))) = 0)
     (hC : payC K root s (.inl (.inr (.inl x))) = 0) (hA : payA K root flag s (.inl (.inr (.inl x))) = 0)
@@ -76,10 +76,10 @@ theorem step_canonical {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 2
   have hexp := exposure_expo K ρ s c flag
   have hB1 : budgetE (expo K ρ flag s) p r0 ≤ 1 :=
     budgetE_le_one (expo_nonneg K ρ (by linarith [hN.low]) flag s) p r0
-      (by have := sw_lt hN hle; push_cast; linarith)
+      (by have := sw_lt hN hle; linarith)
   have hmono : budgetE (expo K ρ flag s) p (r0 + 1) ≤ budgetE (expo K ρ flag s) p r0 :=
     budgetE_succ_le (expo_nonneg K ρ (by linarith [hN.low]) flag s) p r0
-      (by have := sw_lt hN hle; push_cast; linarith [(Nat.cast_nonneg p : (0 : ℝ) ≤ p)])
+      (by have := sw_lt hN hle; linarith [(Nat.cast_nonneg p : (0 : ℝ) ≤ p)])
   have hm := exposure_mean K root s c _ hQ _ hB1
   have hp := exposure_pend K root s c
   have hsum : ∑' r, Pr[= r | sampleCoordinate c s] *
@@ -103,7 +103,7 @@ theorem step_canonical {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 2
     _ = _ := by ring
 
 theorem step_reveal {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 2 ^ 128) cU) (s : St) (flag : Bool)
-    (p r : ℕ) (hb : ¬BadP K root s) (c : Coordinate) (hle : p + r ≤ total) :
+    (p r : ℕ) (_hb : ¬BadP K root s) (c : Coordinate) (hle : p + r ≤ total) :
     StepBound K root model ρ β δ cU (.inl (.inr (.inr c))) s flag p r p := by
   have hnQ := not_isFLQ_reveal K c
   have hcs : costStep model (.inl (.inr (.inr c))) s = (fun r' => (r'.1, r'.2)) <$> sampleCoordinate c s := by

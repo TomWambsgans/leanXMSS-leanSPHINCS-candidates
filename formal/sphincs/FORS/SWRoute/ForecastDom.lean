@@ -425,7 +425,7 @@ theorem excPay_le_psi (s : State) (P : List Pair) (Ms : List Message) (L : Query
     · calc weightA K root s * (min 1 (PiC K data wbar ∅ (CellOf f) s P Ms L d k) - ENNReal.ofReal tp.m)
           ≤ 1 * ENNReal.ofReal (1 - tp.m) := mul_le_mul' hw1 hex
         _ = ENNReal.ofReal (1 - tp.m) * 1 := by rw [one_mul, mul_one]
-        _ ≤ _ := mul_le_mul_left' hpsi _
+        _ ≤ _ := mul_le_mul_right hpsi _
     · have hmin : min 1 (PiC K data wbar ∅ (CellOf f) s P Ms L d k) ≤ ENNReal.ofReal tp.m := by
         by_cases hm1 : 1 ≤ tp.m
         · refine le_trans (min_le_left _ _) ?_
@@ -449,7 +449,7 @@ theorem excPay_le_psi (s : State) (P : List Pair) (Ms : List Message) (L : Query
             exact absurd (one_le_psi_cell K data wbar tp hw hθ s P Ms L d k (cellOfF f) _ hDlt (discAt d I) hQ
               (Finset.filter_subset _ _) (not_le.1 hXle)) hpsi
         · unfold PatOK at hok
-          push_neg at hok
+          push Not at hok
           obtain ⟨I', S, hS, hgt⟩ := hok
           exact absurd (one_le_psi_pat K data wbar tp s P Ms L d k I' S hS hgt) hpsi
       rw [tsub_eq_zero_of_le hmin, mul_zero]

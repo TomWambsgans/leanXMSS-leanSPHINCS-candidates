@@ -215,7 +215,7 @@ theorem known_store (c : Coordinate) : (s.store x u).known c = none ↔ s.known 
 theorem sameLeaf_store_fleaf (hx : s.cache x = none) (hi : K.initial x = none) {f : FIn} (hxf : x = f.input K.p) :
     ∀ l, Retained K.p l → K.SameLeaf s (s.store x u) l := fun l _ =>
   K.sameLeaf_store u hx hi l (fun _ hA => Ctx.isA_ne_fleaf hA f hxf) (fun _ _ hB => Ctx.isB_ne_fleaf hB f hxf)
-    (fun msg ctr he => enc_ne_fleaf (he.symm.trans hxf))
+    (fun _ _ he => enc_ne_fleaf (he.symm.trans hxf))
 
 /-- A digest block is of no WOTS shape. -/
 theorem sameLeaf_store_msg (hx : s.cache x = none) (hi : K.initial x = none) (hM : ForsSigner.IsMsgInput x) :

@@ -43,7 +43,7 @@ variable (K : Ctx) (root : Digest) (model : HiddenRows.Model HashInput HashOutpu
 
 /-- **A fresh first-order answer with a set `S` of special answers** (each costing at most `c`
 times the weight). -/
-theorem step_firstOrder {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 2 ^ 128) cU) (hH : StepHyp K model)
+theorem step_firstOrder {total : ℕ} (_hN : SWNumeric ρ β δ ((total : ℝ) / 2 ^ 128) cU) (hH : StepHyp K model)
     (s : St) (flag : Bool) (p r0 : ℕ) (hinv : InvS K s p) (hb : ¬BadP K root s) {x : HashInput}
     (hx : s.cache x = none) (hcs : costStep model (.inl (.inr (.inl x))) s = readOutside x s)
     (hnF : ∀ f : FIn, x ≠ f.input K.p) (hM : ¬ForsSigner.IsMsgInput x)
@@ -348,7 +348,7 @@ theorem step_enc {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 2 ^ 128
 
 /-- **A fresh FORS leaf query whose secret is known**: an unrecorded contact kills. -/
 theorem step_flq_noguess {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) / 2 ^ 128) cU) (hH : StepHyp K model)
-    (f : FIn) (s : St) (flag : Bool) (p r0 : ℕ) (hinv : InvS K s p) (hb : ¬BadP K root s)
+    (f : FIn) (s : St) (flag : Bool) (p r0 : ℕ) (_hinv : InvS K s p) (hb : ¬BadP K root s)
     (hx : s.cache (f.input K.p) = none) (canonical : Digest) (hk : s.known f.inC = some canonical)
     (hne : f.v ≠ canonical) (hle : p + r0 + 1 ≤ total) :
     StepBound K root model ρ β δ cU (flq K f) s flag p (r0 + 1) (p + 1) := by
@@ -470,7 +470,7 @@ theorem step_digest_fresh {total : ℕ} (hN : SWNumeric ρ β δ ((total : ℝ) 
       rw [hk]
       refine le_trans ?_ le_add_self
       refine mul_le_of_le_one_left' (budgetE_le_one (expo_nonneg K ρ (by linarith [hN.low]) flag s) p r0 ?_)
-      have := sw_lt hN hle; push_cast; linarith
+      have := sw_lt hN hle; linarith
     · have : weightA K root (s.store x u) = weightA K root s := by
         rw [weightA_eq, hweight, hw, if_neg]
         rintro (hw' | hd' | hn')

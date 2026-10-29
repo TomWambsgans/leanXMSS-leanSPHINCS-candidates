@@ -125,7 +125,7 @@ theorem one_le_failMass {Fail : Finset (Fin (2 ^ subtreeHeight))} {l : Fin (2 ^ 
   have hge : ∀ {V : Type} (U : Finset V) (g : V → ℝ≥0∞) (u : V), u ∈ U →
       (U.card : ℝ≥0∞)⁻¹ * g u ≤ freshAvg U g := fun U g u hu => by
     unfold freshAvg
-    exact mul_le_mul_left' (Finset.single_le_sum (f := g) (fun _ _ => bot_le) hu) _
+    exact mul_le_mul_right (Finset.single_le_sum (f := g) (fun _ _ => bot_le) hu) _
   have hinner : freshAvg (Finset.univ : Finset (FTree → FLeaf))
       (fun m => (fun v : View => if v.1 ∈ Fail then (1 : ℝ≥0∞) else 0) (l, m)) = 1 := by
     calc _ = freshAvg (Finset.univ : Finset (FTree → FLeaf)) (fun _ => (1 : ℝ≥0∞)) := by
@@ -143,7 +143,7 @@ theorem one_le_failMass {Fail : Finset (Fin (2 ^ subtreeHeight))} {l : Fin (2 ^ 
   calc (1 : ℝ≥0∞) = (2 : ℝ≥0∞) ^ subtreeHeight * (((2 : ℝ≥0∞) ^ subtreeHeight)⁻¹ * 1) := by
         rw [mul_one, ENNReal.mul_inv_cancel (by simp) (by simp)]
     _ ≤ (2 : ℝ≥0∞) ^ subtreeHeight * failMass Fail := by
-        refine mul_le_mul_left' ?_ _
+        refine mul_le_mul_right ?_ _
         rw [hmass]
         refine le_trans (le_of_eq ?_) (hge _ _ l (Finset.mem_univ l))
         rw [hcard]
@@ -176,7 +176,7 @@ theorem slack_arith (Q N Kk : ℕ) (hK : 1 ≤ Kk) {la d V : ℝ≥0∞} (hla : 
       _ ≤ 4 * (Q : ℝ≥0∞) * u := by gcongr
   have h4 : 2 * (((Q + Kk : ℕ) : ℝ≥0∞) / 2 ^ 256) ≤ ((Q + Kk : ℕ) : ℝ≥0∞) * u := by
     rw [div_eq_mul_inv, mul_left_comm]
-    refine mul_le_mul_left' ?_ _
+    refine mul_le_mul_right ?_ _
     rw [ENNReal.inv_pow, show (2 : ℝ≥0∞) * 2⁻¹ ^ 256 = 2⁻¹ ^ 255 by rw [inv_two_pow_split 255 1, pow_one], hu]
     exact pow_le_pow_of_le_one (by simp) (ENNReal.inv_le_one.2 one_le_two) (by norm_num)
   have hnat : ((3 + 20 * (Q + N) + 4 * Q + (Q + Kk) : ℕ) : ℝ≥0∞) ≤ ((32 * (Q + Kk + N) : ℕ) : ℝ≥0∞) := by
@@ -188,7 +188,7 @@ theorem slack_arith (Q N Kk : ℕ) (hK : 1 ≤ Kk) {la d V : ℝ≥0∞} (hla : 
     _ ≤ 3 * u + (20 * ((Q : ℝ≥0∞) + N) * u + 4 * (Q : ℝ≥0∞) * u) + ((Q + Kk : ℕ) : ℝ≥0∞) * u := by
         gcongr
     _ = ((3 + 20 * (Q + N) + 4 * Q + (Q + Kk) : ℕ) : ℝ≥0∞) * u := by push_cast; ring
-    _ ≤ ((32 * (Q + Kk + N) : ℕ) : ℝ≥0∞) * u := mul_le_mul_right' hnat _
+    _ ≤ ((32 * (Q + Kk + N) : ℕ) : ℝ≥0∞) * u := mul_le_mul_left hnat _
     _ = ((Q + Kk + N : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200 := by rw [h200]; push_cast; ring
 
 /-- The P-part's right side regrouped as `Rp + cU · WC + digest payments`. -/
@@ -319,14 +319,14 @@ theorem detSW_of (hX : HTail) : DetSW := by
     · rw [hb0n', if_pos ht, mul_zero]
       exact bot_le
     · rw [hb0n', if_neg ht]
-      exact mul_le_mul_right' hδle _
+      exact mul_le_mul_left hδle _
   have hGle : ENNReal.ofReal δ' * ((q' : ℝ≥0∞) * startExcessG witnessNear wbar b0n' q') ≤
       ENNReal.ofReal δ * ((q' : ℝ≥0∞) * startExcessG witnessNear wbar b0n q') := by
     by_cases ht : b0n = ⊤
     · rw [hδ0 ht, zero_mul]
       exact bot_le
     · rw [hb0n', if_neg ht]
-      exact mul_le_mul_right' hδle _
+      exact mul_le_mul_left hδle _
   have hd1 : ENNReal.ofReal δ' ≤ 1 := by
     rw [← ENNReal.ofReal_one]
     exact ENNReal.ofReal_le_ofReal ((min_le_right _ _).trans (by norm_num))
@@ -339,7 +339,7 @@ theorem detSW_of (hX : HTail) : DetSW := by
   have hb28 : subtreeHeight ≤ 28 := hHb ▸ totalHeight_le_28
   have hV16 : 16 * (ν * 2 ^ subtreeHeight) ≤ 4 := by
     calc 16 * (ν * 2 ^ subtreeHeight) = ν * 2 ^ (subtreeHeight + 4) := by rw [pow_add]; norm_num; ring
-      _ ≤ ν * 2 ^ 128 := mul_le_mul_left' (pow_le_pow_right₀ one_le_two (by omega)) _
+      _ ≤ ν * 2 ^ 128 := mul_le_mul_right (pow_le_pow_right₀ one_le_two (by omega)) _
       _ = 1 := ENNReal.inv_mul_cancel (by simp) (by simp)
       _ ≤ 4 := by norm_num
   have hrate : ν * ((signatureLimit : ℝ≥0∞) * revRate + ENNReal.ofReal m) ≤ ENNReal.ofReal (cU / 2 ^ 128) := by
@@ -401,7 +401,7 @@ theorem detSW_of (hX : HTail) : DetSW := by
           exact ENNReal.ofReal_le_ofReal (by linarith)
         calc ν * XS K data.root data wbar Fail model (ENNReal.ofReal m) M [] q' start [] [] 0
             ≤ ν * ((q' : ℝ≥0∞) * ENNReal.ofReal (1 - m)) :=
-              mul_le_mul_left' (XS_le_budget K data wbar Fail model m M [] q' start [] [] 0) _
+              mul_le_mul_right (XS_le_budget K data wbar Fail model m M [] q' start [] [] 0) _
           _ ≤ ν * ((q' : ℝ≥0∞) * 1) := by gcongr
           _ ≤ ν * ((q' : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ subtreeHeight * failMass Fail)) := by
               gcongr

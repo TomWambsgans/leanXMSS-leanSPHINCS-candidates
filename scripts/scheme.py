@@ -27,7 +27,7 @@ The FORS FTS has k trees of height a and no root hash (the WOTS+C key signs the 
 the roots): k = 24, a = 10 for every pruned key, the fewest trees whose proved limit for the full key still
 reaches 2^(h+4) signatures, so that verification does not depend on the pruning. A layered key is at least
 24 high: at 2^24 and 2^26 signatures its instances are used fewer times, and it takes a lighter FTS (UNIFORM):
-FORS 20x9 and 23x9, a forest of 6 and 7 coordinates.
+FORS 19x9 and 23x9, a forest of 6 and 7 coordinates.
 """
 
 import argparse
@@ -49,7 +49,7 @@ HEIGHTS = (20, 22, 24, 26, 28)  # the pruned key of each lifetime: h = L - 4
 LAYERED = {24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}  # top layer first
 PRUNED = (8, 10, 12, 13, 14, 20)  # kept subtree heights b < h with a certificate, besides b = h
 # The layered key of each lifetime: (height, forest coordinates, FORS (k, a)).
-UNIFORM = {24: (24, 6, (20, 9)), 26: (24, 7, (23, 9)), 28: (24, 8, (24, 10)), 30: (26, 8, (24, 10)), 32: (28, 8, (24, 10))}
+UNIFORM = {24: (24, 6, (19, 9)), 26: (24, 7, (23, 9)), 28: (24, 8, (24, 10)), 30: (26, 8, (24, 10)), 32: (28, 8, (24, 10))}
 
 
 class Hash:

@@ -359,7 +359,7 @@ theorem new_pair_boundWA {Cmax : ℕ} (hfair : FairS w Cmax Lmax) (hQ : Qtot ≤
     (R : List Coordinate) (hprep : Prepared initial s) (hP : PInv parameter data s P)
     (hM : MInv parameter data s Ms) (hD : DInv R d)
     (hC : CountInv parameter data Qtot s budget) (p : Pair) (c : DigestCall)
-    (hkind : ∀ call, tg.kind (pblk parameter data p call) = .none)
+    (_hkind : ∀ call, tg.kind (pblk parameter data p call) = .none)
     (hp0 : s.cache (pblk parameter data p firstCall) = none) :
     ∑' v, Pr[= v | ($ᵗ HashOutput : ProbComp HashOutput)] *
         ∑' out, Pr[= out | interp tg initial model (next v) (budget - 1)

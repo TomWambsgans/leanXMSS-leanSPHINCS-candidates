@@ -12,8 +12,8 @@ FORS is `k` trees of `2^a` leaves (`Params.forsTrees`, `Params.forsHeight`); the
 in `(k, a)` and only the certificates fix them: `a = 10` and `k = 24`, the same for every pruning
 of a height so that verification does not depend on it (24 is the fewest trees whose cover attack
 reaches the `2^(h+4)` signatures of each lifetime), except the layered keys of the lifetimes `2^24`
-and `2^26`, both at `h = 24`: 20 and 23 trees of height 9, the fewest of height 9 whose certificate
-reaches `2^24` and `2^26` (19 trees certify only about 14.6 million; `scripts/fors_certificates.py`, above its UNIFORM table). A leaf is the hash of one
+and `2^26`, both at `h = 24`: 19 and 23 trees of height 9, the fewest of height 9 whose certificate
+reaches `2^24` and `2^26` (18 trees do not even reach `2^24` in the cover attack). A leaf is the hash of one
 secret, and one hash of the seed gives the two secrets of a sibling pair (`leafPair`), as everywhere
 else in the scheme.
 
@@ -31,7 +31,7 @@ instance's FORS key in `forsKeyCost` hashes and opens one tree in `treeOpenCost`
 ## The digest
 
 The digest is `digestCalls = ⌈(h + k a) / 256⌉` calls of 256 bits: two with 24 trees of height 10,
-one with 20 or 23 trees of height 9. Each call is its own hash domain (`HashDomain`, type byte 12,
+one with 19 or 23 trees of height 9. Each call is its own hash domain (`HashDomain`, type byte 12,
 the call number in `hi`), their outputs are concatenated low call first (`digestValue`) and the
 result is truncated to `h + k a` bits (`truncateMessageDigest`). The index is the low `h` bits, so
 it is read from the first call alone (`digestIndex`, `blockIndex`, `digestIndex_truncate`), and the
@@ -42,7 +42,7 @@ uniform (`Security.evalDist_digestBlock_uniform`).
 
 Signature limits `N` with 127 bits, one theorem each in [Main.lean](FORS/Main.lean) (e.g.
 `h24_pruned12`), collected by `requestedSecurity`; layered keys: 10 + 7 + 7, 10 + 8 + 8 and 10 + 9 + 9,
-at `h = 24` also with 20 and 23 trees of height 9 (`h24_layered_k20`, `h24_layered_k23`).
+at `h = 24` also with 19 and 23 trees of height 9 (`h24_layered_k19`, `h24_layered_k23`).
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -67,20 +67,22 @@ The layered keys with lighter FORS, at `h = 24` (10 + 7 + 7):
 
 | FORS | lifetime | limit | cover attack | share |
 | --- | ---: | ---: | ---: | ---: |
-| 20 trees of height 9 | `2^24` | 24,410,000 | 30,900,666 | 79.0% |
+| 19 trees of height 9 | `2^24` | 16,777,216 | 19,630,036 | 85.5% |
 | 23 trees of height 9 | `2^26` | 71,650,000 | 82,781,654 | 86.6% |
-| 19 trees of height 9 | `2^24` | 16,777,216 | 19,630,037 | 85.5% |
 
-With 1.5 and 4.3 signatures per instance, their limits are a smaller share of the cover attack than
-the 24×10 layered key of the same height (97.2%). Every limit, these three included, is a larger share of its
-own cover attack than the forest's is of the forest's (79.5–97.8%, [README.md](README.md)).
+With 1 and 4.3 signatures per instance, their limits are a smaller share of the cover attack than
+the 24×10 layered key of the same height (97.2%). Every limit, these two included, is a larger share of its
+own cover attack than the forest's is of the forest's (60.0–97.8%, [README.md](README.md)).
 
-The 19×9 key reaches `2^24` only through a third route between the small and the large one, the
-survival-weighted route ([SWRoute/](FORS/SWRoute), `SWRoute.detSW`, combined by
-`ForsPotential.det_bitsF3`): the survival weight of the large route with the marker and contact
-structure of the small one, the budget at a state-dependent exponent (`ρ` unarmed, `2` armed, more
-after a contact), and per-entry certificates of the cover, the near-cover excess and the tail of the
-own-cell near forecast ([Certificates/H24SW](FORS/Certificates/H24SW.lean)).
+**A third route for the 19×9 key.** The two routes of [PROOF.md](PROOF.md) certify the 19×9 key only up
+to about 14.6 million signatures. The survival-weighted route ([SWRoute/](FORS/SWRoute),
+`SWRoute.detSW`) closes the gap. It keeps the survival weight of the large route but raises it to a
+state-dependent exponent: `ρ` until a marker, a contact or a near cover arms the run, then 2, more
+after contacts. It applies to keys that keep every index (`b = h`) with `b + a ≥ 31` and one digest
+call. `ForsPotential.det_bitsF3` combines the three routes: the small route up to `q_h ≈ 2^119.25`,
+the SW route up to about `2^121.97`, the large route above. The SW route's certificate
+([Certificates/H24SW](FORS/Certificates/H24SW.lean), `SWRoute.checkCoverSW`) is 7 entries, each with
+its rate `ρ`, its cover and near options, and a certified tail of the near forecast.
 
 ## What the proof changes
 

@@ -64,9 +64,9 @@ A SPHINCS-style scheme with four toggles, 60 configurations in all. Its componen
   \item[T3, hash.] Keccak-256, BLAKE2s or SHA-256.
   \item[T4, FTS.] The \emph{two-level WOTS forest} of \cref{sec:twolevel}, the candidate (the figures below are
         for it unless a table also gives FORS), of 8 trees, or \emph{FORS}, 24 trees of height 10; the
-        layered keys of $2^{24}$ and $2^{26}$ take a forest of 6 and 7 trees, and FORS of 20 and 23 trees of
+        layered keys of $2^{24}$ and $2^{26}$ take a forest of 6 and 7 trees, and FORS of 19 and 23 trees of
         height 9. Both are proved in Lean, each with its own 39 lifetimes. FORS signatures are 33--34\% larger for
-        pruned keys (19--22\% layered), and its threshold preprocessing is about half for pruned keys
+        pruned keys (17--22\% layered), and its threshold preprocessing is about half for pruned keys
         (\cref{sec:twolevel}).
 \end{description}
 
@@ -78,7 +78,7 @@ A SPHINCS-style scheme with four toggles, 60 configurations in all. Its componen
   pruned: height $h$ & 20 & 22 & 24 & 26 & 28 \\
   layered: layer heights, top first & $10+7+7$ & $10+7+7$ & $10+7+7$ & $10+8+8$ & $10+9+9$ \\
   layered: forest trees & 6 & 7 & 8 & 8 & 8 \\
-  layered: FORS trees $\times$ height & $20\times9$ & $23\times9$ & $24\times10$ & $24\times10$ & $24\times10$ \\
+  layered: FORS trees $\times$ height & $19\times9$ & $23\times9$ & $24\times10$ & $24\times10$ & $24\times10$ \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -131,7 +131,7 @@ verification cost of the full key of its height. Throughout, costs are rounded u
   \midrule
   \multicolumn{6}{l}{\emph{FORS, $24\times10$ unless stated}} \\
   $2^{24}$ & one tree, $h=20$ & 5\,588 & 340 & 358 & 359 \\
-   & layered ($10+7+7$), $20\times9$ & 6\,684 & 428 & 462 & 463 \\
+   & layered ($10+7+7$), $19\times9$ & 6\,524 & 419 & 453 & 453 \\
   $2^{26}$ & one tree, $h=22$ & 5\,620 & 342 & 360 & 361 \\
    & layered ($10+7+7$), $23\times9$ & 7\,164 & 456 & 491 & 491 \\
   $2^{28}$ & one tree, $h=24$ & 5\,652 & 344 & 362 & 363 \\
@@ -157,7 +157,10 @@ signature limits below. One proof, for any height, shape, kept subtree height an
 certificate checked by the Lean kernel; the size and the three verification costs of each of the 10 shapes are
 separate theorems; FORS has the same statement and axioms in a second library, with its own 39 limits. Each block of
 the table gives the limits, then their ratio to that FTS's cover attack (\cref{sec:twolevel}). The layered key of
-each lifetime is the one of \cref{sec:scheme}: at $2^{24}$ and $2^{26}$, 24 high with the lighter FTS.
+each lifetime is the one of \cref{sec:scheme}: at $2^{24}$ and $2^{26}$, 24 high with the lighter FTS. The proof bounds
+small query budgets and large ones by two routes; for the FORS key of $2^{24}$ (19 trees) a third route covers the
+budgets between them: the large route's survival weight with the small route's accounting, where a correct guess of
+a hidden value only wins together with a second event.
 \begin{center}
 \setlength{\tabcolsep}{3.5pt}
 \small
@@ -182,14 +185,14 @@ each lifetime is the one of \cref{sec:scheme}: at $2^{24}$ and $2^{26}$, 24 high
   $2^{32}$ & 28 & 97.8\% & 92.1\% & 87.1\% & 86.3\% & 85.4\% & 83.9\% & 82.6\% & 97.8\% \\
   \midrule
   \multicolumn{10}{l}{\emph{FORS}} \\
-  $2^{24}$ & 20 & $1.74\cdot10^{7}$ & -- & $3.25\cdot10^{5}$ & $1.67\cdot10^{5}$ & $8.62\cdot10^{4}$ & $2.27\cdot10^{4}$ & $6.02\cdot10^{3}$ & $2.44\cdot10^{7}$ \\
+  $2^{24}$ & 20 & $1.74\cdot10^{7}$ & -- & $3.25\cdot10^{5}$ & $1.67\cdot10^{5}$ & $8.62\cdot10^{4}$ & $2.27\cdot10^{4}$ & $6.02\cdot10^{3}$ & $1.67\cdot10^{7}$ \\
   $2^{26}$ & 22 & $7.14\cdot10^{7}$ & $1.90\cdot10^{7}$ & $3.54\cdot10^{5}$ & $1.82\cdot10^{5}$ & $9.35\cdot10^{4}$ & $2.47\cdot10^{4}$ & $6.54\cdot10^{3}$ & $7.16\cdot10^{7}$ \\
   $2^{28}$ & 24 & $2.92\cdot10^{8}$ & $2.07\cdot10^{7}$ & $3.85\cdot10^{5}$ & $1.98\cdot10^{5}$ & $1.01\cdot10^{5}$ & $2.68\cdot10^{4}$ & $7.09\cdot10^{3}$ & $2.92\cdot10^{8}$ \\
   $2^{30}$ & 26 & $1.18\cdot10^{9}$ & $2.25\cdot10^{7}$ & $4.18\cdot10^{5}$ & $2.15\cdot10^{5}$ & $1.10\cdot10^{5}$ & $2.91\cdot10^{4}$ & $7.67\cdot10^{3}$ & $1.18\cdot10^{9}$ \\
   $2^{32}$ & 28 & $4.73\cdot10^{9}$ & $2.45\cdot10^{7}$ & $4.54\cdot10^{5}$ & $2.33\cdot10^{5}$ & $1.19\cdot10^{5}$ & $3.16\cdot10^{4}$ & $8.31\cdot10^{3}$ & $4.73\cdot10^{9}$ \\
   \midrule
   \multicolumn{10}{l}{\emph{ratio to the cover attack}} \\
-  $2^{24}$ & 20 & 92.8\% & -- & 87.5\% & 86.6\% & 85.9\% & 84.2\% & 82.6\% & 79.0\% \\
+  $2^{24}$ & 20 & 92.8\% & -- & 87.5\% & 86.6\% & 85.9\% & 84.2\% & 82.6\% & 85.5\% \\
   $2^{26}$ & 22 & 95.1\% & 93.5\% & 88.3\% & 87.4\% & 86.4\% & 84.9\% & 83.2\% & 86.6\% \\
   $2^{28}$ & 24 & 97.2\% & 94.2\% & 89.0\% & 88.1\% & 87.1\% & 85.4\% & 83.9\% & 97.2\% \\
   $2^{30}$ & 26 & 98.2\% & 94.9\% & 89.7\% & 88.8\% & 87.9\% & 86.1\% & 84.3\% & 98.2\% \\
@@ -405,10 +408,10 @@ not depend on the pruning, and for the layered keys from $2^{28}$ on; its digest
 24 is the fewest trees for which the full key still lasts $2^{h+4}$ signatures: with 23, even the cover attack falls
 short at every height. There, its cover lifetime is 83--85\% of the forest's (\texttt{scripts/scheme.py}); its proved
 lifetimes (\cref{sec:lifetimes}) are 83--98\% of its cover attack, and 12--16\% below the forest's. The layered keys
-of $2^{24}$ and $2^{26}$, 24 high, take 20 and 23 trees of height 9 (a one-call digest), the fewest the proof
-certifies with $a=9$ (with 19 it falls 13\% short of $2^{24}$): $2.44\cdot10^7$ and $7.16\cdot10^7$ proved signatures,
-79\% and 87\% of their cover attack, against $2.66\cdot10^7$ and $1.44\cdot10^8$ for the forest of 6 and 7
-trees. At $h=26$, full key,
+of $2^{24}$ and $2^{26}$, 24 high, take 19 and 23 trees of height 9 (a one-call digest), the fewest whose cover
+attack reaches $2^{24}$ and $2^{26}$: $2^{24}$ and $7.16\cdot10^7$ proved signatures, 85\% and 87\% of their cover
+attack, against $2.66\cdot10^7$ and $1.44\cdot10^8$ for the forest of 6 and 7 trees. With 19 trees the two routes of
+the proof leave a gap; a third route closes it (\cref{sec:lifetimes}). At $h=26$, full key,
 Keccak-256, in permutations (preprocessing: the hashes of one FTS instance inside the threshold MPC):
 \begin{center}
 \setlength{\tabcolsep}{4pt}

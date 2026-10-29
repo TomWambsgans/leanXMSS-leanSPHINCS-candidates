@@ -4,16 +4,16 @@
 A configuration is a total height H (20, 22, 24, 26, 28), a shape (pruned: one tree with a kept subtree
 of height B; layered: the hypertree of SPLITS, nothing pruned, B = H), its FTS, FORS with `k` trees of
 height `a`, and a signature limit N. FORS is 24 trees of height 10 except in the uniform keys of the
-lifetimes 2^24 and 2^26, both at H = 24: 20 and 23 trees of height 9 (LAYERED; `scripts/scheme.py`).
+lifetimes 2^24 and 2^26, both at H = 24: 19 and 23 trees of height 9 (SW_LAYERED, LAYERED; `scripts/scheme.py`).
 
 Usage (from formal/sphincs):
     python3 scripts/fors_certificates.py check H SHAPE B N LX [K A]   # check one parameter set (exit 1 if it fails)
-    python3 scripts/fors_certificates.py emit [ROOT]            # write FORS/Certificates/H*.lean (under ROOT)
+    python3 scripts/fors_certificates.py emit [ROOT]            # write FORS/Certificates/H*.lean, H*SW.lean (under ROOT)
     python3 scripts/fors_certificates.py emit-lifetimes [ROOT]  # and FORS/Lifetimes.lean
     python3 scripts/fors_certificates.py maxn H SHAPE B N0 [STEP LXLO LXHI [K A]]   # search the largest N above N0
     python3 scripts/fors_certificates.py scan H SHAPE B N LX... # the terms of the small route at several lx
     python3 scripts/fors_certificates.py sw H K A N [LX] [--cover Opt|F]  # three routes (small, SW, large) of a layered key
-    python3 scripts/fors_certificates.py sw-emit H K A N [LX]   # and write FORS/Certificates/H<H>SW.lean
+    python3 scripts/fors_certificates.py sw-emit H K A N [LX] [--root ROOT]   # and write FORS/Certificates/H<H>SW.lean
     python3 scripts/fors_certificates.py sw-scan H K A N LX0 LX1 [--cover Opt|F]   # SW slack per unit, entries 2^(1/16)
     python3 scripts/fors_certificates.py sw-maxn H K A N0 N1 [--cover Opt|F]       # the largest N of the three routes
 (--cover Opt, the default: OptF or OptJ, the smaller bound; --cover F: OptF only; LX defaults to the small route's
@@ -989,7 +989,7 @@ ATTACK = {
 }
 
 
-ATTACK_LIGHT = {(24, 20, 9): 30900666, (24, 23, 9): 82781654}
+ATTACK_LIGHT = {(24, 19, 9): 19630036, (24, 23, 9): 82781654}
 
 HEIGHTS = (20, 22, 24, 26, 28)
 
@@ -1005,7 +1005,8 @@ configuration, `ForsPotential.det_bitsFH` applied to the configuration's certifi
 (`Certificates/H*.lean`). `Main.lean` states each of them again, independently of this file, and
 proves it with the theorem here. Small budgets use the linear potential, the one-coin cover
 potential at baseline `ρ / 2^128` and the contact bound A4 of the FORS leaves; large budgets use the
-one-coin covers at the survival-weighted baseline. -/
+one-coin covers at the survival-weighted baseline. A key of `Certificates/H*SW.lean` takes three routes
+(`ForsPotential.det_bitsF3`): the survival-weighted route `SWRoute.detSW` between the small and the large one. -/
 
 namespace FORS.Lifetimes
 
@@ -1019,9 +1020,17 @@ def lean_params(c):
         return '.layered %d %d %d %d %d %d' % (c['h'], c['d'], SPLITS[c['h']][1], c['k'], c['a'], c['N'])
     return '.pruned %d %d %d %d %d' % (c['h'], c['b'], c['k'], c['a'], c['N'])
 
+def lifetimes_order(c):
+    """the order of Lifetimes.lean: by height, pruned keys (in PARAMS order) before layered keys, more trees first"""
+    return (c['h'], c['shape'] == 'layered', -c['k'] if c['shape'] == 'layered' else 0)
+
 def emit_lifetimes(certs, path):
-    heights = sorted({c['h'] for c in certs})
-    out = [LIFETIMES_HEADER % '\n'.join('import FORS.Certificates.H%d' % h for h in heights)]
+    certs = sorted(certs, key=lifetimes_order)
+    heights = sorted({c['h'] for c in certs if not c.get('sw')})
+    swh = sorted({c['h'] for c in certs if c.get('sw')})
+    out = [LIFETIMES_HEADER % '\n'.join(['import FORS.Certificates.H%d' % h for h in heights] +
+                                        ['import FORS.Certificates.H%dSW' % h for h in swh] +
+                                        (['import FORS.SWRoute.Proof'] if swh else []))]
     for c in certs:
         b, N, H, K, k, a = c['b'], c['N'], c['h'], c['K'], c['k'], c['a']
         tag, name, P = tag_of(c), pname(c), lean_params(c)
@@ -1031,6 +1040,17 @@ def emit_lifetimes(certs, path):
         names = ', '.join('H0.' + n for n in c['cover_names'][''])
         hnames = ', '.join('H0.' + n for n in c['cover_names']['h'])
         out.append('theorem %s_bits : SecurityBits (%s) 127 :=' % (name, P))
+        if c.get('sw'):
+            # det_bitsF3 (SWRoute/Closing.lean): hSW hb0 H b k a K N, then hH hb hk ha hK hN, qh, the small route,
+            # the SW cover and the large route
+            out.append('  @det_bitsF3 (%s) (@SWRoute.detSW (%s)) (by decide)\n    %d %d %d %d %d %d\n'
+                       '    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) %d\n'
+                       '    H0.rho_%s H0.tab_%s H0.small_%s H0.near_%s H0.tab_%s_ok H0.rate_%s_ok\n'
+                       '    H0.small_%s_ok H0.near_%s_ok H0.check_%s_ok\n'
+                       '    H0.sw_%s H0.sw_%s_ok\n'
+                       '    [%s] [%s] H0.covers_%s_ok\n'
+                       % (P, P, H, b, k, a, K, N, c['qh'], bt, bt, bt, bt, bt, bt, bt, bt, bt, tag, tag, names, hnames, tag))
+            continue
         # the explicit arguments of det_bitsFH (Certificates/Closing.lean): H b k a K N, then hH hb hk ha hK hN, then qh
         out.append('  @det_bitsFH (%s) (by decide) %d %d %d %d %d %d\n'
                    '    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) %d\n'
@@ -1091,20 +1111,26 @@ PARAMS = {
 
 # Parameter sets of layered keys, by height and FORS shape (h, k, a): (N, lx). The index is not ground (b = h);
 # with 24 trees of height 10 the smaller keygen credit of the top layer alone does not move the largest N, which
-# is the full key's. The uniform keys of the lifetimes 2^24 and 2^26 are at h = 24 with lighter FORS (19 trees of
-# height 9 do not reach 2^24: the largest certified N is about 14.6 million).
+# is the full key's. The uniform keys of the lifetimes 2^24 and 2^26 are at h = 24 with lighter FORS (the 2^24 key
+# in SW_LAYERED).
 LAYERED = {
-    (24, 20, 9): (24410000, -7.5),
     (24, 23, 9): (71650000, -7.625),
     (24, 24, 10): (292300000, -9.125),
     (26, 24, 10): (1182000000, -9.375),
     (28, 24, 10): (4731000000, -11.25),
 }
 
+# Layered keys proved through three routes (det_bitsF3: the small route up to 2^(128 + lx), the SW cover, the large
+# route; `sw-emit`, Certificates/H<h>SW.lean), by (h, k, a): (N, lx). 19 trees of height 9 reach 2^24 only this
+# way (the two routes alone certify about 14.6 million).
+SW_LAYERED = {
+    (24, 19, 9): (16777216, -8.75),
+}
+
 def lifetime(h, shape, b=None, k=24, a=10):
     """The proved signature limit of a configuration, None if it has no certificate here."""
     if shape == 'layered':
-        return (LAYERED.get((h, k, a)) or (None,))[0]
+        return (LAYERED.get((h, k, a)) or SW_LAYERED.get((h, k, a)) or (None,))[0]
     if (k, a) != (24, 10):
         return None
     return next((n for (bb, n, _) in PARAMS.get(h, []) if bb == b), None)
@@ -1116,7 +1142,7 @@ def attack(h, shape, b=None, k=24, a=10):
     return ATTACK.get(h, {}).get(h if shape == 'layered' else b)
 
 # The uniform (layered) key of each lifetime 2^L: (h, k, a).
-UNIFORM = {24: (24, 20, 9), 26: (24, 23, 9), 28: (24, 24, 10), 30: (26, 24, 10), 32: (28, 24, 10)}
+UNIFORM = {24: (24, 19, 9), 26: (24, 23, 9), 28: (24, 24, 10), 30: (26, 24, 10), 32: (28, 24, 10)}
 
 def uniform_lifetime(L):
     """The proved signature limit of the uniform key of the lifetime 2^L, None if not certified here."""
@@ -1136,6 +1162,10 @@ def configs():
             if hh == h and v is not None:
                 out.append((h, 'layered', h, v[0], v[1], k, a))
     return out
+
+def sw_configs():
+    """Every configuration of the three routes: (h, N, lx, k, a)."""
+    return [(h, N, lx, k, a) for (h, k, a), (N, lx) in sorted(SW_LAYERED.items())]
 
 def certify_config(h, shape, b, N, lx, verbose=True, k=24, a=10):
     set_config(h, shape, b, k, a)
@@ -1754,6 +1784,13 @@ if __name__ == '__main__':
         os.makedirs(os.path.join(root, 'FORS', 'Certificates'), exist_ok=True)
         for h in sorted({c['h'] for c in certs}):
             emit([c for c in certs if c['h'] == h], os.path.join(root, 'FORS', 'Certificates', 'H%d.lean' % h))
+        # the keys of the three routes (as sw-emit)
+        for (h, N, lx, k, a) in sw_configs():
+            set_config(h, 'layered', h, k, a)
+            c = certify_sw(h, N, lx)
+            assert c is not None and c['complete'], (h, N, lx, k, a)
+            emit_sw(c, os.path.join(root, 'FORS', 'Certificates', 'H%dSW.lean' % h))
+            certs.append(c)
         # Lifetimes.lean only with emit-lifetimes
         if cmd == 'emit-lifetimes':
             emit_lifetimes(certs, os.path.join(root, 'FORS', 'Lifetimes.lean'))
@@ -1773,7 +1810,8 @@ if __name__ == '__main__':
                   N, math.log2(c['qh']), c['lx'], math.log2(c['sw'].qtop), len(c['sw'].entries), len(c['sw'].opts),
                   len(c['sw'].nopts), float(sl), c['complete'], time.time() - t0), flush=True)
         if cmd == 'sw-emit':
-            path = os.path.join(ROOT, 'FORS', 'Certificates', 'H%dSW.lean' % h)
+            root = sys.argv[sys.argv.index('--root') + 1] if '--root' in sys.argv else ROOT
+            path = os.path.join(root, 'FORS', 'Certificates', 'H%dSW.lean' % h)
             emit_sw(c, path)
             print('written %s (%d bytes)' % (path, os.path.getsize(path)))
     elif cmd == 'sw-scan':
