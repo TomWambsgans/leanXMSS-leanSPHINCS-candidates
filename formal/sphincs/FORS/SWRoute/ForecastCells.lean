@@ -31,29 +31,29 @@ set_option linter.unusedSectionVars false
 /-! ### Cells -/
 
 /-- A cell: an index, a tree, and a leaf of that tree. -/
-abbrev Cell := Fin (2 ^ subtreeHeight) × FTree × FLeaf
+abbrev FCell := Fin (2 ^ subtreeHeight) × FTree × FLeaf
 
 /-- A view opens a cell when it is at the cell's index and selects the cell's leaf in its tree. -/
-def Opens (c : Cell) (v : View) : Prop := v.1 = c.1 ∧ v.2 c.2.1 = c.2.2
+def Opens (c : FCell) (v : View) : Prop := v.1 = c.1 ∧ v.2 c.2.1 = c.2.2
 
-instance (c : Cell) (v : View) : Decidable (Opens c v) := inferInstanceAs (Decidable (_ ∧ _))
+instance (c : FCell) (v : View) : Decidable (Opens c v) := inferInstanceAs (Decidable (_ ∧ _))
 
 /-- The leaves of tree `κ'` disclosed at index `I` by the views of `Q`. -/
 def leavesAt (Q : Finset View) (I : Fin (2 ^ subtreeHeight)) (κ' : FTree) : Finset FLeaf :=
   (Q.filter fun v => v.1 = I).image fun v => v.2 κ'
 
 /-- The trees other than the cell's whose leaf of `u` is disclosed at the cell's index. -/
-noncomputable def hitTrees (c : Cell) (Q : Finset View) (u : View) : Finset FTree :=
+noncomputable def hitTrees (c : FCell) (Q : Finset View) (u : View) : Finset FTree :=
   (Finset.univ.erase c.2.1).filter fun κ' => u.2 κ' ∈ leavesAt Q c.1 κ'
 
 /-- The number of trees other than the cell's whose leaf of `u` is not disclosed at the cell's index. -/
-noncomputable def missing (c : Cell) (Q : Finset View) (u : View) : ℕ :=
+noncomputable def missing (c : FCell) (Q : Finset View) (u : View) : ℕ :=
   ((Finset.univ.erase c.2.1).filter fun κ' => u.2 κ' ∉ leavesAt Q c.1 κ').card
 
 theorem card_erase_tree (κ : FTree) : (Finset.univ.erase κ).card = forsTrees - 1 := by
   rw [Finset.card_erase_of_mem (Finset.mem_univ _), Finset.card_univ, H0.card_ftree]
 
-theorem hitTrees_card (c : Cell) (Q : Finset View) (u : View) :
+theorem hitTrees_card (c : FCell) (Q : Finset View) (u : View) :
     (hitTrees c Q u).card = (forsTrees - 1) - missing c Q u := by
   have h := Finset.card_filter_add_card_filter_not (s := Finset.univ.erase c.2.1)
     (fun κ' => u.2 κ' ∈ leavesAt Q c.1 κ')
@@ -61,12 +61,12 @@ theorem hitTrees_card (c : Cell) (Q : Finset View) (u : View) :
   unfold hitTrees missing
   omega
 
-theorem missing_le (c : Cell) (Q : Finset View) (u : View) : missing c Q u ≤ forsTrees - 1 := by
+theorem missing_le (c : FCell) (Q : Finset View) (u : View) : missing c Q u ≤ forsTrees - 1 := by
   unfold missing
   rw [← card_erase_tree c.2.1]
   exact Finset.card_filter_le _ _
 
-theorem missing_lt (c : Cell) (Q : Finset View) (u : View) : missing c Q u < forsTrees := by
+theorem missing_lt (c : FCell) (Q : Finset View) (u : View) : missing c Q u < forsTrees := by
   have h1 := missing_le c Q u
   have h2 : 0 < forsTrees := Fin.pos c.2.1
   omega
@@ -101,15 +101,15 @@ theorem card_indexE : ((Fintype.card (Fin (2 ^ subtreeHeight)) : ℕ) : ℝ≥0�
 /-! ### Patterns -/
 
 /-- The per-tree factor of a pattern `U` (a set of trees other than the cell's that must be hit). -/
-noncomputable def patG (c : Cell) (Q : Finset View) (U : Finset FTree) (κ'' : FTree) (x : FLeaf) : ℝ≥0∞ :=
+noncomputable def patG (c : FCell) (Q : Finset View) (U : Finset FTree) (κ'' : FTree) (x : FLeaf) : ℝ≥0∞ :=
   if κ'' = c.2.1 then (if x = c.2.2 then 1 else 0)
   else if κ'' ∈ U then (if x ∈ leavesAt Q c.1 κ'' then 1 else 0) else 1
 
 /-- A view opens the cell and hits every tree of the pattern `U`. -/
-noncomputable def pat (c : Cell) (Q : Finset View) (U : Finset FTree) (u : View) : ℝ≥0∞ :=
+noncomputable def pat (c : FCell) (Q : Finset View) (U : Finset FTree) (u : View) : ℝ≥0∞ :=
   (if u.1 = c.1 then 1 else 0) * ∏ κ'', patG c Q U κ'' (u.2 κ'')
 
-theorem pat_hit {c : Cell} {Q : Finset View} {u : View} (hu : Opens c u) : pat c Q (hitTrees c Q u) u = 1 := by
+theorem pat_hit {c : FCell} {Q : Finset View} {u : View} (hu : Opens c u) : pat c Q (hitTrees c Q u) u = 1 := by
   unfold pat
   rw [if_pos hu.1, one_mul]
   refine Finset.prod_eq_one fun κ'' _ => ?_
@@ -122,7 +122,7 @@ theorem pat_hit {c : Cell} {Q : Finset View} {u : View} (hu : Opens c u) : pat c
     · rw [if_neg h2]
 
 /-- **Pointwise pattern bound.** -/
-theorem open_missing_le_pat (c : Cell) (Q : Finset View) (h : ℕ → ℝ≥0∞) (u : View) :
+theorem open_missing_le_pat (c : FCell) (Q : Finset View) (h : ℕ → ℝ≥0∞) (u : View) :
     (if Opens c u then h (missing c Q u) else 0) ≤
       ∑ j ∈ Finset.range forsTrees, h j *
         ∑ U ∈ (Finset.univ.erase c.2.1).powersetCard (forsTrees - 1 - j), pat c Q U u := by
@@ -142,7 +142,7 @@ theorem open_missing_le_pat (c : Cell) (Q : Finset View) (h : ℕ → ℝ≥0∞
     exact zero_le
 
 /-- **The average of a pattern.** -/
-theorem avg_pat_le (c : Cell) (Q : Finset View) (D : ℕ) (hD : ∀ κ', (leavesAt Q c.1 κ').card ≤ D)
+theorem avg_pat_le (c : FCell) (Q : Finset View) (D : ℕ) (hD : ∀ κ', (leavesAt Q c.1 κ').card ≤ D)
     (U : Finset FTree) (hU : U ⊆ Finset.univ.erase c.2.1) :
     freshAvg (Finset.univ : Finset View) (pat c Q U) ≤
       ((2 : ℝ≥0∞) ^ subtreeHeight)⁻¹ * ((2 : ℝ≥0∞) ^ forsHeight)⁻¹ *
@@ -189,7 +189,7 @@ theorem avg_pat_le (c : Cell) (Q : Finset View) (D : ℕ) (hD : ∀ κ', (leaves
     _ = _ := by ring
 
 /-- **The pattern bound.** -/
-theorem avg_open_missing_le (c : Cell) (Q : Finset View) (D : ℕ) (hD : ∀ κ', (leavesAt Q c.1 κ').card ≤ D)
+theorem avg_open_missing_le (c : FCell) (Q : Finset View) (D : ℕ) (hD : ∀ κ', (leavesAt Q c.1 κ').card ≤ D)
     (h : ℕ → ℝ≥0∞) :
     freshAvg (Finset.univ : Finset View) (fun u => if Opens c u then h (missing c Q u) else 0) ≤
       ((2 : ℝ≥0∞) ^ subtreeHeight)⁻¹ * ((2 : ℝ≥0∞) ^ forsHeight)⁻¹ *
@@ -219,18 +219,18 @@ theorem avg_open_missing_le (c : Cell) (Q : Finset View) (D : ℕ) (hD : ∀ κ'
 
 /-- The weight of a view at a cell relative to `Q`: `ρ^(missing)` if it opens the cell, is not in
 `Q`, and misses at least one tree; zero otherwise. -/
-noncomputable def wQ (c : Cell) (Q : Finset View) (ρ : ℝ) (u : View) : ℝ :=
+noncomputable def wQ (c : FCell) (Q : Finset View) (ρ : ℝ) (u : View) : ℝ :=
   if Opens c u ∧ u ∉ Q ∧ 1 ≤ missing c Q u then ρ ^ missing c Q u else 0
 
 /-- The exponential pair factor `e^{θ wQ}`. -/
-noncomputable def pairF (c : Cell) (Q : Finset View) (θ ρ : ℝ) (u : View) : ℝ≥0∞ :=
+noncomputable def pairF (c : FCell) (Q : Finset View) (θ ρ : ℝ) (u : View) : ℝ≥0∞ :=
   ENNReal.ofReal (Real.exp (θ * wQ c Q ρ u))
 
 /-- The excess of the pair factor at `j` missing trees. -/
 noncomputable def pairExcess (θ ρ : ℝ) (j : ℕ) : ℝ≥0∞ :=
   if 1 ≤ j then ENNReal.ofReal (Real.exp (θ * ρ ^ j) - 1) else 0
 
-theorem one_le_pairF (c : Cell) (Q : Finset View) {θ ρ : ℝ} (hθ : 0 ≤ θ) (hρ : 0 ≤ ρ) (u : View) :
+theorem one_le_pairF (c : FCell) (Q : Finset View) {θ ρ : ℝ} (hθ : 0 ≤ θ) (hρ : 0 ≤ ρ) (u : View) :
     1 ≤ pairF c Q θ ρ u := by
   unfold pairF
   rw [← ENNReal.ofReal_one]
@@ -238,7 +238,7 @@ theorem one_le_pairF (c : Cell) (Q : Finset View) {θ ρ : ℝ} (hθ : 0 ≤ θ)
   have : 0 ≤ wQ c Q ρ u := by unfold wQ; split_ifs <;> positivity
   exact Real.one_le_exp (by positivity)
 
-theorem pairF_le (c : Cell) (Q : Finset View) {θ ρ : ℝ} (hθ : 0 ≤ θ) (hρ : 0 ≤ ρ) (u : View) :
+theorem pairF_le (c : FCell) (Q : Finset View) {θ ρ : ℝ} (hθ : 0 ≤ θ) (hρ : 0 ≤ ρ) (u : View) :
     pairF c Q θ ρ u ≤ 1 + (if Opens c u then pairExcess θ ρ (missing c Q u) else 0) := by
   unfold pairF wQ
   by_cases h : Opens c u ∧ u ∉ Q ∧ 1 ≤ missing c Q u
@@ -252,7 +252,7 @@ theorem pairF_le (c : Cell) (Q : Finset View) {θ ρ : ℝ} (hθ : 0 ≤ θ) (h�
     exact le_self_add
 
 /-- **The average pair factor.** -/
-theorem avg_pairF_le (c : Cell) (Q : Finset View) (D : ℕ) (hD : ∀ κ', (leavesAt Q c.1 κ').card ≤ D)
+theorem avg_pairF_le (c : FCell) (Q : Finset View) (D : ℕ) (hD : ∀ κ', (leavesAt Q c.1 κ').card ≤ D)
     {θ ρ : ℝ} (hθ : 0 ≤ θ) (hρ : 0 ≤ ρ) :
     freshAvg (Finset.univ : Finset View) (pairF c Q θ ρ) ≤
       1 + ((2 : ℝ≥0∞) ^ subtreeHeight)⁻¹ * ((2 : ℝ≥0∞) ^ forsHeight)⁻¹ *

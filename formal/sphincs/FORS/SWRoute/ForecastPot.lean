@@ -36,11 +36,11 @@ set_option linter.unusedSectionVars false
 /-! ### Weights with a general per-pair weight function -/
 
 /-- The weight of a view at a cell relative to `Q` with per-pair weights `φ`. -/
-noncomputable def wQφ (c : Cell) (Q : Finset View) (φ : ℕ → ℝ) (u : View) : ℝ :=
+noncomputable def wQφ (c : FCell) (Q : Finset View) (φ : ℕ → ℝ) (u : View) : ℝ :=
   if Opens c u ∧ u ∉ Q ∧ 1 ≤ missing c Q u then φ (missing c Q u) else 0
 
 /-- The exponential pair factor `e^{θ wQφ}`. -/
-noncomputable def pairFφ (c : Cell) (Q : Finset View) (θ : ℝ) (φ : ℕ → ℝ) (u : View) : ℝ≥0∞ :=
+noncomputable def pairFφ (c : FCell) (Q : Finset View) (θ : ℝ) (φ : ℕ → ℝ) (u : View) : ℝ≥0∞ :=
   ENNReal.ofReal (Real.exp (θ * wQφ c Q φ u))
 
 /-! ### Ghost-state notions -/
@@ -50,7 +50,7 @@ noncomputable def discAt (d : Multiset View) (I : Fin (2 ^ subtreeHeight)) : Fin
   d.toFinset.filter fun v => v.1 = I
 
 /-- The local cell of a FORS leaf query. -/
-def cellOfF (f : FIn) : Cell := (localIdx f.index, f.κ, f.leaf)
+def cellOfF (f : FIn) : FCell := (localIdx f.index, f.κ, f.leaf)
 
 /-- The disclosure indicator of a finite set of views. -/
 noncomputable def inDisc (Q : Finset View) (D : Multiset View) : ℝ≥0∞ :=
@@ -104,7 +104,7 @@ noncomputable def prodU (L : QueryLog SigningSpec) (P : List Pair) (g : Pair →
 /-- **The cell part.** -/
 noncomputable def psiC (s : State) (P : List Pair) (Ms : List Message) (L : QueryLog SigningSpec)
     (d : Multiset View) (k : ℕ) : ℝ≥0∞ :=
-  ∑ c : Cell, ∑ D ∈ Finset.range tp.n0, ∑ Q ∈ subsetsAt c.1 D,
+  ∑ c : FCell, ∑ D ∈ Finset.range tp.n0, ∑ Q ∈ subsetsAt c.1 D,
     ENNReal.ofReal (Real.exp (-(tp.θ D * tp.thr D))) *
       prodU L P (fun p => pairFφ c Q (tp.θ D) tp.φ (pview parameter data s p)) *
       ENNReal.ofReal (gammaR subtreeHeight forsTrees forsHeight (tp.θ D) tp.φ D) ^ k *

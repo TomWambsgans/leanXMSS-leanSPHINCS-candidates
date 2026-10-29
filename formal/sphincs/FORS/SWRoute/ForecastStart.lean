@@ -140,7 +140,7 @@ theorem prodU_nilB (L : QueryLog SigningSpec) (g : Pair → ℝ≥0∞) : prodU 
   simp
 
 theorem sum_cell_eqB (F : Fin (2 ^ subtreeHeight) → ℝ≥0∞) :
-    ∑ c : Cell, F c.1 = (forsTrees : ℝ≥0∞) * 2 ^ forsHeight * ∑ I, F I := by
+    ∑ c : FCell, F c.1 = (forsTrees : ℝ≥0∞) * 2 ^ forsHeight * ∑ I, F I := by
   rw [Fintype.sum_prod_type, Finset.mul_sum]
   refine Finset.sum_congr rfl fun I _ => ?_
   simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, Fintype.card_prod, Fintype.card_fin]
@@ -149,7 +149,7 @@ theorem sum_cell_eqB (F : Fin (2 ^ subtreeHeight) → ℝ≥0∞) :
 
 /-- Pointwise: the cell indicators of all `D`-sets sum to at most `k 2^a` binomial counts. -/
 theorem sum_cells_inDisc_le (D : ℕ) (d : Multiset View) :
-    ∑ c : Cell, ∑ Q ∈ subsetsAt c.1 D, inDisc Q d ≤
+    ∑ c : FCell, ∑ Q ∈ subsetsAt c.1 D, inDisc Q d ≤
       (forsTrees : ℝ≥0∞) * 2 ^ forsHeight * perIndex (fun n => ((n.choose D : ℕ) : ℝ≥0∞)) d := by
   rw [sum_cell_eqB (fun I => ∑ Q ∈ subsetsAt I D, inDisc Q d)]
   refine mul_le_mul_right (Finset.sum_le_sum fun I _ => ?_) _
@@ -160,13 +160,13 @@ theorem sum_cells_inDisc_le (D : ℕ) (d : Multiset View) :
 /-- The cell-forecasts of all cells and all `D`-sets at the start. -/
 theorem sum_cells_hTerm_le (wbar : ℝ≥0∞) (hw1 : wbar ≤ 1) (q D : ℕ) (μ : ℝ≥0)
     (hrate : (signatureLimit : ℝ) / 2 ^ subtreeHeight + (q : ℝ) * (landing * wbar).toReal / 2 ^ subtreeHeight ≤ μ) :
-    ∑ c : Cell, ∑ Q ∈ subsetsAt c.1 D,
+    ∑ c : FCell, ∑ Q ∈ subsetsAt c.1 D,
         hTermO (Finset.univ : Finset View) wbar landing signatureLimit q (inDisc Q) ≤
       (forsTrees : ℝ≥0∞) * 2 ^ forsHeight * 2 ^ subtreeHeight * ENNReal.ofReal ((μ : ℝ) ^ D / D.factorial) := by
-  have hsum : ∑ c : Cell, ∑ Q ∈ subsetsAt c.1 D,
+  have hsum : ∑ c : FCell, ∑ Q ∈ subsetsAt c.1 D,
         hTermO (Finset.univ : Finset View) wbar landing signatureLimit q (inDisc Q) =
       hTermO (Finset.univ : Finset View) wbar landing signatureLimit q
-        (fun d => ∑ c : Cell, ∑ Q ∈ subsetsAt c.1 D, inDisc Q d) := by
+        (fun d => ∑ c : FCell, ∑ Q ∈ subsetsAt c.1 D, inDisc Q d) := by
     rw [hTermO_finset_sumB]
     refine Finset.sum_congr rfl fun c _ => ?_
     rw [hTermO_finset_sumB]
@@ -194,15 +194,15 @@ theorem psiC_start_le (parameter : PublicParameter) (data : PublicData) (wbar : 
   refine Finset.sum_le_sum fun D _ => ?_
   set E := ENNReal.ofReal (Real.exp (-(tp.θ D * tp.thr D)))
   set G := ENNReal.ofReal (gammaR subtreeHeight forsTrees forsHeight (tp.θ D) tp.φ D) ^ tp.q
-  have h1 : ∑ c : Cell, ∑ Q ∈ subsetsAt c.1 D,
+  have h1 : ∑ c : FCell, ∑ Q ∈ subsetsAt c.1 D,
         E * G * hTermO (Finset.univ : Finset View) wbar landing signatureLimit tp.q (inDisc Q) =
-      E * G * ∑ c : Cell, ∑ Q ∈ subsetsAt c.1 D,
+      E * G * ∑ c : FCell, ∑ Q ∈ subsetsAt c.1 D,
         hTermO (Finset.univ : Finset View) wbar landing signatureLimit tp.q (inDisc Q) := by
     rw [Finset.mul_sum]
     refine Finset.sum_congr rfl fun c _ => ?_
     rw [Finset.mul_sum]
   rw [h1]
-  calc E * G * ∑ c : Cell, ∑ Q ∈ subsetsAt c.1 D,
+  calc E * G * ∑ c : FCell, ∑ Q ∈ subsetsAt c.1 D,
         hTermO (Finset.univ : Finset View) wbar landing signatureLimit tp.q (inDisc Q)
       ≤ E * G * ((forsTrees : ℝ≥0∞) * 2 ^ forsHeight * 2 ^ subtreeHeight *
           ENNReal.ofReal ((tp.μ : ℝ) ^ D / D.factorial)) :=
@@ -277,8 +277,8 @@ theorem card_patB : Fintype.card Pat = (2 ^ forsHeight + 1) ^ forsTrees := by
   rw [Fintype.card_fun, Fintype.card_option, Fintype.card_fin, Fintype.card_fin]
 
 /-- **The pattern part at the start** is at most `2^-101`. -/
-theorem psiP_start_le (parameter : PublicParameter) (data : PublicData) (tp : TailPar) (s : State) :
-    psiP parameter data tp s [] [] tp.q ≤ ENNReal.ofReal (1 / 2 ^ 99) := by
+theorem psiP_start_le' (parameter : PublicParameter) (data : PublicData) (tp : TailPar) (s : State) :
+    psiP parameter data tp s [] [] tp.q ≤ (2 : ℝ≥0∞)⁻¹ ^ 101 := by
   unfold psiP
   simp only [prodU_nilB, mul_one]
   set B := subtreeHeight + (forsHeight + 1) * forsTrees with hB
@@ -304,10 +304,14 @@ theorem psiP_start_le (parameter : PublicParameter) (data : PublicData) (tp : Ta
             ((2 : ℝ≥0∞) * 2⁻¹) ^ subtreeHeight * ((2 : ℝ≥0∞) * 2⁻¹) ^ ((forsHeight + 1) * forsTrees) by
           rw [mul_pow, mul_pow]; ring]
         rw [ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top, one_pow, one_pow, one_mul, one_mul]
-    _ ≤ ENNReal.ofReal (1 / 2 ^ 99) := by
-        rw [one_div, ENNReal.ofReal_inv_of_pos (by positivity), ENNReal.ofReal_pow (by norm_num),
-          ENNReal.ofReal_ofNat, ← ENNReal.inv_pow]
-        exact ENNReal.inv_le_inv.2 (pow_le_pow_right₀ one_le_two (by norm_num))
+
+/-- The pattern part at the start, in the form of `tailSum`'s slack. -/
+theorem psiP_start_le (parameter : PublicParameter) (data : PublicData) (tp : TailPar) (s : State) :
+    psiP parameter data tp s [] [] tp.q ≤ ENNReal.ofReal (1 / 2 ^ 99) := by
+  refine (psiP_start_le' parameter data tp s).trans ?_
+  rw [one_div, ENNReal.ofReal_inv_of_pos (by positivity), ENNReal.ofReal_pow (by norm_num),
+    ENNReal.ofReal_ofNat, ← ENNReal.inv_pow]
+  exact ENNReal.inv_le_inv.2 (pow_le_pow_right₀ one_le_two (by norm_num))
 
 /-! ### The start value -/
 
