@@ -170,6 +170,44 @@ theorem sha256_h24_layered_k20 (f : QueryImpl HashSpec Id) (pk : PublicKey) (mes
 
 end h24_layered_k20
 
+section h24_layered_k19
+
+variable (hH : totalHeight = 24) (hd : numLayers = 3) (hk : forsTrees = 19) (ha : forsHeight = 9)
+include hH hd hk ha
+
+/-- Signature size, height 24, layers 10 + 7 + 7, `k = 19`, `a = 9`: 6,524 bytes. -/
+theorem size_h24_layered_k19 (signature : Signature) : (serializeSignature signature).length = 6524 := by
+  rw [signature_size, hH, hd, hk, ha]
+
+/-- Keccak-256, height 24, layers 10 + 7 + 7, `k = 19`, `a = 9`: an accepted signature costs 419 Keccak-f permutations. -/
+theorem keccak256_h24_layered_k19 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
+    (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
+      : OracleComp HashSpec Bool) = true) :
+    verifyCompressions .keccak256 f pk message signature = 419 := by
+  rw [verification_compressions _ f pk message signature haccept, verifyCost, treeCost, digestCalls,
+    messageDigestBits, hH, hd, hk, ha]
+  rfl
+
+/-- BLAKE2s, height 24, layers 10 + 7 + 7, `k = 19`, `a = 9`: an accepted signature costs 453 compressions. -/
+theorem blake2s_h24_layered_k19 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
+    (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
+      : OracleComp HashSpec Bool) = true) :
+    verifyCompressions .blake2s f pk message signature = 453 := by
+  rw [verification_compressions _ f pk message signature haccept, verifyCost, treeCost, digestCalls,
+    messageDigestBits, hH, hd, hk, ha]
+  rfl
+
+/-- SHA-256, height 24, layers 10 + 7 + 7, `k = 19`, `a = 9`: an accepted signature costs 453 compressions. -/
+theorem sha256_h24_layered_k19 (f : QueryImpl HashSpec Id) (pk : PublicKey) (message : Message)
+    (signature : Signature) (haccept : evalWithAnswerFn f (Concrete.verify pk message signature
+      : OracleComp HashSpec Bool) = true) :
+    verifyCompressions .sha256 f pk message signature = 453 := by
+  rw [verification_compressions _ f pk message signature haccept, verifyCost, treeCost, digestCalls,
+    messageDigestBits, hH, hd, hk, ha]
+  rfl
+
+end h24_layered_k19
+
 section h24_layered_k23
 
 variable (hH : totalHeight = 24) (hd : numLayers = 3) (hk : forsTrees = 23) (ha : forsHeight = 9)

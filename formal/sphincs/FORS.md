@@ -69,10 +69,18 @@ The layered keys with lighter FORS, at `h = 24` (10 + 7 + 7):
 | --- | ---: | ---: | ---: | ---: |
 | 20 trees of height 9 | `2^24` | 24,410,000 | 30,900,666 | 79.0% |
 | 23 trees of height 9 | `2^26` | 71,650,000 | 82,781,654 | 86.6% |
+| 19 trees of height 9 | `2^24` | 16,777,216 | 19,630,037 | 85.5% |
 
 With 1.5 and 4.3 signatures per instance, their limits are a smaller share of the cover attack than
-the 24×10 layered key of the same height (97.2%). Every limit, these two included, is a larger share of its
+the 24×10 layered key of the same height (97.2%). Every limit, these three included, is a larger share of its
 own cover attack than the forest's is of the forest's (79.5–97.8%, [README.md](README.md)).
+
+The 19×9 key reaches `2^24` only through a third route between the small and the large one, the
+survival-weighted route ([SWRoute/](FORS/SWRoute), `SWRoute.detSW`, combined by
+`ForsPotential.det_bitsF3`): the survival weight of the large route with the marker and contact
+structure of the small one, the budget at a state-dependent exponent (`ρ` unarmed, `2` armed, more
+after a contact), and per-entry certificates of the cover, the near-cover excess and the tail of the
+own-cell near forecast ([Certificates/H24SW](FORS/Certificates/H24SW.lean)).
 
 ## What the proof changes
 

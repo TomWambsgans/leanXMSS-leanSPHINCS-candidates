@@ -150,6 +150,13 @@ directory each:
    bounds the rest. The keygen credit K enters the
    entries of a cover: q' + K is the actual budget.
 
+5'. **Survival-weighted route (FORS 19×9 only).** Between the two, `SWRoute.detSW`
+   ([SWRoute/](FORS/SWRoute)) bounds the advantage by `1 − (1 − x)^ρ` plus the weighted cover and near
+   start values, the coin and the tail of the own-cell near forecast: the survival weight runs at a
+   state-dependent exponent (`ρ` unarmed, `2` once a marker, a contact or a near cover arms it), and
+   the rational check `checkCoverSW` ([SWRoute/Closing](FORS/SWRoute/Closing.lean)) certifies it entry by
+   entry. `ForsPotential.det_bitsF3` combines the three routes.
+
 6. **Closing.** `ForestPotential.det_bitsFH` ([Certificates/Closing](LeanForest/Certificates/Closing.lean))
    combines the two routes from checks parameterized by the total height H, the kept subtree height b,
    the number of coordinates T, the keygen credit K and the limit N (hypotheses `totalHeight = H`,
