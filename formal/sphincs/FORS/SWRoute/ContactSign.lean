@@ -16,7 +16,7 @@ completed one) happens only
 A run that opens the contact's cell (its pair selects the cell; chance at most `revRate` plus `cinv`
 per cached pair of the message at the cell) is paid by the drop of `sigRiskF` and of the cell
 count. Any other completed contact is a near completion at the cell by an unsigned cached pair, so
-the own-cell forecast `PiC` after the call is at least one (`sgn_release`), and it is paid by
+the own-cell forecast `PiC` after the call is at least one (`release_ownW`), and it is paid by
 `min 1 PiC` through the weighted signing step of the generic potential with the weight `weightB`. -/
 
 open OracleComp OracleSpec ENNReal
@@ -933,7 +933,7 @@ theorem cellPairs_sign (c : Cell) (msg : Message) (s s' : State) (P : List Pair)
   rw [hnew, List.nil_append, List.filter_filter, List.filter_filter, List.filter_filter]
   refine List.filter_congr fun q hq => ?_
   rw [hview q hq]
-  simp only [msgLive_append, Bool.decide_and, ne_eq, Bool.not_eq_true']
+  simp only [msgLive_append, Bool.decide_and, ne_eq]
   cases decide (OpensC c (pview K.p data s q)) <;> cases decide (MsgLive L q.1) <;> cases h : decide (q.1 = msg) <;>
     simp_all
 
@@ -965,8 +965,8 @@ section Main
 /-- A weighted capped expectation is at most the cap of the weighted expectations. -/
 theorem tsum_wmin_le {α : Type} (mx : ProbComp α) (w X : α → ℝ≥0∞) :
     ∑' a, Pr[= a | mx] * (w a * min 1 (X a)) ≤ min (∑' a, Pr[= a | mx] * w a) (∑' a, Pr[= a | mx] * (w a * X a)) :=
-  le_min (ENNReal.tsum_le_tsum fun a => mul_le_mul_right (mul_le_of_le_one_right' (min_le_left _ _)) _)
-    (ENNReal.tsum_le_tsum fun a => mul_le_mul_right (mul_le_mul' le_rfl (min_le_right _ _)) _)
+  le_min (ENNReal.tsum_le_tsum fun _ => mul_le_mul_right (mul_le_of_le_one_right' (min_le_left _ _)) _)
+    (ENNReal.tsum_le_tsum fun _ => mul_le_mul_right (mul_le_mul' le_rfl (min_le_right _ _)) _)
 
 theorem min_mul_one (a x : ℝ≥0∞) : min a (a * x) = a * min 1 x := by
   rcases le_total 1 x with h | h
