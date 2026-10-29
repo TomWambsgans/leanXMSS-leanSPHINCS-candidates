@@ -1704,20 +1704,20 @@ theorem covers_h24_b8_ok : ForsPotential.checkCoversH 24 8 24 10 57888 7099 2899
   simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h24_b8_0_ok, cover_h24_b8_1_ok, coverh_h24_b8_0_ok, by decide +kernel⟩
 
-/-! Height 24, layered (10 + 7 + 7), 293,000,000 signatures: the certificate of the height 24, full key, 293,000,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 231424` enters: the cover chains. -/
+/-! Height 24, layered (8 + 8 + 8), 293,000,000 signatures: the certificate of the height 24, full key, 293,000,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 57856` enters: the cover chains. -/
 
-theorem cover_h24_L_0_ok : checkCoverW 24 24 24 10 231424 293000000 609453723237804761606486446491828225 cover_h24_b24_0 = true :=
+theorem cover_h24_L_0_ok : checkCoverW 24 24 24 10 57856 293000000 609453723237804761606486446491828225 cover_h24_b24_0 = true :=
   checkCoverW_of_pt [large_h24_b24_0_0_cB, large_h24_b24_0_1_cB, large_h24_b24_0_2_cB, large_h24_b24_0_3_cB, large_h24_b24_0_4_cB, large_h24_b24_0_5_cB, large_h24_b24_0_6_cB, large_h24_b24_0_7_cB, large_h24_b24_0_8_cB, large_h24_b24_0_9_cB, large_h24_b24_0_10_cB, large_h24_b24_0_11_cB]
     (.cons large_h24_b24_0_0_ok <| .cons large_h24_b24_0_1_ok <| .cons large_h24_b24_0_2_ok <| .cons large_h24_b24_0_3_ok <| .cons large_h24_b24_0_4_ok <| .cons large_h24_b24_0_5_ok <| .cons large_h24_b24_0_6_ok <| .cons large_h24_b24_0_7_ok <| .cons large_h24_b24_0_8_ok <| .cons large_h24_b24_0_9_ok <| .cons large_h24_b24_0_10_ok <| .cons large_h24_b24_0_11_ok <| .nil)
     tabc_h24_b24_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h24_L_ok : ForsPotential.checkCoversH 24 24 24 10 231424 293000000 609453723237804761606486446491828225 [cover_h24_b24_0] [] = true := by
+theorem covers_h24_L_ok : ForsPotential.checkCoversH 24 24 24 10 57856 293000000 609453723237804761606486446491828225 [cover_h24_b24_0] [] = true := by
   simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h24_L_0_ok, by decide +kernel⟩
 
-/-- Poisson table of the small route, height 24, layered (10 + 7 + 7), 23 FORS trees of height 9, 73,380,000 signatures. -/
+/-- Poisson table of the small route, height 24, layered (8 + 8 + 8), 23 FORS trees of height 9, 73,380,000 signatures. -/
 def tab_h24_Lk23 : PoisT := poisOf 80682163250906611986 220 93 150
     21236683299860158948800999275443466206355180514666106606426966876
 
@@ -1926,9 +1926,9 @@ def cover_h24_Lk23_0 : CoverW where
   tab := tabc_h24_Lk23_0
   opts := [large_h24_Lk23_0_0, large_h24_Lk23_0_1, large_h24_Lk23_0_2, large_h24_Lk23_0_3, large_h24_Lk23_0_4, large_h24_Lk23_0_5, large_h24_Lk23_0_6, large_h24_Lk23_0_7, large_h24_Lk23_0_8, large_h24_Lk23_0_9, large_h24_Lk23_0_10, large_h24_Lk23_0_11]
   entries := [
-    (1449533407878593313898110627080044545, 1451454296939465013896746613548212336, 0),
-    (1451454296939465013896746613548212337, 1455303714991376202521632486299280714, 0),
-    (1455303714991376202521632486299280715, 1459249443644299436791558105355780096, 0),
+    (1449533407878593313898110627080044545, 1451454296939465013896746613466613116, 0),
+    (1451454296939465013896746613466613117, 1455303714991376202521632486054050233, 0),
+    (1455303714991376202521632486054050234, 1459249443644299436791558105355780096, 0),
     (1459249443644299436791558105355780097, 1467173023822200451631450434603843584, 1),
     (1467173023822200451631450434603843585, 1483149490565938790643136555122688000, 2),
     (1483149490565938790643136555122688001, 1515626235437138473466594090473750528, 3),
@@ -1941,14 +1941,14 @@ def cover_h24_Lk23_0 : CoverW where
     (20781930446190105567451511940676845569, 142864906868245574563749329996942934016, 10),
     (142864906868245574563749329996942934017, 170141183460469231731687303715884105728, 11)]
 
-theorem cover_h24_Lk23_0_ok : checkCoverW 24 24 23 9 231424 73380000 1449533407878593313898110627080044545 cover_h24_Lk23_0 = true :=
+theorem cover_h24_Lk23_0_ok : checkCoverW 24 24 23 9 57856 73380000 1449533407878593313898110627080044545 cover_h24_Lk23_0 = true :=
   checkCoverW_of_pt [large_h24_Lk23_0_0_cB, large_h24_Lk23_0_1_cB, large_h24_Lk23_0_2_cB, large_h24_Lk23_0_3_cB, large_h24_Lk23_0_4_cB, large_h24_Lk23_0_5_cB, large_h24_Lk23_0_6_cB, large_h24_Lk23_0_7_cB, large_h24_Lk23_0_8_cB, large_h24_Lk23_0_9_cB, large_h24_Lk23_0_10_cB, large_h24_Lk23_0_11_cB]
     (.cons large_h24_Lk23_0_0_ok <| .cons large_h24_Lk23_0_1_ok <| .cons large_h24_Lk23_0_2_ok <| .cons large_h24_Lk23_0_3_ok <| .cons large_h24_Lk23_0_4_ok <| .cons large_h24_Lk23_0_5_ok <| .cons large_h24_Lk23_0_6_ok <| .cons large_h24_Lk23_0_7_ok <| .cons large_h24_Lk23_0_8_ok <| .cons large_h24_Lk23_0_9_ok <| .cons large_h24_Lk23_0_10_ok <| .cons large_h24_Lk23_0_11_ok <| .nil)
     tabc_h24_Lk23_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h24_Lk23_ok : ForsPotential.checkCoversH 24 24 23 9 231424 73380000 1449533407878593313898110627080044545 [cover_h24_Lk23_0] [] = true := by
+theorem covers_h24_Lk23_ok : ForsPotential.checkCoversH 24 24 23 9 57856 73380000 1449533407878593313898110627080044545 [cover_h24_Lk23_0] [] = true := by
   simp only [ForsPotential.checkCoversH, ForsPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h24_Lk23_0_ok, by decide +kernel⟩
 

@@ -158,24 +158,24 @@ theorem h24_pruned8_bits : SecurityBits (.pruned 24 8 24 10 7099) 127 :=
     H0.rho_h24_b8 H0.tab_h24_b8 H0.small_h24_b8 H0.near_h24_b8 H0.tab_h24_b8_ok H0.rate_h24_b8_ok H0.small_h24_b8_ok
     H0.near_h24_b8_ok H0.check_h24_b8_ok [H0.cover_h24_b8_0, H0.cover_h24_b8_1] [H0.coverh_h24_b8_0] H0.covers_h24_b8_ok
 
-/-- Height 24, layered (10 + 7 + 7), 293,000,000 signatures (97.4% of the cover attack's 3.008e+08). -/
-theorem h24_layered_bits : SecurityBits (.layered 24 3 7 24 10 293000000) 127 :=
-  @det_bitsFH (.layered 24 3 7 24 10 293000000) (by decide) 24 24 24 10 231424 293000000
+/-- Height 24, layered (8 + 8 + 8), 293,000,000 signatures (97.4% of the cover attack's 3.008e+08). -/
+theorem h24_layered_bits : SecurityBits (.layered 24 3 8 24 10 293000000) 127 :=
+  @det_bitsFH (.layered 24 3 8 24 10 293000000) (by decide) 24 24 24 10 57856 293000000
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) 609453723237804761606486446491828224
     H0.rho_h24_b24 H0.tab_h24_b24 H0.small_h24_b24 H0.near_h24_b24 H0.tab_h24_b24_ok H0.rate_h24_b24_ok H0.small_h24_b24_ok
     H0.near_h24_b24_ok H0.check_h24_b24_ok [H0.cover_h24_b24_0] [] H0.covers_h24_L_ok
 
-/-- Height 24, layered (10 + 7 + 7), 23 FORS trees of height 9, 73,380,000 signatures (88.6% of the cover attack's 8.278e+07). -/
-theorem h24_layered_k23_bits : SecurityBits (.layered 24 3 7 23 9 73380000) 127 :=
-  @det_bitsFH (.layered 24 3 7 23 9 73380000) (by decide) 24 24 23 9 231424 73380000
+/-- Height 24, layered (8 + 8 + 8), 23 FORS trees of height 9, 73,380,000 signatures (88.6% of the cover attack's 8.278e+07). -/
+theorem h24_layered_k23_bits : SecurityBits (.layered 24 3 8 23 9 73380000) 127 :=
+  @det_bitsFH (.layered 24 3 8 23 9 73380000) (by decide) 24 24 23 9 57856 73380000
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) 1449533407878593313898110627080044544
     H0.rho_h24_Lk23 H0.tab_h24_Lk23 H0.small_h24_Lk23 H0.near_h24_Lk23 H0.tab_h24_Lk23_ok H0.rate_h24_Lk23_ok H0.small_h24_Lk23_ok
     H0.near_h24_Lk23_ok H0.check_h24_Lk23_ok [H0.cover_h24_Lk23_0] [] H0.covers_h24_Lk23_ok
 
-/-- Height 24, layered (10 + 7 + 7), 19 FORS trees of height 9, 16,777,216 signatures (85.5% of the cover attack's 1.963e+07). -/
-theorem h24_layered_k19_bits : SecurityBits (.layered 24 3 7 19 9 16777216) 127 :=
-  @det_bitsF3 (.layered 24 3 7 19 9 16777216) (@SWRoute.detSW (.layered 24 3 7 19 9 16777216)) (by decide)
-    24 24 19 9 231424 16777216
+/-- Height 24, layered (8 + 8 + 8), 19 FORS trees of height 9, 16,777,216 signatures (85.5% of the cover attack's 1.963e+07). -/
+theorem h24_layered_k19_bits : SecurityBits (.layered 24 3 8 19 9 16777216) 127 :=
+  @det_bitsF3 (.layered 24 3 8 19 9 16777216) (@SWRoute.detSW (.layered 24 3 8 19 9 16777216)) (by decide)
+    24 24 19 9 57856 16777216
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) 790363695024114415431440669675094016
     H0.rho_h24_Lk19 H0.tab_h24_Lk19 H0.small_h24_Lk19 H0.near_h24_Lk19 H0.tab_h24_Lk19_ok H0.rate_h24_Lk19_ok
     H0.small_h24_Lk19_ok H0.near_h24_Lk19_ok H0.check_h24_Lk19_ok
