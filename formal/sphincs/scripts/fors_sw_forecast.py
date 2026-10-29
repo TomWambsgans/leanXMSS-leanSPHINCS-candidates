@@ -1,27 +1,25 @@
 #!/usr/bin/env python3
-"""The own-leaf near forecast of the SW route: the light cap, the cell counts and the contact coefficient.
+"""The tail of the own-cell near forecast of the SW route: the certificate of `ForecastTail` (Form H).
 
-A FORS leaf query at a cell c = (I, kappa, L) costs nu = 2^-128 times the chance that a cached or future pair
-at I becomes near covered with c as its only missing leaf. With every index capped at n* disclosures (the
-light event) this forecast splits into
-  * the fresh part  G_fresh = q 2^-(b+a) (n*/A)^(k-1)                               (gFreshQ, A = 2^a),
-  * the cached part sum_{p at c, m_p >= 1} rho^(m_p),  rho = (n* - D)/A, D = #disclosures at I,
-    bounded by G_cached = m except on a bad event (a cell whose cached part exceeds m),
-plus two failure terms, each an absolute probability x * (term) with x = q / 2^128:
-  * light failure: 2^b E[(Pois(mu) - n*)^+] <= 2^b lightTail(t, n*)        (ForecastLight.lean, startLight_le),
-  * cell counts:   sum_{D <= n*} cells (mu^D / D!) e^{-theta_D m} Gamma_D^q <= eps   (ForecastCert.lean),
-    Gamma_D = 1 + 2^-(b+a) sum_{1 <= j < k} C(k-1, j) (D/A)^(k-1-j) (e^{theta_D rho_D^j} - 1),
-    cells = 2^b k A (the pattern bound and the pair factor: ForecastCells.lean).
-The contact coefficient of a FORS leaf query is cU = N / 2^(b+a) + G_fresh + G_cached.
+A surviving FORS leaf query at a cell c = (I, kappa, L) costs nu min(1, Pi_c); the route charges nu m of it in
+cU = N / 2^(b+a) + m, and the excess nu (min(1, Pi_c) - m)^+ is paid by x Pb per entry (x = q / 2^128).
+`ForecastTail m q Pb` (FORS/SWRoute/ForecastTail.lean) states
+  (1 - m)^+ ( 2^b E_mu[(n - (n0 - 1))^+]
+            + sum_{D < n0} k 2^a 2^b (mu^D / D!) e^{-theta_D (m - fresh_D - 2^-10)} Gamma_D^q + 2^-99 ) <= Pb,
+  fresh_D = q 2^-(b+a) E_{j ~ Pois(mu)}[((D + j) / 2^a)^(k-1)],   phi(r) = E_{j ~ Pois(mu)}[(j / 2^a)^r] = T_r(mu) / 2^(ar),
+  Gamma_D = 1 + 2^-(b+a) sum_{1 <= r < k} C(k-1, r) (D / 2^a)^(k-1-r) (e^{theta_D phi(r)} - 1)      (T_r: Touchard).
+The certificate (TailCert: n0, theta_D, precision) is checked by `checkTail` (FORS/SWRoute/ForecastCert.lean) at the
+entry's right end qb (the tail grows with q); `tailOK_of_check` gives ForecastTail for every q <= qb.
 
-API (every exact function mirrors the Lean definition of the same name; floats only choose theta_D, m):
-    lightTail(t, nstar)                       (ForecastLight.lean)
-    gFreshQ(b, k, a, q, nstar)                (ForecastCert.lean)
-    excessUp(u, s, P), lamQ(...), cellTerm(...), cellSum(...), checkCellCert(b, k, a, mu, q, cc, eps)
-    make_cellCert(b, k, a, mu, q, nstar, eps) ->  CellCert (float search of m and theta_D, then exact check)
-    forecast_constants(b, k, a, N, t, q, nstar, eps)  ->  dict of the constants for one budget
+API (every exact function mirrors the Lean definition of the same name; floats only choose n0 and theta_D):
+    lightTail(t, nstar)                                   (ForecastLight.lean)
+    chooseQ, touchard, phiQ, freshQ                       (ForecastTail.lean: chooseK, touchard, phiK, freshK)
+    excessUp, lam1Q, vQ, termQ, tailQ, checkTail          (ForecastCert.lean)
+    make_tailCert(b, k, a, t, qb, m)  ->  (TailCert, Pb)  (the least float tail over n0, then exact check)
+    lean_tailCert(c)                                      (the Lean term of a TailCert)
 
-    python3 scripts/fors_sw_forecast.py       # 19x9 at N = 2^24: the constants on x in [2^-10, 2^-5]
+    python3 scripts/fors_sw_forecast.py       # 19x9 at N = 2^24: Pb per entry (excess form)
+Kernel cost (h2, 19x9, n0 = 15, s = 30, J = 200): about 12 s and 1 GB over the import baseline per certificate.
 """
 from fractions import Fraction as Fr
 import math, os, sys
@@ -85,7 +83,7 @@ def excessUp(u, s, P):
 
 class TailCert:
     """TailCert: the cap n0, theta_D for D < n0, and the precision of the exponential bounds."""
-    def __init__(self, n0, th, s=40, P=64, J=600):
+    def __init__(self, n0, th, s=30, P=64, J=200):
         self.n0, self.th, self.s, self.P, self.J = n0, th, s, P, J
 
 
@@ -176,7 +174,7 @@ class _F:
         return (math.exp(lt), v) if v < v0 else (0.0, v0)
 
 
-def make_tailCert(b, k, a, t, q, m, nmax=40, s=40, P=64, J=600):
+def make_tailCert(b, k, a, t, q, m, nmax=40, s=30, P=64, J=200):
     """the certificate (n0, theta_D) minimizing the float tail, then the exact tail and Pb = its rounding up."""
     F = _F(b, k, a, t.mu, q)
     mf = float(m)

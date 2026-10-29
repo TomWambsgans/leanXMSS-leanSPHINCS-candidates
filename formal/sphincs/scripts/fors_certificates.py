@@ -842,14 +842,16 @@ def certify_config(h, shape, b, N, lx, verbose=True, k=24, a=10):
 # Three routes (det_bitsF3, SWRoute/Closing.lean): the small route up to qh, a SW cover of every budget in
 # [qh + 1, qtop] and the large route's covers from qtop + 1. A SW cover (CoverSW) is a Poisson table at qtop, cover
 # options (OptF today), near options at a baseline (OptNB, scripts/fors_sw_near.py) and entries
-# (qa, qb, rho, beta, delta, m, Pb, ic, in): at x = qb / 2^128 the side conditions checkNumSW with the contact
+# (qa, qb, rho, beta, delta, m, Pb, ic, in, itl): qb <= qtop, the tail certificate itl gives Pb at (qb, m)
+# (checkTail, SWRoute/ForecastCert.lean), at x = qb / 2^128 the side conditions checkNumSW with the contact
 # coefficient cU = N/2^(b+a) + m, the digest payment cthr(cover) + delta cthr(near) <= beta / 2^128 and
 #   satUp(rho, qa / 2^128) + qb B_c + delta qb B_n + coin(qb) + x_b Pb + (qb + K + N) / 2^200 <= 2 qa / 2^128 + K / 2^127.
 # Per entry: rho is the least dyadic (2^-SW_PR) passing the rho conditions of checkNumSW but E3 (all monotone in rho
 # on [3/2, 2]) with m > 0; m is the E3 cap at rho (so E3 does not move rho; rework/F2/verdict.md, route3.mOf); beta the
-# largest dyadic (2^-SW_PB) below its five bounds; delta the least dyadic (2^-SW_PD) above the arming bound; Pb the
-# forecast's tail bound at (m, qb) (SW_TAIL: F2's float model pi.py, excess form, with a 2^-10 cushion, until WP-F's
-# certified tail; the Lean side takes it as the hypothesis TailOK); the near option sits at a baseline b0n of SW_BN
+# largest dyadic (2^-SW_PB) below its five bounds; delta the least dyadic (2^-SW_PD) above the arming bound; the chain
+# is built with Pb from F2's float model (pi.py, excess form, 2^-10 cushion: TailPbadModel), then each entry gets a
+# certified tail (SW_TAIL_CERT: scripts/fors_sw_forecast.py make_tailCert / checkTail, reusing a certificate of an
+# earlier entry when its Pb is no larger) and is checked again with that Pb; the near option sits at a baseline b0n of SW_BN
 # (units 2^-128), the cover option at the threshold floor(beta - delta b0n) on the grid 2^-SW_CKEY (units 2^-128),
 # or at a lower threshold already in use.
 # The option kinds are pluggable: SW_COVER (maker, checker, Lean emitter of the cover option; today OptF) and SW_NEAR.
@@ -973,7 +975,61 @@ class TailPbadModel:
         """the tail bound of an entry: here, Pb at least the model's"""
         return self.pb(b, N, m, qb) <= Pb
 
-SW_TAIL = TailPbadModel
+class TailCertWPF:
+    """The certified tail of an entry (WP-F): a TailCert (n0, theta_D, s, P, J) whose exact tail
+    max(0, 1 - m) tailQ at (qb, m) is at most Pb (checkTail; scripts/fors_sw_forecast.py, SWRoute/ForecastCert.lean)."""
+    def __init__(self):
+        sys.modules.setdefault('fors_certificates', sys.modules[__name__])
+        import fors_sw_forecast
+        self.SF = fors_sw_forecast
+    def pb_of(self, b, t, qb, m, c):
+        """the Pb of the certificate c at (qb, m), rounded up to 40 significant bits as make_tailCert does; None if its
+        side conditions fail there"""
+        SF = self.SF
+        if not (1 <= c.n0 and len(c.th) == c.n0 and 1 <= t.n1): return None
+        for D in range(c.n0):
+            th = SF.getD(c.th, D)
+            if th < 0 or not all(th * SF.phiQ(FA, t.mu, j) < 2 ** c.s for j in range(FK)): return None
+            if SF.vQ(b, FK, FA, t.mu, qb, m, c, D) < 0: return None
+        tail = max(Fr(0), 1 - m) * SF.tailQ(b, FK, FA, t, qb, m, c)
+        return rup(tail, 40 - math.floor(math.log2(float(tail))))
+    def certify(self, b, t, qb, m, pool, Pmax):
+        """(index in pool, Pb): a certificate of the pool whose Pb at (qb, m) is at most Pmax, else a new one"""
+        for i, c in enumerate(pool):
+            Pb = self.pb_of(b, t, qb, m, c)
+            if Pb is not None and Pb <= Pmax and self.check(b, t, qb, m, c, Pb): return i, Pb
+        c, Pb = self.SF.make_tailCert(b, FK, FA, t, qb, m)
+        if Pb > Pmax:
+            c, Pb = self.repair(b, t, qb, m, c, Pb)
+        pool.append(c)
+        return len(pool) - 1, Pb
+    def repair(self, b, t, qb, m, c, Pb):
+        """make_tailCert's golden-section search can return theta_D = 0 where a positive theta_D is far better
+        (seen at D = 0); scan theta_D on a log grid and keep each improvement that passes vQ >= 0"""
+        SF = self.SF
+        F = SF._F(b, FK, FA, t.mu, qb)
+        th = list(c.th)
+        for D in range(c.n0):
+            best = (F.logterm(D, float(th[D]), float(m)), th[D])
+            for i in range(241):
+                x = 10.0 ** (-3 + i / 24)
+                v = F.logterm(D, x, float(m))
+                if v < best[0]:
+                    cand = rdown(Fr(x), 20)
+                    old, th[D] = th[D], cand
+                    ok = SF.vQ(b, FK, FA, t.mu, qb, m, SF.TailCert(c.n0, th, c.s, c.P, c.J), D) >= 0
+                    th[D] = old
+                    if ok: best = (v, cand)
+            th[D] = best[1]
+        c2 = SF.TailCert(c.n0, th, c.s, c.P, c.J)
+        Pb2 = self.pb_of(b, t, qb, m, c2)
+        if Pb2 is not None and Pb2 < Pb and self.check(b, t, qb, m, c2, Pb2): return c2, Pb2
+        return c, Pb
+    def check(self, b, t, qb, m, c, Pb): return self.SF.checkTail(b, FK, FA, t, qb, m, c, Pb)
+    def lean(self, name, c): return 'def %s : SWRoute.TailCert := %s\n' % (name, self.SF.lean_tailCert(c))
+
+SW_TAIL_SEARCH = TailPbadModel    # Pb while the chain is built
+SW_TAIL_CERT = TailCertWPF        # the certified tails of the entries
 
 # -- the option kinds (swap SW_COVER / SW_NEAR to change the options of the SW route) --
 
@@ -1033,43 +1089,40 @@ SW_NEAR = NearOptNB
 # -- the exact checker (SWRoute/Closing.lean) --
 
 class CoverSW:
-    def __init__(self, qtop, tab, opts, nopts, entries):
-        self.qtop, self.tab, self.opts, self.nopts, self.entries = qtop, tab, opts, nopts, entries
+    def __init__(self, qtop, tab, opts, nopts, tails, entries):
+        self.qtop, self.tab, self.opts, self.nopts, self.tails, self.entries = qtop, tab, opts, nopts, tails, entries
 
-def checkEntrySW(b, a, K, N, opts, nopts, e):
-    """checkEntrySW (SWRoute/Closing.lean)"""
-    qa, qb, rho, beta, delta, m, Pb, ic, inr = e
-    if not (0 <= ic < len(opts) and 0 <= inr < len(nopts)): return False
-    o, n = opts[ic], nopts[inr]
-    return (qa <= qb and checkNumSW(rho, beta, delta, Fr(qb, 2 ** 128), cUQ(b, a, N, m)) and
+def checkEntrySW(b, k, a, K, N, qtop, t, opts, nopts, tails, e, tail):
+    """checkEntrySW (SWRoute/Closing.lean); tail.check is checkTail"""
+    qa, qb, rho, beta, delta, m, Pb, ic, inr, itl = e
+    if not (0 <= ic < len(opts) and 0 <= inr < len(nopts) and 0 <= itl < len(tails)): return False
+    o, n, tc = opts[ic], nopts[inr], tails[itl]
+    return (qa <= qb and qb <= qtop and tail.check(b, t, qb, m, tc, Pb) and
+            checkNumSW(rho, beta, delta, Fr(qb, 2 ** 128), cUQ(b, a, N, m)) and
             0 <= delta and 0 <= o.cthr and 0 <= n.cthr and o.cthr + delta * n.cthr <= beta / 2 ** 128 and
             0 <= o.B and 0 <= n.B and 0 <= Pb and swMainQ(K, N, qa, qb, rho, delta, o.B, n.B, Pb))
 
-def chainSW(b, a, K, N, qtop, opts, nopts, last, entries):
+def chainSW(b, k, a, K, N, qtop, t, opts, nopts, tails, last, entries, tail):
     """chainSW (SWRoute/Closing.lean)"""
     for e in entries:
-        if not (e[0] <= last and checkEntrySW(b, a, K, N, opts, nopts, e)): return False
+        if not (e[0] <= last and checkEntrySW(b, k, a, K, N, qtop, t, opts, nopts, tails, e, tail)): return False
         last = e[1] + 1
     return qtop < last
 
-def checkCoverSW(H, b, k, a, K, N, qstart, c, cover, near):
-    """checkCoverSW (SWRoute/Closing.lean), with the checkers of the option kinds"""
+def checkCoverSW(H, b, k, a, K, N, qstart, c, cover, near, tail):
+    """checkCoverSW (SWRoute/Closing.lean), with the checkers of the option kinds and of the tails"""
     assert (H, k, a) == (TOTAL, FK, FA)
     return (H == b and 31 <= b + a and (H + k * a + 255) // 256 == 1 and
             checkRate(b, N, c.qtop, c.tab) and checkPT(c.tab) and
             all(cover.check(b, c.tab, o) for o in c.opts) and all(near.check(b, c.tab, n) for n in c.nopts) and
-            chainSW(b, a, K, N, c.qtop, c.opts, c.nopts, qstart, c.entries))
-
-def checkTailsSW(b, N, c, tail):
-    """the tail bounds of the entries (TailOK; the model's until WP-F's certificate)"""
-    return all(tail.check(b, N, e[5], e[1], e[6]) for e in c.entries)
+            chainSW(b, k, a, K, N, c.qtop, c.tab, c.opts, c.nopts, c.tails, qstart, c.entries, tail))
 
 # -- the builder --
 
 class SWBuilder:
     def __init__(self, b, N, t, cover, near, bn=None, ckey=None, margin=0, tail=None):
         self.b, self.N, self.t, self.cover, self.near = b, N, t, cover, near
-        self.tail = tail if tail is not None else SW_TAIL()
+        self.tail = tail if tail is not None else SW_TAIL_SEARCH()
         self.K = kcredit(b)
         self.bn, self.ckey, self.margin = list(bn or SW_BN), ckey or SW_CKEY, Fr(margin)
         self.cov, self.nopt, self.prm = {}, {}, {}
@@ -1141,13 +1194,20 @@ class SWBuilder:
             out.append((qa, qb, rho, beta, delta, key, c, -msl, m, Pb))
             if qb >= qtop: return out, None
             qa = qb + 1
-    def cover_of(self, qtop, raw):
-        """the CoverSW of a built chain: options in first-use order"""
+    def cover_of(self, qtop, raw, tcert, verbose=False):
+        """the CoverSW of a built chain: options in first-use order; each entry's search Pb replaced by a certified
+        tail (tcert), reused across entries where it is no larger; None if an entry fails with its certified Pb"""
         ck = {k: i for i, k in enumerate(self.used_c)}
         nk = {c: i for i, c in enumerate(self.used_n)}
-        entries = [(qa, qb, rho, beta, delta, m, Pb, ck[key], nk[c]) for (qa, qb, rho, beta, delta, key, c, _, m, Pb) in raw]
+        pool, entries = [], []
+        for (qa, qb, rho, beta, delta, key, c, _, m, Pb0) in raw:
+            itl, Pb = tcert.certify(self.b, self.t, qb, m, pool, Pb0)
+            if verbose: print('    tail at 2^%.4f: cert %d, Pb 2^%.2f (search 2^%.2f)' % (
+                math.log2(qb), itl, math.log2(Pb), math.log2(Pb0)), flush=True)
+            if Pb > Pb0 and self.slack(qa, qb, rho, delta, self.cover_opt(key), self.near_opt(c), Pb) < 0: return None
+            entries.append((qa, qb, rho, beta, delta, m, Pb, ck[key], nk[c], itl))
         return CoverSW(qtop, self.t, [self.cover_opt(k) for k in self.used_c], [self.near_opt(c) for c in self.used_n],
-                       entries)
+                       pool, entries)
 
 def large_startSW(b, N, maker=None, lo=-9.0, hi=-2.0, step=1 / 64, refine=6):
     """the least budget (lx grid, then bisection) from which the large route's light cover reaches 2^127"""
@@ -1185,9 +1245,9 @@ def sw_small_lx(b, N, lo=-12.0, hi=-6.0, step=0.125):
         lx += step
     return best
 
-def certify_sw(b, N, lx=None, cover='F', large=None, verbose=True, emit_large=True, **kw):
+def certify_sw(b, N, lx=None, cover='F', large=None, verbose=True, emit_large=True, tails=True, **kw):
     """the small route at lx (default: the largest on the 1/8 grid), the SW cover from qh + 1 and the large route
-    from the SW cover's top + 1; None if a part fails"""
+    from the SW cover's top + 1; None if a part fails. tails=False: the search's model tails only (no SW cover)."""
     ck = SW_COVER_KINDS[cover](); nk = SW_NEAR()
     lk = SW_COVER_KINDS[large or cover]() if (large or cover) != cover else ck
     if lx is None: lx = sw_small_lx(b, N)
@@ -1210,15 +1270,20 @@ def certify_sw(b, N, lx=None, cover='F', large=None, verbose=True, emit_large=Tr
     if raw is None:
         if verbose: print('  SW cover FAIL at 2^%.4f' % math.log2(stuck), flush=True)
         return None
-    sw = SB.cover_of(qtop, raw)
     K = kcredit(b)
-    assert checkCoverSW(TOTAL, b, FK, FA, K, N, s['qh'] + 1, sw, ck, nk), 'checkCoverSW fails'
-    assert checkTailsSW(b, N, sw, SB.tail), 'a tail bound fails'
+    if not tails:
+        return dict(N=N, lx=lx, qh=s['qh'], sw=None, sw_raw=raw, large_start=qL)
+    tk = SW_TAIL_CERT()
+    sw = SB.cover_of(qtop, raw, tk, verbose)
+    if sw is None:
+        if verbose: print('  SW cover FAIL with the certified tails', flush=True)
+        return None
+    assert checkCoverSW(TOTAL, b, FK, FA, K, N, s['qh'] + 1, sw, ck, nk, tk), 'checkCoverSW fails'
     if verbose:
-        print('  SW cover OK: %d entries, %d cover options (%s), %d near options' % (
-            len(sw.entries), len(sw.opts), ck.name, len(sw.nopts)), flush=True)
+        print('  SW cover OK: %d entries, %d cover options (%s), %d near options, %d tail certificates' % (
+            len(sw.entries), len(sw.opts), ck.name, len(sw.nopts), len(sw.tails)), flush=True)
     c = dict(h=TOTAL, shape=SHAPE, d=num_layers(), K=K, b=b, k=FK, a=FA, N=N, lx=lx, qh=s['qh'], rho=s['rho'],
-             t=s['t'], o=s['o'], on=s['on'], sw=sw, sw_raw=raw, sw_kinds=(ck, nk, SB.tail), large_start=qL,
+             t=s['t'], o=s['o'], on=s['on'], sw=sw, sw_raw=raw, sw_kinds=(ck, nk, tk), large_start=qL,
              covers=[], heavy=[], complete=None)      # None: the large route only as found by large_startSW
     if emit_large and lk.name == 'F':
         r = large_covers(b, N, s['qh'], qL, verbose)
@@ -1260,8 +1325,7 @@ import FORS.SWRoute.Closing
 arithmetic, no `native_decide`), for three routes (`ForsPotential.det_bitsF3`):
   * the small route at `qh = %d`;
   * a SW cover of every budget from `qh + 1` to `%d` (`SWRoute.checkCoverSW`: a Poisson
-    table, %d cover option(s), %d near option(s) at a baseline and %d entries; the tail bounds of the entries
-    are the hypothesis `SWRoute.TailOK`);
+    table, %d cover option(s), %d near option(s) at a baseline, %d tail certificate(s) and %d entries);
   * the large route's covers from the SW cover's top `+ 1`. -/
 
 namespace FORS.Security.H0
@@ -1274,7 +1338,7 @@ set_option Elab.async false
 
 def sw_block(out, c, tag):
     """the SW cover of a configuration and its check"""
-    sw, (ck, nk, _) = c['sw'], c['sw_kinds']
+    sw, (ck, nk, tk) = c['sw'], c['sw_kinds']
     assert ck.emittable, 'the %s cover option has no Lean form here' % ck.name
     b, N, K, H, k, a = c['b'], c['N'], c['K'], c['h'], c['k'], c['a']
     tab = 'tabsw_%s' % tag
@@ -1286,23 +1350,28 @@ def sw_block(out, c, tag):
     for i, n in enumerate(sw.nopts):
         out.append('/-- Near option %d of the SW cover (baseline %.6f / 2^128). -/' % (i, float(n.cthr * 2 ** 128)))
         out.append(nk.lean('swn_%s_%d' % (tag, i), b, tab, sw.tab, n))
+    for i, tc in enumerate(sw.tails):
+        out.append('/-- Tail certificate %d of the SW cover. -/' % i)
+        out.append(tk.lean('swt_%s_%d' % (tag, i), tc))
     ents = ',\n    '.join(lean_entrySW(e) for e in sw.entries)
     out.append('/-- The SW cover: every budget from %d to %d. -/' % (c['qh'] + 1, sw.qtop))
     out.append('def sw_%s : SWRoute.CoverSW where\n  qtop := %d\n  tab := %s\n  opts := [%s]\n'
-               '  nopts := [%s]\n  entries := [\n    %s]\n' % (
+               '  nopts := [%s]\n  tails := [%s]\n  entries := [\n    %s]\n' % (
                    tag, sw.qtop, tab, ', '.join('swc_%s_%d' % (tag, i) for i in range(len(sw.opts))),
-                   ', '.join('swn_%s_%d' % (tag, i) for i in range(len(sw.nopts))), ents))
+                   ', '.join('swn_%s_%d' % (tag, i) for i in range(len(sw.nopts))),
+                   ', '.join('swt_%s_%d' % (tag, i) for i in range(len(sw.tails))), ents))
     out.append('theorem sw_%s_ok : SWRoute.checkCoverSW %d %d %d %d %d %d %d sw_%s = true := by decide +kernel\n'
                % (tag, H, b, k, a, K, N, c['qh'] + 1, tag))
 
 def lean_entrySW(e):
-    """an entry as a Lean tuple (qa, qb, ρ, β, δ, m, Pb, ic, in)"""
-    return '(%d, %d, %s, %s, %s, %s, %s, %d, %d)' % (e[0], e[1], q(e[2]), q(e[3]), q(e[4]), q(e[5]), q(e[6]), e[7], e[8])
+    """an entry as a Lean tuple (qa, qb, ρ, β, δ, m, Pb, ic, in, itl)"""
+    return '(%d, %d, %s, %s, %s, %s, %s, %d, %d, %d)' % (e[0], e[1], q(e[2]), q(e[3]), q(e[4]), q(e[5]), q(e[6]),
+                                                      e[7], e[8], e[9])
 
 def emit_sw(c, path):
     sw = c['sw']
     assert c['complete'], 'the large route is not complete'
-    out = [SW_HEADER % (describe(c), c['qh'], sw.qtop, len(sw.opts), len(sw.nopts), len(sw.entries))]
+    out = [SW_HEADER % (describe(c), c['qh'], sw.qtop, len(sw.opts), len(sw.nopts), len(sw.tails), len(sw.entries))]
     emit_one(out, c, None, middle=sw_block)
     out.append('end FORS.Security.H0\n')
     open(path, 'w').write('\n'.join(out))
@@ -1420,12 +1489,16 @@ if __name__ == '__main__':
         opts.pop('large', None)
         print('worst slack/unit, lx:', sw_scan(h, N, lx0, lx1, **opts))
     elif cmd == 'sw-maxn':
-        # sw-maxn H K A N0 N1 [--cover F|J]: the largest N in [N0, N1) the three routes certify (N0 must pass)
+        # sw-maxn H K A N0 N1 [--cover F|J] [--tails 1]: the largest N in [N0, N1) the three routes certify (N0 must
+        # pass); the search's model tails unless --tails 1 (certified tails, slower)
         h, k, a, lo, hi = int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(float(sys.argv[5])), int(float(sys.argv[6]))
-        _, _, _, opts = sw_args(sys.argv[2:6] + sys.argv[7:])
+        argv = sys.argv[7:]
+        tails = '--tails' in argv and argv[argv.index('--tails') + 1] == '1'
+        if '--tails' in argv: del argv[argv.index('--tails'):argv.index('--tails') + 2]
+        _, _, _, opts = sw_args(sys.argv[2:6] + argv)
         def feas(N):
             try:
-                c = certify_sw(h, N, None, verbose=False, emit_large=False, **opts)
+                c = certify_sw(h, N, None, verbose=False, emit_large=False, tails=tails, **opts)
             except Exception as e:
                 print('  N %d: %r' % (N, e), flush=True)
                 return False
