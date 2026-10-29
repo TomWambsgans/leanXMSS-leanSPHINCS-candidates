@@ -44,8 +44,13 @@ def WContact (s : St) : Prop := ∃ l i, Retained K.p l ∧ (K.ContactB s l i).N
 def ArmedW (s : St) : Prop :=
   ∃ l, Retained K.p l ∧ ((∃ i, K.Marker s l i) ∨ ∃ i, (K.ContactB s l i).Nonempty)
 
-/-- A decided FORS contact. -/
-def FContact (s : St) : Prop := ∃ f, K.FC s f
+/-- **A FORS contact**: a fresh FORS leaf answer equal to the leaf value it writes (a known
+coordinate, fixed in `K.F`). Unlike `Ctx.FC` it reads the leaf value from `K.F`, so it depends on the
+cache only. -/
+def FCk (s : St) (f : FIn) : Prop := ∃ u, K.Fr s (f.input K.p) u ∧ truncateHash u = K.F f.outC
+
+/-- A FORS contact exists. -/
+def FContact (s : St) : Prop := ∃ f, FCk K s f
 
 /-- **A near cell**: a cached landed pair selects leaf `leaf` of tree `κ` at `index`, and the leaf
 secret it selects in every other tree is known. -/
@@ -63,7 +68,7 @@ def NearMiss (s : St) (f : FIn) : Prop :=
 /-- **A completed FORS contact**: a decided contact at a cell whose secret is known (revealed) or
 which is a near cell. Monotone along the run. -/
 def NearContact (s : St) : Prop :=
-  ∃ f, K.FC s f ∧ (s.known f.inC ≠ none ∨ NearLeaf K root s f.index f.κ f.leaf)
+  ∃ f, FCk K s f ∧ (s.known f.inC ≠ none ∨ NearLeaf K root s f.index f.κ f.leaf)
 
 /-- **Dead states**: two distinct WOTS contacts, two distinct decided FORS contacts, or a WOTS
 contact together with a FORS contact. At most one contact survives with positive weight. -/
@@ -71,7 +76,7 @@ def Dead (s : St) : Prop :=
   (∃ (l : OtsKey) (i : ChainIndex) (v : Digest) (l' : OtsKey) (i' : ChainIndex) (v' : Digest),
       Retained K.p l ∧ Retained K.p l' ∧ v ∈ K.ContactB s l i ∧ v' ∈ K.ContactB s l' i' ∧
         (l, i, v) ≠ (l', i', v')) ∨
-    (∃ f g, f ≠ g ∧ K.FC s f ∧ K.FC s g) ∨ (WContact K s ∧ FContact K s)
+    (∃ f g, f ≠ g ∧ FCk K s f ∧ FCk K s g) ∨ (WContact K s ∧ FContact K s)
 
 /-- **The bad set of the route**: a decided first-order hit, a WOTS event, a dead state, or a
 completed FORS contact. (A FORS contact without guess record has its secret known, and two related
@@ -83,6 +88,15 @@ def BadP (s : St) : Prop :=
 /-- **The weight of the route**: zero on the bad set, the survival weight otherwise. -/
 noncomputable def weightA (s : St) : ℝ≥0∞ :=
   if BadP K root s then 0 else survival K.tg K.initial s
+
+/-- The bad set without the completed FORS contacts (it depends on the exposed coordinates only
+through the decided hits). -/
+def BadQ (s : St) : Prop := Realized K.tg K.initial s ∨ K.WotsBad s ∨ Dead K s
+
+/-- **The weight before the completed contacts**: `weightA = if NearContact then 0 else weightB`
+(`weightA_eq_weightB`). It keeps its mean exactly at every exposure. -/
+noncomputable def weightB (s : St) : ℝ≥0∞ :=
+  if BadQ K s then 0 else survival K.tg K.initial s
 
 /-- **The armed status**: the near flag, a marker or WOTS contact at a retained key, or a decided
 FORS contact. -/
