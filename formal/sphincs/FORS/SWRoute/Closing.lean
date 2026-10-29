@@ -1,6 +1,7 @@
 import FORS.SWRoute.ClosingReal
 import FORS.SWRoute.NumericFacts
 import FORS.CoverBound.NearOptionB
+import FORS.SWRoute.ForecastCert
 import FORS.Certificates.Closing
 
 /-! **The certificate of the SW route and the three routes together.** A SW cover (`CoverSW`) is a
@@ -26,13 +27,9 @@ set_option maxRecDepth 10000
 /-! ### The checker -/
 
 /-- A SW entry: budgets `[qa, qb]`, the rate `ρ`, the digest decrement `β`, the arming bound `δ`, the
-cap `m` of the own-leaf near forecast and its tail `Pb`, the index of its cover option and of its near
-option. -/
-abbrev EntrySW := ℕ × ℕ × ℚ × ℚ × ℚ × ℚ × ℚ × ℕ × ℕ
-
-/-- The forecast's tail bound of an entry at every budget of the entry. -/
-def TailOK : EntrySW → Prop
-  | (qa, qb, _, _, _, m, Pb, _, _) => ∀ q, qa ≤ q → q ≤ qb → ForecastTail (m : ℝ) q (Pb : ℝ)
+cap `m` of the own-leaf near forecast and its tail `Pb`, the index of its cover option, of its near
+option and of its tail certificate. -/
+abbrev EntrySW := ℕ × ℕ × ℚ × ℚ × ℚ × ℚ × ℚ × ℕ × ℕ × ℕ
 
 /-- A SW cover certificate. -/
 structure CoverSW where
@@ -40,36 +37,41 @@ structure CoverSW where
   tab : PoisT
   opts : List OptF
   nopts : List OptNB
+  tails : List TailCert
   entries : List EntrySW
 
 /-- The check of one SW entry. -/
-def checkEntrySW (b a K N : ℕ) (opts : List OptF) (nopts : List OptNB) : EntrySW → Bool
-  | (qa, qb, ρ, β, δ, m, Pb, ic, inr) =>
-    match opts[ic]?, nopts[inr]? with
-    | some o, some n =>
-        decide (qa ≤ qb) && checkNumSW ρ β δ ((qb : ℚ) / 2 ^ 128) (cUQ b a N m) &&
+def checkEntrySW (b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) (nopts : List OptNB)
+    (tails : List TailCert) : EntrySW → Bool
+  | (qa, qb, ρ, β, δ, m, Pb, ic, inr, itl) =>
+    match opts[ic]?, nopts[inr]?, tails[itl]? with
+    | some o, some n, some tc =>
+        decide (qa ≤ qb) && decide (qb ≤ qtop) && checkTail b k a t qb m tc Pb && checkNumSW ρ β δ ((qb : ℚ) / 2 ^ 128) (cUQ b a N m) &&
           decide (0 ≤ δ) && decide (0 ≤ o.cthr) && decide (0 ≤ n.cthr) &&
           decide (o.cthr + δ * n.cthr ≤ β / 2 ^ 128) && decide (0 ≤ o.B) && decide (0 ≤ n.B) &&
           decide (0 ≤ Pb) && swMainQ K N qa qb ρ δ o.B n.B Pb
-    | _, _ => false
+    | _, _, _ => false
 
 /-- Consecutive SW entries cover `[last, qtop]`. -/
-def chainSW (b a K N qtop : ℕ) (opts : List OptF) (nopts : List OptNB) : ℕ → List EntrySW → Bool
+def chainSW (b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) (nopts : List OptNB) (tails : List TailCert) :
+    ℕ → List EntrySW → Bool
   | last, [] => decide (qtop < last)
-  | last, e :: rest => decide (e.1 ≤ last) && checkEntrySW b a K N opts nopts e &&
-      chainSW b a K N qtop opts nopts (e.2.1 + 1) rest
+  | last, e :: rest => decide (e.1 ≤ last) && checkEntrySW b k a K N qtop t opts nopts tails e &&
+      chainSW b k a K N qtop t opts nopts tails (e.2.1 + 1) rest
 
 /-- A SW cover of every budget `qstart ≤ q ≤ qtop`. -/
 def checkCoverSW (H b k a K N qstart : ℕ) (c : CoverSW) : Bool :=
   decide (H = b) && decide (31 ≤ b + a) && decide ((H + k * a + 255) / 256 = 1) && checkRate H b N c.qtop c.tab && checkPT c.tab &&
     c.opts.all (checkOptF H b k a c.tab) && c.nopts.all (checkOptNB H b k a c.tab) &&
-    chainSW b a K N c.qtop c.opts c.nopts qstart c.entries
+    chainSW b k a K N c.qtop c.tab c.opts c.nopts c.tails qstart c.entries
 
 /-! ### Soundness of the checker -/
 
-theorem chainSW_sound (b a K N qtop : ℕ) (opts : List OptF) (nopts : List OptNB) :
-    ∀ (entries : List EntrySW) (last : ℕ), chainSW b a K N qtop opts nopts last entries = true →
-      ∀ q, last ≤ q → q ≤ qtop → ∃ e ∈ entries, e.1 ≤ q ∧ q ≤ e.2.1 ∧ checkEntrySW b a K N opts nopts e = true
+theorem chainSW_sound (b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) (nopts : List OptNB)
+    (tails : List TailCert) :
+    ∀ (entries : List EntrySW) (last : ℕ), chainSW b k a K N qtop t opts nopts tails last entries = true →
+      ∀ q, last ≤ q → q ≤ qtop → ∃ e ∈ entries, e.1 ≤ q ∧ q ≤ e.2.1 ∧
+        checkEntrySW b k a K N qtop t opts nopts tails e = true
   | [], last, h, q, hq, hq' => by
       simp only [chainSW, decide_eq_true_eq] at h
       omega
@@ -78,20 +80,23 @@ theorem chainSW_sound (b a K N qtop : ℕ) (opts : List OptF) (nopts : List OptN
       obtain ⟨⟨he1, he2⟩, hrest⟩ := h
       by_cases hle : q ≤ e.2.1
       · exact ⟨e, List.mem_cons_self .., by omega, hle, he2⟩
-      · obtain ⟨e', he', h1, h2, h3⟩ := chainSW_sound b a K N qtop opts nopts rest _ hrest q (by omega) hq'
+      · obtain ⟨e', he', h1, h2, h3⟩ := chainSW_sound b k a K N qtop t opts nopts tails rest _ hrest q (by omega) hq'
         exact ⟨e', List.mem_cons_of_mem _ he', h1, h2, h3⟩
 
 /-- What a checked entry gives. -/
-theorem checkEntrySW_sound {b a K N : ℕ} {opts : List OptF} {nopts : List OptNB}
-    {qa qb : ℕ} {ρ β δ m Pb : ℚ} {ic inr : ℕ}
-    (h : checkEntrySW b a K N opts nopts (qa, qb, ρ, β, δ, m, Pb, ic, inr) = true) :
-    ∃ o ∈ opts, ∃ n ∈ nopts, qa ≤ qb ∧ checkNumSW ρ β δ ((qb : ℚ) / 2 ^ 128) (cUQ b a N m) = true ∧
+theorem checkEntrySW_sound {b k a K N qtop : ℕ} {t : PoisT} {opts : List OptF} {nopts : List OptNB}
+    {tails : List TailCert} {qa qb : ℕ} {ρ β δ m Pb : ℚ} {ic inr itl : ℕ}
+    (h : checkEntrySW b k a K N qtop t opts nopts tails (qa, qb, ρ, β, δ, m, Pb, ic, inr, itl) = true) :
+    ∃ o ∈ opts, ∃ n ∈ nopts, ∃ tc ∈ tails, qa ≤ qb ∧ qb ≤ qtop ∧ checkTail b k a t qb m tc Pb = true ∧ checkNumSW ρ β δ ((qb : ℚ) / 2 ^ 128) (cUQ b a N m) = true ∧
       0 ≤ δ ∧ 0 ≤ o.cthr ∧ 0 ≤ n.cthr ∧ o.cthr + δ * n.cthr ≤ β / 2 ^ 128 ∧ 0 ≤ o.B ∧ 0 ≤ n.B ∧
       0 ≤ Pb ∧ swMainQ K N qa qb ρ δ o.B n.B Pb = true := by
   rcases ho : opts[ic]? with _ | o <;> rcases hn : nopts[inr]? with _ | n <;>
-    simp only [checkEntrySW, ho, hn, Bool.and_eq_true, decide_eq_true_eq, reduceCtorEq, Bool.false_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩ := h
-  exact ⟨o, List.mem_of_getElem? ho, n, List.mem_of_getElem? hn, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩
+    rcases htc : tails[itl]? with _ | tc <;>
+    simp only [checkEntrySW, ho, hn, htc, Bool.and_eq_true, decide_eq_true_eq, reduceCtorEq,
+      Bool.false_eq_true] at h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h0'⟩, h0''⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩ := h
+  exact ⟨o, List.mem_of_getElem? ho, n, List.mem_of_getElem? hn, tc, List.mem_of_getElem? htc, h0, h0', h0'',
+    h2, h3, h4, h5, h6, h7, h8, h9, h10⟩
 
 /-! ### One budget of a checked SW cover -/
 
@@ -111,7 +116,7 @@ set_option maxHeartbeats 1000000 in
 theorem det_of_coverSW (hSW : DetSW) (hb0 : 0 < keptHeight topLayer) (H b k a K N qstart : ℕ)
     (hH : totalHeight = H) (hb : subtreeHeight = b) (hk : forsTrees = k) (ha : forsHeight = a)
     (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N) (hN70 : signatureLimit ≤ 2 ^ 70)
-    (c : CoverSW) (hcov : checkCoverSW H b k a K N qstart c = true) (htail : ∀ e ∈ c.entries, TailOK e)
+    (c : CoverSW) (hcov : checkCoverSW H b k a K N qstart c = true)
     (adversary : Adversary) (q : ℕ) (hbound : HasHashQueryBound adversary q) (hq127 : q < 2 ^ 127)
     (hKq : keygenCost ≤ q) (hq0 : qstart ≤ q - keygenCost) (hqt : q - keygenCost ≤ c.qtop) :
     forgeAdvantage adversary ≤ q / 2 ^ 127 := by
@@ -125,11 +130,13 @@ theorem det_of_coverSW (hSW : DetSW) (hb0 : 0 < keptHeight topLayer) (H b k a K 
     generalize k * a = m at hdc ⊢
     omega
   set q' := q - keygenCost with hq'def
-  obtain ⟨⟨qa, qb, ρ, β, δ, m, Pb, ic, inr⟩, hemem, hqa, hqb, he⟩ :=
-    chainSW_sound b a K N c.qtop c.opts c.nopts c.entries qstart hchain q' hq0 hqt
+  obtain ⟨⟨qa, qb, ρ, β, δ, m, Pb, ic, inr, itl⟩, -, hqa, hqb, he⟩ :=
+    chainSW_sound b k a K N c.qtop c.tab c.opts c.nopts c.tails c.entries qstart hchain q' hq0 hqt
   dsimp only at hqa hqb
-  obtain ⟨o, ho, n, hn, -, hnum, hδ, hoc, hnc, hpay, hoB, hnB, hPb, hmain⟩ := checkEntrySW_sound he
-  have htl : ForecastTail (m : ℝ) q' (Pb : ℝ) := htail _ hemem q' hqa hqb
+  obtain ⟨o, ho, n, hn, tc, -, -, hqbt, htc, hnum, hδ, hoc, hnc, hpay, hoB, hnB, hPb, hmain⟩ :=
+    checkEntrySW_sound he
+  have htl : ForecastTail (m : ℝ) q' (Pb : ℝ) :=
+    tailOK_of_check H b k a N c.qtop hH hb hk ha hN c.tab hr ht qa qb hqbt m Pb tc htc q' hqa hqb
   have hoc' := hopts o ho
   have hnc' := hnopts n hn
   -- the side conditions at `q'`
@@ -351,7 +358,6 @@ theorem det_bitsF3 (hSW : SWRoute.DetSW) (hb0 : 0 < keptHeight topLayer) (H b k 
     (hon : H0.checkOptN H k a t on = true)
     (hsmall : checkSmallF H b a N qh ρ o.cthr o.B ((2 ^ b * on.En : ℚ) / 2) = true)
     (sw : SWRoute.CoverSW) (hsw : SWRoute.checkCoverSW H b k a K N (qh + 1) sw = true)
-    (htail : ∀ e ∈ sw.entries, SWRoute.TailOK e)
     (covers heavy : List H0.CoverW) (hcov : checkCoversH H b k a K N (sw.qtop + 1) covers heavy = true) :
     HasClassicalSecurityBits 127 := by
   have hN70 : signatureLimit ≤ 2 ^ 70 := by
@@ -370,7 +376,7 @@ theorem det_bitsF3 (hSW : SWRoute.DetSW) (hb0 : 0 < keptHeight topLayer) (H b k 
     · have hKq : keygenCost ≤ q := by
         have : 1 ≤ keygenCost := one_le_keygenCostF
         omega
-      have h := SWRoute.det_of_coverSW hSW hb0 H b k a K N (qh + 1) hH hb hk ha hK hN hN70 sw hsw htail adversary q hbound
+      have h := SWRoute.det_of_coverSW hSW hb0 H b k a K N (qh + 1) hH hb hk ha hK hN hN70 sw hsw adversary q hbound
         hq127 hKq (by omega) hm
       refine le_trans h (le_of_eq ?_)
       rw [Nat.cast_pow, Nat.cast_ofNat]
