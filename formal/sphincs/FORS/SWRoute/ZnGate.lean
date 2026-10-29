@@ -1,4 +1,5 @@
 import FORS.SWRoute.ArmAccount
+import FORS.SWRoute.SignBound
 
 /-! **The gated near potential `Z_n` pays the arming account.** The near potential is the generic
 one-coin potential with the near witness (`potG … witnessNear …`), gated by the route's sticky near
@@ -30,21 +31,6 @@ set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 10000
 set_option linter.unusedSectionVars false
 attribute [local instance] Classical.propDecidable
-
-/-! ### Bounded signing queries -/
-
-/-- The program asks at most `n` further signatures. -/
-def SignBound {α : Type} (M : OracleComp (OracleWorld + SigningSpec) α) : ℕ → Prop :=
-  OracleComp.construct (C := fun _ => ℕ → Prop) (fun _ _ => True)
-    (fun input _ rec n => match input with
-      | .inl _ => ∀ v, rec v n
-      | .inr _ => 0 < n ∧ ∀ r, rec r (n - 1)) M
-
-theorem signBound_sign {α : Type} (m : Message)
-    (next : Option Signature → OracleComp (OracleWorld + SigningSpec) α) (n : ℕ) :
-    SignBound (liftM ((OracleWorld + SigningSpec).query (.inr m)) >>= next) n ↔
-      0 < n ∧ ∀ r, SignBound (next r) (n - 1) :=
-  Iff.rfl
 
 /-! ### The potential -/
 
