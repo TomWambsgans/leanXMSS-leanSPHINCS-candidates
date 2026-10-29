@@ -89,15 +89,15 @@ theorem per height, shape, kept subtree height and FORS shape in [Main.lean](FOR
 
 | lifetime | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 2^24 | 20 | 17,440,000 | — | 325,200 | 167,400 | 86,200 | 22,790 | 6,029 | 16,777,216 |
-| 2^26 | 22 | 71,490,000 | 19,030,000 | 354,500 | 182,200 | 93,560 | 24,770 | 6,547 | 71,650,000 |
-| 2^28 | 24 | 292,300,000 | 20,740,000 | 385,300 | 198,000 | 101,700 | 26,860 | 7,099 | 292,300,000 |
-| 2^30 | 26 | 1,182,000,000 | 22,590,000 | 418,900 | 215,200 | 110,500 | 29,130 | 7,677 | 1,182,000,000 |
-| 2^32 | 28 | 4,731,000,000 | 24,540,000 | 454,500 | 233,300 | 119,800 | 31,600 | 8,313 | 4,731,000,000 |
+| 2^24 | 20 | 17,650,000 | — | 327,400 | 168,300 | 86,430 | 22,850 | 6,036 | 16,777,216 |
+| 2^26 | 22 | 72,220,000 | 19,240,000 | 356,000 | 182,800 | 93,890 | 24,790 | 6,547 | 73,380,000 |
+| 2^28 | 24 | 293,000,000 | 20,920,000 | 387,200 | 198,700 | 101,900 | 26,860 | 7,099 | 293,000,000 |
+| 2^30 | 26 | 1,182,000,000 | 22,750,000 | 419,700 | 215,400 | 110,500 | 29,130 | 7,677 | 1,182,000,000 |
+| 2^32 | 28 | 4,731,000,000 | 24,710,000 | 455,600 | 233,500 | 119,800 | 31,600 | 8,313 | 4,731,000,000 |
 
-These are 82.6–98.3% of the FORS cover attack, in every configuration a larger share than the forest's limit is
-of the forest's attack. They are 12–16% below the forest's limits, except for the layered keys of 2^24 and 2^26
-(19×9 and 23×9 against forests of 6 and 7 trees): 37% and 50% below. The layered key of 2^24 is proved
+These are 82.7–98.3% of the FORS cover attack, in every configuration a larger share than the forest's limit is
+of the forest's attack. They are 11–16% below the forest's limits, except for the layered keys of 2^24 and 2^26
+(19×9 and 23×9 against forests of 6 and 7 trees): 37% and 49% below. The layered key of 2^24 is proved
 through a third route between the small and the large one, the survival-weighted route
 (`ForsPotential.det_bitsF3`, [FORS.md](FORS.md)).
 

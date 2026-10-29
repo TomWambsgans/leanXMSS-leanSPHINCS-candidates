@@ -47,43 +47,43 @@ def Secure127 (P : Params) : Prop :=
 /-! ## h = 20 -/
 
 /-- Full key: 17,440,000 signatures. -/
-theorem h20_full : Secure127 (.pruned (h := 20) (b := 20) (k := 24) (a := 10) (N := 17_440_000)) :=
+theorem h20_full : Secure127 (.pruned (h := 20) (b := 20) (k := 24) (a := 10) (N := 17_650_000)) :=
   Lifetimes.h20_full_bits
 /-- Pruned key, kept subtree of height 14: 325,200 signatures. -/
-theorem h20_pruned14 : Secure127 (.pruned (h := 20) (b := 14) (k := 24) (a := 10) (N := 325_200)) :=
+theorem h20_pruned14 : Secure127 (.pruned (h := 20) (b := 14) (k := 24) (a := 10) (N := 327_400)) :=
   Lifetimes.h20_pruned14_bits
 /-- Pruned key, kept subtree of height 13: 167,400 signatures. -/
-theorem h20_pruned13 : Secure127 (.pruned (h := 20) (b := 13) (k := 24) (a := 10) (N := 167_400)) :=
+theorem h20_pruned13 : Secure127 (.pruned (h := 20) (b := 13) (k := 24) (a := 10) (N := 168_300)) :=
   Lifetimes.h20_pruned13_bits
 /-- Pruned key, kept subtree of height 12: 86,200 signatures. -/
-theorem h20_pruned12 : Secure127 (.pruned (h := 20) (b := 12) (k := 24) (a := 10) (N := 86_200)) :=
+theorem h20_pruned12 : Secure127 (.pruned (h := 20) (b := 12) (k := 24) (a := 10) (N := 86_430)) :=
   Lifetimes.h20_pruned12_bits
 /-- Pruned key, kept subtree of height 10: 22,790 signatures. -/
-theorem h20_pruned10 : Secure127 (.pruned (h := 20) (b := 10) (k := 24) (a := 10) (N := 22_790)) :=
+theorem h20_pruned10 : Secure127 (.pruned (h := 20) (b := 10) (k := 24) (a := 10) (N := 22_850)) :=
   Lifetimes.h20_pruned10_bits
 /-- Pruned key, kept subtree of height 8: 6,029 signatures. -/
-theorem h20_pruned8 : Secure127 (.pruned (h := 20) (b := 8) (k := 24) (a := 10) (N := 6_029)) :=
+theorem h20_pruned8 : Secure127 (.pruned (h := 20) (b := 8) (k := 24) (a := 10) (N := 6_036)) :=
   Lifetimes.h20_pruned8_bits
 
 /-! ## h = 22 -/
 
 /-- Full key: 71,490,000 signatures. -/
-theorem h22_full : Secure127 (.pruned (h := 22) (b := 22) (k := 24) (a := 10) (N := 71_490_000)) :=
+theorem h22_full : Secure127 (.pruned (h := 22) (b := 22) (k := 24) (a := 10) (N := 72_220_000)) :=
   Lifetimes.h22_full_bits
 /-- Pruned key, kept subtree of height 20: 19,030,000 signatures. -/
-theorem h22_pruned20 : Secure127 (.pruned (h := 22) (b := 20) (k := 24) (a := 10) (N := 19_030_000)) :=
+theorem h22_pruned20 : Secure127 (.pruned (h := 22) (b := 20) (k := 24) (a := 10) (N := 19_240_000)) :=
   Lifetimes.h22_pruned20_bits
 /-- Pruned key, kept subtree of height 14: 354,500 signatures. -/
-theorem h22_pruned14 : Secure127 (.pruned (h := 22) (b := 14) (k := 24) (a := 10) (N := 354_500)) :=
+theorem h22_pruned14 : Secure127 (.pruned (h := 22) (b := 14) (k := 24) (a := 10) (N := 356_000)) :=
   Lifetimes.h22_pruned14_bits
 /-- Pruned key, kept subtree of height 13: 182,200 signatures. -/
-theorem h22_pruned13 : Secure127 (.pruned (h := 22) (b := 13) (k := 24) (a := 10) (N := 182_200)) :=
+theorem h22_pruned13 : Secure127 (.pruned (h := 22) (b := 13) (k := 24) (a := 10) (N := 182_800)) :=
   Lifetimes.h22_pruned13_bits
 /-- Pruned key, kept subtree of height 12: 93,560 signatures. -/
-theorem h22_pruned12 : Secure127 (.pruned (h := 22) (b := 12) (k := 24) (a := 10) (N := 93_560)) :=
+theorem h22_pruned12 : Secure127 (.pruned (h := 22) (b := 12) (k := 24) (a := 10) (N := 93_890)) :=
   Lifetimes.h22_pruned12_bits
 /-- Pruned key, kept subtree of height 10: 24,770 signatures. -/
-theorem h22_pruned10 : Secure127 (.pruned (h := 22) (b := 10) (k := 24) (a := 10) (N := 24_770)) :=
+theorem h22_pruned10 : Secure127 (.pruned (h := 22) (b := 10) (k := 24) (a := 10) (N := 24_790)) :=
   Lifetimes.h22_pruned10_bits
 /-- Pruned key, kept subtree of height 8: 6,547 signatures. -/
 theorem h22_pruned8 : Secure127 (.pruned (h := 22) (b := 8) (k := 24) (a := 10) (N := 6_547)) :=
@@ -92,19 +92,19 @@ theorem h22_pruned8 : Secure127 (.pruned (h := 22) (b := 8) (k := 24) (a := 10) 
 /-! ## h = 24 (layered: 10 + 7 + 7) -/
 
 /-- Full key: 292,300,000 signatures. -/
-theorem h24_full : Secure127 (.pruned (h := 24) (b := 24) (k := 24) (a := 10) (N := 292_300_000)) :=
+theorem h24_full : Secure127 (.pruned (h := 24) (b := 24) (k := 24) (a := 10) (N := 293_000_000)) :=
   Lifetimes.h24_full_bits
 /-- Pruned key, kept subtree of height 20: 20,740,000 signatures. -/
-theorem h24_pruned20 : Secure127 (.pruned (h := 24) (b := 20) (k := 24) (a := 10) (N := 20_740_000)) :=
+theorem h24_pruned20 : Secure127 (.pruned (h := 24) (b := 20) (k := 24) (a := 10) (N := 20_920_000)) :=
   Lifetimes.h24_pruned20_bits
 /-- Pruned key, kept subtree of height 14: 385,300 signatures. -/
-theorem h24_pruned14 : Secure127 (.pruned (h := 24) (b := 14) (k := 24) (a := 10) (N := 385_300)) :=
+theorem h24_pruned14 : Secure127 (.pruned (h := 24) (b := 14) (k := 24) (a := 10) (N := 387_200)) :=
   Lifetimes.h24_pruned14_bits
 /-- Pruned key, kept subtree of height 13: 198,000 signatures. -/
-theorem h24_pruned13 : Secure127 (.pruned (h := 24) (b := 13) (k := 24) (a := 10) (N := 198_000)) :=
+theorem h24_pruned13 : Secure127 (.pruned (h := 24) (b := 13) (k := 24) (a := 10) (N := 198_700)) :=
   Lifetimes.h24_pruned13_bits
 /-- Pruned key, kept subtree of height 12: 101,700 signatures. -/
-theorem h24_pruned12 : Secure127 (.pruned (h := 24) (b := 12) (k := 24) (a := 10) (N := 101_700)) :=
+theorem h24_pruned12 : Secure127 (.pruned (h := 24) (b := 12) (k := 24) (a := 10) (N := 101_900)) :=
   Lifetimes.h24_pruned12_bits
 /-- Pruned key, kept subtree of height 10: 26,860 signatures. -/
 theorem h24_pruned10 : Secure127 (.pruned (h := 24) (b := 10) (k := 24) (a := 10) (N := 26_860)) :=
@@ -113,10 +113,10 @@ theorem h24_pruned10 : Secure127 (.pruned (h := 24) (b := 10) (k := 24) (a := 10
 theorem h24_pruned8 : Secure127 (.pruned (h := 24) (b := 8) (k := 24) (a := 10) (N := 7_099)) :=
   Lifetimes.h24_pruned8_bits
 /-- Layered key, 10 + 7 + 7: 292,300,000 signatures. -/
-theorem h24_layered : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (k := 24) (a := 10) (N := 292_300_000)) :=
+theorem h24_layered : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (k := 24) (a := 10) (N := 293_000_000)) :=
   Lifetimes.h24_layered_bits
 /-- Layered key, 10 + 7 + 7, 23 FORS trees of height 9 (the lifetime `2^26`): 71,650,000 signatures. -/
-theorem h24_layered_k23 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (k := 23) (a := 9) (N := 71_650_000)) :=
+theorem h24_layered_k23 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (k := 23) (a := 9) (N := 73_380_000)) :=
   Lifetimes.h24_layered_k23_bits
 /-- Layered key, 10 + 7 + 7, 19 FORS trees of height 9 (the lifetime `2^24`): 16,777,216 signatures. -/
 theorem h24_layered_k19 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (k := 19) (a := 9) (N := 16_777_216)) :=
@@ -128,13 +128,13 @@ theorem h24_layered_k19 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (k :
 theorem h26_full : Secure127 (.pruned (h := 26) (b := 26) (k := 24) (a := 10) (N := 1_182_000_000)) :=
   Lifetimes.h26_full_bits
 /-- Pruned key, kept subtree of height 20: 22,590,000 signatures. -/
-theorem h26_pruned20 : Secure127 (.pruned (h := 26) (b := 20) (k := 24) (a := 10) (N := 22_590_000)) :=
+theorem h26_pruned20 : Secure127 (.pruned (h := 26) (b := 20) (k := 24) (a := 10) (N := 22_750_000)) :=
   Lifetimes.h26_pruned20_bits
 /-- Pruned key, kept subtree of height 14: 418,900 signatures. -/
-theorem h26_pruned14 : Secure127 (.pruned (h := 26) (b := 14) (k := 24) (a := 10) (N := 418_900)) :=
+theorem h26_pruned14 : Secure127 (.pruned (h := 26) (b := 14) (k := 24) (a := 10) (N := 419_700)) :=
   Lifetimes.h26_pruned14_bits
 /-- Pruned key, kept subtree of height 13: 215,200 signatures. -/
-theorem h26_pruned13 : Secure127 (.pruned (h := 26) (b := 13) (k := 24) (a := 10) (N := 215_200)) :=
+theorem h26_pruned13 : Secure127 (.pruned (h := 26) (b := 13) (k := 24) (a := 10) (N := 215_400)) :=
   Lifetimes.h26_pruned13_bits
 /-- Pruned key, kept subtree of height 12: 110,500 signatures. -/
 theorem h26_pruned12 : Secure127 (.pruned (h := 26) (b := 12) (k := 24) (a := 10) (N := 110_500)) :=
@@ -155,13 +155,13 @@ theorem h26_layered : Secure127 (.layered (h := 26) (d := 3) (ℓ := 8) (k := 24
 theorem h28_full : Secure127 (.pruned (h := 28) (b := 28) (k := 24) (a := 10) (N := 4_731_000_000)) :=
   Lifetimes.h28_full_bits
 /-- Pruned key, kept subtree of height 20: 24,540,000 signatures. -/
-theorem h28_pruned20 : Secure127 (.pruned (h := 28) (b := 20) (k := 24) (a := 10) (N := 24_540_000)) :=
+theorem h28_pruned20 : Secure127 (.pruned (h := 28) (b := 20) (k := 24) (a := 10) (N := 24_710_000)) :=
   Lifetimes.h28_pruned20_bits
 /-- Pruned key, kept subtree of height 14: 454,500 signatures. -/
-theorem h28_pruned14 : Secure127 (.pruned (h := 28) (b := 14) (k := 24) (a := 10) (N := 454_500)) :=
+theorem h28_pruned14 : Secure127 (.pruned (h := 28) (b := 14) (k := 24) (a := 10) (N := 455_600)) :=
   Lifetimes.h28_pruned14_bits
 /-- Pruned key, kept subtree of height 13: 233,300 signatures. -/
-theorem h28_pruned13 : Secure127 (.pruned (h := 28) (b := 13) (k := 24) (a := 10) (N := 233_300)) :=
+theorem h28_pruned13 : Secure127 (.pruned (h := 28) (b := 13) (k := 24) (a := 10) (N := 233_500)) :=
   Lifetimes.h28_pruned13_bits
 /-- Pruned key, kept subtree of height 12: 119,800 signatures. -/
 theorem h28_pruned12 : Secure127 (.pruned (h := 28) (b := 12) (k := 24) (a := 10) (N := 119_800)) :=
@@ -180,19 +180,19 @@ theorem h28_layered : Secure127 (.layered (h := 28) (d := 3) (ℓ := 9) (k := 24
 
 /-- The 39 configurations above. -/
 def configurations : List Params := [
-  .pruned 20 20 24 10 17_440_000, .pruned 20 14 24 10 325_200, .pruned 20 13 24 10 167_400,
-  .pruned 20 12 24 10 86_200, .pruned 20 10 24 10 22_790, .pruned 20 8 24 10 6_029,
-  .pruned 22 22 24 10 71_490_000, .pruned 22 20 24 10 19_030_000,
-  .pruned 22 14 24 10 354_500, .pruned 22 13 24 10 182_200, .pruned 22 12 24 10 93_560,
-  .pruned 22 10 24 10 24_770, .pruned 22 8 24 10 6_547,
-  .pruned 24 24 24 10 292_300_000, .pruned 24 20 24 10 20_740_000, .pruned 24 14 24 10 385_300,
-  .pruned 24 13 24 10 198_000, .pruned 24 12 24 10 101_700, .pruned 24 10 24 10 26_860,
-  .pruned 24 8 24 10 7_099, .layered 24 3 7 24 10 292_300_000, .layered 24 3 7 23 9 71_650_000,
+  .pruned 20 20 24 10 17_650_000, .pruned 20 14 24 10 327_400, .pruned 20 13 24 10 168_300,
+  .pruned 20 12 24 10 86_430, .pruned 20 10 24 10 22_850, .pruned 20 8 24 10 6_036,
+  .pruned 22 22 24 10 72_220_000, .pruned 22 20 24 10 19_240_000,
+  .pruned 22 14 24 10 356_000, .pruned 22 13 24 10 182_800, .pruned 22 12 24 10 93_890,
+  .pruned 22 10 24 10 24_790, .pruned 22 8 24 10 6_547,
+  .pruned 24 24 24 10 293_000_000, .pruned 24 20 24 10 20_920_000, .pruned 24 14 24 10 387_200,
+  .pruned 24 13 24 10 198_700, .pruned 24 12 24 10 101_900, .pruned 24 10 24 10 26_860,
+  .pruned 24 8 24 10 7_099, .layered 24 3 7 24 10 293_000_000, .layered 24 3 7 23 9 73_380_000,
   .layered 24 3 7 19 9 16_777_216, .pruned 26 26 24 10 1_182_000_000,
-  .pruned 26 20 24 10 22_590_000, .pruned 26 14 24 10 418_900, .pruned 26 13 24 10 215_200,
+  .pruned 26 20 24 10 22_750_000, .pruned 26 14 24 10 419_700, .pruned 26 13 24 10 215_400,
   .pruned 26 12 24 10 110_500, .pruned 26 10 24 10 29_130, .pruned 26 8 24 10 7_677,
   .layered 26 3 8 24 10 1_182_000_000, .pruned 28 28 24 10 4_731_000_000,
-  .pruned 28 20 24 10 24_540_000, .pruned 28 14 24 10 454_500, .pruned 28 13 24 10 233_300,
+  .pruned 28 20 24 10 24_710_000, .pruned 28 14 24 10 455_600, .pruned 28 13 24 10 233_500,
   .pruned 28 12 24 10 119_800, .pruned 28 10 24 10 31_600, .pruned 28 8 24 10 8_313,
   .layered 28 3 9 24 10 4_731_000_000]
 

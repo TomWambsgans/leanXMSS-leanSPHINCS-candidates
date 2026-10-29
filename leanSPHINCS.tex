@@ -53,7 +53,7 @@ A SPHINCS-style scheme with four toggles, 60 configurations in all. Its componen
 \begin{description}[leftmargin=1.2em]
   \item[T1, lifetime.] About $2^{24}$, $2^{26}$, $2^{28}$, $2^{30}$ or $2^{32}$ signatures. A pruned key has an index of
         $h=20$, 22, 24, 26 or 28 bits, and its full key lasts $N\approx19$--$21\cdot2^h$ signatures (FORS:
-        $16.6$--$17.6\cdot2^h$), proved (forest: 88 to 98\% of the cover attack's $21.45\cdot2^h$;
+        $16.8$--$17.6\cdot2^h$), proved (forest: 88 to 98\% of the cover attack's $21.45\cdot2^h$;
         \cref{sec:lifetimes}). A layered key is at least 24 high (table below).
   \item[T2, shape.] \emph{Pruned}~\cite{conduition}: one tree of height $h$; key generation builds only a kept subtree
         of $2^b$ leaves and replaces the $h-b$ siblings above it by pseudorandom surrogate nodes. The signer grinds
@@ -185,18 +185,18 @@ a hidden value only wins together with a second event.
   $2^{32}$ & 28 & 97.8\% & 92.1\% & 87.1\% & 86.3\% & 85.4\% & 83.9\% & 82.6\% & 97.8\% \\
   \midrule
   \multicolumn{10}{l}{\emph{FORS}} \\
-  $2^{24}$ & 20 & $1.74\cdot10^{7}$ & -- & $3.25\cdot10^{5}$ & $1.67\cdot10^{5}$ & $8.62\cdot10^{4}$ & $2.27\cdot10^{4}$ & $6.02\cdot10^{3}$ & $1.67\cdot10^{7}$ \\
-  $2^{26}$ & 22 & $7.14\cdot10^{7}$ & $1.90\cdot10^{7}$ & $3.54\cdot10^{5}$ & $1.82\cdot10^{5}$ & $9.35\cdot10^{4}$ & $2.47\cdot10^{4}$ & $6.54\cdot10^{3}$ & $7.16\cdot10^{7}$ \\
-  $2^{28}$ & 24 & $2.92\cdot10^{8}$ & $2.07\cdot10^{7}$ & $3.85\cdot10^{5}$ & $1.98\cdot10^{5}$ & $1.01\cdot10^{5}$ & $2.68\cdot10^{4}$ & $7.09\cdot10^{3}$ & $2.92\cdot10^{8}$ \\
-  $2^{30}$ & 26 & $1.18\cdot10^{9}$ & $2.25\cdot10^{7}$ & $4.18\cdot10^{5}$ & $2.15\cdot10^{5}$ & $1.10\cdot10^{5}$ & $2.91\cdot10^{4}$ & $7.67\cdot10^{3}$ & $1.18\cdot10^{9}$ \\
-  $2^{32}$ & 28 & $4.73\cdot10^{9}$ & $2.45\cdot10^{7}$ & $4.54\cdot10^{5}$ & $2.33\cdot10^{5}$ & $1.19\cdot10^{5}$ & $3.16\cdot10^{4}$ & $8.31\cdot10^{3}$ & $4.73\cdot10^{9}$ \\
+  $2^{24}$ & 20 & $1.76\cdot10^{7}$ & -- & $3.27\cdot10^{5}$ & $1.68\cdot10^{5}$ & $8.64\cdot10^{4}$ & $2.28\cdot10^{4}$ & $6.03\cdot10^{3}$ & $1.67\cdot10^{7}$ \\
+  $2^{26}$ & 22 & $7.22\cdot10^{7}$ & $1.92\cdot10^{7}$ & $3.56\cdot10^{5}$ & $1.82\cdot10^{5}$ & $9.38\cdot10^{4}$ & $2.47\cdot10^{4}$ & $6.54\cdot10^{3}$ & $7.33\cdot10^{7}$ \\
+  $2^{28}$ & 24 & $2.93\cdot10^{8}$ & $2.09\cdot10^{7}$ & $3.87\cdot10^{5}$ & $1.98\cdot10^{5}$ & $1.01\cdot10^{5}$ & $2.68\cdot10^{4}$ & $7.09\cdot10^{3}$ & $2.93\cdot10^{8}$ \\
+  $2^{30}$ & 26 & $1.18\cdot10^{9}$ & $2.27\cdot10^{7}$ & $4.19\cdot10^{5}$ & $2.15\cdot10^{5}$ & $1.10\cdot10^{5}$ & $2.91\cdot10^{4}$ & $7.67\cdot10^{3}$ & $1.18\cdot10^{9}$ \\
+  $2^{32}$ & 28 & $4.73\cdot10^{9}$ & $2.47\cdot10^{7}$ & $4.55\cdot10^{5}$ & $2.33\cdot10^{5}$ & $1.19\cdot10^{5}$ & $3.16\cdot10^{4}$ & $8.31\cdot10^{3}$ & $4.73\cdot10^{9}$ \\
   \midrule
   \multicolumn{10}{l}{\emph{ratio to the cover attack}} \\
-  $2^{24}$ & 20 & 92.8\% & -- & 87.5\% & 86.6\% & 85.9\% & 84.2\% & 82.6\% & 85.5\% \\
-  $2^{26}$ & 22 & 95.1\% & 93.5\% & 88.3\% & 87.4\% & 86.4\% & 84.9\% & 83.2\% & 86.6\% \\
-  $2^{28}$ & 24 & 97.2\% & 94.2\% & 89.0\% & 88.1\% & 87.1\% & 85.4\% & 83.9\% & 97.2\% \\
-  $2^{30}$ & 26 & 98.2\% & 94.9\% & 89.7\% & 88.8\% & 87.9\% & 86.1\% & 84.3\% & 98.2\% \\
-  $2^{32}$ & 28 & 98.3\% & 95.5\% & 90.4\% & 89.4\% & 88.5\% & 86.8\% & 84.9\% & 98.3\% \\
+  $2^{24}$ & 20 & 93.9\% & -- & 88.0\% & 87.1\% & 86.1\% & 84.4\% & 82.7\% & 85.5\% \\
+  $2^{26}$ & 22 & 96.0\% & 94.5\% & 88.7\% & 87.7\% & 86.7\% & 84.9\% & 83.2\% & 88.6\% \\
+  $2^{28}$ & 24 & 97.4\% & 95.0\% & 89.4\% & 88.4\% & 87.3\% & 85.4\% & 83.9\% & 97.4\% \\
+  $2^{30}$ & 26 & 98.2\% & 95.6\% & 89.9\% & 88.9\% & 87.9\% & 86.1\% & 84.3\% & 98.2\% \\
+  $2^{32}$ & 28 & 98.3\% & 96.2\% & 90.6\% & 89.5\% & 88.5\% & 86.8\% & 84.9\% & 98.3\% \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -407,9 +407,9 @@ the $2k$ nodes below the roots), $k=24$ trees of height $a=10$ for every pruned 
 not depend on the pruning, and for the layered keys from $2^{28}$ on; its digest is $h+240$ bits, from two hash calls.
 24 is the fewest trees for which the full key still lasts $2^{h+4}$ signatures: with 23, even the cover attack falls
 short at every height. There, its cover lifetime is 83--85\% of the forest's (\texttt{scripts/scheme.py}); its proved
-lifetimes (\cref{sec:lifetimes}) are 83--98\% of its cover attack, and 12--16\% below the forest's. The layered keys
+lifetimes (\cref{sec:lifetimes}) are 83--98\% of its cover attack, and 11--16\% below the forest's. The layered keys
 of $2^{24}$ and $2^{26}$, 24 high, take 19 and 23 trees of height 9 (a one-call digest), the fewest whose cover
-attack reaches $2^{24}$ and $2^{26}$: $2^{24}$ and $7.16\cdot10^7$ proved signatures, 85\% and 87\% of their cover
+attack reaches $2^{24}$ and $2^{26}$: $2^{24}$ and $7.33\cdot10^7$ proved signatures, 85\% and 89\% of their cover
 attack, against $2.66\cdot10^7$ and $1.44\cdot10^8$ for the forest of 6 and 7 trees. With 19 trees the two routes of
 the proof leave a gap; a third route closes it (\cref{sec:lifetimes}). At $h=26$, full key,
 Keccak-256, in permutations (preprocessing: the hashes of one FTS instance inside the threshold MPC):
