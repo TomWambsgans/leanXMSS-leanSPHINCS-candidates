@@ -49,7 +49,7 @@ in [FORS.md](FORS.md).
 ## Proved lifetimes
 
 Signature limits N with 127 bits (one theorem each in [Main.lean](LeanForest/Main.lean), e.g.
-`h24_pruned12`). A pruned key has height h = log2(lifetime) − 4; the layered key of each lifetime is 10 + 7 + 7
+`h24_pruned12`). A pruned key has height h = log2(lifetime) − 4; the layered key of each lifetime is 8 + 8 + 8
 (h = 24) up to 2^28, then 10 + 8 + 8 and 10 + 9 + 9, with a forest of 6 and 7 trees at 2^24 and 2^26 (8
 otherwise).
 

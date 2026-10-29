@@ -155,23 +155,23 @@ theorem h24_pruned8_bits : SecurityBits (.pruned 24 8 8154) 127 :=
     H0.rho_h24_b8 H0.tab_h24_b8 H0.small_h24_b8 H0.near_h24_b8 H0.tab_h24_b8_ok H0.rate_h24_b8_ok H0.small_h24_b8_ok
     H0.near_h24_b8_ok H0.check_h24_b8_ok [H0.cover_h24_b8_0, H0.cover_h24_b8_1] [H0.coverh_h24_b8_0] H0.covers_h24_b8_ok
 
-/-- Height 24, layered (10 + 7 + 7), 336,700,000 signatures (93.5% of the cover attack's 3.599e+08). -/
-theorem h24_layered_bits : SecurityBits (.layered 24 3 7 336700000) 127 :=
-  @det_bitsFH (.layered 24 3 7 336700000) (by decide) 24 24 8 231424 336700000 (by decide) (by decide) (by decide) (by decide)
+/-- Height 24, layered (8 + 8 + 8), 336,700,000 signatures (93.5% of the cover attack's 3.599e+08). -/
+theorem h24_layered_bits : SecurityBits (.layered 24 3 8 336700000) 127 :=
+  @det_bitsFH (.layered 24 3 8 336700000) (by decide) 24 24 8 57856 336700000 (by decide) (by decide) (by decide) (by decide)
     (by decide) 332306998946228968225951765070086144
     H0.rho_h24_b24 H0.tab_h24_b24 H0.small_h24_b24 H0.near_h24_b24 H0.tab_h24_b24_ok H0.rate_h24_b24_ok H0.small_h24_b24_ok
     H0.near_h24_b24_ok H0.check_h24_b24_ok [H0.cover_h24_b24_0] [] H0.covers_h24_L_ok
 
-/-- Height 24, layered (10 + 7 + 7), 6 coordinates, 26,670,000 signatures (60.0% of the cover attack's 4.448e+07). -/
-theorem h24_layered_t6_bits : SecurityBits (.layered 24 3 7 26670000 6) 127 :=
-  @det_bitsFH (.layered 24 3 7 26670000 6) (by decide) 24 24 6 231424 26670000 (by decide) (by decide) (by decide) (by decide)
+/-- Height 24, layered (8 + 8 + 8), 6 coordinates, 26,670,000 signatures (60.0% of the cover attack's 4.448e+07). -/
+theorem h24_layered_t6_bits : SecurityBits (.layered 24 3 8 26670000 6) 127 :=
+  @det_bitsFH (.layered 24 3 8 26670000 6) (by decide) 24 24 6 57856 26670000 (by decide) (by decide) (by decide) (by decide)
     (by decide) 1117743056710415287644387422830067712
     H0.rho_h24_L6 H0.tab_h24_L6 H0.small_h24_L6 H0.near_h24_L6 H0.tab_h24_L6_ok H0.rate_h24_L6_ok H0.small_h24_L6_ok
     H0.near_h24_L6_ok H0.check_h24_L6_ok [H0.cover_h24_L6_0] [] H0.covers_h24_L6_ok
 
-/-- Height 24, layered (10 + 7 + 7), 7 coordinates, 144,300,000 signatures (85.6% of the cover attack's 1.687e+08). -/
-theorem h24_layered_t7_bits : SecurityBits (.layered 24 3 7 144300000 7) 127 :=
-  @det_bitsFH (.layered 24 3 7 144300000 7) (by decide) 24 24 7 231424 144300000 (by decide) (by decide) (by decide) (by decide)
+/-- Height 24, layered (8 + 8 + 8), 7 coordinates, 144,300,000 signatures (85.6% of the cover attack's 1.687e+08). -/
+theorem h24_layered_t7_bits : SecurityBits (.layered 24 3 8 144300000 7) 127 :=
+  @det_bitsFH (.layered 24 3 8 144300000 7) (by decide) 24 24 7 57856 144300000 (by decide) (by decide) (by decide) (by decide)
     (by decide) 512487451133699472151040029945233408
     H0.rho_h24_L7 H0.tab_h24_L7 H0.small_h24_L7 H0.near_h24_L7 H0.tab_h24_L7_ok H0.rate_h24_L7_ok H0.small_h24_L7_ok
     H0.near_h24_L7_ok H0.check_h24_L7_ok [H0.cover_h24_L7_0] [] H0.covers_h24_L7_ok

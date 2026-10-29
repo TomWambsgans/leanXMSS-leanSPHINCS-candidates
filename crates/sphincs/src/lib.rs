@@ -60,11 +60,12 @@ pub const MAX_H: usize = 28;
 /// lifetime is proved in Lean (`PRUNED` in scripts/scheme.py); `b = 20` at `h = 20` is the full key.
 pub const PRUNED: [usize; 6] = [8, 10, 12, 13, 14, 20];
 
-/// The layer heights of a layered key of height `h`, top layer first: three layers, a top layer of 10
-/// (about 41 s of key generation on a Ledger with Keccak-256) and two equal bottom layers of 7 to 9.
+/// The layer heights of a layered key of height `h`, top layer first: three layers, three equal layers of 8
+/// at `h = 24` (about 10 s of key generation on a Ledger with Keccak-256), else a top layer of 10 (about 41 s)
+/// and two equal bottom layers of 8 or 9.
 pub fn layered_heights(h: usize) -> &'static [usize] {
     match h {
-        24 => &[10, 7, 7],
+        24 => &[8, 8, 8],
         26 => &[10, 8, 8],
         28 => &[10, 9, 9],
         _ => panic!("no layered split for h = {h}"),

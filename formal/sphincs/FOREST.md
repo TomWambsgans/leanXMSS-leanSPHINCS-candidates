@@ -32,7 +32,7 @@ for the deterministic Lean signer in every configuration of [README.md](README.m
 | 10 | 30,810 | 3.74550e4 | 3.49e4 | 88% |
 | 8 | 8,154 | 1.00543e4 | 9.19e3 | 89% |
 
-The uniform keys of the `2^24` and `2^26` lifetimes are layered at `h = 24` (10 + 7 + 7) with 6 and 7
+The uniform keys of the `2^24` and `2^26` lifetimes are layered at `h = 24` (8 + 8 + 8) with 6 and 7
 coordinates: 26,670,000 and 144,300,000 proved signatures, 60.0% and 85.6% of their cover attacks
 (4.44835e7 and 1.68664e8, `forest_attack.py cover 24 T`).
 

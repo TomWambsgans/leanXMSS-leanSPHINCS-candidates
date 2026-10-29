@@ -89,7 +89,7 @@ theorem h22_pruned10 : Secure127 (.pruned (h := 22) (b := 10) (k := 24) (a := 10
 theorem h22_pruned8 : Secure127 (.pruned (h := 22) (b := 8) (k := 24) (a := 10) (N := 6_547)) :=
   Lifetimes.h22_pruned8_bits
 
-/-! ## h = 24 (layered: 10 + 7 + 7) -/
+/-! ## h = 24 (layered: 8 + 8 + 8) -/
 
 /-- Full key: 293,000,000 signatures. -/
 theorem h24_full : Secure127 (.pruned (h := 24) (b := 24) (k := 24) (a := 10) (N := 293_000_000)) :=
@@ -112,14 +112,14 @@ theorem h24_pruned10 : Secure127 (.pruned (h := 24) (b := 10) (k := 24) (a := 10
 /-- Pruned key, kept subtree of height 8: 7,099 signatures. -/
 theorem h24_pruned8 : Secure127 (.pruned (h := 24) (b := 8) (k := 24) (a := 10) (N := 7_099)) :=
   Lifetimes.h24_pruned8_bits
-/-- Layered key, 10 + 7 + 7: 293,000,000 signatures. -/
-theorem h24_layered : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (k := 24) (a := 10) (N := 293_000_000)) :=
+/-- Layered key, 8 + 8 + 8: 293,000,000 signatures. -/
+theorem h24_layered : Secure127 (.layered (h := 24) (d := 3) (ℓ := 8) (k := 24) (a := 10) (N := 293_000_000)) :=
   Lifetimes.h24_layered_bits
-/-- Layered key, 10 + 7 + 7, 23 FORS trees of height 9 (the lifetime `2^26`): 73,380,000 signatures. -/
-theorem h24_layered_k23 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (k := 23) (a := 9) (N := 73_380_000)) :=
+/-- Layered key, 8 + 8 + 8, 23 FORS trees of height 9 (the lifetime `2^26`): 73,380,000 signatures. -/
+theorem h24_layered_k23 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 8) (k := 23) (a := 9) (N := 73_380_000)) :=
   Lifetimes.h24_layered_k23_bits
-/-- Layered key, 10 + 7 + 7, 19 FORS trees of height 9 (the lifetime `2^24`): 16,777,216 signatures. -/
-theorem h24_layered_k19 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (k := 19) (a := 9) (N := 16_777_216)) :=
+/-- Layered key, 8 + 8 + 8, 19 FORS trees of height 9 (the lifetime `2^24`): 16,777,216 signatures. -/
+theorem h24_layered_k19 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 8) (k := 19) (a := 9) (N := 16_777_216)) :=
   Lifetimes.h24_layered_k19_bits
 
 /-! ## h = 26 (layered: 10 + 8 + 8) -/
@@ -187,8 +187,8 @@ def configurations : List Params := [
   .pruned 22 10 24 10 24_790, .pruned 22 8 24 10 6_547,
   .pruned 24 24 24 10 293_000_000, .pruned 24 20 24 10 20_920_000, .pruned 24 14 24 10 387_200,
   .pruned 24 13 24 10 198_700, .pruned 24 12 24 10 101_900, .pruned 24 10 24 10 26_860,
-  .pruned 24 8 24 10 7_099, .layered 24 3 7 24 10 293_000_000, .layered 24 3 7 23 9 73_380_000,
-  .layered 24 3 7 19 9 16_777_216, .pruned 26 26 24 10 1_182_000_000,
+  .pruned 24 8 24 10 7_099, .layered 24 3 8 24 10 293_000_000, .layered 24 3 8 23 9 73_380_000,
+  .layered 24 3 8 19 9 16_777_216, .pruned 26 26 24 10 1_182_000_000,
   .pruned 26 20 24 10 22_750_000, .pruned 26 14 24 10 419_700, .pruned 26 13 24 10 215_400,
   .pruned 26 12 24 10 110_500, .pruned 26 10 24 10 29_130, .pruned 26 8 24 10 7_677,
   .layered 26 3 8 24 10 1_182_000_000, .pruned 28 28 24 10 4_731_000_000,

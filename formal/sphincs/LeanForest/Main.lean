@@ -71,7 +71,7 @@ theorem h22_pruned10 : Secure127 (.pruned (h := 22) (b := 10) (N := 28_410)) := 
 /-- Pruned key, kept subtree of height 8: 7,514 signatures. -/
 theorem h22_pruned8 : Secure127 (.pruned (h := 22) (b := 8) (N := 7_514)) := Lifetimes.h22_pruned8_bits
 
-/-! ## h = 24 (layered: 10 + 7 + 7, with 8, 6 or 7 coordinates) -/
+/-! ## h = 24 (layered: 8 + 8 + 8, with 8, 6 or 7 coordinates) -/
 
 /-- Full key: 336,700,000 signatures. -/
 theorem h24_full : Secure127 (.pruned (h := 24) (b := 24) (N := 336_700_000)) := Lifetimes.h24_full_bits
@@ -87,13 +87,13 @@ theorem h24_pruned12 : Secure127 (.pruned (h := 24) (b := 12) (N := 116_600)) :=
 theorem h24_pruned10 : Secure127 (.pruned (h := 24) (b := 10) (N := 30_810)) := Lifetimes.h24_pruned10_bits
 /-- Pruned key, kept subtree of height 8: 8,154 signatures. -/
 theorem h24_pruned8 : Secure127 (.pruned (h := 24) (b := 8) (N := 8_154)) := Lifetimes.h24_pruned8_bits
-/-- Layered key, 10 + 7 + 7: 336,700,000 signatures. -/
-theorem h24_layered : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (N := 336_700_000)) := Lifetimes.h24_layered_bits
-/-- Layered key, 10 + 7 + 7, 6 coordinates (the uniform key of the `2^24` lifetime): 26,670,000 signatures. -/
-theorem h24_layered_t6 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (T := 6) (N := 26_670_000)) :=
+/-- Layered key, 8 + 8 + 8: 336,700,000 signatures. -/
+theorem h24_layered : Secure127 (.layered (h := 24) (d := 3) (ℓ := 8) (N := 336_700_000)) := Lifetimes.h24_layered_bits
+/-- Layered key, 8 + 8 + 8, 6 coordinates (the uniform key of the `2^24` lifetime): 26,670,000 signatures. -/
+theorem h24_layered_t6 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 8) (T := 6) (N := 26_670_000)) :=
   Lifetimes.h24_layered_t6_bits
-/-- Layered key, 10 + 7 + 7, 7 coordinates (the uniform key of the `2^26` lifetime): 144,300,000 signatures. -/
-theorem h24_layered_t7 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 7) (T := 7) (N := 144_300_000)) :=
+/-- Layered key, 8 + 8 + 8, 7 coordinates (the uniform key of the `2^26` lifetime): 144,300,000 signatures. -/
+theorem h24_layered_t7 : Secure127 (.layered (h := 24) (d := 3) (ℓ := 8) (T := 7) (N := 144_300_000)) :=
   Lifetimes.h24_layered_t7_bits
 
 /-! ## h = 26 (layered: 10 + 8 + 8) -/
@@ -143,8 +143,8 @@ def configurations : List Params := [
   .pruned 22 22 81_860_000, .pruned 22 20 21_760_000, .pruned 22 14 405_300, .pruned 22 13 208_500,
   .pruned 22 12 107_200, .pruned 22 10 28_410, .pruned 22 8 7_514,
   .pruned 24 24 336_700_000, .pruned 24 20 23_830_000, .pruned 24 14 441_500, .pruned 24 13 226_800,
-  .pruned 24 12 116_600, .pruned 24 10 30_810, .pruned 24 8 8_154, .layered 24 3 7 336_700_000,
-  .layered 24 3 7 26_670_000 6, .layered 24 3 7 144_300_000 7,
+  .pruned 24 12 116_600, .pruned 24 10 30_810, .pruned 24 8 8_154, .layered 24 3 8 336_700_000,
+  .layered 24 3 8 26_670_000 6, .layered 24 3 8 144_300_000 7,
   .pruned 26 26 1_381_000_000, .pruned 26 20 26_030_000, .pruned 26 14 480_100, .pruned 26 13 246_900,
   .pruned 26 12 126_900, .pruned 26 10 33_480, .pruned 26 8 8_830, .layered 26 3 8 1_381_000_000,
   .pruned 28 28 5_634_000_000, .pruned 28 20 28_350_000, .pruned 28 14 522_000, .pruned 28 13 267_900,

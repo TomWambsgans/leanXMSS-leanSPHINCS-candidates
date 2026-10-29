@@ -635,15 +635,15 @@ mod tests {
             assert_eq!(hex(&digest), sig_hex, "{hash:?}");
             assert_eq!(sig.layers[0].counter, counter, "{hash:?}");
         }
-        // the layered key of height 24 (the same bytes as before the lighter forests existed), then
+        // the layered key of height 24 (8 + 8 + 8), then
         // the layered keys of 2^24 and 2^26
         let layered = [
-            (28, "0b5e3aa421434f80badd1a5af9cdd7663fafb0f593515556c4797f672621c2fc",
-             "cafdd9580d45967d80f109872a453b579093d2c63feea3fca59030ce16d5be50"),
-            (24, "6e9915ded835767a08efd9809839ec8ad60017402305fcecac43c4d39c9e81ae",
-             "1c53143babdb893e560450229f80f1d074e461920fb978cf0e82234a0568445b"),
-            (26, "d34a30c1f68dc14604d526a837a64b60ef5886fa10066a5b183ad71bdc49cd58",
-             "61be492958cf39a760e70be3aa92dc08df9a6986af4ecf56d523e75f29ab2b25"),
+            (28, "d80e15c31c7b5f466c4dc94b877b4ab03fafb0f593515556c4797f672621c2fc",
+             "2efe8485f4c5a9bbb93322706000e9b53797d646c838fb79be7a54af1ec69178"),
+            (24, "640752f9dad79be4680e60883f40ef32d60017402305fcecac43c4d39c9e81ae",
+             "d4d1aa8bf9a2d65eb32edd6699113b23549c5cc80a0e243999dc0138168342db"),
+            (26, "e22dca1b13c8744acb34e74ee71fadf7ef5886fa10066a5b183ad71bdc49cd58",
+             "a52a1b4447376b8d7e147671082a762cc462e9527b39727b2042c823a281c0e6"),
         ];
         for (lifetime, pk_hex, sig_hex) in layered {
             let cfg = Config::uniform(HashFn::Keccak256, lifetime);

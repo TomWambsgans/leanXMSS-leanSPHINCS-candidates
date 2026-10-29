@@ -66,7 +66,7 @@ SHAPE = "pruned"
 COORDS = 8          # T, the forest's coordinates (set_config)
 
 # The layer split of a layered key, top layer first (crates/sphincs `layered_heights`).
-SPLITS = {24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}
+SPLITS = {24: (8, 8, 8), 26: (10, 8, 8), 28: (10, 9, 9)}
 
 def set_config(h, shape='pruned', T=8):
     """Select the height, the shape and the number of coordinates every function below works at."""

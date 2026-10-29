@@ -1660,20 +1660,20 @@ theorem covers_h24_b8_ok : ForestPotential.checkCoversH 24 8 8 57888 8154 204994
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h24_b8_0_ok, cover_h24_b8_1_ok, coverh_h24_b8_0_ok, by decide +kernel⟩
 
-/-! Height 24, layered (10 + 7 + 7), 336,700,000 signatures: the certificate of the height 24, full key, 336,700,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 231424` enters: the cover chains. -/
+/-! Height 24, layered (8 + 8 + 8), 336,700,000 signatures: the certificate of the height 24, full key, 336,700,000 signatures (table, small-route option, near certificate, cover tables and options), checked again only where the keygen credit `K = 57856` enters: the cover chains. -/
 
-theorem cover_h24_L_0_ok : checkCoverW 24 24 8 231424 336700000 332306998946228968225951765070086145 cover_h24_b24_0 = true :=
+theorem cover_h24_L_0_ok : checkCoverW 24 24 8 57856 336700000 332306998946228968225951765070086145 cover_h24_b24_0 = true :=
   checkCoverW_of_pt [large_h24_b24_0_0_cB, large_h24_b24_0_1_cB, large_h24_b24_0_2_cB, large_h24_b24_0_3_cB, large_h24_b24_0_4_cB, large_h24_b24_0_5_cB, large_h24_b24_0_6_cB, large_h24_b24_0_7_cB, large_h24_b24_0_8_cB, large_h24_b24_0_9_cB]
     (.cons large_h24_b24_0_0_ok <| .cons large_h24_b24_0_1_ok <| .cons large_h24_b24_0_2_ok <| .cons large_h24_b24_0_3_ok <| .cons large_h24_b24_0_4_ok <| .cons large_h24_b24_0_5_ok <| .cons large_h24_b24_0_6_ok <| .cons large_h24_b24_0_7_ok <| .cons large_h24_b24_0_8_ok <| .cons large_h24_b24_0_9_ok <| .nil)
     tabc_h24_b24_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h24_L_ok : ForestPotential.checkCoversH 24 24 8 231424 336700000 332306998946228968225951765070086145 [cover_h24_b24_0] [] = true := by
+theorem covers_h24_L_ok : ForestPotential.checkCoversH 24 24 8 57856 336700000 332306998946228968225951765070086145 [cover_h24_b24_0] [] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h24_L_0_ok, by decide +kernel⟩
 
-/-- Poisson table of the small route, height 24, layered (10 + 7 + 7), 6 coordinates, 26,670,000 signatures. -/
+/-- Poisson table of the small route, height 24, layered (8 + 8 + 8), 6 coordinates, 26,670,000 signatures. -/
 def tab_h24_L6 : PoisT := poisOf 29323975116409444983 220 79 150
     343732242067707650283924464082750527201138630075216562470415005466
 
@@ -1856,8 +1856,8 @@ def cover_h24_L6_0 : CoverW where
   tab := tabc_h24_L6_0
   opts := [large_h24_L6_0_0, large_h24_L6_0_1, large_h24_L6_0_2, large_h24_L6_0_3, large_h24_L6_0_4, large_h24_L6_0_5, large_h24_L6_0_6, large_h24_L6_0_7, large_h24_L6_0_8, large_h24_L6_0_9, large_h24_L6_0_10]
   entries := [
-    (1117743056710415287644387422830067713, 1120200478551899321187385171619757492, 0),
-    (1120200478551899321187385171619757493, 1123237650160621980752595236094476288, 0),
+    (1117743056710415287644387422830067713, 1120200478551899321187385171513844096, 0),
+    (1120200478551899321187385171513844097, 1123237650160621980752595236094476288, 0),
     (1123237650160621980752595236094476289, 1129336719527171077445625461021343744, 0),
     (1129336719527171077445625461021343745, 1141634390114791470445306023918960640, 1),
     (1141634390114791470445306023918960641, 1166632928063786816104933778945736704, 2),
@@ -1870,18 +1870,18 @@ def cover_h24_L6_0 : CoverW where
     (16258609241674964217256940810325196801, 134001069004385590583959969268655718400, 9),
     (134001069004385590583959969268655718401, 170141183460469231731687303715884105728, 10)]
 
-theorem cover_h24_L6_0_ok : checkCoverW 24 24 6 231424 26670000 1117743056710415287644387422830067713 cover_h24_L6_0 = true :=
+theorem cover_h24_L6_0_ok : checkCoverW 24 24 6 57856 26670000 1117743056710415287644387422830067713 cover_h24_L6_0 = true :=
   checkCoverW_of_pt [large_h24_L6_0_0_cB, large_h24_L6_0_1_cB, large_h24_L6_0_2_cB, large_h24_L6_0_3_cB, large_h24_L6_0_4_cB, large_h24_L6_0_5_cB, large_h24_L6_0_6_cB, large_h24_L6_0_7_cB, large_h24_L6_0_8_cB, large_h24_L6_0_9_cB, large_h24_L6_0_10_cB]
     (.cons large_h24_L6_0_0_ok <| .cons large_h24_L6_0_1_ok <| .cons large_h24_L6_0_2_ok <| .cons large_h24_L6_0_3_ok <| .cons large_h24_L6_0_4_ok <| .cons large_h24_L6_0_5_ok <| .cons large_h24_L6_0_6_ok <| .cons large_h24_L6_0_7_ok <| .cons large_h24_L6_0_8_ok <| .cons large_h24_L6_0_9_ok <| .cons large_h24_L6_0_10_ok <| .nil)
     tabc_h24_L6_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h24_L6_ok : ForestPotential.checkCoversH 24 24 6 231424 26670000 1117743056710415287644387422830067713 [cover_h24_L6_0] [] = true := by
+theorem covers_h24_L6_ok : ForestPotential.checkCoversH 24 24 6 57856 26670000 1117743056710415287644387422830067713 [cover_h24_L6_0] [] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h24_L6_0_ok, by decide +kernel⟩
 
-/-- Poisson table of the small route, height 24, layered (10 + 7 + 7), 7 coordinates, 144,300,000 signatures. -/
+/-- Poisson table of the small route, height 24, layered (8 + 8 + 8), 7 coordinates, 144,300,000 signatures. -/
 def tab_h24_L7 : PoisT := poisOf 158659527889735233975 220 109 150
     309923007077780518551874834745566351846734562393280161884783147
 
@@ -2020,14 +2020,14 @@ def cover_h24_L7_0 : CoverW where
     (3475709084171977907008400403676004353, 22942704850144534433869899663717433344, 5),
     (22942704850144534433869899663717433345, 170141183460469231731687303715884105728, 6)]
 
-theorem cover_h24_L7_0_ok : checkCoverW 24 24 7 231424 144300000 512487451133699472151040029945233409 cover_h24_L7_0 = true :=
+theorem cover_h24_L7_0_ok : checkCoverW 24 24 7 57856 144300000 512487451133699472151040029945233409 cover_h24_L7_0 = true :=
   checkCoverW_of_pt [large_h24_L7_0_0_cB, large_h24_L7_0_1_cB, large_h24_L7_0_2_cB, large_h24_L7_0_3_cB, large_h24_L7_0_4_cB, large_h24_L7_0_5_cB, large_h24_L7_0_6_cB]
     (.cons large_h24_L7_0_0_ok <| .cons large_h24_L7_0_1_ok <| .cons large_h24_L7_0_2_ok <| .cons large_h24_L7_0_3_ok <| .cons large_h24_L7_0_4_ok <| .cons large_h24_L7_0_5_ok <| .cons large_h24_L7_0_6_ok <| .nil)
     tabc_h24_L7_0_ok
     (by decide +kernel)
 
 /-- The covers reach every budget below `2^127`. -/
-theorem covers_h24_L7_ok : ForestPotential.checkCoversH 24 24 7 231424 144300000 512487451133699472151040029945233409 [cover_h24_L7_0] [] = true := by
+theorem covers_h24_L7_ok : ForestPotential.checkCoversH 24 24 7 57856 144300000 512487451133699472151040029945233409 [cover_h24_L7_0] [] = true := by
   simp only [ForestPotential.checkCoversH, ForestPotential.checkCoversHeavy, Bool.and_eq_true]
   exact ⟨cover_h24_L7_0_ok, by decide +kernel⟩
 

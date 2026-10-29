@@ -217,18 +217,18 @@
    "shape": "layered",
    "b": 24,
    "layers": [
-    10,
-    7,
-    7
+    8,
+    8,
+    8
    ],
    "coords": 6,
    "size": 5596,
    "verify": 365,
-   "keygen": 238592,
+   "keygen": 59648,
    "sign": {
-    "16": 149174,
-    "1024": 148709,
-    "16384": 148709
+    "16": 208357,
+    "1024": 208357,
+    "16384": 208357
    },
    "grind": 1,
    "lifetime": 26670000,
@@ -239,9 +239,9 @@
     "size": 6524,
     "verify": 419,
     "sign": {
-     "16": 128891,
-     "1024": 128426,
-     "16384": 128426
+     "16": 188074,
+     "1024": 188074,
+     "16384": 188074
     },
     "lifetime": 16777216,
     "attack": 19630036
@@ -499,18 +499,18 @@
    "shape": "layered",
    "b": 24,
    "layers": [
-    10,
-    7,
-    7
+    8,
+    8,
+    8
    ],
    "coords": 7,
    "size": 5948,
    "verify": 385,
-   "keygen": 238592,
+   "keygen": 59648,
    "sign": {
-    "16": 156602,
-    "1024": 156137,
-    "16384": 156137
+    "16": 215785,
+    "1024": 215785,
+    "16384": 215785
    },
    "grind": 1,
    "lifetime": 144300000,
@@ -521,9 +521,9 @@
     "size": 7164,
     "verify": 456,
     "sign": {
-     "16": 134004,
-     "1024": 133539,
-     "16384": 133539
+     "16": 193187,
+     "1024": 193187,
+     "16384": 193187
     },
     "lifetime": 73380000,
     "attack": 82781654
@@ -781,18 +781,18 @@
    "shape": "layered",
    "b": 24,
    "layers": [
-    10,
-    7,
-    7
+    8,
+    8,
+    8
    ],
    "coords": 8,
    "size": 6300,
    "verify": 406,
-   "keygen": 238592,
+   "keygen": 59648,
    "sign": {
-    "16": 164031,
-    "1024": 163566,
-    "16384": 163566
+    "16": 223214,
+    "1024": 223214,
+    "16384": 223214
    },
    "grind": 1,
    "lifetime": 336700000,
@@ -803,9 +803,9 @@
     "size": 7708,
     "verify": 490,
     "sign": {
-     "16": 166003,
-     "1024": 165538,
-     "16384": 165538
+     "16": 225186,
+     "1024": 225186,
+     "16384": 225186
     },
     "lifetime": 293000000,
     "attack": 300783729
@@ -1592,18 +1592,18 @@
    "shape": "layered",
    "b": 24,
    "layers": [
-    10,
-    7,
-    7
+    8,
+    8,
+    8
    ],
    "coords": 6,
    "size": 5596,
    "verify": 413,
-   "keygen": 247808,
+   "keygen": 61952,
    "sign": {
-    "16": 153133,
-    "1024": 152650,
-    "16384": 152650
+    "16": 214602,
+    "1024": 214602,
+    "16384": 214602
    },
    "grind": 1,
    "lifetime": 26670000,
@@ -1614,9 +1614,9 @@
     "size": 6524,
     "verify": 453,
     "sign": {
-     "16": 131222,
-     "1024": 130739,
-     "16384": 130739
+     "16": 192691,
+     "1024": 192691,
+     "16384": 192691
     },
     "lifetime": 16777216,
     "attack": 19630036
@@ -1874,18 +1874,18 @@
    "shape": "layered",
    "b": 24,
    "layers": [
-    10,
-    7,
-    7
+    8,
+    8,
+    8
    ],
    "coords": 7,
    "size": 5948,
    "verify": 437,
-   "keygen": 247808,
+   "keygen": 61952,
    "sign": {
-    "16": 160834,
-    "1024": 160351,
-    "16384": 160351
+    "16": 222303,
+    "1024": 222303,
+    "16384": 222303
    },
    "grind": 1,
    "lifetime": 144300000,
@@ -1896,9 +1896,9 @@
     "size": 7164,
     "verify": 491,
     "sign": {
-     "16": 136336,
-     "1024": 135853,
-     "16384": 135853
+     "16": 197805,
+     "1024": 197805,
+     "16384": 197805
     },
     "lifetime": 73380000,
     "attack": 82781654
@@ -2156,18 +2156,18 @@
    "shape": "layered",
    "b": 24,
    "layers": [
-    10,
-    7,
-    7
+    8,
+    8,
+    8
    ],
    "coords": 8,
    "size": 6300,
    "verify": 460,
-   "keygen": 247808,
+   "keygen": 61952,
    "sign": {
-    "16": 168534,
-    "1024": 168051,
-    "16384": 168051
+    "16": 230003,
+    "1024": 230003,
+    "16384": 230003
    },
    "grind": 1,
    "lifetime": 336700000,
@@ -2178,9 +2178,9 @@
     "size": 7708,
     "verify": 526,
     "sign": {
-     "16": 168336,
-     "1024": 167853,
-     "16384": 167853
+     "16": 229805,
+     "1024": 229805,
+     "16384": 229805
     },
     "lifetime": 293000000,
     "attack": 300783729
@@ -2967,18 +2967,18 @@
    "shape": "layered",
    "b": 24,
    "layers": [
-    10,
-    7,
-    7
+    8,
+    8,
+    8
    ],
    "coords": 6,
    "size": 5596,
    "verify": 414,
-   "keygen": 247810,
+   "keygen": 61954,
    "sign": {
-    "16": 153133,
-    "1024": 152650,
-    "16384": 152650
+    "16": 214602,
+    "1024": 214602,
+    "16384": 214602
    },
    "grind": 1,
    "lifetime": 26670000,
@@ -2989,9 +2989,9 @@
     "size": 6524,
     "verify": 453,
     "sign": {
-     "16": 131221,
-     "1024": 130738,
-     "16384": 130738
+     "16": 192690,
+     "1024": 192690,
+     "16384": 192690
     },
     "lifetime": 16777216,
     "attack": 19630036
@@ -3249,18 +3249,18 @@
    "shape": "layered",
    "b": 24,
    "layers": [
-    10,
-    7,
-    7
+    8,
+    8,
+    8
    ],
    "coords": 7,
    "size": 5948,
    "verify": 437,
-   "keygen": 247810,
+   "keygen": 61954,
    "sign": {
-    "16": 160833,
-    "1024": 160350,
-    "16384": 160350
+    "16": 222302,
+    "1024": 222302,
+    "16384": 222302
    },
    "grind": 1,
    "lifetime": 144300000,
@@ -3271,9 +3271,9 @@
     "size": 7164,
     "verify": 491,
     "sign": {
-     "16": 136335,
-     "1024": 135852,
-     "16384": 135852
+     "16": 197804,
+     "1024": 197804,
+     "16384": 197804
     },
     "lifetime": 73380000,
     "attack": 82781654
@@ -3531,18 +3531,18 @@
    "shape": "layered",
    "b": 24,
    "layers": [
-    10,
-    7,
-    7
+    8,
+    8,
+    8
    ],
    "coords": 8,
    "size": 6300,
    "verify": 461,
-   "keygen": 247810,
+   "keygen": 61954,
    "sign": {
-    "16": 168534,
-    "1024": 168051,
-    "16384": 168051
+    "16": 230003,
+    "1024": 230003,
+    "16384": 230003
    },
    "grind": 1,
    "lifetime": 336700000,
@@ -3553,9 +3553,9 @@
     "size": 7708,
     "verify": 527,
     "sign": {
-     "16": 168336,
-     "1024": 167853,
-     "16384": 167853
+     "16": 229805,
+     "1024": 229805,
+     "16384": 229805
     },
     "lifetime": 293000000,
     "attack": 300783729
@@ -4274,24 +4274,24 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 26670000,
-   "keygen": 196608,
-   "prep": 86017,
+   "keygen": 49152,
+   "prep": 135169,
    "grind": 16777216,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 148944,
+   "ledger_prep": 208127,
    "device_online": 386,
    "ledger_prepared": 16,
    "ledger_grind": 1048576,
-   "keygen_gb": 0.8921088,
-   "prep_mb": 390.3021375,
+   "keygen_gb": 0.2230272,
+   "prep_mb": 613.3293375,
    "fors": {
     "lifetime": 16777216,
-    "prep": 58881,
-    "prep_mb": 267.1725375,
+    "prep": 108033,
+    "prep_mb": 490.1997375,
     "prep_rounds": 73,
-    "ledger_prep": 128889,
+    "ledger_prep": 188072,
     "device_online": 195
    }
   },
@@ -4470,24 +4470,24 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 144300000,
-   "keygen": 196608,
-   "prep": 92161,
+   "keygen": 49152,
+   "prep": 141313,
    "grind": 16777216,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 156334,
+   "ledger_prep": 215517,
    "device_online": 450,
    "ledger_prepared": 16,
    "ledger_grind": 1048576,
-   "keygen_gb": 0.8921088,
-   "prep_mb": 418.1805375,
+   "keygen_gb": 0.2230272,
+   "prep_mb": 641.2077375,
    "fors": {
     "lifetime": 73380000,
-    "prep": 60929,
-    "prep_mb": 276.4653375,
+    "prep": 110081,
+    "prep_mb": 499.4925375,
     "prep_rounds": 73,
-    "ledger_prep": 134002,
+    "ledger_prep": 193185,
     "device_online": 236
    }
   },
@@ -4666,24 +4666,24 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 336700000,
-   "keygen": 196608,
-   "prep": 98305,
+   "keygen": 49152,
+   "prep": 147457,
    "grind": 16777216,
    "and_depth": 24,
    "keygen_rounds": 73,
    "prep_rounds": 97,
-   "ledger_prep": 163725,
+   "ledger_prep": 222908,
    "device_online": 515,
    "ledger_prepared": 16,
    "ledger_grind": 1048576,
-   "keygen_gb": 0.8921088,
-   "prep_mb": 446.0589375,
+   "keygen_gb": 0.2230272,
+   "prep_mb": 669.0861375,
    "fors": {
     "lifetime": 293000000,
-    "prep": 73729,
-    "prep_mb": 334.5453375,
+    "prep": 122881,
+    "prep_mb": 557.5725375,
     "prep_rounds": 73,
-    "ledger_prep": 166000,
+    "ledger_prep": 225183,
     "device_online": 270
    }
   },
@@ -5226,24 +5226,24 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 26670000,
-   "keygen": 196608,
-   "prep": 86017,
+   "keygen": 49152,
+   "prep": 135169,
    "grind": 16777216,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 152900,
+   "ledger_prep": 214369,
    "device_online": 406,
-   "ledger_prepared": 32,
-   "ledger_grind": 524288,
-   "keygen_gb": 0.36569088,
-   "prep_mb": 159.99162,
+   "ledger_prepared": 16,
+   "ledger_grind": 1048576,
+   "keygen_gb": 0.09142272,
+   "prep_mb": 251.41434,
    "fors": {
     "lifetime": 16777216,
-    "prep": 58881,
-    "prep_mb": 109.51866,
+    "prep": 108033,
+    "prep_mb": 200.94138,
     "prep_rounds": 2653,
-    "ledger_prep": 131217,
+    "ledger_prep": 192686,
     "device_online": 200
    }
   },
@@ -5422,24 +5422,24 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 144300000,
-   "keygen": 196608,
-   "prep": 92161,
+   "keygen": 49152,
+   "prep": 141313,
    "grind": 16777216,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 160563,
+   "ledger_prep": 222032,
    "device_online": 473,
    "ledger_prepared": 16,
    "ledger_grind": 1048576,
-   "keygen_gb": 0.36569088,
-   "prep_mb": 171.41946,
+   "keygen_gb": 0.09142272,
+   "prep_mb": 262.84218,
    "fors": {
     "lifetime": 73380000,
-    "prep": 60929,
-    "prep_mb": 113.32794,
+    "prep": 110081,
+    "prep_mb": 204.75066,
     "prep_rounds": 2653,
-    "ledger_prep": 136331,
+    "ledger_prep": 197800,
     "device_online": 242
    }
   },
@@ -5618,24 +5618,24 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 336700000,
-   "keygen": 196608,
-   "prep": 98305,
+   "keygen": 49152,
+   "prep": 147457,
    "grind": 16777216,
    "and_depth": 884,
    "keygen_rounds": 2653,
    "prep_rounds": 3537,
-   "ledger_prep": 168225,
+   "ledger_prep": 229694,
    "device_online": 541,
    "ledger_prepared": 16,
    "ledger_grind": 1048576,
-   "keygen_gb": 0.36569088,
-   "prep_mb": 182.8473,
+   "keygen_gb": 0.09142272,
+   "prep_mb": 274.27002,
    "fors": {
     "lifetime": 293000000,
-    "prep": 73729,
-    "prep_mb": 137.13594,
+    "prep": 122881,
+    "prep_mb": 228.55866,
     "prep_rounds": 2653,
-    "ledger_prep": 168329,
+    "ledger_prep": 229798,
     "device_online": 277
    }
   },
@@ -6178,24 +6178,24 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 26670000,
-   "keygen": 196608,
-   "prep": 86017,
+   "keygen": 49152,
+   "prep": 135169,
    "grind": 16777216,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 152900,
+   "ledger_prep": 214369,
    "device_online": 406,
    "ledger_prepared": 16,
    "ledger_grind": 1048576,
-   "keygen_gb": 0.554754048,
-   "prep_mb": 242.707717625,
+   "keygen_gb": 0.138688512,
+   "prep_mb": 381.396229625,
    "fors": {
     "lifetime": 16777216,
-    "prep": 58881,
-    "prep_mb": 166.140101625,
+    "prep": 108033,
+    "prep_mb": 304.828613625,
     "prep_rounds": 4822,
-    "ledger_prep": 131216,
+    "ledger_prep": 192685,
     "device_online": 200
    }
   },
@@ -6374,24 +6374,24 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 144300000,
-   "keygen": 196608,
-   "prep": 92161,
+   "keygen": 49152,
+   "prep": 141313,
    "grind": 16777216,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 160562,
+   "ledger_prep": 222031,
    "device_online": 473,
    "ledger_prepared": 16,
    "ledger_grind": 1048576,
-   "keygen_gb": 0.554754048,
-   "prep_mb": 260.043781625,
+   "keygen_gb": 0.138688512,
+   "prep_mb": 398.732293625,
    "fors": {
     "lifetime": 73380000,
-    "prep": 60929,
-    "prep_mb": 171.918789625,
+    "prep": 110081,
+    "prep_mb": 310.607301625,
     "prep_rounds": 4822,
-    "ledger_prep": 136330,
+    "ledger_prep": 197799,
     "device_online": 242
    }
   },
@@ -6570,24 +6570,24 @@
    "shape": "layered",
    "b": 24,
    "lifetime": 336700000,
-   "keygen": 196608,
-   "prep": 98305,
+   "keygen": 49152,
+   "prep": 147457,
    "grind": 16777216,
    "and_depth": 1607,
    "keygen_rounds": 4822,
    "prep_rounds": 6429,
-   "ledger_prep": 168225,
+   "ledger_prep": 229694,
    "device_online": 541,
    "ledger_prepared": 16,
    "ledger_grind": 1048576,
-   "keygen_gb": 0.554754048,
-   "prep_mb": 277.379845625,
+   "keygen_gb": 0.138688512,
+   "prep_mb": 416.068357625,
    "fors": {
     "lifetime": 293000000,
-    "prep": 73729,
-    "prep_mb": 208.035589625,
+    "prep": 122881,
+    "prep_mb": 346.724101625,
     "prep_rounds": 4822,
-    "ledger_prep": 168329,
+    "ledger_prep": 229798,
     "device_online": 277
    }
   },

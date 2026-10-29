@@ -46,7 +46,7 @@ N = 16  # bytes per hash value
 P_LEN, ADDR = 16, 16
 LIFETIMES = (24, 26, 28, 30, 32)  # log2 of the nominal lifetime
 HEIGHTS = (20, 22, 24, 26, 28)  # the pruned key of each lifetime: h = L - 4
-LAYERED = {24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}  # top layer first
+LAYERED = {24: (8, 8, 8), 26: (10, 8, 8), 28: (10, 9, 9)}  # top layer first
 PRUNED = (8, 10, 12, 13, 14, 20)  # kept subtree heights b < h with a certificate, besides b = h
 # The layered key of each lifetime: (height, forest coordinates, FORS (k, a)).
 UNIFORM = {24: (24, 6, (19, 9)), 26: (24, 7, (23, 9)), 28: (24, 8, (24, 10)), 30: (26, 8, (24, 10)), 32: (28, 8, (24, 10))}

@@ -41,7 +41,7 @@ uniform (`Security.evalDist_digestBlock_uniform`).
 ## Proved lifetimes
 
 Signature limits `N` with 127 bits, one theorem each in [Main.lean](FORS/Main.lean) (e.g.
-`h24_pruned12`), collected by `requestedSecurity`; layered keys: 10 + 7 + 7, 10 + 8 + 8 and 10 + 9 + 9,
+`h24_pruned12`), collected by `requestedSecurity`; layered keys: 8 + 8 + 8, 10 + 8 + 8 and 10 + 9 + 9,
 at `h = 24` also with 19 and 23 trees of height 9 (`h24_layered_k19`, `h24_layered_k23`).
 
 | h | full key (b = h) | b = 20 | b = 14 | b = 13 | b = 12 | b = 10 | b = 8 | layered |
@@ -63,7 +63,7 @@ trees; `scripts/scheme.py`, `fors_log2_lifetime`):
 | 26 | 98.2% | 95.6% | 89.9% | 88.9% | 87.9% | 86.1% | 84.3% | 98.2% |
 | 28 | 98.3% | 96.2% | 90.6% | 89.5% | 88.5% | 86.8% | 84.9% | 98.3% |
 
-The layered keys with lighter FORS, at `h = 24` (10 + 7 + 7):
+The layered keys with lighter FORS, at `h = 24` (8 + 8 + 8):
 
 | FORS | lifetime | limit | cover attack | share |
 | --- | ---: | ---: | ---: | ---: |

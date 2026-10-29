@@ -76,7 +76,7 @@ A SPHINCS-style scheme with four toggles, 60 configurations in all. Its componen
   lifetime & $2^{24}$ & $2^{26}$ & $2^{28}$ & $2^{30}$ & $2^{32}$ \\
   \midrule
   pruned: height $h$ & 20 & 22 & 24 & 26 & 28 \\
-  layered: layer heights, top first & $10+7+7$ & $10+7+7$ & $10+7+7$ & $10+8+8$ & $10+9+9$ \\
+  layered: layer heights, top first & $8+8+8$ & $8+8+8$ & $8+8+8$ & $10+8+8$ & $10+9+9$ \\
   layered: forest trees & 6 & 7 & 8 & 8 & 8 \\
   layered: FORS trees $\times$ height & $19\times9$ & $23\times9$ & $24\times10$ & $24\times10$ & $24\times10$ \\
   \bottomrule
@@ -119,11 +119,11 @@ verification cost of the full key of its height. Throughout, costs are rounded u
   \midrule
   \multicolumn{6}{l}{\emph{two-level WOTS forest}} \\
   $2^{24}$ & one tree, $h=20$ & 4\,180 & 256 & 292 & 293 \\
-   & layered ($10+7+7$), 6 trees & 5\,596 & 365 & 413 & 414 \\
+   & layered ($8+8+8$), 6 trees & 5\,596 & 365 & 413 & 414 \\
   $2^{26}$ & one tree, $h=22$ & 4\,212 & 258 & 294 & 295 \\
-   & layered ($10+7+7$), 7 trees & 5\,948 & 385 & 437 & 437 \\
+   & layered ($8+8+8$), 7 trees & 5\,948 & 385 & 437 & 437 \\
   $2^{28}$ & one tree, $h=24$ & 4\,244 & 260 & 296 & 297 \\
-   & layered ($10+7+7$) & 6\,300 & 406 & 460 & 461 \\
+   & layered ($8+8+8$) & 6\,300 & 406 & 460 & 461 \\
   $2^{30}$ & one tree, $h=26$ & 4\,276 & 262 & 298 & 299 \\
    & layered ($10+8+8$) & 6\,332 & 408 & 462 & 463 \\
   $2^{32}$ & one tree, $h=28$ & 4\,308 & 264 & 300 & 301 \\
@@ -131,11 +131,11 @@ verification cost of the full key of its height. Throughout, costs are rounded u
   \midrule
   \multicolumn{6}{l}{\emph{FORS, $24\times10$ unless stated}} \\
   $2^{24}$ & one tree, $h=20$ & 5\,588 & 340 & 358 & 359 \\
-   & layered ($10+7+7$), $19\times9$ & 6\,524 & 419 & 453 & 453 \\
+   & layered ($8+8+8$), $19\times9$ & 6\,524 & 419 & 453 & 453 \\
   $2^{26}$ & one tree, $h=22$ & 5\,620 & 342 & 360 & 361 \\
-   & layered ($10+7+7$), $23\times9$ & 7\,164 & 456 & 491 & 491 \\
+   & layered ($8+8+8$), $23\times9$ & 7\,164 & 456 & 491 & 491 \\
   $2^{28}$ & one tree, $h=24$ & 5\,652 & 344 & 362 & 363 \\
-   & layered ($10+7+7$) & 7\,708 & 490 & 526 & 527 \\
+   & layered ($8+8+8$) & 7\,708 & 490 & 526 & 527 \\
   $2^{30}$ & one tree, $h=26$ & 5\,684 & 346 & 364 & 365 \\
    & layered ($10+8+8$) & 7\,740 & 492 & 528 & 529 \\
   $2^{32}$ & one tree, $h=28$ & 5\,716 & 348 & 366 & 367 \\
@@ -215,7 +215,7 @@ thousand~\cite{hwbench}.
   key & lifetime & keygen & signing, 16~KiB cache & signing, 1~MiB cache \\
   \midrule
   full ($b=24$) & $3.36\cdot10^8$ & $3.91\cdot10^9$ & $3.90\cdot10^6$ & $194\cdot10^3$ \\
-  layered ($10+7+7$) & $3.36\cdot10^8$ & $239\cdot10^3$ & $165\cdot10^3$ & $164\cdot10^3$ \\
+  layered ($8+8+8$) & $3.36\cdot10^8$ & $59.7\cdot10^3$ & $224\cdot10^3$ & $224\cdot10^3$ \\
   pruned, $b=20$ & $2.38\cdot10^7$ & $245\cdot10^6$ & $314\cdot10^3$ & $82\cdot10^3$ \\
   pruned, $b=12$ & $1.16\cdot10^5$ & $955\cdot10^3$ & $81\cdot10^3$ & $79\cdot10^3$ \\
   \bottomrule
@@ -331,11 +331,11 @@ operator at $2^{28}$ signatures ($h=24$), 2-of-3:
   & Keccak-256 & BLAKE2s & SHA-256 \\
   \midrule
   keygen, pruned $b=12$ & 3.6~GB & 1.5~GB & 2.3~GB \\
-  keygen, layered & 0.9~GB & 0.4~GB & 0.6~GB \\
+  keygen, layered & 0.23~GB & 0.10~GB & 0.14~GB \\
   preprocessing, forest, pruned (one instance) & 224~MB & 92~MB & 139~MB \\
-  preprocessing, forest, layered (and two lower trees) & 447~MB & 183~MB & 278~MB \\
+  preprocessing, forest, layered (and two lower trees) & 670~MB & 275~MB & 417~MB \\
   preprocessing, FORS, pruned (one instance) & 112~MB & 46~MB & 70~MB \\
-  preprocessing, FORS, layered (and two lower trees) & 335~MB & 138~MB & 209~MB \\
+  preprocessing, FORS, layered (and two lower trees) & 558~MB & 229~MB & 347~MB \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -392,7 +392,7 @@ permutations per second (750 thousand SHA-256, 1 million BLAKE2s compressions), 
 The device verifies the STARK: its hashing alone is about $10^4$ compressions (1.8~s with Keccak-256 at 5.8 thousand
 per second on a Ledger Nano S+~\cite{hwbench}), and we count the whole verification, optimistically, as 3~s: 5.2~s in all (11.5~s at $h=28$), less where more
 instances are prepared. Preparing an instance costs the device $76\cdot10^3$ Keccak-f permutations for a pruned
-key with $b=12$ and $164\cdot10^3$ for a layered one at $2^{28}$ ($343\cdot10^3$
+key with $b=12$ and $223\cdot10^3$ for a layered one at $2^{28}$ ($343\cdot10^3$
 at $h=28$), WOTS$^+$C counter searches and the path included; the first $p$ are prepared once (about 63~min for
 the layered key at $h=28$).
 
