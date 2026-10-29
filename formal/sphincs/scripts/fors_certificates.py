@@ -12,11 +12,12 @@ Usage (from formal/sphincs):
     python3 scripts/fors_certificates.py emit-lifetimes [ROOT]  # and FORS/Lifetimes.lean
     python3 scripts/fors_certificates.py maxn H SHAPE B N0 [STEP LXLO LXHI [K A]]   # search the largest N above N0
     python3 scripts/fors_certificates.py scan H SHAPE B N LX... # the terms of the small route at several lx
-    python3 scripts/fors_certificates.py sw H K A N [LX] [--cover F|J]  # three routes (small, SW, large) of a layered key
+    python3 scripts/fors_certificates.py sw H K A N [LX] [--cover Opt|F]  # three routes (small, SW, large) of a layered key
     python3 scripts/fors_certificates.py sw-emit H K A N [LX]   # and write FORS/Certificates/H<H>SW.lean
-    python3 scripts/fors_certificates.py sw-scan H K A N LX0 LX1 [--cover F|J]   # SW slack per unit, entries 2^(1/16)
-    python3 scripts/fors_certificates.py sw-maxn H K A N0 N1 [--cover F|J]       # the largest N of the three routes
-(--cover J: P3's J-split option as a model, numbers only; LX defaults to the small route's largest on the 1/8 grid.)
+    python3 scripts/fors_certificates.py sw-scan H K A N LX0 LX1 [--cover Opt|F]   # SW slack per unit, entries 2^(1/16)
+    python3 scripts/fors_certificates.py sw-maxn H K A N0 N1 [--cover Opt|F]       # the largest N of the three routes
+(--cover Opt, the default: OptF or OptJ, the smaller bound; --cover F: OptF only; LX defaults to the small route's
+ largest on the 1/8 grid.)
 SHAPE is `pruned` or `layered` (then B = H); K A default to 24 10. Then `lake build FORS.Lifetimes` (the kernel re-checks every
 certificate). `maxn` is a search: its result counts only once `check` accepts it and it is in PARAMS or LAYERED.
 
@@ -736,7 +737,7 @@ def small_route(b, N, lx, verbose=True):
         return None
     return dict(qh=qh, rho=rho, t=t, o=o, on=on)
 
-def large_covers(b, N, qh, qstart, verbose=True):
+def large_covers(b, N, qh, qstart, verbose=True, maker=None):
     """the large route's covers of every budget from qstart (segments above qh), None if a cover fails"""
     covers = []
     heavy = []
@@ -744,7 +745,7 @@ def large_covers(b, N, qh, qstart, verbose=True):
     for qtop, hv in segs:
         tc = make_poisT(b, N, qtop, heavy=hv)
         assert checkPT(tc) and (checkRateH(b, N, qtop, tc) if hv else checkRate(b, N, qtop, tc))
-        B = Builder(b, N, tc, FModel(tc))
+        B = Builder(b, N, tc, FModel(tc), maker)
         raw = B.build(qstart, TOP=qtop)
         if raw is None:
             if verbose: print('  large route FAIL in [2^%.3f, 2^%.3f]' % (math.log2(qstart), math.log2(qtop)), flush=True)
@@ -903,9 +904,9 @@ def emit_one(out, c, full, middle=None):
         out.append('theorem rate_%s_ok : checkRate %d %d %d %d tab_%s = true := by decide +kernel\n'
                    % (tag, H, b, N, c['qh'], tag))
         out.append('/-- The small-route option at baseline `ρ / 2^128`. -/')
-        out.append('def small_%s : OptF := %s\n' % (tag, lean_opt(b, 'tab_' + tag, c['t'], c['o'])))
-        out.append('theorem small_%s_ok : checkOptF %d %d %d %d tab_%s small_%s = true :=\n    checkOptF_build (by decide +kernel)\n'
-                   % (tag, H, b, k, a, tag, tag))
+        out.append('def small_%s : Opt := %s\n' % (tag, lean_opt(b, 'tab_' + tag, c['t'], c['o'])))
+        out.append('theorem small_%s_ok : checkOpt %d %d %d %d tab_%s small_%s = true :=\n    %s\n'
+                   % (tag, H, b, k, a, tag, tag, lean_opt_proof(c['o']) or 'checkOptF_build (by decide +kernel)'))
         on = c['on']
         out.append('/-- The near certificate. -/')
         out.append('def near_%s : OptN := %s\n' % (tag, lean_optN(b, 'tab_' + tag, c['t'], on)))
@@ -936,11 +937,12 @@ def emit_one(out, c, full, middle=None):
                 for oi, o in enumerate(cv['opts']):
                     out.append('/-- Option %d of %scover %d. -/' % (oi, 'heavy ' if kind else '', ci))
                     name, tabn = 'large%s_%s_%d_%d' % (kind, tag, ci, oi), 'tabc%s_%s_%d' % (kind, tag, ci)
-                    out.append('def %s : OptF := %s\n' % (name, lean_opt(b, tabn, cv['t'], o)))
+                    out.append('def %s : Opt := %s\n' % (name, lean_opt(b, tabn, cv['t'], o)))
                     out.append('/-- Its threshold and its bound. -/')
                     out.append('def %s_cB : ℚ × ℚ :=\n    (%s,\n     %s)\n' % (name, q(o.cthr), q(o.B)))
-                    out.append('theorem %s_ok : checkOptB %d %d %d %d %s %s %s_cB = true :=\n    checkOptB_build (by decide +kernel)\n'
-                               % (name, H, b, k, a, tabn, name, name))
+                    out.append('theorem %s_ok : checkOptB %d %d %d %d %s %s %s_cB = true :=\n    %s\n'
+                               % (name, H, b, k, a, tabn, name, name,
+                                  lean_opt_proof(o) or 'checkOptB_build (by decide +kernel)'))
                 opts = ['large%s_%s_%d_%d' % (kind, tag, ci, oi) for oi in range(len(cv['opts']))]
                 out.append('/-- %s %d: every budget from %d to %d. -/' % (
                     'Heavy cover (one heavy message, one spare slot)' if kind else 'Cover', ci, cv['qstart'], cv['qtop']))
@@ -1145,7 +1147,7 @@ def certify_config(h, shape, b, N, lx, verbose=True, k=24, a=10):
 #
 # Three routes (det_bitsF3, SWRoute/Closing.lean): the small route up to qh, a SW cover of every budget in
 # [qh + 1, qtop] and the large route's covers from qtop + 1. A SW cover (CoverSW) is a Poisson table at qtop, cover
-# options (OptF today), near options at a baseline (OptNB, scripts/fors_sw_near.py) and entries
+# options (Opt: OptF or OptJ), near options at a baseline (OptNB, scripts/fors_sw_near.py) and entries
 # (qa, qb, rho, beta, delta, m, Pb, ic, in, itl): qb <= qtop, the tail certificate itl gives Pb at (qb, m)
 # (checkTail, SWRoute/ForecastCert.lean), at x = qb / 2^128 the side conditions checkNumSW with the contact
 # coefficient cU = N/2^(b+a) + m, the digest payment cthr(cover) + delta cthr(near) <= beta / 2^128 and
@@ -1158,7 +1160,7 @@ def certify_config(h, shape, b, N, lx, verbose=True, k=24, a=10):
 # earlier entry when its Pb is no larger) and is checked again with that Pb; the near option sits at a baseline b0n of SW_BN
 # (units 2^-128), the cover option at the threshold floor(beta - delta b0n) on the grid 2^-SW_CKEY (units 2^-128),
 # or at a lower threshold already in use.
-# The option kinds are pluggable: SW_COVER (maker, checker, Lean emitter of the cover option; today OptF) and SW_NEAR.
+# The option kinds are pluggable: SW_COVER (maker, checker, Lean emitter of the cover option: `Opt`, OptF or OptJ) and SW_NEAR.
 
 SW_BN = [1000, 1200, 1400, 1500, 1600, 1700, 1800, 2000, 2200, 2500, 3000]
 SW_CKEY = 8
@@ -1337,39 +1339,27 @@ SW_TAIL_CERT = TailCertWPF        # the certified tails of the entries
 
 # -- the option kinds (swap SW_COVER / SW_NEAR to change the options of the SW route) --
 
-class CoverOptF:
-    """The SW route's cover option: today's Chernoff option OptF (make_opt, checkOptF, buildOpt)."""
-    name, lean_type, emittable = 'F', 'OptF', True
+class CoverOpt:
+    """The SW route's cover option: the option of the smaller bound, one Chernoff factor (OptF) or the split by big
+    indices (OptJ) (make_opt, checkOpt, lean_opt as `Opt`); the large route takes the same maker."""
+    name, emittable = 'Opt', True
     def __init__(self):
         self.fms = {}
+    def maker(self):
+        return make_opt
     def make(self, b, t, cthr):
         if id(t) not in self.fms: self.fms[id(t)] = (t, FModel(t))
-        o, _ = make_opt(b, t, self.fms[id(t)][1], cthr)
+        o, _ = self.maker()(b, t, self.fms[id(t)][1], cthr)
         return o
-    def check(self, b, t, o): return checkOptF(b, t, o)
-    def large_maker(self): return None          # the large route: make_opt
+    def check(self, b, t, o): return checkOpt(b, t, o)
+    def large_maker(self): return self.maker()
     def lean(self, name, b, tab, t, o):
-        return 'def %s : OptF := %s\n' % (name, lean_opt(b, tab, t, o))
+        return 'def %s : Opt := %s\n' % (name, lean_opt(b, tab, t, o))
 
-P3_DIR = os.environ.get('FC_P3_DIR', '/tmp/claude-0/-root-leanXMSS-leanSPHINCS-candidates/'
-                        'a131ab4a-9415-4c48-ae68-08b3d654c282/scratchpad/rework/P3')
-
-class CoverOptJModel:
-    """MODEL ONLY: P3's J-split option (fc_p3.make_optJ, P3_DIR; the kill test's settings NX = 11..15, per-n A2),
-    for the numbers; it has no Lean form here (the Lean OptJ is on branch fors-split-j)."""
-    name, lean_type, emittable = 'J', 'OptJ', False
-    def __init__(self):
-        sys.modules.setdefault('fcbase', sys.modules[__name__])
-        sys.path.insert(0, P3_DIR)
-        import fc_p3
-        fc_p3.NX = (11, 12, 13, 14, 15); fc_p3.PERN_A2 = True
-        self.P3 = fc_p3
-    def make(self, b, t, cthr):
-        o, _ = self.P3.make_optJ(b, t, None, cthr)
-        return o
-    def check(self, b, t, o): return self.P3.checkOptJ(b, t, o)
-    def large_maker(self): return self.P3.make_optJ
-    def lean(self, *args): raise NotImplementedError('the J option is a model here')
+class CoverOptF(CoverOpt):
+    """One Chernoff factor only (OptF, emitted as `Opt.F`), in the SW route and in the large route: for comparison."""
+    name = 'F'
+    def maker(self): return make_optF
 
 class NearOptNB:
     """The SW route's near option at a baseline: OptNB (scripts/fors_sw_near.py, CoverBound/NearOptionB.lean)."""
@@ -1386,8 +1376,8 @@ class NearOptNB:
         assert all(getattr(again, f) == getattr(o, f) for f in self.SN.OptNB.FIELDS), 'the scalars do not rebuild'
         return self.SN.lean_optNB(o, name, tab, TOTAL, b, FK, FA) + '\n'
 
-SW_COVER_KINDS = {'F': CoverOptF, 'J': CoverOptJModel}
-SW_COVER = 'F'        # the kind of the cover option (the one place to swap it)
+SW_COVER_KINDS = {'Opt': CoverOpt, 'F': CoverOptF}
+SW_COVER = 'Opt'      # the kind of the cover option (the one place to swap it)
 SW_NEAR = NearOptNB
 
 # -- the exact checker (SWRoute/Closing.lean) --
@@ -1549,9 +1539,10 @@ def sw_small_lx(b, N, lo=-12.0, hi=-6.0, step=0.125):
         lx += step
     return best
 
-def certify_sw(b, N, lx=None, cover='F', large=None, verbose=True, emit_large=True, tails=True, **kw):
+def certify_sw(b, N, lx=None, cover=None, large=None, verbose=True, emit_large=True, tails=True, **kw):
     """the small route at lx (default: the largest on the 1/8 grid), the SW cover from qh + 1 and the large route
     from the SW cover's top + 1; None if a part fails. tails=False: the search's model tails only (no SW cover)."""
+    cover = cover or SW_COVER
     ck = SW_COVER_KINDS[cover](); nk = SW_NEAR()
     lk = SW_COVER_KINDS[large or cover]() if (large or cover) != cover else ck
     if lx is None: lx = sw_small_lx(b, N)
@@ -1589,8 +1580,8 @@ def certify_sw(b, N, lx=None, cover='F', large=None, verbose=True, emit_large=Tr
     c = dict(h=TOTAL, shape=SHAPE, d=num_layers(), K=K, b=b, k=FK, a=FA, N=N, lx=lx, qh=s['qh'], rho=s['rho'],
              t=s['t'], o=s['o'], on=s['on'], sw=sw, sw_raw=raw, sw_kinds=(ck, nk, tk), large_start=qL,
              covers=[], heavy=[], complete=None)      # None: the large route only as found by large_startSW
-    if emit_large and lk.name == 'F':
-        r = large_covers(b, N, s['qh'], qL, verbose)
+    if emit_large:
+        r = large_covers(b, N, s['qh'], qL, verbose, lk.large_maker())
         assert r is not None, 'the large route fails from its start'
         c['covers'], c['heavy'], c['complete'] = r
     return c
@@ -1602,10 +1593,10 @@ def sw_report(c):
             math.log2(qa), math.log2(qb), float(rho), float(beta), float(delta), key / 2 ** SW_CKEY, bn, float(sl),
             '' if m is None else '  m %.4f Pb 2^%.2f' % (float(m), math.log2(Pb))))
 
-def sw_scan(b, N, lx0, lx1, cover='F', step=1 / 16, **kw):
+def sw_scan(b, N, lx0, lx1, cover=None, step=1 / 16, **kw):
     """the K model's view: entries of fixed width 2^step from lx0 to lx1 at the SW table of qtop = 2^lx1, the best
     choice of each (fresh options allowed); returns the worst slack per unit and where"""
-    ck = SW_COVER_KINDS[cover](); nk = SW_NEAR()
+    ck = SW_COVER_KINDS[cover or SW_COVER](); nk = SW_NEAR()
     qtop = int(2 ** (128 + lx1))
     t = make_poisT(b, N, qtop)
     SB = SWBuilder(b, N, t, ck, nk, margin=-1, **kw)
@@ -1681,7 +1672,7 @@ def emit_sw(c, path):
     open(path, 'w').write('\n'.join(out))
 
 def sw_args(argv):
-    """H K A N [LX] and --cover F|J, --large F|J, --ckey n, --bn a,b,..., --margin m"""
+    """H K A N [LX] and --cover Opt|F, --large Opt|F, --ckey n, --bn a,b,..., --margin m"""
     pos, kw, i = [], {}, 0
     while i < len(argv):
         if argv[i].startswith('--'):
@@ -1768,7 +1759,7 @@ if __name__ == '__main__':
             emit_lifetimes(certs, os.path.join(root, 'FORS', 'Lifetimes.lean'))
         print('written')
     elif cmd in ('sw', 'sw-emit'):
-        # sw H K A N [LX] [--cover F|J] [--large F|J] [--ckey n] [--bn ...]: the three routes of a layered key
+        # sw H K A N [LX] [--cover Opt|F] [--large Opt|F] [--ckey n] [--bn ...]: the three routes of a layered key
         import time
         t0 = time.time()
         h, N, lx, opts = sw_args(sys.argv[2:])
@@ -1786,14 +1777,14 @@ if __name__ == '__main__':
             emit_sw(c, path)
             print('written %s (%d bytes)' % (path, os.path.getsize(path)))
     elif cmd == 'sw-scan':
-        # sw-scan H K A N LX0 LX1 [--cover F|J]: fixed-width entries 2^(1/16), the worst slack per unit
+        # sw-scan H K A N LX0 LX1 [--cover Opt|F]: fixed-width entries 2^(1/16), the worst slack per unit
         h, k, a, N, lx0, lx1 = int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(float(sys.argv[5])), \
             float(sys.argv[6]), float(sys.argv[7])
         _, _, _, opts = sw_args(sys.argv[2:6] + sys.argv[8:])
         opts.pop('large', None)
         print('worst slack/unit, lx:', sw_scan(h, N, lx0, lx1, **opts))
     elif cmd == 'sw-maxn':
-        # sw-maxn H K A N0 N1 [--cover F|J] [--tails 1]: the largest N in [N0, N1) the three routes certify (N0 must
+        # sw-maxn H K A N0 N1 [--cover Opt|F] [--tails 1]: the largest N in [N0, N1) the three routes certify (N0 must
         # pass); the search's model tails unless --tails 1 (certified tails, slower)
         h, k, a, lo, hi = int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(float(sys.argv[5])), int(float(sys.argv[6]))
         argv = sys.argv[7:]
