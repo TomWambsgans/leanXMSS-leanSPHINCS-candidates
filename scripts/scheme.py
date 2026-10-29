@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sizes and compression counts of the leanSphincs candidate in its 60 configurations (leanSPHINCS.tex).
+"""Sizes and compression counts of the leanSphincs candidate in its configurations (leanSPHINCS.tex).
 
 Four toggles: the lifetime (about 2^24, 2^26, ..., 2^32 signatures), the shape (pruned: one tree of height
 h = log2(lifetime) - 4 of which the key builds a kept subtree of 2^b leaves, b = h being the full key, the
@@ -294,14 +294,14 @@ def main():
         return
 
     if x.table:
-        print("hash       2^L  h  shape            size  verify  keygen    proved N   (cover attack)")
+        print("hash       2^L  h  shape                size  verify  keygen    proved N   (cover attack)")
         for H in hashes:
             for L, h, shape, b, coords, ka in chosen:
                 C = Costs(H, None, coords)
                 n, attack = proved(fc, L, h, shape, b)
                 label = f"layered {coords} trees" if shape == "layered" else ("full" if b == h else f"pruned {b}")
                 life = "not certified" if n is None else f"{n:>11,} ({fmt(attack) if attack else '?'})"
-                print(f"{H.name:<10} {L:>2} {h:>2}  {label:<12} {size(h, shape, coords=coords):>8,} {C.verify(h, shape):>7} "
+                print(f"{H.name:<10} {L:>2} {h:>2}  {label:<16} {size(h, shape, coords=coords):>8,} {C.verify(h, shape):>7} "
                       f"{fmt(C.keygen(h, shape, b)):>7}  {life}")
         return
 
@@ -437,16 +437,16 @@ def shown_time(s):
 
 def ledger_prepared(h, name, device_online, alone):
     """The instances the Ledger prepares for a configuration: wallet_prepared(h), doubled while assisted signing is
-    slower online than the Ledger signing alone, for either FTS (`device_online` and `alone`, in compressions, one per
-    FTS), as long as it can win at all (the STARK verification alone takes STARK_VERIFY_SECONDS)."""
+    slower online than the Ledger signing alone, for an FTS that can win at all (`device_online` and `alone`, in
+    compressions, one per FTS; the STARK verification alone takes STARK_VERIFY_SECONDS), up to 2^h instances."""
     rate = DEVICES["Ledger Nano S+"][name]
     p = wallet_prepared(h)
+    can_win = [(o, a) for o, a in zip(device_online, alone) if STARK_VERIFY_SECONDS + o / rate < a / rate]
     def slower(p):  # not faster as the site shows the two times (shown_time)
-        return any(online >= a / rate or shown_time(online) == shown_time(a / rate) for o, a in zip(device_online, alone)
+        return any(online >= a / rate or shown_time(online) == shown_time(a / rate) for o, a in can_win
                    for online in [max(1, round(2**h / p)) / HOST_RATE[name] + STARK_VERIFY_SECONDS + o / rate])
-    if all(STARK_VERIFY_SECONDS + o / rate < a / rate for o, a in zip(device_online, alone)):
-        while slower(p):
-            p *= 2
+    while p < 2**h and slower(p):
+        p *= 2
     return p
 
 KECCAK_ANDS = 36_300  # AND gates of one Keccak-f[1600] call with a public part and a truncated output

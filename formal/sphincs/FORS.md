@@ -75,7 +75,7 @@ the 24×10 layered key of the same height (97.4%). Every limit, these two includ
 own cover attack than the forest's is of the forest's (60.0–97.8%, [README.md](README.md)).
 
 **A third route for the 19×9 key.** The two routes of [PROOF.md](PROOF.md) certify the 19×9 key only up
-to about 14.6 million signatures. The survival-weighted route ([SWRoute/](FORS/SWRoute),
+to about 15.2 million signatures. The survival-weighted route ([SWRoute/](FORS/SWRoute),
 `SWRoute.detSW`) closes the gap. It keeps the survival weight of the large route but raises it to a
 state-dependent exponent: `ρ` until a marker, a contact or a near cover arms the run, then 2, more
 after contacts. It applies to keys that keep every index (`b = h`) with `b + a ≥ 31` and one digest

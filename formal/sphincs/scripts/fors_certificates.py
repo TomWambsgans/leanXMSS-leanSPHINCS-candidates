@@ -1122,7 +1122,7 @@ LAYERED = {
 
 # Layered keys proved through three routes (det_bitsF3: the small route up to 2^(128 + lx), the SW cover, the large
 # route; `sw-emit`, Certificates/H<h>SW.lean), by (h, k, a): (N, lx). 19 trees of height 9 reach 2^24 only this
-# way (the two routes alone certify about 14.6 million).
+# way (the two routes alone certify about 15.2 million).
 SW_LAYERED = {
     (24, 19, 9): (16777216, -8.75),
 }
