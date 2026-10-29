@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+"""The tail of the own-cell near forecast of the SW route: the certificate of `ForecastTail` (Form H).
+
+A surviving FORS leaf query at a cell c = (I, kappa, L) costs nu min(1, Pi_c); the route charges nu m of it in
+cU = N / 2^(b+a) + m, and the excess nu (min(1, Pi_c) - m)^+ is paid by x Pb per entry (x = q / 2^128).
+`ForecastTail m q Pb` (FORS/SWRoute/ForecastTail.lean) states
+  (1 - m)^+ ( 2^b E_mu[(n - (n0 - 1))^+]
+            + sum_{D < n0} k 2^a 2^b (mu^D / D!) e^{-theta_D (m - fresh_D - 2^-10)} Gamma_D^q + 2^-99 ) <= Pb,
+  fresh_D = q 2^-(b+a) E_{j ~ Pois(mu)}[((D + j) / 2^a)^(k-1)],   phi(r) = E_{j ~ Pois(mu)}[(j / 2^a)^r] = T_r(mu) / 2^(ar),
+  Gamma_D = 1 + 2^-(b+a) sum_{1 <= r < k} C(k-1, r) (D / 2^a)^(k-1-r) (e^{theta_D phi(r)} - 1)      (T_r: Touchard).
+The certificate (TailCert: n0, theta_D, precision) is checked by `checkTail` (FORS/SWRoute/ForecastCert.lean) at the
+entry's right end qb (the tail grows with q); `tailOK_of_check` gives ForecastTail for every q <= qb.
+
+API (every exact function mirrors the Lean definition of the same name; floats only choose n0 and theta_D):
+    lightTail(t, nstar)                                   (ForecastLight.lean)
+    chooseQ, touchard, phiQ, freshQ                       (ForecastTail.lean: chooseK, touchard, phiK, freshK)
+    excessUp, lam1Q, vQ, termQ, tailQ, checkTail          (ForecastCert.lean)
+    make_tailCert(b, k, a, t, qb, m)  ->  (TailCert, Pb)  (the least float tail over n0, then exact check)
+    lean_tailCert(c)                                      (the Lean term of a TailCert)
+
+    python3 scripts/fors_sw_forecast.py       # 19x9 at N = 2^24: Pb per entry (excess form)
+Kernel cost (h2, 19x9, n0 = 15, s = 30, J = 200): about 12 s and 1 GB over the import baseline per certificate.
+"""
+from fractions import Fraction as Fr
+import math, os, sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fors_certificates as fc
+
+
+# ---------------- the light failure (ForecastLight.lean) ----------------
+
+def lightTail(t, nstar):
+    """lightTail t n*: the Poisson mean of (n - n*)^+ from a checked table (head up to n1, geometric tail)."""
+    head = sum((t.pb(n) * max(n - nstar, 0) for n in range(t.n1 + 1)), Fr(0))
+    return head + t.pb(t.n1 + 1) * (Fr(max(t.n1 - nstar, 0)) / (1 - t.r) + Fr(1) / (1 - t.r) ** 2)
+
+
+# ---------------- closed forms (ForecastTail.lean) ----------------
+
+def chooseQ(n, j):
+    """chooseK n j: n! / (j! (n - j)!) (0 for j > n, as Nat subtraction truncates: n!/(j! 0!) is not 0;
+    the Lean definition is only used with j <= n)."""
+    return Fr(math.factorial(n), math.factorial(j) * math.factorial(max(n - j, 0)))
+
+
+def touchardList(mu, r):
+    """touchardGo mu r 0 [1]: T_0 .. T_r at mu (T_{n+1} = mu sum_{i<=n} C(n, i) T_i)."""
+    L = [Fr(1)]
+    for n in range(r):
+        L.append(mu * sum((chooseQ(n, i) * L[i] for i in range(n + 1)), Fr(0)))
+    return L
+
+
+def touchard(mu, r):
+    return touchardList(mu, r)[r]
+
+
+def phiQ(a, mu, r):
+    """phiK a mu r = T_r(mu) / 2^(a r): the per-pair weight at r missing trees."""
+    return touchard(mu, r) / 2 ** (a * r)
+
+
+def freshQ(b, k, a, mu, q, D):
+    """freshK b k a mu q D = q 2^-(b+a) sum_{i<k} C(k-1, i) D^(k-1-i) T_i(mu) / 2^(a(k-1))."""
+    T = touchardList(mu, k - 1)
+    tot = sum((chooseQ(k - 1, i) * Fr(D) ** (k - 1 - i) * T[i] for i in range(k)), Fr(0))
+    return Fr(q, 2 ** (b + a)) * (tot / 2 ** (a * (k - 1)))
+
+
+COIN_SLACK = Fr(1, 2 ** 10)
+FAIL_FLOOR = Fr(1, 2 ** 99)
+
+
+# ---------------- the tail certificate (ForecastCert.lean) ----------------
+
+def excessUp(u, s, P):
+    """excessUp u s P >= e^u - 1 for 0 <= u < 2^s: u/(1-u) below 1/2, expUp(u) - 1 above."""
+    if u < Fr(1, 2):
+        return u / (1 - u)
+    return fc.expUp(u, s, P) - 1
+
+
+class TailCert:
+    """TailCert: the cap n0, theta_D for D < n0, and the precision of the exponential bounds."""
+    def __init__(self, n0, th, s=30, P=64, J=200):
+        self.n0, self.th, self.s, self.P, self.J = n0, th, s, P, J
+
+
+def getD(lst, n):
+    return lst[n] if 0 <= n < len(lst) else Fr(0)
+
+
+def lam1Q(b, k, a, mu, D, th, s, P):
+    """lam1Q: 2^-(b+a) sum_{1<=j<k} C(k-1, j) (D/2^a)^(k-1-j) excessUp(th phi(j)) >= Gamma_D - 1."""
+    tot = Fr(0)
+    for j in range(k):
+        if 1 <= j:
+            tot += chooseQ(k - 1, j) * Fr(D, 2 ** a) ** (k - 1 - j) * excessUp(th * phiQ(a, mu, j), s, P)
+    return tot / 2 ** (b + a)
+
+
+def vQ(b, k, a, mu, q, m, c, D):
+    """the Chernoff exponent of D: theta_D (m - fresh_D - 2^-10) - q lam1Q_D (checked >= 0)."""
+    th = getD(c.th, D)
+    return th * (m - freshQ(b, k, a, mu, q, D) - COIN_SLACK) - q * lam1Q(b, k, a, mu, D, th, c.s, c.P)
+
+
+def termQ(b, k, a, mu, q, m, c, D):
+    """k 2^a 2^b (mu^D / D!) / expLow(v_D)."""
+    return Fr(k * 2 ** a * 2 ** b) * (mu ** D / math.factorial(D)) / fc.expLow(vQ(b, k, a, mu, q, m, c, D), c.J, c.P)
+
+
+def tailQ(b, k, a, t, q, m, c):
+    """2^b lightTail(t, n0 - 1) + sum_{D<n0} termQ + 2^-99 (the tail sum, before the excess factor)."""
+    return 2 ** b * lightTail(t, c.n0 - 1) + \
+        sum((termQ(b, k, a, t.mu, q, m, c, D) for D in range(c.n0)), Fr(0)) + FAIL_FLOOR
+
+
+def checkTail(b, k, a, t, q, m, c, Pb):
+    """checkTail: the side conditions and max(0, 1 - m) tailQ <= Pb (mirrors the Lean Bool, exactly)."""
+    if not (1 <= c.n0 and len(c.th) == c.n0 and 1 <= t.n1): return False
+    for D in range(c.n0):
+        th = getD(c.th, D)
+        if th < 0: return False
+        if not all(th * phiQ(a, t.mu, j) < 2 ** c.s for j in range(k)): return False
+        if vQ(b, k, a, t.mu, q, m, c, D) < 0: return False
+    return max(Fr(0), 1 - m) * tailQ(b, k, a, t, q, m, c) <= Pb and checkCoin(b, k, a, t, q, c.n0)
+
+
+# ---------------- the coin condition (ForecastTail.lean CoinCond, ForecastCert.lean checkCoin) ----------------
+
+def capFloorN(b, k, a): return 2 * (b + (a + 1) * k + 101)
+
+
+def patCapN(b, a, cf, q, s): return max(6 * q // 2 ** (b + a * s) + 1, cf)
+
+
+def coinVList(b, a, cf, q, smax):
+    """coinGo: coinV 0 .. smax, coinV (n+1) = sum_{j<=n} C(n, j) patCapN(j+1) / 2^128 coinV(n-j)."""
+    L = [Fr(1)]
+    for n in range(smax):
+        L.append(sum((chooseQ(n, j) * patCapN(b, a, cf, q, j + 1) / Fr(2 ** 128) * L[n - j] for j in range(n + 1)), Fr(0)))
+    return L
+
+
+def coinR(b, a, cf, q, mu, r):
+    V = coinVList(b, a, cf, q, r)
+    return sum((chooseQ(r, s) * V[s] * phiQ(a, mu, r - s) for s in range(1, r + 1)), Fr(0))
+
+
+def coinRateK(b, a, cf, q): return Fr(2 ** a * patCapN(b, a, cf, q, 1), 2 ** 128)
+
+
+def checkCoin(b, k, a, t, q, n0):
+    """checkCoin: the coin-assisted forecast and the coin rate of the cached pairs fit in coinSlack (exact)."""
+    cf = capFloorN(b, k, a)
+    if not t.mu > 0: return False
+    P1 = patCapN(b, a, cf, q, 1)
+    for r in range(1, k):
+        if not 4 * P1 * coinR(b, a, cf, q, t.mu, r) <= COIN_SLACK * (1 + P1 * phiQ(a, t.mu, r)): return False
+    return ((1 + coinRateK(b, a, cf, q) / t.mu) ** (k - 1) - 1) * (1 + freshQ(b, k, a, t.mu, q, n0)) <= COIN_SLACK / 2
+
+
+# ---------------- the float search ----------------
+
+class _F:
+    """float tables for one (b, k, a, mu, q)."""
+    def __init__(self, b, k, a, mu, q):
+        self.b, self.k, self.a, self.mu, self.q = b, k, a, float(mu), q
+        T = [float(v) for v in touchardList(Fr(mu), k - 1)]
+        self.phi = [T[r] / 2 ** (a * r) for r in range(k)]
+        A = 2 ** a
+        self.fresh = [q / 2 ** (b + a) * sum(math.comb(k - 1, i) * D ** (k - 1 - i) * T[i] for i in range(k)) / A ** (k - 1)
+                      for D in range(200)]
+
+    def lam(self, D, th):
+        A = 2 ** self.a
+        tot = 0.0
+        for j in range(1, self.k):
+            coef = math.comb(self.k - 1, j) * (D / A) ** (self.k - 1 - j)
+            if coef == 0: continue          # D = 0: only j = k - 1 counts (no overflow from the others)
+            u = th * self.phi[j]
+            if u > 700: return math.inf
+            tot += coef * math.expm1(u)
+        return self.q / 2 ** (self.b + self.a) * tot
+
+    def logterm(self, D, th, m):
+        cells = self.k * 2 ** self.a * 2 ** self.b
+        return math.log(cells) + D * math.log(self.mu) - math.lgamma(D + 1) - \
+            th * (m - self.fresh[D] - 2 ** -10) + self.lam(D, th)
+
+    def best(self, D, m):
+        """theta >= 0 minimizing the D-term (theta = 0 gives the term cells mu^D / D!)."""
+        f = lambda lt: self.logterm(D, math.exp(lt), m)
+        # a log grid first (the objective is +inf beyond the overflow of e^{theta phi} and flat below),
+        # then golden section on the bracket around the best grid point
+        grid = [e / 8 * math.log(2) for e in range(-80, 200)]
+        vals = [f(lt) for lt in grid]
+        i = min(range(len(grid)), key=lambda j: vals[j])
+        lo, hi = grid[max(i - 1, 0)], grid[min(i + 1, len(grid) - 1)]
+        g = (math.sqrt(5) - 1) / 2
+        x1, x2 = hi - g * (hi - lo), lo + g * (hi - lo)
+        f1, f2 = f(x1), f(x2)
+        for _ in range(120):
+            if f1 < f2:
+                hi, x2, f2 = x2, x1, f1
+                x1 = hi - g * (hi - lo); f1 = f(x1)
+            else:
+                lo, x1, f1 = x1, x2, f2
+                x2 = lo + g * (hi - lo); f2 = f(x2)
+        lt = (lo + hi) / 2
+        v = f(lt)
+        v0 = self.logterm(D, 0.0, m)
+        return (math.exp(lt), v) if v < v0 else (0.0, v0)
+
+
+def make_tailCert(b, k, a, t, q, m, nmax=40, s=30, P=64, J=200):
+    """the certificate (n0, theta_D) minimizing the float tail, then the exact tail and Pb = its rounding up."""
+    F = _F(b, k, a, t.mu, q)
+    mf = float(m)
+    best = None
+    lt_cache = {}
+    for n0 in range(1, nmax):
+        light = 2 ** b * sum(math.exp(-F.mu + n * math.log(F.mu) - math.lgamma(n + 1)) * (n - n0 + 1)
+                             for n in range(n0, n0 + 60))
+        terms, ths = 0.0, []
+        for D in range(n0):
+            if D not in lt_cache: lt_cache[D] = F.best(D, mf)
+            th, lv = lt_cache[D]
+            terms += math.exp(lv) if lv < 700 else math.inf
+            ths.append(th)
+        tot = light + terms
+        if best is None or tot < best[0]: best = (tot, n0, ths)
+    _, n0, ths = best
+    th = [fc.rdown(Fr(x), 20) for x in ths]
+    c = TailCert(n0, th, s, P, J)
+    # vQ >= 0 may fail after rounding for a D whose optimum is near theta = 0: use theta = 0 there
+    for D in range(n0):
+        if vQ(b, k, a, t.mu, q, m, c, D) < 0:
+            c.th[D] = Fr(0)
+    tail = max(Fr(0), 1 - m) * tailQ(b, k, a, t, q, m, c)
+    e = math.floor(math.log2(float(tail))) - 40
+    Pb = Fr(math.ceil(tail * 2 ** -e) if e < 0 else -(-tail.numerator // (tail.denominator * 2 ** e))) * Fr(2) ** e
+    assert checkTail(b, k, a, t, q, m, c, Pb), "the exact check failed"
+    return c, Pb
+
+
+# ---------------- Lean emission ----------------
+
+def lean_tailCert(c):
+    """the Lean term of a TailCert (SWRoute/ForecastCert.lean)."""
+    return '⟨%d, [%s], %d, %d, %d⟩' % (c.n0, ', '.join(fc.q(x) for x in c.th), c.s, c.P, c.J)
+
+
+def lean_tail_test(b, k, a, t, q, m, c, Pb, H=24, N=2 ** 24, qtop=2 ** 124):
+    """a kernel test file: the table, the rate and the tail check (decide +kernel)."""
+    return '\n'.join([
+        'import FORS.Certificates.Build',
+        'import FORS.SWRoute.ForecastCert',
+        'namespace FORS.Security.H0',
+        'set_option maxRecDepth 1000000',
+        'set_option maxHeartbeats 0',
+        'def tabT : PoisT := %s' % fc.lean_tab(t),
+        'theorem tabT_ok : checkPT tabT = true := checkPT_poisOf (by decide +kernel)',
+        'theorem rateT_ok : checkRate %d %d %d %d tabT = true := by decide +kernel' % (H, b, N, qtop),
+        'theorem tailT_ok : SWRoute.checkTail %d %d %d tabT %d (%s) %s (%s) = true := by decide +kernel'
+        % (b, k, a, q, fc.q(m), lean_tailCert(c), fc.q(Pb)),
+        'end FORS.Security.H0', ''])
+
+
+# ---------------- the numbers ----------------
+
+def main():
+    H, k, a, N = 24, 19, 9, 2 ** 24
+    fc.set_config(H, 'layered', k=k, a=a)
+    b = H
+    qtop = 2 ** 124
+    t = fc.make_poisT(b, N, qtop)
+    assert fc.checkPT(t) and fc.checkRate(b, N, qtop, t)
+    print(f"19x9, h = b = {b}, N = 2^24, mu = {float(t.mu):.12f} (table at qtop = 2^124)")
+    print(" lx_b      m        n0   log2 Pb (excess form)")
+    rows = [(-12.9375, 0.4978), (-12.0, 0.4975), (-11.0, 0.6597), (-10.0, 0.7922), (-9.0, 0.8782),
+            (-8.5, 0.9053), (-8.0, 0.9235), (-7.0, 0.937), (-6.5, 0.9332), (-6.0625, 0.9237), (-6.0, 0.9219)]
+    for lx, mf in rows:
+        q = int(2 ** (128 + lx))
+        m = fc.rdown(Fr(mf), 40)
+        c, Pb = make_tailCert(b, k, a, t, q, m)
+        print(f" {lx:8.4f}  {mf:.4f}   {c.n0:3d}   {math.log2(float(Pb)):8.2f}")
+
+
+if __name__ == '__main__':
+    main()

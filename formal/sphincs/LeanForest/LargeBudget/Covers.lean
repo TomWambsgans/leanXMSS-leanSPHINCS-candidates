@@ -52,8 +52,8 @@ def chainF (K N qtop : ℕ) (opts : List OptF) : ℕ → List EntryF → Bool
   | last, e :: rest => decide (e.1 ≤ last) && checkEntryF K N opts e && chainF K N qtop opts (e.2.1 + 1) rest
 
 /-- A cover of every budget `qstart ≤ q ≤ qtop`. -/
-def checkCoverW (H b K N qstart : ℕ) (c : CoverW) : Bool :=
-  checkRate H b N c.qtop c.tab && checkPT c.tab && c.opts.all (checkOptF H b c.tab) &&
+def checkCoverW (H b T K N qstart : ℕ) (c : CoverW) : Bool :=
+  checkRate H b N c.qtop c.tab && checkPT c.tab && c.opts.all (checkOptF H b T c.tab) &&
     chainF K N c.qtop c.opts qstart c.entries
 
 theorem chainF_sound (K N qtop : ℕ) (opts : List OptF) : ∀ (cover : List EntryF) (last : ℕ),
@@ -81,7 +81,7 @@ theorem checkEntryF_sound {K N : ℕ} {opts : List OptF} {e : EntryF} (h : check
     simp only [Bool.and_eq_true, decide_eq_true_eq] at h
     exact ⟨o, List.mem_of_getElem? hget, h.1.1, h.1.2, h.2⟩
 
-theorem optF_B_nonneg {H b : ℕ} {t : PoisT} {o : OptF} (ho : checkOptF H b t o = true) : 0 ≤ o.B := by
+theorem optF_B_nonneg {H b T : ℕ} {t : PoisT} {o : OptF} (ho : checkOptF H b T t o = true) : 0 ≤ o.B := by
   obtain ⟨-, hθ, hcthr, -, -, -, -, -, -, -, -, -, -, -, -, -, -, hB, hEg0, hEe0⟩ := checkOptF_parts ho
   have hsq0 : 0 ≤ sqUp t.P b (1 + o.Ee) := by
     have h := sqUp_ge t.P b (1 + o.Ee) ((1 + o.Ee : ℚ) : ℝ) (by push_cast; positivity) le_rfl
@@ -153,21 +153,22 @@ theorem rate_le_tableF (H b N qtop : ℕ) (t : PoisT) (ht : checkRate H b N qtop
 
 /-- **A checked table and option bound the one-coin forest H-term** at every budget `q ≤ qtop` and
 every base `β ≥ cthr`. -/
-theorem startExcessO_le_opt (H b N qtop : ℕ) (t : PoisT) (o : OptF) (hr : checkRate H b N qtop t = true)
+theorem startExcessO_le_opt (H b T N qtop : ℕ) (t : PoisT) (o : OptF) (hr : checkRate H b N qtop t = true)
     (ht : checkPT t = true)
-    (ho : checkOptF H b t o = true) (hH : totalHeight = H) (hb : subtreeHeight = b) (hN : signatureLimit = N) (q : ℕ)
+    (ho : checkOptF H b T t o = true) (hH : totalHeight = H) (hb : subtreeHeight = b) (hT : forestCoords = T)
+    (hN : signatureLimit = N) (q : ℕ)
     (hq : q ≤ qtop) (β : ℝ≥0∞) (hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ β) :
     ForestPotential.startExcessO (wbarOf q) β q ≤ ENNReal.ofReal (o.B : ℝ) := by
-  have h := hTermO_le_optF hH hb t o ht ho (wbarOf q) landing
+  have h := hTermO_le_optF hH hb hT t o ht ho (wbarOf q) landing
     (wbar_le_one q (fair_of_rate H b N qtop t hr hH hb q hq)) ForestPotential.landing_le_one
     signatureLimit q (rate_le_tableF H b N qtop t hr hH hb hN q hq) β hβc
   exact h
 
 
 /-- The bound for one checked entry. -/
-theorem bound_of_entryF (H b K N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr : checkRate H b N qtop t = true)
-    (ht : checkPT t = true) (hopts : ∀ o ∈ opts, checkOptF H b t o = true) (hH : totalHeight = H)
-    (hb : subtreeHeight = b) (hK : Prefix.keygenHashCost = K)
+theorem bound_of_entryF (H b T K N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr : checkRate H b N qtop t = true)
+    (ht : checkPT t = true) (hopts : ∀ o ∈ opts, checkOptF H b T t o = true) (hH : totalHeight = H)
+    (hb : subtreeHeight = b) (hT : forestCoords = T) (hK : Prefix.keygenHashCost = K)
     (hN : signatureLimit = N) (e : EntryF) (he : checkEntryF K N opts e = true) (q : ℕ) (hqa : e.1 ≤ q)
     (hqb : q ≤ e.2.1) (hqt : q ≤ qtop) :
     (1 - HiddenDebt.budget 0 q) + (q : ℝ≥0∞) * ForestPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q +
@@ -186,7 +187,7 @@ theorem bound_of_entryF (H b K N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr 
   have hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ HiddenDebt.baselineW q :=
     le_trans (ENNReal.ofReal_le_ofReal (by exact_mod_cast hcthr)) (ForestPotential.baselineW_ge q qb hqb)
   have hH : ForestPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q ≤ ENNReal.ofReal (o.B : ℝ) :=
-    startExcessO_le_opt H b N qtop t o hr ht hoc hH hb hN q hqt _ hβc
+    startExcessO_le_opt H b T N qtop t o hr ht hoc hH hb hT hN q hqt _ hβc
   have hmainR : (qb : ℝ) * (o.B : ℝ) * ((1 / 2 : ℝ) / (1 - 1 / 2)) + ((qb : ℝ) + (K : ℝ) + N) / 2 ^ 200 ≤
       ((qa : ℝ) / 2 ^ 128) ^ 2 + (K : ℝ) / 2 ^ 127 := by
     have := (Rat.cast_le (K := ℝ)).mpr hmain
@@ -240,8 +241,8 @@ theorem bound_of_entryF (H b K N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr 
 
 /-- **The one-coin forest H-term bound at the weighted baseline from a cover certificate**, for every
 budget `qstart ≤ q' ≤ qtop`. -/
-theorem h0W_bound_of_cover (H b K N qstart : ℕ) (cover : CoverW) (hcov : checkCoverW H b K N qstart cover = true)
-    (hH : totalHeight = H) (hb : subtreeHeight = b) (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N) (q' : ℕ) (hq0 : qstart ≤ q') (hq : q' ≤ cover.qtop) :
+theorem h0W_bound_of_cover (H b T K N qstart : ℕ) (cover : CoverW) (hcov : checkCoverW H b T K N qstart cover = true)
+    (hH : totalHeight = H) (hb : subtreeHeight = b) (hT : forestCoords = T) (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N) (q' : ℕ) (hq0 : qstart ≤ q') (hq : q' ≤ cover.qtop) :
     (1 - HiddenDebt.budget 0 q') +
         (q' : ℝ≥0∞) * ForestPotential.startExcessO (wbarOf q') (HiddenDebt.baselineW q') q' +
         ((q' + Prefix.keygenHashCost + signatureLimit : ℕ) : ℝ≥0∞) *
@@ -250,10 +251,10 @@ theorem h0W_bound_of_cover (H b K N qstart : ℕ) (cover : CoverW) (hcov : check
   simp only [checkCoverW, Bool.and_eq_true, List.all_eq_true] at hcov
   obtain ⟨⟨⟨hr, ht⟩, hopts⟩, hchain⟩ := hcov
   obtain ⟨e, -, h1, h2, h3⟩ := chainF_sound K N cover.qtop cover.opts cover.entries qstart hchain q' hq0 hq
-  exact bound_of_entryF H b K N cover.qtop cover.tab cover.opts hr ht hopts hH hb hK hN e h3 q' h1 h2 hq
+  exact bound_of_entryF H b T K N cover.qtop cover.tab cover.opts hr ht hopts hH hb hT hK hN e h3 q' h1 h2 hq
 
 /-- The fair-rate condition of the scan coin at every budget of a cover. -/
-theorem fair_of_cover (H b K N qstart : ℕ) (cover : CoverW) (hcov : checkCoverW H b K N qstart cover = true)
+theorem fair_of_cover (H b T K N qstart : ℕ) (cover : CoverW) (hcov : checkCoverW H b T K N qstart cover = true)
     (hH : totalHeight = H) (hb : subtreeHeight = b) (q' : ℕ) (hq : q' ≤ cover.qtop) :
     q' + 2 ^ 32 + (scanM - 1) * LmaxOf q' + (2 * scanM - 1) ≤ 2 ^ 128 := by
   simp only [checkCoverW, Bool.and_eq_true, List.all_eq_true] at hcov

@@ -109,8 +109,9 @@ theorem leafPayload_length (endpoints : ChainIndex → Digest) :
   rfl
 
 theorem rootsPayload_length (tops : Coord → Digest × Digest) :
-    (rootsPayload tops).length = 256 := by
-  simp [rootsPayload, nodePayload, bytesLE_length, forestCoords]
+    (rootsPayload tops).length = 32 * forestCoords := by
+  simp [rootsPayload, nodePayload, bytesLE_length, List.sum_ofFn]
+  ring
 
 theorem superPayload_length (tops : SubIdx → Digest × Digest) :
     (superPayload tops).length = 64 := by
@@ -155,11 +156,11 @@ theorem Only.leafHash (parameter : PublicParameter) (lay : Layer) (tree : TreeIn
     Only (Concrete.leafHash parameter lay tree leaf endpoints : OracleComp HashSpec Digest) :=
   Only.tweakableHash _ _ _ (by rw [leafPayload_length])
 
-/-- A layer's message is at most the forest key's 256 bytes. -/
+/-- A layer's message is at most 256 bytes: the forest key's `32 T`, `T ≤ 8`. -/
 def ShortMessage (message : HashInput) : Prop := message.length ≤ 256
 
 theorem shortMessage_roots (tops : Coord → Digest × Digest) : ShortMessage (rootsPayload tops) := by
-  unfold ShortMessage; rw [rootsPayload_length]
+  unfold ShortMessage; rw [rootsPayload_length]; have := Params.forestCoords_le; omega
 
 theorem shortMessage_root (root : Digest) : ShortMessage (rootPayload root) := by
   unfold ShortMessage rootPayload; rw [bytesLE_length]; omega

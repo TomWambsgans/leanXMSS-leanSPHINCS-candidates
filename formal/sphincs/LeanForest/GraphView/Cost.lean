@@ -46,7 +46,8 @@ attribute [local irreducible] firstEncoding ReferenceChoice.search encodingAttem
 
 theorem hashCalls_forestKey_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (seed : MasterSeed) :
-    hashCalls f (Seeded.forestKey parameter index seed : OracleComp HashSpec ForestKey) = 59120 :=
+    hashCalls f (Seeded.forestKey parameter index seed : OracleComp HashSpec ForestKey) =
+      7390 * forestCoords :=
   hashCalls_forestKey f parameter index seed
 
 /-- Opening one tree costs 7370 calls: 3 seed derivations, 19 chain steps and 200 subtree-path calls
@@ -91,9 +92,10 @@ theorem hashCalls_coordOpen_exact (f : QueryImpl HashSpec Id) (parameter : Publi
 theorem hashCalls_forestOpen_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
     (index : Index) (marks : Coord → CoordMark) (seed : MasterSeed) :
     hashCalls f (Seeded.forestOpen parameter index marks seed :
-      OracleComp HashSpec (Coord → CoordOpening)) = 58960 := by
-  simp only [Seeded.forestOpen, hashCalls_sequenceFin, hashCalls_coordOpen_exact]
-  decide
+      OracleComp HashSpec (Coord → CoordOpening)) = 7370 * forestCoords := by
+  simp only [Seeded.forestOpen, hashCalls_sequenceFin, hashCalls_coordOpen_exact, Finset.sum_const,
+    Finset.card_univ, Fintype.card_fin, smul_eq_mul]
+  ring
 
 /-- The published values of a WOTS+C signature cost `32 + 128 = 160` calls: the 32 seed derivations
 of the chain starts and the 128 chain steps of a codeword. -/
@@ -176,7 +178,7 @@ theorem hashCalls_treePath_exact (f : QueryImpl HashSpec Id) (parameter : Public
 /-- The cost of a key's message: the root of a whole tree of height 6 below it, or the forest key
 of its instance at the bottom layer. -/
 def keyMessageCost (lay : Layer) : Nat :=
-  if lay.val + 1 < numLayers then 226 * 2 ^ lowerHeight - 1 else 59120
+  if lay.val + 1 < numLayers then 226 * 2 ^ lowerHeight - 1 else 7390 * forestCoords
 
 set_option maxRecDepth 100000 in
 theorem hashCalls_keyMessage (f : QueryImpl HashSpec Id) (parameter : PublicParameter)
@@ -189,7 +191,7 @@ theorem hashCalls_keyMessage (f : QueryImpl HashSpec Id) (parameter : PublicPara
     rw [dif_pos hbelow, if_pos hbelow, hashCalls_bind, hashCalls_treeRoot,
       keptHeight_of_ne_top _ hne, layerHeight_of_ne_top _ hne, Nat.sub_self]
     simp only [hashCalls_pure, Nat.mul_zero, Nat.add_zero]
-  · rw [dif_neg hbelow, if_neg hbelow, hashCalls_bind, hashCalls_forestKey_exact, hashCalls_pure]
+  · rw [dif_neg hbelow, if_neg hbelow, hashCalls_bind, hashCalls_forestKey_exact, hashCalls_pure, Nat.add_zero]
 
 /-- The cost of one layer: its key's message, the counter search, and on success the chain values
 and the path. -/
@@ -232,9 +234,9 @@ noncomputable def finishHashCost (f : QueryImpl HashSpec Id) (parameter : Public
     (data : PublicData) (message : Message) (randomness : Randomness) : Nat :=
   let index := digestIndex (evalWithAnswerFn f
     (messageDigest parameter data.root message randomness : OracleComp HashSpec MessageDigest))
-  1 + 58960 + seqCost (layerFound f parameter data index) (layerHashCost f parameter data index)
+  1 + 7370 * forestCoords + seqCost (layerFound f parameter data index) (layerHashCost f parameter data index)
 
-/-- The `1 + 58960` calls are the digest block and the forest opening (chain values and all subtree
+/-- The `1 + 7370 T` calls are the digest block and the forest opening (chain values and all subtree
 and tree authentication nodes); the layers follow, each with its key's message, the counter search,
 and on success the chain values and the path, until the first failed search. -/
 theorem hashCalls_finishSign_exact (f : QueryImpl HashSpec Id) (parameter : PublicParameter)

@@ -33,7 +33,7 @@ def checkRateH (H b N qtop : ℕ) (t : PoisT) : Bool :=
 
 /-- A heavy cover of every budget `qstart ≤ q ≤ qtop`. -/
 def checkCoverH (H b k a K N qstart : ℕ) (c : CoverW) : Bool :=
-  checkRateH H b N c.qtop c.tab && checkPT c.tab && c.opts.all (checkOptF H b k a c.tab) &&
+  checkRateH H b N c.qtop c.tab && checkPT c.tab && c.opts.all (checkOpt H b k a c.tab) &&
     chainF K N c.qtop c.opts qstart c.entries
 
 /-! ### The heavy coin -/
@@ -184,21 +184,21 @@ theorem rate_le_tableH (H b N qtop : ℕ) (t : PoisT) (ht : checkRateH H b N qto
 
 /-- **A checked table and option bound the FORS H-term with the spare slot** at every budget
 `q ≤ qtop` and every base `β ≥ cthr`. -/
-theorem startExcessH_le_opt (H b k a N qtop : ℕ) (t : PoisT) (o : OptF) (hr : checkRateH H b N qtop t = true)
+theorem startExcessH_le_opt (H b k a N qtop : ℕ) (t : PoisT) (o : Opt) (hr : checkRateH H b N qtop t = true)
     (ht : checkPT t = true)
-    (ho : checkOptF H b k a t o = true) (hH : totalHeight = H) (hb : subtreeHeight = b)
+    (ho : checkOpt H b k a t o = true) (hH : totalHeight = H) (hb : subtreeHeight = b)
     (hk : forsTrees = k) (ha : forsHeight = a) (hN : signatureLimit = N) (q : ℕ)
     (hq : q ≤ qtop) (β : ℝ≥0∞) (hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ β) :
     ForsPotential.startExcessH (wbarH q) β q ≤ ENNReal.ofReal (o.B : ℝ) := by
-  have h := hTermO_le_optF hH hb hk ha t o ht ho (wbarH q) landing
+  have h := hTermO_le_opt hH hb hk ha t o ht ho (wbarH q) landing
     (wbarH_le_one q (fair_of_rateH H b N qtop t hr hH hb q hq))
     ForsPotential.landing_le_one
     (signatureLimit + 1) q (rate_le_tableH H b N qtop t hr hH hb hN q hq) β hβc
   exact h
 
 /-- The bound for one checked entry, for any H-term `X` below the option's bound. -/
-theorem bound_of_entryX (H b k a K N : ℕ) (t : PoisT) (opts : List OptF)
-    (hopts : ∀ o ∈ opts, checkOptF H b k a t o = true)
+theorem bound_of_entryX (H b k a K N : ℕ) (t : PoisT) (opts : List Opt)
+    (hopts : ∀ o ∈ opts, checkOpt H b k a t o = true)
     (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N) (e : EntryF) (he : checkEntryF K N opts e = true)
     (q : ℕ) (hqa : e.1 ≤ q)
     (hqb : q ≤ e.2.1) (X : ℝ≥0∞)
@@ -214,7 +214,7 @@ theorem bound_of_entryX (H b k a K N : ℕ) (t : PoisT) (opts : List OptF)
   have hq127 : q ≤ 2 ^ 127 := by
     have : (2 : ℕ) ^ 128 = 2 * 2 ^ 127 := by norm_num
     omega
-  have hB0 : (0 : ℝ) ≤ (o.B : ℝ) := by exact_mod_cast optF_B_nonneg hoc
+  have hB0 : (0 : ℝ) ≤ (o.B : ℝ) := by exact_mod_cast opt_B_nonneg hoc
   have hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ HiddenDebt.baselineW q :=
     le_trans (ENNReal.ofReal_le_ofReal (by exact_mod_cast hcthr)) (ForsPotential.baselineW_ge q qb hqb)
   have hH : X ≤ ENNReal.ofReal (o.B : ℝ) := hX o ho hβc
@@ -270,8 +270,8 @@ theorem bound_of_entryX (H b k a K N : ℕ) (t : PoisT) (opts : List OptF)
     _ = _ := hrhs.symm
 
 /-- The bound for one checked entry of a heavy cover. -/
-theorem bound_of_entryH (H b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr : checkRateH H b N qtop t = true)
-    (ht : checkPT t = true) (hopts : ∀ o ∈ opts, checkOptF H b k a t o = true) (hH : totalHeight = H)
+theorem bound_of_entryH (H b k a K N qtop : ℕ) (t : PoisT) (opts : List Opt) (hr : checkRateH H b N qtop t = true)
+    (ht : checkPT t = true) (hopts : ∀ o ∈ opts, checkOpt H b k a t o = true) (hH : totalHeight = H)
     (hb : subtreeHeight = b) (hk : forsTrees = k) (ha : forsHeight = a) (hK : Prefix.keygenHashCost = K)
     (hN : signatureLimit = N) (e : EntryF) (he : checkEntryF K N opts e = true) (q : ℕ) (hqa : e.1 ≤ q)
     (hqb : q ≤ e.2.1) (hqt : q ≤ qtop) :
@@ -379,8 +379,8 @@ large budgets from `qh + 1` up to `2^127 − 1 − keygenCost`. -/
 theorem det_bitsFH (hb0 : 0 < keptHeight topLayer) (H b k a K N : ℕ) (hH : totalHeight = H)
     (hb : subtreeHeight = b) (hk : forsTrees = k) (ha : forsHeight = a)
     (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N)
-    (qh : ℕ) (ρ : ℚ) (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true)
-    (hrt : H0.checkRate H b N qh t = true) (ho : H0.checkOptF H b k a t o = true)
+    (qh : ℕ) (ρ : ℚ) (t : H0.PoisT) (o : H0.Opt) (on : H0.OptN) (hpt : H0.checkPT t = true)
+    (hrt : H0.checkRate H b N qh t = true) (ho : H0.checkOpt H b k a t o = true)
     (hon : H0.checkOptN H k a t on = true)
     (hsmall : checkSmallF H b a N qh ρ o.cthr o.B ((2 ^ b * on.En : ℚ) / 2) = true)
     (covers heavy : List H0.CoverW) (hcov : checkCoversH H b k a K N (qh + 1) covers heavy = true) :

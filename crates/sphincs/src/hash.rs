@@ -34,7 +34,7 @@ pub const TWEAK_CHILD_LEAF: u8 = 16;
 pub const TWEAK_SUB_NODE: u8 = 17;
 pub const TWEAK_SUPER_CHILD: u8 = 18;
 pub const TWEAK_TOP_NODE: u8 = 19;
-// Type 20 is unused: the forest key is not hashed, the encoding absorbs its sixteen nodes.
+// Type 20 is unused: the forest key is not hashed, the encoding absorbs its nodes (two per coordinate).
 
 /// The hash function of a configuration.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

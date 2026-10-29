@@ -37,22 +37,22 @@ structure OptF where
   B : ℚ
 
 /-- The excess part bound at `n` from the moment tables. -/
-def gBound (H : ℕ) (o : OptF) (n : ℕ) : ℚ :=
-  min (κQ H * P1tab.getD n 0 ^ 8) (κQ H ^ 2 * P2tab.getD n 0 ^ 8 / (4 * o.c1))
+def gBound (H T : ℕ) (o : OptF) (n : ℕ) : ℚ :=
+  min (κQ H * P1tab.getD n 0 ^ T) (κQ H ^ 2 * P2tab.getD n 0 ^ T / (4 * o.c1))
 
 /-- The Chernoff factor bound (minus one) at `n` from the moment tables. -/
-def hBound (H : ℕ) (o : OptF) (n : ℕ) : ℚ :=
-  min (o.eC - 1) (o.θ * κQ H * P1tab.getD n 0 ^ 8 + o.A2 * κQ H ^ 2 * P2tab.getD n 0 ^ 8)
+def hBound (H T : ℕ) (o : OptF) (n : ℕ) : ℚ :=
+  min (o.eC - 1) (o.θ * κQ H * P1tab.getD n 0 ^ T + o.A2 * κQ H ^ 2 * P2tab.getD n 0 ^ T)
 
 /-- The check of an option against a Poisson table, for subtree height `b`. -/
-def checkOptF (H b : ℕ) (t : PoisT) (o : OptF) : Bool :=
+def checkOptF (H b T : ℕ) (t : PoisT) (o : OptF) : Bool :=
   decide (0 < o.c1) && decide (0 < o.θ) && decide (0 ≤ o.cthr) && decide (o.θ * o.c1 < 2 ^ o.s) &&
     decide (expUp (o.θ * o.c1) o.s t.P ≤ o.eC) &&
     decide ((o.eC - 1 - o.θ * o.c1) / o.c1 ^ 2 ≤ o.A2) &&
     decide (t.n1 ≤ 150) && decide (o.gt.length = t.n1 + 1) && decide (o.ht.length = t.n1 + 1) &&
     checkLeaf o.gt o.Jg && checkLeaf o.ht o.Jh &&
-    decide (∀ n < t.n1 + 1, gBound H o n ≤ o.gt.getD n 0) &&
-    decide (∀ n < t.n1 + 1, hBound H o n ≤ o.ht.getD n 0) &&
+    decide (∀ n < t.n1 + 1, gBound H T o n ≤ o.gt.getD n 0) &&
+    decide (∀ n < t.n1 + 1, hBound H T o n ≤ o.ht.getD n 0) &&
     decide (κQ H ≤ o.gt.getD t.n1 0 + o.Jg) && decide (o.eC - 1 ≤ o.ht.getD t.n1 0 + o.Jh) &&
     decide ((((List.range (t.n1 + 1)).map fun n => t.pb n * o.gt.getD n 0).sum +
       t.pb (t.n1 + 1) * (o.gt.getD t.n1 0 / (1 - t.r) + o.Jg / (1 - t.r) ^ 2)) ≤ o.Eg) &&
@@ -62,11 +62,11 @@ def checkOptF (H b : ℕ) (t : PoisT) (o : OptF) : Bool :=
     decide (0 ≤ o.Eg) && decide (0 ≤ o.Ee)
 
 
-theorem checkOptF_parts {H b : ℕ} {t : PoisT} {o : OptF} (h : checkOptF H b t o = true) :
+theorem checkOptF_parts {H b T : ℕ} {t : PoisT} {o : OptF} (h : checkOptF H b T t o = true) :
     0 < o.c1 ∧ 0 < o.θ ∧ 0 ≤ o.cthr ∧ o.θ * o.c1 < 2 ^ o.s ∧ expUp (o.θ * o.c1) o.s t.P ≤ o.eC ∧
       (o.eC - 1 - o.θ * o.c1) / o.c1 ^ 2 ≤ o.A2 ∧ t.n1 ≤ 150 ∧ o.gt.length = t.n1 + 1 ∧ o.ht.length = t.n1 + 1 ∧
       checkLeaf o.gt o.Jg = true ∧ checkLeaf o.ht o.Jh = true ∧
-      (∀ n < t.n1 + 1, gBound H o n ≤ o.gt.getD n 0) ∧ (∀ n < t.n1 + 1, hBound H o n ≤ o.ht.getD n 0) ∧
+      (∀ n < t.n1 + 1, gBound H T o n ≤ o.gt.getD n 0) ∧ (∀ n < t.n1 + 1, hBound H T o n ≤ o.ht.getD n 0) ∧
       κQ H ≤ o.gt.getD t.n1 0 + o.Jg ∧ o.eC - 1 ≤ o.ht.getD t.n1 0 + o.Jh ∧
       (((List.range (t.n1 + 1)).map fun n => t.pb n * o.gt.getD n 0).sum +
         t.pb (t.n1 + 1) * (o.gt.getD t.n1 0 / (1 - t.r) + o.Jg / (1 - t.r) ^ 2)) ≤ o.Eg ∧
@@ -125,8 +125,10 @@ theorem κE_toReal (H b : ℕ) (hH : totalHeight = H) (hb : subtreeHeight = b) :
   field_simp
 
 /-- **The excess part is dominated by the `ḡ` table.** -/
-theorem avgN_gS_le {H b : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) {t : PoisT} {o : OptF} (ho : checkOptF H b t o = true) (n : ℕ) :
+theorem avgN_gS_le {H b T : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) (hT : forestCoords = T)
+    {t : PoisT} {o : OptF} (ho : checkOptF H b T t o = true) (n : ℕ) :
     avgN (gS (o.c1 : ℝ)) n 0 ≤ ENNReal.ofReal (leafQ o.gt o.Jg n : ℝ) := by
+  subst hT
   obtain ⟨hc1, -, -, -, -, -, h150, hgl, -, hlg, -, hgb, -, hgend, -⟩ := checkOptF_parts ho
   have hc1' : (0 : ℝ) < (o.c1 : ℝ) := by exact_mod_cast hc1
   have hκ := κE_toReal H b hH hb
@@ -138,20 +140,20 @@ theorem avgN_gS_le {H b : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) {
       have := avgN_φF n
       exact (avgNR_nonneg coverAvg_nonneg n 0)
     have hΨ2 : 0 ≤ Ψ2R n := avgNR_nonneg (fun X => sq_nonneg _) n 0
-    have hlin : avgN (gS (o.c1 : ℝ)) n 0 ≤ ENNReal.ofReal ((κQ H * P1tab.getD n 0 ^ 8 : ℚ) : ℝ) := by
+    have hlin : avgN (gS (o.c1 : ℝ)) n 0 ≤ ENNReal.ofReal ((κQ H * P1tab.getD n 0 ^ forestCoords : ℚ) : ℝ) := by
       calc avgN (gS (o.c1 : ℝ)) n 0 ≤ avgN (fun Ms => ENNReal.ofReal κE.toReal * yM Ms) n 0 :=
             avgN_mono (fun Ms => gS_le_lin _ hc1' Ms) n 0
-        _ = ENNReal.ofReal κE.toReal * ENNReal.ofReal (Ψ1R n) ^ 8 := by rw [avgN_const_mul, avgN_yM]
+        _ = ENNReal.ofReal κE.toReal * ENNReal.ofReal (Ψ1R n) ^ forestCoords := by rw [avgN_const_mul, avgN_yM]
         _ ≤ _ := by
             rw [← ENNReal.ofReal_pow hΨ1, ← ENNReal.ofReal_mul ENNReal.toReal_nonneg]
             apply ENNReal.ofReal_le_ofReal
             rw [hκ]
             push_cast
-            exact mul_le_mul_of_nonneg_left (pow_le_pow_left₀ hΨ1 hP1 8) (by unfold κQ; positivity)
-    have hsq : avgN (gS (o.c1 : ℝ)) n 0 ≤ ENNReal.ofReal ((κQ H ^ 2 * P2tab.getD n 0 ^ 8 / (4 * o.c1) : ℚ) : ℝ) := by
+            exact mul_le_mul_of_nonneg_left (pow_le_pow_left₀ hΨ1 hP1 forestCoords) (by unfold κQ; positivity)
+    have hsq : avgN (gS (o.c1 : ℝ)) n 0 ≤ ENNReal.ofReal ((κQ H ^ 2 * P2tab.getD n 0 ^ forestCoords / (4 * o.c1) : ℚ) : ℝ) := by
       calc avgN (gS (o.c1 : ℝ)) n 0 ≤ avgN (fun Ms => ENNReal.ofReal (κE.toReal ^ 2 / (4 * o.c1)) * yM Ms ^ 2) n 0 :=
             avgN_mono (fun Ms => gS_le_sq _ hc1' Ms) n 0
-        _ = ENNReal.ofReal (κE.toReal ^ 2 / (4 * o.c1)) * ENNReal.ofReal (Ψ2R n) ^ 8 := by
+        _ = ENNReal.ofReal (κE.toReal ^ 2 / (4 * o.c1)) * ENNReal.ofReal (Ψ2R n) ^ forestCoords := by
             rw [avgN_const_mul, avgN_yM_sq]
         _ ≤ _ := by
             rw [← ENNReal.ofReal_pow hΨ2, ← ENNReal.ofReal_mul (by positivity)]
@@ -159,10 +161,10 @@ theorem avgN_gS_le {H b : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) {
             rw [hκ]
             push_cast
             rw [div_mul_eq_mul_div, div_le_div_iff_of_pos_right (by positivity)]
-            exact mul_le_mul_of_nonneg_left (pow_le_pow_left₀ hΨ2 hP2 8) (by unfold κQ; positivity)
-    have hmin : avgN (gS (o.c1 : ℝ)) n 0 ≤ ENNReal.ofReal ((gBound H o n : ℚ) : ℝ) := by
+            exact mul_le_mul_of_nonneg_left (pow_le_pow_left₀ hΨ2 hP2 forestCoords) (by unfold κQ; positivity)
+    have hmin : avgN (gS (o.c1 : ℝ)) n 0 ≤ ENNReal.ofReal ((gBound H forestCoords o n : ℚ) : ℝ) := by
       unfold gBound
-      rcases min_choice (κQ H * P1tab.getD n 0 ^ 8) (κQ H ^ 2 * P2tab.getD n 0 ^ 8 / (4 * o.c1)) with h | h <;>
+      rcases min_choice (κQ H * P1tab.getD n 0 ^ forestCoords) (κQ H ^ 2 * P2tab.getD n 0 ^ forestCoords / (4 * o.c1)) with h | h <;>
         rw [h]
       · exact hlin
       · exact hsq
@@ -177,7 +179,7 @@ theorem avgN_gS_le {H b : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) {
     rw [hgl, show t.n1 + 1 - 1 = t.n1 by omega] at h
     exact_mod_cast le_trans hgend h
 
-theorem opt_exp_le {H b : ℕ} {t : PoisT} {o : OptF} (ho : checkOptF H b t o = true) :
+theorem opt_exp_le {H b T : ℕ} {t : PoisT} {o : OptF} (ho : checkOptF H b T t o = true) :
     Real.exp ((o.θ : ℝ) * o.c1) ≤ (o.eC : ℝ) := by
   obtain ⟨hc1, hθ, -, hs, heC, -⟩ := checkOptF_parts ho
   have h := exp_le_expUp (o.θ * o.c1) o.s t.P (by positivity) hs
@@ -186,8 +188,10 @@ theorem opt_exp_le {H b : ℕ} {t : PoisT} {o : OptF} (ho : checkOptF H b t o = 
   linarith
 
 /-- **The Chernoff factor is dominated by `1 + h̄`.** -/
-theorem avgN_hS_le {H b : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) {t : PoisT} {o : OptF} (ho : checkOptF H b t o = true) (n : ℕ) :
+theorem avgN_hS_le {H b T : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) (hT : forestCoords = T)
+    {t : PoisT} {o : OptF} (ho : checkOptF H b T t o = true) (n : ℕ) :
     avgN (hS (o.c1 : ℝ) (o.θ : ℝ)) n 0 ≤ 1 + ENNReal.ofReal (leafQ o.ht o.Jh n : ℝ) := by
+  subst hT
   obtain ⟨hc1, hθ, -, hs, heC, hA2, h150, -, hhl, -, hlh, -, hhb, -, hhend, -⟩ := checkOptF_parts ho
   have hc1' : (0 : ℝ) < (o.c1 : ℝ) := by exact_mod_cast hc1
   have hθ' : (0 : ℝ) < (o.θ : ℝ) := by exact_mod_cast hθ
@@ -222,12 +226,12 @@ theorem avgN_hS_le {H b : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) {
       rw [hA2r]
       exact div_le_div_of_nonneg_right (by linarith) (by positivity)
     have hquad : avgN (hS (o.c1 : ℝ) (o.θ : ℝ)) n 0 ≤
-        1 + ENNReal.ofReal ((o.θ * κQ H * P1tab.getD n 0 ^ 8 + o.A2 * κQ H ^ 2 * P2tab.getD n 0 ^ 8 : ℚ) : ℝ) := by
+        1 + ENNReal.ofReal ((o.θ * κQ H * P1tab.getD n 0 ^ forestCoords + o.A2 * κQ H ^ 2 * P2tab.getD n 0 ^ forestCoords : ℚ) : ℝ) := by
       calc avgN (hS (o.c1 : ℝ) (o.θ : ℝ)) n 0 ≤ avgN (fun Ms => 1 + ENNReal.ofReal ((o.θ : ℝ) * κE.toReal) * yM Ms +
             ENNReal.ofReal (A2r * κE.toReal ^ 2) * yM Ms ^ 2) n 0 :=
             avgN_mono (fun Ms => hS_le_quad _ _ hc1' hθ' Ms) n 0
-        _ = 1 + ENNReal.ofReal ((o.θ : ℝ) * κE.toReal) * ENNReal.ofReal (Ψ1R n) ^ 8 +
-            ENNReal.ofReal (A2r * κE.toReal ^ 2) * ENNReal.ofReal (Ψ2R n) ^ 8 := by
+        _ = 1 + ENNReal.ofReal ((o.θ : ℝ) * κE.toReal) * ENNReal.ofReal (Ψ1R n) ^ forestCoords +
+            ENNReal.ofReal (A2r * κE.toReal ^ 2) * ENNReal.ofReal (Ψ2R n) ^ forestCoords := by
             rw [avgN_add, avgN_add, avgN_const, avgN_const_mul, avgN_const_mul, avgN_yM, avgN_yM_sq]
         _ ≤ _ := by
             rw [add_assoc]
@@ -237,19 +241,19 @@ theorem avgN_hS_le {H b : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) {
             apply ENNReal.ofReal_le_ofReal
             rw [hκ]
             push_cast
-            have h1 := pow_le_pow_left₀ hΨ1 hP1 8
-            have h2 := pow_le_pow_left₀ hΨ2 hP2 8
-            have hP20 : (0 : ℝ) ≤ Ψ2R n ^ 8 := by positivity
+            have h1 := pow_le_pow_left₀ hΨ1 hP1 forestCoords
+            have h2 := pow_le_pow_left₀ hΨ2 hP2 forestCoords
+            have hP20 : (0 : ℝ) ≤ Ψ2R n ^ forestCoords := by positivity
             apply add_le_add
             · rw [mul_assoc, mul_assoc]
               exact mul_le_mul_of_nonneg_left (mul_le_mul_of_nonneg_left h1 hκ0) hθ'.le
-            · calc A2r * (κQ H : ℝ) ^ 2 * Ψ2R n ^ 8 ≤ (o.A2 : ℝ) * (κQ H : ℝ) ^ 2 * Ψ2R n ^ 8 := by gcongr
+            · calc A2r * (κQ H : ℝ) ^ 2 * Ψ2R n ^ forestCoords ≤ (o.A2 : ℝ) * (κQ H : ℝ) ^ 2 * Ψ2R n ^ forestCoords := by gcongr
                 _ ≤ _ := by
                     have hA20 : (0 : ℝ) ≤ (o.A2 : ℝ) := le_trans hA2r0 hA2le
                     gcongr
-    have hmin : avgN (hS (o.c1 : ℝ) (o.θ : ℝ)) n 0 ≤ 1 + ENNReal.ofReal ((hBound H o n : ℚ) : ℝ) := by
+    have hmin : avgN (hS (o.c1 : ℝ) (o.θ : ℝ)) n 0 ≤ 1 + ENNReal.ofReal ((hBound H forestCoords o n : ℚ) : ℝ) := by
       unfold hBound
-      rcases min_choice (o.eC - 1) (o.θ * κQ H * P1tab.getD n 0 ^ 8 + o.A2 * κQ H ^ 2 * P2tab.getD n 0 ^ 8) with h | h <;>
+      rcases min_choice (o.eC - 1) (o.θ * κQ H * P1tab.getD n 0 ^ forestCoords + o.A2 * κQ H ^ 2 * P2tab.getD n 0 ^ forestCoords) with h | h <;>
         rw [h]
       · exact hcap
       · exact hquad
@@ -275,8 +279,8 @@ theorem pref_le (θ cthr : ℚ) (J P : ℕ) (hθ : 0 < θ) (hc : 0 ≤ cthr) :
 
 /-- **One option bounds the forest H-term**: `H ≤ B` whenever the rate `N / 2^b + q λ w / 2^b` is
 below the table rate and the base `b0` is at least the threshold `cthr`. -/
-theorem hTermO_le_optF {H b : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) (t : PoisT) (o : OptF) (ht : checkPT t = true)
-    (ho : checkOptF H b t o = true) (w lam : ℝ≥0∞) (hw : w ≤ 1) (hlam : lam ≤ 1) (N q : ℕ)
+theorem hTermO_le_optF {H b T : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = b) (hT : forestCoords = T)
+    (t : PoisT) (o : OptF) (ht : checkPT t = true) (ho : checkOptF H b T t o = true) (w lam : ℝ≥0∞) (hw : w ≤ 1) (hlam : lam ≤ 1) (N q : ℕ)
     (hrate : (N : ℝ) / 2 ^ b + (q : ℝ) * (lam * w).toReal / 2 ^ b ≤ (t.mu : ℝ))
     (b0 : ℝ≥0∞) (hb0 : ENNReal.ofReal (o.cthr : ℝ) ≤ b0) :
     hTermO (Finset.univ : Finset View) w lam N q (ForestPotential.excess b0) ≤ ENNReal.ofReal (o.B : ℝ) := by
@@ -307,7 +311,7 @@ theorem hTermO_le_optF {H b : ℕ} (hH : totalHeight = H) (hb : subtreeHeight = 
       _ ≤ _ := hrate
   have hmain := hTermO_forest_le w lam hw hlam N q b0 (o.cthr : ℝ) (o.c1 : ℝ) (o.θ : ℝ) hb0 hθ'
     (fun n => ENNReal.ofReal (leafQ o.gt o.Jg n : ℝ)) (fun n => 1 + ENNReal.ofReal (leafQ o.ht o.Jh n : ℝ))
-    (leaf_sepGood hlg) (SepGood.one_add (leaf_sepGood hlh)) (avgN_gS_le hH hb ho) (avgN_hS_le hH hb ho) α γ hα hγ μ hμ
+    (leaf_sepGood hlg) (SepGood.one_add (leaf_sepGood hlh)) (avgN_gS_le hH hb hT ho) (avgN_hS_le hH hb hT ho) α γ hα hγ μ hμ
   rw [poisMean_one_add] at hmain
   have hg := poisMean_leaf_le ht hlg hgl
   have hh := poisMean_leaf_le ht hlh hhl

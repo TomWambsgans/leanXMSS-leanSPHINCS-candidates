@@ -11,11 +11,12 @@ height `h` of which the key keeps a subtree of `2^b` leaves (`numLayers = 1`, `b
 one height (`lowerHeight`, at least 6) and whose key builds the top layer only (`b = h`). The few-time signature
 under every bottom leaf is a **two-level WOTS forest**:
 
-* 8 independent coordinates; a coordinate is a top Merkle tree of height 4 over 16 super-children,
+* `T = forestCoords` independent coordinates (8; 6 and 7 for the uniform keys of `2^24` and `2^26`);
+  a coordinate is a top Merkle tree of height 4 over 16 super-children,
   hashed up to level 3 only: its two level-3 nodes `t_c[0]`, `t_c[1]` are not hashed into a root. The
-  forest key is the sixteen nodes `t_0[0], t_0[1], ..., t_7[0], t_7[1]` themselves, the message the
+  forest key is the `2T` nodes `t_0[0], t_0[1], ..., t_{T-1}[0], t_{T-1}[1]` themselves, the message the
   bottom WOTS+C key signs: no hash folds them, and the WOTS+C encoding absorbs them with its counter,
-  `Th(enc(e), t_0[0] || t_0[1] || ... || t_7[0] || t_7[1] || ctr)`;
+  `Th(enc(e), t_0[0] || t_0[1] || ... || t_{T-1}[0] || t_{T-1}[1] || ctr)`;
 * a sub-tree is a Merkle tree of height 3 over 8 children, hashed up to level 2 only; super-child `s`
   is `Th(super(idx, c, s), m_0[0] || m_0[1] || m_1[0] || m_1[1])` where `m_j[0]`, `m_j[1]` are the two
   level-2 nodes of sub-tree `j`;
@@ -25,10 +26,10 @@ under every bottom leaf is a **two-level WOTS forest**:
 * a codeword is a deficit vector `d ∈ {0..4}^6` with `Σ d_i = 5` (246 of them); `lut` is a fixed list
   of 256 of them (`codewordCodes`): the codewords sorted by decreasing `Σ d_i²`, then
   lexicographically, entry `t` being codeword number `t mod 214`;
-* one digest call gives `h + 8 · 26` bits. The first 16 bytes are the 16 codeword indices (byte
-  `2c + j` for sub-tree `j` of coordinate `c`); then, from bit 128, the 16 children (3 bits each, in
-  the order `2c + j`), the 8 super-children (4 bits each, from bit 176) and the index (`h` bits, from
-  bit 208). No field lies across two 64-bit words;
+* one digest call gives `h + 26 T` bits. The first `2T` bytes are the `2T` codeword indices (byte
+  `2c + j` for sub-tree `j` of coordinate `c`); then, from bit `16 T`, the `2T` children (3 bits each, in
+  the order `2c + j`), the `T` super-children (4 bits each, from bit `22 T`) and the index (`h` bits, from
+  bit `26 T`). With `T = 8` (bits 128, 176, 208) no field lies across two 64-bit words;
 * an opening reveals, per coordinate and sub-tree, `x_{i, 4 - d_i}` for the 6 chains and the 3 auth
   nodes of the sub-tree, then the 4 auth nodes of the top tree. The last auth node of a tree is its
   other top node: the verifier folds all levels but the last and hashes the two top nodes, in index
@@ -83,7 +84,12 @@ class Params where
   lowerHeight : Nat
   subtreeHeight : Nat
   signatureLimit : Nat
+  /-- The number of coordinates of the forest (8, or 6 and 7 for the uniform keys of `2^24` and `2^26`). -/
+  forestCoords : Nat
   numLayers_pos : 0 < numLayers
+  forestCoords_pos : 0 < forestCoords
+  /-- The digest (`h + 26 · forestCoords` bits) fits one call, and a coordinate fits its address fields. -/
+  forestCoords_le : forestCoords ≤ 8
   lowerHeight_ge : 6 ≤ lowerHeight
   /-- The top layer is at least as tall as the others. -/
   lower_le : lowerHeight * numLayers ≤ totalHeight
@@ -93,19 +99,23 @@ class Params where
   below_le : lowerHeight * (numLayers - 1) ≤ subtreeHeight
   subtreeHeight_le : subtreeHeight ≤ totalHeight
 
-export Params (totalHeight numLayers lowerHeight subtreeHeight signatureLimit)
+export Params (totalHeight numLayers lowerHeight subtreeHeight signatureLimit forestCoords)
 
 /-- A **pruned key** (`numLayers = 1`): one tree of height `h` whose key generation builds the
 subtree of height `b` that the public parameter places (`b = h`: the **full key**), for at most `N`
-signatures. With one layer `lowerHeight` is not used; it is set to 6. -/
-abbrev Params.pruned (h b N : Nat) (hh : h ≤ 28 := by decide) (h6 : 6 ≤ h := by decide)
-    (hb : b ≤ h := by decide) : Params where
+signatures, with a forest of `T` coordinates (8 by default). With one layer `lowerHeight` is not used;
+it is set to 6. -/
+abbrev Params.pruned (h b N : Nat) (T : Nat := 8) (hh : h ≤ 28 := by decide) (h6 : 6 ≤ h := by decide)
+    (hb : b ≤ h := by decide) (hT : 0 < T := by decide) (hT8 : T ≤ 8 := by decide) : Params where
   totalHeight := h
   numLayers := 1
   lowerHeight := 6
   subtreeHeight := b
   signatureLimit := N
+  forestCoords := T
   numLayers_pos := Nat.one_pos
+  forestCoords_pos := hT
+  forestCoords_le := hT8
   lowerHeight_ge := Nat.le_refl 6
   lower_le := h6
   totalHeight_le := hh
@@ -114,15 +124,19 @@ abbrev Params.pruned (h b N : Nat) (hh : h ≤ 28 := by decide) (h6 : 6 ≤ h :=
 
 /-- A **layered key**: a hypertree of `d` layers and height `h` whose layers below the top have
 height `ℓ` (the top layer has the rest, `h - ℓ (d - 1)`); key generation builds the whole top layer
-(`subtreeHeight = h`). At most `N` signatures. -/
-abbrev Params.layered (h d ℓ N : Nat) (hd : 0 < d := by decide) (hℓ : 6 ≤ ℓ := by decide)
-    (hle : ℓ * d ≤ h := by decide) (hh : h ≤ 28 := by decide) : Params where
+(`subtreeHeight = h`). At most `N` signatures, with a forest of `T` coordinates (8 by default). -/
+abbrev Params.layered (h d ℓ N : Nat) (T : Nat := 8) (hd : 0 < d := by decide) (hℓ : 6 ≤ ℓ := by decide)
+    (hle : ℓ * d ≤ h := by decide) (hh : h ≤ 28 := by decide) (hT : 0 < T := by decide)
+    (hT8 : T ≤ 8 := by decide) : Params where
   totalHeight := h
   numLayers := d
   lowerHeight := ℓ
   subtreeHeight := h
   signatureLimit := N
+  forestCoords := T
   numLayers_pos := hd
+  forestCoords_pos := hT
+  forestCoords_le := hT8
   lowerHeight_ge := hℓ
   lower_le := hle
   totalHeight_le := hh
@@ -160,8 +174,6 @@ abbrev HashInput := List UInt8
 
 /-! ### Forest parameters and types -/
 
-/-- Number of coordinates. -/
-def forestCoords : Nat := 8
 /-- Height of a coordinate's top tree (16 super-children). -/
 def topHeight : Nat := 4
 /-- Height of a sub-tree (8 children). -/
@@ -241,17 +253,17 @@ def codeDigit (code : Nat) (i : FChain) : FPos :=
 /-- `lut t`: entry `t` of the table. -/
 def lut (t : LutIdx) : Codeword := codeDigit (codewordCodes.getD t.val 0)
 
-/-! ### The message digest: one call, `h + 208` bits -/
+/-! ### The message digest: one call, `h + 26 T` bits -/
 
 /-- Digest bits of one coordinate: super-child 4, and child 3 and codeword 8 for each sub-tree. -/
 def coordBits : Nat := 26
 
-/-- The message digest is `h + 8 · 26` bits: an index and the fields of 8 coordinates. -/
+/-- The message digest is `h + 26 T` bits: an index and the fields of the `T` coordinates. -/
 def messageDigestBits : Nat := totalHeight + forestCoords * coordBits
 
 abbrev MessageDigest := BitVec messageDigestBits
 
-/-- The first `h + 208` bits of the single digest call. -/
+/-- The first `h + 26 T` bits of the single digest call. -/
 def truncateMessageDigest (first : HashOutput) : MessageDigest :=
   first.extractLsb' 0 messageDigestBits
 
@@ -264,7 +276,7 @@ structure CoordMark where
 deriving DecidableEq
 
 /-- The forest key of an instance: the two level-3 nodes of every tree, `(t_c[0], t_c[1])`. It is
-not hashed: the WOTS+C encoding absorbs the sixteen nodes (`Concrete.encode`). -/
+not hashed: the WOTS+C encoding absorbs the `2T` nodes (`Concrete.encode`). -/
 abbrev ForestKey := Coord → Digest × Digest
 
 /-- `pk = (root, P)`. -/
@@ -293,7 +305,7 @@ structure CoordOpening where
 deriving DecidableEq
 
 /-- The randomizer, the forest opening, and the WOTS+C signature with its path at every layer:
-`2832 + 1028 d + 16 h` bytes (`Layout.signature_size`). -/
+`16 + 352 T + 1028 d + 16 h` bytes (`Layout.signature_size`). -/
 structure Signature where
   randomness : Randomness
   forest : Coord → CoordOpening
@@ -569,18 +581,18 @@ def leafHash (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (lea
 def nodePayload (left right : Digest) : HashInput :=
   bytesLE 16 left ++ bytesLE 16 right
 
-/-- `t_0[0] || t_0[1] || ... || t_7[0] || t_7[1]`, the forest key as bytes: the level-3 nodes of the 8
-top trees. -/
+/-- `t_0[0] || t_0[1] || ... || t_{T-1}[0] || t_{T-1}[1]`, the forest key as bytes: the level-3 nodes of
+the `T` top trees. -/
 def rootsPayload (tops : ForestKey) : HashInput :=
   (List.ofFn tops).flatMap fun pair => nodePayload pair.1 pair.2
 
-/-- The message a layer's WOTS+C key signs, as bytes: the forest key's sixteen nodes at the bottom
+/-- The message a layer's WOTS+C key signs, as bytes: the forest key's `2T` nodes at the bottom
 layer (`rootsPayload`), the 16-byte root of the tree below at a layer above. -/
 def rootPayload (root : Digest) : HashInput := bytesLE 16 root
 
 /-- `Enc(P, e, M, c)`: hash the message, then the counter, under the leaf's encoding tweak, and
 decode. There is no message hash: the counter falls in the last block of this one
-(`P || A || K || c`, 292 bytes, at the bottom layer; `P || A || root || c`, 52 bytes, above). -/
+(`P || A || K || c`, `36 + 32 T` bytes, at the bottom layer; `P || A || root || c`, 52 bytes, above). -/
 def encode (parameter : PublicParameter) (lay : Layer) (tree : TreeIndex) (leaf : LeafIndex)
     (message : HashInput) (counter : Counter) : m (Option Encoding) := do
   let digest ← tweakableHash parameter (.encoding lay tree leaf)
@@ -715,7 +727,7 @@ def coordRecover (parameter : PublicParameter) (index : Index) (c : Coord) (mark
   let node ← topFold parameter index c mark.super opening.top (topHeight - 1) super
   return orderTops (mark.super.val.testBit (topHeight - 1)) node (opening.top topTopLevel)
 
-/-- `Fts.recover`: the forest key an opening reaches, the sixteen level-3 nodes. A top tree has no
+/-- `Fts.recover`: the forest key an opening reaches, the `2T` level-3 nodes. A top tree has no
 root hash, and the key has no hash: the WOTS+C encoding absorbs it. -/
 def forestRecover (parameter : PublicParameter) (index : Index) (marks : Coord → CoordMark)
     (opening : Coord → CoordOpening) : m ForestKey :=
@@ -734,12 +746,12 @@ def messageDigestCall (parameter : PublicParameter) (root : Digest) (message : M
     (randomness : Randomness) : m HashOutput :=
   oracleHash (tweakableHashInput parameter .message (messageDigestPayload root message randomness))
 
-/-- Bit offset of the index. The last 16 bytes carry the 16 children (3 bits each), then the 8
-super-children (4 bits each), then the index (`h` bits): `48 + 32 = 80` bits precede it, and with
-that order no field lies across two 64-bit words. -/
-def indexOffset : Nat := 128 + 2 * forestCoords * subHeight + forestCoords * topHeight
+/-- Bit offset of the index. After the `2T` codeword bytes come the `2T` children (3 bits each), then
+the `T` super-children (4 bits each), then the index (`h` bits), from bit `26 T` (208 for `T = 8`,
+where no field lies across two 64-bit words). -/
+def indexOffset : Nat := 16 * forestCoords + 2 * forestCoords * subHeight + forestCoords * topHeight
 
-/-- `idx`, the `h` bits of the digest from bit 208. -/
+/-- `idx`, the `h` bits of the digest from bit `26 T`. -/
 def digestIndex (digest : MessageDigest) : Index :=
   (digest.extractLsb' indexOffset totalHeight).toFin
 
@@ -747,7 +759,7 @@ def digestIndex (digest : MessageDigest) : Index :=
 def blockIndex (first : HashOutput) : Index :=
   (first.extractLsb' indexOffset totalHeight).toFin
 
-/-- `Digest(P, m, rho)` (`message_digest`): the single call, truncated to `h + 208` bits. The root is not
+/-- `Digest(P, m, rho)` (`message_digest`): the single call, truncated to `h + 26 T` bits. The root is not
 an input of the hash. -/
 def messageDigest (parameter : PublicParameter) (root : Digest) (message : Message)
     (randomness : Randomness) : m MessageDigest := do
@@ -757,12 +769,12 @@ def messageDigest (parameter : PublicParameter) (root : Digest) (message : Messa
 /-- Bit offset of the codeword index of sub-tree `j` of coordinate `c`: byte `2c + j` of the digest. -/
 def wordOffset (c : Coord) (j : SubIdx) : Nat := 8 * (2 * c.val + j.val)
 
-/-- Bit offset of coordinate `c`'s super-child (4 bits), after the children: `176 + 4 c`. -/
-def superOffset (c : Coord) : Nat := 128 + 2 * forestCoords * subHeight + 4 * c.val
+/-- Bit offset of coordinate `c`'s super-child (4 bits), after the children: `22 T + 4 c`. -/
+def superOffset (c : Coord) : Nat := 16 * forestCoords + 2 * forestCoords * subHeight + 4 * c.val
 
-/-- Bit offset of the child of sub-tree `j` of coordinate `c` (3 bits), first in the last 16 bytes:
-`128 + 3 (2 c + j)`. -/
-def childOffset (c : Coord) (j : SubIdx) : Nat := 128 + 3 * (2 * c.val + j.val)
+/-- Bit offset of the child of sub-tree `j` of coordinate `c` (3 bits), after the codeword bytes:
+`16 T + 3 (2 c + j)`. -/
+def childOffset (c : Coord) (j : SubIdx) : Nat := 16 * forestCoords + 3 * (2 * c.val + j.val)
 
 /-- The coordinate fields of a digest. -/
 def digestMarks (digest : MessageDigest) : Coord → CoordMark := fun c =>
@@ -1113,7 +1125,7 @@ def signDigestLoop (secretKey : SecretKey) (message : Message) (step : Randomnes
 
 /-- `Sign`: derive the randomizer base `R0` and the step `delta` of the message (one hash), scan
 `R0, R0 + delta, ...` into the kept subtree, compute the digest, open the forest, and at every layer
-sign the message of the layer below (the forest key's sixteen level-3 nodes at the bottom) with
+sign the message of the layer below (the forest key's `2T` level-3 nodes at the bottom) with
 WOTS+C and attach the path. -/
 def sign (secretKey : SecretKey) (message : Message) : m (Option Signature) := do
   let walk ← deriveRandomizer secretKey.parameter secretKey.seed message

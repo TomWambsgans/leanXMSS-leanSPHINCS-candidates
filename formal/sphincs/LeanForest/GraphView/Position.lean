@@ -5,7 +5,7 @@ b7a107256. The position type deliberately overapproximates the single retained s
 pruning selects the positions that are actually prepared. Forest positions are the chain steps,
 the WOTS-key leaves, the subtree nodes, the tree leaves, the tree nodes and the key (`roots`) of
 every instance. A tree leaf is the hash of the four level-2 nodes of its two subtrees and the key the
-hash of the sixteen level-3 nodes of the trees: the root of a subtree (`subNode` at the last level)
+hash of the `2T` level-3 nodes of the trees: the root of a subtree (`subNode` at the last level)
 and the root of a tree (`topNode` at the last level) are positions that no other position and no
 algorithm reads. -/
 
@@ -102,7 +102,8 @@ theorem hashFields_injective {left right : HashDomain} (hl : HashDomain.InRange 
     have hidx : index = index' :=
       Fin.ext (ofNat_inj_of_lt (index_lt_two_pow_32 _) (index_lt_two_pow_32 _) hindex)
     have := c.isLt; have := s.isLt; have := c'.isLt; have := s'.isLt
-    simp only [forestCoords, topHeight] at *
+    have := Params.forestCoords_le
+    simp only [topHeight] at *
     have hp := nat_eq_of_ofNat (bound := 136) (by omega) (by omega) (by decide) hpos
     have hc : c = c' := Fin.ext (by omega)
     have hs : s = s' := Fin.ext (by omega)
@@ -113,7 +114,8 @@ theorem hashFields_injective {left right : HashDomain} (hl : HashDomain.InRange 
       Fin.ext (ofNat_inj_of_lt (index_lt_two_pow_32 _) (index_lt_two_pow_32 _) hindex)
     have := c.isLt; have := node.isLt; have := c'.isLt; have := node'.isLt
     have := level.isLt; have := level'.isLt
-    simp only [forestCoords, topHeight] at *
+    have := Params.forestCoords_le
+    simp only [topHeight] at *
     have hp := nat_eq_of_ofNat (bound := 1024) (by omega) (by omega) (by decide) hpos
     have hc : c = c' := Fin.ext (by omega)
     have hn : node = node' := Fin.ext (by omega)

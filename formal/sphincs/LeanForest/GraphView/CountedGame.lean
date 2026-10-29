@@ -172,7 +172,7 @@ noncomputable def finishCostSource (parameter : PublicParameter) (data : PublicD
     (message : Message) (randomness : Randomness) : OracleComp CostSpec (Option Signature) := do
   let digest ← liftM (messageDigest parameter data.root message randomness :
     OracleComp HashSpec MessageDigest)
-  HiddenCost.tick 58960
+  HiddenCost.tick (7370 * forestCoords)
   let index := digestIndex digest
   let some found ← sequenceDep (α := fun _ => Counter × Encoding) (layerCostSearch parameter data index)
     | return none

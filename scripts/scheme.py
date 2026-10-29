@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Sizes and compression counts of the leanSphincs candidate in its 60 configurations (leanSPHINCS.tex).
+"""Sizes and compression counts of the leanSphincs candidate in its configurations (leanSPHINCS.tex).
 
-Four toggles: the height h (20, 22, 24, 26, 28: about 2^24 to 2^32 signatures), the shape
-(pruned: one tree of height h of which the key builds a kept subtree of 2^b leaves, b = h being the
-full key, the signer grinding the randomizer into it; layered: a hypertree whose key builds the top
-layer only), the hash and the few-time signature (FTS): a two-level WOTS forest or FORS. Every call
+Four toggles: the lifetime (about 2^24, 2^26, ..., 2^32 signatures), the shape (pruned: one tree of height
+h = log2(lifetime) - 4 of which the key builds a kept subtree of 2^b leaves, b = h being the full key, the
+signer grinding the randomizer into it; layered: a hypertree of height 24 to 28 whose key builds the top layer
+only, UNIFORM), the hash and the few-time signature (FTS): a two-level WOTS forest or FORS. Every call
 hashes P (16 B) || address (16 B) || payload, each hash with its own layout:
 
   Keccak-256  P inline; l bytes cost floor(l / 136) + 1 Keccak-f permutations.
@@ -24,8 +24,10 @@ The forest's sizes and verification costs are also pinned by the Rust tests (cra
 `Config::verify_compressions`).
 
 The FORS FTS has k trees of height a and no root hash (the WOTS+C key signs the 2k nodes below
-the roots): a = 10 and k = 24 in every configuration, so that verification does not depend on the pruning.
-24 is the fewest trees whose proved limit for the full key still reaches 2^(h+4) signatures.
+the roots): k = 24, a = 10 for every pruned key, the fewest trees whose proved limit for the full key still
+reaches 2^(h+4) signatures, so that verification does not depend on the pruning. A layered key is at least
+24 high: at 2^24 and 2^26 signatures its instances are used fewer times, and it takes a lighter FTS (UNIFORM):
+FORS 19x9 and 23x9, a forest of 6 and 7 coordinates.
 """
 
 import argparse
@@ -42,9 +44,12 @@ from fors_security import forgery_bits_exact
 
 N = 16  # bytes per hash value
 P_LEN, ADDR = 16, 16
-HEIGHTS = (20, 22, 24, 26, 28)
-LAYERED = {20: (8, 6, 6), 22: (10, 6, 6), 24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}  # top layer first
+LIFETIMES = (24, 26, 28, 30, 32)  # log2 of the nominal lifetime
+HEIGHTS = (20, 22, 24, 26, 28)  # the pruned key of each lifetime: h = L - 4
+LAYERED = {24: (10, 7, 7), 26: (10, 8, 8), 28: (10, 9, 9)}  # top layer first
 PRUNED = (8, 10, 12, 13, 14, 20)  # kept subtree heights b < h with a certificate, besides b = h
+# The layered key of each lifetime: (height, forest coordinates, FORS (k, a)).
+UNIFORM = {24: (24, 6, (19, 9)), 26: (24, 7, (23, 9)), 28: (24, 8, (24, 10)), 30: (26, 8, (24, 10)), 32: (28, 8, (24, 10))}
 
 
 class Hash:
@@ -124,28 +129,28 @@ FORS_TREES = 24
 
 
 def fors(h, shape, b):
-    """(k, a) of the FORS FTS, the same in every configuration (see above)."""
+    """(k, a) of the FORS FTS of a pruned key, and of the layered keys from 2^28 on (UNIFORM has the others)."""
     return FORS_TREES, FORS_HEIGHT
 
 
-def fts_bytes(variant, h, shape, b):
+def fts_bytes(variant, h, shape, b, coords=COORDS, ka=None):
     if variant == "forest":
-        return FOREST_BYTES
-    k, a = fors(h, shape, b)
+        return coords * VALUES * N
+    k, a = ka or fors(h, shape, b)
     return k * (1 + a) * N
 
 
-def size(h, shape, variant="forest", b=None):
-    return 16 + fts_bytes(variant, h, shape, b) + len(layers(h, shape)) * LAYER_BYTES + h * N
+def size(h, shape, variant="forest", b=None, coords=COORDS, ka=None):
+    return 16 + fts_bytes(variant, h, shape, b, coords, ka) + len(layers(h, shape)) * LAYER_BYTES + h * N
 
 
 class Costs:
     """Per-call and per-component compressions of one hash."""
 
-    def __init__(self, H, fts=None):
-        """`fts` is None for the forest, or the (k, a) of FORS."""
+    def __init__(self, H, fts=None, coords=COORDS):
+        """`fts` is None for the forest (of `coords` coordinates), or the (k, a) of FORS."""
         c = H.call
-        self.H, self.fts = H, fts
+        self.H, self.fts, self.coords = H, fts, coords
         self.derive, self.step, self.node = c(32), c(N), c(2 * N)
         self.wots_pk, self.child_leaf, self.super_hash = c(V * N), c(CHAINS * N), c(SUBS * 2 * N)
         self.rnd = c(32 + 32)  # S || m: R_0 and delta
@@ -155,14 +160,14 @@ class Costs:
         wots_key = CHAINS // 2 * self.derive + CHAINS * STEPS * self.step + self.child_leaf
         subtree = CHILDREN * wots_key + (CHILDREN - 2) * self.node
         coord = SUPERS * (SUBS * subtree + self.super_hash) + (SUPERS - 2) * self.node
-        self.forest_sign = COORDS * coord
+        self.forest_sign = coords * coord
         self.per_coord = (SUBS * (DIGIT_SUM * self.step + self.child_leaf + (SUB_PATH - 1) * self.node)
                           + self.super_hash + (TOP_PATH - 1) * self.node)
         if fts is None:
-            self.fts_sign, self.fts_verify, self.fts_nodes = self.forest_sign, COORDS * self.per_coord, COORDS * 2
-            # opening the forest walks again the chains of the 16 WOTS keys it opens from their secrets, up to below
+            self.fts_sign, self.fts_verify, self.fts_nodes = self.forest_sign, coords * self.per_coord, coords * 2
+            # opening the forest walks again the chains of the 2 * coords WOTS keys it opens from their secrets, up to below
             # the tops (as the Rust signer does)
-            self.fts_open = COORDS * SUBS * (CHAINS * STEPS - DIGIT_SUM) * self.step
+            self.fts_open = coords * SUBS * (CHAINS * STEPS - DIGIT_SUM) * self.step
         else:
             k, a = fts
             self.fts_sign = k * (2**a // 2 * self.derive + 2**a * self.step + (2**a - 2) * self.node)
@@ -170,7 +175,7 @@ class Costs:
 
     def digest_calls(self, h):
         """Hash calls of the digest: the index and the FTS fields, 256 bits per call."""
-        bits = h + (COORDS * 26 if self.fts is None else self.fts[0] * self.fts[1])
+        bits = h + (self.coords * 26 if self.fts is None else self.fts[0] * self.fts[1])
         return -(-bits // 256)
 
     def encoding(self, message):
@@ -211,7 +216,7 @@ class Costs:
 
     def mpc_prep(self, h, shape):
         if self.fts is None:
-            fts = COORDS * SUPERS * SUBS * CHILDREN * CHAINS * STEPS * self.step
+            fts = self.coords * SUPERS * SUBS * CHILDREN * CHAINS * STEPS * self.step
         else:  # one hash per FORS leaf
             fts = self.fts[0] * 2 ** self.fts[1] * self.step
         lower = sum(2**hl * V * (Q - 1) * self.step for hl in layers(h, shape)[1:])
@@ -228,7 +233,7 @@ class Costs:
 
     def device_online(self):
         if self.fts is None:
-            opened = COORDS * SUBS * (CHAINS // 2 * self.derive + (CHAINS * STEPS - DIGIT_SUM) * self.step)
+            opened = self.coords * SUBS * (CHAINS // 2 * self.derive + (CHAINS * STEPS - DIGIT_SUM) * self.step)
         else:  # the k opened secrets
             opened = self.fts[0] * self.derive
         return opened + self.fts_verify + self.H.call(self.fts_nodes * N)  # and the hash of the FTS key
@@ -267,20 +272,21 @@ def fmt(x):
 
 
 def lifetimes(h, shape, b):
-    """(proved in Lean, cover attack), None when not certified."""
+    """(proved in Lean, cover attack) of a pruned forest key, None when not certified."""
     return fc.lifetime(h, shape, b), fc.attack(h, shape, b)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--hash", choices=[H.name for H in HASHES], nargs="+", default=[H.name for H in HASHES])
-    ap.add_argument("--h", type=int, nargs="+", default=list(HEIGHTS), choices=HEIGHTS)
+    ap.add_argument("--lt", type=int, nargs="+", default=list(LIFETIMES), choices=LIFETIMES, help="log2 lifetimes")
     ap.add_argument("--pruned", type=int, nargs="+", default=[12, 20], help="log2 kept leaves of pruned keys")
     ap.add_argument("--cache-kib", type=float, nargs="+", default=[16, 1024], help="signer cache sizes (KiB)")
     ap.add_argument("--table", action="store_true", help="one line per configuration: size, verification, lifetime")
     ap.add_argument("--json", action="store_true", help="every figure of the site, as JSON (site/data.json)")
     x = ap.parse_args()
     hashes = [H for H in HASHES if H.name in x.hash]
+    chosen = [c for c in configurations() if c[0] in x.lt and (c[2] == "layered" or c[3] == c[1] or c[3] in x.pruned)]
 
     if x.json:
         import json
@@ -288,19 +294,19 @@ def main():
         return
 
     if x.table:
-        print("hash        h  shape          size  verify  keygen    proved N   (cover attack)")
+        print("hash       2^L  h  shape                size  verify  keygen    proved N   (cover attack)")
         for H in hashes:
-            C = Costs(H)
-            for h in x.h:
-                for shape, b in [("pruned", h)] + [("pruned", bb) for bb in x.pruned if bb < h] + [("layered", None)]:
-                    proved, attack = lifetimes(h, shape, b)
-                    label = shape if shape == "layered" else ("full" if b == h else f"pruned {b}")
-                    life = "not certified" if proved is None else f"{proved:>11,} ({fmt(attack) if attack else '?'})"
-                    print(f"{H.name:<10} {h:>2}  {label:<10} {size(h, shape):>8,} {C.verify(h, shape):>7} "
-                          f"{fmt(C.keygen(h, shape, b)):>7}  {life}")
+            for L, h, shape, b, coords, ka in chosen:
+                C = Costs(H, None, coords)
+                n, attack = proved(fc, L, h, shape, b)
+                label = f"layered {coords} trees" if shape == "layered" else ("full" if b == h else f"pruned {b}")
+                life = "not certified" if n is None else f"{n:>11,} ({fmt(attack) if attack else '?'})"
+                print(f"{H.name:<10} {L:>2} {h:>2}  {label:<16} {size(h, shape, coords=coords):>8,} {C.verify(h, shape):>7} "
+                      f"{fmt(C.keygen(h, shape, b)):>7}  {life}")
         return
 
-    print(f"leanSphincs candidate: a two-level WOTS forest of {COORDS} coordinates under WOTS+C with {V} chains of "
+    print(f"leanSphincs candidate: a two-level WOTS forest of {COORDS} trees (fewer for the layered keys of "
+          f"2^24 and 2^26: 6 and 7 trees) under WOTS+C with {V} chains of "
           f"length {Q} and T={T}; {math.log2(n_sum(V, Q, T)):.2f} bits of valid encodings, expected "
           f"{1 / ALPHA:.0f} counters; costs in compressions (Keccak-f permutations for Keccak-256)")
     for H in hashes:
@@ -312,80 +318,87 @@ def main():
               f"({C.digest_fixed} once + {C.attempt} per attempt), encoding of the forest key {enc0} ({fixed0} once + "
               f"1 per counter), of a root {enc1}" + (", the block of P once per key" if H.per_key else ""))
         print(f"  forest: {C.per_coord} per coordinate to verify, {fmt(C.forest_sign)} per instance to sign")
-        for h in x.h:
-            for shape in ("pruned", "layered"):
-                ls = layers(h, shape)
-                bs = [h] + [bb for bb in x.pruned if bb < h] if shape == "pruned" else [None]
-                desc = "one tree" if shape == "pruned" else "layers " + "+".join(map(str, ls))
-                print(f"  h={h} {shape} ({desc}): signature {size(h, shape):,} B, verification {C.verify(h, shape)}")
-                for b in bs:
-                    proved, attack = lifetimes(h, shape, b)
-                    life = "not certified" if proved is None else f"lifetime {fmt(proved)} (cover attack {fmt(attack)})"
-                    signs = []
-                    for kib in x.cache_kib:
-                        base, grind, tree = C.sign(h, shape, b, int(kib * 1024))
-                        signs.append(f"{fmt(base + tree)} with {kib:g} KiB")
-                    label = "" if b is None else ("full key: " if b == h else f"pruned b={b}: ")
-                    print(f"    {label}{life}, keygen {fmt(C.keygen(h, shape, b))}, signing {', '.join(signs)}")
+        for L, h, shape, b, coords, ka in chosen:
+            C = Costs(H, None, coords)
+            if b == h:
+                desc = "one tree" if shape == "pruned" else "layers " + "+".join(map(str, layers(h, shape))) + f", {coords} coordinates"
+                print(f"  2^{L}, h={h} {shape} ({desc}): signature {size(h, shape, coords=coords):,} B, verification {C.verify(h, shape)}")
+            n, attack = proved(fc, L, h, shape, b)
+            life = "not certified" if n is None else f"lifetime {fmt(n)} (cover attack {fmt(attack)})"
+            signs = []
+            for kib in x.cache_kib:
+                base, grind, tree = C.sign(h, shape, b, int(kib * 1024))
+                signs.append(f"{fmt(base + tree)} with {kib:g} KiB")
+            label = "" if shape == "layered" else ("full key: " if b == h else f"pruned b={b}: ")
+            print(f"    {label}{life}, keygen {fmt(C.keygen(h, shape, b))}, signing {', '.join(signs)}")
 
     print()
-    threshold(x.h)
+    threshold(x.lt)
+
+
+def configurations():
+    """(L, h, shape, b, forest coordinates, FORS (k, a)) of every configuration, by lifetime 2^L."""
+    for L in LIFETIMES:
+        h = L - 4
+        for b in [h] + [bb for bb in PRUNED if bb < h]:
+            yield L, h, "pruned", b, COORDS, (FORS_TREES, FORS_HEIGHT)
+        hl, coords, ka = UNIFORM[L]
+        yield L, hl, "layered", hl, coords, ka
+
+
+def proved(fts, L, h, shape, b):
+    """(proved in Lean, cover attack) of the forest (fc) or FORS (vc), None when not certified."""
+    if shape == "layered":
+        return fts.uniform_lifetime(L), fts.uniform_attack(L)
+    return fts.lifetime(h, shape, b), fts.attack(h, shape, b)
 
 
 def site_data():
-    """Every configuration (height, shape, kept subtree, hash) with its figures, and the threshold and hardware-wallet
-    figures, for the site."""
+    """Every configuration (lifetime, shape, kept subtree, hash) with its figures, and the threshold and
+    hardware-wallet figures, for the site."""
     out = {"configs": [], "threshold": [], "wallet": {}}
     for H in HASHES:
-        C = Costs(H)
-        for h in HEIGHTS:
-            for shape in ("pruned", "layered"):
-                for b in ([h] + [bb for bb in PRUNED if bb < h] if shape == "pruned" else [h]):
-                    proved, attack = lifetimes(h, shape, b)
-                    k, a = fors(h, shape, b)
-                    CV = Costs(H, (k, a))
-                    signs, signs_v = {}, {}
-                    for kib in (16, 1024, 16 * 1024):
-                        base, grind, tree = C.sign(h, shape, b, kib * 1024)
-                        signs[str(kib)] = round(base + tree)
-                        base, grind, tree = CV.sign(h, shape, b, kib * 1024)
-                        signs_v[str(kib)] = round(base + tree)
-                    life_v = fors_log2_lifetime(h, h if shape == "layered" else b, a, k)
-                    out["configs"].append(dict(hash=H.name, h=h, shape=shape, b=b, layers=list(layers(h, shape)),
-                                               size=size(h, shape), verify=C.verify(h, shape),
-                                               keygen=round(C.keygen(h, shape, b)), sign=signs,
-                                               grind=round(2 ** (h - b)) if shape == "pruned" else 1,
-                                               lifetime=proved, attack=attack,
-                                               fors=dict(k=k, a=a, size=size(h, shape, "fors", b),
-                                                            verify=CV.verify(h, shape), sign=signs_v,
-                                                            lifetime=vc.lifetime(h, shape, b),
-                                                            attack=math.floor(2**life_v))))
+        for L, h, shape, b, coords, ka in configurations():
+            C, CV = Costs(H, None, coords), Costs(H, ka)
+            proved_f, attack_f = proved(fc, L, h, shape, b)
+            proved_v, attack_v = proved(vc, L, h, shape, b)
+            signs, signs_v = {}, {}
+            for kib in (16, 1024, 16 * 1024):
+                base, grind, tree = C.sign(h, shape, b, kib * 1024)
+                signs[str(kib)] = round(base + tree)
+                base, grind, tree = CV.sign(h, shape, b, kib * 1024)
+                signs_v[str(kib)] = round(base + tree)
+            out["configs"].append(dict(hash=H.name, lt=L, h=h, shape=shape, b=b, layers=list(layers(h, shape)),
+                                       coords=coords, size=size(h, shape, coords=coords), verify=C.verify(h, shape),
+                                       keygen=round(C.keygen(h, shape, b)), sign=signs,
+                                       grind=round(2 ** (h - b)) if shape == "pruned" else 1,
+                                       lifetime=proved_f, attack=attack_f,
+                                       fors=dict(k=ka[0], a=ka[1], size=size(h, shape, "fors", b, ka=ka),
+                                                 verify=CV.verify(h, shape), sign=signs_v,
+                                                 lifetime=proved_v, attack=attack_v)))
     for H in HASHES:
-        C = Costs(H)
         ands = ANDS[H.name]
-        for h in HEIGHTS:
-            for shape, b in [("pruned", bb) for bb in PRUNED if bb < h] + [("layered", h)]:
-                ls = layers(h, shape)
-                keygen, prep = C.mpc_keygen(h, shape, b), C.mpc_prep(h, shape)
-                # the hardware wallet computes the whole instance, and signs it with WOTS+C
-                lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
-                ledger = C.ledger_prep(h, shape, b)
-                CV = Costs(H, fors(h, shape, b))
-                prep_v = CV.mpc_prep(h, shape)
-                # the Ledger signs a pruned key with a 16 KiB cache: alone, or assisted from prepared instances
-                alone = [C.sign(h, shape, b, 16 * 1024), CV.sign(h, shape, b, 16 * 1024)]
-                alone = [base + tree for base, grind, tree in alone]
-                np_ = ledger_prepared(h, H.name, [C.device_online(), CV.device_online()], alone)
-                fors_th = dict(lifetime=vc.lifetime(h, shape, b),
-                               prep=round(prep_v), prep_mb=prep_v * ands * BITS_PER_AND / 8 / 1e6, prep_rounds=rounds(H.name, 1 if shape == "pruned" else Q - 1),
-                               ledger_prep=math.ceil(CV.ledger_prep(h, shape, b)), device_online=CV.device_online())
-                out["threshold"].append(dict(hash=H.name, h=h, shape=shape, b=b, lifetime=lifetimes(h, shape, b)[0],
-                                             keygen=round(keygen), prep=round(prep), grind=2**h // THRESHOLD_PREPARED,
-                                             and_depth=and_depth(H.name), keygen_rounds=rounds(H.name, Q - 1), prep_rounds=rounds(H.name, STEPS),
-                                             ledger_prep=math.ceil(ledger), device_online=C.device_online(),
-                                             ledger_prepared=np_, ledger_grind=2**h // np_,
-                                             keygen_gb=keygen * ands * BITS_PER_AND / 8 / 1e9,
-                                             prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6, fors=fors_th))
+        for L, h, shape, b, coords, ka in configurations():
+            if shape == "pruned" and b == h:
+                continue  # the full key is not for threshold signing
+            C, CV = Costs(H, None, coords), Costs(H, ka)
+            keygen, prep = C.mpc_keygen(h, shape, b), C.mpc_prep(h, shape)
+            ledger = C.ledger_prep(h, shape, b)
+            prep_v = CV.mpc_prep(h, shape)
+            # the Ledger signs with a 16 KiB cache: alone, or assisted from prepared instances
+            alone = [C.sign(h, shape, b, 16 * 1024), CV.sign(h, shape, b, 16 * 1024)]
+            alone = [base + tree for base, grind, tree in alone]
+            np_ = ledger_prepared(h, H.name, [C.device_online(), CV.device_online()], alone)
+            fors_th = dict(lifetime=proved(vc, L, h, shape, b)[0],
+                           prep=round(prep_v), prep_mb=prep_v * ands * BITS_PER_AND / 8 / 1e6, prep_rounds=rounds(H.name, 1 if shape == "pruned" else Q - 1),
+                           ledger_prep=math.ceil(CV.ledger_prep(h, shape, b)), device_online=CV.device_online())
+            out["threshold"].append(dict(hash=H.name, lt=L, h=h, shape=shape, b=b, lifetime=proved(fc, L, h, shape, b)[0],
+                                         keygen=round(keygen), prep=round(prep), grind=2**h // THRESHOLD_PREPARED,
+                                         and_depth=and_depth(H.name), keygen_rounds=rounds(H.name, Q - 1), prep_rounds=rounds(H.name, STEPS),
+                                         ledger_prep=math.ceil(ledger), device_online=C.device_online(),
+                                         ledger_prepared=np_, ledger_grind=2**h // np_,
+                                         keygen_gb=keygen * ands * BITS_PER_AND / 8 / 1e9,
+                                         prep_mb=prep * ands * BITS_PER_AND / 8 / 1e6, fors=fors_th))
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
     out["rates"] = DEVICES
     out["wallet"] = dict(prepared=THRESHOLD_PREPARED, stark_verify=STARK_VERIFY, stark_verify_s=STARK_VERIFY_SECONDS, host_rate=HOST_RATE, device_rate=DEVICE_RATE,
@@ -409,17 +422,31 @@ def wallet_prepared(h):
     return max(PREPARED, 2**h // (HOST_GRIND_TOP if h == max(HEIGHTS) else HOST_GRIND))
 
 
+def shown_time(s):
+    """A time as the site writes it: two significant digits rounded up, in h, min, s, ms or µs (site `time`)."""
+    def sig2(v):
+        return str(math.ceil(v - 1e-9)) if v >= 10 else f"{math.ceil(v * 10 - 1e-9) / 10:.1f}".removesuffix(".0")
+    units = [(3600, "h", math.inf), (60, "min", 60), (1, "s", 60), (1e-3, "ms", 1000), (1e-6, "µs", 1000)]
+    i = 0
+    while i < len(units) - 1 and s < units[i][0]:
+        i += 1
+    if i > 0 and float(sig2(s / units[i][0])) >= units[i][2]:
+        i -= 1
+    return sig2(s / units[i][0]) + " " + units[i][1]
+
+
 def ledger_prepared(h, name, device_online, alone):
     """The instances the Ledger prepares for a configuration: wallet_prepared(h), doubled while assisted signing is
-    slower online than the Ledger signing alone, for either FTS (`device_online` and `alone`, in compressions, one per
-    FTS), as long as it can win at all (the STARK verification alone takes STARK_VERIFY_SECONDS)."""
+    slower online than the Ledger signing alone, for an FTS that can win at all (`device_online` and `alone`, in
+    compressions, one per FTS; the STARK verification alone takes STARK_VERIFY_SECONDS), up to 2^h instances."""
     rate = DEVICES["Ledger Nano S+"][name]
     p = wallet_prepared(h)
-    def slower(p):
-        return any(2**h / p / HOST_RATE[name] + STARK_VERIFY_SECONDS + o / rate >= a / rate for o, a in zip(device_online, alone))
-    if all(STARK_VERIFY_SECONDS + o / rate < a / rate for o, a in zip(device_online, alone)):
-        while slower(p):
-            p *= 2
+    can_win = [(o, a) for o, a in zip(device_online, alone) if STARK_VERIFY_SECONDS + o / rate < a / rate]
+    def slower(p):  # not faster as the site shows the two times (shown_time)
+        return any(online >= a / rate or shown_time(online) == shown_time(a / rate) for o, a in can_win
+                   for online in [max(1, round(2**h / p)) / HOST_RATE[name] + STARK_VERIFY_SECONDS + o / rate])
+    while p < 2**h and slower(p):
+        p *= 2
     return p
 
 KECCAK_ANDS = 36_300  # AND gates of one Keccak-f[1600] call with a public part and a truncated output
@@ -497,22 +524,25 @@ DEVICES = {
 }
 
 
-def threshold(heights):
+def threshold(lts):
     C = Costs(HASHES[0])
     nonzero = [sum(1 for d in w if d) for w in forest_table.table()]
     opened = COORDS * SUBS
     print(f"threshold (Keccak-256): {opened * sum(nonzero) / len(nonzero):.2f} forest chain values opened per "
-          f"signature on average, at most {opened * max(nonzero)}")
-    for h in heights:
-        for shape, b in (("pruned", 12), ("layered", None)):
+          f"signature on average, at most {opened * max(nonzero)} (with {COORDS} trees)")
+    for L in lts:
+        for shape in ("pruned", "layered"):
+            h, coords = (L - 4, COORDS) if shape == "pruned" else UNIFORM[L][:2]
+            b = 12 if shape == "pruned" else h
+            C = Costs(HASHES[0], None, coords)
             ls = layers(h, shape)
             keygen, prep = C.mpc_keygen(h, shape, b), C.mpc_prep(h, shape)
             lower = sum(2**hl * C.leaf + (2**hl - 1) * C.node for hl in ls[1:])
             ledger = C.ledger_prep(h, shape, b)
             gb = keygen * KECCAK_ANDS * BITS_PER_AND / 8 / 1e9
             pm = prep * KECCAK_ANDS * BITS_PER_AND / 8 / 1e6
-            label = f"pruned b={b}" if shape == "pruned" else "layered"
-            print(f"  h={h} {label}: keygen MPC {fmt(keygen)} permutations ({gb:.3g} GB per operator); "
+            label = f"pruned b={b}" if shape == "pruned" else f"layered, {coords} coordinates"
+            print(f"  2^{L}, h={h} {label}: keygen MPC {fmt(keygen)} permutations ({gb:.3g} GB per operator); "
                   f"preprocessing {fmt(prep)} per signature ({pm:.0f} MB; on a hardware wallet, which also signs with "
                   f"WOTS+C, {fmt(ledger)}); online grinding {fmt(2 ** h / THRESHOLD_PREPARED)} attempts")
     # The alternative for a pruned key: every forest of the kept subtree prepared at key generation, once.
@@ -525,7 +555,7 @@ def threshold(heights):
               f"once, against {math.floor(lifetime * 10) / 10:.1f} TB of preprocessing over the lifetime")
     print(f"hardware wallet: the device prepares max({PREPARED}, 2^h / 2^{HOST_GRIND.bit_length() - 1}) instances (2^h / 2^{HOST_GRIND_TOP.bit_length() - 1} at h = {max(HEIGHTS)}) and the host grinds "
           f"2^h / that many digests ({', '.join(f'h={h}: {wallet_prepared(h)} prepared, {fmt(2 ** h / wallet_prepared(h))} digests, '
-          f'{2 ** h / wallet_prepared(h) / HOST_RATE["Keccak-256"]:.2g} s to prove (Keccak-256)' for h in heights)});"
+          f'{2 ** h / wallet_prepared(h) / HOST_RATE["Keccak-256"]:.2g} s to prove (Keccak-256)' for h in HEIGHTS)});"
           f" the device verifies the STARK in about {fmt(STARK_VERIFY)} compressions, counted as {STARK_VERIFY_SECONDS} s")
 
 if __name__ == "__main__":

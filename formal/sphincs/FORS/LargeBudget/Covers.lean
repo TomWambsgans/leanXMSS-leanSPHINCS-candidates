@@ -1,4 +1,4 @@
-import FORS.CoverBound.HTermOption
+import FORS.CoverBound.HTermOptionJ
 import FORS.LargeBudget.Route
 
 /-! FORS split-bound covers at the survival-weighted baseline `baselineW` (thresholds `betaWQ`): a
@@ -19,7 +19,7 @@ abbrev EntryF := ℕ × ℕ × ℕ
 structure CoverW where
   qtop : ℕ
   tab : PoisT
-  opts : List OptF
+  opts : List Opt
   entries : List EntryF
 
 /-- The inverse landing probability at total height `H` and kept height `b`. -/
@@ -38,7 +38,7 @@ def checkRate (H b N qtop : ℕ) (t : PoisT) : Bool :=
     decide ((N : ℚ) / 2 ^ b + ((2 * scanMb H b - 1 : ℕ) : ℚ) * qtop / (scanMb H b * denB H b qtop * 2 ^ b) ≤ t.mu)
 
 /-- The check of one entry, with the keygen credit `K`. -/
-def checkEntryF (K N : ℕ) (opts : List OptF) (e : EntryF) : Bool :=
+def checkEntryF (K N : ℕ) (opts : List Opt) (e : EntryF) : Bool :=
   match opts[e.2.2]? with
   | none => false
   | some o =>
@@ -47,16 +47,16 @@ def checkEntryF (K N : ℕ) (opts : List OptF) (e : EntryF) : Bool :=
           ((e.1 : ℚ) / 2 ^ 128) ^ 2 + (K : ℚ) / 2 ^ 127)
 
 /-- Consecutive entries cover `[last, 2^127]`. -/
-def chainF (K N qtop : ℕ) (opts : List OptF) : ℕ → List EntryF → Bool
+def chainF (K N qtop : ℕ) (opts : List Opt) : ℕ → List EntryF → Bool
   | last, [] => decide (qtop < last)
   | last, e :: rest => decide (e.1 ≤ last) && checkEntryF K N opts e && chainF K N qtop opts (e.2.1 + 1) rest
 
 /-- A cover of every budget `qstart ≤ q ≤ qtop`. -/
 def checkCoverW (H b k a K N qstart : ℕ) (c : CoverW) : Bool :=
-  checkRate H b N c.qtop c.tab && checkPT c.tab && c.opts.all (checkOptF H b k a c.tab) &&
+  checkRate H b N c.qtop c.tab && checkPT c.tab && c.opts.all (checkOpt H b k a c.tab) &&
     chainF K N c.qtop c.opts qstart c.entries
 
-theorem chainF_sound (K N qtop : ℕ) (opts : List OptF) : ∀ (cover : List EntryF) (last : ℕ),
+theorem chainF_sound (K N qtop : ℕ) (opts : List Opt) : ∀ (cover : List EntryF) (last : ℕ),
     chainF K N qtop opts last cover = true →
       ∀ q, last ≤ q → q ≤ qtop → ∃ e ∈ cover, e.1 ≤ q ∧ q ≤ e.2.1 ∧ checkEntryF K N opts e = true
   | [], last, h, q, hq, hq' => by
@@ -70,7 +70,7 @@ theorem chainF_sound (K N qtop : ℕ) (opts : List OptF) : ∀ (cover : List Ent
       · obtain ⟨e', he', h1, h2, h3⟩ := chainF_sound K N qtop opts rest _ hrest q (by omega) hq'
         exact ⟨e', List.mem_cons_of_mem _ he', h1, h2, h3⟩
 
-theorem checkEntryF_sound {K N : ℕ} {opts : List OptF} {e : EntryF} (h : checkEntryF K N opts e = true) :
+theorem checkEntryF_sound {K N : ℕ} {opts : List Opt} {e : EntryF} (h : checkEntryF K N opts e = true) :
     ∃ o ∈ opts, 2 * e.2.1 ≤ 2 ^ 128 ∧ o.cthr ≤ ForsPotential.betaWQ e.2.1 ∧
       (e.2.1 : ℚ) * o.B + ((e.2.1 : ℚ) + K + N) / 2 ^ 200 ≤
         ((e.1 : ℚ) / 2 ^ 128) ^ 2 + (K : ℚ) / 2 ^ 127 := by
@@ -80,19 +80,6 @@ theorem checkEntryF_sound {K N : ℕ} {opts : List OptF} {e : EntryF} (h : check
   · rw [hget] at h
     simp only [Bool.and_eq_true, decide_eq_true_eq] at h
     exact ⟨o, List.mem_of_getElem? hget, h.1.1, h.1.2, h.2⟩
-
-theorem optF_B_nonneg {H b k a : ℕ} {t : PoisT} {o : OptF} (ho : checkOptF H b k a t o = true) :
-    0 ≤ o.B := by
-  obtain ⟨-, hθ, hcthr, -, -, -, -, -, -, -, -, -, -, -, -, -, -, hB, hEg0, hEe0⟩ := checkOptF_parts ho
-  have hsq0 : 0 ≤ sqUp t.P b (1 + o.Ee) := by
-    have h := sqUp_ge t.P b (1 + o.Ee) ((1 + o.Ee : ℚ) : ℝ) (by push_cast; positivity) le_rfl
-    have h0 : (0 : ℝ) ≤ ((1 + o.Ee : ℚ) : ℝ) ^ (2 ^ b) := by push_cast; positivity
-    exact_mod_cast le_trans h0 h
-  have hE := one_le_expLow (o.θ * o.cthr) t.J t.P (by positivity)
-  have he : (0 : ℚ) < eLowQ := by unfold eLowQ; norm_num
-  refine le_trans ?_ hB
-  positivity
-
 
 theorem scanMb_eq (H b : ℕ) (hH : totalHeight = H) (hb : subtreeHeight = b) : scanMb H b = scanM := by
   unfold scanMb scanM; rw [hH, hb]
@@ -154,21 +141,21 @@ theorem rate_le_tableF (H b N qtop : ℕ) (t : PoisT) (ht : checkRate H b N qtop
 
 /-- **A checked table and option bound the one-coin FORS H-term** at every budget `q ≤ qtop` and
 every base `β ≥ cthr`. -/
-theorem startExcessO_le_opt (H b k a N qtop : ℕ) (t : PoisT) (o : OptF) (hr : checkRate H b N qtop t = true)
+theorem startExcessO_le_opt (H b k a N qtop : ℕ) (t : PoisT) (o : Opt) (hr : checkRate H b N qtop t = true)
     (ht : checkPT t = true)
-    (ho : checkOptF H b k a t o = true) (hH : totalHeight = H) (hb : subtreeHeight = b)
+    (ho : checkOpt H b k a t o = true) (hH : totalHeight = H) (hb : subtreeHeight = b)
     (hk : forsTrees = k) (ha : forsHeight = a) (hN : signatureLimit = N) (q : ℕ)
     (hq : q ≤ qtop) (β : ℝ≥0∞) (hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ β) :
     ForsPotential.startExcessO (wbarOf q) β q ≤ ENNReal.ofReal (o.B : ℝ) := by
-  have h := hTermO_le_optF hH hb hk ha t o ht ho (wbarOf q) landing
+  have h := hTermO_le_opt hH hb hk ha t o ht ho (wbarOf q) landing
     (wbar_le_one q (fair_of_rate H b N qtop t hr hH hb q hq)) ForsPotential.landing_le_one
     signatureLimit q (rate_le_tableF H b N qtop t hr hH hb hN q hq) β hβc
   exact h
 
 
 /-- The bound for one checked entry. -/
-theorem bound_of_entryF (H b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr : checkRate H b N qtop t = true)
-    (ht : checkPT t = true) (hopts : ∀ o ∈ opts, checkOptF H b k a t o = true) (hH : totalHeight = H)
+theorem bound_of_entryF (H b k a K N qtop : ℕ) (t : PoisT) (opts : List Opt) (hr : checkRate H b N qtop t = true)
+    (ht : checkPT t = true) (hopts : ∀ o ∈ opts, checkOpt H b k a t o = true) (hH : totalHeight = H)
     (hb : subtreeHeight = b) (hk : forsTrees = k) (ha : forsHeight = a) (hK : Prefix.keygenHashCost = K)
     (hN : signatureLimit = N) (e : EntryF) (he : checkEntryF K N opts e = true) (q : ℕ) (hqa : e.1 ≤ q)
     (hqb : q ≤ e.2.1) (hqt : q ≤ qtop) :
@@ -184,7 +171,7 @@ theorem bound_of_entryF (H b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) 
     have : (2 : ℕ) ^ 128 = 2 * 2 ^ 127 := by norm_num
     omega
   have hq2 : 2 * q ≤ 2 ^ 128 := by omega
-  have hB0 : (0 : ℝ) ≤ (o.B : ℝ) := by exact_mod_cast optF_B_nonneg hoc
+  have hB0 : (0 : ℝ) ≤ (o.B : ℝ) := by exact_mod_cast opt_B_nonneg hoc
   have hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ HiddenDebt.baselineW q :=
     le_trans (ENNReal.ofReal_le_ofReal (by exact_mod_cast hcthr)) (ForsPotential.baselineW_ge q qb hqb)
   have hH : ForsPotential.startExcessO (wbarOf q) (HiddenDebt.baselineW q) q ≤ ENNReal.ofReal (o.B : ℝ) :=

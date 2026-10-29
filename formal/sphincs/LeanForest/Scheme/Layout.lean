@@ -79,16 +79,16 @@ theorem layerUp_bijective : Function.Bijective fun k : Fin numLayers => layerUp 
   exact Fin.ext (by omega)
 
 /-- **Serialized size.** Every signature, malformed or not, serializes to
-`16 + 8 · 352 + d · 1028 + 16 h` bytes: 4,244 for one layer of height 24. -/
+`16 + 352 T + d · 1028 + 16 h` bytes: 4,244 for one layer of height 24 and `T = 8`. -/
 theorem signature_size (signature : Signature) :
-    (serializeSignature signature).length = 2832 + 1028 * numLayers + 16 * totalHeight := by
+    (serializeSignature signature).length =
+      16 + 352 * forestCoords + 1028 * numLayers + 16 * totalHeight := by
   simp only [serializeSignature, List.length_append, bytesLE_length, List.length_flatten,
     List.map_ofFn, Function.comp_def, serializeCoord_length, serializeLayer_length, List.sum_ofFn,
     Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul]
   rw [Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul,
     ← Finset.mul_sum,
     Function.Bijective.sum_comp layerUp_bijective (fun lay => layerHeight lay), sum_layerHeight]
-  unfold forestCoords
   ring
 
 end LeanForest

@@ -664,9 +664,9 @@ theorem tree_root_value (hboundary : BoundaryCorrect f parameter seed labels)
 
 Every forest position is prepared. Its label is the honest value: chain steps the chain values,
 WOTS-key leaves the child leaves, subtree and tree nodes the honest nodes, the tree leaves the
-hashes of the four level-2 nodes of their subtrees, and the roots position the hash of the sixteen
+hashes of the four level-2 nodes of their subtrees, and the roots position the hash of the `2T`
 level-3 nodes of the trees. The scheme does not hash the roots position: the forest key is the
-sixteen level-3 nodes themselves (`keyLabels`). -/
+`2T` level-3 nodes themselves (`keyLabels`). -/
 
 section Forest
 

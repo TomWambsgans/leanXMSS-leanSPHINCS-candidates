@@ -2,9 +2,9 @@ import LeanForest.Scheme.Uniform
 import Mathlib.Data.BitVec
 
 /-!
-The full view of a message digest (its index and the 26-bit field of each of the 8 trees)
+The full view of a message digest (its index and the 26-bit field of each of the `T` trees)
 is a bijection, so a uniform digest gives a uniform view. The 26 bits of a tree lie in three places
-of the digest (its two codeword indices among the first 16 bytes, its leaf, its two WOTS keys);
+of the digest (its two codeword indices among the first `2T` bytes, its leaf, its two WOTS keys);
 `coordField` gathers them. A field decodes to the tree's mark: the
 leaf of the tree, and for each of the two subtrees the WOTS key and the codeword index. Coverage of a
 view by disclosed fields: every chain of both WOTS keys of every tree is disclosed at or below the
@@ -78,8 +78,8 @@ theorem getLsbD_of_extract {left right : MessageDigest} {offset len position : N
   simp only [BitVec.getLsbD_extractLsb', hwithin, decide_true, Bool.true_and] at hbit
   rwa [show offset + (position - offset) = position by omega] at hbit
 
-/-- The index and the 8 fields hold every bit of the digest: bits 0 to 127 are the 16 codeword
-indices, 128 to 175 the 16 WOTS keys, 176 to 207 the 8 tree leaves and 208 to `207 + h` the index. -/
+/-- The index and the `T` fields hold every bit of the digest: bits 0 to `16 T - 1` are the `2T`
+codeword indices, then `6 T` bits of WOTS keys, `4 T` bits of tree leaves and, from `26 T`, the index. -/
 theorem fullDigestView_injective : Function.Injective fullDigestView := by
   intro left right heq
   have hidx : left.extractLsb' indexOffset totalHeight = right.extractLsb' indexOffset totalHeight := by
@@ -96,29 +96,29 @@ theorem fullDigestView_injective : Function.Injective fullDigestView := by
     exact ⟨hs, Fin.forall_fin_two.2 ⟨hc0, hc1⟩, Fin.forall_fin_two.2 ⟨hw0, hw1⟩⟩
   apply BitVec.eq_of_getLsbD_eq
   intro position hposition
-  have hposition' : position < 208 + totalHeight := by
-    have : messageDigestBits = 208 + totalHeight := by
-      unfold messageDigestBits forestCoords coordBits; omega
+  have hposition' : position < 26 * forestCoords + totalHeight := by
+    have : messageDigestBits = 26 * forestCoords + totalHeight := by
+      unfold messageDigestBits coordBits; omega
     omega
-  by_cases hword : position < 128
-  · let c : Coord := ⟨position / 16, by simp only [forestCoords]; omega⟩
+  by_cases hword : position < 16 * forestCoords
+  · let c : Coord := ⟨position / 16, by omega⟩
     let j : SubIdx := ⟨position / 8 % 2, by omega⟩
     refine getLsbD_of_extract ((hfield c).2.2 j) ?_ ?_ <;>
     · simp only [wordOffset, c, j]
       omega
-  · by_cases hchild : position < 176
-    · let c : Coord := ⟨(position - 128) / 6, by simp only [forestCoords]; omega⟩
-      let j : SubIdx := ⟨(position - 128) / 3 % 2, by omega⟩
+  · by_cases hchild : position < 22 * forestCoords
+    · let c : Coord := ⟨(position - 16 * forestCoords) / 6, by omega⟩
+      let j : SubIdx := ⟨(position - 16 * forestCoords) / 3 % 2, by omega⟩
       refine getLsbD_of_extract ((hfield c).2.1 j) ?_ ?_ <;>
       · simp only [childOffset, c, j]
         omega
-    · by_cases hsuper : position < 208
-      · let c : Coord := ⟨(position - 176) / 4, by simp only [forestCoords]; omega⟩
+    · by_cases hsuper : position < 26 * forestCoords
+      · let c : Coord := ⟨(position - 22 * forestCoords) / 4, by omega⟩
         refine getLsbD_of_extract (hfield c).1 ?_ ?_ <;>
-        · simp only [superOffset, forestCoords, subHeight, c]
+        · simp only [superOffset, subHeight, c]
           omega
       · refine getLsbD_of_extract hidx ?_ ?_ <;>
-        · simp only [indexOffset, forestCoords, subHeight, topHeight]
+        · simp only [indexOffset, subHeight, topHeight]
           omega
 
 theorem fullDigestView_bijective : Function.Bijective fullDigestView := by
@@ -127,6 +127,8 @@ theorem fullDigestView_bijective : Function.Bijective fullDigestView := by
   rw [card_bitVec, Fintype.card_prod, Fintype.card_fin, Fintype.card_fun,
     Fintype.card_fin, Fintype.card_fin, ← pow_mul, ← pow_add]
   congr 1
+  unfold messageDigestBits
+  ring
 
 theorem evalDist_fullDigestView_uniform :
     𝒟[fullDigestView <$> ($ᵗ MessageDigest : ProbComp MessageDigest)] =

@@ -144,12 +144,13 @@ theorem numLayers_pos : 0 < numLayers := Params.numLayers_pos
 /-- The index field lies inside the hash output. -/
 theorem indexOffset_add_le : Concrete.indexOffset + totalHeight ≤ hashOutputBits := by
   have := totalHeight_le_28
-  unfold Concrete.indexOffset hashOutputBits forestCoords subHeight topHeight
+  have := Params.forestCoords_le
+  unfold Concrete.indexOffset hashOutputBits subHeight topHeight
   omega
 
 /-- The index field lies inside the truncated digest. -/
 theorem indexOffset_add_le_digest : Concrete.indexOffset + totalHeight ≤ messageDigestBits := by
-  unfold Concrete.indexOffset messageDigestBits forestCoords subHeight topHeight coordBits
+  unfold Concrete.indexOffset messageDigestBits subHeight topHeight coordBits
   omega
 
 theorem two_pow_totalHeight_le : 2 ^ totalHeight ≤ 2 ^ 28 :=
@@ -176,7 +177,8 @@ theorem maxLayerHeight_pos : 0 < maxLayerHeight :=
 
 theorem messageDigestBits_le : messageDigestBits ≤ hashOutputBits := by
   have := totalHeight_le_28
-  unfold messageDigestBits hashOutputBits forestCoords coordBits
+  have := Params.forestCoords_le
+  unfold messageDigestBits hashOutputBits coordBits
   omega
 
 /-- At most 4 layers: the layers below the top have height at least 6 and `h ≤ 28`. -/

@@ -38,10 +38,14 @@ theorem witnessNear_le (target : View) (D : Multiset View) : witnessNear target 
   unfold witnessNear
   calc ∑ c, ∑ j, (if NearSub target c j D then (1 : ℝ≥0∞) else 0) ≤ ∑ _c : Coord, ∑ _j : SubIdx, (1 : ℝ≥0∞) :=
         Finset.sum_le_sum fun c _ => Finset.sum_le_sum fun j _ => by split_ifs <;> simp
-    _ = 16 := by
-        simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one]
-        rw [show Fintype.card Coord = 8 from H0.card_coord]
-        norm_num
+    _ = ((2 * forestCoords : ℕ) : ℝ≥0∞) := by
+        simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one, H0.card_coord]
+        rw [show Fintype.card SubIdx = 2 from rfl]
+        push_cast
+        ring
+    _ ≤ 16 := by
+        have := Params.forestCoords_le
+        exact_mod_cast (show 2 * forestCoords ≤ 16 by omega)
 
 theorem witnessNear_props : WitnessProps witnessNear := by
   intro v

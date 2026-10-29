@@ -2,8 +2,9 @@
 // MIT OR Apache-2.0, see licenses/leanVM-LICENSE-MIT and licenses/leanVM-LICENSE-APACHE.
 // Re-parameterized to the leanSphincs candidate (leanSPHINCS.tex): a two-level WOTS forest as the
 // few-time signature, WOTS+C with 64 chains of length 4 and target sum 128, and three toggles: the
-// height (20, 22, 24, 26 or 28), the shape (one pruned tree, or a hypertree whose key builds the top
-// layer only) and the hash (Keccak-256, BLAKE2s or SHA-256).
+// lifetime (about 2^24 to 2^32 signatures), the shape (one pruned tree of height 20 to 28, or a
+// hypertree of height 24 to 28 whose key builds the top layer only) and the hash (Keccak-256,
+// BLAKE2s or SHA-256).
 
 //! The leanSphincs candidate.
 //!
@@ -47,9 +48,12 @@ pub const V: usize = 64;
 /// WOTS+C target sum of the signed positions.
 pub const TARGET_SUM: usize = 128;
 
-/// The tree heights `h`, one per lifetime: the full and layered keys last about `20 * 2^h` signatures;
+/// The heights `h` of a pruned key, one per lifetime: the full key lasts about `20 * 2^h` signatures;
 /// a pruned key lasts much less (6,926 to 28.35M signatures, formal/sphincs/README.md).
 pub const HEIGHTS: [usize; 5] = [20, 22, 24, 26, 28];
+/// The layered keys, one per lifetime: `(log2 lifetime, h, forest coordinates)`. The lifetimes
+/// `2^24` and `2^26` share the height 24 with `2^28` and use a lighter forest.
+pub const UNIFORM: [(usize, usize, usize); 5] = [(24, 24, 6), (26, 24, 7), (28, 24, 8), (30, 26, 8), (32, 28, 8)];
 /// The tallest height: the digest's index field and the address fields are sized for it.
 pub const MAX_H: usize = 28;
 /// The kept subtree heights `b` of a pruned key besides the full key `b = h`: those whose
@@ -57,12 +61,9 @@ pub const MAX_H: usize = 28;
 pub const PRUNED: [usize; 6] = [8, 10, 12, 13, 14, 20];
 
 /// The layer heights of a layered key of height `h`, top layer first: three layers, a top layer of 10
-/// (about 41 s of key generation on a Ledger with Keccak-256; 8 at h = 20, about 10 s) and two equal
-/// bottom layers of 6 to 9.
+/// (about 41 s of key generation on a Ledger with Keccak-256) and two equal bottom layers of 7 to 9.
 pub fn layered_heights(h: usize) -> &'static [usize] {
     match h {
-        20 => &[8, 6, 6],
-        22 => &[10, 6, 6],
         24 => &[10, 7, 7],
         26 => &[10, 8, 8],
         28 => &[10, 9, 9],
@@ -70,10 +71,11 @@ pub fn layered_heights(h: usize) -> &'static [usize] {
     }
 }
 
-/// The few-time signature, a two-level WOTS forest: `COORDS` independent coordinates, each a top
-/// tree of height `TOP_HEIGHT` over super-children, each of those over `SUBS` sub-trees of height
-/// `SUB_HEIGHT`, whose children are WOTS keys of `CHILD_CHAINS` chains of `CHAIN_TOP` steps, signed
-/// at a codeword of digit sum `CODEWORD_SUM`.
+/// The few-time signature, a two-level WOTS forest: independent coordinates (`COORDS`, or fewer for
+/// the layered keys of the lifetimes `2^24` and `2^26`, [`UNIFORM`]), each a top tree of height
+/// `TOP_HEIGHT` over super-children, each of those over `SUBS` sub-trees of height `SUB_HEIGHT`, whose
+/// children are WOTS keys of `CHILD_CHAINS` chains of `CHAIN_TOP` steps, signed at a codeword of digit
+/// sum `CODEWORD_SUM`.
 pub const COORDS: usize = 8;
 pub const TOP_HEIGHT: usize = 4;
 pub const SUBS: usize = 2;
@@ -88,8 +90,12 @@ pub const COORD_BITS: usize = TOP_HEIGHT + SUBS * (SUB_HEIGHT + 8);
 pub const MAX_ENCODING_ATTEMPTS: u64 = 1 << 32;
 
 pub const PUB_KEY_SIZE: usize = N + PUBLIC_PARAM_LEN;
-/// Bytes of the forest opening.
-pub const FOREST_SIZE: usize = COORDS * VALUES_PER_COORD * N;
+/// Bytes of the forest opening of `coords` coordinates.
+pub const fn forest_size(coords: usize) -> usize {
+    coords * VALUES_PER_COORD * N
+}
+/// Bytes of the forest opening with `COORDS` coordinates.
+pub const FOREST_SIZE: usize = forest_size(COORDS);
 /// Bytes a tree layer adds besides its path: the WOTS+C counter and the 64 chain values.
 pub const LAYER_SIZE: usize = COUNTER_LEN + V * N;
 
@@ -104,22 +110,44 @@ pub enum Shape {
     Layered,
 }
 
-/// One of the configurations: a hash, a height and a shape.
+/// One of the configurations: a hash, a height, a shape and the forest's number of coordinates.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Config {
     hash: HashFn,
     h: usize,
     shape: Shape,
+    coords: usize,
 }
 
 impl Config {
-    /// Panics unless `h` is one of [`HEIGHTS`] and a pruned key keeps `b = h` or `b` in [`PRUNED`].
+    /// A key with the `COORDS`-coordinate forest. Panics unless a pruned key has `h` in [`HEIGHTS`]
+    /// and keeps `b = h` or `b` in [`PRUNED`], and a layered key has `h` = 24, 26 or 28.
     pub fn new(hash: HashFn, h: usize, shape: Shape) -> Self {
-        assert!(HEIGHTS.contains(&h), "h = {h}");
-        if let Shape::Pruned { b } = shape {
-            assert!(b == h || PRUNED.contains(&b), "b = {b}");
+        match shape {
+            Shape::Pruned { b } => {
+                assert!(HEIGHTS.contains(&h), "h = {h}");
+                assert!(b == h || PRUNED.contains(&b), "b = {b}");
+            }
+            Shape::Layered => assert!(UNIFORM.iter().any(|&(_, hh, c)| hh == h && c == COORDS), "h = {h}"),
         }
-        Self { hash, h, shape }
+        Self { hash, h, shape, coords: COORDS }
+    }
+
+    /// The pruned key of lifetime about `2^log2_lifetime` (`h = log2_lifetime - 4`) keeping `2^b` leaves.
+    pub fn pruned(hash: HashFn, log2_lifetime: usize, b: usize) -> Self {
+        Self::new(hash, log2_lifetime.checked_sub(4).expect("lifetime"), Shape::Pruned { b })
+    }
+
+    /// The layered key of lifetime about `2^log2_lifetime` ([`UNIFORM`]): `2^24` and `2^26` have
+    /// height 24 and a forest of 6 and 7 coordinates.
+    pub fn uniform(hash: HashFn, log2_lifetime: usize) -> Self {
+        let &(_, h, coords) = UNIFORM.iter().find(|u| u.0 == log2_lifetime).expect("lifetime");
+        Self { hash, h, shape: Shape::Layered, coords }
+    }
+
+    /// The forest's number of coordinates.
+    pub fn coords(&self) -> usize {
+        self.coords
     }
 
     pub fn hash(&self) -> HashFn {
@@ -158,7 +186,7 @@ impl Config {
     /// Bytes of a signature: the randomizer, the forest, then per layer the counter, the chain values
     /// and the path.
     pub fn sig_size(&self) -> usize {
-        RANDOMIZER_LEN + FOREST_SIZE + self.layers().len() * LAYER_SIZE + self.h * N
+        RANDOMIZER_LEN + forest_size(self.coords) + self.layers().len() * LAYER_SIZE + self.h * N
     }
 
     /// Compressions of one verification of an accepted signature: the cached block of `P`
@@ -175,20 +203,20 @@ impl Config {
             .iter()
             .enumerate()
             .map(|(layer, &height)| {
-                let message = if layer == 0 { COORDS * 2 * N } else { N };
+                let message = if layer == 0 { self.coords * 2 * N } else { N };
                 c(message + COUNTER_LEN)
                     + (V * (CHAIN_LEN - 1) - TARGET_SUM) as u64 * c(N)
                     + c(V * N)
                     + height as u64 * c(2 * N)
             })
             .sum();
-        pp + digest + COORDS as u64 * coord + layers
+        pp + digest + self.coords as u64 * coord + layers
     }
 }
 
-/// The digest bits: the 16 codeword indices, then the children, the super-children and the index.
-pub const fn digest_bits(h: usize) -> usize {
-    h + COORDS * COORD_BITS
+/// The digest bits: the codeword indices, then the children, the super-children and the index.
+pub const fn digest_bits(h: usize, coords: usize) -> usize {
+    h + coords * COORD_BITS
 }
 
 /// The baseline: Keccak-256, one tree of height 24, a full key.
@@ -200,6 +228,6 @@ pub const BASELINE_VERIFY_PERMUTATIONS: u64 = 260;
 const _: () = assert!(W * V == 8 * N);
 const _: () = assert!(TARGET_SUM < V * (CHAIN_LEN - 1));
 const _: () = assert!(RANDOMIZER_LEN + FOREST_SIZE + LAYER_SIZE + 24 * N == BASELINE_SIG_SIZE);
-const _: () = assert!(digest_bits(24) == 232 && digest_bits(MAX_H) <= 8 * 32);
+const _: () = assert!(digest_bits(24, COORDS) == 232 && digest_bits(MAX_H, COORDS) <= 8 * 32);
 const _: () = assert!(PUB_KEY_SIZE == 32);
 const _: () = assert!(PRUNED[PRUNED.len() - 1] <= HEIGHTS[0]);   // b = 20 at h = 20 is the full key

@@ -4,7 +4,7 @@ import LeanForest.CoverBound.PerIndex
 WOTS key it selects in subtree `j` of tree `c` is opened deep enough. Its probability over `n`
 uniform marks is `ΨH(n) = Σ_k C(n,k) (1/16)^k (15/16)^(n-k) μ_k`, by the inclusion-exclusion of the
 first per-tree moment restricted to one subtree. The near witness of a target, summed over the free
-subtree `(c, j)`, has per-index mean `Σ_{c,j} Ψ1(n)^7 ΨH(n)`. -/
+subtree `(c, j)`, has per-index mean `Σ_{c,j} Ψ1(n)^(T-1) ΨH(n)`. -/
 
 open ENNReal
 
@@ -249,9 +249,9 @@ theorem avgN_sum_fin {U : Type} [Fintype U] [Nonempty U] {β : Type} [DecidableE
         funext fun Y => Finset.sum_insert hb
       rw [h1, avgN_add, ih, Finset.sum_insert hb]
 
-/-- **`E[near | n] = Σ_{c,j} Ψ1(n)^7 ΨH(n)`.** -/
+/-- **`E[near | n] = Σ_{c,j} Ψ1(n)^(T-1) ΨH(n)`.** -/
 theorem avgN_yN (n : ℕ) :
-    avgN yN n 0 = ∑ _c : Coord, ∑ j : SubIdx, ENNReal.ofReal (ΨHR j n) * ENNReal.ofReal (Ψ1R n) ^ 7 := by
+    avgN yN n 0 = ∑ _c : Coord, ∑ j : SubIdx, ENNReal.ofReal (ΨHR j n) * ENNReal.ofReal (Ψ1R n) ^ (forestCoords - 1) := by
   unfold yN
   rw [avgN_sum_fin]
   refine Finset.sum_congr rfl fun c _ => ?_
@@ -269,7 +269,7 @@ theorem avgN_yN (n : ℕ) :
   rw [h1, Finset.prod_congr rfl h2, Finset.prod_const, Finset.card_erase_of_mem (Finset.mem_univ _),
     Finset.card_univ, card_coord]
 
-theorem yN_le (Ms : Multiset (Coord → FieldVal)) : yN Ms ≤ 16 := by
+theorem yN_le (Ms : Multiset (Coord → FieldVal)) : yN Ms ≤ ((2 * forestCoords : ℕ) : ℝ≥0∞) := by
   unfold yN
   calc ∑ c, ∑ j, ∏ c', nearFactor c j c' (Ms.map fun m => m c') ≤ ∑ _c : Coord, ∑ _j : SubIdx, (1 : ℝ≥0∞) := by
         refine Finset.sum_le_sum fun c _ => Finset.sum_le_sum fun j _ => ?_
@@ -278,8 +278,10 @@ theorem yN_le (Ms : Multiset (Coord → FieldVal)) : yN Ms ≤ 16 := by
         split_ifs
         · exact φH_le_one j _
         · exact φF_le_one _
-    _ = 16 := by
+    _ = ((2 * forestCoords : ℕ) : ℝ≥0∞) := by
         simp only [Finset.sum_const, Finset.card_univ, card_coord, nsmul_eq_mul, mul_one]
-        norm_num
+        rw [show Fintype.card SubIdx = 2 from rfl]
+        push_cast
+        ring
 
 end LeanForest.Security.H0

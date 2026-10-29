@@ -32,8 +32,8 @@ def checkRateH (H b N qtop : ℕ) (t : PoisT) : Bool :=
       ((2 * scanMb H b - 1 : ℕ) : ℚ) * qtop / (scanMb H b * denHB H b qtop * 2 ^ b) ≤ t.mu)
 
 /-- A heavy cover of every budget `qstart ≤ q ≤ qtop`. -/
-def checkCoverH (H b K N qstart : ℕ) (c : CoverW) : Bool :=
-  checkRateH H b N c.qtop c.tab && checkPT c.tab && c.opts.all (checkOptF H b c.tab) &&
+def checkCoverH (H b T K N qstart : ℕ) (c : CoverW) : Bool :=
+  checkRateH H b N c.qtop c.tab && checkPT c.tab && c.opts.all (checkOptF H b T c.tab) &&
     chainF K N c.qtop c.opts qstart c.entries
 
 /-! ### The heavy coin -/
@@ -184,19 +184,20 @@ theorem rate_le_tableH (H b N qtop : ℕ) (t : PoisT) (ht : checkRateH H b N qto
 
 /-- **A checked table and option bound the forest H-term with the spare slot** at every budget
 `q ≤ qtop` and every base `β ≥ cthr`. -/
-theorem startExcessH_le_opt (H b N qtop : ℕ) (t : PoisT) (o : OptF) (hr : checkRateH H b N qtop t = true)
+theorem startExcessH_le_opt (H b T N qtop : ℕ) (t : PoisT) (o : OptF) (hr : checkRateH H b N qtop t = true)
     (ht : checkPT t = true)
-    (ho : checkOptF H b t o = true) (hH : totalHeight = H) (hb : subtreeHeight = b) (hN : signatureLimit = N) (q : ℕ)
+    (ho : checkOptF H b T t o = true) (hH : totalHeight = H) (hb : subtreeHeight = b) (hT : forestCoords = T)
+    (hN : signatureLimit = N) (q : ℕ)
     (hq : q ≤ qtop) (β : ℝ≥0∞) (hβc : ENNReal.ofReal (o.cthr : ℝ) ≤ β) :
     ForestPotential.startExcessH (wbarH q) β q ≤ ENNReal.ofReal (o.B : ℝ) := by
-  have h := hTermO_le_optF hH hb t o ht ho (wbarH q) landing (wbarH_le_one q (fair_of_rateH H b N qtop t hr hH hb q hq))
+  have h := hTermO_le_optF hH hb hT t o ht ho (wbarH q) landing (wbarH_le_one q (fair_of_rateH H b N qtop t hr hH hb q hq))
     ForestPotential.landing_le_one
     (signatureLimit + 1) q (rate_le_tableH H b N qtop t hr hH hb hN q hq) β hβc
   exact h
 
 /-- The bound for one checked entry, for any H-term `X` below the option's bound. -/
-theorem bound_of_entryX (H b K N : ℕ) (t : PoisT) (opts : List OptF)
-    (hopts : ∀ o ∈ opts, checkOptF H b t o = true)
+theorem bound_of_entryX (H b T K N : ℕ) (t : PoisT) (opts : List OptF)
+    (hopts : ∀ o ∈ opts, checkOptF H b T t o = true)
     (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N) (e : EntryF) (he : checkEntryF K N opts e = true)
     (q : ℕ) (hqa : e.1 ≤ q)
     (hqb : q ≤ e.2.1) (X : ℝ≥0∞)
@@ -268,22 +269,22 @@ theorem bound_of_entryX (H b K N : ℕ) (t : PoisT) (opts : List OptF)
     _ = _ := hrhs.symm
 
 /-- The bound for one checked entry of a heavy cover. -/
-theorem bound_of_entryH (H b K N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr : checkRateH H b N qtop t = true)
-    (ht : checkPT t = true) (hopts : ∀ o ∈ opts, checkOptF H b t o = true) (hH : totalHeight = H)
-    (hb : subtreeHeight = b) (hK : Prefix.keygenHashCost = K)
+theorem bound_of_entryH (H b T K N qtop : ℕ) (t : PoisT) (opts : List OptF) (hr : checkRateH H b N qtop t = true)
+    (ht : checkPT t = true) (hopts : ∀ o ∈ opts, checkOptF H b T t o = true) (hH : totalHeight = H)
+    (hb : subtreeHeight = b) (hT : forestCoords = T) (hK : Prefix.keygenHashCost = K)
     (hN : signatureLimit = N) (e : EntryF) (he : checkEntryF K N opts e = true) (q : ℕ) (hqa : e.1 ≤ q)
     (hqb : q ≤ e.2.1) (hqt : q ≤ qtop) :
     (1 - HiddenDebt.budget 0 q) + (q : ℝ≥0∞) * ForestPotential.startExcessH (wbarH q) (HiddenDebt.baselineW q) q +
         ((q + Prefix.keygenHashCost + signatureLimit : ℕ) : ℝ≥0∞) *
           (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
       ((q + Prefix.keygenHashCost : ℕ) : ℝ≥0∞) / 2 ^ 127 :=
-  bound_of_entryX H b K N t opts hopts hK hN e he q hqa hqb _ fun o ho hβc =>
-    startExcessH_le_opt H b N qtop t o hr ht (hopts o ho) hH hb hN q hqt _ hβc
+  bound_of_entryX H b T K N t opts hopts hK hN e he q hqa hqb _ fun o ho hβc =>
+    startExcessH_le_opt H b T N qtop t o hr ht (hopts o ho) hH hb hT hN q hqt _ hβc
 
 /-- **The forest H-term bound with the spare slot at the weighted baseline from a heavy cover
 certificate**, for every budget `qstart ≤ q' ≤ qtop`. -/
-theorem h0H_bound_of_cover (H b K N qstart : ℕ) (cover : CoverW) (hcov : checkCoverH H b K N qstart cover = true)
-    (hH : totalHeight = H) (hb : subtreeHeight = b) (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N) (q' : ℕ) (hq0 : qstart ≤ q') (hq : q' ≤ cover.qtop) :
+theorem h0H_bound_of_cover (H b T K N qstart : ℕ) (cover : CoverW) (hcov : checkCoverH H b T K N qstart cover = true)
+    (hH : totalHeight = H) (hb : subtreeHeight = b) (hT : forestCoords = T) (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N) (q' : ℕ) (hq0 : qstart ≤ q') (hq : q' ≤ cover.qtop) :
     (1 - HiddenDebt.budget 0 q') +
         (q' : ℝ≥0∞) * ForestPotential.startExcessH (wbarH q') (HiddenDebt.baselineW q') q' +
         ((q' + Prefix.keygenHashCost + signatureLimit : ℕ) : ℝ≥0∞) *
@@ -292,10 +293,10 @@ theorem h0H_bound_of_cover (H b K N qstart : ℕ) (cover : CoverW) (hcov : check
   simp only [checkCoverH, Bool.and_eq_true, List.all_eq_true] at hcov
   obtain ⟨⟨⟨hr, ht⟩, hopts⟩, hchain⟩ := hcov
   obtain ⟨e, -, h1, h2, h3⟩ := chainF_sound K N cover.qtop cover.opts cover.entries qstart hchain q' hq0 hq
-  exact bound_of_entryH H b K N cover.qtop cover.tab cover.opts hr ht hopts hH hb hK hN e h3 q' h1 h2 hq
+  exact bound_of_entryH H b T K N cover.qtop cover.tab cover.opts hr ht hopts hH hb hT hK hN e h3 q' h1 h2 hq
 
 /-- The fair-rate condition of the heavy coin at every budget of a heavy cover. -/
-theorem fair_of_coverH (H b K N qstart : ℕ) (cover : CoverW) (hcov : checkCoverH H b K N qstart cover = true)
+theorem fair_of_coverH (H b T K N qstart : ℕ) (cover : CoverW) (hcov : checkCoverH H b T K N qstart cover = true)
     (hH : totalHeight = H) (hb : subtreeHeight = b) (q' : ℕ) (hq : q' ≤ cover.qtop) :
     q' / 2 + (scanM - 1) * LmaxOf q' + (2 * scanM - 1) ≤ 2 ^ 128 := by
   simp only [checkCoverH, Bool.and_eq_true, List.all_eq_true] at hcov
@@ -320,19 +321,19 @@ attribute [local instance] Classical.propDecidable
 
 /-- A chain of heavy covers of the large budgets, ending once every budget `q'` with
 `q' + keygenCost < 2^127` is covered. -/
-def checkCoversHeavy (H b K N : ℕ) : ℕ → List H0.CoverW → Bool
+def checkCoversHeavy (H b T K N : ℕ) : ℕ → List H0.CoverW → Bool
   | qstart, [] => decide (2 ^ 127 ≤ qstart + K)
-  | qstart, c :: heavy => H0.checkCoverH H b K N qstart c && checkCoversHeavy H b K N (c.qtop + 1) heavy
+  | qstart, c :: heavy => H0.checkCoverH H b T K N qstart c && checkCoversHeavy H b T K N (c.qtop + 1) heavy
 
 /-- A chain of covers of the large budgets: light covers first, then heavy covers. -/
-def checkCoversH (H b K N : ℕ) : ℕ → List H0.CoverW → List H0.CoverW → Bool
-  | qstart, [], heavy => checkCoversHeavy H b K N qstart heavy
-  | qstart, c :: light, heavy => H0.checkCoverW H b K N qstart c && checkCoversH H b K N (c.qtop + 1) light heavy
+def checkCoversH (H b T K N : ℕ) : ℕ → List H0.CoverW → List H0.CoverW → Bool
+  | qstart, [], heavy => checkCoversHeavy H b T K N qstart heavy
+  | qstart, c :: light, heavy => H0.checkCoverW H b T K N qstart c && checkCoversH H b T K N (c.qtop + 1) light heavy
 
 /-- Every budget from `qstart` on with `q' + keygenCost < 2^127` lies in a checked heavy cover. -/
-theorem checkCoversHeavy_sound (H b K N : ℕ) : ∀ (heavy : List H0.CoverW) (qstart : ℕ),
-    checkCoversHeavy H b K N qstart heavy = true → ∀ q', qstart ≤ q' → q' + K < 2 ^ 127 →
-      ∃ c ∈ heavy, ∃ qs, H0.checkCoverH H b K N qs c = true ∧ qs ≤ q' ∧ q' ≤ c.qtop
+theorem checkCoversHeavy_sound (H b T K N : ℕ) : ∀ (heavy : List H0.CoverW) (qstart : ℕ),
+    checkCoversHeavy H b T K N qstart heavy = true → ∀ q', qstart ≤ q' → q' + K < 2 ^ 127 →
+      ∃ c ∈ heavy, ∃ qs, H0.checkCoverH H b T K N qs c = true ∧ qs ≤ q' ∧ q' ≤ c.qtop
   | [], qstart, h, q', h0, h1 => by
       simp only [checkCoversHeavy, decide_eq_true_eq] at h
       omega
@@ -340,22 +341,22 @@ theorem checkCoversHeavy_sound (H b K N : ℕ) : ∀ (heavy : List H0.CoverW) (q
       simp only [checkCoversHeavy, Bool.and_eq_true] at h
       by_cases hq : q' ≤ c.qtop
       · exact ⟨c, List.mem_cons_self .., qstart, h.1, h0, hq⟩
-      · obtain ⟨c', hc', hrest⟩ := checkCoversHeavy_sound H b K N rest (c.qtop + 1) h.2 q' (by omega) h1
+      · obtain ⟨c', hc', hrest⟩ := checkCoversHeavy_sound H b T K N rest (c.qtop + 1) h.2 q' (by omega) h1
         exact ⟨c', List.mem_cons_of_mem _ hc', hrest⟩
 
 /-- Every budget from `qstart` on with `q' + keygenCost < 2^127` lies in a checked light cover or in
 a checked heavy cover of the chain. -/
-theorem checkCoversH_sound (H b K N : ℕ) (heavy : List H0.CoverW) : ∀ (light : List H0.CoverW) (qstart : ℕ),
-    checkCoversH H b K N qstart light heavy = true → ∀ q', qstart ≤ q' →
+theorem checkCoversH_sound (H b T K N : ℕ) (heavy : List H0.CoverW) : ∀ (light : List H0.CoverW) (qstart : ℕ),
+    checkCoversH H b T K N qstart light heavy = true → ∀ q', qstart ≤ q' →
       q' + K < 2 ^ 127 →
-      (∃ c ∈ light, ∃ qs, H0.checkCoverW H b K N qs c = true ∧ qs ≤ q' ∧ q' ≤ c.qtop) ∨
-        (∃ c ∈ heavy, ∃ qs, H0.checkCoverH H b K N qs c = true ∧ qs ≤ q' ∧ q' ≤ c.qtop)
-  | [], qstart, h, q', h0, h1 => Or.inr (checkCoversHeavy_sound H b K N heavy qstart h q' h0 h1)
+      (∃ c ∈ light, ∃ qs, H0.checkCoverW H b T K N qs c = true ∧ qs ≤ q' ∧ q' ≤ c.qtop) ∨
+        (∃ c ∈ heavy, ∃ qs, H0.checkCoverH H b T K N qs c = true ∧ qs ≤ q' ∧ q' ≤ c.qtop)
+  | [], qstart, h, q', h0, h1 => Or.inr (checkCoversHeavy_sound H b T K N heavy qstart h q' h0 h1)
   | c :: rest, qstart, h, q', h0, h1 => by
       simp only [checkCoversH, Bool.and_eq_true] at h
       by_cases hq : q' ≤ c.qtop
       · exact Or.inl ⟨c, List.mem_cons_self .., qstart, h.1, h0, hq⟩
-      · rcases checkCoversH_sound H b K N heavy rest (c.qtop + 1) h.2 q' (by omega) h1 with
+      · rcases checkCoversH_sound H b T K N heavy rest (c.qtop + 1) h.2 q' (by omega) h1 with
           ⟨c', hc', hrest⟩ | hheavy
         · exact Or.inl ⟨c', List.mem_cons_of_mem _ hc', hrest⟩
         · exact Or.inr hheavy
@@ -366,12 +367,12 @@ set_option maxRecDepth 100000 in
 /-- **127 bits for the deterministic signer of the forest**, from the small-route check at `qh` (with
 a table whose rate is checked at `qh`) and a checked chain of light covers, then heavy covers, of the
 large budgets from `qh + 1` up to `2^127 − 1 − keygenCost`. -/
-theorem det_bitsFH (hb0 : 0 < keptHeight topLayer) (H b K N : ℕ) (hH : totalHeight = H) (hb : subtreeHeight = b)
-    (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N)
+theorem det_bitsFH (hb0 : 0 < keptHeight topLayer) (H b T K N : ℕ) (hH : totalHeight = H) (hb : subtreeHeight = b)
+    (hT : forestCoords = T) (hK : Prefix.keygenHashCost = K) (hN : signatureLimit = N)
     (qh : ℕ) (ρ : ℚ) (t : H0.PoisT) (o : H0.OptF) (on : H0.OptN) (hpt : H0.checkPT t = true)
-    (hrt : H0.checkRate H b N qh t = true) (ho : H0.checkOptF H b t o = true) (hon : H0.checkOptN H t on = true)
+    (hrt : H0.checkRate H b N qh t = true) (ho : H0.checkOptF H b T t o = true) (hon : H0.checkOptN H T t on = true)
     (hsmall : checkSmallF H b N qh ρ o.cthr o.B ((2 ^ b * on.En : ℚ) / 2) = true)
-    (covers heavy : List H0.CoverW) (hcov : checkCoversH H b K N (qh + 1) covers heavy = true) :
+    (covers heavy : List H0.CoverW) (hcov : checkCoversH H b T K N (qh + 1) covers heavy = true) :
     HasClassicalSecurityBits 127 := by
   obtain ⟨hnum, hqh, hN70, hcthr, hB, hc, hpayR, hcheck⟩ := checkSmallF_sound hsmall
   have hN70' : signatureLimit ≤ 2 ^ 70 := hN ▸ hN70
@@ -421,23 +422,23 @@ theorem det_bitsFH (hb0 : 0 < keptHeight topLayer) (H b K N : ℕ) (hH : totalHe
         field_simp
       rw [hκR, he]
       linarith
-    refine le_trans (det_smallF hb0 adversary q hbound (by omega) (ρ : ℝ) hnum' κ hκ0 hκ1 hκq H b N hH hb hN t o on
+    refine le_trans (det_smallF hb0 adversary q hbound (by omega) (ρ : ℝ) hnum' κ hκ0 hκ1 hκq H b T N hH hb hT hN t o on
       hpt qh hrt hs ho hon hcthr) ?_
     exact small_closeFF q qh hq1 hs hqh hN70' (ρ : ℝ) (by linarith [hnum.low]) o.B (κ * c) hB hc2 hcheck'
   · have hKq : keygenCost ≤ q := by omega
     have e1 : (q - keygenCost) + Prefix.keygenHashCost = q - keygenCost + keygenCost :=
       rfl
-    rcases checkCoversH_sound H b K N heavy covers (qh + 1) hcov (q - keygenCost)
+    rcases checkCoversH_sound H b T K N heavy covers (qh + 1) hcov (q - keygenCost)
       (by omega) (by rw [← hkg]; omega) with ⟨cover, -, qs, hcv, hqs, hqt⟩ | ⟨cover, -, qs, hcv, hqs, hqt⟩
-    · have hcovb := H0.h0W_bound_of_cover H b K N qs cover hcv hH hb hK hN (q - keygenCost) hqs hqt
-      have hfairq := H0.fair_of_cover H b K N qs cover hcv hH hb (q - keygenCost) hqt
+    · have hcovb := H0.h0W_bound_of_cover H b T K N qs cover hcv hH hb hT hK hN (q - keygenCost) hqs hqt
+      have hfairq := H0.fair_of_cover H b T K N qs cover hcv hH hb (q - keygenCost) hqt
       have h := det_largeW hb0 hN70' adversary q hbound hq127 hKq hfairq (by
         rw [e1] at hcovb
         exact hcovb)
       refine le_trans h (le_of_eq ?_)
       rw [Nat.cast_pow, Nat.cast_ofNat]
-    · have hcovb := H0.h0H_bound_of_cover H b K N qs cover hcv hH hb hK hN (q - keygenCost) hqs hqt
-      have hfairq := H0.fair_of_coverH H b K N qs cover hcv hH hb (q - keygenCost) hqt
+    · have hcovb := H0.h0H_bound_of_cover H b T K N qs cover hcv hH hb hT hK hN (q - keygenCost) hqs hqt
+      have hfairq := H0.fair_of_coverH H b T K N qs cover hcv hH hb (q - keygenCost) hqt
       have h := det_largeH hb0 adversary q hbound hq127 hKq (H0.wbarH (q - keygenCost))
         (H0.LmaxOf (q - keygenCost)) (H0.fair_ofH (q - keygenCost) hfairq) (lam_start_leF (q - keygenCost)) (by
         rw [e1] at hcovb

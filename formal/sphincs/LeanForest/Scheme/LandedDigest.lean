@@ -6,8 +6,8 @@ import LeanForest.Scheme.Landing
 section
 
 /-!
-The candidate's single message-digest call: its first `h + 208` bits are the digest, so a uniform
-block gives the uniform digest law on `h + 208` bits.
+The candidate's single message-digest call: its first `h + 26 T` bits are the digest, so a uniform
+block gives the uniform digest law on `h + 26 T` bits.
 -/
 
 open OracleComp OracleSpec ENNReal
@@ -18,7 +18,7 @@ namespace LeanForest.Security
 variable [Params]
 open Concrete
 
-/-- The oracle block induces exactly the uniform digest law on `h + 208` bits. -/
+/-- The oracle block induces exactly the uniform digest law on `h + 26 T` bits. -/
 theorem evalDist_digestBlock_uniform :
     𝒟[truncateMessageDigest <$> ($ᵗ HashOutput : ProbComp HashOutput)] =
       𝒟[($ᵗ MessageDigest : ProbComp MessageDigest)] :=
@@ -36,7 +36,7 @@ end
 section
 
 /-!
-The kept view of a digest (its local index in the pruned subtree and the fields of all 8 trees), and
+The kept view of a digest (its local index in the pruned subtree and the fields of all `T` trees), and
 the law of a fresh uniform digest that lands: landing with a kept view in a set costs exactly the
 reciprocal number of subtrees times the uniform probability of that set.
 -/
@@ -52,7 +52,7 @@ open OracleComp OracleSpec ENNReal Concrete
 
 abbrev KeptDigestView := Fin (2 ^ subtreeHeight) × (Coord → FieldVal)
 
-/-- The local index and the 8 tree fields, defined even for a rejected global index. -/
+/-- The local index and the `T` tree fields, defined even for a rejected global index. -/
 def localFullView (view : FullDigestView) : KeptDigestView :=
   (⟨view.1.val % 2 ^ subtreeHeight, Nat.mod_lt _ (Nat.two_pow_pos _)⟩, view.2)
 
