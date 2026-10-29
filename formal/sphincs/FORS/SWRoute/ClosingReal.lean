@@ -21,8 +21,9 @@ def satUpQ (ρ x : ℚ) : ℚ := ρ * x - ρ * (ρ - 1) * x ^ 2 / 2
 /-- The rational coin bound at budget `q`. -/
 def coinQ (q : ℕ) : ℚ := ((q : ℚ) / 2 ^ 128) ^ 2 / 2 ^ 30 + ((q : ℚ) / 2 ^ 128) / 2 ^ 100 + 1 / 2 ^ 180
 
-/-- The contact coefficient at the right end `qb`, from the near mean `En` of a checked `OptN`. -/
-def cUQ (b a N qb : ℕ) (En : ℚ) : ℚ := (N : ℚ) / (2 ^ b * 2 ^ a) + (qb : ℚ) * (2 ^ b * En) / 2 ^ a
+/-- The contact coefficient: the reveal rate `N / (2^b 2^a)` and the cap `m` of the own-leaf near
+forecast. -/
+def cUQ (b a N : ℕ) (m : ℚ) : ℚ := (N : ℚ) / (2 ^ b * 2 ^ a) + m
 
 /-- **The side conditions, rationally**, at `x` with contact coefficient `cU`. -/
 def checkNumSW (ρ β δ x cU : ℚ) : Bool :=
@@ -48,11 +49,11 @@ theorem checkNumSW_sound {ρ β δ x cU : ℚ} (h : checkNumSW ρ β δ x cU = t
   push_cast at r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 r16
   exact ⟨r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16⟩
 
-/-- The main inequality of an entry `[qa, qb]` with cover bound `BC`, near bound `BN`, keygen
-credit `K` and limit `N`. -/
-def swMainQ (K N qa qb : ℕ) (ρ δ BC BN : ℚ) : Bool :=
+/-- The main inequality of an entry `[qa, qb]` with cover bound `BC`, near bound `BN`, forecast tail
+`Pb`, keygen credit `K` and limit `N`. -/
+def swMainQ (K N qa qb : ℕ) (ρ δ BC BN Pb : ℚ) : Bool :=
   decide (satUpQ ρ ((qa : ℚ) / 2 ^ 128) + (qb : ℚ) * BC + δ * ((qb : ℚ) * BN) + coinQ qb +
-      ((qb : ℚ) + K + N) / 2 ^ 200 ≤ 2 * ((qa : ℚ) / 2 ^ 128) + (K : ℚ) / 2 ^ 127)
+      (qb : ℚ) / 2 ^ 128 * Pb + ((qb : ℚ) + K + N) / 2 ^ 200 ≤ 2 * ((qa : ℚ) / 2 ^ 128) + (K : ℚ) / 2 ^ 127)
 
 /-! ### The real form of an entry -/
 
@@ -61,10 +62,11 @@ bound at `x = q / 2^128`, `q` times the cover and near bounds, the coin and the 
 `(q + K) / 2^127`. -/
 theorem sw_entry_real (q qa qb K N ρ δ BC BN XC XN : ℝ) (hqa : qa ≤ q) (hqb : q ≤ qb) (hqa0 : 0 ≤ qa)
     (hρ1 : 1 ≤ ρ) (hρ2 : ρ ≤ 2) (hδ : 0 ≤ δ) (hXC : XC ≤ BC) (hXN : XN ≤ BN) (hXC0 : 0 ≤ XC) (hXN0 : 0 ≤ XN)
-    (coin coinB : ℝ) (hcoin : coin ≤ coinB)
-    (hmain : satUp ρ (qa / 2 ^ 128) + qb * BC + δ * (qb * BN) + coinB + (qb + K + N) / 2 ^ 200 ≤
+    (coin coinB : ℝ) (hcoin : coin ≤ coinB) (Pb : ℝ) (hPb : 0 ≤ Pb)
+    (hmain : satUp ρ (qa / 2 ^ 128) + qb * BC + δ * (qb * BN) + coinB + qb / 2 ^ 128 * Pb + (qb + K + N) / 2 ^ 200 ≤
       2 * (qa / 2 ^ 128) + K / 2 ^ 127) :
-    satUp ρ (q / 2 ^ 128) + q * XC + δ * (q * XN) + coin + (q + K + N) / 2 ^ 200 ≤ (q + K) / 2 ^ 127 := by
+    satUp ρ (q / 2 ^ 128) + q * XC + δ * (q * XN) + coin + q / 2 ^ 128 * Pb + (q + K + N) / 2 ^ 200 ≤
+      (q + K) / 2 ^ 127 := by
   have hq0 : 0 ≤ q := le_trans hqa0 hqa
   -- `satUp ρ x - 2 x` decreases in `x`
   have hsat : satUp ρ (q / 2 ^ 128) - 2 * (q / 2 ^ 128) ≤ satUp ρ (qa / 2 ^ 128) - 2 * (qa / 2 ^ 128) := by
@@ -78,6 +80,7 @@ theorem sw_entry_real (q qa qb K N ρ δ BC BN XC XN : ℝ) (hqa : qa ≤ q) (hq
   have h2 : δ * (q * XN) ≤ δ * (qb * BN) :=
     mul_le_mul_of_nonneg_left (mul_le_mul hqb hXN hXN0 (by linarith)) hδ
   have h3 : (q + K + N) / 2 ^ 200 ≤ (qb + K + N) / 2 ^ 200 := by gcongr
+  have h4 : q / 2 ^ 128 * Pb ≤ qb / 2 ^ 128 * Pb := by gcongr
   have e : (q + K) / (2 : ℝ) ^ 127 = 2 * (q / 2 ^ 128) + K / 2 ^ 127 := by ring
   rw [e]
   linarith

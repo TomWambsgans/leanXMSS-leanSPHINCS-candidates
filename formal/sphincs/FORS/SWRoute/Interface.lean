@@ -1,6 +1,7 @@
 import FORS.LazyRun.SaturationE
 import FORS.LargeBudget.Route
 import FORS.CoverBound.NearOption
+import FORS.SWRoute.ForecastTail
 
 /-! **The survival-weighted route: its interface.** Between the small route (budgets up to `q_h`)
 and the large route, the survival-weighted route ("SW route") bounds the deterministic signer at
@@ -71,30 +72,28 @@ landed pair of its message, at budget `q`, plus the failure of the cell-count bo
 noncomputable def coinSW (q : ℕ) : ℝ≥0∞ :=
   ENNReal.ofReal (((q : ℝ) / 2 ^ 128) ^ 2 / 2 ^ 30 + ((q : ℝ) / 2 ^ 128) / 2 ^ 100 + 1 / 2 ^ 180)
 
-/-- The contact coefficient of a FORS leaf query: the reveal rate of the signatures and the own-leaf
-near forecast, in units of `2^-128` (`q' · hNearOf q' / 2^a`). -/
-noncomputable def nearCoef (q : ℕ) : ℝ :=
-  (signatureLimit : ℝ) / (2 ^ subtreeHeight * 2 ^ forsHeight) + (q : ℝ) * (H0.hNearOf q).toReal / 2 ^ forsHeight
-
 /-- **The SW route** (proved by the potential argument, used by the closing). For an adversary with
 `q < 2^127` hash queries and `q' = q - keygenCost`: if the side conditions hold at `x = q' / 2^128`
-with a contact coefficient `cU ≥ nearCoef q'`, the digest payment `b0c + δ b0n` fits in `β / 2^128`,
-and the route's terms (saturation at `ρ`, the cover and near start values, the coin) plus the slack
+with a contact coefficient `cU ≥ N / 2^(b+a) + m` (the reveal rate of the signatures and the cap `m`
+of the own-leaf near forecast at a surviving FORS leaf query), the forecast's tail `Pb` beyond `m`
+(`ForecastTail`), the digest payment `b0c + δ b0n` fits in `β / 2^128`,
+and the route's terms (saturation at `ρ`, the cover and near start values, the coin, `x · Pb`) plus the slack
 fit in `(q' + keygenCost) / 2^127`, then the advantage is at most `q / 2^127`. -/
 def DetSW : Prop :=
   ∀ (_hb : 0 < keptHeight topLayer) (adversary : Adversary) (q : ℕ),
     totalHeight = subtreeHeight → 31 ≤ subtreeHeight + forsHeight → digestCalls = 1 →
     HasHashQueryBound adversary q → q < 2 ^ 127 → keygenCost ≤ q → signatureLimit ≤ 2 ^ 70 →
     q - keygenCost + 2 ^ 32 + (H0.scanM - 1) * H0.LmaxOf (q - keygenCost) + (2 * H0.scanM - 1) ≤ 2 ^ 128 →
-    ∀ (ρ β δ cU : ℝ) (b0c b0n : ℝ≥0∞),
+    ∀ (ρ β δ cU m Pb : ℝ) (b0c b0n : ℝ≥0∞),
       SWNumeric ρ β δ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128) cU →
-      nearCoef (q - keygenCost) ≤ cU →
+      (signatureLimit : ℝ) / (2 ^ subtreeHeight * 2 ^ forsHeight) + m ≤ cU →
+      ForecastTail m (q - keygenCost) Pb →
       b0c + ENNReal.ofReal δ * b0n ≤ ENNReal.ofReal (β / 2 ^ 128) →
       (1 - budgetE ρ 0 (q - keygenCost)) +
           ((q - keygenCost : ℕ) : ℝ≥0∞) * startExcessO (H0.wbarOf (q - keygenCost)) b0c (q - keygenCost) +
           ENNReal.ofReal δ * (((q - keygenCost : ℕ) : ℝ≥0∞) *
             startExcessG witnessNear (H0.wbarOf (q - keygenCost)) b0n (q - keygenCost)) +
-          coinSW (q - keygenCost) +
+          coinSW (q - keygenCost) + ENNReal.ofReal (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128 * Pb) +
           ((q - keygenCost + keygenCost + signatureLimit : ℕ) : ℝ≥0∞) * (2 : ℝ≥0∞)⁻¹ ^ 200 ≤
         ((q - keygenCost + keygenCost : ℕ) : ℝ≥0∞) / 2 ^ 127 →
       forgeAdvantage adversary ≤ q / 2 ^ 127
