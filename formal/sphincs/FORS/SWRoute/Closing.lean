@@ -35,13 +35,13 @@ abbrev EntrySW := ℕ × ℕ × ℚ × ℚ × ℚ × ℚ × ℚ × ℕ × ℕ ×
 structure CoverSW where
   qtop : ℕ
   tab : PoisT
-  opts : List OptF
+  opts : List Opt
   nopts : List OptNB
   tails : List TailCert
   entries : List EntrySW
 
 /-- The check of one SW entry. -/
-def checkEntrySW (b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) (nopts : List OptNB)
+def checkEntrySW (b k a K N qtop : ℕ) (t : PoisT) (opts : List Opt) (nopts : List OptNB)
     (tails : List TailCert) : EntrySW → Bool
   | (qa, qb, ρ, β, δ, m, Pb, ic, inr, itl) =>
     match opts[ic]?, nopts[inr]?, tails[itl]? with
@@ -53,7 +53,7 @@ def checkEntrySW (b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) (nopts : 
     | _, _, _ => false
 
 /-- Consecutive SW entries cover `[last, qtop]`. -/
-def chainSW (b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) (nopts : List OptNB) (tails : List TailCert) :
+def chainSW (b k a K N qtop : ℕ) (t : PoisT) (opts : List Opt) (nopts : List OptNB) (tails : List TailCert) :
     ℕ → List EntrySW → Bool
   | last, [] => decide (qtop < last)
   | last, e :: rest => decide (e.1 ≤ last) && checkEntrySW b k a K N qtop t opts nopts tails e &&
@@ -62,12 +62,12 @@ def chainSW (b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) (nopts : List 
 /-- A SW cover of every budget `qstart ≤ q ≤ qtop`. -/
 def checkCoverSW (H b k a K N qstart : ℕ) (c : CoverSW) : Bool :=
   decide (H = b) && decide (31 ≤ b + a) && decide ((H + k * a + 255) / 256 = 1) && checkRate H b N c.qtop c.tab && checkPT c.tab &&
-    c.opts.all (checkOptF H b k a c.tab) && c.nopts.all (checkOptNB H b k a c.tab) &&
+    c.opts.all (checkOpt H b k a c.tab) && c.nopts.all (checkOptNB H b k a c.tab) &&
     chainSW b k a K N c.qtop c.tab c.opts c.nopts c.tails qstart c.entries
 
 /-! ### Soundness of the checker -/
 
-theorem chainSW_sound (b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) (nopts : List OptNB)
+theorem chainSW_sound (b k a K N qtop : ℕ) (t : PoisT) (opts : List Opt) (nopts : List OptNB)
     (tails : List TailCert) :
     ∀ (entries : List EntrySW) (last : ℕ), chainSW b k a K N qtop t opts nopts tails last entries = true →
       ∀ q, last ≤ q → q ≤ qtop → ∃ e ∈ entries, e.1 ≤ q ∧ q ≤ e.2.1 ∧
@@ -84,7 +84,7 @@ theorem chainSW_sound (b k a K N qtop : ℕ) (t : PoisT) (opts : List OptF) (nop
         exact ⟨e', List.mem_cons_of_mem _ he', h1, h2, h3⟩
 
 /-- What a checked entry gives. -/
-theorem checkEntrySW_sound {b k a K N qtop : ℕ} {t : PoisT} {opts : List OptF} {nopts : List OptNB}
+theorem checkEntrySW_sound {b k a K N qtop : ℕ} {t : PoisT} {opts : List Opt} {nopts : List OptNB}
     {tails : List TailCert} {qa qb : ℕ} {ρ β δ m Pb : ℚ} {ic inr itl : ℕ}
     (h : checkEntrySW b k a K N qtop t opts nopts tails (qa, qb, ρ, β, δ, m, Pb, ic, inr, itl) = true) :
     ∃ o ∈ opts, ∃ n ∈ nopts, ∃ tc ∈ tails, qa ≤ qb ∧ qb ≤ qtop ∧ checkTail b k a t qb m tc Pb = true ∧ checkNumSW ρ β δ ((qb : ℚ) / 2 ^ 128) (cUQ b a N m) = true ∧

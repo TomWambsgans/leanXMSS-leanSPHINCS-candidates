@@ -96,4 +96,9 @@ forms in `A = 2^a` — `1 - (1 - 1/A)^n` and its second-moment companion
 [CoverBound/SecondMoment.lean](FORS/CoverBound/SecondMoment.lean)) — which replace the forest's
 codeword tables; [CoverBound/MomentBounds.lean](FORS/CoverBound/MomentBounds.lean) turns them
 into kernel-checked rational tables and
-[CoverBound/HTermOption.lean](FORS/CoverBound/HTermOption.lean) raises them to the k-th power.
+[CoverBound/HTermOption.lean](FORS/CoverBound/HTermOption.lean) raises them to the k-th power. A
+tighter option ([CoverBound/HTermOptionJ.lean](FORS/CoverBound/HTermOptionJ.lean)) splits by the number of
+indices with many views (none, one, more; each with its own Chernoff parameter), bounds the cover
+fraction by its support with `n` views, and at a few view counts uses the exact law of the trees with
+no, one or more repeated leaves ([CoverBound/ClassLaw.lean](FORS/CoverBound/ClassLaw.lean)); each
+certificate uses the option with the lower bound.

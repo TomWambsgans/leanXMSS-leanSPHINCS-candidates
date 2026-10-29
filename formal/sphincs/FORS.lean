@@ -114,11 +114,14 @@ import FORS.CoverPotential.OneCoin
 import FORS.CoverPotential.OneCoinGame
 import FORS.CoverPotential.Price
 import FORS.CoverPotential.StartValue
+import FORS.CoverBound.ClassLaw
 import FORS.CoverBound.FirstMoment
 import FORS.CoverBound.HTerm
 import FORS.CoverBound.HTermCertificate
 import FORS.CoverBound.HTermOption
+import FORS.CoverBound.HTermOptionJ
 import FORS.CoverBound.IndexFactor
+import FORS.CoverBound.IntTables
 import FORS.CoverBound.MarkAverage
 import FORS.CoverBound.MomentBounds
 import FORS.CoverBound.MomentTable
