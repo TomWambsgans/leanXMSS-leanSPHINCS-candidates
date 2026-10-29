@@ -49,7 +49,7 @@ def checkEntrySW (b k a K N qtop : ℕ) (t : PoisT) (opts : List Opt) (nopts : L
         decide (qa ≤ qb) && decide (qb ≤ qtop) && checkTail b k a t qb m tc Pb && checkNumSW ρ β δ ((qb : ℚ) / 2 ^ 128) (cUQ b a N m) &&
           decide (0 ≤ δ) && decide (0 ≤ o.cthr) && decide (0 ≤ n.cthr) &&
           decide (o.cthr + δ * n.cthr ≤ β / 2 ^ 128) && decide (0 ≤ o.B) && decide (0 ≤ n.B) &&
-          decide (0 ≤ Pb) && swMainQ K N qa qb ρ δ o.B n.B Pb
+          decide (0 ≤ Pb) && decide (0 ≤ m) && swMainQ K N qa qb ρ δ o.B n.B Pb
     | _, _, _ => false
 
 /-- Consecutive SW entries cover `[last, qtop]`. -/
@@ -89,14 +89,14 @@ theorem checkEntrySW_sound {b k a K N qtop : ℕ} {t : PoisT} {opts : List Opt} 
     (h : checkEntrySW b k a K N qtop t opts nopts tails (qa, qb, ρ, β, δ, m, Pb, ic, inr, itl) = true) :
     ∃ o ∈ opts, ∃ n ∈ nopts, ∃ tc ∈ tails, qa ≤ qb ∧ qb ≤ qtop ∧ checkTail b k a t qb m tc Pb = true ∧ checkNumSW ρ β δ ((qb : ℚ) / 2 ^ 128) (cUQ b a N m) = true ∧
       0 ≤ δ ∧ 0 ≤ o.cthr ∧ 0 ≤ n.cthr ∧ o.cthr + δ * n.cthr ≤ β / 2 ^ 128 ∧ 0 ≤ o.B ∧ 0 ≤ n.B ∧
-      0 ≤ Pb ∧ swMainQ K N qa qb ρ δ o.B n.B Pb = true := by
+      0 ≤ Pb ∧ 0 ≤ m ∧ swMainQ K N qa qb ρ δ o.B n.B Pb = true := by
   rcases ho : opts[ic]? with _ | o <;> rcases hn : nopts[inr]? with _ | n <;>
     rcases htc : tails[itl]? with _ | tc <;>
     simp only [checkEntrySW, ho, hn, htc, Bool.and_eq_true, decide_eq_true_eq, reduceCtorEq,
       Bool.false_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h0'⟩, h0''⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h0'⟩, h0''⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, hm⟩, h10⟩ := h
   exact ⟨o, List.mem_of_getElem? ho, n, List.mem_of_getElem? hn, tc, List.mem_of_getElem? htc, h0, h0', h0'',
-    h2, h3, h4, h5, h6, h7, h8, h9, h10⟩
+    h2, h3, h4, h5, h6, h7, h8, h9, hm, h10⟩
 
 /-! ### One budget of a checked SW cover -/
 
@@ -133,7 +133,7 @@ theorem det_of_coverSW (hSW : DetSW) (hb0 : 0 < keptHeight topLayer) (H b k a K 
   obtain ⟨⟨qa, qb, ρ, β, δ, m, Pb, ic, inr, itl⟩, -, hqa, hqb, he⟩ :=
     chainSW_sound b k a K N c.qtop c.tab c.opts c.nopts c.tails c.entries qstart hchain q' hq0 hqt
   dsimp only at hqa hqb
-  obtain ⟨o, ho, n, hn, tc, -, -, hqbt, htc, hnum, hδ, hoc, hnc, hpay, hoB, hnB, hPb, hmain⟩ :=
+  obtain ⟨o, ho, n, hn, tc, -, -, hqbt, htc, hnum, hδ, hoc, hnc, hpay, hoB, hnB, hPb, hm0, hmain⟩ :=
     checkEntrySW_sound he
   have htl : ForecastTail (m : ℝ) q' (Pb : ℝ) :=
     tailOK_of_check H b k a N c.qtop hH hb hk ha hN c.tab hr ht qa qb hqbt m Pb tc htc q' hqa hqb
@@ -160,7 +160,7 @@ theorem det_of_coverSW (hSW : DetSW) (hb0 : 0 < keptHeight topLayer) (H b k a K 
     push_cast at this
     exact this
   refine hSW hb0 adversary q (by rw [hH, hb, hHb]) (by rw [hb, ha]; exact hba) hdc' hbound hq127 hKq hN70 hfair (ρ : ℝ) (β : ℝ) (δ : ℝ) _
-    (m : ℝ) (Pb : ℝ) (ENNReal.ofReal (o.cthr : ℝ)) (ENNReal.ofReal (n.cthr : ℝ)) hnum' hcU htl hpayE ?_
+    (m : ℝ) (Pb : ℝ) (ENNReal.ofReal (o.cthr : ℝ)) (ENNReal.ofReal (n.cthr : ℝ)) hnum' (by exact_mod_cast hm0) hcU htl hpayE ?_
   -- the main inequality
   have hρ1 : (1 : ℝ) ≤ (ρ : ℝ) := by linarith [hnum'.low]
   have hρ2 : (ρ : ℝ) ≤ 2 := hnum'.high

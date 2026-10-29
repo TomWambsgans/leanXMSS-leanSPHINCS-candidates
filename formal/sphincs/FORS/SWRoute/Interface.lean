@@ -86,6 +86,7 @@ def DetSW : Prop :=
     q - keygenCost + 2 ^ 32 + (H0.scanM - 1) * H0.LmaxOf (q - keygenCost) + (2 * H0.scanM - 1) ≤ 2 ^ 128 →
     ∀ (ρ β δ cU m Pb : ℝ) (b0c b0n : ℝ≥0∞),
       SWNumeric ρ β δ (((q - keygenCost : ℕ) : ℝ) / 2 ^ 128) cU →
+      0 ≤ m →
       (signatureLimit : ℝ) / (2 ^ subtreeHeight * 2 ^ forsHeight) + m ≤ cU →
       ForecastTail m (q - keygenCost) Pb →
       b0c + ENNReal.ofReal δ * b0n ≤ ENNReal.ofReal (β / 2 ^ 128) →
